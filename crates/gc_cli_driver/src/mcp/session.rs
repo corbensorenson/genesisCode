@@ -7,16 +7,16 @@ use super::super::*;
 use super::McpOptions;
 use super::catalog::{MCP_PROTOCOL_VERSION, ToolBinding, bindings, tool_argv};
 use super::resources::{read_resource, resource_definitions};
+use crate::session_resources::{SessionAudit, SessionResourceLimits};
 use crate::warm_protocol::{InputEvent, spawn_bounded_reader};
-use crate::warm_request::{build_sub_cli, validate_workspace_argv};
+use crate::warm_request::{build_sub_cli, normalize_session_argv, validate_workspace_argv};
 use crate::warm_session_config::{inherited_global_args, prime_runtime};
+use crate::warm_worker::WorkerControl;
 use crate::warm_worker::{WorkerJob, WorkerResult, run_worker_inline, spawn_worker};
 use serde_json::{Map, Value, json};
 
 const JSONRPC: &str = "2.0";
 const ROOTS_REQUEST_ID: &str = "genesis-roots-1";
-const POLL_INTERVAL: Duration = Duration::from_millis(5);
-
 mod cancellation;
 mod roots;
 mod wire;
@@ -35,6 +35,7 @@ struct Config {
     max_requests: u64,
     max_roots: usize,
     workspace_boundary: PathBuf,
+    resources: SessionResourceLimits,
 }
 
 struct PendingCall {
@@ -43,6 +44,8 @@ struct PendingCall {
     progress_token: Option<Value>,
     cli: Cli,
     workspace_root: PathBuf,
+    argv: Vec<String>,
+    inherited: Vec<String>,
 }
 
 struct RunningCall {
@@ -50,6 +53,8 @@ struct RunningCall {
     key: String,
     progress_token: Option<Value>,
     cancelled: bool,
+    drain_timeout: bool,
+    control: Option<WorkerControl>,
 }
 
 struct State {
@@ -65,6 +70,11 @@ struct State {
     active_ids: BTreeSet<String>,
     handled_frames: u64,
     input_eof: bool,
+    drain_deadline: Option<std::time::Instant>,
+    drain_reason: Option<&'static str>,
+    completed_calls: u64,
+    cancelled_calls: u64,
+    resource_exceeded_calls: u64,
 }
 
 impl State {
@@ -85,6 +95,11 @@ impl State {
             active_ids: BTreeSet::new(),
             handled_frames: 0,
             input_eof: false,
+            drain_deadline: None,
+            drain_reason: None,
+            completed_calls: 0,
+            cancelled_calls: 0,
+            resource_exceeded_calls: 0,
         }
     }
 }
@@ -102,6 +117,7 @@ pub(crate) fn cmd_mcp(
         max_requests,
         max_roots,
         workspace_root,
+        resources,
     } = options;
     if !(1..=4096).contains(&max_queue)
         || !(256..=16_777_216).contains(&max_frame_bytes)
@@ -122,6 +138,8 @@ pub(crate) fn cmd_mcp(
             "MCP workspace boundary must be an existing accessible directory",
         )
     })?;
+    let resources = SessionResourceLimits::from_options(resources)
+        .map_err(|message| cli_err(EX_PARSE, "mcp/resource-limit", message))?;
     if !workspace_boundary.is_dir() {
         return Err(cli_err(
             EX_IO,
@@ -137,6 +155,7 @@ pub(crate) fn cmd_mcp(
         max_requests,
         max_roots,
         workspace_boundary,
+        resources,
     };
     serve(cli, flavor, &config)?;
     Ok(CmdOut {
@@ -146,320 +165,8 @@ pub(crate) fn cmd_mcp(
     })
 }
 
-fn serve(cli: &Cli, flavor: Flavor, config: &Config) -> Result<(), CliError> {
-    let tools = bindings(runtime_profile())
-        .map_err(|message| cli_err(EX_INTERNAL, "mcp/interface-invalid", message))?;
-    let mut inherited = inherited_global_args(cli);
-    if !inherited.iter().any(|argument| argument == "--json") {
-        inherited.insert(0, "--json".to_string());
-    }
-    let mut state = State::new(&config.workspace_boundary);
-    let (input, _reader) =
-        spawn_bounded_reader(config.max_frame_bytes, config.max_queue.saturating_add(16)).map_err(
-            |_| {
-                cli_err(
-                    EX_IO,
-                    "mcp/input",
-                    "failed to start bounded MCP input reader",
-                )
-            },
-        )?;
-    let (worker_tx, worker_rx) = mpsc::channel();
-
-    loop {
-        drain_worker(&worker_rx, &mut state, config)?;
-        start_next(&mut state, flavor, &worker_tx, config)?;
-        if state.input_eof && state.running.is_none() {
-            return Ok(());
-        }
-        match input.recv_timeout(POLL_INTERVAL) {
-            Ok(event) => process_input(event, &mut state, config, &tools, &inherited, flavor)?,
-            Err(mpsc::RecvTimeoutError::Timeout) => {}
-            Err(mpsc::RecvTimeoutError::Disconnected) => state.input_eof = true,
-        }
-    }
-}
-
-fn process_input(
-    event: InputEvent,
-    state: &mut State,
-    config: &Config,
-    tools: &[ToolBinding],
-    inherited: &[String],
-    _flavor: Flavor,
-) -> Result<(), CliError> {
-    if matches!(
-        event,
-        InputEvent::Line(_) | InputEvent::Oversize | InputEvent::InvalidUtf8
-    ) {
-        if state.handled_frames >= config.max_requests {
-            rpc_error(
-                Value::Null,
-                -32004,
-                "session frame limit reached",
-                None,
-                config,
-            )?;
-            state.input_eof = true;
-            cancel_all(state);
-            return Ok(());
-        }
-        state.handled_frames = state.handled_frames.saturating_add(1);
-    }
-    match event {
-        InputEvent::Line(line) => match serde_json::from_str::<Value>(&line) {
-            Ok(value) => process_message(value, state, config, tools, inherited)?,
-            Err(_) => rpc_error(Value::Null, -32700, "parse error", None, config)?,
-        },
-        InputEvent::Oversize => rpc_error(
-            Value::Null,
-            -32003,
-            "input frame exceeds configured limit",
-            Some(json!({"limit": config.max_frame_bytes})),
-            config,
-        )?,
-        InputEvent::InvalidUtf8 => rpc_error(
-            Value::Null,
-            -32700,
-            "input frame is not UTF-8",
-            None,
-            config,
-        )?,
-        InputEvent::IoError(_) | InputEvent::Eof => {
-            state.input_eof = true;
-            cancel_all(state);
-        }
-    }
-    Ok(())
-}
-
-fn process_message(
-    value: Value,
-    state: &mut State,
-    config: &Config,
-    tools: &[ToolBinding],
-    inherited: &[String],
-) -> Result<(), CliError> {
-    let Some(object) = value.as_object() else {
-        return rpc_error(Value::Null, -32600, "invalid request", None, config);
-    };
-    if object.get("jsonrpc").and_then(Value::as_str) != Some(JSONRPC) {
-        return rpc_error(
-            object.get("id").cloned().unwrap_or(Value::Null),
-            -32600,
-            "invalid JSON-RPC version",
-            None,
-            config,
-        );
-    }
-    if !object.contains_key("method") {
-        return process_response(object, state, config);
-    }
-    let Some(method) = object.get("method").and_then(Value::as_str) else {
-        return rpc_error(
-            object.get("id").cloned().unwrap_or(Value::Null),
-            -32600,
-            "method must be a string",
-            None,
-            config,
-        );
-    };
-    let id = match object.get("id") {
-        Some(id) if valid_rpc_atom(id) => Some(id.clone()),
-        Some(_) => {
-            return rpc_error(
-                Value::Null,
-                -32600,
-                "request id must be a string or integer",
-                None,
-                config,
-            );
-        }
-        None => None,
-    };
-    let params = object.get("params").cloned().unwrap_or_else(|| json!({}));
-
-    if method == "initialize" {
-        let Some(id) = id else {
-            return rpc_error(
-                Value::Null,
-                -32600,
-                "initialize must be a request",
-                None,
-                config,
-            );
-        };
-        return initialize(id, &params, state, config);
-    }
-    if !state.initialize_seen {
-        if let Some(id) = id {
-            return rpc_error(id, -32002, "server is not initialized", None, config);
-        }
-        return Ok(());
-    }
-    if method == "notifications/initialized" {
-        if id.is_some() || !params.is_object() {
-            return Ok(());
-        }
-        if state.initialized {
-            return Ok(());
-        }
-        state.initialized = true;
-        if state.client_roots {
-            request_roots(state, config)?;
-        }
-        return Ok(());
-    }
-    if method == "notifications/cancelled" {
-        cancel_request(&params, state);
-        return Ok(());
-    }
-    if method == "notifications/roots/list_changed" {
-        if state.client_roots && state.initialized {
-            request_roots(state, config)?;
-        }
-        return Ok(());
-    }
-    if !state.initialized {
-        if let Some(id) = id {
-            return rpc_error(
-                id,
-                -32002,
-                "initialized notification has not been received",
-                None,
-                config,
-            );
-        }
-        return Ok(());
-    }
-    let Some(id) = id else {
-        return Ok(());
-    };
-    match method {
-        "ping" => rpc_result(id, json!({}), config),
-        "tools/list" => list_tools(id, &params, tools, config),
-        "tools/call" => enqueue_tool(id, &params, state, config, tools, inherited),
-        "resources/list" => list_resources(id, &params, config),
-        "resources/templates/list" => list_resource_templates(id, &params, config),
-        "resources/read" => read_resource_request(id, &params, config),
-        _ => rpc_error(id, -32601, "method not found", None, config),
-    }
-}
-
-fn initialize(
-    id: Value,
-    params: &Value,
-    state: &mut State,
-    config: &Config,
-) -> Result<(), CliError> {
-    if state.initialize_seen {
-        return rpc_error(id, -32600, "initialize may only be sent once", None, config);
-    }
-    let Some(params) = params.as_object() else {
-        return rpc_error(
-            id,
-            -32602,
-            "initialize params must be an object",
-            None,
-            config,
-        );
-    };
-    if !params.get("protocolVersion").is_some_and(Value::is_string)
-        || !params.get("capabilities").is_some_and(Value::is_object)
-        || !params.get("clientInfo").is_some_and(Value::is_object)
-    {
-        return rpc_error(id, -32602, "initialize params are incomplete", None, config);
-    }
-    state.initialize_seen = true;
-    state.client_roots = params["capabilities"]
-        .get("roots")
-        .is_some_and(Value::is_object);
-    if state.client_roots {
-        state.roots.clear();
-        state.roots_ready = false;
-    }
-    rpc_result(
-        id,
-        json!({
-            "protocolVersion": MCP_PROTOCOL_VERSION,
-            "capabilities": {
-                "tools": {"listChanged": false},
-                "resources": {"subscribe": false, "listChanged": false}
-            },
-            "serverInfo": {
-                "name": "genesiscode",
-                "title": "GenesisCode Agent Toolchain",
-                "version": env!("CARGO_PKG_VERSION")
-            },
-            "instructions": "Use generated tools and genesis:// resources. Paths are root-relative; MCP Tasks are not negotiated."
-        }),
-        config,
-    )
-}
-
-fn list_tools(
-    id: Value,
-    params: &Value,
-    tools: &[ToolBinding],
-    config: &Config,
-) -> Result<(), CliError> {
-    if has_cursor(params) {
-        return rpc_error(
-            id,
-            -32602,
-            "pagination cursor is not supported",
-            None,
-            config,
-        );
-    }
-    rpc_result(
-        id,
-        json!({"tools": tools.iter().map(|tool| tool.definition.clone()).collect::<Vec<_>>() }),
-        config,
-    )
-}
-
-fn list_resources(id: Value, params: &Value, config: &Config) -> Result<(), CliError> {
-    if has_cursor(params) {
-        return rpc_error(
-            id,
-            -32602,
-            "pagination cursor is not supported",
-            None,
-            config,
-        );
-    }
-    rpc_result(id, json!({"resources": resource_definitions()}), config)
-}
-
-fn list_resource_templates(id: Value, params: &Value, config: &Config) -> Result<(), CliError> {
-    if has_cursor(params) {
-        return rpc_error(
-            id,
-            -32602,
-            "pagination cursor is not supported",
-            None,
-            config,
-        );
-    }
-    rpc_result(id, json!({"resourceTemplates": []}), config)
-}
-
-fn read_resource_request(id: Value, params: &Value, config: &Config) -> Result<(), CliError> {
-    let Some(uri) = params.get("uri").and_then(Value::as_str) else {
-        return rpc_error(id, -32602, "resource URI is required", None, config);
-    };
-    match read_resource(uri, runtime_profile()) {
-        Ok(result) => rpc_result(id, result, config),
-        Err(message) => rpc_error(
-            id,
-            -32002,
-            "resource read failed",
-            Some(json!({"reason": message})),
-            config,
-        ),
-    }
-}
+mod transport;
+use transport::serve;
 
 fn enqueue_tool(
     id: Value,
@@ -518,6 +225,7 @@ fn enqueue_tool(
         Ok(argv) => argv,
         Err(message) => return rpc_error(id, -32602, message, None, config),
     };
+    let argv = normalize_session_argv(argv);
     if let Err(error) = validate_workspace_argv(&argv, &workspace_root) {
         return rpc_error(id, -32602, error.message, None, config);
     }
@@ -551,6 +259,8 @@ fn enqueue_tool(
         progress_token,
         cli,
         workspace_root,
+        argv,
+        inherited: inherited.to_vec(),
     });
     Ok(())
 }
@@ -561,7 +271,7 @@ fn start_next(
     worker_tx: &mpsc::Sender<WorkerResult>,
     config: &Config,
 ) -> Result<(), CliError> {
-    if state.running.is_some() || state.input_eof {
+    if state.running.is_some() {
         return Ok(());
     }
     let Some(pending) = state.pending.pop_front() else {
@@ -576,28 +286,41 @@ fn start_next(
         cli: pending.cli,
         flavor,
         workspace_root: pending.workspace_root,
+        inherited: pending.inherited,
+        argv: pending.argv,
+        limits: config.resources.clone(),
     };
     state.running = Some(RunningCall {
         id: pending.id,
         key: pending.key,
         progress_token: pending.progress_token,
         cancelled: false,
+        drain_timeout: false,
+        control: None,
     });
     if matches!(flavor, Flavor::Wasi) {
         let result = run_worker_inline(job);
         return finish_worker(result, state, config);
     }
-    if spawn_worker(job, worker_tx.clone()).is_err()
-        && let Some(running) = state.running.take()
-    {
-        state.active_ids.remove(&running.key);
-        rpc_error(
-            running.id,
-            -32603,
-            "failed to start tool worker",
-            None,
-            config,
-        )?;
+    match spawn_worker(job, worker_tx.clone()) {
+        Ok(control) => {
+            if let Some(running) = state.running.as_mut() {
+                running.control = Some(control);
+            }
+        }
+        Err(_) => {
+            if let Some(running) = state.running.take() {
+                state.active_ids.remove(&running.key);
+                let audit = SessionAudit::not_started(&config.resources, "worker-launch-failed");
+                rpc_error(
+                    running.id,
+                    -32603,
+                    "failed to start isolated tool worker",
+                    Some(json!({"audit": audit.as_json()})),
+                    config,
+                )?;
+            }
+        }
     }
     Ok(())
 }
@@ -619,8 +342,11 @@ fn drain_worker(
 fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Result<(), CliError> {
     let result_key = match &result {
         WorkerResult::Completed { request_id, .. }
+        | WorkerResult::CommandError { request_id, .. }
         | WorkerResult::WorkspaceError { request_id, .. }
-        | WorkerResult::Crashed { request_id } => request_id,
+        | WorkerResult::Crashed { request_id, .. }
+        | WorkerResult::Cancelled { request_id, .. }
+        | WorkerResult::ResourceExceeded { request_id, .. } => request_id,
     };
     if state
         .running
@@ -633,36 +359,110 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
         return Ok(());
     };
     state.active_ids.remove(&running.key);
-    if running.cancelled || state.input_eof {
-        return Ok(());
+    let audit = match &result {
+        WorkerResult::Completed { audit, .. }
+        | WorkerResult::CommandError { audit, .. }
+        | WorkerResult::Crashed { audit, .. }
+        | WorkerResult::Cancelled { audit, .. }
+        | WorkerResult::ResourceExceeded { audit, .. } => Some(audit.as_json()),
+        WorkerResult::WorkspaceError { audit, .. } => audit.as_ref().map(SessionAudit::as_json),
+    };
+    if running.drain_timeout {
+        state.cancelled_calls = state.cancelled_calls.saturating_add(1);
+        return rpc_error(
+            running.id,
+            -32006,
+            "tool call was terminated when the bounded disconnect drain expired",
+            Some(json!({"reason": state.drain_reason, "audit": audit})),
+            config,
+        );
+    }
+    if running.cancelled {
+        state.cancelled_calls = state.cancelled_calls.saturating_add(1);
+        return rpc_error(
+            running.id,
+            -32800,
+            "tool call was cancelled and its worker was reaped",
+            Some(json!({"audit": audit})),
+            config,
+        );
     }
     if let Some(token) = &running.progress_token {
         progress(token, 1, "completed", config)?;
     }
     match result {
         WorkerResult::Completed {
-            result: Ok(output), ..
-        } => tool_result(running.id, output.json, output.exit_code != EX_OK, config),
-        WorkerResult::Completed {
-            result: Err(error), ..
+            result: Ok(output),
+            audit,
+            ..
         } => {
-            let envelope = command_error_envelope(error);
-            tool_result(running.id, envelope, true, config)
+            state.completed_calls = state.completed_calls.saturating_add(1);
+            tool_result(
+                running.id,
+                output.json,
+                output.exit_code != EX_OK,
+                &audit,
+                config,
+            )
         }
-        WorkerResult::WorkspaceError { .. } => rpc_error(
+        WorkerResult::Completed {
+            result: Err(error),
+            audit,
+            ..
+        } => {
+            state.completed_calls = state.completed_calls.saturating_add(1);
+            let envelope = command_error_envelope(error);
+            tool_result(running.id, envelope, true, &audit, config)
+        }
+        WorkerResult::CommandError {
+            envelope, audit, ..
+        } => {
+            state.completed_calls = state.completed_calls.saturating_add(1);
+            tool_result(running.id, envelope, true, &audit, config)
+        }
+        WorkerResult::WorkspaceError { audit, .. } => rpc_error(
             running.id,
             -32603,
             "tool worker could not enter the selected workspace",
-            None,
+            Some(json!({"audit": audit.map(|audit| audit.as_json())})),
             config,
         ),
-        WorkerResult::Crashed { .. } => rpc_error(
+        WorkerResult::Crashed { audit, .. } => rpc_error(
             running.id,
             -32603,
             "tool worker terminated unexpectedly",
-            None,
+            Some(json!({"audit": audit.as_json()})),
             config,
         ),
+        WorkerResult::Cancelled { audit, .. } => {
+            state.cancelled_calls = state.cancelled_calls.saturating_add(1);
+            rpc_error(
+                running.id,
+                -32800,
+                "tool worker was cancelled and reaped",
+                Some(json!({"audit": audit.as_json()})),
+                config,
+            )
+        }
+        WorkerResult::ResourceExceeded {
+            resource,
+            command_envelope,
+            audit,
+            ..
+        } => {
+            state.resource_exceeded_calls = state.resource_exceeded_calls.saturating_add(1);
+            rpc_error(
+                running.id,
+                -32007,
+                "tool worker exceeded a session resource limit",
+                Some(json!({
+                    "resource": resource,
+                    "command_envelope": command_envelope,
+                    "audit": audit.as_json(),
+                })),
+                config,
+            )
+        }
     }
 }
 
@@ -681,6 +481,7 @@ fn tool_result(
     id: Value,
     structured: Value,
     is_error: bool,
+    audit: &SessionAudit,
     config: &Config,
 ) -> Result<(), CliError> {
     let text = json_canonical_string(&structured);
@@ -689,7 +490,8 @@ fn tool_result(
         json!({
             "content": [{"type": "text", "text": text}],
             "structuredContent": structured,
-            "isError": is_error
+            "isError": is_error,
+            "_meta": {"genesis/sessionAudit": audit.as_json()}
         }),
         config,
     )

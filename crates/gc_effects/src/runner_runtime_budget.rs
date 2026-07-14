@@ -1,4 +1,26 @@
 use super::*;
+use std::cell::Cell;
+
+thread_local! {
+    static SESSION_EFFECT_CEILING: Cell<u64> = const { Cell::new(0) };
+}
+
+pub(crate) fn set_session_effect_ceiling(limit: Option<u64>) {
+    SESSION_EFFECT_CEILING.set(limit.unwrap_or(0));
+}
+
+fn effective_effect_ceiling(policy: &CapsPolicy) -> Option<u64> {
+    let session = match SESSION_EFFECT_CEILING.get() {
+        0 => None,
+        value => Some(value),
+    };
+    match (policy.runtime.max_effect_ops, session) {
+        (Some(policy), Some(session)) => Some(policy.min(session)),
+        (Some(policy), None) => Some(policy),
+        (None, Some(session)) => Some(session),
+        (None, None) => None,
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct RuntimeBudgetState {
@@ -16,7 +38,7 @@ pub(super) fn enforce_request_runtime_limits(
 ) -> Option<Value> {
     let observed_effect_ops = budget.effect_ops.saturating_add(1);
     budget.effect_ops = observed_effect_ops;
-    if let Some(limit) = policy.runtime.max_effect_ops
+    if let Some(limit) = effective_effect_ceiling(policy)
         && observed_effect_ops > limit
     {
         return Some(runtime_limit_error(

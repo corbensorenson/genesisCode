@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Structured failures
 
-**180 diagnostics** · catalog identity `12014848710f1d392489f2a9ff1b5068f46ea273ff5125cc7a728e0e0bff895f`
+**185 diagnostics** · catalog identity `2e5c15bd0c8a03af8e4eaab6c5a312dea4b2bec2cbb0c4dffcea2e978a5ae995`
 
 Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
 
@@ -295,6 +295,7 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 | [`mcp/interface-invalid`](#mcp-interface-invalid-07940c97) | error | `inspect-invocation-contract` |
 | [`mcp/limit-invalid`](#mcp-limit-invalid-c639d8a7) | error | `inspect-invocation-contract` |
 | [`mcp/output`](#mcp-output-9525a9c7) | error | `inspect-invocation-contract` |
+| [`mcp/resource-limit`](#mcp-resource-limit-caf1b620) | error | `inspect-invocation-contract` |
 | [`mcp/workspace-root`](#mcp-workspace-root-cfe4ae98) | error | `inspect-invocation-contract` |
 | [`prelude/missing`](#prelude-missing-94720305) | error | `inspect-invocation-contract` |
 | [`warm/argv-parse`](#warm-argv-parse-f654d90a) | error | `inspect-invocation-contract` |
@@ -303,6 +304,8 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 | [`warm/max-workspaces`](#warm-max-workspaces-1886f913) | error | `inspect-invocation-contract` |
 | [`warm/nested`](#warm-nested-0a1c0509) | error | `inspect-invocation-contract` |
 | [`warm/reader-launch`](#warm-reader-launch-b78c9065) | error | `inspect-invocation-contract` |
+| [`warm/resource-limit`](#warm-resource-limit-bf9ebeaa) | error | `inspect-invocation-contract` |
+| [`warm/resource-override`](#warm-resource-override-2df53680) | error | `inspect-invocation-contract` |
 | [`warm/workspace-escape`](#warm-workspace-escape-63fccc6e) | error | `inspect-invocation-contract` |
 | [`warm/workspace-limit`](#warm-workspace-limit-4ae5a7b8) | error | `inspect-invocation-contract` |
 | [`warm/workspace-path`](#warm-workspace-path-553426c6) | error | `inspect-invocation-contract` |
@@ -536,6 +539,21 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 
 **Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 
+### `mcp/resource-limit` {#mcp-resource-limit-caf1b620}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/mcp/resource-limit`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
 ### `mcp/workspace-root` {#mcp-workspace-root-cfe4ae98}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/mcp/workspace-root`
@@ -644,6 +662,36 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `warm/reader-launch` {#warm-reader-launch-b78c9065}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/warm/reader-launch`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/resource-limit` {#warm-resource-limit-bf9ebeaa}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/resource-limit`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/resource-override` {#warm-resource-override-2df53680}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/resource-override`
 
 **Likely causes**
 
@@ -2119,6 +2167,8 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 | [`session/state-write`](#session-state-write-0f32426e) | error | `replan-semantic-edit` |
 | [`session/store-write`](#session-store-write-730b6d18) | error | `replan-semantic-edit` |
 | [`session/unverified`](#session-unverified-e824f336) | error | `replan-semantic-edit` |
+| [`session/worker-output`](#session-worker-output-725ad73f) | error | `replan-semantic-edit` |
+| [`session/worker-wait`](#session-worker-wait-586252a6) | error | `replan-semantic-edit` |
 | [`session/workspace-tampered`](#session-workspace-tampered-a9833c7a) | error | `replan-semantic-edit` |
 | [`session/workspace-write`](#session-workspace-write-a731879b) | error | `replan-semantic-edit` |
 
@@ -2710,6 +2760,36 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `session/unverified` {#session-unverified-e824f336}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/session/unverified`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/worker-output` {#session-worker-output-725ad73f}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/worker-output`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/worker-wait` {#session-worker-wait-586252a6}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/worker-wait`
 
 **Likely causes**
 

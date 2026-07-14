@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**230 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**231 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | GenesisCode v0.2 — Codex Working Agreement | md | `f1dbd457caf7` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `7ce45a3a0372` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `0a9541a9b18b` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Efficient, Self-Hosted, and Trustworthy | md | `9c54b09cbfe3` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Efficient, Self-Hosted, and Trustworthy | md | `4d96f4b91a3c` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-07-14) | md | `91f1ced12587` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `5d9503486758` |
@@ -29,7 +29,7 @@ toc-depth: 2
 | [`docs/DEPRECATION_MAP_v0.1.md`](../docs/DEPRECATION_MAP_v0.1.md) | Documentation Deprecation Map v0.1 | md | `961d8acb5a56` |
 | [`docs/FOUNDATION_STDLIB_v0.2.md`](../docs/FOUNDATION_STDLIB_v0.2.md) | Foundation Standard Library (Level 1) v0.2 | md | `3a6c7f25a475` |
 | [`docs/GETTING_STARTED.md`](../docs/GETTING_STARTED.md) | Getting Started (GenesisCode v0.2) | md | `8a34a02cc2b9` |
-| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `a215440b7b24` |
+| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `cdbb82ddaedf` |
 | [`docs/PAPER_v0.2.md`](../docs/PAPER_v0.2.md) | **GenesisCode v0.2** | md | `53c93937e42c` |
 | [`docs/POLICY_DEFAULTS_v0.1.md`](../docs/POLICY_DEFAULTS_v0.1.md) | Policy Defaults v0.1 | md | `3cd6800f37c2` |
 | [`docs/STACKS_v0.2.md`](../docs/STACKS_v0.2.md) | GenesisCode Stacks (Levels 0–2) v0.2 | md | `8c0df911adeb` |
@@ -59,7 +59,7 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json`](../docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json) | genesis/evidence-adversarial-matrix-v0.1 | json | `f9f281eb2bf7` |
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `c82cf48cb9dc` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `5f79e42bc1a5` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `0cba1725d731` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -125,6 +125,7 @@ toc-depth: 2
 | [`docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`](../docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md) | Agent Capability Gauntlet v0.1 | md | `0c52e5595d37` |
 | [`docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`](../docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md) | Agent Generative Workloads v0.1 | md | `c3693b1a3d20` |
 | [`docs/spec/AGENT_INDEX_v0.1.md`](../docs/spec/AGENT_INDEX_v0.1.md) | Agent Index v0.1 | md | `115add9a6b83` |
+| [`docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json`](../docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json) | GenesisCode bounded agent session resources v0.1 | schema | `f0158daa7345` |
 | [`docs/spec/AGENT_TRANSACTION_v0.1.schema.json`](../docs/spec/AGENT_TRANSACTION_v0.1.schema.json) | GenesisCode transactional agent session v0.1 | schema | `07abf0b5118d` |
 | [`docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md`](../docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md) | Agent Workflow Runtime Parity v0.1 | md | `70fb21c86792` |
 | [`docs/spec/AI_STYLE.md`](../docs/spec/AI_STYLE.md) | AI Style Obligation (core/obligation::ai-style) | md | `7b79fef136fd` |
@@ -142,10 +143,10 @@ toc-depth: 2
 | [`docs/spec/CAPS_TOML.md`](../docs/spec/CAPS_TOML.md) | caps.toml (Capability Policy) v0.2 | md | `e718c78fd6de` |
 | [`docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json`](../docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json) | GenesisCode Cargo Cache Policy v0.1 | schema | `10c82a4c531b` |
 | [`docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json`](../docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json) | GenesisCode Changed Impact Policy v0.1 | schema | `dd72983c147a` |
-| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `94bef39674d8` |
+| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `969228a3c70c` |
 | [`docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`](../docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md) | Check/Update Boundary v0.1 | md | `2f34c7dda77d` |
 | [`docs/spec/CLI.md`](../docs/spec/CLI.md) | Genesis CLI v0.2 (Exit Codes + JSON) | md | `62bdef99ec09` |
-| [`docs/spec/CLI_JSON_SCHEMAS_v0.1.md`](../docs/spec/CLI_JSON_SCHEMAS_v0.1.md) | CLI JSON Schemas v0.1 (Non-GCPM) | md | `98f254426fe3` |
+| [`docs/spec/CLI_JSON_SCHEMAS_v0.1.md`](../docs/spec/CLI_JSON_SCHEMAS_v0.1.md) | CLI JSON Schemas v0.1 (Non-GCPM) | md | `9ce0baaa033a` |
 | [`docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`](../docs/spec/CLI_TOOLING_BUNDLE_v0.1.md) | CLI Tooling Bundle v0.1 | md | `aad9743416b9` |
 | [`docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`](../docs/spec/CONCURRENCY_GPU_SLO_v0.1.md) | Concurrency + GPU SLO Contract v0.1 | md | `75224d329c93` |
 | [`docs/spec/CONCURRENCY_v0.1.md`](../docs/spec/CONCURRENCY_v0.1.md) | Concurrency Spec (v0.1) | md | `f03c605523b4` |
@@ -189,7 +190,7 @@ toc-depth: 2
 | [`docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json`](../docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json) | GenesisCode Agent Symbol Index v0.3 | schema | `0f27aabe83fc` |
 | [`docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`](../docs/spec/GC_AGENT_TASK_CARDS_v0.3.json) | genesis/gc-agent-task-cards-v0.3 | json | `cd610a658b33` |
 | [`docs/spec/GC_AGENT_TASK_CARDS_v0.3.md`](../docs/spec/GC_AGENT_TASK_CARDS_v0.3.md) | GC-AGENT-v0.3 Task Cards | md | `5f976c76da68` |
-| [`docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json`](../docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json) | genesis/diagnostic-catalog-v0.1 | json | `d550ff4cf9ca` |
+| [`docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json`](../docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json) | genesis/diagnostic-catalog-v0.1 | json | `65a0d66e9049` |
 | [`docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json`](../docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json) | GC_DIAGNOSTIC_CATALOG_v0.1.schema.json | schema | `d4009ae238f2` |
 | [`docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json`](../docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json) | GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json | schema | `30f034b29478` |
 | [`docs/spec/GC_FAILURE_CONTEXT_v0.1.schema.json`](../docs/spec/GC_FAILURE_CONTEXT_v0.1.schema.json) | GC_FAILURE_CONTEXT_v0.1.schema.json | schema | `2fb670a4dbc5` |
@@ -254,7 +255,7 @@ toc-depth: 2
 | [`docs/spec/VERSIONING_v0.1.md`](../docs/spec/VERSIONING_v0.1.md) | Versioning Policy v0.1 | md | `ee885103b45d` |
 | [`docs/spec/VERSION_SURFACES_v0.1.md`](../docs/spec/VERSION_SURFACES_v0.1.md) | Version Surfaces v0.1 | md | `e93a5e1d332a` |
 | [`docs/spec/VERSION_SURFACES_v0.1.schema.json`](../docs/spec/VERSION_SURFACES_v0.1.schema.json) | GenesisCode Version Surfaces v0.1 | schema | `16e7df06c824` |
-| [`docs/spec/WARM_PROTOCOL_v0.2.schema.json`](../docs/spec/WARM_PROTOCOL_v0.2.schema.json) | GenesisCode warm protocol v0.2 | schema | `565590f7e495` |
+| [`docs/spec/WARM_PROTOCOL_v0.2.schema.json`](../docs/spec/WARM_PROTOCOL_v0.2.schema.json) | GenesisCode warm protocol v0.2 | schema | `dfd140ad32a4` |
 | [`docs/spec/WASI.md`](../docs/spec/WASI.md) | WASI Tooling Build v0.2 (Rust Bootstrap -> genesis.wasm) | md | `702fbcfe8613` |
 | [`docs/spec/WASM.md`](../docs/spec/WASM.md) | WASM Build (Pure Kernel) v0.2 | md | `5137977e4247` |
 | [`docs/spec/WASM_HOST_BRIDGE.md`](../docs/spec/WASM_HOST_BRIDGE.md) | WASM Host Bridge (Effectful Stepping) v0.2 | md | `93f5a2acfa16` |

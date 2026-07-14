@@ -4,6 +4,7 @@ use std::time::Duration;
 use serde_json::json;
 
 use super::*;
+use crate::session_resources::{SessionResourceLimits, SessionResourceOptions};
 use crate::warm_protocol::WARM_PROTOCOL_V02;
 
 pub(super) struct WarmConfig {
@@ -14,6 +15,7 @@ pub(super) struct WarmConfig {
     pub(super) workspace_idle: Duration,
     pub(super) max_requests: u64,
     pub(super) workspace_root: PathBuf,
+    pub(super) resources: SessionResourceLimits,
 }
 
 pub(super) struct WarmOptions<'a> {
@@ -24,19 +26,16 @@ pub(super) struct WarmOptions<'a> {
     pub(super) workspace_idle_ms: u64,
     pub(super) max_requests: u64,
     pub(super) workspace_root: &'a Path,
+    pub(super) resources: SessionResourceOptions,
 }
 
-pub(super) fn inherited_global_args(cli: &Cli) -> Vec<String> {
-    let mut out = Vec::new();
-    if cli.json {
-        out.push("--json".to_string());
-    }
-    if let Some(n) = cli.step_limit {
-        out.extend(["--step-limit".to_string(), n.to_string()]);
-    }
-    if cli.no_step_limit {
-        out.push("--no-step-limit".to_string());
-    }
+pub(super) fn inherited_global_args(cli: &Cli, resources: &SessionResourceLimits) -> Vec<String> {
+    let mut out = vec!["--json".to_string()];
+    let step_limit = cli
+        .step_limit
+        .unwrap_or(gc_kernel::DEFAULT_STEP_LIMIT)
+        .min(resources.max_steps);
+    out.extend(["--step-limit".to_string(), step_limit.to_string()]);
     for (flag, value) in [
         ("--max-pair-cells", cli.max_pair_cells),
         ("--max-vec-len", cli.max_vec_len),
@@ -67,6 +66,10 @@ pub(super) fn inherited_global_args(cli: &Cli) -> Vec<String> {
             frontend.as_str().to_string(),
         ]);
     }
+    out.extend([
+        "--session-max-effects".to_string(),
+        resources.max_effects.to_string(),
+    ]);
     out
 }
 
@@ -98,6 +101,7 @@ pub(super) fn warm_session_cache_key(
             "max_workspaces": config.max_workspaces,
             "workspace_idle_ms": config.workspace_idle.as_millis(),
             "max_requests": config.max_requests,
+            "resources": config.resources.as_json(),
         }
     });
     let mut hasher = blake3::Hasher::new();

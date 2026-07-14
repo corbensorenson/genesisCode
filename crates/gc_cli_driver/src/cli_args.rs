@@ -33,6 +33,10 @@ struct Cli {
     #[arg(long, global = true, value_name = "N")]
     max_string_len: Option<u64>,
 
+    /// Trusted session-runner effect ceiling; direct users should use capability policy.
+    #[arg(long, global = true, hide = true, value_name = "N")]
+    session_max_effects: Option<u64>,
+
     /// Path to selfhost toolchain artifact used when `--engine selfhost` is selected.
     /// Defaults to `./.genesis/selfhost/toolchain.gc` when bootstrap mode allows artifacts.
     #[arg(long, global = true, value_name = "FILE")]
@@ -311,6 +315,46 @@ enum Cmd {
         #[arg(long, default_value_t = 100_000, value_parser = clap::value_parser!(u64).range(1..))]
         max_requests: u64,
 
+        /// Hard wall-clock ceiling for each accepted command.
+        #[arg(long, default_value_t = 300_000, value_parser = clap::value_parser!(u64).range(1..=86_400_000))]
+        max_wall_ms: u64,
+
+        /// Hard CPU ceiling for each accepted command.
+        #[arg(long, default_value_t = 120_000, value_parser = clap::value_parser!(u64).range(1..=86_400_000))]
+        max_cpu_ms: u64,
+
+        /// Maximum kernel evaluation steps for each accepted command.
+        #[arg(long, default_value_t = 50_000_000, value_parser = clap::value_parser!(u64).range(1..))]
+        max_steps: u64,
+
+        /// Maximum aggregate native worker process-tree resident bytes.
+        #[arg(long, default_value_t = 4_294_967_296_u64)]
+        max_heap_bytes: u64,
+
+        /// Maximum captured command output bytes.
+        #[arg(long, default_value_t = 4_194_304)]
+        max_output_bytes: usize,
+
+        /// Maximum host-effect operations in one accepted command.
+        #[arg(long, default_value_t = 4_096, value_parser = clap::value_parser!(u64).range(1..))]
+        max_effects: u64,
+
+        /// Maximum processes in the isolated command process tree.
+        #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u64).range(1..))]
+        max_processes: u64,
+
+        /// Maximum workspace disk growth and individual output-file bytes per command.
+        #[arg(long, default_value_t = 536_870_912_u64)]
+        max_disk_bytes: u64,
+
+        /// Maximum accepted commands drained after EOF or disconnect.
+        #[arg(long, default_value_t = 8)]
+        max_drain_requests: usize,
+
+        /// Total wall time allowed for the bounded disconnect drain.
+        #[arg(long, default_value_t = 30_000, value_parser = clap::value_parser!(u64).range(1..=3_600_000))]
+        drain_timeout_ms: u64,
+
         /// Root beneath which request workspace roots must resolve.
         #[arg(long, default_value = ".")]
         workspace_root: PathBuf,
@@ -337,6 +381,42 @@ enum Cmd {
         /// Maximum number of input frames handled by one session.
         #[arg(long, default_value_t = 100_000, value_parser = clap::value_parser!(u64).range(1..))]
         max_requests: u64,
+
+        /// Hard wall-clock ceiling for each accepted tool call.
+        #[arg(long, default_value_t = 300_000, value_parser = clap::value_parser!(u64).range(1..=86_400_000))]
+        max_wall_ms: u64,
+
+        /// Hard CPU ceiling for each accepted tool call.
+        #[arg(long, default_value_t = 120_000, value_parser = clap::value_parser!(u64).range(1..=86_400_000))]
+        max_cpu_ms: u64,
+
+        /// Maximum kernel evaluation steps for each accepted tool call.
+        #[arg(long, default_value_t = 50_000_000, value_parser = clap::value_parser!(u64).range(1..))]
+        max_steps: u64,
+
+        /// Maximum aggregate native worker process-tree resident bytes.
+        #[arg(long, default_value_t = 4_294_967_296_u64)]
+        max_heap_bytes: u64,
+
+        /// Maximum host-effect operations in one accepted tool call.
+        #[arg(long, default_value_t = 4_096, value_parser = clap::value_parser!(u64).range(1..))]
+        max_effects: u64,
+
+        /// Maximum processes in the isolated command process tree.
+        #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u64).range(1..))]
+        max_processes: u64,
+
+        /// Maximum workspace disk growth and individual output-file bytes per tool call.
+        #[arg(long, default_value_t = 536_870_912_u64)]
+        max_disk_bytes: u64,
+
+        /// Maximum accepted calls drained after EOF or disconnect.
+        #[arg(long, default_value_t = 8)]
+        max_drain_requests: usize,
+
+        /// Total wall time allowed for the bounded disconnect drain.
+        #[arg(long, default_value_t = 30_000, value_parser = clap::value_parser!(u64).range(1..=3_600_000))]
+        drain_timeout_ms: u64,
 
         /// Maximum roots accepted from the MCP client.
         #[arg(long, default_value_t = 32)]

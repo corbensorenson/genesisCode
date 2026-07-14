@@ -5,8 +5,37 @@ use serde_json::json;
 use super::*;
 use crate::warm_protocol::ProtocolError;
 
+pub(super) fn normalize_session_argv(argv: Vec<String>) -> Vec<String> {
+    argv.into_iter()
+        .filter(|argument| argument != "--json")
+        .collect()
+}
+
 pub(super) fn validate_workspace_argv(argv: &[String], root: &Path) -> Result<(), ProtocolError> {
+    const SESSION_OWNED_FLAGS: &[&str] = &[
+        "--step-limit",
+        "--no-step-limit",
+        "--max-pair-cells",
+        "--max-vec-len",
+        "--max-map-len",
+        "--max-bytes-len",
+        "--max-string-len",
+        "--session-max-effects",
+    ];
     for argument in argv {
+        if SESSION_OWNED_FLAGS
+            .iter()
+            .any(|flag| argument == flag || argument.starts_with(&format!("{flag}=")))
+        {
+            return Err(ProtocolError {
+                request_id: None,
+                code: "warm/resource-override",
+                message: "request arguments may not override session-owned resource limits"
+                    .to_string(),
+                retryable: false,
+                details: json!({}),
+            });
+        }
         let path = Path::new(argument);
         if path.is_absolute()
             || path

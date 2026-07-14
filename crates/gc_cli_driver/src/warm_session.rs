@@ -6,11 +6,12 @@ use std::time::{Duration, Instant};
 use serde_json::json;
 
 use super::*;
+use crate::session_resources::{SessionAudit, SessionResourceLimits};
 use crate::warm_protocol::{
     InputEvent, WARM_PROTOCOL_V02, WarmFrame, WarmMethod, parse_frame, read_bounded_event,
     spawn_bounded_reader,
 };
-use crate::warm_request::{build_sub_cli, validate_workspace_argv};
+use crate::warm_request::{build_sub_cli, normalize_session_argv, validate_workspace_argv};
 use crate::warm_session_config::{
     WarmConfig, WarmOptions, inherited_global_args, prime_runtime, warm_session_cache_key,
 };
@@ -20,288 +21,15 @@ use crate::warm_workspace::{evict_idle_workspaces, resolve_workspace};
 
 const POLL_INTERVAL: Duration = Duration::from_millis(5);
 
-fn handle_frame(
-    frame: WarmFrame,
-    state: &mut SessionState,
-    config: &WarmConfig,
-    inherited: &[String],
-    cli: &Cli,
-    flavor: Flavor,
-    evicted_workspaces: usize,
-) -> Result<Option<WorkerResult>, CliError> {
-    if !state.seen_ids.insert(frame.id.clone()) {
-        state.protocol_error(
-            Some(frame.id),
-            "warm/duplicate-id",
-            "request ID was already used in this generation",
-            false,
-            json!({}),
-            evicted_workspaces,
-        )?;
-        return Ok(None);
-    }
-
-    if !state.initialized && !matches!(frame.method, WarmMethod::Initialize { .. }) {
-        state.protocol_error(
-            Some(frame.id),
-            "warm/not-initialized",
-            "initialize must be the first method in each generation",
-            true,
-            json!({"generation": state.generation}),
-            evicted_workspaces,
-        )?;
-        return Ok(None);
-    }
-
-    match frame.method {
-        WarmMethod::Initialize {
-            client_name,
-            client_version,
-        } => {
-            if state.initialized {
-                state.protocol_error(
-                    Some(frame.id),
-                    "warm/already-initialized",
-                    "session generation is already initialized",
-                    false,
-                    json!({}),
-                    evicted_workspaces,
-                )?;
-            } else {
-                state.initialized = true;
-                state.emit_success(
-                    &frame.id,
-                    "initialized",
-                    json!({
-                        "server": {"name": "genesis", "version": env!("CARGO_PKG_VERSION")},
-                        "client": {"name": client_name, "version": client_version},
-                        "limits": {
-                            "max_queue": config.max_queue,
-                            "max_frame_bytes": config.max_frame_bytes,
-                            "max_workspaces": config.max_workspaces,
-                            "workspace_idle_ms": config.workspace_idle.as_millis(),
-                            "max_requests": config.max_requests,
-                        },
-                        "capabilities": {
-                            "concurrent_control": matches!(flavor, Flavor::Native),
-                            "queued_cancellation": true,
-                            "running_cancellation": "cooperative-result-suppression",
-                            "hard_termination": false,
-                            "restart": "idle-only",
-                        }
-                    }),
-                    evicted_workspaces,
-                )?;
-            }
-        }
-        WarmMethod::Execute {
-            workspace,
-            argv,
-            deadline_ms,
-        } => {
-            if state.shutting_down {
-                state.protocol_error(
-                    Some(frame.id),
-                    "warm/shutting-down",
-                    "session is draining and no longer accepts execution",
-                    true,
-                    json!({}),
-                    evicted_workspaces,
-                )?;
-            } else if state.pending.len() >= config.max_queue {
-                state.protocol_error(
-                    Some(frame.id),
-                    "warm/queue-full",
-                    "bounded execute queue is full",
-                    true,
-                    json!({"limit": config.max_queue}),
-                    evicted_workspaces,
-                )?;
-            } else {
-                let request_id = frame.id.clone();
-                let result = resolve_workspace(state, config, &workspace).and_then(|root| {
-                    validate_workspace_argv(&argv, &root)?;
-                    let sub_cli = build_sub_cli(inherited, &argv)?;
-                    Ok((root, sub_cli))
-                });
-                match result {
-                    Ok((workspace_root, sub_cli)) => {
-                        let deadline = deadline_ms.and_then(|milliseconds| {
-                            Instant::now().checked_add(Duration::from_millis(milliseconds))
-                        });
-                        let accepted_index = state.accepted_requests;
-                        state.accepted_requests = state.accepted_requests.saturating_add(1);
-                        state.pending.push_back(PendingRequest {
-                            id: request_id.clone(),
-                            cli: sub_cli,
-                            workspace_id: workspace.id,
-                            workspace_root,
-                            deadline,
-                            accepted_index,
-                        });
-                        state.emit_success(
-                            &request_id,
-                            "accepted",
-                            json!({"accepted_index": accepted_index}),
-                            evicted_workspaces,
-                        )?;
-                    }
-                    Err(mut error) => {
-                        error.request_id = Some(request_id);
-                        state.emit_error(error, evicted_workspaces)?;
-                    }
-                }
-            }
-        }
-        WarmMethod::Cancel { target_id } => {
-            if let Some(position) = state
-                .pending
-                .iter()
-                .position(|request| request.id == target_id)
-            {
-                if let Some(target) = state.pending.remove(position) {
-                    state.protocol_error(
-                        Some(target.id),
-                        "warm/cancelled",
-                        "queued request was cancelled before execution",
-                        false,
-                        json!({"hard_termination": false}),
-                        evicted_workspaces,
-                    )?;
-                }
-                state.emit_success(
-                    &frame.id,
-                    "cancelled",
-                    json!({"target_id": target_id, "target_state": "queued"}),
-                    evicted_workspaces,
-                )?;
-            } else if state
-                .running
-                .as_ref()
-                .is_some_and(|request| request.id == target_id)
-            {
-                if let Some(running) = state.running.as_mut() {
-                    running.cancellation_requested = true;
-                }
-                state.emit_success(
-                    &frame.id,
-                    "cancellation-requested",
-                    json!({
-                        "target_id": target_id,
-                        "target_state": "running",
-                        "hard_termination": false,
-                    }),
-                    evicted_workspaces,
-                )?;
-            } else {
-                state.protocol_error(
-                    Some(frame.id),
-                    "warm/cancel-target",
-                    "cancel target is not queued or running",
-                    false,
-                    json!({"target_id": target_id}),
-                    evicted_workspaces,
-                )?;
-            }
-        }
-        WarmMethod::Restart => {
-            if state.running.is_some() || !state.pending.is_empty() {
-                state.protocol_error(
-                    Some(frame.id),
-                    "warm/restart-busy",
-                    "graceful restart requires an idle worker and empty queue",
-                    true,
-                    json!({}),
-                    evicted_workspaces,
-                )?;
-            } else {
-                match prime_runtime(cli, config.prime_selfhost) {
-                    Ok(()) => {
-                        state.generation = state.generation.saturating_add(1);
-                        state.initialized = false;
-                        state.workspaces.clear();
-                        state.seen_ids.clear();
-                        state.emit_success(
-                            &frame.id,
-                            "restarted",
-                            json!({"requires_initialize": true}),
-                            evicted_workspaces,
-                        )?;
-                    }
-                    Err(error) => {
-                        state.protocol_error(
-                            Some(frame.id),
-                            "warm/restart-failed",
-                            "runtime priming failed during restart",
-                            true,
-                            json!({"command_error": error.json.code}),
-                            evicted_workspaces,
-                        )?;
-                    }
-                }
-            }
-        }
-        WarmMethod::Shutdown => {
-            state.shutting_down = true;
-            state.emit_success(
-                &frame.id,
-                "draining",
-                json!({
-                    "running": state.running.is_some(),
-                    "queued": state.pending.len(),
-                }),
-                evicted_workspaces,
-            )?;
-        }
-        WarmMethod::Ping => {
-            state.emit_success(
-                &frame.id,
-                "ready",
-                json!({"initialized": state.initialized, "shutting_down": state.shutting_down}),
-                evicted_workspaces,
-            )?;
-        }
-    }
-    Ok(None)
-}
-
-fn expire_pending(state: &mut SessionState) -> Result<(), CliError> {
-    let expired = state
-        .pending
-        .iter()
-        .filter(|request| {
-            request
-                .deadline
-                .is_some_and(|deadline| Instant::now() >= deadline)
-        })
-        .map(|request| request.id.clone())
-        .collect::<HashSet<_>>();
-    if expired.is_empty() {
-        return Ok(());
-    }
-    let mut retained = VecDeque::new();
-    while let Some(request) = state.pending.pop_front() {
-        if expired.contains(&request.id) {
-            state.protocol_error(
-                Some(request.id),
-                "warm/deadline-exceeded",
-                "request deadline expired before execution",
-                false,
-                json!({"phase": "queued", "hard_termination": false}),
-                0,
-            )?;
-        } else {
-            retained.push_back(request);
-        }
-    }
-    state.pending = retained;
-    Ok(())
-}
+mod admission;
+use admission::{begin_drain, enforce_drain_deadline, expire_pending, handle_frame};
 
 fn start_next(
     state: &mut SessionState,
     flavor: Flavor,
     worker_sender: &mpsc::Sender<WorkerResult>,
+    config: &WarmConfig,
+    inherited: &[String],
 ) -> Result<Option<WorkerResult>, CliError> {
     if state.running.is_some() {
         return Ok(None);
@@ -313,12 +41,19 @@ fn start_next(
         .deadline
         .is_some_and(|deadline| Instant::now() >= deadline)
     {
+        state.cancelled_requests = state.cancelled_requests.saturating_add(1);
+        let audit = SessionAudit::not_started(&config.resources, "queue-deadline-expired");
         state.protocol_error(
             Some(request.id),
             "warm/deadline-exceeded",
             "request deadline expired before execution",
             false,
-            json!({"phase": "queued", "hard_termination": false}),
+            json!({
+                "accepted_index": request.accepted_index,
+                "phase": "queued",
+                "hard_termination": false,
+                "audit": audit.as_json(),
+            }),
             0,
         )?;
         return Ok(None);
@@ -330,36 +65,67 @@ fn start_next(
         accepted_index: request.accepted_index,
         cancellation_requested: false,
         deadline_expired: false,
+        drain_timeout: false,
+        control: None,
     };
+    let mut limits = config.resources.clone();
+    if let Some(deadline) = request.deadline {
+        limits.max_wall = limits
+            .max_wall
+            .min(deadline.saturating_duration_since(Instant::now()));
+    }
     let job = WorkerJob {
         request_id: request.id,
         cli: request.cli,
         flavor,
         workspace_root: request.workspace_root,
+        inherited: inherited.to_vec(),
+        argv: request.argv,
+        limits,
     };
     state.running = Some(running);
     if matches!(flavor, Flavor::Wasi) {
         return Ok(Some(run_worker_inline(job)));
     }
-    if let Err(message) = spawn_worker(job, worker_sender.clone()) {
-        let request_id = state.running.take().map(|request| request.id);
-        state.protocol_error(
-            request_id,
-            "warm/worker-launch",
-            "failed to launch warm worker",
-            true,
-            json!({"reason": message}),
-            0,
-        )?;
+    match spawn_worker(job, worker_sender.clone()) {
+        Ok(control) => {
+            if let Some(running) = state.running.as_mut() {
+                running.control = Some(control);
+            }
+        }
+        Err(message) => {
+            let running = state.running.take();
+            let request_id = running.as_ref().map(|request| request.id.clone());
+            let audit = SessionAudit::not_started(&config.resources, "worker-launch-failed");
+            state.protocol_error(
+                request_id,
+                "warm/worker-launch",
+                "failed to launch warm worker",
+                true,
+                json!({
+                    "accepted_index": running.map(|request| request.accepted_index),
+                    "reason": message,
+                    "audit": audit.as_json(),
+                }),
+                0,
+            )?;
+        }
     }
     Ok(None)
 }
 
-fn handle_worker_result(state: &mut SessionState, outcome: WorkerResult) -> Result<(), CliError> {
+fn handle_worker_result(
+    state: &mut SessionState,
+    outcome: WorkerResult,
+    limits: &SessionResourceLimits,
+) -> Result<(), CliError> {
     let outcome_id = match &outcome {
         WorkerResult::Completed { request_id, .. }
+        | WorkerResult::CommandError { request_id, .. }
         | WorkerResult::WorkspaceError { request_id, .. }
-        | WorkerResult::Crashed { request_id } => request_id,
+        | WorkerResult::Crashed { request_id, .. }
+        | WorkerResult::Cancelled { request_id, .. }
+        | WorkerResult::ResourceExceeded { request_id, .. } => request_id,
     };
     if state
         .running
@@ -371,81 +137,176 @@ fn handle_worker_result(state: &mut SessionState, outcome: WorkerResult) -> Resu
     let Some(running) = state.running.take() else {
         return Ok(());
     };
+    let audit = match &outcome {
+        WorkerResult::Completed { audit, .. }
+        | WorkerResult::CommandError { audit, .. }
+        | WorkerResult::Crashed { audit, .. }
+        | WorkerResult::Cancelled { audit, .. }
+        | WorkerResult::ResourceExceeded { audit, .. } => Some(audit.as_json()),
+        WorkerResult::WorkspaceError { audit, .. } => audit.as_ref().map(SessionAudit::as_json),
+    };
+    let hard_termination = audit
+        .as_ref()
+        .and_then(|audit| audit.get("worker_profile"))
+        .and_then(serde_json::Value::as_str)
+        == Some("native-isolated-v0.1");
+    if running.drain_timeout {
+        state.cancelled_requests = state.cancelled_requests.saturating_add(1);
+        return state.protocol_error(
+            Some(running.id),
+            "warm/drain-timeout",
+            "running request was terminated when the bounded drain expired",
+            false,
+            json!({
+                "phase": "running",
+                "reason": state.drain_reason,
+                "hard_termination": hard_termination,
+                "audit": audit,
+            }),
+            0,
+        );
+    }
     if running.deadline_expired
         || running
             .deadline
             .is_some_and(|deadline| Instant::now() >= deadline)
     {
+        state.cancelled_requests = state.cancelled_requests.saturating_add(1);
         return state.protocol_error(
             Some(running.id),
             "warm/deadline-exceeded",
             "request deadline expired during execution",
             false,
-            json!({"phase": "running", "hard_termination": false}),
+            json!({"phase": "running", "hard_termination": hard_termination, "audit": audit}),
             0,
         );
     }
     if running.cancellation_requested {
+        state.cancelled_requests = state.cancelled_requests.saturating_add(1);
         return state.protocol_error(
             Some(running.id),
             "warm/cancelled",
-            "running request completed after cooperative cancellation was requested",
+            "running request was cancelled and its worker was reaped",
             false,
-            json!({"phase": "running", "hard_termination": false}),
+            json!({"phase": "running", "hard_termination": hard_termination, "audit": audit}),
             0,
         );
     }
     match outcome {
         WorkerResult::Completed {
-            result: Ok(output), ..
-        } => state.emit_success(
-            &running.id,
-            "completed",
-            json!({
-                "accepted_index": running.accepted_index,
-                "exit_code": output.exit_code,
-                "result": output.json,
-            }),
-            0,
-        ),
+            result: Ok(output),
+            audit,
+            ..
+        } => {
+            state.completed_requests = state.completed_requests.saturating_add(1);
+            state.emit_success(
+                &running.id,
+                "completed",
+                json!({
+                    "accepted_index": running.accepted_index,
+                    "exit_code": output.exit_code,
+                    "result": output.json,
+                    "audit": audit.as_json(),
+                }),
+                0,
+            )
+        }
         WorkerResult::Completed {
-            result: Err(error), ..
-        } => state.protocol_error(
-            Some(running.id),
-            "warm/command-error",
-            "command returned a typed CLI error",
-            false,
-            json!({
-                "accepted_index": running.accepted_index,
-                "exit_code": error.exit_code,
-                "command_error": error.json,
-            }),
-            0,
-        ),
-        WorkerResult::WorkspaceError { message, .. } => state.protocol_error(
+            result: Err(error),
+            audit,
+            ..
+        } => {
+            state.completed_requests = state.completed_requests.saturating_add(1);
+            state.protocol_error(
+                Some(running.id),
+                "warm/command-error",
+                "command returned a typed CLI error",
+                false,
+                json!({
+                    "accepted_index": running.accepted_index,
+                    "exit_code": error.exit_code,
+                    "command_error": error.json,
+                    "audit": audit.as_json(),
+                }),
+                0,
+            )
+        }
+        WorkerResult::CommandError {
+            exit_code,
+            envelope,
+            audit,
+            ..
+        } => {
+            state.completed_requests = state.completed_requests.saturating_add(1);
+            state.protocol_error(
+                Some(running.id),
+                "warm/command-error",
+                "command returned a typed CLI error",
+                false,
+                json!({
+                    "accepted_index": running.accepted_index,
+                    "exit_code": exit_code,
+                    "command_envelope": envelope,
+                    "audit": audit.as_json(),
+                }),
+                0,
+            )
+        }
+        WorkerResult::WorkspaceError { message, audit, .. } => state.protocol_error(
             Some(running.id),
             "warm/workspace-transition",
             "worker could not enter or restore the request workspace",
             true,
-            json!({"reason": message}),
+            json!({"reason": message, "audit": audit.map(|audit| audit.as_json())}),
             0,
         ),
-        WorkerResult::Crashed { .. } => {
+        WorkerResult::Crashed { audit, .. } => {
             state.protocol_error(
                 Some(running.id),
                 "warm/worker-crash",
                 "worker crashed; session generation was reset",
                 true,
-                json!({"requires_initialize": true}),
+                json!({"requires_initialize": true, "audit": audit.as_json()}),
                 0,
             )?;
-            state.discard_pending_after_crash()?;
+            state.discard_pending_after_crash(limits)?;
             state.crash_count = state.crash_count.saturating_add(1);
             state.generation = state.generation.saturating_add(1);
             state.initialized = false;
             state.workspaces.clear();
             state.seen_ids.clear();
             Ok(())
+        }
+        WorkerResult::Cancelled { audit, .. } => {
+            state.cancelled_requests = state.cancelled_requests.saturating_add(1);
+            state.protocol_error(
+                Some(running.id),
+                "warm/cancelled",
+                "worker was cancelled and reaped",
+                false,
+                json!({"phase": "running", "hard_termination": true, "audit": audit.as_json()}),
+                0,
+            )
+        }
+        WorkerResult::ResourceExceeded {
+            resource,
+            command_envelope,
+            audit,
+            ..
+        } => {
+            state.resource_exceeded_requests = state.resource_exceeded_requests.saturating_add(1);
+            state.protocol_error(
+                Some(running.id),
+                "warm/resource-exceeded",
+                "isolated worker exceeded a session resource limit",
+                false,
+                json!({
+                    "resource": resource,
+                    "command_envelope": command_envelope,
+                    "audit": audit.as_json(),
+                }),
+                0,
+            )
         }
     }
 }
@@ -510,9 +371,9 @@ fn process_input_event(
                 json!({"reason": message}),
                 0,
             )?;
-            state.input_eof = true;
+            begin_drain(state, config, "input-io", true)?;
         }
-        InputEvent::Eof => state.input_eof = true,
+        InputEvent::Eof => begin_drain(state, config, "eof", true)?,
     }
     Ok(())
 }
@@ -531,11 +392,12 @@ fn run_native_loop(
     let (worker_sender, worker_receiver) = mpsc::channel();
     loop {
         if let Ok(outcome) = worker_receiver.try_recv() {
-            handle_worker_result(state, outcome)?;
+            handle_worker_result(state, outcome, &config.resources)?;
         }
-        expire_pending(state)?;
-        if let Some(outcome) = start_next(state, flavor, &worker_sender)? {
-            handle_worker_result(state, outcome)?;
+        enforce_drain_deadline(state, config)?;
+        expire_pending(state, config)?;
+        if let Some(outcome) = start_next(state, flavor, &worker_sender, config, inherited)? {
+            handle_worker_result(state, outcome, &config.resources)?;
         }
         if let Some(running) = state.running.as_mut()
             && running
@@ -543,6 +405,9 @@ fn run_native_loop(
                 .is_some_and(|deadline| Instant::now() >= deadline)
         {
             running.deadline_expired = true;
+            if let Some(control) = &running.control {
+                control.cancel();
+            }
         }
         if (state.shutting_down || state.input_eof)
             && state.running.is_none()
@@ -555,17 +420,21 @@ fn run_native_loop(
                 process_input_event(event, state, config, inherited, cli, flavor)?;
                 continue;
             }
-            Err(TryRecvError::Disconnected) => state.input_eof = true,
+            Err(TryRecvError::Disconnected) => {
+                begin_drain(state, config, "input-disconnected", true)?
+            }
             Err(TryRecvError::Empty) => {}
         }
         if state.running.is_some() {
             if let Ok(outcome) = worker_receiver.recv_timeout(POLL_INTERVAL) {
-                handle_worker_result(state, outcome)?;
+                handle_worker_result(state, outcome, &config.resources)?;
             }
         } else if !state.input_eof && !state.shutting_down {
             match input_receiver.recv_timeout(POLL_INTERVAL) {
                 Ok(event) => process_input_event(event, state, config, inherited, cli, flavor)?,
-                Err(mpsc::RecvTimeoutError::Disconnected) => state.input_eof = true,
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    begin_drain(state, config, "input-disconnected", true)?
+                }
                 Err(mpsc::RecvTimeoutError::Timeout) => {}
             }
         }
@@ -584,9 +453,10 @@ fn run_wasi_loop(
     let mut reader = stdin.lock();
     let (worker_sender, _worker_receiver): (_, Receiver<WorkerResult>) = mpsc::channel();
     loop {
-        expire_pending(state)?;
-        if let Some(outcome) = start_next(state, flavor, &worker_sender)? {
-            handle_worker_result(state, outcome)?;
+        expire_pending(state, config)?;
+        enforce_drain_deadline(state, config)?;
+        if let Some(outcome) = start_next(state, flavor, &worker_sender, config, inherited)? {
+            handle_worker_result(state, outcome, &config.resources)?;
         }
         if (state.shutting_down || state.input_eof)
             && state.running.is_none()
@@ -613,6 +483,7 @@ pub(super) fn cmd_warm(
         workspace_idle_ms,
         max_requests,
         workspace_root,
+        resources,
     } = options;
     if !(1..=4096).contains(&max_queue) {
         return Err(cli_err(
@@ -642,6 +513,8 @@ pub(super) fn cmd_warm(
             "configured workspace root does not resolve to an existing directory",
         )
     })?;
+    let resources = SessionResourceLimits::from_options(resources)
+        .map_err(|message| cli_err(EX_PARSE, "warm/resource-limit", message))?;
     let config = WarmConfig {
         prime_selfhost,
         max_queue,
@@ -650,9 +523,10 @@ pub(super) fn cmd_warm(
         workspace_idle: Duration::from_millis(workspace_idle_ms),
         max_requests,
         workspace_root,
+        resources,
     };
     prime_runtime(cli, config.prime_selfhost)?;
-    let inherited = inherited_global_args(cli);
+    let inherited = inherited_global_args(cli, &config.resources);
     let mut state = SessionState {
         initialized: false,
         generation: 0,
@@ -660,8 +534,13 @@ pub(super) fn cmd_warm(
         accepted_requests: 0,
         response_sequence: 0,
         crash_count: 0,
+        completed_requests: 0,
+        cancelled_requests: 0,
+        resource_exceeded_requests: 0,
         shutting_down: false,
         input_eof: false,
+        drain_deadline: None,
+        drain_reason: None,
         session_cache_key: warm_session_cache_key(cli, flavor, &config, &inherited),
         seen_ids: HashSet::new(),
         workspaces: HashMap::new(),
@@ -682,8 +561,18 @@ pub(super) fn cmd_warm(
             "requests_accepted": state.accepted_requests,
             "generation": state.generation,
             "crash_count": state.crash_count,
+            "requests_completed": state.completed_requests,
+            "requests_cancelled": state.cancelled_requests,
+            "requests_resource_exceeded": state.resource_exceeded_requests,
             "prime_selfhost": config.prime_selfhost,
             "session_cache_key": state.session_cache_key,
+            "resource_limits": config.resources.as_json(),
+            "resource_identity": config.resources.identity(),
+            "drain": {
+                "reason": state.drain_reason,
+                "max_requests": config.resources.max_drain_requests,
+                "timeout_ms": config.resources.drain_timeout.as_millis(),
+            },
         })),
         error: None,
     };

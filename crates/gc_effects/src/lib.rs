@@ -42,5 +42,13 @@ pub fn set_force_wasi_remote_profile(enabled: bool) {
     runner::set_force_wasi_remote_profile(enabled);
 }
 
+/// Tighten the effect-operation ceiling for an isolated agent-session worker.
+///
+/// `None` clears the session ceiling. Capability policy remains authoritative;
+/// when both limits exist, the lower limit wins.
+pub fn set_session_effect_ceiling(limit: Option<u64>) {
+    runner::set_session_effect_ceiling(limit);
+}
+
 #[cfg(test)]
 mod tests;

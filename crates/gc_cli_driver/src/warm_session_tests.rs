@@ -3,6 +3,26 @@ use std::path::PathBuf;
 
 use crate::warm_workspace::WorkspaceEntry;
 
+fn limits() -> SessionResourceLimits {
+    SessionResourceLimits::from_options(crate::session_resources::SessionResourceOptions {
+        max_wall_ms: 1_000,
+        max_cpu_ms: 1_000,
+        max_steps: 1_000,
+        max_heap_bytes: 64 * 1024 * 1024,
+        max_output_bytes: 1024,
+        max_effects: 1,
+        max_processes: 1,
+        max_disk_bytes: 1024 * 1024,
+        max_drain_requests: 1,
+        drain_timeout_ms: 100,
+    })
+    .expect("limits")
+}
+
+fn audit() -> SessionAudit {
+    SessionAudit::not_started(&limits(), "test-crash")
+}
+
 fn state() -> SessionState {
     SessionState {
         initialized: true,
@@ -11,8 +31,13 @@ fn state() -> SessionState {
         accepted_requests: 0,
         response_sequence: 0,
         crash_count: 0,
+        completed_requests: 0,
+        cancelled_requests: 0,
+        resource_exceeded_requests: 0,
         shutting_down: false,
         input_eof: false,
+        drain_deadline: None,
+        drain_reason: None,
         session_cache_key: "0".repeat(64),
         seen_ids: HashSet::new(),
         workspaces: HashMap::new(),
@@ -48,6 +73,7 @@ fn idle_eviction_preserves_active_workspace() {
     state.pending.push_back(PendingRequest {
         id: "request".to_string(),
         cli: fixture_cli(),
+        argv: vec!["cli-schema".to_string()],
         workspace_id: "active".to_string(),
         workspace_root: PathBuf::from("active"),
         deadline: None,
@@ -69,10 +95,13 @@ fn worker_crash_resets_generation_and_discards_queue() {
         accepted_index: 0,
         cancellation_requested: false,
         deadline_expired: false,
+        drain_timeout: false,
+        control: None,
     });
     state.pending.push_back(PendingRequest {
         id: "queued".to_string(),
         cli: fixture_cli(),
+        argv: vec!["cli-schema".to_string()],
         workspace_id: "ws".to_string(),
         workspace_root: PathBuf::from("ws"),
         deadline: None,
@@ -83,7 +112,9 @@ fn worker_crash_resets_generation_and_discards_queue() {
         &mut state,
         WorkerResult::Crashed {
             request_id: "running".to_string(),
+            audit: audit(),
         },
+        &limits(),
     )
     .unwrap();
 

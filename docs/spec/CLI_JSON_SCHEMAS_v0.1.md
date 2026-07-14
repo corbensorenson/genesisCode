@@ -247,38 +247,60 @@ observed by an embedding runtime) uses `genesis/warm-session-v0.2`.
    parsed CLI command. Rebinding an active workspace ID, absolute paths, parent
    traversal, and symlink escape fail closed. A single serialized dispatcher
    prevents process-current-directory overlap between workspaces.
-4. `cancel` removes queued work immediately. For running pure CLI work in v0.2,
-   cancellation and deadlines are cooperative result suppression: the command
-   is allowed to quiesce, but its result is replaced by `warm/cancelled` or
-   `warm/deadline-exceeded`. Initialization advertises
-   `hard_termination = false`; clients MUST NOT infer process termination.
-   Kill-and-reap semantics for effectful host children are a separate R1.3.b
-   contract.
+4. `cancel` terminalizes queued work immediately with a `not-started-v0.1`
+   audit. In native Unix mode, each running command occupies a fresh process
+   tree rooted at that group. Cancellation, request deadlines, session wall limits, disconnect
+   drain expiry, and monitored resource violations send `SIGKILL` to that
+   process tree and reap its leader before the terminal response is emitted.
+   Initialization advertises `hard_termination = true` only for that profile.
 5. `restart` succeeds only while idle, advances the generation, clears all
    workspace and ID bindings, and requires a new `initialize`. A contained
    worker panic performs the same generation reset, emits
    `warm/worker-crash`, and fails queued requests as
    `warm/worker-restarted` rather than replaying uncertain work.
-6. `shutdown` stops admission and drains accepted work. EOF has the same drain
-   behavior. No accepted request is silently discarded during an ordinary
-   shutdown.
+6. `shutdown`, EOF, input failure, and disconnect stop admission. At most
+   `max_drain_requests`, including the active request, remain eligible to run;
+   excess accepted requests receive `warm/drain-bounded`. The retained set has
+   one total `drain_timeout_ms` deadline. Expiry kills and reaps the active
+   worker and terminalizes the rest as `warm/drain-timeout`. Every accepted ID
+   therefore receives exactly one terminal response even when input closes.
 
 ### Bounds and isolation
 
 - Frame allocation is bounded before UTF-8 or JSON decoding. Oversized lines
   are fully drained so the next frame remains parseable.
 - Input transport capacity, execute queue depth, workspace count, argv count,
-  argv entry size, deadline, session frame count, and workspace idle lifetime
-  are finite and reported by `initialize`.
+  argv entry size, deadline, session frame count, workspace idle lifetime,
+  disconnect drain set, and disconnect drain time are finite and reported by
+  `initialize`.
+- `docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json` closes the resource and
+  audit shapes. Each native command has finite wall, aggregate CPU, kernel
+  steps, aggregate process-group resident memory, combined output, effect-op,
+  process-count, and workspace-growth ceilings. Clients cannot override these
+  session-owned limits in request argv.
+- Native output pipes continue draining after their capture ceiling, while the
+  process group is killed. Disk enforcement combines inherited per-file OS
+  limits with periodic and final base-relative workspace growth accounting.
+  CPU, resident memory, and process count are sampled recursively across the
+  complete process tree, including host-bridge descendants that create their
+  own process groups.
+- `genesis/agent-session-audit-v0.1` records the limit-set BLAKE3 identity,
+  worker profile, observed wall/CPU/output/effects/disk/peak-memory/peak-process
+  values, enforcement mechanisms, termination mode, and exceeded dimension.
+  Native terminal successes place it at `data.audit`; terminal protocol errors
+  place it at `error.details.audit`. Host absolute paths are forbidden.
 - Valid, malformed, oversized, and invalid-UTF-8 frames all consume the finite
   session frame budget. EOF and transport failures do not.
 - Workspace roots resolve beneath `--workspace-root`; response metadata and
   typed errors do not expose the configured absolute root. Idle eviction never
   removes a queued or running request's workspace.
-- Native mode accepts cancellation and control frames while one worker runs.
-  WASI mode advertises `concurrent_control = false` and processes the same wire
-  format sequentially. Clients negotiate from capabilities instead of assuming
-  runtime parity where concurrency is unavailable.
+- Native macOS/Linux mode accepts cancellation and control frames while one
+  isolated worker runs. Other native targets fail closed at worker launch.
+  WASI mode advertises `concurrent_control = false`,
+  `hard_termination = false`, and `wasi-inline-v0.1`; it enforces logical
+  step/shape/effect/output bounds but explicitly reports unavailable native OS
+  CPU/process hard isolation. Clients MUST negotiate the worker profile and
+  MUST NOT infer native hard-cancellation parity from wire-version parity.
 
 ### Closed frame examples
 
@@ -388,8 +410,10 @@ and argument vector has a finite configured bound.
 - MCP Tasks are experimental in revision `2025-11-25`. Every core tool declares
   `execution.taskSupport = "forbidden"`; task methods and task-augmented calls
   fail unless a future separately versioned extension is explicitly negotiated.
-- EOF terminates the session after the active in-process command boundary has
-  returned. There is no private shutdown method.
+- EOF/disconnect stops admission and applies the same finite drain-set and
+  drain-time contract as warm mode. Every accepted call receives a terminal
+  JSON-RPC result/error when stdout remains writable. There is no private
+  shutdown method.
 
 ### Generated tool authority
 
@@ -428,11 +452,15 @@ valid list. Embedded JSON is parsed before use; malformed authorities fail close
 
 - A valid `_meta.progressToken` produces strictly increasing progress values
   `0` then `1`; no progress is emitted after completion or cancellation.
-- `notifications/cancelled` removes queued calls. For an active in-process CLI
-  call it marks the request cancelled and suppresses every late progress/result
-  frame. Host bridge children reached by that call retain the hard kill-and-reap
-  timeout guarantee specified by R1.3.b. General per-call wall/CPU isolation is
-  intentionally owned by R1.3.e and is not claimed here.
+- `notifications/cancelled` terminalizes queued calls with JSON-RPC `-32800` and
+  a not-started audit. For an active native call it kills and reaps the complete
+  isolated process tree before emitting `-32800`; late progress/result frames
+  are impossible. Disconnect drain cancellation uses `-32005` or `-32006`.
+- Initialization advertises `experimental.genesis/sessionResources` with the
+  closed limits and their identity. Successful tool results carry the audit in
+  `_meta["genesis/sessionAudit"]`; cancellation, resource, worker, and drain
+  errors carry it in `error.data.audit`. An oversized transport fallback
+  preserves this audit.
 - Parse, request-shape, method, parameter, initialization, root, queue, frame,
   output, worker, and resource failures use bounded JSON-RPC errors. CLI semantic
   failures remain typed Genesis tool results rather than transport failures.

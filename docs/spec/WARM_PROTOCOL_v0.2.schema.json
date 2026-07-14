@@ -122,6 +122,9 @@
         "crash_count": {"type": "integer", "minimum": 0}
       }
     },
+    "sessionAudit": {
+      "$ref": "AGENT_SESSION_RESOURCES_v0.1.schema.json#/$defs/audit"
+    },
     "response": {
       "type": "object",
       "additionalProperties": false,
@@ -144,6 +147,57 @@
         {
           "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
           "then": {"properties": {"data": {"type": "null"}, "error": {"$ref": "#/$defs/error"}}}
+        },
+        {
+          "if": {"properties": {"status": {"const": "completed"}}, "required": ["status"]},
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["audit"],
+                "properties": {"audit": {"$ref": "#/$defs/sessionAudit"}}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "error": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "warm/cancelled",
+                      "warm/command-error",
+                      "warm/deadline-exceeded",
+                      "warm/drain-bounded",
+                      "warm/drain-timeout",
+                      "warm/resource-exceeded",
+                      "warm/worker-crash",
+                      "warm/worker-launch",
+                      "warm/worker-restarted",
+                      "warm/workspace-transition"
+                    ]
+                  }
+                },
+                "required": ["code"]
+              }
+            },
+            "required": ["error"]
+          },
+          "then": {
+            "properties": {
+              "error": {
+                "properties": {
+                  "details": {
+                    "required": ["audit"],
+                    "properties": {"audit": {"$ref": "#/$defs/sessionAudit"}}
+                  }
+                }
+              }
+            }
+          }
         }
       ]
     }

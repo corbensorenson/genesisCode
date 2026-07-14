@@ -1,5 +1,21 @@
 use super::*;
 
+fn limits() -> SessionResourceLimits {
+    SessionResourceLimits::from_options(crate::session_resources::SessionResourceOptions {
+        max_wall_ms: 1_000,
+        max_cpu_ms: 1_000,
+        max_steps: 1_000,
+        max_heap_bytes: 64 * 1024 * 1024,
+        max_output_bytes: 1024,
+        max_effects: 1,
+        max_processes: 1,
+        max_disk_bytes: 1024 * 1024,
+        max_drain_requests: 1,
+        drain_timeout_ms: 100,
+    })
+    .expect("limits")
+}
+
 #[test]
 fn roots_reject_escape_and_non_file_schemes() {
     let root = std::env::current_dir()
@@ -13,6 +29,7 @@ fn roots_reject_escape_and_non_file_schemes() {
         max_requests: 10,
         max_roots: 2,
         workspace_boundary: root.clone(),
+        resources: limits(),
     };
     assert!(validate_roots(&[json!({"uri": "https://example.com"})], &config).is_err());
     let parent = root.parent().expect("parent");
@@ -35,7 +52,7 @@ fn multiple_roots_require_an_explicit_exact_uri() {
 }
 
 #[test]
-fn cancellation_removes_queued_calls_and_suppresses_running_calls() {
+fn cancellation_returns_queued_calls_for_terminal_provenance_and_marks_running_calls() {
     let cwd = std::env::current_dir().expect("cwd");
     let cli = Cli::try_parse_from(["genesis", "mcp"]).expect("CLI");
     let mut state = State::new(&cwd);
@@ -46,8 +63,11 @@ fn cancellation_removes_queued_calls_and_suppresses_running_calls() {
         progress_token: Some(json!("progress")),
         cli,
         workspace_root: cwd,
+        argv: vec!["cli-schema".to_string()],
+        inherited: vec!["--json".to_string()],
     });
-    cancel_request(&json!({"requestId": "queued"}), &mut state);
+    let cancelled = cancel_request(&json!({"requestId": "queued"}), &mut state);
+    assert!(cancelled.is_some());
     assert!(state.pending.is_empty());
     assert!(!state.active_ids.contains("\"queued\""));
 
@@ -56,7 +76,9 @@ fn cancellation_removes_queued_calls_and_suppresses_running_calls() {
         key: "7".to_string(),
         progress_token: None,
         cancelled: false,
+        drain_timeout: false,
+        control: None,
     });
-    cancel_request(&json!({"requestId": 7}), &mut state);
+    assert!(cancel_request(&json!({"requestId": 7}), &mut state).is_none());
     assert!(state.running.as_ref().is_some_and(|call| call.cancelled));
 }

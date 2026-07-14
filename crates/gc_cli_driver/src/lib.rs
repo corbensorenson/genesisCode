@@ -94,6 +94,7 @@ mod runtime_backend_profile;
 mod selfhost_bridge;
 mod selfhost_frontend;
 mod semantic_workspace;
+mod session_resources;
 mod structured_failures;
 mod sync_contract;
 mod vcs_contract;
@@ -104,6 +105,8 @@ mod warm_session;
 mod warm_session_config;
 mod warm_state;
 mod warm_worker;
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod warm_worker_process;
 mod warm_workspace;
 
 use agent_session::cmd_agent_session;
@@ -316,6 +319,7 @@ struct CmdOut {
 }
 
 fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
+    gc_effects::set_session_effect_ceiling(cli.session_max_effects);
     let _active_backend_profile = active_runtime_backend_profile();
     let _backend_flags = (gpu_device_backend_enabled(), gfx_desktop_backend_enabled());
     enforce_selfhost_only_cmd(cli, flavor)?;
@@ -383,6 +387,16 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             max_workspaces,
             workspace_idle_ms,
             max_requests,
+            max_wall_ms,
+            max_cpu_ms,
+            max_steps,
+            max_heap_bytes,
+            max_output_bytes,
+            max_effects,
+            max_processes,
+            max_disk_bytes,
+            max_drain_requests,
+            drain_timeout_ms,
             workspace_root,
         } => cmd_warm(
             cli,
@@ -395,6 +409,18 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
                 workspace_idle_ms: *workspace_idle_ms,
                 max_requests: *max_requests,
                 workspace_root,
+                resources: session_resources::SessionResourceOptions {
+                    max_wall_ms: *max_wall_ms,
+                    max_cpu_ms: *max_cpu_ms,
+                    max_steps: *max_steps,
+                    max_heap_bytes: *max_heap_bytes,
+                    max_output_bytes: *max_output_bytes,
+                    max_effects: *max_effects,
+                    max_processes: *max_processes,
+                    max_disk_bytes: *max_disk_bytes,
+                    max_drain_requests: *max_drain_requests,
+                    drain_timeout_ms: *drain_timeout_ms,
+                },
             },
         ),
         Cmd::Mcp {
@@ -404,6 +430,15 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             max_output_bytes,
             max_requests,
             max_roots,
+            max_wall_ms,
+            max_cpu_ms,
+            max_steps,
+            max_heap_bytes,
+            max_effects,
+            max_processes,
+            max_disk_bytes,
+            max_drain_requests,
+            drain_timeout_ms,
             workspace_root,
         } => cmd_mcp(
             cli,
@@ -416,6 +451,18 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
                 max_requests: *max_requests,
                 max_roots: *max_roots,
                 workspace_root,
+                resources: session_resources::SessionResourceOptions {
+                    max_wall_ms: *max_wall_ms,
+                    max_cpu_ms: *max_cpu_ms,
+                    max_steps: *max_steps,
+                    max_heap_bytes: *max_heap_bytes,
+                    max_output_bytes: *max_output_bytes,
+                    max_effects: *max_effects,
+                    max_processes: *max_processes,
+                    max_disk_bytes: *max_disk_bytes,
+                    max_drain_requests: *max_drain_requests,
+                    drain_timeout_ms: *drain_timeout_ms,
+                },
             },
         ),
         Cmd::CliSchema => cmd_cli_schema(cli),
@@ -582,94 +629,5 @@ fn hex32(h: [u8; 32]) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        EX_PARSE, EX_VERIFY, SelfhostBootstrapMode, enforce_bootstrap_mode_allowed_with_flag,
-        json_canonical_string, parse_sync_set_refs,
-    };
-    use crate::vcs_helpers::parse_set_ref_spec;
-
-    #[test]
-    fn parse_set_ref_spec_supports_contract_refs_with_colons() {
-        let commit = "a".repeat(64);
-        let policy = "b".repeat(64);
-        let expected_old = "c".repeat(64);
-        let spec = format!(
-            "refs/contracts/my-lib/counter::Counter/heads/dev:{commit}:{policy}@{expected_old}"
-        );
-        let parsed = parse_set_ref_spec(&spec).expect("parse");
-        assert_eq!(
-            parsed.name,
-            "refs/contracts/my-lib/counter::Counter/heads/dev"
-        );
-        assert_eq!(parsed.hash, commit);
-        assert_eq!(parsed.policy, policy);
-        assert_eq!(parsed.expected_old.as_deref(), Some(expected_old.as_str()));
-    }
-
-    #[test]
-    fn parse_set_ref_spec_rejects_invalid_hashes() {
-        let err = parse_set_ref_spec("refs/heads/main:nothex:alsonothex").expect_err("must fail");
-        assert_eq!(err.exit_code, EX_PARSE);
-    }
-
-    #[test]
-    fn parse_set_ref_spec_accepts_expected_old_nil() {
-        let commit = "a".repeat(64);
-        let policy = "b".repeat(64);
-        let spec = format!("refs/heads/main:{commit}:{policy}@nil");
-        let parsed = parse_set_ref_spec(&spec).expect("parse");
-        assert_eq!(parsed.expected_old.as_deref(), Some("nil"));
-    }
-
-    #[test]
-    fn parse_set_ref_spec_supports_contract_refs_without_expected_old() {
-        let commit = "a".repeat(64);
-        let policy = "b".repeat(64);
-        let spec = format!("refs/contracts/p::q/heads/dev:{commit}:{policy}");
-        let parsed = parse_set_ref_spec(&spec).expect("parse");
-        assert_eq!(parsed.name, "refs/contracts/p::q/heads/dev");
-        assert_eq!(parsed.hash, commit);
-        assert_eq!(parsed.policy, policy);
-        assert_eq!(parsed.expected_old, None);
-    }
-
-    #[test]
-    fn json_canonical_string_sorts_object_keys_recursively() {
-        let value = serde_json::json!({
-            "z": 1,
-            "a": {
-                "y": 2,
-                "x": [{"b": 1, "a": 2}]
-            }
-        });
-        let s = json_canonical_string(&value);
-        assert_eq!(s, r#"{"a":{"x":[{"a":2,"b":1}],"y":2},"z":1}"#);
-    }
-
-    #[test]
-    fn parse_sync_set_refs_rejects_duplicate_targets() {
-        let commit = "a".repeat(64);
-        let policy = "b".repeat(64);
-        let specs = vec![
-            format!("refs/heads/main:{commit}:{policy}"),
-            format!("refs/heads/main:{commit}:{policy}@nil"),
-        ];
-        let err = parse_sync_set_refs(&specs).expect_err("must fail");
-        assert_eq!(err.exit_code, EX_PARSE);
-    }
-
-    #[test]
-    fn non_artifact_bootstrap_mode_is_dev_only() {
-        let err = enforce_bootstrap_mode_allowed_with_flag(
-            SelfhostBootstrapMode::Embedded,
-            "test",
-            false,
-        )
-        .expect_err("embedded bootstrap should be rejected outside development mode");
-        assert_eq!(err.exit_code, EX_VERIFY);
-        assert!(err.json.message.contains("development-only"));
-        enforce_bootstrap_mode_allowed_with_flag(SelfhostBootstrapMode::Embedded, "test", true)
-            .expect("embedded bootstrap should be allowed in development mode");
-    }
-}
+#[path = "lib_tests.rs"]
+mod tests;

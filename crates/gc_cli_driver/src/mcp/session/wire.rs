@@ -48,10 +48,18 @@ pub(super) fn emit(message: &Value, config: &Config) -> Result<(), CliError> {
     let mut line = json_canonical_string(message);
     if line.len().saturating_add(1) > config.max_output_bytes {
         let id = message.get("id").cloned().unwrap_or(Value::Null);
+        let audit = message
+            .pointer("/result/_meta/genesis~1sessionAudit")
+            .or_else(|| message.pointer("/error/data/audit"))
+            .cloned();
         line = json_canonical_string(&json!({
             "jsonrpc": JSONRPC,
             "id": id,
-            "error": {"code": -32003, "message": "output frame exceeds configured limit"}
+            "error": {
+                "code": -32003,
+                "message": "output frame exceeds configured limit",
+                "data": {"audit": audit},
+            }
         }));
     }
     let stdout = io::stdout();

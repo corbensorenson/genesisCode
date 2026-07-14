@@ -93,6 +93,30 @@ fn terminal<'a>(output: &'a [JsonValue], id: &str) -> &'a JsonValue {
         .unwrap_or_else(|| panic!("missing terminal response for {id}: {output:?}"))
 }
 
+fn terminal_audit(response: &JsonValue) -> &JsonValue {
+    response
+        .pointer("/data/audit")
+        .or_else(|| response.pointer("/error/details/audit"))
+        .unwrap_or_else(|| panic!("terminal response has no session audit: {response}"))
+}
+
+fn assert_native_audit(response: &JsonValue, workspace: &Path) {
+    let audit = terminal_audit(response);
+    assert_eq!(audit["kind"], "genesis/agent-session-audit-v0.1");
+    assert_eq!(audit["worker_profile"], "native-isolated-v0.1");
+    let identity = audit["limits_identity"].as_str().expect("limits identity");
+    assert_eq!(identity.len(), 64);
+    assert!(identity.bytes().all(|byte| byte.is_ascii_hexdigit()));
+    assert!(audit["observed"]["peak_processes"].as_u64().is_some());
+    assert!(audit["observed"]["peak_heap_bytes"].as_u64().is_some());
+    assert!(
+        !response
+            .to_string()
+            .contains(&workspace.display().to_string()),
+        "session provenance must not leak the absolute workspace path"
+    );
+}
+
 fn assert_closed_response_shape(response: &JsonValue) {
     let mut fields = response
         .as_object()
@@ -375,9 +399,21 @@ fn warm_v02_suppresses_running_results_after_cancel_or_deadline() {
         terminal(&output, "deadline")["error"]["code"],
         "warm/deadline-exceeded"
     );
+    let deadline = terminal(&output, "deadline");
+    let phase = deadline["error"]["details"]["phase"]
+        .as_str()
+        .expect("deadline phase");
     assert_eq!(
-        terminal(&output, "deadline")["error"]["details"]["hard_termination"],
-        false
+        deadline["error"]["details"]["hard_termination"],
+        phase == "running"
+    );
+    assert_eq!(
+        terminal_audit(deadline)["worker_profile"],
+        if phase == "running" {
+            "native-isolated-v0.1"
+        } else {
+            "not-started-v0.1"
+        }
     );
 }
 
@@ -405,4 +441,342 @@ fn warm_v02_restart_requires_renegotiation() {
     );
     assert_eq!(terminal(&output, "init-1")["status"], "initialized");
     assert_eq!(terminal(&output, "ready")["status"], "ready");
+}
+
+#[test]
+fn warm_v02_rejects_request_resource_overrides_before_admission() {
+    let td = tempfile::tempdir().unwrap();
+    fs::write(td.path().join("quick.gc"), "(prim int/add 1 1)\n").unwrap();
+    let output = run_warm(
+        td.path(),
+        &[
+            initialize("init"),
+            execute(
+                "override",
+                "ws",
+                ".",
+                &["--step-limit", "1", "eval", "quick.gc"],
+            ),
+            control("stop", "shutdown"),
+        ],
+        &[],
+    );
+
+    assert_eq!(
+        terminal(&output, "override")["error"]["code"],
+        "warm/resource-override"
+    );
+    assert_eq!(responses(&output, "override").len(), 1);
+}
+
+#[cfg(unix)]
+#[test]
+fn warm_v02_hard_limits_kill_and_reap_native_workers_with_audits() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let td = tempfile::tempdir().unwrap();
+    write_slow_program(td.path());
+
+    let wall = run_warm(
+        td.path(),
+        &[
+            initialize("init-wall"),
+            execute("wall", "ws", ".", &["eval", "slow.gc"]),
+        ],
+        &["--max-wall-ms", "1"],
+    );
+    let wall = terminal(&wall, "wall");
+    assert_eq!(wall["error"]["code"], "warm/resource-exceeded");
+    assert_eq!(wall["error"]["details"]["resource"], "wall");
+    assert_eq!(
+        terminal_audit(wall)["termination"],
+        "resource-killed-and-reaped"
+    );
+    assert_native_audit(wall, td.path());
+
+    let output = run_warm(
+        td.path(),
+        &[
+            initialize("init-output"),
+            execute("output", "ws", ".", &["cli-schema"]),
+        ],
+        &["--max-output-bytes", "1024"],
+    );
+    let output = terminal(&output, "output");
+    assert_eq!(output["error"]["code"], "warm/resource-exceeded");
+    assert_eq!(output["error"]["details"]["resource"], "output");
+    assert_native_audit(output, td.path());
+
+    let cpu = run_warm(
+        td.path(),
+        &[
+            initialize("init-cpu"),
+            execute("cpu", "ws", ".", &["eval", "slow.gc"]),
+        ],
+        &["--max-cpu-ms", "1", "--max-wall-ms", "10000"],
+    );
+    let cpu = terminal(&cpu, "cpu");
+    assert_eq!(cpu["error"]["code"], "warm/resource-exceeded");
+    assert_eq!(cpu["error"]["details"]["resource"], "cpu");
+    assert_native_audit(cpu, td.path());
+
+    fs::write(
+        td.path().join("heap.gc"),
+        "(def prog (((core/process::spawn \"echo\") []) {}))\nprog\n",
+    )
+    .unwrap();
+    fs::write(
+        td.path().join("heap.toml"),
+        r#"
+allow = ["sys/process::spawn"]
+[op."sys/process::spawn"]
+allow_programs = ["echo"]
+base_dir = "."
+bridge_cmd = "heap_bridge.sh"
+max_bytes = 4096
+"#,
+    )
+    .unwrap();
+    fs::write(
+        td.path().join("heap_bridge.sh"),
+        r#"#!/bin/sh
+awk 'BEGIN { value="x"; for (i=0; i<27; i++) value=value value; system("sleep 5") }'
+"#,
+    )
+    .unwrap();
+    let mut permissions = fs::metadata(td.path().join("heap_bridge.sh"))
+        .unwrap()
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(td.path().join("heap_bridge.sh"), permissions).unwrap();
+    let heap = run_warm(
+        td.path(),
+        &[
+            initialize("init-heap"),
+            execute(
+                "heap",
+                "ws",
+                ".",
+                &["run", "heap.gc", "--caps", "heap.toml"],
+            ),
+        ],
+        &[
+            "--max-heap-bytes",
+            "67108864",
+            "--max-wall-ms",
+            "30000",
+            "--max-processes",
+            "4",
+        ],
+    );
+    let heap = terminal(&heap, "heap");
+    assert_eq!(heap["error"]["details"]["resource"], "heap");
+    assert!(
+        terminal_audit(heap)["observed"]["peak_heap_bytes"]
+            .as_u64()
+            .is_some_and(|value| value > 67_108_864)
+    );
+    assert_native_audit(heap, td.path());
+}
+
+#[test]
+fn warm_v02_eof_terminalizes_every_accepted_request_with_a_bounded_drain() {
+    let td = tempfile::tempdir().unwrap();
+    write_slow_program(td.path());
+    let output = run_warm(
+        td.path(),
+        &[
+            initialize("init"),
+            execute("one", "ws", ".", &["eval", "slow.gc"]),
+            execute("two", "ws", ".", &["eval", "quick.gc"]),
+            execute("three", "ws", ".", &["eval", "quick.gc"]),
+        ],
+        &["--max-drain-requests", "1", "--drain-timeout-ms", "10000"],
+    );
+
+    for id in ["one", "two", "three"] {
+        assert_eq!(
+            responses(&output, id).len(),
+            2,
+            "accepted plus terminal for {id}"
+        );
+        let terminal = terminal(&output, id);
+        let audit = terminal_audit(terminal);
+        assert_eq!(audit["kind"], "genesis/agent-session-audit-v0.1");
+        assert!(
+            audit["limits_identity"]
+                .as_str()
+                .is_some_and(|value| value.len() == 64)
+        );
+    }
+    let bounded = ["one", "two", "three"]
+        .iter()
+        .filter(|id| terminal(&output, id)["error"]["code"] == "warm/drain-bounded")
+        .count();
+    assert_eq!(bounded, 2);
+}
+
+#[cfg(unix)]
+#[test]
+fn warm_v02_enforces_steps_effects_processes_and_disk_with_exact_evidence() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let td = tempfile::tempdir().unwrap();
+    write_slow_program(td.path());
+
+    let steps = run_warm(
+        td.path(),
+        &[
+            initialize("init-steps"),
+            execute("steps", "ws", ".", &["eval", "slow.gc"]),
+        ],
+        &["--max-steps", "100"],
+    );
+    let steps = terminal(&steps, "steps");
+    assert_eq!(steps["error"]["details"]["resource"], "steps");
+    assert_eq!(
+        steps["error"]["details"]["command_envelope"]["error"]["context"]["kind"],
+        "step-limit"
+    );
+    assert_native_audit(steps, td.path());
+
+    fs::write(
+        td.path().join("effects.gc"),
+        r#"
+(def prog
+  ((core/effect::bind
+     (core/effect::perform 'sys/time::now nil (fn (first) (core/effect::pure first))))
+    (fn (_)
+      (core/effect::perform 'sys/time::now nil (fn (second) (core/effect::pure second))))))
+prog
+"#,
+    )
+    .unwrap();
+    fs::write(
+        td.path().join("effects.toml"),
+        "allow = [\"sys/time::now\"]\n",
+    )
+    .unwrap();
+    let effects = run_warm(
+        td.path(),
+        &[
+            initialize("init-effects"),
+            execute(
+                "effects",
+                "ws",
+                ".",
+                &["run", "effects.gc", "--caps", "effects.toml"],
+            ),
+        ],
+        &["--max-effects", "1"],
+    );
+    let effects = terminal(&effects, "effects");
+    assert_eq!(effects["error"]["details"]["resource"], "effects");
+    assert_eq!(terminal_audit(effects)["observed"]["effect_ops"], 2);
+    assert_native_audit(effects, td.path());
+
+    fs::write(
+        td.path().join("process.gc"),
+        "(def prog (((core/process::spawn \"echo\") []) {}))\nprog\n",
+    )
+    .unwrap();
+    fs::write(
+        td.path().join("process.toml"),
+        r#"
+allow = ["sys/process::spawn"]
+[op."sys/process::spawn"]
+allow_programs = ["echo"]
+base_dir = "."
+bridge_cmd = "slow_bridge.sh"
+max_bytes = 4096
+"#,
+    )
+    .unwrap();
+    fs::write(
+        td.path().join("slow_bridge.sh"),
+        r#"#!/bin/sh
+sleep 5
+response='{:ok true :process-id "never"}'
+printf '%s\n%s' "${#response}" "$response"
+"#,
+    )
+    .unwrap();
+    let mut permissions = fs::metadata(td.path().join("slow_bridge.sh"))
+        .unwrap()
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(td.path().join("slow_bridge.sh"), permissions).unwrap();
+    let processes = run_warm(
+        td.path(),
+        &[
+            initialize("init-processes"),
+            execute(
+                "processes",
+                "ws",
+                ".",
+                &["run", "process.gc", "--caps", "process.toml"],
+            ),
+        ],
+        &["--max-processes", "1"],
+    );
+    let processes = terminal(&processes, "processes");
+    assert_eq!(processes["error"]["details"]["resource"], "processes");
+    assert!(
+        terminal_audit(processes)["observed"]["peak_processes"]
+            .as_u64()
+            .is_some_and(|value| value > 1)
+    );
+    assert_native_audit(processes, td.path());
+
+    fs::write(
+        td.path().join("disk_bridge.sh"),
+        r#"#!/bin/sh
+dd if=/dev/zero of=disk-a.bin bs=700000 count=1 status=none
+dd if=/dev/zero of=disk-b.bin bs=700000 count=1 status=none
+response='{:ok true :process-id "disk"}'
+printf '%s\n%s' "${#response}" "$response"
+"#,
+    )
+    .unwrap();
+    let mut permissions = fs::metadata(td.path().join("disk_bridge.sh"))
+        .unwrap()
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(td.path().join("disk_bridge.sh"), permissions).unwrap();
+    fs::write(
+        td.path().join("disk.toml"),
+        r#"
+allow = ["sys/process::spawn"]
+[op."sys/process::spawn"]
+allow_programs = ["echo"]
+base_dir = "."
+bridge_cmd = "disk_bridge.sh"
+max_bytes = 4096
+"#,
+    )
+    .unwrap();
+    let disk = run_warm(
+        td.path(),
+        &[
+            initialize("init-disk"),
+            execute(
+                "disk",
+                "ws",
+                ".",
+                &["run", "process.gc", "--caps", "disk.toml"],
+            ),
+        ],
+        &["--max-disk-bytes", "1048576", "--max-processes", "4"],
+    );
+    let disk = terminal(&disk, "disk");
+    assert_eq!(
+        disk["error"]["details"]["resource"], "disk",
+        "unexpected disk terminal response: {disk}"
+    );
+    assert!(
+        terminal_audit(disk)["observed"]["disk_delta_bytes"]
+            .as_i64()
+            .is_some_and(|value| value > 1_048_576)
+    );
+    assert_native_audit(disk, td.path());
 }

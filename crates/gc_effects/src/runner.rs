@@ -110,6 +110,10 @@ pub(crate) fn set_force_wasi_remote_profile(enabled: bool) {
     runner_remote_ops::set_force_wasi_remote_profile(enabled);
 }
 
+pub(crate) fn set_session_effect_ceiling(limit: Option<u64>) {
+    runner_runtime_budget::set_session_effect_ceiling(limit);
+}
+
 #[derive(Debug, Clone, Default)]
 struct ArtifactBudgetState {
     store_written_bytes: usize,

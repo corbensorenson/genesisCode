@@ -6,12 +6,15 @@ use std::time::Instant;
 use serde_json::{Value, json};
 
 use super::*;
+use crate::session_resources::{SessionAudit, SessionResourceLimits};
 use crate::warm_protocol::{ProtocolError, WARM_ERROR_V02, WARM_PROTOCOL_V02, WARM_RESPONSE_V02};
+use crate::warm_worker::WorkerControl;
 use crate::warm_workspace::WorkspaceEntry;
 
 pub(super) struct PendingRequest {
     pub(super) id: String,
     pub(super) cli: Cli,
+    pub(super) argv: Vec<String>,
     pub(super) workspace_id: String,
     pub(super) workspace_root: PathBuf,
     pub(super) deadline: Option<Instant>,
@@ -25,6 +28,8 @@ pub(super) struct RunningRequest {
     pub(super) accepted_index: u64,
     pub(super) cancellation_requested: bool,
     pub(super) deadline_expired: bool,
+    pub(super) drain_timeout: bool,
+    pub(super) control: Option<WorkerControl>,
 }
 
 pub(super) struct SessionState {
@@ -34,8 +39,13 @@ pub(super) struct SessionState {
     pub(super) accepted_requests: u64,
     pub(super) response_sequence: u64,
     pub(super) crash_count: u64,
+    pub(super) completed_requests: u64,
+    pub(super) cancelled_requests: u64,
+    pub(super) resource_exceeded_requests: u64,
     pub(super) shutting_down: bool,
     pub(super) input_eof: bool,
+    pub(super) drain_deadline: Option<Instant>,
+    pub(super) drain_reason: Option<&'static str>,
     pub(super) session_cache_key: String,
     pub(super) seen_ids: HashSet<String>,
     pub(super) workspaces: HashMap<String, WorkspaceEntry>,
@@ -132,14 +142,23 @@ impl SessionState {
         )
     }
 
-    pub(super) fn discard_pending_after_crash(&mut self) -> Result<(), CliError> {
+    pub(super) fn discard_pending_after_crash(
+        &mut self,
+        limits: &SessionResourceLimits,
+    ) -> Result<(), CliError> {
         while let Some(request) = self.pending.pop_front() {
+            self.cancelled_requests = self.cancelled_requests.saturating_add(1);
+            let audit = SessionAudit::not_started(limits, "worker-crash-cancelled");
             self.protocol_error(
                 Some(request.id),
                 "warm/worker-restarted",
-                "request was discarded during worker crash recovery",
+                "accepted request was cancelled during worker crash recovery",
                 true,
-                json!({"requires_initialize": true}),
+                json!({
+                    "accepted_index": request.accepted_index,
+                    "requires_initialize": true,
+                    "audit": audit.as_json(),
+                }),
                 0,
             )?;
         }

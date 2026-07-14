@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "genesis/agent-session-resources-v0.1",
+  "title": "GenesisCode bounded agent session resources v0.1",
+  "oneOf": [
+    {"$ref": "#/$defs/limits"},
+    {"$ref": "#/$defs/audit"}
+  ],
+  "$defs": {
+    "nonnegative": {"type": "integer", "minimum": 0},
+    "nullableNonnegative": {"type": ["integer", "null"], "minimum": 0},
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_wall_ms",
+        "max_cpu_ms",
+        "max_steps",
+        "max_heap_bytes",
+        "max_output_bytes",
+        "max_effects",
+        "max_processes",
+        "max_disk_bytes",
+        "max_drain_requests",
+        "drain_timeout_ms"
+      ],
+      "properties": {
+        "max_wall_ms": {"type": "integer", "minimum": 1, "maximum": 86400000},
+        "max_cpu_ms": {"type": "integer", "minimum": 1, "maximum": 86400000},
+        "max_steps": {"type": "integer", "minimum": 1},
+        "max_heap_bytes": {"type": "integer", "minimum": 67108864, "maximum": 68719476736},
+        "max_output_bytes": {"type": "integer", "minimum": 1024, "maximum": 67108864},
+        "max_effects": {"type": "integer", "minimum": 1},
+        "max_processes": {"type": "integer", "minimum": 1, "maximum": 64},
+        "max_disk_bytes": {"type": "integer", "minimum": 1048576, "maximum": 1099511627776},
+        "max_drain_requests": {"type": "integer", "minimum": 0, "maximum": 4096},
+        "drain_timeout_ms": {"type": "integer", "minimum": 1, "maximum": 3600000}
+      }
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wall_ms",
+        "cpu_ms",
+        "output_bytes",
+        "disk_delta_bytes",
+        "effect_ops",
+        "peak_heap_bytes",
+        "peak_processes"
+      ],
+      "properties": {
+        "wall_ms": {"$ref": "#/$defs/nonnegative"},
+        "cpu_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "output_bytes": {"$ref": "#/$defs/nonnegative"},
+        "disk_delta_bytes": {"type": "integer"},
+        "effect_ops": {"$ref": "#/$defs/nullableNonnegative"},
+        "peak_heap_bytes": {"$ref": "#/$defs/nullableNonnegative"},
+        "peak_processes": {"$ref": "#/$defs/nullableNonnegative"}
+      }
+    },
+    "enforcement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wall", "cpu", "steps", "heap", "output", "effects", "processes", "disk"],
+      "properties": {
+        "wall": {"type": "string", "minLength": 1},
+        "cpu": {"type": "string", "minLength": 1},
+        "steps": {"type": "string", "minLength": 1},
+        "heap": {"type": "string", "minLength": 1},
+        "output": {"type": "string", "minLength": 1},
+        "effects": {"type": "string", "minLength": 1},
+        "processes": {"type": "string", "minLength": 1},
+        "disk": {"type": "string", "minLength": 1}
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "worker_profile",
+        "limits_identity",
+        "observed",
+        "enforcement",
+        "termination",
+        "exceeded"
+      ],
+      "properties": {
+        "kind": {"const": "genesis/agent-session-audit-v0.1"},
+        "worker_profile": {
+          "enum": ["native-isolated-v0.1", "wasi-inline-v0.1", "not-started-v0.1"]
+        },
+        "limits_identity": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "observed": {"$ref": "#/$defs/observed"},
+        "enforcement": {"$ref": "#/$defs/enforcement"},
+        "termination": {"type": "string", "minLength": 1},
+        "exceeded": {
+          "type": ["string", "null"],
+          "enum": [null, "wall", "cpu", "steps", "heap", "output", "effects", "processes", "disk"]
+        }
+      }
+    }
+  }
+}

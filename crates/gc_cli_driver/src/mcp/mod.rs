@@ -13,4 +13,5 @@ pub(crate) struct McpOptions<'a> {
     pub(crate) max_requests: u64,
     pub(crate) max_roots: usize,
     pub(crate) workspace_root: &'a std::path::Path,
+    pub(crate) resources: crate::session_resources::SessionResourceOptions,
 }

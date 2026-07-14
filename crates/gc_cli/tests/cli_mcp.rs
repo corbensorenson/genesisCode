@@ -90,6 +90,29 @@ impl McpChild {
             .expect("read stderr");
         stderr
     }
+
+    fn finish_frames(mut self) -> (Vec<Value>, String) {
+        drop(self.stdin.take());
+        let mut frames = Vec::new();
+        loop {
+            let mut line = String::new();
+            let read = self.stdout.read_line(&mut line).expect("read MCP frame");
+            if read == 0 {
+                break;
+            }
+            frames.push(serde_json::from_str(&line).expect("valid MCP frame"));
+        }
+        let status = self.child.wait().expect("wait for MCP server");
+        assert!(status.success(), "MCP server exited with {status}");
+        let mut stderr = String::new();
+        self.child
+            .stderr
+            .take()
+            .expect("stderr")
+            .read_to_string(&mut stderr)
+            .expect("read stderr");
+        (frames, stderr)
+    }
 }
 
 impl Drop for McpChild {
@@ -323,4 +346,39 @@ fn mcp_rejects_batches_tasks_and_escaped_roots_without_panicking() {
         "client exposed no usable workspace roots"
     );
     assert_eq!(server.finish(), "");
+}
+
+#[test]
+fn mcp_eof_cancels_and_reaps_every_accepted_call_with_audited_provenance() {
+    let td = tempfile::tempdir().expect("tempdir");
+    let mut server = McpChild::spawn(
+        td.path(),
+        &["--max-drain-requests", "0", "--drain-timeout-ms", "1000"],
+    );
+    complete_handshake(&mut server, false);
+    for id in ["one", "two", "three"] {
+        server.send(&json!({
+            "jsonrpc":"2.0","id":id,"method":"tools/call",
+            "params":{"name":"get-card","arguments":{"card":"core"}}
+        }));
+    }
+    let (frames, stderr) = server.finish_frames();
+    assert_eq!(stderr, "");
+    for id in ["one", "two", "three"] {
+        let response = frames
+            .iter()
+            .find(|frame| frame["id"] == id)
+            .unwrap_or_else(|| panic!("missing terminal response for {id}: {frames:?}"));
+        assert!(matches!(
+            response["error"]["code"].as_i64(),
+            Some(-32005 | -32006)
+        ));
+        let audit = &response["error"]["data"]["audit"];
+        assert_eq!(audit["kind"], "genesis/agent-session-audit-v0.1");
+        assert!(
+            audit["limits_identity"]
+                .as_str()
+                .is_some_and(|value| value.len() == 64)
+        );
+    }
 }
