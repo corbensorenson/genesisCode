@@ -4,6 +4,8 @@ All notable GenesisCode changes are tracked here. The project is pre-1.0; format
 
 ## [Unreleased]
 
+- Harden generated-state startup and reclamation: clean checkouts now create provenance-marked Cargo roots before admission, and deterministic cleanup tolerates bounded transient metadata recreation after atomic quarantine.
+
 <!-- BEGIN GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 ### Generated Release Facts
 

@@ -82,6 +82,7 @@ configuration_paths = {
     root / cache.SCHEMA_REL,
     root / "rust-toolchain.toml",
     root / "policies/deterministic_cleanup_v0.1.json",
+    root / "policies/generated_state_v0.1.json",
     root / ".cargo/config.toml",
     root / "Cargo.lock",
     root / "tools/genesis-evidence-verifier/Cargo.lock",
@@ -106,6 +107,37 @@ with tempfile.TemporaryDirectory(prefix="genesis-cargo-cache-policy.") as temp_r
     source_fixture = fixture / "crates/gc_coreform/src/lib.rs"
     source_fixture.parent.mkdir(parents=True, exist_ok=True)
     source_fixture.write_text("pub fn source_only_fixture() {}\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=fixture, check=True)
+
+    fresh_env = mock_env(fixture / ".genesis/build/cargo-cache/v1")
+    fresh = subprocess.run(
+        [
+            sys.executable,
+            str(fixture / "scripts/lib/cargo_cache.py"),
+            "--root",
+            str(fixture),
+            "--scope",
+            "root-host",
+            "--format",
+            "json",
+        ],
+        cwd=fixture,
+        env=fresh_env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    require(fresh.returncode == 0, f"fresh-checkout cache admission failed: {fresh.stderr}")
+    fresh_result = json.loads(fresh.stdout)
+    cleanup_marker = cache.load_json(
+        fixture / "policies/deterministic_cleanup_v0.1.json"
+    )["markerFile"]
+    require(
+        pathlib.Path(fresh_result["targetDir"]).is_dir()
+        and (fixture / ".genesis/build" / cleanup_marker).is_file(),
+        "fresh-checkout cache admission omitted materialization or provenance",
+    )
+    passed("fresh-checkout-materialization")
 
     env = mock_env(temp / "cache-a")
     baseline = cache.resolve(fixture, "root-host", env)
@@ -341,6 +373,7 @@ expected_controls = {
     "context-convergence",
     "duplicate-policy-key-rejection",
     "feature-definition-sensitivity",
+    "fresh-checkout-materialization",
     "host-path-exclusion",
     "legacy-override-rejection",
     "lockfile-sensitivity",

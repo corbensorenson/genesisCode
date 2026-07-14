@@ -817,13 +817,13 @@
       "execution_helper_closure": [
         {
           "path": "scripts/render_cargo_target_dir_policy_report.sh",
-          "sha256": "1cd10961b7f83ef6fedf3da5b48945b6e7cbeffb2eb4fd48365c001c4fc2e96c"
+          "sha256": "93cb583682248530af48c97e750fc25d9f8a65dafb4520bda78185f06dcbe6d3"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cargo_target_dir_policy_report.sh"
       ],
-      "execution_identity_sha256": "3df806cca3e9f4ee95cc1b05c61a234c156240273242dc2141c8c614584699bf",
+      "execution_identity_sha256": "33fa975669fca6d2983058c36a15def765be005679e321949faef0b2d705264e",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1203,6 +1203,7 @@
         "(repo / \"policies\").mkdir(parents=True)",
         "(repo / \"source.gc\").write_text(\"(module fixture)\\n\", encoding=\"utf-8\")",
         "(repo / relative).mkdir(parents=True)",
+        "(transient_tree / \"payload.bin\").write_bytes(b\"payload\")",
         "(unauthorized / \".genesis/build\").mkdir(parents=True)",
         "(unauthorized / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
         "(unauthorized / \"policies\").mkdir(parents=True)",
@@ -1219,12 +1220,13 @@
         "quarantine_path.parent.mkdir(parents=True, exist_ok=True)",
         "registry_path.write_bytes(valid_registry)",
         "registry_path.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
+        "transient_tree.mkdir()",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT",
         "unbounded_path.write_bytes(state.pretty_bytes(unbounded_policy))"
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "7e4bf60437eee814f9c708ef1292c8b4a8a57671ee735f494117d8351bc4c3e9",
+      "execution_identity_sha256": "7ed203698fd5c4e80b85cea8bb96173293459321cf8309f067a1b39c093c8ac9",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1235,7 +1237,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "72c10315ec9146d9e60b6fcf4f401806e06c05caaae5092e18c83997c6cff201",
+      "sha256": "f2d60cd40f79747e5456553f752058173e86edc4fdc154e78ecd8f3d538c3b93",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -1264,6 +1266,7 @@
         "(repo / \"policies\").mkdir(parents=True)",
         "(repo / \"source.gc\").write_text(\"(module fixture)\\n\", encoding=\"utf-8\")",
         "(repo / relative).mkdir(parents=True)",
+        "(transient_tree / \"payload.bin\").write_bytes(b\"payload\")",
         "(unauthorized / \".genesis/build\").mkdir(parents=True)",
         "(unauthorized / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
         "(unauthorized / \"policies\").mkdir(parents=True)",
@@ -1280,6 +1283,7 @@
         "quarantine_path.parent.mkdir(parents=True, exist_ok=True)",
         "registry_path.write_bytes(valid_registry)",
         "registry_path.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
+        "transient_tree.mkdir()",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT",
         "unbounded_path.write_bytes(state.pretty_bytes(unbounded_policy))"
       ]

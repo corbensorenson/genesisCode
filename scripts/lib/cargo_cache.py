@@ -328,6 +328,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 relative_target = None
             else:
                 relative_target = target.relative_to(args.root.resolve()).as_posix()
+                deterministic_cleanup.require_safe_parent_chain(
+                    args.root.resolve(), ".genesis/build"
+                )
+                build_root.mkdir(parents=True, exist_ok=True)
                 deterministic_cleanup.initialize_root_marker(
                     args.root.resolve(), ".genesis/build", "cargo-cache"
                 )
@@ -356,7 +360,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                     )
                 raise
         emit(result, args.format)
-    except (CachePolicyError, generated_state.GeneratedStateError, OSError) as exc:
+    except (
+        CachePolicyError,
+        deterministic_cleanup.CleanupError,
+        generated_state.GeneratedStateError,
+        OSError,
+    ) as exc:
         print(f"cargo-cache: {exc}", file=sys.stderr)
         return 2
     return 0

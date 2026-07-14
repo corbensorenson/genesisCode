@@ -15,6 +15,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Any, Mapping, Sequence
 
 
@@ -575,11 +576,23 @@ def validate_plan_shape(plan: Any) -> None:
 def remove_tree(path: Path) -> None:
     if not shutil.rmtree.avoids_symlink_attacks:
         raise CleanupError("platform lacks symlink-safe recursive removal")
+
     def repair_and_retry(function, failed, _exc):
         os.chmod(failed, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
         function(failed)
 
-    shutil.rmtree(path, onerror=repair_and_retry)
+    # Indexers can recreate metadata between scandir and rmdir. Retry the whole
+    # bounded operation; a continuously mutating producer still fails closed.
+    for attempt in range(8):
+        try:
+            shutil.rmtree(path, onerror=repair_and_retry)
+            return
+        except OSError:
+            if not path.exists():
+                return
+            if attempt == 7:
+                raise
+            time.sleep(0.025 * (attempt + 1))
 
 
 def _execute_plan_impl(

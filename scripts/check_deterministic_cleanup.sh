@@ -245,6 +245,30 @@ require((repo / ".genesis/build/drift.bin").is_file(), "quarantine rollback lost
 require(not (repo / policy["quarantineRoot"]).exists(), "quarantine rollback left unresolved state")
 controls.append("transactional-quarantine-rollback")
 
+transient_tree = temp / "transient-metadata-tree"
+transient_tree.mkdir()
+(transient_tree / "payload.bin").write_bytes(b"payload")
+original_rmtree = cleanup.shutil.rmtree
+transient_attempts = 0
+
+
+def transient_rmtree(path, *args, **kwargs):
+    global transient_attempts
+    transient_attempts += 1
+    if transient_attempts == 1:
+        raise OSError(66, "Directory not empty", str(path))
+    return original_rmtree(path, *args, **kwargs)
+
+
+transient_rmtree.avoids_symlink_attacks = original_rmtree.avoids_symlink_attacks
+cleanup.shutil.rmtree = transient_rmtree
+try:
+    cleanup.remove_tree(transient_tree)
+finally:
+    cleanup.shutil.rmtree = original_rmtree
+require(transient_attempts == 2 and not transient_tree.exists(), "transient metadata removal did not recover")
+controls.append("transient-metadata-recreation-recovery")
+
 executed = run_cli(repo, "--execute", "--plan", fresh_path, "--confirm-sha256", fresh_sha)
 require(executed.returncode == 0, f"valid dev cleanup failed: {executed.stderr}")
 result = json.loads(executed.stdout, object_pairs_hook=cleanup.reject_duplicate_keys)
@@ -560,7 +584,7 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(len(controls) == 40 and len(set(controls)) == 40, f"control coverage drift: {controls}")
+require(len(controls) == 41 and len(set(controls)) == 41, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",
