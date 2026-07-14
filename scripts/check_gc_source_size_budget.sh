@@ -173,7 +173,7 @@ if [[ ${#GC_GENERATED_EXCLUDE_PATHS[@]} -gt 0 ]]; then
 fi
 echo "gc-source-size-budget: top gc authoring sources by line count:"
 if [[ -s "$TMP_COUNTS" ]]; then
-  sort -nr "$TMP_COUNTS" | head -n 12 | awk '{printf "  %5s  %s\n", $1, $2}'
+  sort -nr "$TMP_COUNTS" | awk 'NR <= 12 {printf "  %5s  %s\n", $1, $2}'
 else
   echo "      0  <none>"
 fi

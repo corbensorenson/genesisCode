@@ -120,7 +120,7 @@ fi
 echo "test-size-budget: policy=$POLICY_FILE test_max_lines=$TEST_MAX_LINES test_target_lines=$TEST_TARGET_LINES"
 echo "test-size-budget: top test files by line count:"
 if [[ -s "$TMP_COUNTS" ]]; then
-  sort -nr "$TMP_COUNTS" | head -n 12 | awk '{printf "  %5s  %s\n", $1, $2}'
+  sort -nr "$TMP_COUNTS" | awk 'NR <= 12 {printf "  %5s  %s\n", $1, $2}'
 else
   echo "      0  <none>"
 fi

@@ -202,11 +202,11 @@ fi
 
 echo "source-size-budget: policy=$POLICY_FILE rust_max_lines=$RUST_MAX_LINES gc_max_lines=${GC_MAX_LINES:-<disabled>} rust_target_lines=${RUST_TARGET_LINES:-<disabled>} gc_target_lines=${GC_TARGET_LINES:-<disabled>}"
 echo "source-size-budget: top production files by line count:"
-sort -nr "$TMP_COUNTS" | head -n 8 | awk '{printf "  %5s  %s\n", $1, $2}'
+sort -nr "$TMP_COUNTS" | awk 'NR <= 8 {printf "  %5s  %s\n", $1, $2}'
 if [[ -n "$GC_MAX_LINES" ]]; then
   echo "source-size-budget: top gc authoring sources by line count:"
   if [[ -s "$TMP_GC_COUNTS" ]]; then
-    sort -nr "$TMP_GC_COUNTS" | head -n 8 | awk '{printf "  %5s  %s\n", $1, $2}'
+    sort -nr "$TMP_GC_COUNTS" | awk 'NR <= 8 {printf "  %5s  %s\n", $1, $2}'
   else
     echo "      0  <none>"
   fi
