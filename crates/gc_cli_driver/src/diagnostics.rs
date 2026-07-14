@@ -1,4 +1,6 @@
 use std::sync::OnceLock;
+mod human;
+pub(crate) use human::{HumanRenderOptions, render_human_envelope, render_human_error};
 
 use serde_json::{Map, Value};
 
@@ -7,6 +9,9 @@ pub(crate) const DIAGNOSTIC_CATALOG_PATH: &str = "docs/spec/GC_DIAGNOSTIC_CATALO
 const DIAGNOSTIC_CATALOG_JSON: &str =
     include_str!("../../../docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json");
 const CATALOG_MISS_CODE: &str = "diagnostic/catalog-miss";
+const DEFAULT_HUMAN_WIDTH: usize = 96;
+const MIN_HUMAN_WIDTH: usize = 24;
+const MAX_HUMAN_WIDTH: usize = 160;
 
 fn diagnostic_catalog() -> &'static Value {
     static CATALOG: OnceLock<Value> = OnceLock::new();
@@ -370,7 +375,10 @@ pub(crate) fn annotate_envelope(mut envelope: Value, exit_code: u8) -> Value {
 mod tests {
     use serde_json::{Value, json};
 
-    use super::{DIAGNOSTICS_SCHEMA_V1, annotate_envelope, embedded_diagnostic_catalog};
+    use super::{
+        DIAGNOSTICS_SCHEMA_V1, HumanRenderOptions, annotate_envelope, embedded_diagnostic_catalog,
+        render_human_error,
+    };
 
     #[test]
     fn embedded_catalog_is_closed_and_counted() {
@@ -572,5 +580,88 @@ mod tests {
             diagnostic["repair_plan"]["authorization"]["policy_change_allowed"],
             false
         );
+    }
+
+    #[test]
+    fn human_diagnostic_contains_operation_subject_cause_and_action() {
+        let rendered = render_human_error(
+            "io/read",
+            "read /private/tmp/work/input.gc: missing",
+            Some(json!({
+                "schema": "genesis/failure-context-v0.1",
+                "domain": "package",
+                "kind": "io",
+                "operation": "package/load",
+                "facts": {
+                    "path": "/private/tmp/work/input.gc",
+                    "causes": [{"reason": "source /private/tmp/work/input.gc does not exist"}]
+                },
+                "primary_span": null,
+                "related_spans": []
+            })),
+            74,
+            HumanRenderOptions {
+                width: 96,
+                color: false,
+            },
+        );
+        assert!(rendered.starts_with("error[io/read]: package/load failed for input.gc\n"));
+        assert!(rendered.contains("  cause: source input.gc does not exist\n"));
+        assert!(rendered.contains("  next: Verify the reported base-relative path"));
+        assert!(!rendered.contains("/private/"));
+        assert!(!rendered.contains('\u{1b}'));
+    }
+
+    #[test]
+    fn human_diagnostic_wraps_narrow_output_and_styles_labels_only() {
+        let plain = render_human_error(
+            "parse/term",
+            "unexpected token after an expression",
+            Some(json!({
+                "schema": "genesis/failure-context-v0.1",
+                "domain": "parser",
+                "kind": "unexpected-token",
+                "operation": "parse/module",
+                "facts": {"source": "main.gc"},
+                "primary_span": null,
+                "related_spans": []
+            })),
+            20,
+            HumanRenderOptions {
+                width: 24,
+                color: false,
+            },
+        );
+        assert!(plain.lines().all(|line| line.chars().count() <= 24));
+        assert!(plain.lines().count() > 3);
+
+        let colored = render_human_error(
+            "parse/term",
+            "unexpected token",
+            None,
+            20,
+            HumanRenderOptions {
+                width: 80,
+                color: true,
+            },
+        );
+        assert!(colored.starts_with("\u{1b}[1;31merror[parse/term]"));
+        assert!(colored.contains("\u{1b}[1mcause:\u{1b}[0m"));
+        assert!(colored.contains("\u{1b}[1mnext:\u{1b}[0m"));
+    }
+
+    #[test]
+    fn human_diagnostic_unknown_code_fails_closed_without_controls() {
+        let rendered = render_human_error(
+            "prompt/injected-code\nspoof",
+            "\u{1b}[31muntrusted\u{7}",
+            None,
+            70,
+            HumanRenderOptions::default(),
+        );
+        assert!(rendered.starts_with("error[diagnostic/catalog-miss]:"));
+        assert!(rendered.contains("prompt/injected-code spoof failed for <unknown>"));
+        assert!(!rendered.contains('\u{1b}'));
+        assert!(!rendered.contains('\u{7}'));
     }
 }

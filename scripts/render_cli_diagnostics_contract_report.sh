@@ -24,8 +24,10 @@ START_MS="$(genesis_profile_gate_now_ms)"
 BUDGET_MS="${GENESIS_CLI_DIAGNOSTICS_CONTRACT_BUDGET_MS:-300000}"
 
 cargo test -p gc_cli --test cli_diagnostics_matrix --quiet
+cargo test -p gc_cli --test cli_human_diagnostics --quiet
 cargo test -p gc_cli --test cli_structured_failures --quiet
 cargo test -p gc_cli --test cli_diagnostic_goldens --quiet
+cargo test -p gc_cli_driver diagnostics::tests --quiet
 
 BASELINE_HISTORY=""
 if [[ "$HISTORY_INPUT_PATH" != "$HISTORY_PATH" && -f "$HISTORY_INPUT_PATH" ]]; then

@@ -78,6 +78,17 @@ def passed(control_id):
     controls.append(control_id)
 
 
+storage_gate = (root / "scripts/check_evidence_storage_classes.sh").read_text(encoding="utf-8")
+release_renderer = (root / "scripts/render_evidence_release_asset.sh").read_text(encoding="utf-8")
+require(
+    "genesis_configure_cargo_target_dir" not in storage_gate
+    and '"evidence-release-asset"' in release_renderer
+    and "evidence-verifier-host" in release_renderer,
+    "Python-only parent gate must not reserve root-host around nested verifier builds",
+)
+passed("nested-verifier-scope-reservation")
+
+
 configuration_paths = {
     root / cache.POLICY_REL,
     root / cache.SCHEMA_REL,
@@ -91,6 +102,8 @@ configuration_paths = {
     root / "scripts/lib/cargo_target_dir.sh",
     root / "scripts/lib/deterministic_cleanup.py",
     root / "scripts/lib/generated_state.py",
+    root / "scripts/check_evidence_storage_classes.sh",
+    root / "scripts/render_evidence_release_asset.sh",
 }
 for scope in policy["scopes"]:
     for pattern in scope["manifestGlobs"]:
@@ -324,7 +337,9 @@ authority_paths = {
     root / "scripts/lib/cargo_target_dir.sh",
     root / "scripts/lib/generated_state.py",
     root / "scripts/check_cargo_target_dir_policy.sh",
+    root / "scripts/check_evidence_storage_classes.sh",
     root / "scripts/render_cargo_target_dir_policy_report.sh",
+    root / "scripts/render_evidence_release_asset.sh",
     root / ".github/workflows/ci.yml",
     root / "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
     root / "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
@@ -383,6 +398,7 @@ expected_controls = {
     "legacy-override-rejection",
     "lockfile-sensitivity",
     "metadata-tamper-rejection",
+    "nested-verifier-scope-reservation",
     "observed-toolchain-sensitivity",
     "root-relocation-key-stability",
     "resolved-environment-transition",

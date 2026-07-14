@@ -5,6 +5,8 @@ All notable GenesisCode changes are tracked here. The project is pre-1.0; format
 ## [Unreleased]
 
 - Harden generated-state startup and reclamation: clean checkouts create provenance-marked Cargo roots before admission, one-shot resolvers release transient leases, and deterministic cleanup tolerates bounded metadata recreation after atomic quarantine.
+- Avoid false generated-state quota denial by keeping Python-only evidence gates lease-free while nested verifier builds reserve their own declared cache class.
+- Render non-JSON failures from the structured diagnostic catalog with operation, redacted subject, primary cause, one safe next action, deterministic wrapping, and terminal-aware color.
 - Consolidate governance entrypoints under a manifest-enforced one-in/one-out budget, retiring redundant feature-matrix check/update aliases in favor of capability-ledger authorities.
 
 <!-- BEGIN GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->

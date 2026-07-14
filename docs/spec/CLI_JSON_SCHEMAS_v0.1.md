@@ -68,6 +68,25 @@ legacy context into the same schema, preserves scrubbed legacy details under
 fallback. Human messages remain concise renderings and are not the only
 failure contract.
 
+Without `--json`, every cataloged CLI failure is rendered from that same
+normalized diagnostic rather than from separately maintained prose. The first
+line identifies the exact diagnostic code, failed `operation`, and one safe
+normalized subject. The following `cause` and `next` fields select one primary
+cause from structured context (falling back to the producer message and then
+the catalog) and exactly one catalog-authorized next action. Subject and cause
+selection use a fixed key priority through nested legacy/cause objects; arrays
+retain source order. Absolute paths reduce to safe basenames, control
+characters become spaces, fields are bounded, and missing facts render explicit
+`unknown` placeholders. Unknown codes first fail closed to
+`diagnostic/catalog-miss` and cannot inject terminal controls.
+
+Human output wraps deterministically to `COLUMNS`, clamped to 24-160 columns
+with a 96-column default. ANSI styling is enabled only for a terminal or a
+nonzero `CLICOLOR_FORCE`; the presence of `NO_COLOR` always wins. Styling
+changes labels only, so removing ANSI sequences reproduces no-color output
+exactly. MCP and `--json` remain protocol surfaces and do not consume this
+terminal rendering contract.
+
 Failures emitted before a command result use `kind = "genesis/error-v0.2"`.
 Command-result envelopes may retain the command-specific `kind` with
 `ok = false`, structured `error`, and non-empty `diagnostics`; this preserves

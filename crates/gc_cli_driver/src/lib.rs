@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 #[cfg(feature = "parity-harness")]
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -212,59 +213,7 @@ fn configure_profile_flags(_parity: bool) {}
 pub fn run(flavor: Flavor) -> std::process::ExitCode {
     set_runtime_profile(RuntimeProfile::Production);
     configure_profile_flags(false);
-    gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
-    if let Some(code) = host_bridge_runtime::maybe_run_host_bridge_mode() {
-        return code;
-    }
-    let cli = Cli::parse();
-    let stdio_server = matches!(cli.cmd, Cmd::Mcp { .. });
-    match dispatch(&cli, flavor) {
-        Ok(out) => {
-            if stdio_server {
-                // MCP owns stdout for the full process lifetime.
-            } else if cli.json {
-                // JSON mode: exactly one JSON object on stdout.
-                println!("{}", json_canonical_string(&out.json));
-            } else if !out.stdout.is_empty() {
-                print!("{}", out.stdout);
-            }
-            std::process::ExitCode::from(out.exit_code)
-        }
-        Err(e) => {
-            if stdio_server {
-                eprintln!("{}", e.json.message);
-            } else if cli.json {
-                let out = match json_envelope_value(JsonEnvelope::<serde_json::Value> {
-                    ok: false,
-                    kind: "genesis/error-v0.2",
-                    data: None,
-                    error: Some(e.json),
-                }) {
-                    Ok(v) => v,
-                    Err(serr) => serde_json::json!({
-                        "ok": false,
-                        "kind": "genesis/error-v0.2",
-                        "error": {
-                            "code": serr.json.code,
-                            "message": serr.json.message,
-                            "context": serr.json.context,
-                        },
-                    }),
-                };
-                let out = annotate_envelope(out, e.exit_code);
-                println!("{}", json_canonical_string(&out));
-            } else {
-                eprintln!("{}", e.json.message);
-                if let Some(ctx) = e.json.context
-                    && let Some(s) = ctx.as_str()
-                    && !s.is_empty()
-                {
-                    eprintln!("{s}");
-                }
-            }
-            std::process::ExitCode::from(e.exit_code)
-        }
-    }
+    run_configured(flavor)
 }
 
 #[cfg(feature = "parity-harness")]
@@ -272,6 +221,10 @@ pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process
     set_runtime_profile(profile);
     let parity = matches!(profile, RuntimeProfile::ParityHarness);
     configure_profile_flags(parity);
+    run_configured(flavor)
+}
+
+fn run_configured(flavor: Flavor) -> std::process::ExitCode {
     gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
     if let Some(code) = host_bridge_runtime::maybe_run_host_bridge_mode() {
         return code;
@@ -284,6 +237,14 @@ pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process
                 // MCP owns stdout for the full process lifetime.
             } else if cli.json {
                 println!("{}", json_canonical_string(&out.json));
+            } else if out.exit_code != 0 {
+                if let Some(rendered) =
+                    diagnostics::render_human_envelope(&out.json, human_render_options())
+                {
+                    eprintln!("{rendered}");
+                } else if !out.stdout.is_empty() {
+                    print!("{}", out.stdout);
+                }
             } else if !out.stdout.is_empty() {
                 print!("{}", out.stdout);
             }
@@ -313,16 +274,34 @@ pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process
                 let out = annotate_envelope(out, e.exit_code);
                 println!("{}", json_canonical_string(&out));
             } else {
-                eprintln!("{}", e.json.message);
-                if let Some(ctx) = e.json.context
-                    && let Some(s) = ctx.as_str()
-                    && !s.is_empty()
-                {
-                    eprintln!("{s}");
-                }
+                eprintln!(
+                    "{}",
+                    diagnostics::render_human_error(
+                        e.json.code,
+                        &e.json.message,
+                        e.json.context,
+                        e.exit_code,
+                        human_render_options(),
+                    )
+                );
             }
             std::process::ExitCode::from(e.exit_code)
         }
+    }
+}
+
+fn human_render_options() -> diagnostics::HumanRenderOptions {
+    let width = std::env::var("COLUMNS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(96);
+    let no_color = std::env::var_os("NO_COLOR").is_some();
+    let force_color = std::env::var("CLICOLOR_FORCE")
+        .ok()
+        .is_some_and(|value| !value.is_empty() && value != "0");
+    diagnostics::HumanRenderOptions {
+        width,
+        color: !no_color && (force_color || std::io::stderr().is_terminal()),
     }
 }
 
