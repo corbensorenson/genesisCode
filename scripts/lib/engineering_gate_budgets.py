@@ -36,10 +36,10 @@ EXPECTED = {
 STDLIB = {
     "__future__", "argparse", "ast", "base64", "binascii", "collections", "contextlib", "copy",
     "dataclasses", "datetime", "errno", "fcntl", "fnmatch", "fractions", "functools", "gzip",
-    "hashlib", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "random", "re",
+    "hashlib", "html", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "random", "re",
     "shlex", "shutil", "signal", "socket", "stat",
     "secrets", "statistics", "string", "subprocess", "sys", "tarfile", "tempfile", "threading", "time", "tomllib",
-    "types", "typing", "urllib",
+    "types", "typing", "urllib", "xml",
 }
 
 
