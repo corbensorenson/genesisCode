@@ -332,8 +332,8 @@ wasi_self_patch="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" --corefor
 
 "$GEN" --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
 "$GWASI" --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/wasi.store" --markdown "$TMP_DIR/WASI_SELFHOST_CUTOVER.md" >/dev/null
-grep -q '\`policy/\*\`' "$TMP_DIR/SELFHOST_CUTOVER.md" || fail "native selfhost dashboard markdown missing policy/* row"
-grep -q '\`policy/\*\`' "$TMP_DIR/WASI_SELFHOST_CUTOVER.md" || fail "WASI selfhost dashboard markdown missing policy/* row"
+grep -Fq '`policy/*`' "$TMP_DIR/SELFHOST_CUTOVER.md" || fail "native selfhost dashboard markdown missing policy/* row"
+grep -Fq '`policy/*`' "$TMP_DIR/WASI_SELFHOST_CUTOVER.md" || fail "WASI selfhost dashboard markdown missing policy/* row"
 
 ELAPSED_MS=$(( $(now_ms) - START_MS ))
 python3 "$ROOT_DIR/scripts/lib/profile_runtime_budget.py" \
