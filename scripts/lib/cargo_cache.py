@@ -320,6 +320,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         result["root"] = args.root.resolve()
         result["cache_hit"] = False
         if not args.no_materialize:
+            transient_lease = args.lease_pid is None
+            admission_pid = os.getpid() if transient_lease else args.lease_pid
             target = Path(result["target_dir"]).resolve()
             build_root = args.root.resolve() / ".genesis/build"
             try:
@@ -349,7 +351,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     result["metadata"]["cacheKeySha256"],
                     relative_target,
                     size_class,
-                    pid=args.lease_pid,
+                    pid=admission_pid,
                 )
             try:
                 result["cache_hit"] = materialize(result)
@@ -359,6 +361,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                         args.root.resolve(), result["generated_state"]["leaseToken"]
                     )
                 raise
+            if transient_lease and result.get("generated_state"):
+                generated_state.release(
+                    args.root.resolve(), result["generated_state"]["leaseToken"]
+                )
         emit(result, args.format)
     except (
         CachePolicyError,

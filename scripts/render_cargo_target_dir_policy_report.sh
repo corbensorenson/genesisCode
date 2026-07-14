@@ -24,6 +24,7 @@ report_path = pathlib.Path(sys.argv[2])
 history_path = pathlib.Path(sys.argv[3])
 sys.path.insert(0, str(root / "scripts/lib"))
 import cargo_cache as cache  # noqa: E402
+import generated_state as state  # noqa: E402
 
 
 class ControlFailure(AssertionError):
@@ -136,6 +137,10 @@ with tempfile.TemporaryDirectory(prefix="genesis-cargo-cache-policy.") as temp_r
         pathlib.Path(fresh_result["targetDir"]).is_dir()
         and (fixture / ".genesis/build" / cleanup_marker).is_file(),
         "fresh-checkout cache admission omitted materialization or provenance",
+    )
+    require(
+        state.status(fixture)["activeLeases"] == 0,
+        "non-shell cache resolution leaked a process lease",
     )
     passed("fresh-checkout-materialization")
 

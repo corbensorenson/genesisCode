@@ -199,6 +199,26 @@ file. `GENESIS_GATE_TELEMETRY_DISABLE=1` is reserved for explicit authority
 regeneration and telemetry self-conformance; release orchestration MUST NOT
 disable observation.
 
+## Governance Consolidation Budget
+
+`policies/gates_v0.1.json` owns the closed one-in/one-out budget for governed
+check, update, and render entrypoints until M1. `genesis.gates.json` publishes
+the baseline, current inventory, non-positive delta, ceilings, retired alias
+mapping, and removed declared duration/disk envelope. A new check entrypoint is
+valid only for a distinct trust boundary and requires retiring another
+entrypoint in the same reviewed change; documentation convenience and legacy
+command compatibility are not trust boundaries.
+
+The gate-manifest renderer independently counts all three entrypoint surfaces,
+requires every retired alias to be absent and its canonical replacement to
+exist, rejects compatibility-wrapper markers, and prevents count or aggregate
+declared-envelope growth above the R0 baseline. The initial consolidation
+retires the feature-matrix check/update aliases in favor of the canonical
+capability-ledger entrypoints, reducing the governed inventory from 125 to 124
+checks and from 79 to 78 updaters while leaving 58 renderers. The removed check
+carried a 600-second and 4096-MiB declared CI envelope; these are scheduling
+budget savings, not a claim that every run consumed the full envelope.
+
 ## Engineering Gate Budgets
 
 `policies/engineering_gate_budgets_v0.1.json`, closed by

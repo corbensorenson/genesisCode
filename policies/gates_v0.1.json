@@ -6,6 +6,37 @@
     "boundaryAudit": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
     "prerequisiteManifest": "genesis.prerequisites.json"
   },
+  "governanceBudget": {
+    "baseline": {
+      "checkEntrypoints": 125,
+      "updateEntrypoints": 79,
+      "renderEntrypoints": 58,
+      "declaredDurationSeconds": 63420,
+      "declaredDiskMiB": 425472
+    },
+    "ceilings": {
+      "checkEntrypoints": 124,
+      "updateEntrypoints": 78,
+      "renderEntrypoints": 58
+    },
+    "retiredAliases": [
+      {
+        "path": "scripts/check_feature_matrix_evidence.sh",
+        "replacement": "scripts/check_capability_evidence_ledger.sh",
+        "surface": "check",
+        "declaredDurationSeconds": 600,
+        "declaredDiskMiB": 4096
+      },
+      {
+        "path": "scripts/update_feature_matrix_evidence.sh",
+        "replacement": "scripts/update_capability_status_views.sh",
+        "surface": "update",
+        "declaredDurationSeconds": 0,
+        "declaredDiskMiB": 0
+      }
+    ],
+    "rule": "one-in-one-out-distinct-trust-boundary"
+  },
   "platforms": [
     {
       "id": "darwin-arm64",

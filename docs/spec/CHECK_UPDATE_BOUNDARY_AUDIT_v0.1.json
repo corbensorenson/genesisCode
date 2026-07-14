@@ -738,7 +738,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "b499553864df38a9d309beb15c5eeb3d2b7f81ca77d29254c585767fe2bb04ee",
+      "execution_identity_sha256": "797ba31574452ca3f6227c6624de18466be7d46b35c0bf01e7a9b201b4be0e4f",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -749,7 +749,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "16fe9c055dc600e7cfeb6fe33170f21f245dbc5a46a72006e065915d84d16873",
+      "sha256": "3747cd9ac7408a8e3dd18abdfb6824b8d357fb0f21cb26a6c77d27d6ab001fbe",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -817,13 +817,13 @@
       "execution_helper_closure": [
         {
           "path": "scripts/render_cargo_target_dir_policy_report.sh",
-          "sha256": "93cb583682248530af48c97e750fc25d9f8a65dafb4520bda78185f06dcbe6d3"
+          "sha256": "b651ce4c668732a15845b4ef551b4b72ff113e0f502110dca9495db224d1e3a9"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cargo_target_dir_policy_report.sh"
       ],
-      "execution_identity_sha256": "33fa975669fca6d2983058c36a15def765be005679e321949faef0b2d705264e",
+      "execution_identity_sha256": "9c5ea31889ee0533c0d02de90bb68bbd8aaf686d0400deb8c39bf8e19c5eb4c7",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1709,43 +1709,6 @@
         "scripts/render_evidence_release_asset.sh: trap 'rm -rf \"$TMP_DIR\"' EXIT",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"
       ]
-    },
-    {
-      "check_invocations": [
-        "check_capability_evidence_ledger.sh"
-      ],
-      "class": "aggregate",
-      "compilation_declaration": null,
-      "compilation_detected": false,
-      "default_refresh_true": false,
-      "direct_check_invocations": [
-        "check_capability_evidence_ledger.sh"
-      ],
-      "direct_compilation_detected": false,
-      "direct_default_refresh_true": false,
-      "direct_network_detected": false,
-      "direct_persistent_output_references": [],
-      "direct_read_only_persistent_inputs": [],
-      "direct_refresh_controls": [],
-      "direct_update_invocations": [],
-      "direct_write_candidates": [],
-      "execution_helper_closure": [],
-      "execution_helper_invocations": [],
-      "execution_identity_sha256": "b1d823e08e3b13ab8188021ef718215a7409a5f5f33597a8e1b45c35c5e1061e",
-      "legacy_persistent_output_declaration": null,
-      "mutation_helper_declaration": null,
-      "mutation_helper_invocations": [],
-      "network_declaration": null,
-      "network_detected": false,
-      "path": "scripts/check_feature_matrix_evidence.sh",
-      "persistent_output_references": [],
-      "r0_2_compliant": true,
-      "read_only_persistent_inputs": [],
-      "refresh_controls": [],
-      "sha256": "696a092d339b90c0266a4169205f26528264e1cd46eef8ee8e4c627dd0a6c9df",
-      "transitive_noncompliant_checks": [],
-      "update_invocations": [],
-      "write_candidates": []
     },
     {
       "check_invocations": [
@@ -5576,6 +5539,7 @@
         "check_assurance_standards_crosswalk.sh",
         "check_bootstrap_retirement_gate.sh",
         "check_capability_coverage_audit.sh",
+        "check_capability_evidence_ledger.sh",
         "check_capability_evidence_ledger_contract.sh",
         "check_capability_indices.sh",
         "check_cargo_target_dir_policy.sh",
@@ -5588,7 +5552,6 @@
         "check_domain_kit_workflows.sh",
         "check_domain_starter_registry_bootstrap.sh",
         "check_engineering_gate_contract.sh",
-        "check_feature_matrix_evidence.sh",
         "check_feature_matrix_gap_hygiene.sh",
         "check_foundation_stdlib_conformance.sh",
         "check_full_selfhost_cutover_profile.sh",
@@ -5692,7 +5655,7 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "a5e149e169a554146bcd898ba24cf958a1201a54e3547de2c0185218bf910b68"
+          "sha256": "3fe58790e708421b4c88c5dccf1ced98063d50ff49ef04576c96db6f03b5c05d"
         },
         {
           "path": "scripts/test_changed_fast.sh",
@@ -5702,7 +5665,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "00d647aa4e7960f0b6631ea007f06592d3b103f4c8012005f6c158906dbb5d3c",
+      "execution_identity_sha256": "440f539ffb4d9e69ea2a27156d2636809ee0c20ce99ea6efa4bd5d892d66522c",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -6247,14 +6210,14 @@
   "kind": "genesis/check-update-boundary-audit-v0.1",
   "policy": "policies/check_update_boundary_v0.1.json",
   "summary": {
-    "check_scripts": 125,
+    "check_scripts": 124,
     "compile_scripts": 54,
     "default_refresh_true_scripts": 0,
     "legacy_persistent_output_scripts": 0,
     "mutation_helper_scripts": 0,
     "network_scripts": 1,
     "r0_2_a_complete": true,
-    "r0_2_compliant_scripts": 125,
+    "r0_2_compliant_scripts": 124,
     "update_invocation_scripts": 0
   },
   "target": {

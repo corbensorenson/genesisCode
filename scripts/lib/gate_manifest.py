@@ -42,6 +42,7 @@ POLICY_FIELDS = {
     "kind", "version", "inventory", "platforms", "profiles", "inputSets",
     "outputSets", "classDefaults", "kindOverrides", "kindDefaults",
     "networkOverrides", "gateOverrides", "defaultPlatforms", "platformOverrides", "toolOverrides",
+    "governanceBudget",
 }
 MANIFEST_FIELDS = {
     "kind", "version", "inventory", "platforms", "profiles", "inputSets",
@@ -58,6 +59,16 @@ REPO_REF_RE = re.compile(
 ROOT_REF_RE = re.compile(
     r"(?<![A-Za-z0-9_.-])((?:Cargo\.(?:toml|lock)|README\.md|ROADMAP\.md|CHANGELOG\.md|rust-toolchain\.toml|genesis\.[A-Za-z0-9_.-]+))"
 )
+GOVERNANCE_SNAPSHOT_FIELDS = {
+    "checkEntrypoints", "updateEntrypoints", "renderEntrypoints",
+    "declaredDurationSeconds", "declaredDiskMiB",
+}
+ENTRYPOINT_CEILING_FIELDS = {
+    "checkEntrypoints", "updateEntrypoints", "renderEntrypoints",
+}
+RETIRED_ALIAS_FIELDS = {
+    "path", "replacement", "surface", "declaredDurationSeconds", "declaredDiskMiB",
+}
 
 TOOL_PATTERNS = {
     "adb": re.compile(r"(?:^|[^A-Za-z0-9_-])adb(?:[^A-Za-z0-9_-]|$)"),
@@ -189,11 +200,94 @@ def validate_sorted_unique_objects(items: Any, context: str) -> list[Mapping[str
     return require_type_items
 
 
+def entrypoint_counts() -> dict[str, int]:
+    return {
+        "checkEntrypoints": len(list((ROOT / "scripts").glob("check_*.sh"))),
+        "updateEntrypoints": len(list((ROOT / "scripts").glob("update_*.sh"))),
+        "renderEntrypoints": len(list((ROOT / "scripts").glob("render_*.sh"))),
+    }
+
+
+def validate_snapshot(value: Any, context: str) -> dict[str, int]:
+    require_type(value, dict, context)
+    require_closed(value, GOVERNANCE_SNAPSHOT_FIELDS, context)
+    return {
+        field: require_int(value[field], f"{context}.{field}")
+        for field in GOVERNANCE_SNAPSHOT_FIELDS
+    }
+
+
+def validate_governance_policy(value: Any) -> None:
+    context = "policy.governanceBudget"
+    require_type(value, dict, context)
+    require_closed(value, {"baseline", "ceilings", "retiredAliases", "rule"}, context)
+    baseline = validate_snapshot(value["baseline"], f"{context}.baseline")
+    ceilings = value["ceilings"]
+    require_type(ceilings, dict, f"{context}.ceilings")
+    require_closed(ceilings, ENTRYPOINT_CEILING_FIELDS, f"{context}.ceilings")
+    ceilings = {
+        field: require_int(ceilings[field], f"{context}.ceilings.{field}")
+        for field in ENTRYPOINT_CEILING_FIELDS
+    }
+    if value["rule"] != "one-in-one-out-distinct-trust-boundary":
+        raise GateManifestError("governance entrypoint budget rule drift")
+
+    retired = value["retiredAliases"]
+    require_type(retired, list, f"{context}.retiredAliases")
+    if not retired:
+        raise GateManifestError("governance budget lacks consolidation records")
+    paths = []
+    retired_by_surface = {"check": 0, "update": 0, "render": 0}
+    for index, item in enumerate(retired):
+        item_context = f"{context}.retiredAliases[{index}]"
+        require_type(item, dict, item_context)
+        require_closed(item, RETIRED_ALIAS_FIELDS, item_context)
+        path = validate_repo_path(item["path"], f"{item_context}.path")
+        replacement = validate_repo_path(
+            item["replacement"], f"{item_context}.replacement", must_exist=True
+        )
+        surface = item["surface"]
+        if surface not in retired_by_surface:
+            raise GateManifestError(f"{item_context}.surface is invalid")
+        prefix = f"scripts/{surface}_"
+        if not path.startswith(prefix) or not replacement.startswith(prefix):
+            raise GateManifestError(f"{item_context} surface/path mismatch")
+        if (ROOT / path).exists():
+            raise GateManifestError(f"retired governance alias still exists: {path}")
+        require_int(item["declaredDurationSeconds"], f"{item_context}.declaredDurationSeconds")
+        require_int(item["declaredDiskMiB"], f"{item_context}.declaredDiskMiB")
+        paths.append(path)
+        retired_by_surface[surface] += 1
+    if paths != sorted(set(paths)):
+        raise GateManifestError("retired governance aliases must be sorted and unique")
+
+    current = entrypoint_counts()
+    for field, surface in (
+        ("checkEntrypoints", "check"),
+        ("updateEntrypoints", "update"),
+        ("renderEntrypoints", "render"),
+    ):
+        if current[field] > ceilings[field]:
+            raise GateManifestError(f"governance entrypoint ceiling exceeded: {field}")
+        if baseline[field] - current[field] != retired_by_surface[surface]:
+            raise GateManifestError(f"governance consolidation inventory drift: {field}")
+        if ceilings[field] > baseline[field]:
+            raise GateManifestError(f"governance ceiling exceeds baseline: {field}")
+
+    for pattern in ("check_*.sh", "update_*.sh"):
+        for path in (ROOT / "scripts").glob(pattern):
+            if "Compatibility entrypoint" in path.read_text(encoding="utf-8"):
+                raise GateManifestError(
+                    f"ungoverned compatibility entrypoint remains: {display_path(path)}"
+                )
+
+
 def validate_policy(policy: Any, audit: Any, prerequisites: Any) -> None:
     require_type(policy, dict, "policy")
     require_closed(policy, POLICY_FIELDS, "policy")
     if policy["kind"] != "genesis/gate-manifest-policy-v0.1" or policy["version"] != "0.1":
         raise GateManifestError("unsupported gate manifest policy identity")
+    validate_governance_policy(policy["governanceBudget"])
 
     inventory = policy["inventory"]
     require_type(inventory, dict, "policy.inventory")
@@ -556,6 +650,27 @@ def render_manifest(policy: Any, audit: Any, prerequisites: Any) -> Mapping[str,
     for rel in (AUDIT_REL, POLICY_REL, PREREQUISITES_REL):
         generated_from.append({"path": rel, "sha256": digest_file(ROOT / rel)})
     generated_from.sort(key=lambda item: item["path"])
+    governance_policy = policy["governanceBudget"]
+    baseline = deepcopy(governance_policy["baseline"])
+    current = {
+        **entrypoint_counts(),
+        "declaredDurationSeconds": sum(gate["expectedDurationSeconds"] for gate in gates),
+        "declaredDiskMiB": sum(gate["diskBudgetMiB"] for gate in gates),
+    }
+    delta = {field: current[field] - baseline[field] for field in GOVERNANCE_SNAPSHOT_FIELDS}
+    if any(value > 0 for value in delta.values()):
+        raise GateManifestError("governance inventory exceeded its R0 consolidation baseline")
+    savings = {
+        "declaredDurationSeconds": sum(
+            item["declaredDurationSeconds"] for item in governance_policy["retiredAliases"]
+        ),
+        "declaredDiskMiB": sum(
+            item["declaredDiskMiB"] for item in governance_policy["retiredAliases"]
+        ),
+    }
+    for field in savings:
+        if baseline[field] - current[field] != savings[field]:
+            raise GateManifestError(f"retired governance envelope drift: {field}")
     return {
         "kind": "genesis/gate-manifest-v0.1",
         "version": "0.1",
@@ -563,6 +678,15 @@ def render_manifest(policy: Any, audit: Any, prerequisites: Any) -> Mapping[str,
             "checkGlob": "scripts/check_*.sh",
             "gateCount": len(gates),
             "generatedFrom": generated_from,
+            "governanceBudget": {
+                "baseline": baseline,
+                "ceilings": deepcopy(governance_policy["ceilings"]),
+                "current": current,
+                "delta": delta,
+                "retiredAliases": deepcopy(governance_policy["retiredAliases"]),
+                "rule": governance_policy["rule"],
+                "scheduledEnvelopeSavings": savings,
+            },
         },
         "platforms": deepcopy(policy["platforms"]),
         "profiles": deepcopy(policy["profiles"]),
@@ -614,7 +738,11 @@ def validate_manifest(data: Any, expected: Any, prerequisites: Any) -> None:
         raise GateManifestError("unsupported gate manifest identity")
     inventory = data["inventory"]
     require_type(inventory, dict, "manifest.inventory")
-    require_closed(inventory, {"checkGlob", "gateCount", "generatedFrom"}, "manifest.inventory")
+    require_closed(
+        inventory,
+        {"checkGlob", "gateCount", "generatedFrom", "governanceBudget"},
+        "manifest.inventory",
+    )
     if inventory["checkGlob"] != "scripts/check_*.sh":
         raise GateManifestError("manifest inventory glob drift")
     require_int(inventory["gateCount"], "manifest.inventory.gateCount", 1)
@@ -628,6 +756,49 @@ def validate_manifest(data: Any, expected: Any, prerequisites: Any) -> None:
         validate_repo_path(source["path"], f"manifest.inventory.generatedFrom[{index}].path", must_exist=True)
         if not SHA_RE.fullmatch(require_string(source["sha256"], "generation sha256")):
             raise GateManifestError("generation authority has malformed sha256")
+
+    governance = inventory["governanceBudget"]
+    governance_context = "manifest.inventory.governanceBudget"
+    require_type(governance, dict, governance_context)
+    require_closed(
+        governance,
+        {"baseline", "ceilings", "current", "delta", "retiredAliases", "rule", "scheduledEnvelopeSavings"},
+        governance_context,
+    )
+    validate_snapshot(governance["baseline"], f"{governance_context}.baseline")
+    current_governance = validate_snapshot(
+        governance["current"], f"{governance_context}.current"
+    )
+    ceilings = governance["ceilings"]
+    require_type(ceilings, dict, f"{governance_context}.ceilings")
+    require_closed(ceilings, ENTRYPOINT_CEILING_FIELDS, f"{governance_context}.ceilings")
+    for field in ENTRYPOINT_CEILING_FIELDS:
+        ceiling = require_int(ceilings[field], f"{governance_context}.ceilings.{field}")
+        if ceiling < current_governance[field]:
+            raise GateManifestError(f"manifest governance ceiling exceeded: {field}")
+    delta = governance["delta"]
+    require_type(delta, dict, f"{governance_context}.delta")
+    require_closed(delta, GOVERNANCE_SNAPSHOT_FIELDS, f"{governance_context}.delta")
+    if any(
+        not isinstance(delta[field], int)
+        or isinstance(delta[field], bool)
+        or delta[field] > 0
+        for field in GOVERNANCE_SNAPSHOT_FIELDS
+    ):
+        raise GateManifestError("manifest governance delta must be non-positive integers")
+    if governance["rule"] != "one-in-one-out-distinct-trust-boundary":
+        raise GateManifestError("manifest governance rule drift")
+    if governance["retiredAliases"] != expected["inventory"]["governanceBudget"]["retiredAliases"]:
+        raise GateManifestError("manifest retired alias inventory drift")
+    savings = governance["scheduledEnvelopeSavings"]
+    require_type(savings, dict, f"{governance_context}.scheduledEnvelopeSavings")
+    require_closed(
+        savings,
+        {"declaredDurationSeconds", "declaredDiskMiB"},
+        f"{governance_context}.scheduledEnvelopeSavings",
+    )
+    for field in ("declaredDurationSeconds", "declaredDiskMiB"):
+        require_int(savings[field], f"{governance_context}.scheduledEnvelopeSavings.{field}")
 
     input_ids = {item["id"] for item in validate_sorted_unique_objects(data["inputSets"], "manifest.inputSets")}
     output_ids = {item["id"] for item in validate_sorted_unique_objects(data["outputSets"], "manifest.outputSets")}
@@ -651,6 +822,8 @@ def validate_manifest(data: Any, expected: Any, prerequisites: Any) -> None:
     require_type(raw_gates, list, "manifest.gates")
     if inventory["gateCount"] != len(raw_gates):
         raise GateManifestError("manifest gate count does not match inventory")
+    if current_governance["checkEntrypoints"] != len(raw_gates):
+        raise GateManifestError("manifest governance check count does not match gate inventory")
     gates: Dict[str, Mapping[str, Any]] = {}
     ids = []
     previous_path = ""
@@ -789,6 +962,9 @@ def run_self_test(expected: Any, prerequisites: Any) -> int:
     reference_host = next(gate for gate in mutated["gates"] if gate["entrypoint"] == "scripts/check_reference_host_profiles.sh")
     reference_host["tools"].remove("rustc")
     vectors.append(("probe-tool-scope-drift", mutated))
+    mutated = deepcopy(expected)
+    mutated["inventory"]["governanceBudget"]["ceilings"]["checkEntrypoints"] -= 1
+    vectors.append(("governance-entrypoint-budget", mutated))
     for name, candidate in vectors:
         expect_reject(name, candidate, expected, prerequisites)
     try:

@@ -11,7 +11,7 @@
     "inventory": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["checkGlob", "gateCount", "generatedFrom"],
+      "required": ["checkGlob", "gateCount", "generatedFrom", "governanceBudget"],
       "properties": {
         "checkGlob": {"const": "scripts/check_*.sh"},
         "gateCount": {"type": "integer", "minimum": 1},
@@ -20,7 +20,8 @@
           "minItems": 3,
           "maxItems": 3,
           "items": {"$ref": "#/$defs/sourceIdentity"}
-        }
+        },
+        "governanceBudget": {"$ref": "#/$defs/governanceBudget"}
       }
     },
     "platforms": {
@@ -57,6 +58,78 @@
       "properties": {
         "path": {"$ref": "#/$defs/repoPath"},
         "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "governanceBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "ceilings", "current", "delta", "retiredAliases", "rule", "scheduledEnvelopeSavings"],
+      "properties": {
+        "baseline": {"$ref": "#/$defs/governanceSnapshot"},
+        "ceilings": {"$ref": "#/$defs/entrypointCeilings"},
+        "current": {"$ref": "#/$defs/governanceSnapshot"},
+        "delta": {"$ref": "#/$defs/governanceDelta"},
+        "retiredAliases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/retiredAlias"}
+        },
+        "rule": {"const": "one-in-one-out-distinct-trust-boundary"},
+        "scheduledEnvelopeSavings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["declaredDurationSeconds", "declaredDiskMiB"],
+          "properties": {
+            "declaredDurationSeconds": {"type": "integer", "minimum": 0},
+            "declaredDiskMiB": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "governanceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checkEntrypoints", "updateEntrypoints", "renderEntrypoints", "declaredDurationSeconds", "declaredDiskMiB"],
+      "properties": {
+        "checkEntrypoints": {"type": "integer", "minimum": 0},
+        "updateEntrypoints": {"type": "integer", "minimum": 0},
+        "renderEntrypoints": {"type": "integer", "minimum": 0},
+        "declaredDurationSeconds": {"type": "integer", "minimum": 0},
+        "declaredDiskMiB": {"type": "integer", "minimum": 0}
+      }
+    },
+    "entrypointCeilings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checkEntrypoints", "updateEntrypoints", "renderEntrypoints"],
+      "properties": {
+        "checkEntrypoints": {"type": "integer", "minimum": 0},
+        "updateEntrypoints": {"type": "integer", "minimum": 0},
+        "renderEntrypoints": {"type": "integer", "minimum": 0}
+      }
+    },
+    "governanceDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checkEntrypoints", "updateEntrypoints", "renderEntrypoints", "declaredDurationSeconds", "declaredDiskMiB"],
+      "properties": {
+        "checkEntrypoints": {"type": "integer", "maximum": 0},
+        "updateEntrypoints": {"type": "integer", "maximum": 0},
+        "renderEntrypoints": {"type": "integer", "maximum": 0},
+        "declaredDurationSeconds": {"type": "integer", "maximum": 0},
+        "declaredDiskMiB": {"type": "integer", "maximum": 0}
+      }
+    },
+    "retiredAlias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "replacement", "surface", "declaredDurationSeconds", "declaredDiskMiB"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repoPath"},
+        "replacement": {"$ref": "#/$defs/repoPath"},
+        "surface": {"enum": ["check", "update", "render"]},
+        "declaredDurationSeconds": {"type": "integer", "minimum": 0},
+        "declaredDiskMiB": {"type": "integer", "minimum": 0}
       }
     },
     "platform": {

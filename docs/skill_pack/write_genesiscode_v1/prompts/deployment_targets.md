@@ -17,5 +17,5 @@ Use this prompt when extending `gcpm build` target coverage and deployment contr
 ## Minimum Verification
 
 - `cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts -- --exact`
-- `bash scripts/check_feature_matrix_evidence.sh`
+- `bash scripts/check_capability_evidence_ledger.sh`
 - `bash scripts/check_write_genesiscode_skill_distribution.sh`

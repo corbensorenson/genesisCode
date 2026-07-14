@@ -17,5 +17,5 @@ Use this prompt when implementing durable data and IO-heavy workflows.
 ## Minimum Verification
 
 - `bash scripts/check_agent_reference_workflows.sh`
-- `bash scripts/check_feature_matrix_evidence.sh`
+- `bash scripts/check_capability_evidence_ledger.sh`
 - `bash scripts/check_write_genesiscode_skill_distribution.sh`

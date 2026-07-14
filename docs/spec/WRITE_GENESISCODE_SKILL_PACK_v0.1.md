@@ -89,7 +89,7 @@ and tooling evolution code.
 
 ### `feature_matrix_claims`
 - `bash scripts/check_feature_matrix_gap_hygiene.sh`
-- `bash scripts/check_feature_matrix_evidence.sh`
+- `bash scripts/check_capability_evidence_ledger.sh`
 
 ### `skill_conformance_executable`
 - `bash scripts/check_agent_reference_workflows.sh`
