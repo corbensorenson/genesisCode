@@ -95,7 +95,16 @@ pub(super) fn eval_one_module(
 
     let meta = match defined.get("::meta") {
         None => None,
-        Some(Value::Data(Term::Map(m))) => Some(Term::Map(m.clone())),
+        Some(Value::Data(t)) => match t.as_ref() {
+            Term::Map(m) => Some(Term::Map(m.clone())),
+            _ => {
+                return Err(ObligationError::Module(format!(
+                    "{}: ::meta must be a quoted map datum, got {}",
+                    path.display(),
+                    Value::Data(t.clone()).debug_repr()
+                )));
+            }
+        },
         Some(other) => {
             return Err(ObligationError::Module(format!(
                 "{}: ::meta must be a quoted map datum, got {}",
@@ -199,7 +208,7 @@ pub(super) fn suite_to_module(modules: &[LoadedModule]) -> BTreeMap<String, usiz
     out
 }
 
-pub(super) fn value_as_map(v: &Value) -> Option<&BTreeMap<TermOrdKey, Value>> {
+pub(super) fn value_as_map(v: &Value) -> Option<&gc_kernel::ValueMap> {
     match v {
         Value::Map(m) => Some(m),
         _ => None,
@@ -213,7 +222,7 @@ pub(super) fn apply_curried_term_args(
 ) -> Result<Value, ObligationError> {
     for arg in args {
         f = f
-            .apply(ctx, Value::Data(arg.clone()))
+            .apply(ctx, Value::data(arg.clone()))
             .map_err(|e| ObligationError::Test(format!("gc helper apply failed: {e}")))?;
     }
     Ok(f)

@@ -2,7 +2,7 @@ use crate::error::KernelError;
 use crate::value::Value;
 use gc_coreform::{FixedDecimal, Term};
 
-use super::{EvalCtx, type_err};
+use super::{EvalCtx, eval_prims::value_to_bigint, type_err};
 
 pub(super) fn prim_dec_parse(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
     if args.len() != 1 {
@@ -17,7 +17,7 @@ pub(super) fn prim_dec_parse(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value,
     };
     let t = d.to_term();
     ctx.mem_observe_map_len(3)?;
-    Ok(Value::Data(t))
+    Ok(Value::data(t))
 }
 
 pub(super) fn prim_dec_to_str(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
@@ -30,20 +30,20 @@ pub(super) fn prim_dec_to_str(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value
     };
     let s = d.to_canonical_string();
     ctx.mem_observe_string_len(s.len())?;
-    Ok(Value::Data(Term::Str(s)))
+    Ok(Value::data(Term::Str(s)))
 }
 
 pub(super) fn prim_dec_from_int(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
     if args.len() != 1 {
         return type_err(ctx, "dec/from-int expects 1 arg");
     }
-    let Some(Term::Int(i)) = args[0].as_data() else {
+    let Some(i) = value_to_bigint(&args[0]) else {
         return type_err(ctx, "dec/from-int expects int");
     };
-    let d = FixedDecimal::from_int(i.clone());
+    let d = FixedDecimal::from_int(i);
     let t = d.to_term();
     ctx.mem_observe_map_len(3)?;
-    Ok(Value::Data(t))
+    Ok(Value::data(t))
 }
 
 pub(super) fn prim_dec_bin<F>(ctx: &mut EvalCtx, args: &[Value], f: F) -> Result<Value, KernelError>
@@ -67,7 +67,7 @@ where
     };
     let t = out.to_term();
     ctx.mem_observe_map_len(3)?;
-    Ok(Value::Data(t))
+    Ok(Value::data(t))
 }
 
 pub(super) fn prim_dec_cmp<F>(ctx: &mut EvalCtx, args: &[Value], f: F) -> Result<Value, KernelError>
@@ -85,7 +85,7 @@ where
         Ok(x) => x,
         Err(e) => return e,
     };
-    Ok(Value::Data(Term::Bool(f(a, b))))
+    Ok(Value::data(Term::Bool(f(a, b))))
 }
 
 fn as_fixed_decimal(

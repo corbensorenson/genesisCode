@@ -597,12 +597,10 @@ fn process_spawn_wait_and_stdout_read_use_real_lifecycle() {
             (":program", Term::Str("sh".to_string())),
             (
                 ":args",
-                Term::Vector(
-                    vec![
-                        Term::Str("-c".to_string()),
-                        Term::Str("printf ready; sleep 0.1; printf done".to_string()),
-                    ],
-                ),
+                Term::Vector(vec![
+                    Term::Str("-c".to_string()),
+                    Term::Str("printf ready; sleep 0.1; printf done".to_string()),
+                ]),
             ),
         ]);
         let spawn_resp = process_spawn(&spawn_payload).expect("spawn process");
@@ -643,12 +641,10 @@ fn process_kill_sets_killed_flag_and_wait_returns_terminated_exit() {
             (":program", Term::Str("sh".to_string())),
             (
                 ":args",
-                Term::Vector(
-                    vec![
-                        Term::Str("-c".to_string()),
-                        Term::Str("sleep 5".to_string()),
-                    ],
-                ),
+                Term::Vector(vec![
+                    Term::Str("-c".to_string()),
+                    Term::Str("sleep 5".to_string()),
+                ]),
             ),
         ]);
         let spawn_resp = process_spawn(&spawn_payload).expect("spawn process");

@@ -8,6 +8,7 @@ compile_error!(
 
 pub use prelude::{Prelude, build_prelude};
 pub use selfhost_coreform_v1::{
+    BOOTSTRAP_PROFILE_ID, SELFHOST_TOOLCHAIN_ARTIFACT_KIND, SELFHOST_TOOLCHAIN_ARTIFACT_VERSION,
     SelfhostBootstrapMode, embedded_bootstrap_available, load_selfhost_coreform_toolchain_v1,
     load_selfhost_coreform_toolchain_v1_from_artifact,
     load_selfhost_coreform_toolchain_v1_from_artifact_source,
@@ -18,9 +19,13 @@ pub use selfhost_coreform_v1::{
 #[cfg(test)]
 mod tests {
     use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
-    use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, Value, eval_module};
+    use gc_kernel::{Apply, EffectProgram, EvalCtx, Value, eval_module};
 
     use super::build_prelude;
+
+    fn value_is_int(value: &Value, expected: i64) -> bool {
+        matches!(value.to_plain_term(), Some(Term::Int(n)) if n == expected.into())
+    }
 
     #[test]
     fn protocol_seals_are_unforgeable_by_user_code() {
@@ -47,22 +52,22 @@ mod tests {
         let fakeq = m
             .get(&TermOrdKey(Term::Symbol(":fake?".to_string())))
             .unwrap();
-        assert!(matches!(fakeq, Value::Data(Term::Bool(false))));
+        assert!(matches!(fakeq.as_data(), Some(Term::Bool(false))));
 
         let fake_un = m
             .get(&TermOrdKey(Term::Symbol(":fake-un".to_string())))
             .unwrap();
-        assert!(matches!(fake_un, Value::Data(Term::Nil)));
+        assert!(matches!(fake_un.as_data(), Some(Term::Nil)));
 
         let realq = m
             .get(&TermOrdKey(Term::Symbol(":real?".to_string())))
             .unwrap();
-        assert!(matches!(realq, Value::Data(Term::Bool(true))));
+        assert!(matches!(realq.as_data(), Some(Term::Bool(true))));
 
         let real_un = m
             .get(&TermOrdKey(Term::Symbol(":real-un".to_string())))
             .unwrap();
-        assert!(matches!(real_un, Value::Data(Term::Int(i)) if i == &456.into()));
+        assert!(matches!(real_un.as_data(), Some(Term::Int(i)) if i == &456.into()));
     }
 
     #[test]
@@ -100,13 +105,13 @@ mod tests {
             panic!("expected map, got {}", v.debug_repr());
         };
         let r1 = m.get(&TermOrdKey(Term::Symbol(":r1".to_string()))).unwrap();
-        assert!(matches!(r1, Value::Data(Term::Int(i)) if i == &10.into()));
+        assert!(matches!(r1.as_data(), Some(Term::Int(i)) if i == &10.into()));
 
         let r2 = m.get(&TermOrdKey(Term::Symbol(":r2".to_string()))).unwrap();
-        assert!(matches!(r2, Value::Data(Term::Int(i)) if i == &20.into()));
+        assert!(matches!(r2.as_data(), Some(Term::Int(i)) if i == &20.into()));
 
         let tr = m.get(&TermOrdKey(Term::Symbol(":tr".to_string()))).unwrap();
-        let Value::Data(Term::Map(tm)) = tr else {
+        let Some(Term::Map(tm)) = tr.as_data() else {
             panic!("expected trace map datum, got {}", tr.debug_repr());
         };
         let Term::Vector(steps) = tm
@@ -153,7 +158,7 @@ mod tests {
 
         for (k, expect_steps, expect_result) in [(":tr1", 2usize, 10i64), (":tr2", 1usize, 20i64)] {
             let tr = m.get(&TermOrdKey(Term::Symbol(k.to_string()))).unwrap();
-            let Value::Data(Term::Map(tm)) = tr else {
+            let Some(Term::Map(tm)) = tr.as_data() else {
                 panic!("expected trace map datum, got {}", tr.debug_repr());
             };
             assert!(matches!(
@@ -234,7 +239,7 @@ mod tests {
         let mut env = prelude.env;
 
         let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
-        assert!(matches!(v, Value::Data(Term::Int(i)) if i == 3.into()));
+        assert!(value_is_int(&v, 3));
     }
 
     #[test]
@@ -257,11 +262,23 @@ mod tests {
         };
 
         let ht = match m.get(&TermOrdKey(Term::Symbol(":ht".to_string()))).unwrap() {
-            Value::Data(Term::Str(s)) => s.clone(),
+            Value::Data(t) => match t.as_ref() {
+                Term::Str(s) => s.clone(),
+                _ => panic!(
+                    "expected :ht string, got {}",
+                    Value::Data(t.clone()).debug_repr()
+                ),
+            },
             other => panic!("expected :ht string, got {}", other.debug_repr()),
         };
         let pt = match m.get(&TermOrdKey(Term::Symbol(":pt".to_string()))).unwrap() {
-            Value::Data(Term::Str(s)) => s.clone(),
+            Value::Data(t) => match t.as_ref() {
+                Term::Str(s) => s.clone(),
+                _ => panic!(
+                    "expected :pt string, got {}",
+                    Value::Data(t.clone()).debug_repr()
+                ),
+            },
             other => panic!("expected :pt string, got {}", other.debug_repr()),
         };
 
@@ -315,9 +332,9 @@ mod tests {
         let mut env = prelude.env;
 
         let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
-        let got = match v {
-            Value::Data(Term::Str(s)) => s,
-            other => panic!("expected string, got {}", other.debug_repr()),
+        let got = match v.as_data() {
+            Some(Term::Str(s)) => s.clone(),
+            _ => panic!("expected string, got {}", v.debug_repr()),
         };
 
         let want = {
@@ -360,11 +377,12 @@ mod tests {
         };
         assert_eq!(*token, tok);
 
-        let Value::EffectRequest(EffectRequest { k, .. }) = payload.as_ref() else {
+        let Value::EffectRequest(req) = payload.as_ref() else {
             panic!("expected effect request payload");
         };
+        let k = req.k.clone();
 
-        let resp = Value::Data(Term::Bytes(vec![1, 2, 3, 4].into()));
+        let resp = Value::data(Term::Bytes(vec![1, 2, 3, 4].into()));
         let next = (*k).clone().apply(&mut ctx, resp).unwrap();
         let Value::EffectProgram(p2) = next else {
             panic!("expected effect program");
@@ -372,7 +390,7 @@ mod tests {
         let EffectProgram::Pure(v) = p2.as_ref() else {
             panic!("expected pure");
         };
-        assert!(matches!(v.as_ref(), Value::Data(Term::Int(i)) if i == &4.into()));
+        assert!(value_is_int(v.as_ref(), 4));
     }
 
     #[test]
@@ -404,11 +422,11 @@ mod tests {
 
         assert!(matches!(
             m.get(&TermOrdKey(Term::symbol(":len"))),
-            Some(Value::Data(Term::Int(i))) if i == &3.into()
+            Some(v) if value_is_int(v, 3)
         ));
         assert!(matches!(
             m.get(&TermOrdKey(Term::symbol(":sum"))),
-            Some(Value::Data(Term::Int(i))) if i == &6.into()
+            Some(v) if value_is_int(v, 6)
         ));
 
         let want_rev = parse_module("(quote (3 2 1))").unwrap();
@@ -456,7 +474,7 @@ mod tests {
         match bad {
             Value::Sealed { token, payload } => {
                 assert_eq!(*token, p.error);
-                let Value::Data(Term::Map(pm)) = payload.as_ref() else {
+                let Some(Term::Map(pm)) = payload.as_ref().as_data() else {
                     panic!("expected error payload map");
                 };
                 assert!(matches!(
@@ -488,6 +506,6 @@ mod tests {
         let EffectProgram::Pure(v) = p.as_ref() else {
             panic!("expected pure");
         };
-        assert!(matches!(v.as_ref(), Value::Data(Term::Int(i)) if i == &42.into()));
+        assert!(matches!(v.as_ref().as_data(), Some(Term::Int(i)) if i == &42.into()));
     }
 }

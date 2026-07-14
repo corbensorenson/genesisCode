@@ -22,7 +22,7 @@ pub(super) fn finalize_vcs_cmd_output(
     {
         ok = false;
         exit_code = EX_EVAL;
-        if let Value::Data(Term::Map(m)) = payload.as_ref()
+        if let Some(Term::Map(m)) = payload.as_ref().as_data()
             && matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
                 Some(Term::Str(s)) if s == "core/caps/denied"
@@ -45,9 +45,12 @@ pub(super) fn finalize_vcs_cmd_output(
         ok_false && has_conflict
     };
     let value_is_conflict = match result_value {
-        Value::Data(Term::Map(m)) => map_is_conflict(m),
-        Value::Data(Term::Str(s)) => match gc_coreform::parse_term(s) {
-            Ok(Term::Map(m)) => map_is_conflict(&m),
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(m) => map_is_conflict(m),
+            Term::Str(s) => match gc_coreform::parse_term(s) {
+                Ok(Term::Map(m)) => map_is_conflict(&m),
+                _ => false,
+            },
             _ => false,
         },
         _ => false,

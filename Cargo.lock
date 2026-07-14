@@ -145,6 +145,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "archery"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70e0a5f99dfebb87bb342d0f53bb92c81842e100bbb915223e38349580e5441d"
+dependencies = [
+ "triomphe",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -987,7 +996,7 @@ dependencies = [
 
 [[package]]
 name = "gc_cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "assert_cmd",
  "blake3",
@@ -995,6 +1004,9 @@ dependencies = [
  "gc_cli_driver_parity",
  "gc_coreform",
  "gc_effects",
+ "gc_kernel",
+ "gc_pkg",
+ "gc_prelude",
  "gc_registry",
  "gc_vcs",
  "predicates",
@@ -1004,7 +1016,7 @@ dependencies = [
 
 [[package]]
 name = "gc_cli_driver"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1034,12 +1046,13 @@ dependencies = [
  "sha2",
  "thiserror 2.0.18",
  "toml",
+ "url",
  "wasm-encoder 0.245.1",
 ]
 
 [[package]]
 name = "gc_cli_driver_parity"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1069,12 +1082,13 @@ dependencies = [
  "sha2",
  "thiserror 2.0.18",
  "toml",
+ "url",
  "wasm-encoder 0.245.1",
 ]
 
 [[package]]
 name = "gc_coreform"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "blake3",
@@ -1089,7 +1103,7 @@ dependencies = [
 
 [[package]]
 name = "gc_effects"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -1125,7 +1139,7 @@ dependencies = [
 
 [[package]]
 name = "gc_gfx"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "gc_coreform",
@@ -1134,7 +1148,7 @@ dependencies = [
 
 [[package]]
 name = "gc_kernel"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "blake3",
@@ -1142,13 +1156,14 @@ dependencies = [
  "gc_coreform",
  "num-bigint",
  "num-traits",
+ "rpds",
  "stacker",
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "gc_obligations"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -1175,7 +1190,7 @@ dependencies = [
 
 [[package]]
 name = "gc_opt"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "blake3",
@@ -1194,7 +1209,7 @@ dependencies = [
 
 [[package]]
 name = "gc_patches"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1214,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "gc_pkg"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "gc_coreform",
@@ -1226,7 +1241,7 @@ dependencies = [
 
 [[package]]
 name = "gc_prelude"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "blake3",
@@ -1246,7 +1261,7 @@ dependencies = [
 
 [[package]]
 name = "gc_registry"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "fs2",
@@ -1261,7 +1276,7 @@ dependencies = [
 
 [[package]]
 name = "gc_runtime_bench"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "blake3",
@@ -1282,7 +1297,7 @@ dependencies = [
 
 [[package]]
 name = "gc_types"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "gc_coreform",
@@ -1293,7 +1308,7 @@ dependencies = [
 
 [[package]]
 name = "gc_vcs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -1307,7 +1322,7 @@ dependencies = [
 
 [[package]]
 name = "gc_wasi_cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "assert_cmd",
  "blake3",
@@ -1324,7 +1339,7 @@ dependencies = [
 
 [[package]]
 name = "gc_wasm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "gc_coreform",
@@ -2789,6 +2804,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rpds"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e025feb26210bc196b908e72deb063b1b4000754304341cbc168a1e72c857ebc"
+dependencies = [
+ "archery",
+ "smallvec",
+]
+
+[[package]]
 name = "rusqlite"
 version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2875,9 +2900,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.9"
+version = "0.103.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7df23109aa6c1567d1c575b9952556388da57401e4ace1d15f79eedad0d8f53"
+checksum = "61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e"
 dependencies = [
  "ring",
  "rustls-pki-types",
@@ -3506,6 +3531,12 @@ checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
 ]
+
+[[package]]
+name = "triomphe"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b40688ea6389c8171614b25491f71d4a27946e0c7ce2da1c6de27e25abf1a0ae"
 
 [[package]]
 name = "try-lock"

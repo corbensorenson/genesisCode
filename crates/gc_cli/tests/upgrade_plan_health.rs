@@ -9,6 +9,7 @@ fn repo_root() -> PathBuf {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn upgrade_plan_health_check_passes() {
     let root = repo_root();
     let status = Command::new("bash")

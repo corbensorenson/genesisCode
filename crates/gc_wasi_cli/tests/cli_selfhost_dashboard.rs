@@ -53,6 +53,8 @@ fn selfhost_dashboard_writes_store_artifact_and_markdown_mirror() {
 
     let md = std::fs::read_to_string(markdown).unwrap();
     assert!(md.contains("Selfhost Cutover Dashboard"));
+    assert!(md.contains("Scope: command routing only"));
+    assert!(md.contains("docs/status/SELFHOST_AUTHORITY_v0.1.md"));
     assert!(md.contains("`policy/*`"));
     assert!(md.contains("`policy/*` | false | true | true"));
     assert!(md.contains("`store/*` | true | true | true"));

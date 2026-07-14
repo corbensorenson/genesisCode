@@ -10,8 +10,9 @@ This contract defines production SLO checks derived from runtime microbench evid
 - `gpu_compute_bridge` throughput budget from `metrics.bridge_runner_ms`
 - `gpu_compute_submit` throughput budget from `metrics.gpu_compute_submit_ms`
 
-Both budgets are measured by `gc_runtime_bench` and enforced in CI by
-`scripts/check_runtime_microbench_budgets.sh`.
+Both budgets are measured by `gc_runtime_bench`. Read-only validation uses
+`scripts/check_runtime_microbench_budgets.sh`; CI lanes that retain and upload
+the E0 report set use `scripts/update_runtime_microbench_budgets_report.sh`.
 
 ## Input Evidence
 
@@ -32,9 +33,14 @@ Required fields:
 
 ## Output Artifact
 
-CI must emit:
+The explicit producer emits:
 - `.genesis/perf/concurrency_gpu_slo_report.json`
 - kind: `genesis/concurrency-gpu-slo-v0.1`
+
+It also emits the source metrics plus
+`.genesis/perf/runtime_microbench_runtime_report.json` and the one-row-per-run
+`.genesis/perf/runtime_microbench_runtime_history.jsonl`. The read-only check
+uses private temporary outputs and never appends retained history.
 
 Schema:
 
@@ -81,12 +87,15 @@ Failure behavior:
 
 ## CI Integration
 
-`.github/workflows/ci.yml` runs `scripts/check_runtime_microbench_budgets.sh` on
-`standard` and `full` profiles, and runs `scripts/check_gpu_compute_device_conformance.sh`
-on both GPU conformance lanes (`gpu_device_microbench` + `gpu_device_microbench_deterministic`)
-to produce adapter-scoped conformance artifacts.
-Release profile runs additionally enforce lane parity with
-`scripts/check_gpu_device_conformance_lane_parity.sh`.
+`.github/workflows/ci.yml` runs `scripts/update_runtime_microbench_budgets_report.sh` on
+`standard` and `full` profiles, and runs
+`scripts/update_gpu_compute_device_conformance_report.sh` on both GPU conformance lanes
+(`gpu_device_microbench` + `gpu_device_microbench_deterministic`) to produce
+adapter-scoped conformance artifacts. Health and local validation surfaces use the paired
+read-only checks.
+Release profile runs additionally retain validated lane parity with
+`scripts/update_gpu_device_conformance_lane_parity_report.sh`; read-only local and aggregate
+validation use the paired check or its explicit renderer with temporary output.
 `scripts/check_upgrade_plan_health.sh --profile release-full` also requires device
 conformance by default (fail-closed for release/full profile health gates).
 

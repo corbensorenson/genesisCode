@@ -8,8 +8,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "selfhost-strict-golden" \
-  ".genesis/build/cargo" \
-  "GENESIS_SELFHOST_STRICT_GOLDEN_CARGO_TARGET_DIR"
+  root-host
 
 STRICT_GOLDEN_REPORT="${GENESIS_STRICT_GOLDEN_PROFILE_REPORT:-.genesis/perf/strict_golden_profile_report.json}"
 STRICT_GOLDEN_HISTORY="${GENESIS_STRICT_GOLDEN_PROFILE_HISTORY:-.genesis/perf/strict_golden_profile_history.jsonl}"

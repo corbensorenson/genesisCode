@@ -161,7 +161,7 @@ wasi_bridge_response = "{:ok true :plaintext b\"pt\"}"
         SealId(26),
     )
     .expect("hash");
-    let Value::Data(Term::Map(hash_mm)) = hash_out else {
+    let Some(Term::Map(hash_mm)) = hash_out.as_data() else {
         panic!("expected hash map");
     };
     assert_eq!(
@@ -190,7 +190,7 @@ wasi_bridge_response = "{:ok true :plaintext b\"pt\"}"
         SealId(27),
     )
     .expect("sign");
-    let Value::Data(Term::Map(sign_mm)) = sign_out else {
+    let Some(Term::Map(sign_mm)) = sign_out.as_data() else {
         panic!("expected sign map");
     };
     assert_eq!(
@@ -223,7 +223,7 @@ wasi_bridge_response = "{:ok true :plaintext b\"pt\"}"
         SealId(28),
     )
     .expect("verify");
-    let Value::Data(Term::Map(verify_mm)) = verify_out else {
+    let Some(Term::Map(verify_mm)) = verify_out.as_data() else {
         panic!("expected verify map");
     };
     assert_eq!(
@@ -250,7 +250,7 @@ wasi_bridge_response = "{:ok true :plaintext b\"pt\"}"
         SealId(29),
     )
     .expect("kdf");
-    let Value::Data(Term::Map(kdf_mm)) = kdf_out else {
+    let Some(Term::Map(kdf_mm)) = kdf_out.as_data() else {
         panic!("expected kdf map");
     };
     assert_eq!(
@@ -284,7 +284,7 @@ wasi_bridge_response = "{:ok true :plaintext b\"pt\"}"
         SealId(30),
     )
     .expect("aead-seal");
-    let Value::Data(Term::Map(seal_mm)) = seal_out else {
+    let Some(Term::Map(seal_mm)) = seal_out.as_data() else {
         panic!("expected aead-seal map");
     };
     assert_eq!(
@@ -319,7 +319,7 @@ wasi_bridge_response = "{:ok true :plaintext b\"pt\"}"
         SealId(31),
     )
     .expect("aead-open");
-    let Value::Data(Term::Map(open_mm)) = open_out else {
+    let Some(Term::Map(open_mm)) = open_out.as_data() else {
         panic!("expected aead-open map");
     };
     assert_eq!(

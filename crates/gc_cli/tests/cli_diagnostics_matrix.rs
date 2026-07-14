@@ -51,6 +51,22 @@ fn run_case(case: &Case) {
         "family {} must carry diagnostics schema",
         case.family
     );
+    assert_eq!(
+        value
+            .pointer("/diagnostic_catalog/path")
+            .and_then(Value::as_str),
+        Some("docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json"),
+        "family {} must identify the catalog authority",
+        case.family
+    );
+    assert!(
+        value
+            .pointer("/diagnostic_catalog/identity_sha256")
+            .and_then(Value::as_str)
+            .is_some_and(|identity| identity.len() == 64),
+        "family {} must pin the catalog identity",
+        case.family
+    );
     let diagnostics = value
         .get("diagnostics")
         .and_then(Value::as_array)
@@ -83,6 +99,41 @@ fn run_case(case: &Case) {
                 "family {} failure kind drift",
                 case.family
             );
+            let failure_context = value
+                .pointer("/error/context")
+                .and_then(Value::as_object)
+                .unwrap_or_else(|| panic!("family {} omitted failure context", case.family));
+            assert_eq!(
+                failure_context.get("schema").and_then(Value::as_str),
+                Some("genesis/failure-context-v0.1"),
+                "family {} failure-context schema drift",
+                case.family
+            );
+            assert!(
+                failure_context
+                    .get("domain")
+                    .and_then(Value::as_str)
+                    .is_some_and(|domain| matches!(
+                        domain,
+                        "parser"
+                            | "typechecker"
+                            | "evaluator"
+                            | "package"
+                            | "policy"
+                            | "replay"
+                            | "patch"
+                            | "build"
+                            | "deployment"
+                    )),
+                "family {} emitted invalid failure domain",
+                case.family
+            );
+            assert!(failure_context.get("facts").is_some_and(Value::is_object));
+            assert!(
+                failure_context
+                    .get("related_spans")
+                    .is_some_and(Value::is_array)
+            );
             assert!(
                 !diagnostics.is_empty(),
                 "family {} failures must emit diagnostics",
@@ -99,6 +150,12 @@ fn run_case(case: &Case) {
                 diag.get("version").and_then(Value::as_str),
                 Some("v1"),
                 "family {} diagnostic version drift",
+                case.family
+            );
+            assert_eq!(
+                diag.get("id").and_then(Value::as_str),
+                Some(format!("genesis/diagnostic/v1/{code}").as_str()),
+                "family {} diagnostic ID/code drift",
                 case.family
             );
             assert_eq!(
@@ -128,6 +185,44 @@ fn run_case(case: &Case) {
                 "family {} diagnostics must include non-empty error_class",
                 case.family
             );
+            for field in [
+                "catalog_version",
+                "catalog_identity_sha256",
+                "phase",
+                "primary_span",
+                "related_spans",
+                "parameters",
+                "likely_causes",
+                "safe_repair_actions",
+                "documentation",
+            ] {
+                assert!(
+                    diag.get(field).is_some(),
+                    "family {} diagnostic omitted {field}",
+                    case.family
+                );
+            }
+            assert!(
+                diag.get("related_spans")
+                    .and_then(Value::as_array)
+                    .is_some(),
+                "family {} related_spans must be an array",
+                case.family
+            );
+            assert!(
+                diag.get("parameters").and_then(Value::as_object).is_some(),
+                "family {} parameters must be an object",
+                case.family
+            );
+            for field in ["likely_causes", "safe_repair_actions", "documentation"] {
+                assert!(
+                    diag.get(field)
+                        .and_then(Value::as_array)
+                        .is_some_and(|items| !items.is_empty()),
+                    "family {} {field} must be nonempty",
+                    case.family
+                );
+            }
             assert!(
                 diag.get("candidate_fix")
                     .and_then(Value::as_str)
@@ -147,6 +242,70 @@ fn run_case(case: &Case) {
                 "family {} diagnostics must include blocking_capability (nullable)",
                 case.family
             );
+            let repair_plan = diag
+                .get("repair_plan")
+                .and_then(Value::as_object)
+                .unwrap_or_else(|| panic!("family {} omitted repair plan", case.family));
+            assert_eq!(
+                repair_plan.get("schema").and_then(Value::as_str),
+                Some("genesis/diagnostic-repair-plan-v0.1")
+            );
+            let action = repair_plan
+                .get("action")
+                .and_then(Value::as_object)
+                .expect("repair action");
+            assert!(matches!(
+                action.get("obligationEffect").and_then(Value::as_str),
+                Some("preserve" | "rerun-required")
+            ));
+            let authorization = repair_plan
+                .get("authorization")
+                .and_then(Value::as_object)
+                .expect("repair authorization");
+            assert_eq!(
+                authorization
+                    .get("policy_change_allowed")
+                    .and_then(Value::as_bool),
+                Some(false)
+            );
+            assert_eq!(
+                authorization
+                    .get("obligation_suppression_allowed")
+                    .and_then(Value::as_bool),
+                Some(false)
+            );
+            if authorization
+                .get("automatic_allowed")
+                .and_then(Value::as_bool)
+                == Some(true)
+            {
+                assert_eq!(
+                    action.get("automaticEligible").and_then(Value::as_bool),
+                    Some(true)
+                );
+                assert_eq!(
+                    action.get("requiresReview").and_then(Value::as_bool),
+                    Some(false)
+                );
+                assert_eq!(
+                    action.get("policyEffect").and_then(Value::as_str),
+                    Some("none")
+                );
+            }
+            if let Some(policy_diff) = repair_plan.get("policy_diff").and_then(Value::as_object) {
+                assert_eq!(
+                    policy_diff.get("status").and_then(Value::as_str),
+                    Some("proposal")
+                );
+                assert_eq!(
+                    policy_diff.get("requires_review").and_then(Value::as_bool),
+                    Some(true)
+                );
+                assert_eq!(
+                    policy_diff.get("auto_apply").and_then(Value::as_bool),
+                    Some(false)
+                );
+            }
             if code.starts_with("caps/") {
                 assert!(
                     diag.get("blocking_capability")
@@ -219,6 +378,15 @@ fn diagnostics_contract_covers_all_cli_command_families() {
     let h = hash64();
 
     let cases = vec![
+        Case {
+            family: "parse",
+            expect: Expect::Failure,
+            argv: vec![
+                "--json".into(),
+                "parse".into(),
+                missing.display().to_string(),
+            ],
+        },
         Case {
             family: "fmt",
             expect: Expect::Failure,
@@ -545,7 +713,7 @@ fn diagnostics_contract_covers_all_cli_command_families() {
     }
 
     let covered: BTreeSet<&str> = cases.iter().map(|c| c.family).collect();
-    let excluded: BTreeSet<&str> = ["selfhost-artifact", "warm"].into_iter().collect();
+    let excluded: BTreeSet<&str> = ["selfhost-artifact", "warm", "mcp"].into_iter().collect();
 
     let cli_schema = cargo_bin_cmd!("genesis")
         .args(["--json", "cli-schema"])

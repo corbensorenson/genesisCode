@@ -4,6 +4,9 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use thiserror::Error;
 
+pub const GENESIS_LOCK_LEGACY_VERSION: u64 = 1;
+pub const GENESIS_LOCK_CURRENT_VERSION: u64 = 2;
+
 #[derive(Debug, Error)]
 pub enum LockError {
     #[error("lock io error: {0}")]
@@ -219,7 +222,7 @@ struct LockedToml {
 impl GenesisLock {
     pub fn empty(workspace: impl Into<String>) -> Self {
         Self {
-            version: 2,
+            version: GENESIS_LOCK_CURRENT_VERSION,
             workspace: workspace.into(),
             policy: "policy:default-v0.1".to_string(),
             registries: BTreeMap::new(),
@@ -240,8 +243,11 @@ impl GenesisLock {
             msg: e.to_string(),
         })?;
 
-        let version = lt.version.unwrap_or(1);
-        if version != 1 && version != 2 {
+        let version = lt.version.ok_or_else(|| LockError::Invalid {
+            path: path.display().to_string(),
+            msg: "missing version".to_string(),
+        })?;
+        if version != GENESIS_LOCK_LEGACY_VERSION && version != GENESIS_LOCK_CURRENT_VERSION {
             return Err(LockError::Invalid {
                 path: path.display().to_string(),
                 msg: format!("unsupported version {version}"),
@@ -325,7 +331,7 @@ impl GenesisLock {
     pub fn to_toml_canonical(&self) -> String {
         let version =
             if self.version == 0 || (self.version < 2 && has_v2_requirements(&self.requirements)) {
-                2
+                GENESIS_LOCK_CURRENT_VERSION
             } else {
                 self.version
             };
@@ -562,6 +568,21 @@ mod tests {
             LockError::Invalid { .. } => {}
             other => panic!("expected invalid, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn version_is_required_and_explicit_legacy_is_supported() {
+        let path = std::path::Path::new("genesis.lock");
+        let missing = "workspace = \"w\"\npolicy = \"p\"\n[requirements]\n[locked]\n";
+        assert!(
+            GenesisLock::from_toml_str(path, missing)
+                .unwrap_err()
+                .to_string()
+                .contains("missing version")
+        );
+
+        let legacy = "version = 1\nworkspace = \"w\"\npolicy = \"p\"\n[requirements]\n[locked]\n";
+        assert_eq!(GenesisLock::from_toml_str(path, legacy).unwrap().version, 1);
     }
 
     #[test]

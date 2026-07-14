@@ -8,19 +8,30 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "test-changed-fast" \
-  ".genesis/build/cargo" \
-  "GENESIS_TEST_CHANGED_FAST_CARGO_TARGET_DIR"
+  root-host
 
 BASE_REF="${GENESIS_CHANGED_BASE:-}"
 RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
-REPORT_PATH="${GENESIS_TEST_CHANGED_REPORT:-.genesis/perf/test_changed_fast_metrics.json}"
-HISTORY_PATH="${GENESIS_TEST_CHANGED_HISTORY:-.genesis/perf/test_changed_fast_history.jsonl}"
+REPORT_PATH=""
+HISTORY_PATH=""
 BUDGET_MS="${GENESIS_TEST_CHANGED_BUDGET_MS:-120000}" # 2 minutes
 MIN_HISTORY="${GENESIS_TEST_CHANGED_MIN_HISTORY:-5}"
 FULL_MODE_THRESHOLD="${GENESIS_TEST_CHANGED_FULL_THRESHOLD:-120}"
 STRICT_DISK_MODE="${GENESIS_TEST_CHANGED_STRICT_DISK:-auto}"
 CHANGED_FILES_OVERRIDE="${GENESIS_TEST_CHANGED_FILES_OVERRIDE:-}"
 DRY_RUN=0
+OUTPUT_TMP_DIR=""
+IMPACT_TMP_DIR=""
+
+cleanup() {
+  if [[ -n "$OUTPUT_TMP_DIR" ]]; then
+    rm -rf "$OUTPUT_TMP_DIR"
+  fi
+  if [[ -n "$IMPACT_TMP_DIR" ]]; then
+    rm -rf "$IMPACT_TMP_DIR"
+  fi
+}
+trap cleanup EXIT
 
 usage() {
   cat <<'EOF'
@@ -29,8 +40,8 @@ Usage: scripts/test_changed_fast.sh [options]
 Options:
   --base <rev>         diff base revision (default: merge-base with origin/main or HEAD~1)
   --runner <name>      auto|cargo|nextest (default: auto)
-  --report <path>      metrics report path (default: .genesis/perf/test_changed_fast_metrics.json)
-  --history <path>     metrics history jsonl (default: .genesis/perf/test_changed_fast_history.jsonl)
+  --report <path>      explicit metrics report path (must be paired with --history)
+  --history <path>     explicit metrics history path (must be paired with --report)
   --budget-ms <N>      max allowed elapsed ms for this run (default: 120000)
   --min-history <N>    samples required before enforcing history P95 (default: 5)
   --strict-disk <mode> pass through to check_disk_headroom strict mode (auto|0|1)
@@ -108,6 +119,38 @@ done
 [[ "$MIN_HISTORY" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: --min-history must be numeric" >&2; exit 2; }
 [[ "$FULL_MODE_THRESHOLD" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: GENESIS_TEST_CHANGED_FULL_THRESHOLD must be numeric" >&2; exit 2; }
 
+if [[ -n "$REPORT_PATH" && -z "$HISTORY_PATH" ]] || [[ -z "$REPORT_PATH" && -n "$HISTORY_PATH" ]]; then
+  echo "test-changed-fast: --report and --history must be provided together" >&2
+  exit 2
+fi
+if [[ -z "$REPORT_PATH" ]]; then
+  OUTPUT_TMP_DIR="$(mktemp -d)"
+  REPORT_PATH="$OUTPUT_TMP_DIR/test_changed_fast_metrics.json"
+  HISTORY_PATH="$OUTPUT_TMP_DIR/test_changed_fast_history.jsonl"
+  REPORT_DISPLAY="temporary"
+else
+  REPORT_DISPLAY="$REPORT_PATH"
+fi
+
+# GB-2 covers the complete changed-file gate, including impact planning and disk preflight.
+GENESIS_CHANGED_GATE_START_NS="$(python3 - <<'PY'
+import time
+print(time.time_ns())
+PY
+)"
+generated_target_bytes() {
+  if [[ ! -e "$CARGO_TARGET_DIR" ]]; then
+    printf '0\n'
+    return
+  fi
+  # `du` reports allocated KiB and avoids a slow Python stat walk over Cargo's
+  # high-cardinality cache. This loop owns exactly one content-addressed target.
+  du -sk "$CARGO_TARGET_DIR" | awk '{ print $1 * 1024 }'
+}
+GENESIS_CHANGED_GATE_START_GENERATED_BYTES="$(generated_target_bytes)"
+GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES=1073741824
+export CARGO_NET_OFFLINE=true
+
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-changed-fast" --strict "$STRICT_DISK_MODE"
 
 resolve_base_ref() {
@@ -165,194 +208,46 @@ if [[ "$RUNNER" == "nextest" && "$NEXTTEST_AVAILABLE" -ne 1 ]]; then
 fi
 
 BASE="$(resolve_base_ref)"
-declare -a CHANGED_FILES=()
+IMPACT_TMP_DIR="$(mktemp -d)"
+IMPACT_PLAN="$IMPACT_TMP_DIR/plan.json"
 if [[ -n "$CHANGED_FILES_OVERRIDE" ]]; then
-  while IFS= read -r line; do
-    [[ -n "$line" ]] || continue
-    CHANGED_FILES+=("$line")
-  done <<<"$CHANGED_FILES_OVERRIDE"
+  printf '%s\n' "$CHANGED_FILES_OVERRIDE" >"$IMPACT_TMP_DIR/changed.txt"
+  python3 scripts/lib/changed_impact.py \
+    --root "$ROOT_DIR" \
+    --changed-files "$IMPACT_TMP_DIR/changed.txt" \
+    --runner "$RUNNER" \
+    --out "$IMPACT_PLAN"
 else
-  while IFS= read -r line; do
-    [[ -n "$line" ]] || continue
-    CHANGED_FILES+=("$line")
-  done < <(git diff --name-only "$BASE"...HEAD | sed '/^$/d')
-fi
-CHANGED_COUNT="${#CHANGED_FILES[@]}"
-
-MODE="targeted"
-if (( CHANGED_COUNT == 0 )); then
-  MODE="clean-tree"
-fi
-if (( CHANGED_COUNT > FULL_MODE_THRESHOLD )); then
-  MODE="full-threshold"
+  python3 scripts/lib/changed_impact.py \
+    --root "$ROOT_DIR" \
+    --git-base "$BASE" \
+    --runner "$RUNNER" \
+    --out "$IMPACT_PLAN"
 fi
 
-declare -a CHANGED_CRATES=()
-declare -a GC_CLI_TESTS=()
-declare -a GC_WASI_TESTS=()
-NEEDS_SELFHOST_CACHE=0
-NEEDS_FULL_FAST=0
-NEEDS_DOC_GATES=0
-NEEDS_SHELL_GATE=0
-
-for f in "${CHANGED_FILES[@]-}"; do
-  case "$f" in
-    crates/*/*)
-      crate="$(cut -d'/' -f2 <<<"$f")"
-      add_unique CHANGED_CRATES "$crate"
-      ;;
-  esac
-
-  case "$f" in
-    crates/gc_cli/tests/*.rs)
-      test_name="$(basename "$f" .rs)"
-      add_unique GC_CLI_TESTS "$test_name"
-      ;;
-    crates/gc_wasi_cli/tests/*.rs)
-      test_name="$(basename "$f" .rs)"
-      add_unique GC_WASI_TESTS "$test_name"
-      ;;
-  esac
-
-  case "$f" in
-    prelude/*|selfhost/*|tests/spec/*|docs/spec/*)
-      NEEDS_SELFHOST_CACHE=1
-      ;;
-  esac
-
-  case "$f" in
-    docs/*|*.md)
-      NEEDS_DOC_GATES=1
-      ;;
-  esac
-
-  case "$f" in
-    scripts/*)
-      NEEDS_SHELL_GATE=1
-      ;;
-  esac
-
-  case "$f" in
-    Cargo.toml|Cargo.lock|rust-toolchain*|.github/workflows/*)
-      NEEDS_FULL_FAST=1
-      ;;
-  esac
-done
-
-if (( NEEDS_FULL_FAST == 1 )); then
-  MODE="full-global-change"
-fi
-
+MODE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["mode"])' "$IMPACT_PLAN")"
+CHANGED_COUNT="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["changedFiles"]))' "$IMPACT_PLAN")"
+FALLBACK_PROFILE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["fallbackProfile"] or "")' "$IMPACT_PLAN")"
+IMPACT_SHA256="$(python3 -c 'from hashlib import sha256; import pathlib,sys; print(sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' "$IMPACT_PLAN")"
+declare -a CHANGED_FILES=()
 declare -a TARGET_CRATES=()
-if [[ "$MODE" != "clean-tree" && "$MODE" != "full-threshold" && "$MODE" != "full-global-change" ]]; then
-  for c in "${CHANGED_CRATES[@]-}"; do
-    add_unique TARGET_CRATES "$c"
-    case "$c" in
-      gc_coreform|gc_kernel|gc_prelude|gc_effects|gc_obligations|gc_patches|gc_types|gc_opt|gc_vcs|gc_registry|gc_pkg|gc_cli_driver)
-        add_unique TARGET_CRATES "gc_cli"
-        NEEDS_SELFHOST_CACHE=1
-        ;;
-      gc_cli|gc_wasi_cli)
-        NEEDS_SELFHOST_CACHE=1
-        ;;
-    esac
-  done
-fi
-
-if [[ "$MODE" == "targeted" && "${#TARGET_CRATES[@]}" -eq 0 ]]; then
-  MODE="non-crate-targeted"
-fi
-
-COMMANDS=()
-if [[ "$MODE" == "clean-tree" ]]; then
-  COMMANDS+=("cargo test -p gc_coreform -p gc_kernel --lib --quiet")
-elif [[ "$MODE" == "full-threshold" || "$MODE" == "full-global-change" ]]; then
-  COMMANDS+=("bash scripts/test_fast_full.sh")
-elif [[ "$MODE" == "non-crate-targeted" ]]; then
-  if (( NEEDS_DOC_GATES == 1 )); then
-    COMMANDS+=("bash scripts/check_doc_hygiene.sh")
-    COMMANDS+=("bash scripts/check_planning_docs_fresh.sh")
-  fi
-  if (( NEEDS_SHELL_GATE == 1 )); then
-    COMMANDS+=("cargo test -p gc_cli --test shell_gate_regressions changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg -- --exact")
-  fi
-  if [[ "${#COMMANDS[@]}" -eq 0 ]]; then
-    COMMANDS+=("bash scripts/check_doc_hygiene.sh")
-  fi
-else
-  # WASI integration suites are valuable but expensive; include them only when their crate or
-  # WASI-facing specs changed. Full CI lanes still run complete WASI coverage.
-  INCLUDE_WASI=0
-  if contains "gc_wasi_cli" "${TARGET_CRATES[@]-}"; then
-    INCLUDE_WASI=1
-  elif printf '%s\n' "${CHANGED_FILES[@]-}" | grep -q '^docs/spec/WASI\.md$'; then
-    INCLUDE_WASI=1
-  fi
-  if (( INCLUDE_WASI == 0 )); then
-    declare -a FILTERED=()
-    for c in "${TARGET_CRATES[@]-}"; do
-      if [[ "$c" != "gc_wasi_cli" ]]; then
-        FILTERED+=("$c")
-      fi
-    done
-    TARGET_CRATES=("${FILTERED[@]}")
-  fi
-
-  if (( NEEDS_SELFHOST_CACHE == 1 )); then
-    COMMANDS+=("bash scripts/warm_selfhost_cache.sh")
-  fi
-
-  if [[ "$RUNNER" == "nextest" ]]; then
-    for c in "${TARGET_CRATES[@]-}"; do
-      if [[ "$c" == "gc_cli" && "${#GC_CLI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_CLI_TESTS[@]-}"; do
-          COMMANDS+=("cargo nextest run -p gc_cli --test ${t} --profile ci")
-        done
-      elif [[ "$c" == "gc_cli" ]] && ! contains "gc_cli" "${CHANGED_CRATES[@]-}"; then
-        COMMANDS+=("cargo nextest run -p gc_cli --test cli_smoke --test cli_selfhost_only --test cli_store --profile ci")
-      elif [[ "$c" == "gc_wasi_cli" && "${#GC_WASI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_WASI_TESTS[@]-}"; do
-          COMMANDS+=("cargo nextest run -p gc_wasi_cli --test ${t} --profile ci")
-        done
-      elif [[ "$c" == "gc_wasi_cli" ]] && ! contains "gc_wasi_cli" "${CHANGED_CRATES[@]-}"; then
-        COMMANDS+=("cargo nextest run -p gc_wasi_cli --test cli_eval_engine --test cli_store_engine --profile ci")
-      else
-        COMMANDS+=("cargo nextest run -p ${c} --profile ci")
-      fi
-    done
-  else
-    for c in "${TARGET_CRATES[@]-}"; do
-      if [[ "$c" == "gc_cli" && "${#GC_CLI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_CLI_TESTS[@]-}"; do
-          COMMANDS+=("cargo test -p gc_cli --test ${t}")
-        done
-      elif [[ "$c" == "gc_cli" ]] && ! contains "gc_cli" "${CHANGED_CRATES[@]-}"; then
-        COMMANDS+=("cargo test -p gc_cli --test cli_smoke")
-        COMMANDS+=("cargo test -p gc_cli --test cli_selfhost_only")
-        COMMANDS+=("cargo test -p gc_cli --test cli_store")
-      elif [[ "$c" == "gc_wasi_cli" && "${#GC_WASI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_WASI_TESTS[@]-}"; do
-          COMMANDS+=("cargo test -p gc_wasi_cli --test ${t}")
-        done
-      elif [[ "$c" == "gc_wasi_cli" ]] && ! contains "gc_wasi_cli" "${CHANGED_CRATES[@]-}"; then
-        COMMANDS+=("cargo test -p gc_wasi_cli --test cli_eval_engine")
-        COMMANDS+=("cargo test -p gc_wasi_cli --test cli_store_engine")
-      else
-        COMMANDS+=("cargo test -p ${c}")
-      fi
-    done
-  fi
-fi
-
-if [[ "${#COMMANDS[@]}" -eq 0 ]]; then
-  COMMANDS+=("cargo test -p gc_coreform --lib --quiet")
-fi
+declare -a IMPACT_GATES=()
+declare -a COMMANDS=()
+while IFS= read -r value; do [[ -n "$value" ]] && CHANGED_FILES+=("$value"); done < <(
+  python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["changedFiles"]))' "$IMPACT_PLAN"
+)
+while IFS= read -r value; do [[ -n "$value" ]] && TARGET_CRATES+=("$value"); done < <(
+  python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["affectedCrates"]))' "$IMPACT_PLAN"
+)
+while IFS= read -r value; do [[ -n "$value" ]] && IMPACT_GATES+=("$value"); done < <(
+  python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["affectedGates"]))' "$IMPACT_PLAN"
+)
+while IFS= read -r value; do [[ -n "$value" ]] && COMMANDS+=("$value"); done < <(
+  python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["commands"]))' "$IMPACT_PLAN"
+)
 
 echo "test-changed-fast: base=$BASE"
 echo "test-changed-fast: mode=$MODE runner=$RUNNER changed_files=$CHANGED_COUNT commands=${#COMMANDS[@]}"
-
-mkdir -p "$(dirname "$REPORT_PATH")"
-mkdir -p "$(dirname "$HISTORY_PATH")"
 
 if (( DRY_RUN == 1 )); then
   printf 'test-changed-fast: changed files:\n'
@@ -362,11 +257,8 @@ if (( DRY_RUN == 1 )); then
   exit 0
 fi
 
-START_NS="$(python3 - <<'PY'
-import time
-print(time.time_ns())
-PY
-)"
+mkdir -p "$(dirname "$REPORT_PATH")"
+mkdir -p "$(dirname "$HISTORY_PATH")"
 
 for cmd in "${COMMANDS[@]-}"; do
   echo ">> $cmd"
@@ -374,16 +266,18 @@ for cmd in "${COMMANDS[@]-}"; do
   eval "$cmd"
 done
 
-END_NS="$(python3 - <<'PY'
+GENESIS_CHANGED_GATE_END_NS="$(python3 - <<'PY'
 import time
 print(time.time_ns())
 PY
 )"
-ELAPSED_MS="$(( (END_NS - START_NS) / 1000000 ))"
+ELAPSED_MS="$(( (GENESIS_CHANGED_GATE_END_NS - GENESIS_CHANGED_GATE_START_NS) / 1000000 ))"
+GENESIS_CHANGED_GATE_END_GENERATED_BYTES="$(generated_target_bytes)"
+GENERATED_DISK_DELTA_BYTES="$(( GENESIS_CHANGED_GATE_END_GENERATED_BYTES > GENESIS_CHANGED_GATE_START_GENERATED_BYTES ? GENESIS_CHANGED_GATE_END_GENERATED_BYTES - GENESIS_CHANGED_GATE_START_GENERATED_BYTES : 0 ))"
 
-python3 - "$REPORT_PATH" "$HISTORY_PATH" "$BASE" "$MODE" "$RUNNER" "$CHANGED_COUNT" "$ELAPSED_MS" "$BUDGET_MS" "$MIN_HISTORY" "$STRICT_DISK_MODE" <<'PY'
+python3 - "$REPORT_PATH" "$HISTORY_PATH" "$BASE" "$MODE" "$RUNNER" "$CHANGED_COUNT" "$ELAPSED_MS" "$BUDGET_MS" "$MIN_HISTORY" "$STRICT_DISK_MODE" "$IMPACT_SHA256" "${#TARGET_CRATES[@]}" "${#IMPACT_GATES[@]}" "$FALLBACK_PROFILE" "$GENERATED_DISK_DELTA_BYTES" "$GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES" <<'PY'
 import json, os, statistics, sys, time
-report_path, history_path, base, mode, runner, changed_count_s, elapsed_ms_s, budget_ms_s, min_hist_s, strict_disk_mode = sys.argv[1:]
+report_path, history_path, base, mode, runner, changed_count_s, elapsed_ms_s, budget_ms_s, min_hist_s, strict_disk_mode, impact_sha256, affected_crates_s, affected_gates_s, fallback_profile, disk_delta_s, disk_budget_s = sys.argv[1:]
 changed_count = int(changed_count_s)
 elapsed_ms = int(elapsed_ms_s)
 budget_ms = int(budget_ms_s)
@@ -399,6 +293,14 @@ entry = {
     "elapsed_ms": elapsed_ms,
     "budget_ms": budget_ms,
     "disk_strict_mode": strict_disk_mode,
+    "generated_disk_delta_bytes": int(disk_delta_s),
+    "generated_disk_budget_bytes": int(disk_budget_s),
+    "generated_disk_measurement": "allocated-blocks-active-cargo-target",
+    "network_mode": "deny",
+    "impact_plan_sha256": impact_sha256,
+    "affected_crate_count": int(affected_crates_s),
+    "affected_gate_count": int(affected_gates_s),
+    "fallback_profile": fallback_profile or None,
 }
 
 history = []
@@ -454,10 +356,14 @@ print(json.dumps(report, sort_keys=True))
 
 if elapsed_ms > budget_ms:
     raise SystemExit(f"test-changed-fast: elapsed_ms {elapsed_ms} exceeds budget {budget_ms}")
+if int(disk_delta_s) > int(disk_budget_s):
+    raise SystemExit(
+        f"test-changed-fast: generated disk delta {disk_delta_s} exceeds budget {disk_budget_s}"
+    )
 if len(elapsed) >= min_history and p95 > budget_ms:
     raise SystemExit(
         f"test-changed-fast: history p95 {p95} exceeds budget {budget_ms} with {len(elapsed)} samples"
     )
 PY
 
-echo "test-changed-fast: ok elapsed_ms=$ELAPSED_MS budget_ms=$BUDGET_MS report=$REPORT_PATH"
+echo "test-changed-fast: ok elapsed_ms=$ELAPSED_MS budget_ms=$BUDGET_MS report=$REPORT_DISPLAY"

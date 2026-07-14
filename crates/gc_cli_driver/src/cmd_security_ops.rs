@@ -98,8 +98,10 @@ pub(super) fn cmd_sign(
     let acceptance = acceptance_buf.as_deref();
     let signatures = signatures_buf.as_deref();
 
-    let (_manifest, pkg_dir) = PackageManifest::load(pkg)
-        .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
+    let (_manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| {
+        let context = structured_failures::manifest_context("package/sign", &e);
+        cli_err_with_context(EX_PARSE, "manifest/parse", format!("{e}"), context)
+    })?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
 
     let acc_hex = match acceptance {
@@ -202,8 +204,10 @@ pub(super) fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, C
     };
     let pkg = pkg_buf.as_path();
 
-    let (_manifest, pkg_dir) = PackageManifest::load(pkg)
-        .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
+    let (_manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| {
+        let context = structured_failures::manifest_context("package/transparency-verify", &e);
+        cli_err_with_context(EX_PARSE, "manifest/parse", format!("{e}"), context)
+    })?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
     let r = gc_obligations::verify_transparency_log(&store, &pkg_dir)
         .map_err(|e| cli_err(EX_INTERNAL, "transparency/error", format!("{e}")))?;
@@ -241,9 +245,15 @@ pub(super) fn cmd_typecheck(cli: &Cli, pkg: &Path, strict_sound: bool) -> Result
         strict_sound,
     )
     .map_err(obligation_err)?;
+    let diagnostics = structured_failures::typecheck_diagnostics_json(&result.diagnostics);
     let report_s = result.report_coreform;
 
     let exit_code = if result.ok { EX_OK } else { EX_OBLIGATIONS };
+    let error = (!result.ok).then(|| JsonError {
+        code: "typecheck/error",
+        message: "package typecheck failed".to_string(),
+        context: Some(structured_failures::typecheck_failure_context(&diagnostics)),
+    });
     let env = JsonEnvelope {
         ok: result.ok,
         kind: "genesis/typecheck-v0.2",
@@ -252,8 +262,9 @@ pub(super) fn cmd_typecheck(cli: &Cli, pkg: &Path, strict_sound: bool) -> Result
             "strict_sound": strict_sound,
             "coreform_frontend": frontend_info,
             "report_coreform": report_s,
+            "diagnostics": diagnostics,
         })),
-        error: None,
+        error,
     };
     Ok(CmdOut {
         exit_code,
@@ -284,8 +295,14 @@ pub(super) fn cmd_optimize(
     let forms = match engine {
         #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
-            let forms = parse_module(&src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = parse_module(&src).map_err(|e| {
+                cli_err_with_context(
+                    EX_PARSE,
+                    "parse/coreform",
+                    e.to_string(),
+                    structured_failures::parser_context("build/parse-module", file, &src, &e),
+                )
+            })?;
             canonicalize_module(forms)
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?
         }
@@ -302,44 +319,46 @@ pub(super) fn cmd_optimize(
     };
     let pipeline =
         gc_opt::optimize_command_pipeline(&forms, stage1_gate, stage2_gate, emit_wasm.is_some())
-            .map_err(|e| match e {
-                gc_opt::OptimizeCommandError::Stage1Build(msg) => {
-                    cli_err(EX_INTERNAL, "stage1/error", msg)
+            .map_err(|e| {
+                let context = structured_failures::optimize_context("build/optimize", &e);
+                match e {
+                    gc_opt::OptimizeCommandError::Stage1Build(msg) => {
+                        cli_err_with_context(EX_INTERNAL, "stage1/error", msg, context)
+                    }
+                    gc_opt::OptimizeCommandError::Stage1Gate(_) => cli_err_with_context(
+                        EX_OBLIGATIONS,
+                        "obligation/stage1-validation",
+                        "core/obligation::stage1-validation failed",
+                        context,
+                    ),
+                    gc_opt::OptimizeCommandError::Stage2Gate(_) => cli_err_with_context(
+                        EX_OBLIGATIONS,
+                        "obligation/translation-validation",
+                        "core/obligation::translation-validation (stage2 CoreForm->WASM) failed",
+                        context,
+                    ),
+                    gc_opt::OptimizeCommandError::Stage2Compile(e) => match e {
+                        gc_opt::Stage2CompileError::Unsupported(msg) => {
+                            cli_err_with_context(EX_OBLIGATIONS, "stage2/unsupported", msg, context)
+                        }
+                        gc_opt::Stage2CompileError::Internal(msg) => {
+                            cli_err_with_context(EX_INTERNAL, "stage2/error", msg, context)
+                        }
+                    },
                 }
-                gc_opt::OptimizeCommandError::Stage1Gate(out) => CliError {
-                    exit_code: EX_OBLIGATIONS,
-                    json: JsonError {
-                        code: "obligation/stage1-validation",
-                        message: "core/obligation::stage1-validation failed".to_string(),
-                        context: Some(gc_opt::stage1_pipeline_json(&out)),
-                    },
-                },
-                gc_opt::OptimizeCommandError::Stage2Gate(s2) => CliError {
-                    exit_code: EX_OBLIGATIONS,
-                    json: JsonError {
-                        code: "obligation/translation-validation",
-                        message:
-                            "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
-                                .to_string(),
-                        context: Some(gc_opt::stage2_report_json(&s2)),
-                    },
-                },
-                gc_opt::OptimizeCommandError::Stage2Compile(e) => match e {
-                    gc_opt::Stage2CompileError::Unsupported(msg) => {
-                        cli_err(EX_OBLIGATIONS, "stage2/unsupported", msg)
-                    }
-                    gc_opt::Stage2CompileError::Internal(msg) => {
-                        cli_err(EX_INTERNAL, "stage2/error", msg)
-                    }
-                },
             })?;
 
     if let Some(p) = emit_wasm {
         let art = pipeline.wasm_artifact.as_ref().ok_or_else(|| {
-            cli_err(
+            cli_err_with_context(
                 EX_INTERNAL,
                 "stage2/error",
                 "missing wasm artifact from optimize pipeline",
+                structured_failures::generic_context(
+                    "build",
+                    "missing-artifact",
+                    "build/emit-wasm",
+                ),
             )
         })?;
         std::fs::write(p, &art.wasm_bytes)
@@ -440,8 +459,10 @@ pub(super) fn cmd_semantic_edit_index(
 ) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
     let frontend_info = coreform_frontend_json(&frontend);
-    let (_manifest, pkg_dir) = PackageManifest::load(pkg)
-        .map_err(|e| cli_err(EX_PARSE, "package/invalid", format!("{e}")))?;
+    let (_manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| {
+        let context = structured_failures::manifest_context("package/load", &e);
+        cli_err_with_context(EX_PARSE, "package/invalid", format!("{e}"), context)
+    })?;
     let module_abs = pkg_dir.join(module_path);
     let src = std::fs::read_to_string(&module_abs)
         .with_context(|| format!("read {}", module_abs.display()))
@@ -453,12 +474,19 @@ pub(super) fn cmd_semantic_edit_index(
         resolved_step_limit(cli),
         resolved_mem_limits(cli),
     )
-    .map_err(|e| match e {
-        gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
-            cli_err(EX_PARSE, "semantic-edit/invalid", format!("{e}"))
+    .map_err(|e| {
+        let context = structured_failures::patch_context("patch/index", &e);
+        match e {
+            gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
+                cli_err_with_context(EX_PARSE, "semantic-edit/invalid", format!("{e}"), context)
+            }
+            gc_patches::PatchError::Io(_) => {
+                cli_err_with_context(EX_IO, "io/error", format!("{e}"), context)
+            }
+            gc_patches::PatchError::Obligations(_) => {
+                cli_err_with_context(EX_OBLIGATIONS, "patch/obligation", format!("{e}"), context)
+            }
         }
-        gc_patches::PatchError::Io(_) => cli_err(EX_IO, "io/error", format!("{e}")),
-        gc_patches::PatchError::Obligations(inner) => obligation_err(inner),
     })?;
     let nodes_json: Vec<serde_json::Value> = nodes
         .iter()
@@ -520,12 +548,19 @@ pub(super) fn cmd_apply_patch(
         resolved_mem_limits(cli),
         frontend,
     )
-    .map_err(|e| match e {
-        gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
-            cli_err(EX_PARSE, "patch/invalid", format!("{e}"))
+    .map_err(|e| {
+        let context = structured_failures::patch_context("patch/apply", &e);
+        match e {
+            gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
+                cli_err_with_context(EX_PARSE, "patch/invalid", format!("{e}"), context)
+            }
+            gc_patches::PatchError::Io(_) => {
+                cli_err_with_context(EX_IO, "io/error", format!("{e}"), context)
+            }
+            gc_patches::PatchError::Obligations(_) => {
+                cli_err_with_context(EX_OBLIGATIONS, "patch/obligation", format!("{e}"), context)
+            }
         }
-        gc_patches::PatchError::Io(_) => cli_err(EX_IO, "io/error", format!("{e}")),
-        gc_patches::PatchError::Obligations(inner) => obligation_err(inner),
     })?;
 
     let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };

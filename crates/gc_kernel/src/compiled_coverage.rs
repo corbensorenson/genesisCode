@@ -2,74 +2,146 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use super::{CExpr, CompiledForm, CompiledModule, CoverageSiteManifest};
+use crate::error::{KernelError, KernelErrorKind};
 
 pub(super) fn compiled_module_coverage_manifest_from_compiled(
     compiled: &CompiledModule,
 ) -> CoverageSiteManifest {
-    let mut manifest = CoverageSiteManifest::default();
-    for form in &compiled.forms {
+    compiled.coverage_sites.manifest()
+}
+
+pub(super) fn collect_decision_conditions_and_validate(
+    forms: &[CompiledForm],
+    statement_site_count: usize,
+    decision_site_count: usize,
+) -> Result<Vec<BTreeSet<String>>, KernelError> {
+    let mut decision_conditions = vec![BTreeSet::new(); decision_site_count];
+    for form in forms {
         match form {
-            CompiledForm::Def(_, expr) | CompiledForm::Expr(expr) => {
-                collect_coverage_manifest_from_expr(expr, &mut manifest);
+            CompiledForm::Def { expr, .. } | CompiledForm::Expr(expr) => {
+                collect_decision_conditions_from_expr(
+                    expr,
+                    statement_site_count,
+                    &mut decision_conditions,
+                )?;
             }
         }
     }
-    manifest
+    Ok(decision_conditions)
 }
 
-fn collect_coverage_manifest_from_expr(expr: &Arc<CExpr>, manifest: &mut CoverageSiteManifest) {
+fn collect_decision_conditions_from_expr(
+    expr: &Arc<CExpr>,
+    statement_site_count: usize,
+    decision_conditions: &mut [BTreeSet<String>],
+) -> Result<(), KernelError> {
     match expr.as_ref() {
         CExpr::Atom(_) | CExpr::Vector(_) | CExpr::Quote(_) | CExpr::SealNew => {}
-        CExpr::Var { site_id, .. } => {
-            manifest.statement_sites.insert(site_id.clone());
+        CExpr::Var { statement_site, .. } => {
+            let site_index = usize::try_from(*statement_site).map_err(|_| {
+                KernelError::new(
+                    KernelErrorKind::Internal,
+                    "compiled coverage statement site index exceeds usize range",
+                )
+            })?;
+            if site_index >= statement_site_count {
+                return Err(KernelError::new(
+                    KernelErrorKind::Internal,
+                    format!("compiled coverage statement site index out of range: {site_index}"),
+                ));
+            }
         }
         CExpr::Map(entries) => {
             for (_, v) in entries {
-                collect_coverage_manifest_from_expr(v, manifest);
+                collect_decision_conditions_from_expr(
+                    v,
+                    statement_site_count,
+                    decision_conditions,
+                )?;
             }
         }
         CExpr::If {
             cond,
             then_expr,
             else_expr,
-            site_id,
+            decision_site,
         } => {
-            manifest.decision_sites.insert(site_id.clone());
-            let mut vars = BTreeSet::new();
-            collect_condition_symbols_from_expr(cond, &mut vars);
-            manifest
-                .decision_conditions
-                .entry(site_id.clone())
-                .or_default()
-                .extend(vars);
-            collect_coverage_manifest_from_expr(cond, manifest);
-            collect_coverage_manifest_from_expr(then_expr, manifest);
-            collect_coverage_manifest_from_expr(else_expr, manifest);
+            let site_index = usize::try_from(*decision_site).map_err(|_| {
+                KernelError::new(
+                    KernelErrorKind::Internal,
+                    "compiled coverage decision site index exceeds usize range",
+                )
+            })?;
+            let Some(conditions) = decision_conditions.get_mut(site_index) else {
+                return Err(KernelError::new(
+                    KernelErrorKind::Internal,
+                    format!("compiled coverage decision site index out of range: {site_index}"),
+                ));
+            };
+            collect_condition_symbols_from_expr(cond, conditions);
+            collect_decision_conditions_from_expr(cond, statement_site_count, decision_conditions)?;
+            collect_decision_conditions_from_expr(
+                then_expr,
+                statement_site_count,
+                decision_conditions,
+            )?;
+            collect_decision_conditions_from_expr(
+                else_expr,
+                statement_site_count,
+                decision_conditions,
+            )?;
         }
         CExpr::Begin(xs) => {
             for x in xs {
-                collect_coverage_manifest_from_expr(x, manifest);
+                collect_decision_conditions_from_expr(
+                    x,
+                    statement_site_count,
+                    decision_conditions,
+                )?;
             }
         }
         CExpr::Let(bindings, body) => {
             for (_, rhs) in bindings {
-                collect_coverage_manifest_from_expr(rhs, manifest);
+                collect_decision_conditions_from_expr(
+                    rhs,
+                    statement_site_count,
+                    decision_conditions,
+                )?;
             }
-            collect_coverage_manifest_from_expr(body, manifest);
+            collect_decision_conditions_from_expr(body, statement_site_count, decision_conditions)?;
         }
         CExpr::FnUnary { body, .. } => {
-            collect_coverage_manifest_from_expr(body, manifest);
+            collect_decision_conditions_from_expr(body, statement_site_count, decision_conditions)?;
         }
-        CExpr::Prim { args, .. } => {
+        CExpr::Prim { args, .. } | CExpr::PrimUnknown { args, .. } => {
             for a in args {
-                collect_coverage_manifest_from_expr(a, manifest);
+                collect_decision_conditions_from_expr(
+                    a,
+                    statement_site_count,
+                    decision_conditions,
+                )?;
             }
         }
         CExpr::Seal(v, tok) | CExpr::Unseal(v, tok) | CExpr::App(v, tok) => {
-            collect_coverage_manifest_from_expr(v, manifest);
-            collect_coverage_manifest_from_expr(tok, manifest);
+            collect_decision_conditions_from_expr(v, statement_site_count, decision_conditions)?;
+            collect_decision_conditions_from_expr(tok, statement_site_count, decision_conditions)?;
+        }
+        CExpr::AppN { callee, args, .. } => {
+            collect_decision_conditions_from_expr(
+                callee,
+                statement_site_count,
+                decision_conditions,
+            )?;
+            for arg in args.iter() {
+                collect_decision_conditions_from_expr(
+                    arg,
+                    statement_site_count,
+                    decision_conditions,
+                )?;
+            }
         }
     }
+    Ok(())
 }
 
 fn collect_condition_symbols_from_expr(expr: &Arc<CExpr>, out: &mut BTreeSet<String>) {
@@ -107,7 +179,7 @@ fn collect_condition_symbols_from_expr(expr: &Arc<CExpr>, out: &mut BTreeSet<Str
         CExpr::FnUnary { body, .. } => {
             collect_condition_symbols_from_expr(body, out);
         }
-        CExpr::Prim { args, .. } => {
+        CExpr::Prim { args, .. } | CExpr::PrimUnknown { args, .. } => {
             for a in args {
                 collect_condition_symbols_from_expr(a, out);
             }
@@ -115,6 +187,12 @@ fn collect_condition_symbols_from_expr(expr: &Arc<CExpr>, out: &mut BTreeSet<Str
         CExpr::Seal(v, tok) | CExpr::Unseal(v, tok) | CExpr::App(v, tok) => {
             collect_condition_symbols_from_expr(v, out);
             collect_condition_symbols_from_expr(tok, out);
+        }
+        CExpr::AppN { callee, args, .. } => {
+            collect_condition_symbols_from_expr(callee, out);
+            for arg in args.iter() {
+                collect_condition_symbols_from_expr(arg, out);
+            }
         }
     }
 }

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use blake3::Hasher;
-use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
+use gc_coreform::{HASH_DOMAIN_PREFIX, Term, TermOrdKey, hash_term, print_term};
 use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value, value_hash};
 use gc_prelude::build_prelude;
 use num_bigint::BigInt;
@@ -10,7 +10,7 @@ use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
 use crate::lock::ExclusiveLock;
-use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
+use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
 use crate::policy::{CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
 use crate::runner_browser_host::{BrowserHostRuntime, browser_host_call};
@@ -124,7 +124,8 @@ struct HashingWriter<'a, W: std::io::Write> {
 impl<'a, W: std::io::Write> HashingWriter<'a, W> {
     fn new(inner: &'a mut W) -> Self {
         let mut hasher = blake3::Hasher::new();
-        hasher.update(b"GCv0.2\0gpk\0");
+        hasher.update(HASH_DOMAIN_PREFIX);
+        hasher.update(b"gpk\0");
         Self { inner, hasher }
     }
 
@@ -188,7 +189,7 @@ pub fn run(
         match p.as_ref() {
             EffectProgram::Pure(v) => {
                 let log = EffectLog {
-                    version: 3,
+                    version: GCLOG_CURRENT_VERSION,
                     program_hash,
                     toolchain,
                     entries,

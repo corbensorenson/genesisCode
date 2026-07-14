@@ -1,0 +1,1720 @@
+{
+  "authority": {
+    "documentClass": "E1",
+    "runtimeGateClaims": "requirements-only-unverified",
+    "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
+  },
+  "contentIdentitySha256": "c51747efaa3f432ac96b3daa63e3d748614735634bc3a548b1f1c6b557858fd3",
+  "kind": "genesis/release-notes-v0.1",
+  "releaseTrain": "0.2.0",
+  "sections": {
+    "capabilityEvidence": {
+      "authorizedUnqualifiedClaims": [],
+      "claims": [
+        {
+          "evidenceIds": [
+            "E1:cap-kernel-determinism/check-1",
+            "E1:cap-kernel-determinism/check-2"
+          ],
+          "gapIds": [
+            "R7.2.a"
+          ],
+          "id": "CAP-KERNEL-DETERMINISM",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Pure deterministic kernel separated from effects"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-coreform-identity/check-1"
+          ],
+          "gapIds": [
+            "R4.2.a",
+            "R7.2.f"
+          ],
+          "id": "CAP-COREFORM-IDENTITY",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Canonical CoreForm IR + stable content hash identity"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-sealed-protocol/check-1",
+            "E1:cap-sealed-protocol/check-2"
+          ],
+          "gapIds": [
+            "R7.2.b"
+          ],
+          "id": "CAP-SEALED-PROTOCOL",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Sealed unforgeable `UNHANDLED`/`EFFECT`/`ERROR` protocol"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-deny-default-policy/check-1"
+          ],
+          "gapIds": [
+            "R4.2.d",
+            "R7.3.a"
+          ],
+          "id": "CAP-DENY-DEFAULT-POLICY",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Deny-by-default capability policy runtime"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-effect-replay/check-1",
+            "E1:cap-effect-replay/check-2"
+          ],
+          "gapIds": [
+            "P0.1",
+            "R7.2.c"
+          ],
+          "id": "CAP-EFFECT-REPLAY",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Deterministic effect logs + replay checker"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-semantic-vcs/check-1"
+          ],
+          "gapIds": [
+            "R4.2.c",
+            "R4.2.e"
+          ],
+          "id": "CAP-SEMANTIC-VCS",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Built-in semantic VCS (`commit`/`patch`/`refs`/`merge3`)"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-package-manager/check-1",
+            "E1:cap-package-manager/check-2"
+          ],
+          "gapIds": [
+            "R4.2.e",
+            "R6.1.a"
+          ],
+          "id": "CAP-PACKAGE-MANAGER",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Built-in package/project manager (`pkg`/`gcpm`)"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-artifact-gc/check-1",
+            "E1:cap-artifact-gc/check-2",
+            "E1:cap-artifact-gc/check-3",
+            "E1:cap-artifact-gc/check-4"
+          ],
+          "gapIds": [
+            "R4.2.e"
+          ],
+          "id": "CAP-ARTIFACT-GC",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Reachability-based artifact GC (`refs` + locks + pins)"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-evidence-gated-publish/check-1"
+          ],
+          "gapIds": [
+            "R4.2.d",
+            "R6.2.d"
+          ],
+          "id": "CAP-EVIDENCE-GATED-PUBLISH",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Obligation/evidence/attestation-gated publish + ref updates"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-runtime-surfaces/check-1"
+          ],
+          "gapIds": [
+            "R3.2.a",
+            "R6.3.a"
+          ],
+          "id": "CAP-RUNTIME-SURFACES",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Native + WASI + wasm-host runtime surfaces"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-selfhost-frontend/check-1",
+            "E1:cap-selfhost-frontend/check-2",
+            "E1:cap-selfhost-frontend/check-3"
+          ],
+          "gapIds": [
+            "R4.2.a",
+            "R4.2.g"
+          ],
+          "id": "CAP-SELFHOST-FRONTEND",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Selfhost frontend default in production CLIs"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-selfhost-cutover/check-1",
+            "E1:cap-selfhost-cutover/check-2",
+            "E1:cap-selfhost-cutover/check-3"
+          ],
+          "gapIds": [
+            "R4.4.c"
+          ],
+          "id": "CAP-SELFHOST-CUTOVER",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Full selfhost cutover profile + readiness scorecard"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-strict-no-fallback/check-1"
+          ],
+          "gapIds": [
+            "R4.1.c",
+            "R4.1.e"
+          ],
+          "id": "CAP-STRICT-NO-FALLBACK",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Strict no-production Rust semantic fallback guard"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-agent-json-contracts/check-1",
+            "E1:cap-agent-json-contracts/check-2",
+            "E1:cap-agent-json-contracts/check-3",
+            "E1:cap-agent-json-contracts/check-4"
+          ],
+          "gapIds": [
+            "P1.2",
+            "R1.3.c"
+          ],
+          "id": "CAP-AGENT-JSON-CONTRACTS",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "CLI + GCPM JSON schema contracts for agent automation"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-agent-skill-pack/check-1",
+            "E1:cap-agent-skill-pack/check-2"
+          ],
+          "gapIds": [
+            "R1.5.a",
+            "R1.5.f"
+          ],
+          "id": "CAP-AGENT-SKILL-PACK",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Agent index + skill-pack conformance contracts"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-domain-starters/check-1",
+            "E1:cap-domain-starters/check-2"
+          ],
+          "gapIds": [
+            "R8.3.a"
+          ],
+          "id": "CAP-DOMAIN-STARTERS",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Domain starter registry for agent workflows"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-agent-workload-parity/check-1",
+            "E1:cap-agent-workload-parity/check-2"
+          ],
+          "gapIds": [
+            "R1.4.c",
+            "R8.2.a"
+          ],
+          "id": "CAP-AGENT-WORKLOAD-PARITY",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Agent generative workload parity gates (native vs WASI)"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-agent-workspace-perf/check-1",
+            "E1:cap-agent-workspace-perf/check-2",
+            "E1:cap-agent-workspace-perf/check-3",
+            "E1:cap-agent-workspace-perf/check-4"
+          ],
+          "gapIds": [
+            "P1.3",
+            "R2.3.e"
+          ],
+          "id": "CAP-AGENT-WORKSPACE-PERF",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Large-workspace agent iteration perf lane"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-concurrency-replay/check-1",
+            "E1:cap-concurrency-replay/check-2"
+          ],
+          "gapIds": [
+            "R5.2.a",
+            "R5.2.e"
+          ],
+          "id": "CAP-CONCURRENCY-REPLAY",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Concurrency/task replay stress lane"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-gpu-compute/check-1",
+            "E1:cap-gpu-compute/check-2",
+            "E1:cap-gpu-compute/check-3",
+            "E1:cap-gpu-compute/check-4"
+          ],
+          "gapIds": [
+            "R8.2.h"
+          ],
+          "id": "CAP-GPU-COMPUTE",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "GPU compute capability independent of graphics surface"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-graphics-runtime/check-1",
+            "E1:cap-graphics-runtime/check-2",
+            "E1:cap-graphics-runtime/check-3",
+            "E1:cap-graphics-runtime/check-4"
+          ],
+          "gapIds": [
+            "R8.3.a"
+          ],
+          "id": "CAP-GRAPHICS-RUNTIME",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Graphics/window/input/audio capability families"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-browser-xr/check-1",
+            "E1:cap-browser-xr/check-2"
+          ],
+          "gapIds": [
+            "R8.2.e"
+          ],
+          "id": "CAP-BROWSER-XR",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Browser + XR runtime families"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-plugin-ffi/check-1",
+            "E1:cap-plugin-ffi/check-2",
+            "E1:cap-plugin-ffi/check-3"
+          ],
+          "gapIds": [
+            "R5.5.a",
+            "R5.5.c"
+          ],
+          "id": "CAP-PLUGIN-FFI",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Host plugin + FFI schemas/contracts"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-host-bridge/check-1",
+            "E1:cap-host-bridge/check-2"
+          ],
+          "gapIds": [
+            "P1.1",
+            "R2.2.f",
+            "R7.3.b"
+          ],
+          "id": "CAP-HOST-BRIDGE",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "First-party bridge for network/process/db/crypto/plugin/ffi"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-stage2-wasm-validation/check-1"
+          ],
+          "gapIds": [
+            "R3.2.a",
+            "R3.2.b"
+          ],
+          "id": "CAP-STAGE2-WASM-VALIDATION",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Stage2 CoreForm->WASM translation-validation"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-deployment-pipeline/check-1",
+            "E1:cap-deployment-pipeline/check-2",
+            "E1:cap-deployment-pipeline/check-3"
+          ],
+          "gapIds": [
+            "R6.3.b",
+            "R6.3.c"
+          ],
+          "id": "CAP-DEPLOYMENT-PIPELINE",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Deployment target pipeline in core toolchain"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-assurance-profiles/check-1",
+            "E1:cap-assurance-profiles/check-2",
+            "E1:cap-assurance-profiles/check-3"
+          ],
+          "gapIds": [
+            "P1.2",
+            "P1.3",
+            "R7.1.a",
+            "R7.3.a"
+          ],
+          "id": "CAP-ASSURANCE-PROFILES",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "Assurance profile packs + standards crosswalk"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-tool-qualification/check-1"
+          ],
+          "gapIds": [
+            "R7.1.e",
+            "R9.2.c"
+          ],
+          "id": "CAP-TOOL-QUALIFICATION",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "H0",
+          "title": "Tool qualification lineage + evidence closures"
+        },
+        {
+          "evidenceIds": [
+            "E1:cap-modular-boundaries/check-1"
+          ],
+          "gapIds": [
+            "R4.3.a",
+            "R4.3.b"
+          ],
+          "id": "CAP-MODULAR-BOUNDARIES",
+          "immutableEvidenceIds": [],
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "maturity": "L1",
+          "maturityByPlatform": {
+            "linux-arm64": "L0",
+            "linux-x86_64": "L1",
+            "macos-arm64": "L1",
+            "windows-x86_64": "L0"
+          },
+          "releaseClaimEligible": false,
+          "selfhostLevel": "N/A",
+          "title": "AI-first modular decomposition + boundary guards"
+        }
+      ],
+      "platforms": [
+        {
+          "id": "macos-arm64",
+          "label": "macOS arm64",
+          "tier": 1
+        },
+        {
+          "id": "linux-x86_64",
+          "label": "Linux x86_64",
+          "tier": 1
+        },
+        {
+          "id": "linux-arm64",
+          "label": "Linux arm64",
+          "tier": 2
+        },
+        {
+          "id": "windows-x86_64",
+          "label": "Windows x86_64",
+          "tier": 2
+        }
+      ]
+    },
+    "compatibility": {
+      "entries": [
+        {
+          "candidateId": "genesis/language-profile/v0.2",
+          "compatibilityClass": "semantic",
+          "components": [
+            {
+              "acceptedReaders": [
+                "v0.2"
+              ],
+              "currentWriter": "v0.2",
+              "id": "language-semantics-v0.2",
+              "migrationRecords": [],
+              "missingDiscriminator": "not-applicable"
+            }
+          ],
+          "dependencies": [],
+          "key": "language-profile",
+          "stableId": "genesis/compat/v1/language-profile",
+          "state": "candidate"
+        },
+        {
+          "candidateId": "genesis/coreform/v0.2",
+          "compatibilityClass": "wire-and-semantic",
+          "components": [
+            {
+              "acceptedReaders": [
+                "genesis/coreform/v0.2"
+              ],
+              "currentWriter": "genesis/coreform/v0.2",
+              "id": "canonical-coreform-v0.2",
+              "migrationRecords": [],
+              "missingDiscriminator": "profile-selected-by-language-toolchain"
+            },
+            {
+              "acceptedReaders": [
+                "genesis/hash-profile/gcv0.2-blake3"
+              ],
+              "currentWriter": "genesis/hash-profile/gcv0.2-blake3",
+              "id": "canonical-term-hash",
+              "migrationRecords": [],
+              "missingDiscriminator": "profile-selected-by-container-or-toolchain"
+            }
+          ],
+          "dependencies": [
+            "language-profile"
+          ],
+          "key": "coreform",
+          "stableId": "genesis/compat/v1/coreform",
+          "state": "candidate"
+        },
+        {
+          "candidateId": "genesis/value-effect-hash/v0.2",
+          "compatibilityClass": "identity",
+          "components": [
+            {
+              "acceptedReaders": [
+                "genesis/value-effect-hash/v0.2"
+              ],
+              "currentWriter": "genesis/value-effect-hash/v0.2",
+              "id": "value-and-effect-request-hash",
+              "migrationRecords": [],
+              "missingDiscriminator": "profile-selected-by-log-or-toolchain"
+            }
+          ],
+          "dependencies": [
+            "coreform"
+          ],
+          "key": "value-effect-hash",
+          "stableId": "genesis/compat/v1/value-effect-hash",
+          "state": "candidate"
+        },
+        {
+          "candidateId": "genesis/effect-log/v3",
+          "compatibilityClass": "wire-and-replay",
+          "components": [
+            {
+              "acceptedReaders": [
+                "2",
+                "3"
+              ],
+              "currentWriter": "3",
+              "id": "gclog",
+              "migrationRecords": [
+                "M-GCLOG-2-TO-3"
+              ],
+              "missingDiscriminator": "reject"
+            }
+          ],
+          "dependencies": [
+            "coreform",
+            "value-effect-hash"
+          ],
+          "key": "effect-log",
+          "stableId": "genesis/compat/v1/effect-log",
+          "state": "candidate"
+        },
+        {
+          "candidateId": "genesis/evidence-profile/v0.1",
+          "compatibilityClass": "attestation",
+          "components": [
+            {
+              "acceptedReaders": [
+                "genesis/evidence-profile/v0.1"
+              ],
+              "currentWriter": "genesis/evidence-profile/v0.1",
+              "id": "evidence-bundle-v0.1",
+              "migrationRecords": [],
+              "missingDiscriminator": "reject"
+            }
+          ],
+          "dependencies": [
+            "language-profile"
+          ],
+          "key": "evidence",
+          "stableId": "genesis/compat/v1/evidence",
+          "state": "candidate"
+        },
+        {
+          "candidateId": "genesis/package-profile/v0.2",
+          "compatibilityClass": "container-and-resolution",
+          "components": [
+            {
+              "acceptedReaders": [
+                "pre-schema",
+                "1"
+              ],
+              "currentWriter": "1",
+              "id": "package-manifest",
+              "migrationRecords": [
+                "M-PACKAGE-PRESCHEMA-TO-1"
+              ],
+              "missingDiscriminator": "M-PACKAGE-PRESCHEMA-TO-1"
+            },
+            {
+              "acceptedReaders": [
+                "1"
+              ],
+              "currentWriter": "1",
+              "id": "workspace",
+              "migrationRecords": [],
+              "missingDiscriminator": "reject"
+            },
+            {
+              "acceptedReaders": [
+                "1",
+                "2"
+              ],
+              "currentWriter": "2",
+              "id": "lock",
+              "migrationRecords": [
+                "M-LOCK-1-TO-2"
+              ],
+              "missingDiscriminator": "reject"
+            },
+            {
+              "acceptedReaders": [
+                "1",
+                "2"
+              ],
+              "currentWriter": "2",
+              "id": "gpk",
+              "migrationRecords": [
+                "M-GPK-1-TO-2"
+              ],
+              "missingDiscriminator": "reject"
+            }
+          ],
+          "dependencies": [
+            "coreform",
+            "evidence",
+            "patch",
+            "snapshot"
+          ],
+          "key": "package",
+          "stableId": "genesis/compat/v1/package",
+          "state": "candidate"
+        },
+        {
+          "candidateId": "genesis/patch-profile/v0.2",
+          "compatibilityClass": "semantic-transform",
+          "components": [
+            {
+              "acceptedReaders": [
+                "1"
+              ],
+              "currentWriter": "1",
+              "id": "semantic-gcpatch",
+              "migrationRecords": [],
+              "missingDiscriminator": "reject"
+            },
+            {
+              "acceptedReaders": [
+                "1"
+              ],
+              "currentWriter": "1",
+              "id": "vcs-patch",
+              "migrationRecords": [],
+              "missingDiscriminator": "reject"
+            }
+          ],
+          "dependencies": [
+            "coreform",
+            "snapshot"
+          ],
+          "key": "patch",
+          "stableId": "genesis/compat/v1/patch",
+          "state": "candidate"
+        },
+        {
+          "candidateId": null,
+          "compatibilityClass": "executable",
+          "components": [],
+          "dependencies": [
+            "language-profile",
+            "coreform",
+            "value-effect-hash",
+            "effect-log"
+          ],
+          "key": "bytecode",
+          "stableId": "genesis/compat/v1/bytecode",
+          "state": "unbound"
+        },
+        {
+          "candidateId": "genesis/vcs-snapshot/v1",
+          "compatibilityClass": "content-addressed-state",
+          "components": [
+            {
+              "acceptedReaders": [
+                "1"
+              ],
+              "currentWriter": "1",
+              "id": "vcs-snapshot",
+              "migrationRecords": [],
+              "missingDiscriminator": "reject"
+            }
+          ],
+          "dependencies": [
+            "coreform"
+          ],
+          "key": "snapshot",
+          "stableId": "genesis/compat/v1/snapshot",
+          "state": "candidate"
+        },
+        {
+          "candidateId": "genesis/bootstrap-profile/v0.2",
+          "compatibilityClass": "trusted-bootstrap",
+          "components": [
+            {
+              "acceptedReaders": [
+                "genesis/selfhost-toolchain-artifact-v0.2/:v=1"
+              ],
+              "currentWriter": "genesis/selfhost-toolchain-artifact-v0.2/:v=1",
+              "id": "selfhost-toolchain-artifact",
+              "migrationRecords": [],
+              "missingDiscriminator": "reject"
+            }
+          ],
+          "dependencies": [
+            "language-profile",
+            "coreform",
+            "value-effect-hash"
+          ],
+          "key": "bootstrap",
+          "stableId": "genesis/compat/v1/bootstrap",
+          "state": "candidate"
+        }
+      ],
+      "releaseClaim": "reserved-not-stable",
+      "surfaces": [
+        {
+          "acceptedReaders": [
+            "0.2.0"
+          ],
+          "currentWriter": "0.2.0",
+          "id": "product-release",
+          "kind": "semver",
+          "migrations": []
+        },
+        {
+          "acceptedReaders": [
+            "pre-schema",
+            "1"
+          ],
+          "currentWriter": "1",
+          "id": "package-manifest",
+          "kind": "toml-schema",
+          "migrations": [
+            "M-PACKAGE-PRESCHEMA-TO-1"
+          ]
+        },
+        {
+          "acceptedReaders": [
+            "1"
+          ],
+          "currentWriter": "1",
+          "id": "workspace-config",
+          "kind": "toml-version",
+          "migrations": []
+        },
+        {
+          "acceptedReaders": [
+            "1",
+            "2"
+          ],
+          "currentWriter": "2",
+          "id": "genesis-lock",
+          "kind": "toml-version",
+          "migrations": [
+            "M-LOCK-1-TO-2"
+          ]
+        },
+        {
+          "acceptedReaders": [
+            "2",
+            "3"
+          ],
+          "currentWriter": "3",
+          "id": "effect-log",
+          "kind": "coreform-version",
+          "migrations": [
+            "M-GCLOG-2-TO-3"
+          ]
+        },
+        {
+          "acceptedReaders": [
+            "1",
+            "2"
+          ],
+          "currentWriter": "2",
+          "id": "gpk-bundle",
+          "kind": "binary-version",
+          "migrations": [
+            "M-GPK-1-TO-2"
+          ]
+        },
+        {
+          "acceptedReaders": [
+            "genesis/hash-profile/gcv0.2-blake3"
+          ],
+          "currentWriter": "genesis/hash-profile/gcv0.2-blake3",
+          "id": "canonical-hash-profile",
+          "kind": "hash-domain",
+          "migrations": []
+        },
+        {
+          "acceptedReaders": [
+            "GCKM5\\0"
+          ],
+          "currentWriter": "GCKM5\\0",
+          "id": "compiled-module-blob",
+          "kind": "binary-magic",
+          "migrations": []
+        },
+        {
+          "acceptedReaders": [
+            "GCSHC1\\0"
+          ],
+          "currentWriter": "GCSHC1\\0",
+          "id": "selfhost-compiled-cache",
+          "kind": "binary-magic",
+          "migrations": []
+        },
+        {
+          "acceptedReaders": [
+            "genesis/selfhost-toolchain-artifact-v0.2"
+          ],
+          "currentWriter": "genesis/selfhost-toolchain-artifact-v0.2",
+          "id": "selfhost-toolchain-artifact",
+          "kind": "coreform-kind",
+          "migrations": []
+        }
+      ]
+    },
+    "dependencies": {
+      "lockfiles": [
+        {
+          "gitPackageRecords": 0,
+          "path": "Cargo.lock",
+          "pathOrWorkspacePackageRecords": 18,
+          "registryPackageRecords": 443,
+          "schemaVersion": 4,
+          "sha256": "01559290ad362bc02b2e79d0aabb65caa42e9eb5bfe612bca54d715a761e432f",
+          "totalPackageRecords": 461,
+          "uniquePackageIdentities": 461
+        },
+        {
+          "gitPackageRecords": 0,
+          "path": "tools/genesis-evidence-producer/Cargo.lock",
+          "pathOrWorkspacePackageRecords": 1,
+          "registryPackageRecords": 40,
+          "schemaVersion": 4,
+          "sha256": "a7aa895176386dcbde3de7e0d49a8511ca38227880ee30e82c12978cc5fa416e",
+          "totalPackageRecords": 41,
+          "uniquePackageIdentities": 41
+        },
+        {
+          "gitPackageRecords": 0,
+          "path": "tools/genesis-evidence-verifier/Cargo.lock",
+          "pathOrWorkspacePackageRecords": 1,
+          "registryPackageRecords": 40,
+          "schemaVersion": 4,
+          "sha256": "d3a5c9c2e7d3cb614d79b3360210c93f63317cdbb808250d0084ff4c1822f3eb",
+          "totalPackageRecords": 41,
+          "uniquePackageIdentities": 41
+        }
+      ],
+      "mirror": {
+        "authorityFiles": [
+          "Cargo.lock",
+          "Cargo.toml",
+          "package-lock.json",
+          "package.json",
+          "tools/genesis-evidence-verifier/Cargo.lock",
+          "tools/genesis-evidence-verifier/Cargo.toml"
+        ],
+        "fetchPolicy": {
+          "cargoRegistryIndex": "https://github.com/rust-lang/crates.io-index",
+          "mode": "declared-once",
+          "npmRegistryOrigin": "https://registry.npmjs.org/",
+          "redirects": "deny",
+          "requireTls": true
+        },
+        "offlineChecks": [
+          "cargo-cli-build",
+          "cargo-evidence-verifier-check",
+          "cargo-workspace-check",
+          "npm-clean-install",
+          "npm-playwright-import"
+        ],
+        "storeMode": "create-new-sha256"
+      },
+      "npm": {
+        "externalPackageRecords": 3,
+        "integrityAlgorithms": [
+          "sha512"
+        ],
+        "lockfileVersion": 3,
+        "path": "package-lock.json",
+        "sha256": "f5b2fa938c2c572fa8172b0f57418c10dca846791855fbd25b1b662b188097ed"
+      }
+    },
+    "evidence": {
+      "baselines": [
+        {
+          "authority": "observation",
+          "baselineIdentitySha256": "a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967",
+          "evidenceClass": "E0",
+          "overall": {
+            "budgetFailing": 2,
+            "budgetPassing": 2,
+            "decisionGated": 1,
+            "observed": 4,
+            "runnerUnavailable": 5,
+            "status": "observed-with-failures"
+          },
+          "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
+          "signatureGrantsAuthority": false
+        }
+      ],
+      "fixtureAuthority": false,
+      "fixtureDistributionClass": "E2",
+      "fixtures": [
+        {
+          "claimedEvidenceClass": "E3",
+          "path": "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
+          "role": "artifact-hash-tree",
+          "sha256": "1ee6541e1f594edce44ae99a9e17c5288c9cab7a4f0818528c821bdc11b15546",
+          "testOnly": true
+        },
+        {
+          "claimedEvidenceClass": "E3",
+          "path": "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json",
+          "role": "authenticated-bundle",
+          "sha256": "1dcfce299a83bac9ba9601b064c3da8caa1ffa61602cca5446febc9132172e81",
+          "testOnly": true
+        },
+        {
+          "claimedEvidenceClass": "none",
+          "path": "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json",
+          "role": "adversarial-catalog",
+          "sha256": "5595e59ffce6727ad73987bac84fb2bc993cc0c113377d7d4fc18c443d168491",
+          "testOnly": true
+        },
+        {
+          "claimedEvidenceClass": "E3",
+          "path": "docs/program/evidence/artifact/genesis-example.bin",
+          "role": "subject-artifact",
+          "sha256": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
+          "testOnly": true
+        },
+        {
+          "claimedEvidenceClass": "E0",
+          "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
+          "role": "signed-e0-baseline",
+          "sha256": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
+          "testOnly": true
+        },
+        {
+          "claimedEvidenceClass": "none",
+          "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "role": "fixture-public-key",
+          "sha256": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
+          "testOnly": true
+        }
+      ]
+    },
+    "knownGaps": {
+      "activeDefectIds": [
+        "P0.1",
+        "P1.1",
+        "P1.2",
+        "P1.3"
+      ],
+      "roadmapGaps": [
+        {
+          "affectedClaims": [
+            "CAP-EFFECT-REPLAY"
+          ],
+          "id": "P0.1",
+          "summary": "Restore denied-effect replay parity across Rust and self-host engines on native and WASI."
+        },
+        {
+          "affectedClaims": [
+            "CAP-HOST-BRIDGE"
+          ],
+          "id": "P1.1",
+          "summary": "Make host-bridge hard-cancellation stress deterministic under supported parallel load."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-JSON-CONTRACTS",
+            "CAP-ASSURANCE-PROFILES"
+          ],
+          "id": "P1.2",
+          "summary": "Restore default-suite hermeticity and load stability without retries or ignored failures."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-WORKSPACE-PERF",
+            "CAP-ASSURANCE-PROFILES"
+          ],
+          "id": "P1.3",
+          "summary": "Bound generated-state growth with safe automatic quota, lease, and reclamation enforcement."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-JSON-CONTRACTS"
+          ],
+          "id": "R1.3.c",
+          "summary": "Generate and verify the pinned MCP agent interface from canonical CLI schemas."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-WORKLOAD-PARITY"
+          ],
+          "id": "R1.4.c",
+          "summary": "Build deterministic generation, repair, refactor, and deployment task benchmarks."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-SKILL-PACK"
+          ],
+          "id": "R1.5.a",
+          "summary": "Generate the authoring skill from canonical language and capability inputs."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-SKILL-PACK"
+          ],
+          "id": "R1.5.f",
+          "summary": "Validate skill distribution, offline use, token budgets, and multi-agent compatibility."
+        },
+        {
+          "affectedClaims": [
+            "CAP-HOST-BRIDGE"
+          ],
+          "id": "R2.2.f",
+          "summary": "Prove host-handle cleanup across success, failure, cancellation, timeout, and restart."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-WORKSPACE-PERF"
+          ],
+          "id": "R2.3.e",
+          "summary": "Meet explicit incremental large-workspace agent-loop SLOs."
+        },
+        {
+          "affectedClaims": [
+            "CAP-RUNTIME-SURFACES",
+            "CAP-STAGE2-WASM-VALIDATION"
+          ],
+          "id": "R3.2.a",
+          "summary": "Audit existing stage2/Wasm coverage and eliminate undeclared fallback."
+        },
+        {
+          "affectedClaims": [
+            "CAP-STAGE2-WASM-VALIDATION"
+          ],
+          "id": "R3.2.b",
+          "summary": "Validate source-to-Wasm translation and embedded artifact identity."
+        },
+        {
+          "affectedClaims": [
+            "CAP-STRICT-NO-FALLBACK"
+          ],
+          "id": "R4.1.c",
+          "summary": "Maintain a semantic-ownership ledger for every production decision."
+        },
+        {
+          "affectedClaims": [
+            "CAP-STRICT-NO-FALLBACK"
+          ],
+          "id": "R4.1.e",
+          "summary": "Enforce selfhost and stage0 dependency boundaries structurally."
+        },
+        {
+          "affectedClaims": [
+            "CAP-COREFORM-IDENTITY",
+            "CAP-SELFHOST-FRONTEND"
+          ],
+          "id": "R4.2.a",
+          "summary": "Make frontend and canonicalization GenesisCode-produced with independent identity verification."
+        },
+        {
+          "affectedClaims": [
+            "CAP-SEMANTIC-VCS"
+          ],
+          "id": "R4.2.c",
+          "summary": "Make semantic patch and refactor behavior GenesisCode-authoritative."
+        },
+        {
+          "affectedClaims": [
+            "CAP-DENY-DEFAULT-POLICY",
+            "CAP-EVIDENCE-GATED-PUBLISH"
+          ],
+          "id": "R4.2.d",
+          "summary": "Make obligation and policy decision logic GenesisCode-authoritative."
+        },
+        {
+          "affectedClaims": [
+            "CAP-ARTIFACT-GC",
+            "CAP-PACKAGE-MANAGER",
+            "CAP-SEMANTIC-VCS"
+          ],
+          "id": "R4.2.e",
+          "summary": "Make package, registry, and VCS logic GenesisCode-authoritative."
+        },
+        {
+          "affectedClaims": [
+            "CAP-SELFHOST-FRONTEND"
+          ],
+          "id": "R4.2.g",
+          "summary": "Make CLI and agent orchestration selfhost-authoritative without hidden Rust semantics."
+        },
+        {
+          "affectedClaims": [
+            "CAP-MODULAR-BOUNDARIES"
+          ],
+          "id": "R4.3.a",
+          "summary": "Split oversized host crates and meet source concentration budgets."
+        },
+        {
+          "affectedClaims": [
+            "CAP-MODULAR-BOUNDARIES"
+          ],
+          "id": "R4.3.b",
+          "summary": "Generate repetitive host, Prelude, capability, MCP, codec, and parity bindings from one schema."
+        },
+        {
+          "affectedClaims": [
+            "CAP-SELFHOST-CUTOVER"
+          ],
+          "id": "R4.4.c",
+          "summary": "Prove cross-host bootstrap fixpoint on the tier-1 host matrix."
+        },
+        {
+          "affectedClaims": [
+            "CAP-CONCURRENCY-REPLAY"
+          ],
+          "id": "R5.2.a",
+          "summary": "Audit and reconcile deterministic concurrency specifications and runtime behavior."
+        },
+        {
+          "affectedClaims": [
+            "CAP-CONCURRENCY-REPLAY"
+          ],
+          "id": "R5.2.e",
+          "summary": "Differentially explore and replay bounded schedules across tiers and hosts."
+        },
+        {
+          "affectedClaims": [
+            "CAP-PLUGIN-FFI"
+          ],
+          "id": "R5.5.a",
+          "summary": "Adopt and pin the WebAssembly Component Model/WIT extension boundary."
+        },
+        {
+          "affectedClaims": [
+            "CAP-PLUGIN-FFI"
+          ],
+          "id": "R5.5.c",
+          "summary": "Sandbox extension memory, CPU, calls, effects, cancellation, and lifecycle."
+        },
+        {
+          "affectedClaims": [
+            "CAP-PACKAGE-MANAGER"
+          ],
+          "id": "R6.1.a",
+          "summary": "Freeze and migrate deterministic package manifest and lock schemas."
+        },
+        {
+          "affectedClaims": [
+            "CAP-EVIDENCE-GATED-PUBLISH"
+          ],
+          "id": "R6.2.d",
+          "summary": "Enforce package evidence policy at registry acceptance."
+        },
+        {
+          "affectedClaims": [
+            "CAP-RUNTIME-SURFACES"
+          ],
+          "id": "R6.3.a",
+          "summary": "Define the supported v1 build target profiles."
+        },
+        {
+          "affectedClaims": [
+            "CAP-DEPLOYMENT-PIPELINE"
+          ],
+          "id": "R6.3.b",
+          "summary": "Implement the selfhosted genesis build graph and evidence outputs."
+        },
+        {
+          "affectedClaims": [
+            "CAP-DEPLOYMENT-PIPELINE"
+          ],
+          "id": "R6.3.c",
+          "summary": "Make target artifacts reproducible across independent builders."
+        },
+        {
+          "affectedClaims": [
+            "CAP-ASSURANCE-PROFILES"
+          ],
+          "id": "R7.1.a",
+          "summary": "Classify and own the complete layered verification suite."
+        },
+        {
+          "affectedClaims": [
+            "CAP-TOOL-QUALIFICATION"
+          ],
+          "id": "R7.1.e",
+          "summary": "Use mutation testing to demonstrate trust-check sensitivity."
+        },
+        {
+          "affectedClaims": [
+            "CAP-KERNEL-DETERMINISM"
+          ],
+          "id": "R7.2.a",
+          "summary": "Mechanize the pure core semantics and determinism theorem."
+        },
+        {
+          "affectedClaims": [
+            "CAP-SEALED-PROTOCOL"
+          ],
+          "id": "R7.2.b",
+          "summary": "Prove seal unforgeability and protected-boundary behavior."
+        },
+        {
+          "affectedClaims": [
+            "CAP-EFFECT-REPLAY"
+          ],
+          "id": "R7.2.c",
+          "summary": "Model and prove deterministic complete effect dispatch and replay checking."
+        },
+        {
+          "affectedClaims": [
+            "CAP-COREFORM-IDENTITY"
+          ],
+          "id": "R7.2.f",
+          "summary": "Verify or independently cross-check canonical codec assumptions."
+        },
+        {
+          "affectedClaims": [
+            "CAP-ASSURANCE-PROFILES",
+            "CAP-DENY-DEFAULT-POLICY"
+          ],
+          "id": "R7.3.a",
+          "summary": "Threat-model every kernel, effect, bridge, package, build, and release boundary."
+        },
+        {
+          "affectedClaims": [
+            "CAP-HOST-BRIDGE"
+          ],
+          "id": "R7.3.b",
+          "summary": "Sandbox host execution with hard cancellation, least privilege, and bounded IPC."
+        },
+        {
+          "affectedClaims": [
+            "CAP-AGENT-WORKLOAD-PARITY"
+          ],
+          "id": "R8.2.a",
+          "summary": "Prove the pure library and CLI agent archetype end to end."
+        },
+        {
+          "affectedClaims": [
+            "CAP-BROWSER-XR"
+          ],
+          "id": "R8.2.e",
+          "summary": "Prove the browser application agent archetype and its sandboxed effects."
+        },
+        {
+          "affectedClaims": [
+            "CAP-GPU-COMPUTE"
+          ],
+          "id": "R8.2.h",
+          "summary": "Prove the GPU or numeric agent archetype with deterministic backend evidence."
+        },
+        {
+          "affectedClaims": [
+            "CAP-DOMAIN-STARTERS",
+            "CAP-GRAPHICS-RUNTIME"
+          ],
+          "id": "R8.3.a",
+          "summary": "Ship and maintain at least five evidence-backed flagship programs."
+        },
+        {
+          "affectedClaims": [
+            "CAP-TOOL-QUALIFICATION"
+          ],
+          "id": "R9.2.c",
+          "summary": "Publish and independently mirror immutable E4 release attestations."
+        }
+      ]
+    },
+    "migrations": {
+      "entries": [
+        {
+          "from": "pre-schema",
+          "id": "M-PACKAGE-PRESCHEMA-TO-1",
+          "reader": "Treat absence as schema 1 only; reject every explicit value other than 1.",
+          "retirement": "Retain through the 0.x train; removal requires a major compatibility decision and corpus telemetry.",
+          "semantic_delta": "No package semantics change; the discriminator makes future evolution fail closed.",
+          "surface": "package-manifest",
+          "tests": [
+            "crates/gc_pkg/src/manifest.rs"
+          ],
+          "to": "1",
+          "user_action": "Add schema = 1 as a top-level key.",
+          "writer": "Scaffolds and maintained repository manifests always emit schema = 1."
+        },
+        {
+          "from": "1",
+          "id": "M-LOCK-1-TO-2",
+          "reader": "Read explicit versions 1 and 2; never infer a missing version.",
+          "retirement": "Retain v1 reads through the 0.x train; remove only with an offline migrator and a release-note deprecation cycle.",
+          "semantic_delta": "Version 2 records source selectors, resolution strategies, tag policy, resolved refs, export hashes, and environment fingerprints.",
+          "surface": "genesis-lock",
+          "tests": [
+            "crates/gc_pkg/src/lock.rs"
+          ],
+          "to": "2",
+          "user_action": "Run a lock-producing gcpm operation and review the canonical version 2 diff.",
+          "writer": "New locks emit version 2; v1 objects requiring v2 resolution metadata are promoted on canonical write."
+        },
+        {
+          "from": "2",
+          "id": "M-GCLOG-2-TO-3",
+          "reader": "Read explicit versions 2 and 3; never infer a missing :version.",
+          "retirement": "Retain v2 replay through the 0.x train; removal requires an authenticated log migrator and golden replay corpus.",
+          "semantic_delta": "Version 3 binds the current value hash encoding and deterministic task scheduling metadata.",
+          "surface": "effect-log",
+          "tests": [
+            "crates/gc_effects/src/log.rs",
+            "crates/gc_effects/src/tests.rs"
+          ],
+          "to": "3",
+          "user_action": "Regenerate logs for archival provenance; replay may still consume explicit version 2 logs.",
+          "writer": "Every runtime log emits version 3."
+        },
+        {
+          "from": "1",
+          "id": "M-GPK-1-TO-2",
+          "reader": "Read explicit binary versions 1 and 2 under the same GPK magic.",
+          "retirement": "Retain v1 reads through the 0.x train; removal requires a streaming re-export tool and fixture census.",
+          "semantic_delta": "Version 2 adds a deterministic, sorted refs section; payload object encoding is unchanged.",
+          "surface": "gpk-bundle",
+          "tests": [
+            "crates/gc_vcs/src/gpk.rs",
+            "crates/gc_cli/tests/cli_pkg_gpk.rs"
+          ],
+          "to": "2",
+          "user_action": "Re-export a v1 bundle to obtain canonical v2; imports continue to accept v1.",
+          "writer": "Production exports always emit version 2, including a zero-count refs section."
+        }
+      ]
+    },
+    "security": {
+      "activeDefectIds": [
+        "P0.1",
+        "P1.1",
+        "P1.2",
+        "P1.3"
+      ],
+      "claimState": "requirements-only-unverified",
+      "mandatoryChecks": [
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_dependency_mirror_contract.sh",
+          "executionIdentitySha256": "93f27a873ea8472638b14b9e2fa6d8a6c2c2d902715b61fe81367b5ffbc78faa",
+          "gateId": "gate/dependency-mirror-contract",
+          "kind": "test",
+          "networkMode": "deny",
+          "profile": "prepush-standard"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_evidence_adversarial_matrix.sh",
+          "executionIdentitySha256": "360125ec20753c02ea9780387729aa56a6281cb651c930663c3619999933b8de",
+          "gateId": "gate/evidence-adversarial-matrix",
+          "kind": "test",
+          "networkMode": "deny",
+          "profile": "prepush-standard"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_genesis_evidence_verifier.sh",
+          "executionIdentitySha256": "fa34c8eae2803ff7aaa5026d08e5bb11d3e520e836bc4adce13ea3ce65dd50b8",
+          "gateId": "gate/genesis-evidence-verifier",
+          "kind": "test",
+          "networkMode": "deny",
+          "profile": "prepush-standard"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_no_user_panics.sh",
+          "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
+          "gateId": "gate/no-user-panics",
+          "kind": "static",
+          "networkMode": "deny",
+          "profile": "local-fast"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_no_user_panics_compiler.sh",
+          "executionIdentitySha256": "754141f4f09fab4c01e05b14ce77193952b8dfd27d3e1cf7d8b1077889577004",
+          "gateId": "gate/no-user-panics-compiler",
+          "kind": "test",
+          "networkMode": "deny",
+          "profile": "prepush-standard"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_release_smoke.sh",
+          "executionIdentitySha256": "774a53bf2abd54b76ed40ef06bbb28c87c0bf1c6e1a7b3c65fa3cf422730b8f2",
+          "gateId": "gate/release-smoke",
+          "kind": "release-only",
+          "networkMode": "deny",
+          "profile": "release-full"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_root_lock_policy.sh",
+          "executionIdentitySha256": "d047629ebd27b412cc3136be55dc70ca98f423c1cb038bca6e48ba2803db281d",
+          "gateId": "gate/root-lock-policy",
+          "kind": "static",
+          "networkMode": "deny",
+          "profile": "local-fast"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_supply_chain.sh",
+          "executionIdentitySha256": "a5521633615c50e22ba847ce17cc18f4a92bc68311b3572369a6261739f2cb6e",
+          "gateId": "gate/supply-chain",
+          "kind": "release-only",
+          "networkMode": "deny",
+          "profile": "release-full"
+        },
+        {
+          "claim": "required-but-not-attested",
+          "entrypoint": "scripts/check_versioning_release_hygiene.sh",
+          "executionIdentitySha256": "582c2b6719015a2d732678c96bc3204120f3ce41130c85658076f15c82829818",
+          "gateId": "gate/versioning-release-hygiene",
+          "kind": "release-only",
+          "networkMode": "deny",
+          "profile": "release-full"
+        }
+      ],
+      "passedChecks": [],
+      "policySha256": "b06ac4fa64316d97cd4fc7f4ed540140a027559b7a80838d4d5e6e5826323480"
+    }
+  },
+  "sourceIdentities": {
+    "Cargo.lock": "01559290ad362bc02b2e79d0aabb65caa42e9eb5bfe612bca54d715a761e432f",
+    "Cargo.toml": "bef3b5cdbfb7698a51a77e255a4b40c6a9cfebe32876df97c0fec5779a8f097b",
+    "deny.toml": "b06ac4fa64316d97cd4fc7f4ed540140a027559b7a80838d4d5e6e5826323480",
+    "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json": "4ce9bed19d3dac8926a06a15f2edceaaaa038c3a9a814265b7bd13858359a173",
+    "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json": "1ee6541e1f594edce44ae99a9e17c5288c9cab7a4f0818528c821bdc11b15546",
+    "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json": "1dcfce299a83bac9ba9601b064c3da8caa1ffa61602cca5446febc9132172e81",
+    "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json": "5595e59ffce6727ad73987bac84fb2bc993cc0c113377d7d4fc18c443d168491",
+    "docs/program/evidence/artifact/genesis-example.bin": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
+    "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
+    "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "1b8a72703153662ee0ff795dfbdcb5e0035dd9833edf8746f76fe567b44666f5",
+    "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
+    "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
+    "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",
+    "genesis.version-surfaces.json": "643402a19527b77ef0432b7a0197d4ee658e413640961e0b93d826f8801e3278",
+    "package-lock.json": "f5b2fa938c2c572fa8172b0f57418c10dca846791855fbd25b1b662b188097ed",
+    "policies/evidence_storage_classes_v0.1.json": "b492fabe76d9f20a54f7488d9a6715225bdd1ee789dbe30df8aa2810e1da6459",
+    "policies/release_notes_v0.1.json": "19bab59aa31dcbb7fdad9a234feb94958587481646f022952651416cb454d7c7",
+    "tools/genesis-evidence-producer/Cargo.lock": "a7aa895176386dcbde3de7e0d49a8511ca38227880ee30e82c12978cc5fa416e",
+    "tools/genesis-evidence-verifier/Cargo.lock": "d3a5c9c2e7d3cb614d79b3360210c93f63317cdbb808250d0084ff4c1822f3eb"
+  },
+  "version": "0.1"
+}

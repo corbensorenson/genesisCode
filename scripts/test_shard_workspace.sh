@@ -8,8 +8,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "test-shard-workspace" \
-  ".genesis/build/cargo" \
-  "GENESIS_TEST_SHARD_WORKSPACE_CARGO_TARGET_DIR"
+  root-host
 
 TOTAL=""
 INDEX=""

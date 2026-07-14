@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -15,7 +18,7 @@ SIDECAR_PATH="${GENESIS_SELFHOST_TOOLCHAIN_REVIEW_PATH:-selfhost/toolchain.revie
 TMP_FILE="$(mktemp)"
 trap 'rm -f "$TMP_FILE"' EXIT
 
-bash scripts/update_selfhost_toolchain_review.sh "$TMP_FILE" >/dev/null
+bash scripts/render_selfhost_toolchain_review.sh "$TMP_FILE" >/dev/null
 
 if ! diff -u "$SIDECAR_PATH" "$TMP_FILE" >/dev/null; then
   echo "selfhost-toolchain-review-fresh: committed sidecar is stale." >&2

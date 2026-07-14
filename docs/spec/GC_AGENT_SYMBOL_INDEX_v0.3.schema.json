@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-agent-symbol-index-v0.3.schema.json",
+  "title": "GenesisCode Agent Symbol Index v0.3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "profileId", "profileIdentitySha256", "indexIdentitySha256", "lookup", "sourceIdentities", "symbolCount", "symbols", "unsupportedBehaviorCount", "unsupportedBehaviorIdentitySha256", "unsupportedClasses"],
+  "properties": {
+    "kind": {"const": "genesis/gc-agent-symbol-index-v0.3"},
+    "version": {"const": "0.3"},
+    "profileId": {"const": "GC-AGENT-v0.3"},
+    "profileIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "indexIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "lookup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseSensitive", "normalization", "maxResults", "command"],
+      "properties": {
+        "caseSensitive": {"const": true},
+        "normalization": {"const": "none"},
+        "maxResults": {"const": 1},
+        "command": {"const": "genesis --json agent-index --symbol <exact-name>"}
+      }
+    },
+    "sourceIdentities": {
+      "type": "object",
+      "minProperties": 3,
+      "additionalProperties": {"$ref": "#/$defs/sha256"}
+    },
+    "symbolCount": {"type": "integer", "minimum": 1},
+    "unsupportedBehaviorCount": {"type": "integer", "minimum": 5},
+    "unsupportedBehaviorIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "unsupportedClasses": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {"enum": ["experimental-syntax", "host-only-operation", "unavailable-target", "nondeterministic-facility", "out-of-profile-capability"]},
+      "uniqueItems": true
+    },
+    "symbols": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/symbol"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stringArray": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "anchors"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "anchors": {"$ref": "#/$defs/stringArray"}
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "notation", "parameters", "returns"],
+      "properties": {
+        "kind": {"enum": ["callable", "form", "literal", "value-kind", "declaration", "policy-field", "identifier"]},
+        "notation": {"type": "string", "minLength": 1},
+        "parameters": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "returns": {"type": "string", "minLength": 1}
+      }
+    },
+    "deprecation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "since", "replacement", "removal"],
+      "properties": {
+        "status": {"enum": ["active", "deprecated"]},
+        "since": {"type": ["string", "null"]},
+        "replacement": {"type": ["string", "null"]},
+        "removal": {"type": ["string", "null"]}
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "expected"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "expected": {"type": "string", "minLength": 1}
+      }
+    },
+    "symbol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "domains", "profileStatus", "signature", "effects", "capabilities", "contracts", "examples", "diagnostics", "deprecation", "sources"],
+      "properties": {
+        "symbol": {"type": "string", "minLength": 1},
+        "domains": {"$ref": "#/$defs/stringArray"},
+        "profileStatus": {"enum": ["core", "profile-selected"]},
+        "signature": {"$ref": "#/$defs/signature"},
+        "effects": {"$ref": "#/$defs/stringArray"},
+        "capabilities": {"$ref": "#/$defs/stringArray"},
+        "contracts": {"$ref": "#/$defs/stringArray"},
+        "examples": {"type": "array", "items": {"$ref": "#/$defs/example"}},
+        "diagnostics": {"$ref": "#/$defs/stringArray"},
+        "deprecation": {"$ref": "#/$defs/deprecation"},
+        "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/source"}}
+      }
+    }
+  }
+}

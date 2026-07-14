@@ -1,0 +1,8 @@
+# External crates allowed to appear at multiple semver major versions.
+# Format: crate-name | reason
+# Keep this list short. Each entry is a temporary compatibility waiver, not a precedent.
+bitflags | transitive platform/terminal/image stack split between 1.x and 2.x; revisit during dependency unification.
+mio | notify and tokio stacks currently straddle 0.x and 1.x; remove when notify ecosystem converges.
+rustix | crossterm and tempfile stacks currently straddle 0.x and 1.x; remove when both converge on rustix 1.x.
+thiserror | workspace uses 2.x while older transitive crates still require 1.x; remove when transitives converge.
+thiserror-impl | proc-macro companion for the temporary thiserror 1.x/2.x split; remove with thiserror waiver.

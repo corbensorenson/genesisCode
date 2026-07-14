@@ -1,5 +1,5 @@
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
-use gc_kernel::{Env, EvalCtx, Value, eval_module};
+use gc_kernel::{Env, EvalCtx, Value, ValueMap, eval_module};
 use gc_prelude::build_prelude;
 
 const FOUNDATION_REQUIRED_SYMBOLS: &[&str] = &[
@@ -62,9 +62,13 @@ fn eval_with_prelude(src: &str) -> (EvalCtx, Env, Value) {
     (ctx, env, value)
 }
 
-fn map_value<'a>(m: &'a std::collections::BTreeMap<TermOrdKey, Value>, key: &str) -> &'a Value {
+fn map_value<'a>(m: &'a ValueMap, key: &str) -> &'a Value {
     m.get(&TermOrdKey(Term::symbol(key)))
         .unwrap_or_else(|| panic!("missing key {key}"))
+}
+
+fn map_value_is_int(m: &ValueMap, key: &str, expected: i64) -> bool {
+    matches!(map_value(m, key).to_plain_term(), Some(Term::Int(n)) if n == expected.into())
 }
 
 #[test]
@@ -114,60 +118,39 @@ fn foundation_required_behavior_conforms() {
         panic!("expected map result");
     };
 
+    assert!(map_value_is_int(&m, ":list-len", 3));
+    assert!(map_value_is_int(&m, ":list-fold", 6));
+    assert!(map_value_is_int(&m, ":map-get", 3));
+    assert!(map_value_is_int(&m, ":map-len", 3));
+    assert!(map_value_is_int(&m, ":vec-get", 9));
+    assert!(map_value_is_int(&m, ":vec-len", 3));
     assert!(matches!(
-        map_value(&m, ":list-len"),
-        Value::Data(Term::Int(i)) if i == &3.into()
+        map_value(&m, ":str-join").as_data(),
+        Some(Term::Str(s)) if s == "a-b-c"
     ));
     assert!(matches!(
-        map_value(&m, ":list-fold"),
-        Value::Data(Term::Int(i)) if i == &6.into()
+        map_value(&m, ":str-roundtrip").as_data(),
+        Some(Term::Str(s)) if s == "hi✓"
     ));
     assert!(matches!(
-        map_value(&m, ":map-get"),
-        Value::Data(Term::Int(i)) if i == &3.into()
+        map_value(&m, ":bytes-slice").as_data(),
+        Some(Term::Bytes(bs)) if bs.as_ref() == [2, 3]
     ));
     assert!(matches!(
-        map_value(&m, ":map-len"),
-        Value::Data(Term::Int(i)) if i == &3.into()
+        map_value(&m, ":sym-eq").as_data(),
+        Some(Term::Bool(true))
     ));
     assert!(matches!(
-        map_value(&m, ":vec-get"),
-        Value::Data(Term::Int(i)) if i == &9.into()
+        map_value(&m, ":sym-str").as_data(),
+        Some(Term::Str(s)) if s == "pkg/example::op"
     ));
+    assert!(map_value_is_int(&m, ":hash-len", 32));
     assert!(matches!(
-        map_value(&m, ":vec-len"),
-        Value::Data(Term::Int(i)) if i == &3.into()
-    ));
-    assert!(matches!(
-        map_value(&m, ":str-join"),
-        Value::Data(Term::Str(s)) if s == "a-b-c"
-    ));
-    assert!(matches!(
-        map_value(&m, ":str-roundtrip"),
-        Value::Data(Term::Str(s)) if s == "hi✓"
-    ));
-    assert!(matches!(
-        map_value(&m, ":bytes-slice"),
-        Value::Data(Term::Bytes(bs)) if bs.as_ref() == [2, 3]
-    ));
-    assert!(matches!(
-        map_value(&m, ":sym-eq"),
-        Value::Data(Term::Bool(true))
-    ));
-    assert!(matches!(
-        map_value(&m, ":sym-str"),
-        Value::Data(Term::Str(s)) if s == "pkg/example::op"
-    ));
-    assert!(matches!(
-        map_value(&m, ":hash-len"),
-        Value::Data(Term::Int(i)) if i == &32.into()
-    ));
-    assert!(matches!(
-        map_value(&m, ":msg-op"),
-        Value::Data(Term::Symbol(s)) if s == "pkg/example::op"
+        map_value(&m, ":msg-op").as_data(),
+        Some(Term::Symbol(s)) if s == "pkg/example::op"
     ));
 
-    let Value::Data(Term::Map(msg_payload)) = map_value(&m, ":msg-payload") else {
+    let Some(Term::Map(msg_payload)) = map_value(&m, ":msg-payload").as_data() else {
         panic!(":msg-payload must be map");
     };
     assert!(matches!(
@@ -175,7 +158,7 @@ fn foundation_required_behavior_conforms() {
         Some(Term::Int(i)) if i == &1.into()
     ));
 
-    let Value::Data(Term::Map(contract_payload)) = map_value(&m, ":contract-call") else {
+    let Some(Term::Map(contract_payload)) = map_value(&m, ":contract-call").as_data() else {
         panic!(":contract-call must be map");
     };
     assert!(matches!(
@@ -184,7 +167,12 @@ fn foundation_required_behavior_conforms() {
     ));
 
     let entries: Vec<Term> = match map_value(&m, ":map-entries") {
-        Value::Data(Term::Vector(entries)) => entries.clone(),
+        Value::Data(t) if matches!(t.as_ref(), Term::Vector(_)) => {
+            let Term::Vector(entries) = t.as_ref() else {
+                panic!(":map-entries must be vector");
+            };
+            entries.clone()
+        }
         Value::Vector(entries) => entries
             .iter()
             .map(|v| {

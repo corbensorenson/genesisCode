@@ -29,9 +29,9 @@ fn diag_toolchain_decode() {
         Term::Symbol("bar".to_string()),
     );
     let out = rename
-        .apply(&mut ctx, Value::Data(Term::Map(req)))
+        .apply(&mut ctx, Value::data(Term::Map(req)))
         .expect("rename apply");
-    let Value::Data(Term::Map(m)) = out else {
+    let Some(Term::Map(m)) = out.as_data() else {
         panic!("rename out not map data: {}", out.debug_repr());
     };
     let forms = m

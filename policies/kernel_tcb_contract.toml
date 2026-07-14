@@ -9,12 +9,18 @@ expected_kernel_surface_files = [
   "compiled_blob.rs",
   "compiled_compile.rs",
   "compiled_coverage.rs",
+  "compiled_runtime/apply.rs",
+  "compiled_runtime/eval.rs",
+  "compiled_runtime/mod.rs",
+  "compiled_runtime/patterns.rs",
   "env.rs",
   "error.rs",
   "eval.rs",
+  "eval_coverage.rs",
   "eval_decimal_ops.rs",
   "eval_forms.rs",
   "eval_prims.rs",
+  "eval_prims/text_bytes.rs",
   "eval_treewalk.rs",
   "eval_value_ops.rs",
   "lib.rs",
@@ -33,9 +39,23 @@ forbidden_eval_markers = [
 ]
 
 [line_budgets]
+"crates/gc_kernel/src/compiled.rs" = 520
+"crates/gc_kernel/src/compiled_blob.rs" = 520
+"crates/gc_kernel/src/compiled_compile.rs" = 700
+"crates/gc_kernel/src/compiled_coverage.rs" = 230
+"crates/gc_kernel/src/compiled_runtime/apply.rs" = 450
+"crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
+"crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
+"crates/gc_kernel/src/compiled_runtime/patterns.rs" = 400
+"crates/gc_kernel/src/env.rs" = 100
+"crates/gc_kernel/src/error.rs" = 80
 "crates/gc_kernel/src/eval.rs" = 550
+"crates/gc_kernel/src/eval_coverage.rs" = 430
 "crates/gc_kernel/src/eval_treewalk.rs" = 260
 "crates/gc_kernel/src/eval_forms.rs" = 320
 "crates/gc_kernel/src/eval_prims.rs" = 900
+"crates/gc_kernel/src/eval_prims/text_bytes.rs" = 450
 "crates/gc_kernel/src/eval_decimal_ops.rs" = 160
 "crates/gc_kernel/src/eval_value_ops.rs" = 140
+"crates/gc_kernel/src/lib.rs" = 80
+"crates/gc_kernel/src/value.rs" = 720

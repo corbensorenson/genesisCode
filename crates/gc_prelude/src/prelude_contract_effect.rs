@@ -1,20 +1,21 @@
 use super::*;
+use gc_coreform::HASH_DOMAIN_PREFIX;
 
 pub(super) fn make_genesis() -> Value {
-    let empty_overrides = Value::Map(BTreeMap::new());
+    let empty_overrides = Value::map(ValueMap::new());
     // Avoid any fallible/alloc-heavy path during runtime init: construct the
     // partially-applied native function directly.
-    let handler = Value::NativeFn(NativeFn {
+    let handler = Value::native_fn(NativeFn {
         name: "core/contract::internal-override-handler",
         arity: 2,
         collected: vec![empty_overrides.clone()],
         func: nf_internal_override_handler,
     });
 
-    let meta = Value::Map(
+    let meta = Value::map(
         [(
             TermOrdKey(Term::Symbol(":intent".to_string())),
-            Value::Data(Term::Str("Root contract (proto base)".to_string())),
+            Value::data(Term::Str("Root contract (proto base)".to_string())),
         )]
         .into_iter()
         .collect(),
@@ -34,7 +35,8 @@ pub(super) fn make_genesis() -> Value {
 
 fn shape_id(proto: Option<&Contract>, overrides: &BTreeMap<String, Value>) -> [u8; 32] {
     let mut h = Hasher::new();
-    h.update(b"GCv0.2\0shape\0");
+    h.update(HASH_DOMAIN_PREFIX);
+    h.update(b"shape\0");
     if let Some(p) = proto {
         h.update(&p.shape_id);
     } else {
@@ -54,7 +56,8 @@ fn contract_id(
     proto: Option<&Contract>,
 ) -> [u8; 32] {
     let mut h = Hasher::new();
-    h.update(b"GCv0.2\0contract\0");
+    h.update(HASH_DOMAIN_PREFIX);
+    h.update(b"contract\0");
     h.update(shape_id);
     if let Some(p) = proto {
         h.update(&p.contract_id);
@@ -85,7 +88,7 @@ pub(super) fn nf_unhandled(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value,
 
 pub(super) fn nf_is_unhandled(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
-    Ok(Value::Data(Term::Bool(
+    Ok(Value::data(Term::Bool(
         sealed_matches(&args[0], p.unhandled).is_some(),
     )))
 }
@@ -100,7 +103,7 @@ pub(super) fn nf_effect_wrap(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Valu
 
 pub(super) fn nf_is_effect(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
-    Ok(Value::Data(Term::Bool(
+    Ok(Value::data(Term::Bool(
         sealed_matches(&args[0], p.effect).is_some(),
     )))
 }
@@ -115,7 +118,7 @@ pub(super) fn nf_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Ker
 
 pub(super) fn nf_is_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
-    Ok(Value::Data(Term::Bool(
+    Ok(Value::data(Term::Bool(
         sealed_matches(&args[0], p.error).is_some(),
     )))
 }
@@ -125,7 +128,7 @@ pub(super) fn nf_unerror(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, K
     if let Some(payload) = sealed_matches(&args[0], p.error) {
         Ok(payload.clone())
     } else {
-        Ok(Value::Data(Term::Nil))
+        Ok(Value::data(Term::Nil))
     }
 }
 
@@ -133,13 +136,13 @@ pub(super) fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Va
     let handler = args[0].clone();
     if !matches!(
         handler,
-        Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+        Value::Closure(_) | Value::CompiledClosure(_) | Value::NativeFn(_)
     ) {
         return Ok(mk_error(ctx, "contract handler must be callable"));
     }
     let proto = match &args[1] {
         Value::Contract(c) => Some(c.clone()),
-        Value::Data(Term::Nil) => None,
+        Value::Data(t) if matches!(t.as_ref(), Term::Nil) => None,
         _ => return Ok(mk_error(ctx, "proto must be a contract or nil")),
     };
     let meta = args[2].clone();
@@ -180,7 +183,7 @@ pub(super) fn nf_contract_extend(
         };
         if !matches!(
             v,
-            Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+            Value::Closure(_) | Value::CompiledClosure(_) | Value::NativeFn(_)
         ) {
             return Ok(mk_error(ctx, format!("override for {op} must be callable")));
         }
@@ -192,7 +195,7 @@ pub(super) fn nf_contract_extend(
 
     // Handler: internal override handler partially applied to the overrides map.
     let handler = {
-        let f = Value::NativeFn(NativeFn::new(
+        let f = Value::native_fn(NativeFn::new(
             "core/contract::internal-override-handler",
             2,
             nf_internal_override_handler,
@@ -217,7 +220,7 @@ fn merge_meta(base: &Value, plus: &Value) -> Value {
         (Value::Map(a), Value::Map(b)) => {
             let mut out = a.clone();
             for (k, v) in b.iter() {
-                out.insert(k.clone(), v.clone());
+                Rc::make_mut(&mut out).insert_mut(k.clone(), v.clone());
             }
             Value::Map(out)
         }
@@ -235,7 +238,7 @@ pub(super) fn nf_internal_override_handler(
         _ => return Ok(mk_error(ctx, "internal override handler expects map")),
     };
     let msg_term = match &args[1] {
-        Value::Data(t) => t.clone(),
+        Value::Data(t) => t.as_ref().clone(),
         _ => return Ok(mk_error(ctx, "msg must be a datum")),
     };
     let (op, _payload) = match parse_msg_term(&msg_term) {
@@ -243,7 +246,7 @@ pub(super) fn nf_internal_override_handler(
         Err(e) => {
             return Ok(Value::Sealed {
                 token: p.error,
-                payload: Box::new(Value::Data(Term::Str(e.msg))),
+                payload: Box::new(Value::data(Term::Str(e.msg))),
             });
         }
     };
@@ -251,7 +254,7 @@ pub(super) fn nf_internal_override_handler(
         return Ok(mk_error(ctx, "msg op must be a symbol"));
     };
     if let Some(h) = overrides.get(&TermOrdKey(Term::Symbol(op_s.clone()))) {
-        return h.clone().apply(ctx, Value::Data(msg_term));
+        return h.clone().apply(ctx, Value::data(msg_term));
     }
     Ok(mk_unhandled(ctx, msg_term))
 }
@@ -272,7 +275,7 @@ pub(super) fn nf_contract_dispatch(
         let r = cur
             .handler
             .clone()
-            .apply(ctx, Value::Data(msg_term.clone()))?;
+            .apply(ctx, Value::data(msg_term.clone()))?;
         if sealed_matches(&r, p.unhandled).is_some()
             && let Some(proto) = &cur.proto
         {
@@ -312,7 +315,7 @@ pub(super) fn nf_contract_explain(
         let r = cur
             .handler
             .clone()
-            .apply(ctx, Value::Data(msg_term.clone()))?;
+            .apply(ctx, Value::data(msg_term.clone()))?;
         let unhandled = sealed_matches(&r, p.unhandled).is_some();
 
         steps.push(Term::Map(
@@ -367,7 +370,7 @@ pub(super) fn nf_contract_explain(
         .into_iter()
         .collect(),
     );
-    Ok(Value::Data(trace))
+    Ok(Value::data(trace))
 }
 
 pub(super) fn nf_contract_meta(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
@@ -381,7 +384,7 @@ pub(super) fn nf_contract_proto(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<V
     match &args[0] {
         Value::Contract(c) => match &c.proto {
             Some(p) => Ok(Value::Contract(p.clone())),
-            None => Ok(Value::Data(Term::Nil)),
+            None => Ok(Value::data(Term::Nil)),
         },
         _ => Ok(mk_error(ctx, "proto expects a contract")),
     }
@@ -389,7 +392,7 @@ pub(super) fn nf_contract_proto(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<V
 
 pub(super) fn nf_contract_shape(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     match &args[0] {
-        Value::Contract(c) => Ok(Value::Data(Term::Str(hex(&c.shape_id)))),
+        Value::Contract(c) => Ok(Value::data(Term::Str(hex(&c.shape_id)))),
         _ => Ok(mk_error(ctx, "shape expects a contract")),
     }
 }
@@ -400,7 +403,7 @@ pub(super) fn nf_msg_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, 
         _ => return Ok(mk_error(ctx, "msg op must be a symbol datum")),
     };
     let payload = value_to_data_term(&args[1])?;
-    Ok(Value::Data(Term::list(vec![
+    Ok(Value::data(Term::list(vec![
         Term::Symbol("msg".to_string()),
         op,
         payload,
@@ -409,26 +412,26 @@ pub(super) fn nf_msg_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, 
 
 pub(super) fn nf_msg_op(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let msg = match &args[0] {
-        Value::Data(t) => t.clone(),
+        Value::Data(t) => t.as_ref().clone(),
         _ => return Ok(mk_error(ctx, "msg must be a datum")),
     };
     let (op, _) = match parse_msg_term(&msg) {
         Ok(x) => x,
         Err(e) => return Ok(mk_error(ctx, e.msg)),
     };
-    Ok(Value::Data(op))
+    Ok(Value::data(op))
 }
 
 pub(super) fn nf_msg_payload(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let msg = match &args[0] {
-        Value::Data(t) => t.clone(),
+        Value::Data(t) => t.as_ref().clone(),
         _ => return Ok(mk_error(ctx, "msg must be a datum")),
     };
     let (_, payload) = match parse_msg_term(&msg) {
         Ok(x) => x,
         Err(e) => return Ok(mk_error(ctx, e.msg)),
     };
-    Ok(Value::Data(payload))
+    Ok(Value::data(payload))
 }
 
 pub(super) fn nf_effect_pure(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
@@ -447,11 +450,11 @@ pub(super) fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<V
     let k = args[2].clone();
     if !matches!(
         k,
-        Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+        Value::Closure(_) | Value::CompiledClosure(_) | Value::NativeFn(_)
     ) {
         return Ok(mk_error(ctx, "effect continuation must be callable"));
     }
-    let req = Value::EffectRequest(EffectRequest {
+    let req = Value::effect_request(EffectRequest {
         op,
         payload,
         k: Box::new(k),
@@ -492,14 +495,14 @@ fn bind_impl(ctx: &mut EvalCtx, program: Value, f: Value) -> Result<Value, Kerne
             };
 
             let k = (*req.k).clone();
-            let k2 = Value::NativeFn(NativeFn {
+            let k2 = Value::native_fn(NativeFn {
                 name: "core/effect::internal-bind-cont",
                 arity: 3,
                 collected: vec![k, f],
                 func: nf_effect_bind_cont,
             });
 
-            let req2 = Value::EffectRequest(EffectRequest {
+            let req2 = Value::effect_request(EffectRequest {
                 op: req.op.clone(),
                 payload: req.payload.clone(),
                 k: Box::new(k2),
@@ -519,7 +522,7 @@ pub(super) fn nf_effect_bind(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Valu
     let f = args[1].clone();
     if !matches!(
         f,
-        Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+        Value::Closure(_) | Value::CompiledClosure(_) | Value::NativeFn(_)
     ) {
         return Ok(mk_error(ctx, "bind function must be callable"));
     }

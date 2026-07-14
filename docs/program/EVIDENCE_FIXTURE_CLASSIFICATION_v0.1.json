@@ -1,0 +1,52 @@
+{
+  "authority": false,
+  "coverage": "exact-recursive-files",
+  "distributionClass": "E2",
+  "files": [
+    {
+      "claimedEvidenceClass": "E3",
+      "path": "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
+      "role": "artifact-hash-tree",
+      "sha256": "1ee6541e1f594edce44ae99a9e17c5288c9cab7a4f0818528c821bdc11b15546",
+      "testOnly": true
+    },
+    {
+      "claimedEvidenceClass": "E3",
+      "path": "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json",
+      "role": "authenticated-bundle",
+      "sha256": "1dcfce299a83bac9ba9601b064c3da8caa1ffa61602cca5446febc9132172e81",
+      "testOnly": true
+    },
+    {
+      "claimedEvidenceClass": "none",
+      "path": "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json",
+      "role": "adversarial-catalog",
+      "sha256": "5595e59ffce6727ad73987bac84fb2bc993cc0c113377d7d4fc18c443d168491",
+      "testOnly": true
+    },
+    {
+      "claimedEvidenceClass": "E3",
+      "path": "docs/program/evidence/artifact/genesis-example.bin",
+      "role": "subject-artifact",
+      "sha256": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
+      "testOnly": true
+    },
+    {
+      "claimedEvidenceClass": "E0",
+      "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
+      "role": "signed-e0-baseline",
+      "sha256": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
+      "testOnly": true
+    },
+    {
+      "claimedEvidenceClass": "none",
+      "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+      "role": "fixture-public-key",
+      "sha256": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
+      "testOnly": true
+    }
+  ],
+  "kind": "genesis/evidence-fixture-classification-v0.1",
+  "root": "docs/program/evidence/",
+  "version": "0.1"
+}

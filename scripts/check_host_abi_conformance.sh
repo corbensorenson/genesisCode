@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 export LC_ALL=C
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -10,8 +13,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "host-abi-conformance" \
-  ".genesis/build/cargo" \
-  "GENESIS_CHECK_HOST_ABI_CONFORMANCE_CARGO_TARGET_DIR"
+  root-host
 
 RUNNER_FILES=(
   "crates/gc_effects/src/runner_capability_dispatch.rs"

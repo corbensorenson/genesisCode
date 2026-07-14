@@ -1,9 +1,12 @@
 use super::*;
 use clap::{Arg, Command, CommandFactory};
+use std::any::TypeId;
 
 pub(super) fn cmd_cli_schema(cli: &Cli) -> Result<CmdOut, CliError> {
     let profile = runtime_profile();
     let command = build_cli_schema(profile);
+    let mcp_interface = mcp::interface_manifest(profile)
+        .map_err(|message| cli_err(EX_INTERNAL, "mcp/interface-invalid", message))?;
     let env = JsonEnvelope {
         ok: true,
         kind: "genesis/cli-schema-v0.1",
@@ -11,6 +14,7 @@ pub(super) fn cmd_cli_schema(cli: &Cli) -> Result<CmdOut, CliError> {
             "schema": "genesis/cli-schema-v0.1",
             "runtime_profile": runtime_profile_token(profile),
             "command": command,
+            "mcp_interface": mcp_interface,
         })),
         error: None,
     };
@@ -100,6 +104,7 @@ fn arg_schema(arg: &Arg, profile: RuntimeProfile) -> serde_json::Value {
         .get_value_names()
         .map(|names| names.iter().map(|v| v.to_string()).collect::<Vec<_>>())
         .unwrap_or_default();
+    let num_args = arg.get_num_args();
 
     serde_json::json!({
         "name": arg.get_id().to_string(),
@@ -112,7 +117,58 @@ fn arg_schema(arg: &Arg, profile: RuntimeProfile) -> serde_json::Value {
         "value_names": value_names,
         "default_values": default_values,
         "allowed_values": allowed_values,
+        "action": arg_action_token(arg),
+        "value_type": arg_value_type(arg),
+        "multiple": matches!(arg.get_action(), clap::ArgAction::Append),
+        "min_values": num_args.map(|range| range.min_values()),
+        "max_values": num_args.and_then(|range| {
+            let max = range.max_values();
+            (max != usize::MAX).then_some(max)
+        }),
     })
+}
+
+fn arg_action_token(arg: &Arg) -> &'static str {
+    match arg.get_action() {
+        clap::ArgAction::Set => "set",
+        clap::ArgAction::Append => "append",
+        clap::ArgAction::SetTrue => "set-true",
+        clap::ArgAction::SetFalse => "set-false",
+        clap::ArgAction::Count => "count",
+        _ => "control",
+    }
+}
+
+fn arg_value_type(arg: &Arg) -> &'static str {
+    match arg.get_action() {
+        clap::ArgAction::SetTrue | clap::ArgAction::SetFalse => "boolean",
+        clap::ArgAction::Count => "integer",
+        clap::ArgAction::Append => "string-array",
+        _ => {
+            let id = arg.get_value_parser().type_id();
+            if [
+                TypeId::of::<u8>(),
+                TypeId::of::<u16>(),
+                TypeId::of::<u32>(),
+                TypeId::of::<u64>(),
+                TypeId::of::<usize>(),
+                TypeId::of::<i8>(),
+                TypeId::of::<i16>(),
+                TypeId::of::<i32>(),
+                TypeId::of::<i64>(),
+                TypeId::of::<isize>(),
+            ]
+            .iter()
+            .any(|expected| id == *expected)
+            {
+                "integer"
+            } else if id == TypeId::of::<f32>() || id == TypeId::of::<f64>() {
+                "number"
+            } else {
+                "string"
+            }
+        }
+    }
 }
 
 fn collect_possible_values(arg: &Arg) -> Vec<String> {

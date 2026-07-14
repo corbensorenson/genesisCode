@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/v1-compatibility-registry-v0.1.json",
+  "title": "GenesisCode v1 Compatibility Registry v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "namespace", "releaseClaim", "stabilizationTask", "policy", "promotionRequirements", "entries"],
+  "properties": {
+    "kind": {"const": "genesis/v1-compatibility-registry-v0.1"},
+    "version": {"const": "0.1"},
+    "namespace": {"const": "genesis/compat/v1"},
+    "releaseClaim": {"const": "reserved-not-stable"},
+    "stabilizationTask": {"const": "R9.1.a"},
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateChange", "dependencyRule", "reservation", "retirementRule", "stabilityRule"],
+      "properties": {
+        "candidateChange": {"type": "string", "minLength": 1},
+        "dependencyRule": {"type": "string", "minLength": 1},
+        "reservation": {"type": "string", "minLength": 1},
+        "retirementRule": {"type": "string", "minLength": 1},
+        "stabilityRule": {"type": "string", "minLength": 1}
+      }
+    },
+    "promotionRequirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/promotionRequirement"}
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {"$ref": "#/$defs/entry"}
+    }
+  },
+  "$defs": {
+    "promotionRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^P-[A-Z0-9-]+$"},
+        "description": {"type": "string", "minLength": 1}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "contains"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$"},
+        "contains": {"type": "string", "minLength": 1}
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "currentWriter", "acceptedReaders", "missingDiscriminator", "migrationRecords"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$"},
+        "currentWriter": {"type": "string", "minLength": 1},
+        "acceptedReaders": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "missingDiscriminator": {"type": "string", "minLength": 1},
+        "migrationRecords": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^M-[A-Z0-9-]+$"}
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "stableId", "state", "candidateId", "compatibilityClass", "dependencies", "authorities", "components", "promotionRequirements"],
+      "properties": {
+        "key": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "stableId": {"type": "string", "pattern": "^genesis/compat/v1/[a-z][a-z0-9-]*$"},
+        "state": {"enum": ["unbound", "candidate", "stable"]},
+        "candidateId": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^genesis/[a-z0-9][a-z0-9./-]*$"}
+          ]
+        },
+        "compatibilityClass": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "dependencies": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"}
+        },
+        "authorities": {"type": "array", "items": {"$ref": "#/$defs/authority"}},
+        "components": {"type": "array", "items": {"$ref": "#/$defs/component"}},
+        "promotionRequirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "pattern": "^P-[A-Z0-9-]+$"}
+        }
+      }
+    }
+  }
+}

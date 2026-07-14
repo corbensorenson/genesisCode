@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -29,7 +32,8 @@ require_pattern "gpu_device_microbench_deterministic:" "missing deterministic se
 require_pattern "gpu_device_conformance_release_gate:" "missing release conformance parity gate job"
 require_pattern "gpu-device-conformance-artifacts-selfhosted-linux" "missing primary lane artifact upload"
 require_pattern "gpu-device-conformance-artifacts-deterministic" "missing secondary lane artifact upload"
-require_pattern "bash scripts/check_gpu_device_conformance_lane_parity.sh" "missing lane parity checker invocation"
+require_pattern "bash scripts/update_gpu_compute_device_conformance_report.sh" "missing explicit gpu device conformance producer invocation"
+require_pattern "bash scripts/update_gpu_device_conformance_lane_parity_report.sh" "missing explicit lane parity producer invocation"
 require_pattern "needs:" "missing needs declaration for conformance parity gate"
 require_pattern "- gpu_device_microbench" "conformance parity gate must require primary lane"
 require_pattern "- gpu_device_microbench_deterministic" "conformance parity gate must require secondary lane"
@@ -42,7 +46,7 @@ require_pattern "gpu-device-conformance-artifacts-nvidia-linux" "missing NVIDIA 
 require_pattern "gpu-device-conformance-artifacts-amd-linux" "missing AMD Linux lane artifact upload"
 require_pattern "gpu-device-conformance-artifacts-intel-windows" "missing Intel Windows lane artifact upload"
 require_pattern "gpu-device-conformance-artifacts-apple-macos" "missing Apple macOS lane artifact upload"
-require_pattern "bash scripts/check_gpu_device_conformance_matrix.sh" "missing gpu conformance matrix checker invocation"
+require_pattern "bash scripts/update_gpu_device_conformance_matrix_report.sh" "missing explicit gpu conformance matrix producer invocation"
 require_pattern "--config policies/perf/gpu_device_conformance_matrix.toml" "missing matrix policy config for gpu conformance gate"
 
 echo "gpu-conformance-lane-matrix: ok"

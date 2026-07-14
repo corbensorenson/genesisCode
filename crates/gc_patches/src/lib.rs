@@ -15,6 +15,9 @@ use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
+pub const SEMANTIC_PATCH_PROFILE_ID: &str = "genesis/patch-profile/v0.2";
+pub const SEMANTIC_PATCH_VERSION: u64 = 1;
+
 #[path = "patch_apply.rs"]
 mod patch_apply;
 #[path = "patch_manifest.rs"]

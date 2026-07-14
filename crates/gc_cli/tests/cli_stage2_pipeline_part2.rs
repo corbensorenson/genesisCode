@@ -569,7 +569,7 @@ fn eval_stage2_gate_validates_branch_sensitive_concat_wrappers_both_if_sides() {
 }
 
 #[test]
-fn optimize_stage2_gate_rejects_unsupported_module() {
+fn optimize_stage2_gate_validates_effect_program_projection() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("effect.gc");
     std::fs::write(
@@ -583,18 +583,38 @@ fn optimize_stage2_gate_rejects_unsupported_module() {
     )
     .unwrap();
 
-    genesis_cmd()
-        .args(["optimize", file.to_str().unwrap(), "--stage2-gate"])
+    let out = genesis_cmd()
+        .args([
+            "--json",
+            "optimize",
+            file.to_str().unwrap(),
+            "--stage2-gate",
+        ])
         .assert()
-        .failure()
-        .code(30)
-        .stderr(predicates::str::contains(
-            "core/obligation::translation-validation",
-        ));
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let stage1 = &v["data"]["stage1"];
+    assert_eq!(stage1["ok"].as_bool(), Some(false), "{v}");
+    let stage2 = &v["data"]["stage2"];
+    assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
+    assert_eq!(
+        stage2["lowering_mode"].as_str(),
+        Some("constant-fallback"),
+        "{v}"
+    );
+    assert_eq!(stage2["value_kind"].as_str(), Some("term"), "{v}");
+    assert_eq!(
+        stage2["original_value_hash"], stage2["wasm_value_hash"],
+        "{v}"
+    );
 }
 
 #[test]
-fn optimize_emit_wasm_fails_for_unsupported_module() {
+fn optimize_emit_wasm_writes_effect_program_projection_artifact() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("effect.gc");
     let wasm = dir.path().join("effect.wasm");
@@ -609,14 +629,38 @@ fn optimize_emit_wasm_fails_for_unsupported_module() {
     )
     .unwrap();
 
-    genesis_cmd()
+    let out = genesis_cmd()
         .args([
+            "--json",
             "optimize",
             file.to_str().unwrap(),
             "--emit-wasm",
             wasm.to_str().unwrap(),
         ])
         .assert()
-        .failure()
-        .code(30);
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert!(wasm.exists());
+    assert!(std::fs::metadata(&wasm).unwrap().len() > 0);
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        v["data"]["wasm_out"].as_str(),
+        Some(wasm.to_str().unwrap()),
+        "{v}"
+    );
+    let stage2 = &v["data"]["stage2"];
+    assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
+    assert_eq!(
+        stage2["lowering_mode"].as_str(),
+        Some("constant-fallback"),
+        "{v}"
+    );
+    assert_eq!(stage2["value_kind"].as_str(), Some("term"), "{v}");
+    assert_eq!(
+        stage2["original_value_hash"], stage2["wasm_value_hash"],
+        "{v}"
+    );
 }

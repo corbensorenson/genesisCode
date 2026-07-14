@@ -42,8 +42,10 @@ pub(super) fn cmd_pkg(
     let (prog, kind, log_op, program_hash) =
         frontend_dispatch::build_pkg_effect_program(cli, cmd, &frontend, &mut ctx, &mut env)?;
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
-    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
-        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain).map_err(|e| {
+        let context = structured_failures::effects_context("package/run", &e);
+        cli_err_with_context(EX_EVAL, "effects/run", format!("{e}"), context)
+    })?;
     enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "pkg", &r.log)?;
     let contract_value = normalize_pkg_contract_value(cmd, &r.value);
 
@@ -62,7 +64,7 @@ pub(super) fn cmd_pkg(
     {
         ok = false;
         exit_code = EX_EVAL;
-        if let Value::Data(Term::Map(m)) = payload.as_ref()
+        if let Some(Term::Map(m)) = payload.as_ref().as_data()
             && let Some(Term::Str(code)) =
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
         {
@@ -261,6 +263,23 @@ pub(super) fn cmd_pkg(
         obj.insert("telemetry".to_string(), telemetry);
     }
 
+    let failure_context = match cmd {
+        PkgCmd::Publish { .. }
+        | PkgCmd::Export { .. }
+        | PkgCmd::Import { .. }
+        | PkgCmd::Bridge { .. } => structured_failures::FailureContext::new(
+            "deployment",
+            "package-operation",
+            "deployment/package",
+        )
+        .into_value(),
+        PkgCmd::Build { .. } | PkgCmd::SelfOptimize { .. } => {
+            structured_failures::FailureContext::new("build", "package-build", "build/package")
+                .into_value()
+        }
+        _ => structured_failures::FailureContext::new("package", "operation", "package/execute")
+            .into_value(),
+    };
     let env = JsonEnvelope {
         ok,
         kind,
@@ -271,7 +290,7 @@ pub(super) fn cmd_pkg(
             Some(JsonError {
                 code: "pkg/error",
                 message: "pkg operation failed".to_string(),
-                context: None,
+                context: Some(failure_context),
             })
         },
     };
@@ -287,7 +306,10 @@ fn normalize_pkg_contract_value(cmd: &PkgCmd, value: &Value) -> Value {
     if !matches!(cmd, PkgCmd::Update { .. }) {
         return value.clone();
     }
-    let Value::Data(Term::Map(m)) = value else {
+    let Value::Data(t) = value else {
+        return value.clone();
+    };
+    let Term::Map(m) = t.as_ref() else {
         return value.clone();
     };
     let mut out = m.clone();
@@ -297,7 +319,7 @@ fn normalize_pkg_contract_value(cmd: &PkgCmd, value: &Value) -> Value {
         .or_insert(Term::Int(0.into()));
     out.entry(gc_coreform::TermOrdKey(Term::symbol(":rationale")))
         .or_insert(Term::Vector(Vec::new()));
-    Value::Data(Term::Map(out))
+    Value::data(Term::Map(out))
 }
 
 fn run_pkg_strict_sound_check(

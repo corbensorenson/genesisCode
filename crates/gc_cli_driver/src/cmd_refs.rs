@@ -55,7 +55,7 @@ pub(super) fn cmd_refs(
                     )
                 })?;
                 let prog = f
-                    .apply(&mut ctx, Value::Data(Term::Str(name.to_string())))
+                    .apply(&mut ctx, Value::data(Term::Str(name.to_string())))
                     .map_err(|e| {
                         cli_err(
                             EX_EVAL,
@@ -92,7 +92,7 @@ pub(super) fn cmd_refs(
                     .map(|s| Term::Str(s.to_string()))
                     .unwrap_or(Term::Nil);
                 let prog = f
-                    .apply(&mut ctx, Value::Data(prefix_term.clone()))
+                    .apply(&mut ctx, Value::data(prefix_term.clone()))
                     .map_err(|e| {
                         cli_err(
                             EX_EVAL,
@@ -156,7 +156,7 @@ pub(super) fn cmd_refs(
                     .collect(),
                 );
 
-                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                let prog = f.apply(&mut ctx, Value::data(req)).map_err(|e| {
                     cli_err(
                         EX_EVAL,
                         "eval/error",
@@ -232,7 +232,7 @@ pub(super) fn cmd_refs(
                     .collect(),
                 );
 
-                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                let prog = f.apply(&mut ctx, Value::data(req)).map_err(|e| {
                     cli_err(
                         EX_EVAL,
                         "eval/error",
@@ -291,7 +291,7 @@ pub(super) fn cmd_refs(
     {
         ok = false;
         exit_code = EX_EVAL;
-        if let Value::Data(Term::Map(m)) = payload.as_ref()
+        if let Some(Term::Map(m)) = payload.as_ref().as_data()
             && matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
                 Some(Term::Str(s)) if s == "core/caps/denied"

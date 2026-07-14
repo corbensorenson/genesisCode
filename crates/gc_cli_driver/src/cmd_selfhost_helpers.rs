@@ -30,6 +30,11 @@ struct SelfhostCutoverMetadata {
 
 const SELFHOST_CUTOVER_METADATA: &[SelfhostCutoverMetadata] = &[
     SelfhostCutoverMetadata {
+        cli_name: "parse",
+        dashboard_cmd: "parse",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
         cli_name: "fmt",
         dashboard_cmd: "fmt",
         fast_path_required: true,
@@ -82,6 +87,11 @@ const SELFHOST_CUTOVER_METADATA: &[SelfhostCutoverMetadata] = &[
     SelfhostCutoverMetadata {
         cli_name: "warm",
         dashboard_cmd: "warm",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "mcp",
+        dashboard_cmd: "mcp",
         fast_path_required: false,
     },
     SelfhostCutoverMetadata {

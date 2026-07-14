@@ -21,7 +21,7 @@ fn is_sealed_error_code(ctx: &EvalCtx, value: &Value, code: &str) -> bool {
     if *token != proto.error {
         return false;
     }
-    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+    let Some(Term::Map(m)) = payload.as_ref().as_data() else {
         return false;
     };
     matches!(
@@ -121,7 +121,7 @@ path = "./.genesis/refs.gc"
         "gc_effects-test".to_string(),
     )
     .unwrap();
-    let Value::Data(Term::Map(m)) = r1.value else {
+    let Some(Term::Map(m)) = r1.value.as_data() else {
         panic!("expected map result");
     };
     assert!(matches!(
@@ -153,7 +153,7 @@ path = "./.genesis/refs.gc"
         "gc_effects-test".to_string(),
     )
     .unwrap();
-    let Value::Data(Term::Map(m2)) = r2.value else {
+    let Some(Term::Map(m2)) = r2.value.as_data() else {
         panic!("expected map result");
     };
     assert!(matches!(
@@ -314,7 +314,7 @@ path = "./.genesis/refs.gc"
         "gc_effects-test".to_string(),
     )
     .unwrap();
-    let Value::Data(Term::Map(m_ok)) = r_ok.value else {
+    let Some(Term::Map(m_ok)) = r_ok.value.as_data() else {
         panic!("expected map result");
     };
     assert!(matches!(

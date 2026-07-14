@@ -135,7 +135,7 @@ pub(super) fn dispatch_snapshot(
                 TermOrdKey(Term::symbol(":values")),
                 Term::Vector(values.into_iter().map(Term::Str).collect()),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/vcs-low::apply" => {
             let store = store.ok_or_else(|| {
@@ -293,7 +293,7 @@ pub(super) fn dispatch_snapshot(
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(snap_h));
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/vcs-low::merge3" => {
             let store = store.ok_or_else(|| {
@@ -433,7 +433,7 @@ pub(super) fn dispatch_snapshot(
                 let mut m = BTreeMap::new();
                 m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
                 m.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
-                return Ok(Value::Data(Term::Map(m)));
+                return Ok(Value::data(Term::Map(m)));
             }
 
             let mut keys: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
@@ -533,7 +533,7 @@ pub(super) fn dispatch_snapshot(
                 let mut m = BTreeMap::new();
                 m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
                 m.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
-                return Ok(Value::Data(Term::Map(m)));
+                return Ok(Value::data(Term::Map(m)));
             }
 
             let merged_snapshot = gc_vcs::ContractSnapshot {
@@ -574,7 +574,7 @@ pub(super) fn dispatch_snapshot(
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         _ => Ok(mk_error(
             error_tok,

@@ -48,7 +48,7 @@ pub(super) fn build_pkg_init(
             .unwrap_or(Term::Nil),
     );
     let req = Term::Map(mm);
-    let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+    let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
         cli_err(
             EX_EVAL,
             "eval/error",
@@ -138,7 +138,7 @@ pub(super) fn build_pkg_add(
             .unwrap_or(Term::Nil),
     );
     let req = Term::Map(mm);
-    let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+    let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
         cli_err(
             EX_EVAL,
             "eval/error",

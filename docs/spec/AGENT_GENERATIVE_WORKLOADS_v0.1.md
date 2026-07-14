@@ -9,10 +9,14 @@ Purpose:
 
 ## Runner
 
-- Script: `scripts/check_agent_generative_workloads.sh`
-- Report: `.genesis/perf/agent_generative_workloads_report.json`
-- History: `.genesis/perf/agent_generative_workloads_history.jsonl`
+- Read-only check: `scripts/check_agent_generative_workloads.sh`
+- Explicit producer: `scripts/update_agent_generative_workloads_report.sh`
+- Optional report: `.genesis/perf/agent_generative_workloads_report.json`
+- Optional history: `.genesis/perf/agent_generative_workloads_history.jsonl`
 - Baseline seed history: `policies/perf/agent_generative_workloads_seed_history.jsonl`
+
+The check renders its current report/history privately while evaluating seeded and
+retained history inputs. Only the explicit producer retains the current sample.
 
 ## Inputs
 

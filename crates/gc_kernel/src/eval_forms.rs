@@ -5,12 +5,12 @@ pub(super) fn eval_module(
     env: &mut Env,
     forms: &[Term],
 ) -> Result<Value, KernelError> {
-    let mut last = Value::Data(Term::Nil);
+    let mut last = Value::data(Term::Nil);
     for form in forms {
         if let Some((name, expr)) = parse_def(form) {
             let v = eval_term(ctx, env, &expr)?;
             env.set_local(name, v);
-            last = Value::Data(Term::Nil);
+            last = Value::data(Term::Nil);
             continue;
         }
         last = eval_term(ctx, env, form)?;
@@ -186,11 +186,11 @@ pub(super) fn eval_fn(
             "internal fn desugaring produced non-symbol param",
         ));
     };
-    Ok(Value::Closure {
-        param: param.clone(),
-        body: items2[2].clone(),
-        env: env.clone(),
-    })
+    Ok(Value::closure(
+        param.clone(),
+        items2[2].clone(),
+        env.clone(),
+    ))
 }
 
 pub(super) fn eval_seal(
@@ -243,7 +243,7 @@ pub(super) fn eval_unseal(
     {
         return Ok(*payload);
     }
-    Ok(Value::Data(Term::Nil))
+    Ok(Value::data(Term::Nil))
 }
 
 pub(super) fn eval_prim(

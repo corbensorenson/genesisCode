@@ -8,7 +8,7 @@ genesis_heavy_gate_preflight() {
   local context="$2"
   local min_free_kb="$3"
   local tmp_root="$4"
-  local auto_reclaim="${5:-1}"
+  local auto_reclaim="${5:-0}"
   local strict_mode="${6:-}"
 
   if [[ -z "$strict_mode" ]]; then

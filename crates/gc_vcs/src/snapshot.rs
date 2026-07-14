@@ -5,6 +5,9 @@ use thiserror::Error;
 
 use crate::schema::{SchemaError, validate_hex_hash};
 
+pub const VCS_SNAPSHOT_PROFILE_ID: &str = "genesis/vcs-snapshot/v1";
+pub const VCS_SNAPSHOT_VERSION: i64 = 1;
+
 #[derive(Debug, Error)]
 pub enum SnapshotError {
     #[error("{0}")]
@@ -89,7 +92,7 @@ impl Snapshot {
             return Err(SchemaError::Bad(format!("snapshot: wrong :type {ty}")));
         }
         let v = req_i64(m, ":v", "snapshot")?;
-        if v != 1 {
+        if v != VCS_SNAPSHOT_VERSION {
             return Err(SchemaError::Bad(format!("snapshot: unsupported :v {v}")));
         }
         let kind = req_sym(m, ":kind", "snapshot")?;
@@ -147,7 +150,10 @@ impl ContractSnapshot {
                     TermOrdKey(Term::symbol(":type")),
                     Term::symbol(":vcs/snapshot"),
                 ),
-                (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                (
+                    TermOrdKey(Term::symbol(":v")),
+                    Term::Int(VCS_SNAPSHOT_VERSION.into()),
+                ),
                 (TermOrdKey(Term::symbol(":kind")), Term::symbol(":contract")),
                 (
                     TermOrdKey(Term::symbol(":proto")),

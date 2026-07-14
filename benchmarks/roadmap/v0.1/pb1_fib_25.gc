@@ -1,0 +1,7 @@
+(def bench/fib
+  (fn (n)
+    (if ((core/int::lt? n) 2)
+      n
+      ((core/int::add (bench/fib ((core/int::sub n) 1)))
+        (bench/fib ((core/int::sub n) 2))))))
+(bench/fib 25)

@@ -167,7 +167,7 @@ pub(super) fn dispatch_meta(
                 Term::Bool(truncated),
             );
             m.insert(TermOrdKey(Term::symbol(":commits")), Term::Vector(out));
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/vcs-low::blame" => {
             let store = store.ok_or_else(|| {
@@ -320,7 +320,7 @@ pub(super) fn dispatch_meta(
                 TermOrdKey(Term::symbol(":path")),
                 path.map(Term::Str).unwrap_or(Term::Nil),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/vcs-low::why" => {
             let store = store.ok_or_else(|| {
@@ -532,7 +532,7 @@ pub(super) fn dispatch_meta(
             m.insert(TermOrdKey(Term::symbol(":target")), target);
             m.insert(TermOrdKey(Term::symbol(":author")), author);
             m.insert(TermOrdKey(Term::symbol(":why")), why);
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         _ => Ok(mk_error(
             error_tok,
@@ -567,7 +567,7 @@ mod tests {
         match out {
             Value::Sealed { token, payload } => {
                 assert_eq!(token, SealId(991));
-                let Value::Data(Term::Map(mm)) = *payload else {
+                let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
                     panic!("expected sealed error map payload");
                 };
                 let code = match mm.get(&TermOrdKey(Term::symbol(":error/code"))) {

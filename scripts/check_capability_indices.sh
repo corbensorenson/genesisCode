@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -25,24 +28,35 @@ python3 scripts/generate_capability_indices.py \
   --out-host-schema "$TMP_DIR/HOST_ABI_SCHEMA_INDEX_v0.1.json" \
   --out-prelude "$TMP_DIR/PRELUDE_CAPABILITY_INDEX_v0.1.json"
 
-if ! cmp -s "$TMP_DIR/HOST_ABI_INDEX_v0.1.json" "$HOST_INDEX"; then
-  echo "capability-indices: host ABI index is stale: $HOST_INDEX" >&2
-  diff -u "$HOST_INDEX" "$TMP_DIR/HOST_ABI_INDEX_v0.1.json" || true
+report_stale_index() {
+  local label="$1"
+  local tracked="$2"
+  local generated="$3"
+
+  echo "capability-indices: $label is stale: $tracked" >&2
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::error file=${tracked},title=Stale capability index::${tracked} is stale; run scripts/update_capability_indices.sh"
+    echo "::group::capability-indices diff: ${tracked}"
+  fi
+  diff -u "$tracked" "$generated" || true
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::endgroup::"
+  fi
   echo "capability-indices: run scripts/update_capability_indices.sh" >&2
+}
+
+if ! cmp -s "$TMP_DIR/HOST_ABI_INDEX_v0.1.json" "$HOST_INDEX"; then
+  report_stale_index "host ABI index" "$HOST_INDEX" "$TMP_DIR/HOST_ABI_INDEX_v0.1.json"
   exit 1
 fi
 
 if ! cmp -s "$TMP_DIR/HOST_ABI_SCHEMA_INDEX_v0.1.json" "$HOST_SCHEMA_INDEX"; then
-  echo "capability-indices: host ABI schema index is stale: $HOST_SCHEMA_INDEX" >&2
-  diff -u "$HOST_SCHEMA_INDEX" "$TMP_DIR/HOST_ABI_SCHEMA_INDEX_v0.1.json" || true
-  echo "capability-indices: run scripts/update_capability_indices.sh" >&2
+  report_stale_index "host ABI schema index" "$HOST_SCHEMA_INDEX" "$TMP_DIR/HOST_ABI_SCHEMA_INDEX_v0.1.json"
   exit 1
 fi
 
 if ! cmp -s "$TMP_DIR/PRELUDE_CAPABILITY_INDEX_v0.1.json" "$PRELUDE_INDEX"; then
-  echo "capability-indices: prelude capability index is stale: $PRELUDE_INDEX" >&2
-  diff -u "$PRELUDE_INDEX" "$TMP_DIR/PRELUDE_CAPABILITY_INDEX_v0.1.json" || true
-  echo "capability-indices: run scripts/update_capability_indices.sh" >&2
+  report_stale_index "prelude capability index" "$PRELUDE_INDEX" "$TMP_DIR/PRELUDE_CAPABILITY_INDEX_v0.1.json"
   exit 1
 fi
 

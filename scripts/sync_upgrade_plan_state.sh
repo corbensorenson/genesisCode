@@ -146,9 +146,9 @@ print(
 PY
 
 if [[ "$REFRESH_READINESS" == "1" ]]; then
-  bash scripts/check_selfhost_readiness_scorecard.sh >/dev/null
+  bash scripts/update_selfhost_readiness_scorecard_report.sh >/dev/null
 elif [[ ! -f "$READINESS_FILE" ]]; then
-  bash scripts/check_selfhost_readiness_scorecard.sh >/dev/null
+  bash scripts/update_selfhost_readiness_scorecard_report.sh >/dev/null
 fi
 
 GENESIS_PLANNING_REFRESH_READINESS=0 bash scripts/check_redteam_report.sh

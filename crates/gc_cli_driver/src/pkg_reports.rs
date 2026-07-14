@@ -590,7 +590,7 @@ mod tests {
             gc_coreform::TermOrdKey(Term::symbol(":commit")),
             Term::Str("c".repeat(64)),
         );
-        let value = Value::Data(Term::Map(m));
+        let value = Value::data(Term::Map(m));
         let cmd = PkgCmd::Publish {
             remote: "gen://registry".to_string(),
             refname: "refs/heads/main".to_string(),
@@ -642,7 +642,7 @@ mod tests {
             gc_coreform::TermOrdKey(Term::symbol(":rationale-artifact")),
             Term::Str("e".repeat(64)),
         );
-        let value = Value::Data(Term::Map(m));
+        let value = Value::data(Term::Map(m));
         let cmd = PkgCmd::Update {
             lock: PathBuf::from("genesis.lock"),
             only: vec!["missing-dep".to_string()],
@@ -673,7 +673,7 @@ mod tests {
     #[test]
     fn extended_workflow_reports_cover_operational_surface() {
         let caps = PathBuf::from("caps.toml");
-        let value = Value::Data(Term::Map(BTreeMap::new()));
+        let value = Value::data(Term::Map(BTreeMap::new()));
         let cmds = vec![
             (
                 PkgCmd::Add {

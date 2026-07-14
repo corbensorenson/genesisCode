@@ -5,6 +5,10 @@ use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
 
+pub const GCLOG_LEGACY_VERSION: u64 = 2;
+pub const GCLOG_CURRENT_VERSION: u64 = 3;
+pub const GCLOG_PROFILE_ID: &str = "genesis/effect-log/v3";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Decision {
     Allow,
@@ -73,10 +77,11 @@ impl EffectLog {
         let Term::Map(m) = t else {
             return Err(EffectsError::Log("gclog must be a map".to_string()));
         };
-        let version = get_int(m, ":version")?.unwrap_or(2);
-        if version != 2 && version != 3 {
+        let version = get_int(m, ":version")?
+            .ok_or_else(|| EffectsError::Log("missing gclog :version".to_string()))?;
+        if version != GCLOG_LEGACY_VERSION && version != GCLOG_CURRENT_VERSION {
             return Err(EffectsError::Log(format!(
-                "unsupported gclog :version {version} (expected 2 or 3)"
+                "unsupported gclog :version {version} (expected {GCLOG_LEGACY_VERSION} or {GCLOG_CURRENT_VERSION})"
             )));
         }
         let program_hash = get_bytes32(m, ":program-hash")?;
@@ -387,5 +392,60 @@ fn get_bytes32(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<[u8; 32], Effe
             print_term(x)
         ))),
         None => Err(EffectsError::Log(format!("missing {k}"))),
+    }
+}
+
+#[cfg(test)]
+mod version_tests {
+    use std::collections::BTreeMap;
+
+    use gc_coreform::{Term, TermOrdKey};
+
+    use super::{EffectLog, GCLOG_CURRENT_VERSION, GCLOG_LEGACY_VERSION};
+
+    fn minimal_log(version: Option<u64>) -> Term {
+        let mut map = BTreeMap::new();
+        if let Some(version) = version {
+            map.insert(
+                TermOrdKey(Term::symbol(":version")),
+                Term::Int((version as i64).into()),
+            );
+        }
+        map.insert(
+            TermOrdKey(Term::symbol(":program-hash")),
+            Term::Bytes(vec![0; 32].into()),
+        );
+        map.insert(
+            TermOrdKey(Term::symbol(":toolchain")),
+            Term::Str("genesis 0.2.0".to_string()),
+        );
+        map.insert(
+            TermOrdKey(Term::symbol(":entries")),
+            Term::Vector(Vec::new()),
+        );
+        Term::Map(map)
+    }
+
+    #[test]
+    fn version_is_required_and_explicit_legacy_is_supported() {
+        let missing = EffectLog::from_term(&minimal_log(None)).unwrap_err();
+        assert!(missing.to_string().contains("missing gclog :version"));
+
+        for version in [GCLOG_LEGACY_VERSION, GCLOG_CURRENT_VERSION] {
+            assert_eq!(
+                EffectLog::from_term(&minimal_log(Some(version)))
+                    .unwrap()
+                    .version,
+                version
+            );
+        }
+    }
+
+    #[test]
+    fn future_version_is_rejected() {
+        let error = EffectLog::from_term(&minimal_log(Some(GCLOG_CURRENT_VERSION + 1)))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unsupported gclog :version"), "{error}");
     }
 }

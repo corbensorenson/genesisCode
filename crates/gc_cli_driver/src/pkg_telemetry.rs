@@ -51,9 +51,10 @@ pub(crate) fn build_pkg_telemetry(
 
 fn value_kind(value: &Value) -> &'static str {
     match value {
-        Value::Data(t) => term_kind(t),
-        Value::Closure { .. } => "closure",
-        Value::CompiledClosure { .. } => "compiled-closure",
+        Value::Data(t) => term_kind(t.as_ref()),
+        Value::Int(_) => "int",
+        Value::Closure(_) => "closure",
+        Value::CompiledClosure(_) => "compiled-closure",
         Value::SealToken(_) => "seal-token",
         Value::Sealed { .. } => "sealed",
         Value::NativeFn(_) => "native-fn",
@@ -123,7 +124,7 @@ mod tests {
                 resp_h: [4; 32],
             }],
         };
-        let value = Value::Data(Term::Map(
+        let value = Value::data(Term::Map(
             [(
                 TermOrdKey(Term::symbol(":lock-h")),
                 Term::Str("a".repeat(64)),

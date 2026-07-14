@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "dimensions": ["effect-log", "schedule", "sealed-error"],
+      "id": "denied-effect",
+      "source": "tests/spec/pkg_fail_determinism/fail.gc"
+    },
+    {
+      "dimensions": ["canonical-hash", "value"],
+      "id": "ordered-map",
+      "source": "tests/spec/coreform/map_order.in.gc"
+    },
+    {
+      "dimensions": ["canonical-hash", "value"],
+      "id": "persistent-vector",
+      "source": "tests/spec/coreform/app_sugar.in.gc"
+    },
+    {
+      "dimensions": ["canonical-hash", "value"],
+      "id": "pure-integer",
+      "source": "benchmarks/roadmap/v0.1/pb6_trivial_check.gc"
+    },
+    {
+      "dimensions": ["resource-error", "sealed-error"],
+      "id": "resource-exhaustion",
+      "source": "tests/spec/pkg_fail_budgets/budget.gc"
+    }
+  ],
+  "kind": "genesis/pb9-semantic-parity-corpus-v0.1",
+  "requiredDimensions": [
+    "canonical-hash",
+    "effect-log",
+    "resource-error",
+    "schedule",
+    "sealed-error",
+    "value"
+  ],
+  "version": "0.1"
+}

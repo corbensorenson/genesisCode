@@ -227,6 +227,19 @@ path = "lib.gc"
         provenance_m.get(&TermOrdKey(Term::symbol(":bundle-h"))),
         Some(&Term::Str(bundle_h))
     );
+    for (key, expected) in [
+        (":artifact-path", "artifact/package.webbundle"),
+        (":signature-path", "artifact/package.webbundle.sig"),
+        (":executable-path", "artifact/launch_web.gc"),
+        (":entrypoint-path", "artifact/entrypoint.gc"),
+        (":launcher-path", "artifact/launch_web.sh"),
+    ] {
+        assert_eq!(
+            map_string(&provenance_m, key),
+            expected,
+            "provenance path {key} must be bundle-relative"
+        );
+    }
 }
 
 #[test]
@@ -418,6 +431,26 @@ path = "lib.gc"
             entrypoint_path.is_file(),
             "target {target} missing bundled entrypoint"
         );
+        let provenance_src =
+            fs::read_to_string(bundle_root.join("provenance.gc")).expect("read target provenance");
+        let provenance_term =
+            gc_coreform::parse_term(&provenance_src).expect("parse target provenance");
+        let Term::Map(provenance_map) = provenance_term else {
+            panic!("target {target} provenance must be map");
+        };
+        for (key, expected) in [
+            (":artifact-path", package_rel),
+            (":signature-path", signature_rel),
+            (":executable-path", launch_rel),
+            (":entrypoint-path", "artifact/entrypoint.gc"),
+            (":launcher-path", launcher_rel),
+        ] {
+            assert_eq!(
+                map_string(&provenance_map, key),
+                expected,
+                "target {target} provenance path {key} must be bundle-relative"
+            );
+        }
         let package_bytes = fs::read(&package_path).expect("read package bytes");
         match target {
             "ios" => {

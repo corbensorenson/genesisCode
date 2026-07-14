@@ -1,0 +1,18 @@
+{
+  "algorithm": "sha256-merkle-v0.1",
+  "entries": [
+    {
+      "digest": {
+        "sha256": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d"
+      },
+      "path": "artifact/genesis-example.bin",
+      "sizeBytes": 34,
+      "type": "file"
+    }
+  ],
+  "kind": "genesis/artifact-hash-tree-v0.1",
+  "rootDigest": {
+    "sha256": "e3bcf8b287b3f3a1735de56a8516aebaaad84276f3ff42b2b63339c1249c519a"
+  },
+  "version": "0.1"
+}

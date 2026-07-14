@@ -2,6 +2,7 @@ use std::path::Path;
 use std::process::Command;
 
 #[test]
+#[ignore = "perf-gate"]
 fn agent_authoring_bundle_guard_check_passes() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")

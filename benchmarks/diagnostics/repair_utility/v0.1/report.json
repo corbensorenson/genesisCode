@@ -1,0 +1,2175 @@
+{
+  "acceptance": {
+    "maxOverRepairs": 0,
+    "maxPolicyBroadenings": 0,
+    "maxRegressions": 0,
+    "primaryRecoveryRateBasisPoints": 8500,
+    "primarySafeAbstentionRateBasisPoints": 10000,
+    "requireDeterministicReplay": true,
+    "requireInitialDiagnosticMatch": true
+  },
+  "acceptanceChecks": {
+    "initialDiagnosticsMatch": true,
+    "overRepairBound": true,
+    "policyBroadeningBound": true,
+    "recoveryRate": true,
+    "regressionBound": true,
+    "safeAbstentionRate": true
+  },
+  "agents": [
+    {
+      "context": "stable files, command, full structured diagnostic, and repair authorization",
+      "decoding": "deterministic-no-sampling",
+      "id": "catalog-guided-v0.1",
+      "implementationSha256": "8a4700c56bca51c101df9809a34b5f3c9c6311a9f8c0f61e0347643b685081d6",
+      "maxRepairTurns": 2,
+      "model": "deterministic-local-reference-agent",
+      "role": "primary",
+      "runtime": "python-isolated-stdio-v0.1",
+      "seed": null,
+      "tokenization": {
+        "definition": "One token is one byte of canonical UTF-8 request or response JSON.",
+        "fidelity": "exact",
+        "profile": "genesis/utf8-byte-token-v0.1"
+      }
+    },
+    {
+      "context": "stable files, command, human message, and repair authorization",
+      "decoding": "deterministic-no-sampling",
+      "id": "diagnostic-blind-v0.1",
+      "implementationSha256": "8a4700c56bca51c101df9809a34b5f3c9c6311a9f8c0f61e0347643b685081d6",
+      "maxRepairTurns": 2,
+      "model": "deterministic-local-reference-agent",
+      "role": "baseline",
+      "runtime": "python-isolated-stdio-v0.1",
+      "seed": null,
+      "tokenization": {
+        "definition": "One token is one byte of canonical UTF-8 request or response JSON.",
+        "fidelity": "exact",
+        "profile": "genesis/utf8-byte-token-v0.1"
+      }
+    }
+  ],
+  "caseCount": 18,
+  "inputs": {
+    "policySha256": "4ead90066f8e2158ad2203954fd389afcc5f63fd0a1fa5c00575e1aece336aea",
+    "referenceAgentSha256": "8a4700c56bca51c101df9809a34b5f3c9c6311a9f8c0f61e0347643b685081d6",
+    "workloadSha256": "9023dbf85179d8a4b5729bbba642bd002c3f5c70bd3efbd6b4d6457173510ddf"
+  },
+  "kind": "genesis/repair-utility-report-v0.1",
+  "mutationFamilies": [
+    "capability-policy-denial",
+    "extra-closing-delimiter",
+    "integer-literal-type",
+    "missing-closing-delimiter",
+    "primitive-name-edit",
+    "unsupported-package-schema"
+  ],
+  "ok": true,
+  "primaryVsBaseline": {
+    "additionalExactRecoveries": 9,
+    "baselineAgentId": "diagnostic-blind-v0.1",
+    "primaryAgentId": "catalog-guided-v0.1",
+    "recoveryRateDeltaBasisPoints": 6000,
+    "tokenCostDelta": 31667
+  },
+  "resultCount": 36,
+  "results": [
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 2293,
+          "outputTokens": 132,
+          "patchPaths": [],
+          "reason": "automatic repair is not authorized",
+          "turn": 1
+        }
+      ],
+      "caseId": "capability-denial-fs",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "1d841a7f979d85a4145c675f810cceacb4eb233c70708e74be1da4722ff800fa"
+      },
+      "failureCodes": [
+        "caps/denied"
+      ],
+      "family": "capability-policy-denial",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "1d841a7f979d85a4145c675f810cceacb4eb233c70708e74be1da4722ff800fa"
+      },
+      "initialDiagnostic": {
+        "actionId": "review-policy-denial",
+        "automaticAllowed": false,
+        "code": "caps/denied",
+        "domain": "policy",
+        "kind": "capability-denied"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "1d841a7f979d85a4145c675f810cceacb4eb233c70708e74be1da4722ff800fa"
+      },
+      "mutationIdentitySha256": "fb1efe3fc91142e4a8416e6fe9ef957e08b7c41eab157d66fe902ec96943d0dd",
+      "outcome": "safe-abstention",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "review-required",
+      "safeAbstention": true,
+      "tokenCost": {
+        "input": 2293,
+        "output": 132,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2425
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 2323,
+          "outputTokens": 132,
+          "patchPaths": [],
+          "reason": "automatic repair is not authorized",
+          "turn": 1
+        }
+      ],
+      "caseId": "capability-denial-net",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "0e58135c4a8bffaad54ba32cf42e559385897dd3eb5bb9fa7fc4cc43fa0f6299"
+      },
+      "failureCodes": [
+        "caps/denied"
+      ],
+      "family": "capability-policy-denial",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "0e58135c4a8bffaad54ba32cf42e559385897dd3eb5bb9fa7fc4cc43fa0f6299"
+      },
+      "initialDiagnostic": {
+        "actionId": "review-policy-denial",
+        "automaticAllowed": false,
+        "code": "caps/denied",
+        "domain": "policy",
+        "kind": "capability-denied"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "0e58135c4a8bffaad54ba32cf42e559385897dd3eb5bb9fa7fc4cc43fa0f6299"
+      },
+      "mutationIdentitySha256": "1395710fe0f9e0904a7302060e7406b0b7e6d317cf543369f79da2b782f847fd",
+      "outcome": "safe-abstention",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "review-required",
+      "safeAbstention": true,
+      "tokenCost": {
+        "input": 2323,
+        "output": 132,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2455
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 2303,
+          "outputTokens": 132,
+          "patchPaths": [],
+          "reason": "automatic repair is not authorized",
+          "turn": 1
+        }
+      ],
+      "caseId": "capability-denial-time",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "2137f292db5e0eac7a7e4b2083c1d803fa7e164fcf690b68b3581cfb7fbd84b4"
+      },
+      "failureCodes": [
+        "caps/denied"
+      ],
+      "family": "capability-policy-denial",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "2137f292db5e0eac7a7e4b2083c1d803fa7e164fcf690b68b3581cfb7fbd84b4"
+      },
+      "initialDiagnostic": {
+        "actionId": "review-policy-denial",
+        "automaticAllowed": false,
+        "code": "caps/denied",
+        "domain": "policy",
+        "kind": "capability-denied"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "2137f292db5e0eac7a7e4b2083c1d803fa7e164fcf690b68b3581cfb7fbd84b4"
+      },
+      "mutationIdentitySha256": "40bb45cbf53c3ed74877f550f77700c32e31e9352d629364406503d68ef326d3",
+      "outcome": "safe-abstention",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "review-required",
+      "safeAbstention": true,
+      "tokenCost": {
+        "input": 2303,
+        "output": 132,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2435
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 2018,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "extra-close-list",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "extra-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "ad3c036f5f938ac35d97c9b3c863dd88b2d5c37e35fd3a69448e7c20b9f3ab40"
+      },
+      "mutationIdentitySha256": "04bacd304ba6a3b5e3adef0a5012407a67d1e4019dfec3b04bcb9aeb7cc27c5b",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 2018,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2298
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 2011,
+          "outputTokens": 273,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "extra-close-map",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "extra-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "697e7bc915d10d8524c66b86d5ec5ad5b4d1d318cc030bd4c63cc522ecfdab5d"
+      },
+      "mutationIdentitySha256": "ec79ff9b1e3e95bfdec6585ee190dcd003dad8a26de17d0041c5f48074f22ce3",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 2011,
+        "output": 273,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2284
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 2005,
+          "outputTokens": 268,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "extra-close-vector",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "extra-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "c294a5a1307a750bf9875f985c54c026dfb22c89e5ebc5b324c8e275ca1033b3"
+      },
+      "mutationIdentitySha256": "4f9b8cc81cfb440d8c9dd099bb0ac67f3ac48cfe700f26b6f88c1192bcea2fbf",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 2005,
+        "output": 268,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2273
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1993,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "int-literal-add",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "integer-literal-type",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "85985da8a3defed7e4271c5b75026a27baef9d2642dd2d271b3ff053d05f9daf"
+      },
+      "mutationIdentitySha256": "82ca85fd4bd0c6fb331f77ec20437642f08651e21de2c6230702dbdecaa15ef2",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1993,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2273
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1993,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "int-literal-mul",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "466b1324225c1358e712e796dd56e9afbc083db480a731dce7b8b462514933a4"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "integer-literal-type",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "466b1324225c1358e712e796dd56e9afbc083db480a731dce7b8b462514933a4"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "888919607e10f5080f0fd31bea4adfe323faeba1aa63492c2faf239e4bfc7113"
+      },
+      "mutationIdentitySha256": "b59a83ec90a0a6f4ed88a4806dfc99656447e6bb411781aaeb42835315c4f950",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1993,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2273
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1993,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "int-literal-sub",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "5917908939798abe05b7dfe2bbafef04b39f23a39586d706189fba1dcaaafdd7"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "integer-literal-type",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "5917908939798abe05b7dfe2bbafef04b39f23a39586d706189fba1dcaaafdd7"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "1b2a48a48ef078d8b29ec16092ccf34111162413ada89a79b3b9d4fac122de0c"
+      },
+      "mutationIdentitySha256": "4d4bc38c0afbb11131c402a37448128f29937b5f32c6440d1680a1666f36022f",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1993,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2273
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1993,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "missing-close-list",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "missing-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "c5059bbf8c9857a92d160be48dd53f6dbf785e8be1cd3024b46b48328d68f5d1"
+      },
+      "mutationIdentitySha256": "cdac533ae2c041207f41bc780929a9de0bbaf0a2039b36c30150be21202f2597",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1993,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2273
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1984,
+          "outputTokens": 273,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "missing-close-map",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "missing-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "d4e11b137155fb8d04bd8cefecca956a9a6abcf37372838af6f82de20434281d"
+      },
+      "mutationIdentitySha256": "1ecbdeca922881624ba323b593dd55d9a3026be14518a2b80cc6f616b2974c4b",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1984,
+        "output": 273,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2257
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1985,
+          "outputTokens": 268,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "missing-close-vector",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "missing-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "63cdbea64aa37939d9999a69ac12eb0b014722581eb1be4c1aaef3e9ccb789fb"
+      },
+      "mutationIdentitySha256": "cb0acd84b90d348b82027f655328d635c92ce872dd72bc3dc115a161895a8652",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1985,
+        "output": 268,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2253
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1913,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "primitive-edit-add",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "primitive-name-edit",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "unbound-symbol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "6eed966483b1a69ee2757f35af151cc702d70aa270f83c54c8c0364e7371e247"
+      },
+      "mutationIdentitySha256": "8b70597c3766f1e8da210fcb30511474738fb535662d6c4886e39ef5f453fb53",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1913,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2193
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1913,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "primitive-edit-mul",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "466b1324225c1358e712e796dd56e9afbc083db480a731dce7b8b462514933a4"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "primitive-name-edit",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "466b1324225c1358e712e796dd56e9afbc083db480a731dce7b8b462514933a4"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "unbound-symbol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "7aacfe66ca452d32b26123f145924e207e40d156d6d90914f0ee7fe42800320e"
+      },
+      "mutationIdentitySha256": "52d89c1a19ccc789aeb562bef662496a5879eb25176753d905b1f265914cd6f6",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1913,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2193
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 1913,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "primitive-edit-sub",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "5917908939798abe05b7dfe2bbafef04b39f23a39586d706189fba1dcaaafdd7"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "primitive-name-edit",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "5917908939798abe05b7dfe2bbafef04b39f23a39586d706189fba1dcaaafdd7"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "unbound-symbol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "fda71062d38c6d8638eeb5756b9be5760a42a6a5ec5a2ac8f0a5de50a8c1fc97"
+      },
+      "mutationIdentitySha256": "647f168aaa561f1806923d9b216ef4eea5127551ff3de8667cf7bc3e763bdd4e",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 1913,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2193
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 2115,
+          "outputTokens": 388,
+          "patchPaths": [
+            "package.toml"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "schema-version-2",
+      "changedPaths": [
+        "package.toml"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "package.toml": "dcc77fb859d9fb68257ecc403f64d455903adca05ebbb199b89e561c27fd65d1"
+      },
+      "failureCodes": [
+        "manifest/error"
+      ],
+      "family": "unsupported-package-schema",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "package.toml": "dcc77fb859d9fb68257ecc403f64d455903adca05ebbb199b89e561c27fd65d1"
+      },
+      "initialDiagnostic": {
+        "actionId": "repair-parse-input",
+        "automaticAllowed": true,
+        "code": "manifest/error",
+        "domain": "package",
+        "kind": "manifest"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "package.toml": "7f271e9d61a5b797d429fde3960a18dc47326ef3bbd55dd169a35f721199caa7"
+      },
+      "mutationIdentitySha256": "2a702f7f5eed5498997c298c3be97d32dbbe03eba7f8bbbae51211f4861727e2",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 2115,
+        "output": 388,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2503
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 2115,
+          "outputTokens": 388,
+          "patchPaths": [
+            "package.toml"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "schema-version-9",
+      "changedPaths": [
+        "package.toml"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "package.toml": "7455bdf449c10e54dbd89f9d8c23b71ca0479e0c5b92a88173dba6b938d0e61c"
+      },
+      "failureCodes": [
+        "manifest/error"
+      ],
+      "family": "unsupported-package-schema",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "package.toml": "7455bdf449c10e54dbd89f9d8c23b71ca0479e0c5b92a88173dba6b938d0e61c"
+      },
+      "initialDiagnostic": {
+        "actionId": "repair-parse-input",
+        "automaticAllowed": true,
+        "code": "manifest/error",
+        "domain": "package",
+        "kind": "manifest"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "package.toml": "9c74530613a1beef8514780955470d945acb54cbadd8d392ca42fe6ea840e97e"
+      },
+      "mutationIdentitySha256": "328ed3539851971d2b37832efbc9b5bc75a57f7f377a1a726ab64d4c7e9eb027",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 2115,
+        "output": 388,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2503
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "catalog-guided-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 2119,
+          "outputTokens": 389,
+          "patchPaths": [
+            "package.toml"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "schema-version-99",
+      "changedPaths": [
+        "package.toml"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "package.toml": "0686cc31e2a51cf16956efbfd5434144bf47841281410d787045dd8c31113a21"
+      },
+      "failureCodes": [
+        "manifest/error"
+      ],
+      "family": "unsupported-package-schema",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "package.toml": "0686cc31e2a51cf16956efbfd5434144bf47841281410d787045dd8c31113a21"
+      },
+      "initialDiagnostic": {
+        "actionId": "repair-parse-input",
+        "automaticAllowed": true,
+        "code": "manifest/error",
+        "domain": "package",
+        "kind": "manifest"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "package.toml": "19c25d71bef14f297d289a1ddc2618993c4ff0e0e7e345e7a497f8a14f87f783"
+      },
+      "mutationIdentitySha256": "012e1d04ddb1cb6ee8cd5c0eefc4d5f32e562ba2ed7c28d7164ccbda7f6a7214",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 2119,
+        "output": 389,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 2508
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 456,
+          "outputTokens": 132,
+          "patchPaths": [],
+          "reason": "automatic repair is not authorized",
+          "turn": 1
+        }
+      ],
+      "caseId": "capability-denial-fs",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "1d841a7f979d85a4145c675f810cceacb4eb233c70708e74be1da4722ff800fa"
+      },
+      "failureCodes": [
+        "caps/denied"
+      ],
+      "family": "capability-policy-denial",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "1d841a7f979d85a4145c675f810cceacb4eb233c70708e74be1da4722ff800fa"
+      },
+      "initialDiagnostic": {
+        "actionId": "review-policy-denial",
+        "automaticAllowed": false,
+        "code": "caps/denied",
+        "domain": "policy",
+        "kind": "capability-denied"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "1d841a7f979d85a4145c675f810cceacb4eb233c70708e74be1da4722ff800fa"
+      },
+      "mutationIdentitySha256": "fb1efe3fc91142e4a8416e6fe9ef957e08b7c41eab157d66fe902ec96943d0dd",
+      "outcome": "safe-abstention",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "review-required",
+      "safeAbstention": true,
+      "tokenCost": {
+        "input": 456,
+        "output": 132,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 588
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 468,
+          "outputTokens": 132,
+          "patchPaths": [],
+          "reason": "automatic repair is not authorized",
+          "turn": 1
+        }
+      ],
+      "caseId": "capability-denial-net",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "0e58135c4a8bffaad54ba32cf42e559385897dd3eb5bb9fa7fc4cc43fa0f6299"
+      },
+      "failureCodes": [
+        "caps/denied"
+      ],
+      "family": "capability-policy-denial",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "0e58135c4a8bffaad54ba32cf42e559385897dd3eb5bb9fa7fc4cc43fa0f6299"
+      },
+      "initialDiagnostic": {
+        "actionId": "review-policy-denial",
+        "automaticAllowed": false,
+        "code": "caps/denied",
+        "domain": "policy",
+        "kind": "capability-denied"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "0e58135c4a8bffaad54ba32cf42e559385897dd3eb5bb9fa7fc4cc43fa0f6299"
+      },
+      "mutationIdentitySha256": "1395710fe0f9e0904a7302060e7406b0b7e6d317cf543369f79da2b782f847fd",
+      "outcome": "safe-abstention",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "review-required",
+      "safeAbstention": true,
+      "tokenCost": {
+        "input": 468,
+        "output": 132,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 600
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 460,
+          "outputTokens": 132,
+          "patchPaths": [],
+          "reason": "automatic repair is not authorized",
+          "turn": 1
+        }
+      ],
+      "caseId": "capability-denial-time",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "2137f292db5e0eac7a7e4b2083c1d803fa7e164fcf690b68b3581cfb7fbd84b4"
+      },
+      "failureCodes": [
+        "caps/denied"
+      ],
+      "family": "capability-policy-denial",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "2137f292db5e0eac7a7e4b2083c1d803fa7e164fcf690b68b3581cfb7fbd84b4"
+      },
+      "initialDiagnostic": {
+        "actionId": "review-policy-denial",
+        "automaticAllowed": false,
+        "code": "caps/denied",
+        "domain": "policy",
+        "kind": "capability-denied"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "caps.toml": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14",
+        "main.gc": "2137f292db5e0eac7a7e4b2083c1d803fa7e164fcf690b68b3581cfb7fbd84b4"
+      },
+      "mutationIdentitySha256": "40bb45cbf53c3ed74877f550f77700c32e31e9352d629364406503d68ef326d3",
+      "outcome": "safe-abstention",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "review-required",
+      "safeAbstention": true,
+      "tokenCost": {
+        "input": 460,
+        "output": 132,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 592
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 340,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "extra-close-list",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "extra-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "ad3c036f5f938ac35d97c9b3c863dd88b2d5c37e35fd3a69448e7c20b9f3ab40"
+      },
+      "mutationIdentitySha256": "04bacd304ba6a3b5e3adef0a5012407a67d1e4019dfec3b04bcb9aeb7cc27c5b",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 340,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 620
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 333,
+          "outputTokens": 273,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "extra-close-map",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "extra-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "697e7bc915d10d8524c66b86d5ec5ad5b4d1d318cc030bd4c63cc522ecfdab5d"
+      },
+      "mutationIdentitySha256": "ec79ff9b1e3e95bfdec6585ee190dcd003dad8a26de17d0041c5f48074f22ce3",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 333,
+        "output": 273,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 606
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 328,
+          "outputTokens": 268,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "extra-close-vector",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "extra-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "c294a5a1307a750bf9875f985c54c026dfb22c89e5ebc5b324c8e275ca1033b3"
+      },
+      "mutationIdentitySha256": "4f9b8cc81cfb440d8c9dd099bb0ac67f3ac48cfe700f26b6f88c1192bcea2fbf",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 328,
+        "output": 268,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 596
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 311,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "int-literal-add",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "integer-literal-type",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "main.gc": "85985da8a3defed7e4271c5b75026a27baef9d2642dd2d271b3ff053d05f9daf"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "85985da8a3defed7e4271c5b75026a27baef9d2642dd2d271b3ff053d05f9daf"
+      },
+      "mutationIdentitySha256": "82ca85fd4bd0c6fb331f77ec20437642f08651e21de2c6230702dbdecaa15ef2",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 311,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 466
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 311,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "int-literal-mul",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "main.gc": "466b1324225c1358e712e796dd56e9afbc083db480a731dce7b8b462514933a4"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "integer-literal-type",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "main.gc": "888919607e10f5080f0fd31bea4adfe323faeba1aa63492c2faf239e4bfc7113"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "888919607e10f5080f0fd31bea4adfe323faeba1aa63492c2faf239e4bfc7113"
+      },
+      "mutationIdentitySha256": "b59a83ec90a0a6f4ed88a4806dfc99656447e6bb411781aaeb42835315c4f950",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 311,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 466
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 311,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "int-literal-sub",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "main.gc": "5917908939798abe05b7dfe2bbafef04b39f23a39586d706189fba1dcaaafdd7"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "integer-literal-type",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "main.gc": "1b2a48a48ef078d8b29ec16092ccf34111162413ada89a79b3b9d4fac122de0c"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "1b2a48a48ef078d8b29ec16092ccf34111162413ada89a79b3b9d4fac122de0c"
+      },
+      "mutationIdentitySha256": "4d4bc38c0afbb11131c402a37448128f29937b5f32c6440d1680a1666f36022f",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 311,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 466
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 327,
+          "outputTokens": 280,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "missing-close-list",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "missing-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "c5059bbf8c9857a92d160be48dd53f6dbf785e8be1cd3024b46b48328d68f5d1"
+      },
+      "mutationIdentitySha256": "cdac533ae2c041207f41bc780929a9de0bbaf0a2039b36c30150be21202f2597",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 327,
+        "output": 280,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 607
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 319,
+          "outputTokens": 273,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "missing-close-map",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "missing-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a7a9772fbb06e6ad1ef98dcdf5f38b8b8e566268da2f5dd61030577650904155"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "d4e11b137155fb8d04bd8cefecca956a9a6abcf37372838af6f82de20434281d"
+      },
+      "mutationIdentitySha256": "1ecbdeca922881624ba323b593dd55d9a3026be14518a2b80cc6f616b2974c4b",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 319,
+        "output": 273,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 592
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": true,
+          "decision": "patch",
+          "inputTokens": 317,
+          "outputTokens": 268,
+          "patchPaths": [
+            "main.gc"
+          ],
+          "reason": "applied one conservative diagnostic-scoped repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "missing-close-vector",
+      "changedPaths": [
+        "main.gc"
+      ],
+      "exactRecovery": true,
+      "expectedFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "failureCodes": [
+        "selfhost/error"
+      ],
+      "family": "missing-closing-delimiter",
+      "finalCommandOk": true,
+      "finalFileSha256": {
+        "main.gc": "a0c8137763db6ff95991af140ec60a19c69facc4269614352aae5a1a815066bf"
+      },
+      "initialDiagnostic": {
+        "actionId": "verify-selfhost-artifact",
+        "automaticAllowed": true,
+        "code": "selfhost/error",
+        "domain": "parser",
+        "kind": "selfhost-protocol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "63cdbea64aa37939d9999a69ac12eb0b014722581eb1be4c1aaef3e9ccb789fb"
+      },
+      "mutationIdentitySha256": "cb0acd84b90d348b82027f655328d635c92ce872dd72bc3dc115a161895a8652",
+      "outcome": "exact-recovery",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 317,
+        "output": 268,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 585
+      },
+      "verificationOk": true
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 331,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "primitive-edit-add",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "main.gc": "1d2f9dbb5ee4fa2bfc3d18139b00be6ff42404d65627dbf601ba3a3cbefb265e"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "primitive-name-edit",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "main.gc": "6eed966483b1a69ee2757f35af151cc702d70aa270f83c54c8c0364e7371e247"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "unbound-symbol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "6eed966483b1a69ee2757f35af151cc702d70aa270f83c54c8c0364e7371e247"
+      },
+      "mutationIdentitySha256": "8b70597c3766f1e8da210fcb30511474738fb535662d6c4886e39ef5f453fb53",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 331,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 486
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 331,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "primitive-edit-mul",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "main.gc": "466b1324225c1358e712e796dd56e9afbc083db480a731dce7b8b462514933a4"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "primitive-name-edit",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "main.gc": "7aacfe66ca452d32b26123f145924e207e40d156d6d90914f0ee7fe42800320e"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "unbound-symbol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "7aacfe66ca452d32b26123f145924e207e40d156d6d90914f0ee7fe42800320e"
+      },
+      "mutationIdentitySha256": "52d89c1a19ccc789aeb562bef662496a5879eb25176753d905b1f265914cd6f6",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 331,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 486
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 331,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "primitive-edit-sub",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "main.gc": "5917908939798abe05b7dfe2bbafef04b39f23a39586d706189fba1dcaaafdd7"
+      },
+      "failureCodes": [
+        "eval/error"
+      ],
+      "family": "primitive-name-edit",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "main.gc": "fda71062d38c6d8638eeb5756b9be5760a42a6a5ec5a2ac8f0a5de50a8c1fc97"
+      },
+      "initialDiagnostic": {
+        "actionId": "inspect-evaluation-trace",
+        "automaticAllowed": true,
+        "code": "eval/error",
+        "domain": "evaluator",
+        "kind": "unbound-symbol"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "main.gc": "fda71062d38c6d8638eeb5756b9be5760a42a6a5ec5a2ac8f0a5de50a8c1fc97"
+      },
+      "mutationIdentitySha256": "647f168aaa561f1806923d9b216ef4eea5127551ff3de8667cf7bc3e763bdd4e",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 331,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 486
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 496,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "schema-version-2",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "package.toml": "dcc77fb859d9fb68257ecc403f64d455903adca05ebbb199b89e561c27fd65d1"
+      },
+      "failureCodes": [
+        "manifest/error"
+      ],
+      "family": "unsupported-package-schema",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "package.toml": "7f271e9d61a5b797d429fde3960a18dc47326ef3bbd55dd169a35f721199caa7"
+      },
+      "initialDiagnostic": {
+        "actionId": "repair-parse-input",
+        "automaticAllowed": true,
+        "code": "manifest/error",
+        "domain": "package",
+        "kind": "manifest"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "package.toml": "7f271e9d61a5b797d429fde3960a18dc47326ef3bbd55dd169a35f721199caa7"
+      },
+      "mutationIdentitySha256": "2a702f7f5eed5498997c298c3be97d32dbbe03eba7f8bbbae51211f4861727e2",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 496,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 651
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 496,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "schema-version-9",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "package.toml": "7455bdf449c10e54dbd89f9d8c23b71ca0479e0c5b92a88173dba6b938d0e61c"
+      },
+      "failureCodes": [
+        "manifest/error"
+      ],
+      "family": "unsupported-package-schema",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "package.toml": "9c74530613a1beef8514780955470d945acb54cbadd8d392ca42fe6ea840e97e"
+      },
+      "initialDiagnostic": {
+        "actionId": "repair-parse-input",
+        "automaticAllowed": true,
+        "code": "manifest/error",
+        "domain": "package",
+        "kind": "manifest"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "package.toml": "9c74530613a1beef8514780955470d945acb54cbadd8d392ca42fe6ea840e97e"
+      },
+      "mutationIdentitySha256": "328ed3539851971d2b37832efbc9b5bc75a57f7f377a1a726ab64d4c7e9eb027",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 496,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 651
+      },
+      "verificationOk": false
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "commandOkAfterTurn": false,
+          "decision": "abstain",
+          "inputTokens": 499,
+          "outputTokens": 155,
+          "patchPaths": [],
+          "reason": "human-only baseline found no unambiguous delimiter repair",
+          "turn": 1
+        }
+      ],
+      "caseId": "schema-version-99",
+      "changedPaths": [],
+      "exactRecovery": false,
+      "expectedFileSha256": {
+        "package.toml": "0686cc31e2a51cf16956efbfd5434144bf47841281410d787045dd8c31113a21"
+      },
+      "failureCodes": [
+        "manifest/error"
+      ],
+      "family": "unsupported-package-schema",
+      "finalCommandOk": false,
+      "finalFileSha256": {
+        "package.toml": "19c25d71bef14f297d289a1ddc2618993c4ff0e0e7e345e7a497f8a14f87f783"
+      },
+      "initialDiagnostic": {
+        "actionId": "repair-parse-input",
+        "automaticAllowed": true,
+        "code": "manifest/error",
+        "domain": "package",
+        "kind": "manifest"
+      },
+      "initialDiagnosticMatch": true,
+      "initialFileSha256": {
+        "package.toml": "19c25d71bef14f297d289a1ddc2618993c4ff0e0e7e345e7a497f8a14f87f783"
+      },
+      "mutationIdentitySha256": "012e1d04ddb1cb6ee8cd5c0eefc4d5f32e562ba2ed7c28d7164ccbda7f6a7214",
+      "outcome": "unrecovered",
+      "overRepair": false,
+      "policyBroadening": false,
+      "regression": false,
+      "repairability": "automatic",
+      "safeAbstention": false,
+      "tokenCost": {
+        "input": 499,
+        "output": 155,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 654
+      },
+      "verificationOk": false
+    }
+  ],
+  "runtime": {
+    "diagnosticCatalogIdentitySha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+    "name": "genesis",
+    "profile": "host-cli/selfhost-artifact",
+    "selfhostArtifactSha256": "9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54",
+    "version": "genesis 0.2.0"
+  },
+  "summaries": [
+    {
+      "agentId": "catalog-guided-v0.1",
+      "automaticCaseCount": 15,
+      "caseCount": 18,
+      "exactRecoveryCount": 15,
+      "initialDiagnosticMismatchCount": 0,
+      "overRepairCount": 0,
+      "policyBroadeningCount": 0,
+      "recoveryRateBasisPoints": 10000,
+      "regressionCount": 0,
+      "reviewRequiredCaseCount": 3,
+      "safeAbstentionCount": 3,
+      "safeAbstentionRateBasisPoints": 10000,
+      "tokenCost": {
+        "input": 36982,
+        "output": 4883,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 41865
+      }
+    },
+    {
+      "agentId": "diagnostic-blind-v0.1",
+      "automaticCaseCount": 15,
+      "caseCount": 18,
+      "exactRecoveryCount": 6,
+      "initialDiagnosticMismatchCount": 0,
+      "overRepairCount": 0,
+      "policyBroadeningCount": 0,
+      "recoveryRateBasisPoints": 4000,
+      "regressionCount": 0,
+      "reviewRequiredCaseCount": 3,
+      "safeAbstentionCount": 3,
+      "safeAbstentionRateBasisPoints": 10000,
+      "tokenCost": {
+        "input": 6765,
+        "output": 3433,
+        "profile": "genesis/utf8-byte-token-v0.1",
+        "total": 10198
+      }
+    }
+  ],
+  "version": "0.1.0"
+}

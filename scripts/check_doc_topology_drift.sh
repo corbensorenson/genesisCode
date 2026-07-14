@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -41,17 +44,18 @@ matrix = matrix_path.read_text(encoding="utf-8")
 redteam = redteam_path.read_text(encoding="utf-8")
 
 readiness_ref = ".genesis/perf/selfhost_readiness_report.json"
+capability_ledger_ref = "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json"
 if readiness_ref not in plan:
     raise SystemExit(
         "doc-topology-drift: upgrade_plan.md must reference "
         + readiness_ref
         + " as the machine-readable selfhost readiness source"
     )
-if readiness_ref not in matrix:
+if capability_ledger_ref not in matrix:
     raise SystemExit(
         "doc-topology-drift: feature_matrix.md must reference "
-        + readiness_ref
-        + " as a primary evidence path"
+        + capability_ledger_ref
+        + " as its canonical source"
     )
 
 for header in (
@@ -71,6 +75,10 @@ for required_ref in (
     "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
     "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md",
     "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+    "docs/status/SELFHOST_AUTHORITY_v0.1.md",
+    "policies/check_update_boundary_v0.1.json",
+    "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
     "upgrade_plan.md",
     "feature_matrix.md",
     "docs/status/REDTEAM_REPORT.md",
@@ -87,6 +95,17 @@ if "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md" not in index:
     raise SystemExit("doc-topology-drift: docs/INDEX.md must reference docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md")
 if "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md" not in index:
     raise SystemExit("doc-topology-drift: docs/INDEX.md must reference docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md")
+for generated_status in (
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+    "docs/status/SELFHOST_AUTHORITY_v0.1.md",
+    "policies/check_update_boundary_v0.1.json",
+    "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
+):
+    if generated_status not in index:
+        raise SystemExit(
+            "doc-topology-drift: docs/INDEX.md missing canonical/generated status reference: "
+            + generated_status
+        )
 
 open_ids = sorted(
     set(

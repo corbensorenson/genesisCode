@@ -75,7 +75,7 @@ fn obligation_report_term(contract: &str, args: &[Term]) -> Result<Term, Obligat
         .ok_or_else(|| ObligationError::Module(format!("missing prelude binding {contract}")))?;
     for arg in args {
         f = f
-            .apply(&mut ctx, Value::Data(arg.clone()))
+            .apply(&mut ctx, Value::data(arg.clone()))
             .map_err(|e| ObligationError::Test(format!("{contract} apply failed: {e}")))?;
     }
     let out = f.to_term_for_log(ctx.protocol.map(|p| p.error));

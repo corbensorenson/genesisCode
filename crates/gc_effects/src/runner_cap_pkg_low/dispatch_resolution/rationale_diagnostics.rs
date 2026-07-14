@@ -303,8 +303,12 @@ pub(super) fn annotate_requirement_resolution_error(
     let Value::Sealed { token, payload } = err else {
         return err;
     };
-    let Value::Data(Term::Map(mut mm)) = *payload else {
-        return Value::Sealed { token, payload };
+    let mut mm = match payload.as_ref() {
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(mm) => mm.clone(),
+            _ => return Value::Sealed { token, payload },
+        },
+        _ => return Value::Sealed { token, payload },
     };
     let existing_ctx = mm
         .get(&TermOrdKey(Term::symbol(":error/context")))
@@ -341,7 +345,7 @@ pub(super) fn annotate_requirement_resolution_error(
     mm.insert(TermOrdKey(Term::symbol(":error/context")), Term::Map(ctx));
     Value::Sealed {
         token,
-        payload: Box::new(Value::Data(Term::Map(mm))),
+        payload: Box::new(Value::data(Term::Map(mm))),
     }
 }
 
@@ -369,7 +373,7 @@ mod tests {
         );
         let err = Value::Sealed {
             token: SealId(91),
-            payload: Box::new(Value::Data(Term::Map(err_map))),
+            payload: Box::new(Value::data(Term::Map(err_map))),
         };
         let req = gc_pkg::Requirement {
             selector: "semver:^2.0.0".to_string(),
@@ -382,7 +386,7 @@ mod tests {
         let Value::Sealed { payload, .. } = out else {
             panic!("expected sealed value");
         };
-        let Value::Data(Term::Map(mm)) = *payload else {
+        let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
             panic!("expected map payload");
         };
         let Some(Term::Map(ctx)) = mm.get(&TermOrdKey(Term::symbol(":error/context"))) else {

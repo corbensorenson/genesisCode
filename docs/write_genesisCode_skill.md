@@ -5,16 +5,21 @@ Canonical AI-first authoring handbook for GenesisCode.
 ## Canonical Sources
 
 - Bundle entrypoint:
-  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+  - `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+- Frozen authoring profile:
+  - `docs/spec/GC_AGENT_PROFILE_v0.3.json`
+  - `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`
+  - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
+  - `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
 - Source skill file:
-  - `/Users/corbensorenson/Documents/genesisCode/.agents/skills/genesiscode-authoring/SKILL.md`
+  - `.agents/skills/genesiscode-authoring/SKILL.md`
 - Machine-readable contract:
-  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`
 - Versioned pack:
-  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
-  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`
-  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
-  - `/Users/corbensorenson/Documents/genesisCode/docs/skill_pack/write_genesiscode_v1/manifest.json`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
+  - `docs/skill_pack/write_genesiscode_v1/manifest.json`
 
 ## Objective
 
@@ -33,6 +38,10 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 
 ## Contract Pattern
 
+- Load and verify `GC-AGENT-v0.3` before generating source or selecting language features.
+- Resolve failures through exact versioned catalog IDs/codes and bounded `genesis --json agent-index --diagnostic <exact-code>` lookup; never scrape message prose.
+- Treat every unsupported profile entry as a fail-closed boundary, not an invitation to infer syntax or semantics.
+- For the five required classes, reject experimental syntax, unavailable targets, and out-of-profile capabilities; route host-only and nondeterministic facilities only through explicit capability-scoped logged effects. Follow `safeAlternative` without silently broadening policy.
 - Every new capability or workflow must provide:
   - stable schema id/kind,
   - deterministic replay payload shape,
@@ -44,6 +53,11 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 ## Testing Pattern
 
 - Minimum required validation for substantial changes:
+  - `bash scripts/check_gc_agent_core_card.sh`
+  - `bash scripts/check_gc_agent_task_cards.sh`
+  - `bash scripts/check_gc_agent_symbol_index.sh`
+  - `bash scripts/check_cli_diagnostics_contract.sh`
+  - `bash scripts/check_gc_agent_profile.sh`
   - `bash scripts/check_agent_reference_workflows.sh`
   - `bash scripts/check_agent_generative_workloads.sh`
   - `bash scripts/check_write_genesiscode_skill_conformance.sh`
@@ -61,6 +75,7 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
   2. policy gate mismatch,
   3. replay hash drift,
   4. runtime/perf regression.
+- Treat `diagnostic/catalog-miss` as an implementation defect and preserve its structured `reported_code` parameter.
 - Fix root causes; do not mask regressions by loosening gates without an explicit policy update.
 
 ## Performance Pattern
@@ -106,13 +121,13 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 
 Every substantial run should report:
 
-1. Completed `upgrade_plan.md` IDs.
-2. Remaining open ID count.
+1. Completed `ROADMAP.md` task IDs and any completed `upgrade_plan.md` P0/P1 IDs.
+2. Remaining roadmap task count and unresolved upgrade-plan P0/P1 count.
 3. Validation commands executed.
 4. Generated/updated artifact report paths.
 5. Any blockers with concrete root cause.
 
 ## Adoption
 
-- Agent workflows should load this handbook and the canonical skill contract before coding.
+- Agent workflows should load this handbook, the canonical skill contract, and `GC-AGENT-v0.3` before coding.
 - Reviewers should evaluate changes against these patterns and associated gate outputs.

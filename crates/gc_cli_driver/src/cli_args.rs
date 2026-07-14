@@ -143,6 +143,14 @@ impl CoreformFrontendArg {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Parse and canonicalize a CoreForm module without modifying its source file.
+    Parse {
+        file: PathBuf,
+        /// Frontend engine (selfhost by default in production profile).
+        #[arg(long, help = fmt_engine_help())]
+        engine: Option<FmtEngine>,
+    },
+
     /// Canonical formatting for CoreForm (.gc) files.
     Fmt {
         file: PathBuf,
@@ -271,24 +279,112 @@ enum Cmd {
         store: Option<PathBuf>,
     },
 
-    /// Warm startup mode: process newline-delimited JSON requests in one long-lived process.
+    /// Warm startup mode: process versioned newline-delimited JSON frames in one process.
     ///
     /// Input format (one JSON object per line on stdin):
-    ///   {"argv":["--json","eval","file.gc"]}
+    ///   {"protocol":"genesis/warm-protocol-v0.2","id":"r1","method":"execute","workspace":{"id":"ws","root":"."},"argv":["--json","eval","file.gc"]}
     ///
     /// Output format (one JSON object per line on stdout):
-    ///   { "ok": true|false, "kind": "genesis/warm-response-v0.1", ... }
+    ///   { "protocol":"genesis/warm-protocol-v0.2", "id":"r1", "ok":true|false, "kind":"genesis/warm-response-v0.2", ... }
     Warm {
         /// Preload selfhost toolchain once before request handling.
         #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
         prime_selfhost: bool,
+
+        /// Maximum number of accepted execute requests waiting behind the active worker.
+        #[arg(long, default_value_t = 64)]
+        max_queue: usize,
+
+        /// Maximum bytes in one newline-delimited input frame.
+        #[arg(long, default_value_t = 1_048_576)]
+        max_frame_bytes: usize,
+
+        /// Maximum simultaneously registered workspace identities.
+        #[arg(long, default_value_t = 32)]
+        max_workspaces: usize,
+
+        /// Evict an inactive workspace mapping after this many milliseconds.
+        #[arg(long, default_value_t = 300_000, value_parser = clap::value_parser!(u64).range(1..=86_400_000))]
+        workspace_idle_ms: u64,
+
+        /// Maximum protocol frames handled before graceful session exhaustion.
+        #[arg(long, default_value_t = 100_000, value_parser = clap::value_parser!(u64).range(1..))]
+        max_requests: u64,
+
+        /// Root beneath which request workspace roots must resolve.
+        #[arg(long, default_value = ".")]
+        workspace_root: PathBuf,
+    },
+
+    /// Serve the pinned Model Context Protocol interface over stdio.
+    Mcp {
+        /// Preload the selfhost toolchain before accepting requests.
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        prime_selfhost: bool,
+
+        /// Maximum accepted tool calls waiting behind the active worker.
+        #[arg(long, default_value_t = 64)]
+        max_queue: usize,
+
+        /// Maximum bytes in one newline-delimited JSON-RPC frame.
+        #[arg(long, default_value_t = 1_048_576)]
+        max_frame_bytes: usize,
+
+        /// Maximum bytes emitted in one JSON-RPC frame.
+        #[arg(long, default_value_t = 4_194_304)]
+        max_output_bytes: usize,
+
+        /// Maximum number of input frames handled by one session.
+        #[arg(long, default_value_t = 100_000, value_parser = clap::value_parser!(u64).range(1..))]
+        max_requests: u64,
+
+        /// Maximum roots accepted from the MCP client.
+        #[arg(long, default_value_t = 32)]
+        max_roots: usize,
+
+        /// Boundary beneath which all client roots must resolve.
+        #[arg(long, default_value = ".")]
+        workspace_root: PathBuf,
     },
 
     /// Emit machine-readable CLI command/option schema for agent planning.
     CliSchema,
 
-    /// Emit AI-facing planning index (CLI schema + capability indices + workflow pointers).
-    AgentIndex,
+    /// Emit AI-facing planning index or one exact symbol/diagnostic record.
+    AgentIndex {
+        /// Return exactly one case-sensitive GC-AGENT-v0.3 symbol record.
+        #[arg(long, value_name = "EXACT_NAME", conflicts_with = "diagnostic")]
+        symbol: Option<String>,
+
+        /// Return exactly one case-sensitive versioned diagnostic record.
+        #[arg(long, value_name = "EXACT_CODE", conflicts_with = "symbol")]
+        diagnostic: Option<String>,
+
+        /// Search the frozen GC-AGENT-v0.3 symbol index using a case-sensitive query.
+        #[arg(
+            long,
+            value_name = "QUERY",
+            conflicts_with_all = ["symbol", "diagnostic", "card"]
+        )]
+        search_symbol: Option<String>,
+
+        /// Return one exact generated agent card.
+        #[arg(
+            long,
+            value_enum,
+            conflicts_with_all = ["symbol", "diagnostic", "search_symbol"]
+        )]
+        card: Option<AgentCardArg>,
+
+        /// Maximum symbol-search results.
+        #[arg(
+            long,
+            default_value_t = 16,
+            value_parser = clap::value_parser!(u64).range(1..=64),
+            requires = "search_symbol"
+        )]
+        max_results: u64,
+    },
 
     /// Plan a deterministic workflow DAG from structured agent intent with policy prechecks.
     AgentPlan {
@@ -523,6 +619,23 @@ enum Cmd {
         #[command(subcommand)]
         cmd: VcsCmd,
     },
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum AgentCardArg {
+    Core,
+    Profile,
+    Tasks,
+}
+
+impl AgentCardArg {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Core => "core",
+            Self::Profile => "profile",
+            Self::Tasks => "tasks",
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

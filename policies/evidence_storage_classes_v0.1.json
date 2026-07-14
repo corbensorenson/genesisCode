@@ -1,0 +1,139 @@
+{
+  "kind": "genesis/evidence-storage-policy-v0.1",
+  "version": "0.1",
+  "authorityRules": {
+    "claimedClassDoesNotGrantAuthority": true,
+    "inTreeFixtureMaximumClass": "E2",
+    "releaseAuthorityRequiresExternalPolicy": true,
+    "selfPublicationForbidden": true
+  },
+  "classes": [
+    {
+      "id": "E0",
+      "authority": "observation",
+      "root": ".genesis/",
+      "tracked": false,
+      "mutable": true,
+      "requirements": {
+        "authentication": "none",
+        "independentVerification": false,
+        "minimumSignatures": 0,
+        "minimumMirrors": 0
+      },
+      "publication": {
+        "channel": "local-ignored",
+        "immutable": false,
+        "offlineVerifiable": false
+      }
+    },
+    {
+      "id": "E1",
+      "authority": "schema-or-example",
+      "root": "docs/spec/",
+      "tracked": true,
+      "mutable": false,
+      "requirements": {
+        "authentication": "reviewed-source",
+        "independentVerification": false,
+        "minimumSignatures": 0,
+        "minimumMirrors": 0
+      },
+      "publication": {
+        "channel": "source-tree",
+        "immutable": false,
+        "offlineVerifiable": true
+      }
+    },
+    {
+      "id": "E2",
+      "authority": "reviewed-golden",
+      "root": "docs/program/evidence/",
+      "tracked": true,
+      "mutable": false,
+      "requirements": {
+        "authentication": "reviewed-source",
+        "independentVerification": true,
+        "minimumSignatures": 0,
+        "minimumMirrors": 0
+      },
+      "publication": {
+        "channel": "source-tree",
+        "immutable": false,
+        "offlineVerifiable": true
+      }
+    },
+    {
+      "id": "E3",
+      "authority": "authenticated-release-evidence",
+      "root": ".genesis/release-assets/evidence/E3/",
+      "tracked": false,
+      "mutable": false,
+      "requirements": {
+        "authentication": "dsse-ed25519-external-trust",
+        "independentVerification": true,
+        "minimumSignatures": 1,
+        "minimumMirrors": 1
+      },
+      "publication": {
+        "channel": "immutable-release-asset",
+        "immutable": true,
+        "offlineVerifiable": true
+      }
+    },
+    {
+      "id": "E4",
+      "authority": "independently-reproduced-release-evidence",
+      "root": ".genesis/release-assets/evidence/E4/",
+      "tracked": false,
+      "mutable": false,
+      "requirements": {
+        "authentication": "dsse-ed25519-threshold-external-trust",
+        "independentVerification": true,
+        "minimumSignatures": 2,
+        "minimumMirrors": 2
+      },
+      "publication": {
+        "channel": "immutable-release-asset",
+        "immutable": true,
+        "offlineVerifiable": true
+      }
+    }
+  ],
+  "releaseAssetProfile": {
+    "format": "ustar",
+    "mediaType": "application/vnd.genesiscode.evidence-release.v0.1+tar",
+    "sourceDateEpoch": 0,
+    "fileMode": 420,
+    "directoryMode": 493,
+    "ownerId": 0,
+    "groupId": 0,
+    "maximumAssetBytes": 67108864,
+    "contentAddressedFilename": "genesis-evidence-{class}-{release}.sha256-{digest}.tar",
+    "requiredArchiveEntries": [
+      "MIRROR.json",
+      "evidence/artifact-tree.json",
+      "evidence/bundle.json",
+      "release-manifest.json",
+      "verification/result.json"
+    ],
+    "forbiddenArchivePrefixes": [
+      "../",
+      ".genesis/",
+      "/",
+      "trust/"
+    ]
+  },
+  "mirrorProfile": {
+    "copyMode": "create-new",
+    "overwriteForbidden": true,
+    "verifyBeforeAndAfterCopy": true,
+    "trustPolicyDistribution": "out-of-band",
+    "requiredInstructions": [
+      "compare-bytes",
+      "fetch-independent-mirror",
+      "fetch-primary",
+      "verify-offline",
+      "verify-sha256"
+    ]
+  }
+}

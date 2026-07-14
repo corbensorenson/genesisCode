@@ -405,5 +405,5 @@ pub(super) fn dispatch_save_lock(
     out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
     out.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
     out.insert(TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_h));
-    Ok(Value::Data(Term::Map(out)))
+    Ok(Value::data(Term::Map(out)))
 }

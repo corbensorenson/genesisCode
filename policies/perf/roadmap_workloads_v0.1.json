@@ -1,0 +1,385 @@
+{
+  "identityAlgorithm": "sha256-canonical-json",
+  "inputHashAlgorithm": "sha256",
+  "kind": "genesis/roadmap-workloads-v0.1",
+  "protocols": [
+    {
+      "confidence": "not-applicable-deterministic",
+      "decisionStatistic": "all-observations-byte-and-semantic-identical",
+      "dispersion": "not-applicable",
+      "failurePolicy": "invalidate-entire-sample-set",
+      "id": "exact-all-v0.1",
+      "integerRounding": "not-applicable",
+      "outlierPolicy": "retain-all",
+      "primary": "all-match",
+      "secondary": "none",
+      "sampleOrdering": "lexicographic-case-then-tier"
+    },
+    {
+      "confidence": "all-30-quiescent-checkpoints-retained",
+      "decisionStatistic": "maximum-quiescent-rss-growth-and-nonpositive-theil-sen-slope",
+      "dispersion": "median-absolute-deviation",
+      "failurePolicy": "invalidate-entire-session",
+      "id": "leak-30-v0.1",
+      "integerRounding": "floor-after-exact-rational",
+      "outlierPolicy": "retain-all",
+      "primary": "maximum-quiescent-rss-growth-percent",
+      "secondary": "theil-sen-rss-slope-by-request",
+      "sampleOrdering": "monotonic-request-index"
+    },
+    {
+      "confidence": "exact-binomial-median-95pct-ranks-10-21-for-n30",
+      "decisionStatistic": "directional-95pct-median-confidence-bound",
+      "dispersion": "median-absolute-deviation",
+      "failurePolicy": "invalidate-entire-sample-set",
+      "id": "timing-30-v0.1",
+      "integerRounding": "floor-after-exact-rational",
+      "outlierPolicy": "retain-all",
+      "primary": "median",
+      "secondary": "p95-nearest-rank-ceil",
+      "sampleOrdering": "fixed-sequential"
+    }
+  ],
+  "referenceHostPolicy": "policies/reference_host_profiles_v0.1.json",
+  "roadmapTask": "R0.5.b",
+  "version": "0.1",
+  "workloads": [
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"kind\":\"integer\",\"value\":\"75025\"}\n",
+        "sha256": "35f740ed69c7a1c89eff3edef9d7c3d185c53152a90a341ae202fe92a08b3731"
+      },
+      "id": "PB-1",
+      "inputs": [
+        {
+          "bytes": 181,
+          "path": "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
+          "role": "exact-source",
+          "sha256": "2986a1cb95dac4dcc427f51bff84b2f4b4fbff82f448034f5d5dbaa0a91aefca"
+        }
+      ],
+      "measurement": {
+        "cacheState": "fresh-eval-context-warm-prelude-and-compiled-module",
+        "protocolId": "timing-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "process-local-evaluation",
+        "timeoutMs": 2000,
+        "warmup": {"count": 5, "unit": "process-local-evaluation"}
+      },
+      "runner": "gc_runtime_bench/compiled-ast",
+      "sizes": [{"name": "fib-n", "unit": "integer", "value": 25}],
+      "status": "active",
+      "target": {"comparison": "lte", "unit": "milliseconds", "value": 250}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"kind\":\"integer\",\"value\":\"75025\"}\n",
+        "sha256": "35f740ed69c7a1c89eff3edef9d7c3d185c53152a90a341ae202fe92a08b3731"
+      },
+      "id": "PB-2",
+      "inputs": [
+        {
+          "bytes": 181,
+          "path": "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
+          "role": "exact-source",
+          "sha256": "2986a1cb95dac4dcc427f51bff84b2f4b4fbff82f448034f5d5dbaa0a91aefca"
+        }
+      ],
+      "measurement": {
+        "cacheState": "fresh-vm-context-warm-prelude-and-verified-bytecode",
+        "protocolId": "timing-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "process-local-evaluation",
+        "timeoutMs": 1000,
+        "warmup": {"count": 5, "unit": "process-local-evaluation"}
+      },
+      "runner": "gc_runtime_bench/bytecode",
+      "sizes": [{"name": "fib-n", "unit": "integer", "value": 25}],
+      "status": "roadmap-blocked",
+      "target": {"comparison": "lte", "unit": "milliseconds", "value": 40}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"kind\":\"integer\",\"value\":\"75025\"}\n",
+        "sha256": "35f740ed69c7a1c89eff3edef9d7c3d185c53152a90a341ae202fe92a08b3731"
+      },
+      "id": "PB-3",
+      "inputs": [
+        {
+          "bytes": 181,
+          "path": "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
+          "role": "exact-source",
+          "sha256": "2986a1cb95dac4dcc427f51bff84b2f4b4fbff82f448034f5d5dbaa0a91aefca"
+        }
+      ],
+      "measurement": {
+        "cacheState": "fresh-jit-context-warm-prelude-and-validated-code-cache",
+        "protocolId": "timing-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "process-local-evaluation",
+        "timeoutMs": 500,
+        "warmup": {"count": 5, "unit": "process-local-evaluation"}
+      },
+      "runner": "gc_runtime_bench/validated-jit",
+      "sizes": [{"name": "fib-n", "unit": "integer", "value": 25}],
+      "status": "decision-gated",
+      "target": {"comparison": "lte", "unit": "milliseconds", "value": 8}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"endExclusive\":1000000,\"kind\":\"integer-range-vector\",\"length\":1000000,\"start\":0}\n",
+        "sha256": "8f8d5c29344d6c6ef971708f11583ba7b9a9cb9ea76681b82f6ba32650eb0ef3"
+      },
+      "id": "PB-4",
+      "inputs": [
+        {
+          "bytes": 255,
+          "path": "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
+          "role": "exact-source",
+          "sha256": "3ed529f73aee921579b0e0e144b2b267ddae8705d6cb2e35efa0becadb9070df"
+        }
+      ],
+      "measurement": {
+        "cacheState": "fresh-eval-context-warm-prelude-and-compiled-module",
+        "protocolId": "timing-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "process-local-evaluation",
+        "timeoutMs": 5000,
+        "warmup": {"count": 5, "unit": "process-local-evaluation"}
+      },
+      "runner": "gc_runtime_bench/compiled-ast",
+      "sizes": [{"name": "vector-length", "unit": "elements", "value": 1000000}],
+      "status": "active",
+      "target": {"comparison": "lte", "unit": "milliseconds", "value": 150}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"entryCount\":100000,\"keyEndExclusive\":100000,\"keyStart\":0,\"kind\":\"integer-identity-map\"}\n",
+        "sha256": "b055c3f4bb2cd2829c437cd1bd406503013fe78274d26ef637d9dfe02dd74b0d"
+      },
+      "id": "PB-5",
+      "inputs": [
+        {
+          "bytes": 257,
+          "path": "benchmarks/roadmap/v0.1/pb5_map_100000.gc",
+          "role": "exact-source",
+          "sha256": "0c729c0e7c84a9cf417a4da510226b366caf05ad36a6973e6f7161bf52ecd673"
+        }
+      ],
+      "measurement": {
+        "cacheState": "fresh-eval-context-warm-prelude-and-compiled-module",
+        "protocolId": "timing-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "process-local-evaluation",
+        "timeoutMs": 5000,
+        "warmup": {"count": 5, "unit": "process-local-evaluation"}
+      },
+      "runner": "gc_runtime_bench/compiled-ast",
+      "sizes": [{"name": "map-entries", "unit": "entries", "value": 100000}],
+      "status": "active",
+      "target": {"comparison": "lte", "unit": "milliseconds", "value": 300}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"canonicalModuleHashRequired\":true,\"kind\":\"successful-check\",\"moduleCount\":1}\n",
+        "sha256": "53e93d9b60b8be1de5181f4b967bb01fde476d29f018622efc75a938c8681e56"
+      },
+      "id": "PB-6",
+      "inputs": [
+        {
+          "bytes": 55,
+          "path": "benchmarks/roadmap/v0.1/pb6_trivial_check.gc",
+          "role": "exact-source",
+          "sha256": "c2a426cdb240d8e555ad3a4ca0e7ee917a063f2331a0e49d34faf2890c0678af"
+        }
+      ],
+      "measurement": {
+        "cacheState": "fresh-process-warm-os-page-cache-pinned-prelude-snapshot",
+        "protocolId": "timing-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "fresh-process-check",
+        "timeoutMs": 2000,
+        "warmup": {"count": 5, "unit": "fresh-process-check"}
+      },
+      "runner": "genesis/check-snapshot-cold-process",
+      "sizes": [{"name": "module-count", "unit": "modules", "value": 1}],
+      "status": "roadmap-blocked",
+      "target": {"comparison": "lte", "unit": "milliseconds", "value": 30}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"corpusBytes\":253896,\"kind\":\"all-modules-parse\",\"moduleCount\":2}\n",
+        "sha256": "dc0f62caf81b2cd4969a7d0614e8b83cbeafdd2fd11e418b95f571d0ffa94429"
+      },
+      "id": "PB-7",
+      "inputs": [
+        {
+          "bytes": 236014,
+          "path": "prelude/prelude.gc",
+          "role": "parse-corpus",
+          "sha256": "cd18a4cf8abe587f48e517cb56c1d33c52c0987781905c2c05ccc5da5655a775"
+        },
+        {
+          "bytes": 17882,
+          "path": "selfhost/parse.gc",
+          "role": "parse-corpus",
+          "sha256": "c703e7343f2d871a55ef8feee85e3c1ad4b76725ad4a6a1a063c49d07dbd7f07"
+        }
+      ],
+      "measurement": {
+        "cacheState": "fresh-eval-context-warm-prelude-parser-loaded",
+        "protocolId": "timing-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "full-corpus-parse",
+        "timeoutMs": 120000,
+        "warmup": {"count": 5, "unit": "full-corpus-parse"}
+      },
+      "runner": "gc_runtime_bench/selfhost-parser",
+      "sizes": [
+        {"name": "corpus-bytes", "unit": "bytes", "value": 253896},
+        {"name": "module-count", "unit": "modules", "value": 2}
+      ],
+      "status": "active",
+      "target": {"comparison": "gte", "unit": "bytes-per-second", "value": 1048576}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"kind\":\"bounded-warm-session\",\"requestsHandled\":100000,\"responseKind\":\"genesis/warm-response-v0.1\"}\n",
+        "sha256": "89083dbd36922077de9de1d3d1f0cc00763214a80faf5bc12963f4984e1fc742"
+      },
+      "id": "PB-8",
+      "inputs": [
+        {
+          "bytes": 55,
+          "path": "benchmarks/roadmap/v0.1/pb6_trivial_check.gc",
+          "role": "request-source",
+          "sha256": "c2a426cdb240d8e555ad3a4ca0e7ee917a063f2331a0e49d34faf2890c0678af"
+        },
+        {
+          "bytes": 74,
+          "path": "benchmarks/roadmap/v0.1/pb8_warm_request.jsonl",
+          "role": "request-template",
+          "sha256": "6c7ec2a5569c989f08f804afbe59b0a12edbc4de3fdab1f5b02558d7240fdef9"
+        }
+      ],
+      "measurement": {
+        "cacheState": "single-persistent-process-quiesced-between-checkpoints",
+        "protocolId": "leak-30-v0.1",
+        "sampleCount": 30,
+        "sampleUnit": "quiescent-rss-checkpoint",
+        "timeoutMs": 2700000,
+        "warmup": {"count": 1000, "unit": "request"}
+      },
+      "runner": "genesis/warm-rss-harness",
+      "sizes": [
+        {"name": "checkpoint-count", "unit": "checkpoints", "value": 30},
+        {"name": "measured-requests", "unit": "requests", "value": 100000},
+        {"name": "quiescence-milliseconds", "unit": "milliseconds", "value": 1000}
+      ],
+      "status": "roadmap-blocked",
+      "target": {"comparison": "lte", "unit": "percent-rss-growth", "value": 5}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"caseCount\":5,\"dimensions\":[\"canonical-hash\",\"effect-log\",\"resource-error\",\"schedule\",\"sealed-error\",\"value\"],\"kind\":\"all-tier-observations-identical\"}\n",
+        "sha256": "eaa891a9e441bb156a1e0a5be2a982422944f19b9e6b2722a21b95a2f5081ca5"
+      },
+      "id": "PB-9",
+      "inputs": [
+        {
+          "bytes": 55,
+          "path": "benchmarks/roadmap/v0.1/pb6_trivial_check.gc",
+          "role": "corpus-source",
+          "sha256": "c2a426cdb240d8e555ad3a4ca0e7ee917a063f2331a0e49d34faf2890c0678af"
+        },
+        {
+          "bytes": 1003,
+          "path": "benchmarks/roadmap/v0.1/pb9_semantic_parity_corpus.json",
+          "role": "corpus-manifest",
+          "sha256": "3f36c9cdc729288557d92e42d5a50ba1439f5239f62965b1d3b621fdad763540"
+        },
+        {
+          "bytes": 48,
+          "path": "tests/spec/coreform/app_sugar.in.gc",
+          "role": "corpus-source",
+          "sha256": "f5028239dec421fbd8003669daf0f185836475b9c7db5055431ddeac40f09a73"
+        },
+        {
+          "bytes": 14,
+          "path": "tests/spec/coreform/map_order.in.gc",
+          "role": "corpus-source",
+          "sha256": "84b37ab66bdce282bf4037e5ffee587b8cac00ef9d759e4855dff962e2db3ea7"
+        },
+        {
+          "bytes": 544,
+          "path": "tests/spec/pkg_fail_budgets/budget.gc",
+          "role": "corpus-source",
+          "sha256": "7c1478cc8fb2c4166a5a0ca9ca7a14353553892dc9b7eca5e006f3b4951ed8a9"
+        },
+        {
+          "bytes": 501,
+          "path": "tests/spec/pkg_fail_determinism/fail.gc",
+          "role": "corpus-source",
+          "sha256": "27667d05fef8648acf36bc153465b5e80a8cd6d32dd5ca4858566fc9036b5b53"
+        }
+      ],
+      "measurement": {
+        "cacheState": "isolated-fresh-context-no-result-cache",
+        "protocolId": "exact-all-v0.1",
+        "sampleCount": 5,
+        "sampleUnit": "case-per-runtime-tier",
+        "timeoutMs": 30000,
+        "warmup": {"count": 0, "unit": "case"}
+      },
+      "runner": "genesis/semantic-tier-parity",
+      "sizes": [
+        {"name": "case-count", "unit": "cases", "value": 5},
+        {"name": "comparison-dimensions", "unit": "dimensions", "value": 6}
+      ],
+      "status": "roadmap-blocked",
+      "target": {"comparison": "eq", "unit": "percent-identical", "value": 100}
+    },
+    {
+      "expected": {
+        "canonicalDescriptor": "{\"artifactHashRelation\":\"stage2-equals-stage3\",\"kind\":\"cross-host-bootstrap-fixpoint\",\"tier1HostCount\":2}\n",
+        "sha256": "824da27ac9d4b210f18efb1a07c69911863c69a08de136eefd46a3e0842dead7"
+      },
+      "id": "PB-10",
+      "inputs": [
+        {
+          "bytes": 312,
+          "path": "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
+          "role": "bootstrap-protocol",
+          "sha256": "2a2ce38296344af0ea9b76bae16a3aef02347f5561efc6a4929cbedda3322c5d"
+        },
+        {
+          "bytes": 602110,
+          "path": "selfhost/toolchain.gc",
+          "role": "artifact-seed",
+          "sha256": "9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54"
+        },
+        {
+          "bytes": 2637,
+          "path": "selfhost/toolchain_manifest.gc",
+          "role": "source-manifest",
+          "sha256": "b34f9f40f15305019698f7c88efbe7c66c7fdc01a94380740d286da7197a29d7"
+        }
+      ],
+      "measurement": {
+        "cacheState": "clean-content-store-offline-source-bootstrap",
+        "protocolId": "exact-all-v0.1",
+        "sampleCount": 2,
+        "sampleUnit": "rebuild-per-tier1-host",
+        "timeoutMs": 2700000,
+        "warmup": {"count": 0, "unit": "bootstrap"}
+      },
+      "runner": "genesis/bootstrap-fixpoint",
+      "sizes": [
+        {"name": "rebuilds-per-host", "unit": "rebuilds", "value": 2},
+        {"name": "tier1-host-count", "unit": "hosts", "value": 2}
+      ],
+      "status": "roadmap-blocked",
+      "target": {"comparison": "eq", "unit": "percent-byte-identical", "value": 100}
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "$id": "https://genesiscode.dev/schemas/gc-agent-profile-v0.3.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "compatibility": {"additionalProperties": {"type": "string"}, "propertyNames": {"pattern": "^[a-zA-Z][a-zA-Z0-9]+$"}, "type": "object"},
+    "conformance": {"$ref": "#/$defs/conformance"},
+    "domainOrder": {"items": {"type": "string"}, "minItems": 11, "maxItems": 11, "type": "array", "uniqueItems": true},
+    "domains": {"items": {"$ref": "#/$defs/domain"}, "minItems": 11, "maxItems": 11, "type": "array"},
+    "kind": {"const": "genesis/gc-agent-profile-v0.3"},
+    "profileId": {"const": "GC-AGENT-v0.3"},
+    "profileIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "sourceIdentities": {"additionalProperties": {"$ref": "#/$defs/sha256"}, "propertyNames": {"$ref": "#/$defs/path"}, "type": "object"},
+    "stability": {"const": "training-frozen-pre-v1"},
+    "unsupportedBehavior": {
+      "allOf": [
+        {"contains": {"properties": {"roadmapClass": {"const": "experimental-syntax"}}, "required": ["roadmapClass"]}},
+        {"contains": {"properties": {"roadmapClass": {"const": "host-only-operation"}}, "required": ["roadmapClass"]}},
+        {"contains": {"properties": {"roadmapClass": {"const": "unavailable-target"}}, "required": ["roadmapClass"]}},
+        {"contains": {"properties": {"roadmapClass": {"const": "nondeterministic-facility"}}, "required": ["roadmapClass"]}},
+        {"contains": {"properties": {"roadmapClass": {"const": "out-of-profile-capability"}}, "required": ["roadmapClass"]}}
+      ],
+      "items": {"$ref": "#/$defs/unsupported"},
+      "minItems": 5,
+      "type": "array"
+    },
+    "unsupportedClassOrder": {
+      "items": {"enum": ["experimental-syntax", "host-only-operation", "unavailable-target", "nondeterministic-facility", "out-of-profile-capability"]},
+      "maxItems": 5,
+      "minItems": 5,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "version": {"const": "0.3"}
+  },
+  "required": ["compatibility", "conformance", "domainOrder", "domains", "kind", "profileId", "profileIdentitySha256", "sourceIdentities", "stability", "unsupportedBehavior", "unsupportedClassOrder", "version"],
+  "type": "object",
+  "$defs": {
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "anchors": {"items": {"type": "string", "minLength": 1}, "minItems": 1, "type": "array", "uniqueItems": true},
+        "path": {"$ref": "#/$defs/path"}
+      },
+      "required": ["anchors", "path"],
+      "type": "object"
+    },
+    "conformance": {
+      "additionalProperties": false,
+      "properties": {
+        "evaluatorCases": {"items": {"$ref": "#/$defs/evaluatorCase"}, "minItems": 1, "type": "array"},
+        "packageCases": {"items": {"$ref": "#/$defs/packageCase"}, "minItems": 1, "type": "array"},
+        "parserCases": {"items": {"$ref": "#/$defs/parserCase"}, "minItems": 1, "type": "array"},
+        "requiredChecks": {"items": {"$ref": "#/$defs/path"}, "minItems": 1, "type": "array", "uniqueItems": true},
+        "resourceCases": {"items": {"$ref": "#/$defs/resourceCase"}, "minItems": 1, "type": "array"}
+      },
+      "required": ["evaluatorCases", "packageCases", "parserCases", "requiredChecks", "resourceCases"],
+      "type": "object"
+    },
+    "domain": {
+      "additionalProperties": false,
+      "properties": {
+        "authorities": {"items": {"$ref": "#/$defs/authority"}, "minItems": 1, "type": "array"},
+        "conformanceChecks": {"items": {"$ref": "#/$defs/path"}, "minItems": 1, "type": "array", "uniqueItems": true},
+        "id": {"type": "string"},
+        "invariants": {"items": {"type": "string", "minLength": 1}, "minItems": 1, "type": "array", "uniqueItems": true},
+        "limitations": {"items": {"type": "string", "minLength": 1}, "minItems": 1, "type": "array", "uniqueItems": true},
+        "status": {"enum": ["core", "profile-selected"]},
+        "summary": {"type": "string", "minLength": 1},
+        "surface": {"items": {"type": "string", "minLength": 1}, "minItems": 1, "type": "array", "uniqueItems": true}
+      },
+      "required": ["authorities", "conformanceChecks", "id", "invariants", "limitations", "status", "summary", "surface"],
+      "type": "object"
+    },
+    "evaluatorCase": {
+      "additionalProperties": false,
+      "properties": {
+        "expected": {"type": ["null", "string"]},
+        "expectedErrorKind": {"type": ["null", "string"]},
+        "expectedValueKind": {"type": ["null", "string"]},
+        "id": {"type": "string"},
+        "source": {"type": "string"}
+      },
+      "required": ["expected", "expectedErrorKind", "expectedValueKind", "id", "source"],
+      "type": "object"
+    },
+    "limits": {
+      "additionalProperties": false,
+      "properties": {
+        "maxBytesLen": {"type": ["integer", "null"]},
+        "maxMapLen": {"type": ["integer", "null"]},
+        "maxPairCells": {"type": ["integer", "null"]},
+        "maxStringLen": {"type": ["integer", "null"]},
+        "maxVecLen": {"type": ["integer", "null"]},
+        "steps": {"minimum": 1, "type": "integer"}
+      },
+      "required": ["maxBytesLen", "maxMapLen", "maxPairCells", "maxStringLen", "maxVecLen", "steps"],
+      "type": "object"
+    },
+    "packageCase": {
+      "additionalProperties": false,
+      "properties": {
+        "expected": {"enum": ["accept", "reject"]},
+        "id": {"type": "string"},
+        "source": {"type": "string"}
+      },
+      "required": ["expected", "id", "source"],
+      "type": "object"
+    },
+    "parserCase": {
+      "additionalProperties": false,
+      "properties": {
+        "expected": {"enum": ["accept", "reject"]},
+        "formCount": {"type": ["integer", "null"]},
+        "id": {"type": "string"},
+        "mode": {"enum": ["module", "term"]},
+        "source": {"type": "string"}
+      },
+      "required": ["expected", "formCount", "id", "mode", "source"],
+      "type": "object"
+    },
+    "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$", "type": "string"},
+    "resourceCase": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedErrorKind": {"enum": ["MemoryLimit", "StepLimit"]},
+        "id": {"type": "string"},
+        "limits": {"$ref": "#/$defs/limits"},
+        "source": {"type": "string"}
+      },
+      "required": ["expectedErrorKind", "id", "limits", "source"],
+      "type": "object"
+    },
+    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "unsupported": {
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {"type": "string", "minLength": 1},
+        "category": {"type": "string", "minLength": 1},
+        "enforcement": {"enum": ["reject", "explicit-effect-only", "deny-by-default", "profile-negotiation-required", "bounded-opt-in-only", "claim-prohibited"]},
+        "id": {"pattern": "^U-[A-Z0-9-]+$", "type": "string"},
+        "rationale": {"type": "string", "minLength": 1},
+        "roadmapClass": {"enum": ["experimental-syntax", "host-only-operation", "unavailable-target", "nondeterministic-facility", "out-of-profile-capability", "additional-safety-boundary"]},
+        "roadmapTask": {"type": ["null", "string"]},
+        "safeAlternative": {"type": "string", "minLength": 1},
+        "status": {"const": "unsupported"}
+      },
+      "required": ["behavior", "category", "enforcement", "id", "rationale", "roadmapClass", "roadmapTask", "safeAlternative", "status"],
+      "type": "object"
+    }
+  }
+}

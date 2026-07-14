@@ -39,7 +39,7 @@ pub(super) fn build_selfhost_vcs_program(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -94,7 +94,7 @@ pub(super) fn build_selfhost_vcs_program(
                 mm.insert(TermOrdKey(Term::symbol(":path")), Term::Str(p.to_string()));
             }
             let req = Term::Map(mm);
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -147,7 +147,7 @@ pub(super) fn build_selfhost_vcs_program(
                 mm.insert(TermOrdKey(Term::symbol(":op")), Term::Str(o.to_string()));
             }
             let req = Term::Map(mm);
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -198,7 +198,7 @@ pub(super) fn build_selfhost_vcs_program(
                 );
             }
             let req = Term::Map(mm);
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -255,7 +255,7 @@ pub(super) fn build_selfhost_vcs_program(
                 );
             }
             let req = Term::Map(mm);
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -318,7 +318,7 @@ pub(super) fn build_selfhost_vcs_program(
                 );
             }
             let req = Term::Map(mm);
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -486,7 +486,7 @@ pub(super) fn build_selfhost_vcs_program(
             }
 
             let req = Term::Map(payload.clone());
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",

@@ -15,26 +15,11 @@ fn get_req(v: Value) -> EffectRequest {
     let Value::EffectRequest(req) = payload.as_ref() else {
         panic!("expected effect request payload");
     };
-    req.clone()
+    req.as_ref().clone()
 }
 
 fn value_to_data_term(v: &Value) -> Option<Term> {
-    match v {
-        Value::Data(t) => Some(t.clone()),
-        Value::Vector(xs) => Some(Term::Vector(
-            xs.iter()
-                .map(value_to_data_term)
-                .collect::<Option<Vec<_>>>()?,
-        )),
-        Value::Map(m) => {
-            let mut out = std::collections::BTreeMap::new();
-            for (k, vv) in m {
-                out.insert(k.clone(), value_to_data_term(vv)?);
-            }
-            Some(Term::Map(out))
-        }
-        _ => None,
-    }
+    v.to_plain_term()
 }
 
 #[test]

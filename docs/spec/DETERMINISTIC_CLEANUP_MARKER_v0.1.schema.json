@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/deterministic-cleanup-marker-v0.1.json",
+  "title": "GenesisCode Deterministic Cleanup Root Marker v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "class", "path", "policySha256", "producer"],
+  "properties": {
+    "kind": {"const": "genesis/deterministic-cleanup-root-v0.1"},
+    "version": {"const": "0.1"},
+    "class": {"enum": ["dependency-mirror", "rebuildable-output", "retained-evidence"]},
+    "path": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"},
+    "policySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "producer": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}
+  }
+}

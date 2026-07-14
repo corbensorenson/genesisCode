@@ -143,7 +143,7 @@ wasi_bridge_response = "{:ok true :result {:sum 3}}"
         SealId(72),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected data map");
     };
     assert_eq!(
@@ -365,7 +365,7 @@ wasi_bridge_response = "{:ok true :result {:sum 3}}"
         SealId(76),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected data map");
     };
     let Some(Term::Map(provenance)) = mm.get(&TermOrdKey(Term::symbol(":ffi-provenance"))) else {

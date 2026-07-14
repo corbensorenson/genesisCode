@@ -15,7 +15,7 @@ fn sealed_error_code(v: &Value) -> Option<String> {
     let Value::Sealed { payload, .. } = v else {
         return None;
     };
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         return None;
     };
     match mm.get(&TermOrdKey(Term::symbol(":error/code"))) {
@@ -28,7 +28,7 @@ fn sealed_error_ctx(v: &Value) -> Option<&std::collections::BTreeMap<TermOrdKey,
     let Value::Sealed { payload, .. } = v else {
         return None;
     };
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         return None;
     };
     let Some(Term::Map(ctx)) = mm.get(&TermOrdKey(Term::symbol(":error/context"))) else {

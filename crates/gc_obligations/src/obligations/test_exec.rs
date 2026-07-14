@@ -213,7 +213,7 @@ fn run_test_from_package(
     )?;
 
     let value = test_body
-        .apply(ctx, Value::Data(Term::Nil))
+        .apply(ctx, Value::data(Term::Nil))
         .map_err(|e| ObligationError::Test(format!("test apply failed: {e}")))?;
 
     let (final_value, effect_log) = match value {
@@ -244,7 +244,7 @@ fn run_test_from_package(
     let ok = if is_error {
         false
     } else if let Some(exp) = expect {
-        fv_hash == value_hash(&Value::Data(exp))
+        fv_hash == value_hash(&Value::data(exp))
     } else {
         true
     };

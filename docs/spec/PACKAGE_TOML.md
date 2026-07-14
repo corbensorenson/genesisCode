@@ -4,6 +4,7 @@ This file defines a package, its modules, dependencies, and required obligations
 
 ## Required Keys
 
+- `schema` (integer): current writers emit `1`. The documented pre-schema form is read as schema 1 under migration `M-PACKAGE-PRESCHEMA-TO-1`; every other explicit value is rejected.
 - `name` (string)
 - `version` (string)
 - `modules` (array of tables): `[{ path = "...", hash = "..." }, ...]`

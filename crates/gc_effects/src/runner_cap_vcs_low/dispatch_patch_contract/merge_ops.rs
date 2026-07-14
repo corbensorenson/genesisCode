@@ -99,7 +99,7 @@ pub(super) fn handle_merge3_contract_snapshots(
         let mut out = BTreeMap::new();
         out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
         out.insert(TermOrdKey(Term::symbol(":conflict-term")), conflict_term);
-        return Value::Data(Term::Map(out));
+        return Value::data(Term::Map(out));
     }
 
     let mut keys: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
@@ -164,7 +164,7 @@ pub(super) fn handle_merge3_contract_snapshots(
         let mut out = BTreeMap::new();
         out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
         out.insert(TermOrdKey(Term::symbol(":conflict-term")), conflict_term);
-        return Value::Data(Term::Map(out));
+        return Value::data(Term::Map(out));
     }
 
     let merged_snapshot = gc_vcs::ContractSnapshot {
@@ -175,5 +175,5 @@ pub(super) fn handle_merge3_contract_snapshots(
     let mut out = BTreeMap::new();
     out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
     out.insert(TermOrdKey(Term::symbol(":snapshot-term")), merged_snapshot);
-    Value::Data(Term::Map(out))
+    Value::data(Term::Map(out))
 }

@@ -14,7 +14,7 @@ pub(super) fn cap_refs_get(payload: &Term, refs: Option<&RefsDb>) -> Result<Valu
         TermOrdKey(Term::Symbol(":hash".to_string())),
         h.map(Term::Str).unwrap_or(Term::Nil),
     );
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 pub(super) fn cap_refs_list(payload: &Term, refs: Option<&RefsDb>) -> Result<Value, EffectsError> {
@@ -40,7 +40,7 @@ pub(super) fn cap_refs_list(payload: &Term, refs: Option<&RefsDb>) -> Result<Val
         TermOrdKey(Term::Symbol(":refs".to_string())),
         Term::Vector(out),
     );
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 pub(super) fn cap_refs_set(
@@ -91,7 +91,7 @@ pub(super) fn cap_refs_set(
                 TermOrdKey(Term::Symbol(":hash".to_string())),
                 new_hash.map(Term::Str).unwrap_or(Term::Nil),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         SetResult::Conflict { current } => Ok(mk_error_with_ctx(
             error_tok,
@@ -152,7 +152,7 @@ pub(super) fn cap_refs_delete(
                 TermOrdKey(Term::Symbol(":name".to_string())),
                 Term::Str(name),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         SetResult::Conflict { current } => Ok(mk_error_with_ctx(
             error_tok,

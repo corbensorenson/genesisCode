@@ -116,7 +116,7 @@ pub(super) fn capability_gc_gpk_low(
                 TermOrdKey(Term::symbol(":dead-sample")),
                 Term::Vector(dead_sample),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::run" => {
             let store = store.ok_or_else(|| {
@@ -225,7 +225,7 @@ pub(super) fn capability_gc_gpk_low(
                 TermOrdKey(Term::symbol(":reclaimed-bytes")),
                 Term::Int((dead_bytes as i64).into()),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::pin" => {
             let base_dir = effective_base_dir(pol)?;
@@ -266,7 +266,7 @@ pub(super) fn capability_gc_gpk_low(
                 TermOrdKey(Term::symbol(":keep-refs")),
                 Term::Vector(pins.keep_refs.iter().cloned().map(Term::Str).collect()),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::unpin" => {
             let base_dir = effective_base_dir(pol)?;
@@ -302,7 +302,7 @@ pub(super) fn capability_gc_gpk_low(
                 TermOrdKey(Term::symbol(":keep-refs")),
                 Term::Vector(pins.keep_refs.iter().cloned().map(Term::Str).collect()),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::purge" => {
             let base_dir = effective_base_dir(pol)?;
@@ -329,7 +329,7 @@ pub(super) fn capability_gc_gpk_low(
                 let mut m = BTreeMap::new();
                 m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
                 m.insert(TermOrdKey(Term::symbol(":purged")), Term::Int(0.into()));
-                return Ok(Value::Data(Term::Map(m)));
+                return Ok(Value::data(Term::Map(m)));
             }
 
             let now = std::time::SystemTime::now();
@@ -363,7 +363,7 @@ pub(super) fn capability_gc_gpk_low(
                 TermOrdKey(Term::symbol(":purged")),
                 Term::Int((purged as i64).into()),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/gpk-low::export" => {
             let mut ctx = gpk_ops::GpkDispatchCtx {

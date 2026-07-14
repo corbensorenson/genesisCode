@@ -17,6 +17,7 @@ mod runner_host_bridge;
 mod runner_io_ops;
 mod runner_pkg_payload;
 mod runner_plugin_schema;
+mod runner_process_control;
 mod runner_refs_ops;
 mod runner_store_ops;
 mod runner_sync_payload;
@@ -28,7 +29,10 @@ mod runner_xr_host;
 mod store;
 
 pub use crate::error::EffectsError;
-pub use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
+pub use crate::log::{
+    Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, GCLOG_LEGACY_VERSION,
+    GCLOG_PROFILE_ID, LoggedResp,
+};
 pub use crate::policy::{CapsPolicy, OpPolicy};
 pub use crate::refs::{RefEntry, RefsDb, SetResult};
 pub use crate::runner::{RunResult, replay, replay_with_store, run};

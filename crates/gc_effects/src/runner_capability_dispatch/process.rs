@@ -65,7 +65,7 @@ pub(super) fn capability_sys_process_spawn_or_exec(
         ));
     }
     match call_host_bridge("process", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -86,7 +86,7 @@ pub(super) fn capability_sys_process_wait_or_kill(
         ));
     }
     match call_host_bridge("process", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -108,7 +108,7 @@ pub(super) fn capability_sys_process_stdin_write(
         ));
     }
     match call_host_bridge("process", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }

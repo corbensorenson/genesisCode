@@ -1,0 +1,163 @@
+{
+  "schema": "genesis/version-surfaces-v0.1",
+  "release_train": "0.2.0",
+  "policy": {
+    "current_writer_only": true,
+    "future_versions": "reject",
+    "missing_discriminator": "reject-except-named-migration",
+    "legacy_reader_rule": "every non-current accepted value requires a migration record and regression test"
+  },
+  "surfaces": [
+    {
+      "id": "product-release",
+      "kind": "semver",
+      "discriminator": "Cargo package version and CLI --version",
+      "current_writer": "0.2.0",
+      "accepted_readers": ["0.2.0"],
+      "authorities": ["Cargo.toml", "crates/gc_cli_driver/src/cli_args.rs", "crates/gc_cli/Cargo.toml", "crates/gc_wasi_cli/Cargo.toml"],
+      "specs": ["docs/spec/VERSIONING_v0.1.md", "docs/spec/RELEASE_SMOKE_v0.1.md"],
+      "migrations": []
+    },
+    {
+      "id": "package-manifest",
+      "kind": "toml-schema",
+      "discriminator": "top-level schema",
+      "current_writer": "1",
+      "accepted_readers": ["pre-schema", "1"],
+      "authorities": ["crates/gc_pkg/src/manifest.rs", "crates/gc_cli_driver/src/pkg_scaffold.rs"],
+      "specs": ["docs/spec/PACKAGE_TOML.md"],
+      "migrations": ["M-PACKAGE-PRESCHEMA-TO-1"]
+    },
+    {
+      "id": "workspace-config",
+      "kind": "toml-version",
+      "discriminator": "top-level version",
+      "current_writer": "1",
+      "accepted_readers": ["1"],
+      "authorities": ["crates/gc_pkg/src/workspace.rs"],
+      "specs": ["docs/spec/VERSION_SURFACES_v0.1.md"],
+      "migrations": []
+    },
+    {
+      "id": "genesis-lock",
+      "kind": "toml-version",
+      "discriminator": "top-level version",
+      "current_writer": "2",
+      "accepted_readers": ["1", "2"],
+      "authorities": ["crates/gc_pkg/src/lock.rs"],
+      "specs": ["docs/spec/VERSION_SURFACES_v0.1.md"],
+      "migrations": ["M-LOCK-1-TO-2"]
+    },
+    {
+      "id": "effect-log",
+      "kind": "coreform-version",
+      "discriminator": ":version",
+      "current_writer": "3",
+      "accepted_readers": ["2", "3"],
+      "authorities": ["crates/gc_effects/src/log.rs", "crates/gc_effects/src/runner.rs"],
+      "specs": ["docs/spec/GCLOG.md"],
+      "migrations": ["M-GCLOG-2-TO-3"]
+    },
+    {
+      "id": "gpk-bundle",
+      "kind": "binary-version",
+      "discriminator": "little-endian u32 after GPK\\0 magic",
+      "current_writer": "2",
+      "accepted_readers": ["1", "2"],
+      "authorities": ["crates/gc_vcs/src/gpk.rs", "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs"],
+      "specs": ["docs/spec/VERSION_SURFACES_v0.1.md"],
+      "migrations": ["M-GPK-1-TO-2"]
+    },
+    {
+      "id": "canonical-hash-profile",
+      "kind": "hash-domain",
+      "discriminator": "domain prefix",
+      "current_writer": "genesis/hash-profile/gcv0.2-blake3",
+      "accepted_readers": ["genesis/hash-profile/gcv0.2-blake3"],
+      "wire_identity": "GCv0.2\\0",
+      "authorities": ["crates/gc_coreform/src/term.rs"],
+      "specs": ["docs/spec/VALUE_EFFECT_HASH.md", "docs/spec/PACKAGE_TOML.md"],
+      "migrations": []
+    },
+    {
+      "id": "compiled-module-blob",
+      "kind": "binary-magic",
+      "discriminator": "leading magic",
+      "current_writer": "GCKM5\\0",
+      "accepted_readers": ["GCKM5\\0"],
+      "authorities": ["crates/gc_kernel/src/compiled.rs", "crates/gc_kernel/src/compiled_blob.rs"],
+      "specs": ["docs/spec/VERSION_SURFACES_v0.1.md"],
+      "migrations": []
+    },
+    {
+      "id": "selfhost-compiled-cache",
+      "kind": "binary-magic",
+      "discriminator": "leading magic",
+      "current_writer": "GCSHC1\\0",
+      "accepted_readers": ["GCSHC1\\0"],
+      "authorities": ["crates/gc_prelude/src/selfhost_coreform_v1.rs", "crates/gc_prelude/src/selfhost_compiled_cache.rs"],
+      "specs": ["docs/spec/VERSION_SURFACES_v0.1.md"],
+      "migrations": []
+    },
+    {
+      "id": "selfhost-toolchain-artifact",
+      "kind": "coreform-kind",
+      "discriminator": ":kind",
+      "current_writer": "genesis/selfhost-toolchain-artifact-v0.2",
+      "accepted_readers": ["genesis/selfhost-toolchain-artifact-v0.2"],
+      "authorities": ["crates/gc_prelude/src/selfhost_coreform_v1.rs", "selfhost/toolchain.gc"],
+      "specs": ["docs/spec/SELF_HOST_BOUNDARY.md", "docs/spec/VERSION_SURFACES_v0.1.md"],
+      "migrations": []
+    }
+  ],
+  "migrations": [
+    {
+      "id": "M-PACKAGE-PRESCHEMA-TO-1",
+      "surface": "package-manifest",
+      "from": "pre-schema",
+      "to": "1",
+      "reader": "Treat absence as schema 1 only; reject every explicit value other than 1.",
+      "writer": "Scaffolds and maintained repository manifests always emit schema = 1.",
+      "semantic_delta": "No package semantics change; the discriminator makes future evolution fail closed.",
+      "user_action": "Add schema = 1 as a top-level key.",
+      "tests": ["crates/gc_pkg/src/manifest.rs"],
+      "retirement": "Retain through the 0.x train; removal requires a major compatibility decision and corpus telemetry."
+    },
+    {
+      "id": "M-LOCK-1-TO-2",
+      "surface": "genesis-lock",
+      "from": "1",
+      "to": "2",
+      "reader": "Read explicit versions 1 and 2; never infer a missing version.",
+      "writer": "New locks emit version 2; v1 objects requiring v2 resolution metadata are promoted on canonical write.",
+      "semantic_delta": "Version 2 records source selectors, resolution strategies, tag policy, resolved refs, export hashes, and environment fingerprints.",
+      "user_action": "Run a lock-producing gcpm operation and review the canonical version 2 diff.",
+      "tests": ["crates/gc_pkg/src/lock.rs"],
+      "retirement": "Retain v1 reads through the 0.x train; remove only with an offline migrator and a release-note deprecation cycle."
+    },
+    {
+      "id": "M-GCLOG-2-TO-3",
+      "surface": "effect-log",
+      "from": "2",
+      "to": "3",
+      "reader": "Read explicit versions 2 and 3; never infer a missing :version.",
+      "writer": "Every runtime log emits version 3.",
+      "semantic_delta": "Version 3 binds the current value hash encoding and deterministic task scheduling metadata.",
+      "user_action": "Regenerate logs for archival provenance; replay may still consume explicit version 2 logs.",
+      "tests": ["crates/gc_effects/src/log.rs", "crates/gc_effects/src/tests.rs"],
+      "retirement": "Retain v2 replay through the 0.x train; removal requires an authenticated log migrator and golden replay corpus."
+    },
+    {
+      "id": "M-GPK-1-TO-2",
+      "surface": "gpk-bundle",
+      "from": "1",
+      "to": "2",
+      "reader": "Read explicit binary versions 1 and 2 under the same GPK magic.",
+      "writer": "Production exports always emit version 2, including a zero-count refs section.",
+      "semantic_delta": "Version 2 adds a deterministic, sorted refs section; payload object encoding is unchanged.",
+      "user_action": "Re-export a v1 bundle to obtain canonical v2; imports continue to accept v1.",
+      "tests": ["crates/gc_vcs/src/gpk.rs", "crates/gc_cli/tests/cli_pkg_gpk.rs"],
+      "retirement": "Retain v1 reads through the 0.x train; removal requires a streaming re-export tool and fixture census."
+    }
+  ]
+}

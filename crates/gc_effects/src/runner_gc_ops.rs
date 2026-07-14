@@ -98,8 +98,8 @@ pub(super) fn gpk_export_closure_local(
 
         let plan_term = helper_ref_plan_fn
             .clone()
-            .apply(&mut helper_ctx, Value::Data(t.clone()))
-            .and_then(|f| f.apply(&mut helper_ctx, Value::Data(opts_term)))
+            .apply(&mut helper_ctx, Value::data(t.clone()))
+            .and_then(|f| f.apply(&mut helper_ctx, Value::data(opts_term)))
             .map(|v| v.to_term_for_log(helper_ctx.protocol.map(|p| p.error)))
             .map_err(|e| {
                 mk_error(
@@ -333,12 +333,12 @@ pub(super) fn gc_roots_plan_from_sources(
     let plan_term = roots_plan_fn
         .apply(
             &mut helper_ctx,
-            Value::Data(Term::Vector(refs_entries.to_vec())),
+            Value::data(Term::Vector(refs_entries.to_vec())),
         )
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(lock_info.clone())))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(pins_info.clone())))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(Term::Bool(include_lock))))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(Term::Bool(include_refs))))
+        .and_then(|f| f.apply(&mut helper_ctx, Value::data(lock_info.clone())))
+        .and_then(|f| f.apply(&mut helper_ctx, Value::data(pins_info.clone())))
+        .and_then(|f| f.apply(&mut helper_ctx, Value::data(Term::Bool(include_lock))))
+        .and_then(|f| f.apply(&mut helper_ctx, Value::data(Term::Bool(include_refs))))
         .map(|v| v.to_term_for_log(helper_ctx.protocol.map(|p| p.error)))
         .map_err(|e| {
             mk_error(

@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 PATH_TO_CHECK="."
 MIN_FREE_KB="${GENESIS_MIN_FREE_KB:-1048576}" # 1 GiB default floor
 CONTEXT="${GENESIS_DISK_CHECK_CONTEXT:-genesis}"
-AUTO_RECLAIM="${GENESIS_DISK_AUTO_RECLAIM:-1}"
+AUTO_RECLAIM="${GENESIS_DISK_AUTO_RECLAIM:-0}"
 STRICT_MODE="${GENESIS_DISK_STRICT_MODE:-auto}"
 
 usage() {
@@ -18,7 +21,7 @@ Options:
   --path <dir>      filesystem path to check (default: .)
   --min-kb <N>      minimum free KB required (default: GENESIS_MIN_FREE_KB or 1048576)
   --context <name>  label used in diagnostics (default: genesis)
-  --auto-reclaim <0|1>  attempt scripts/reclaim_build_space.sh --safe once on low space (default: 1)
+  --auto-reclaim <0|1>  compatibility option; 1 is rejected because checks are read-only (default: 0)
   --strict <auto|0|1>   fail hard after retry (auto => CI=true only)
   -h, --help        show help
 EOF
@@ -66,6 +69,10 @@ done
   echo "check-disk-headroom: --auto-reclaim must be 0 or 1" >&2
   exit 2
 }
+if [[ "$AUTO_RECLAIM" == "1" ]]; then
+  echo "check-disk-headroom: checks are read-only; dry-run and review scripts/reclaim_build_space.sh --profile dev-clean, then execute the confirmed plan and rerun with --auto-reclaim 0" >&2
+  exit 2
+fi
 [[ "$STRICT_MODE" == "auto" || "$STRICT_MODE" == "0" || "$STRICT_MODE" == "1" ]] || {
   echo "check-disk-headroom: --strict must be auto, 0, or 1" >&2
   exit 2
@@ -97,16 +104,9 @@ fi
 FREE_KB="$(read_free_kb)"
 echo "${CONTEXT}: disk headroom precheck free_kb=${FREE_KB} required_kb=${MIN_FREE_KB}"
 
-if (( FREE_KB < MIN_FREE_KB )) && [[ "$AUTO_RECLAIM" == "1" ]]; then
-  echo "${CONTEXT}: low disk headroom detected; attempting one safe reclaim pass"
-  bash "$ROOT_DIR/scripts/reclaim_build_space.sh" --safe
-  FREE_KB="$(read_free_kb)"
-  echo "${CONTEXT}: disk headroom post-reclaim free_kb=${FREE_KB} required_kb=${MIN_FREE_KB}"
-fi
-
 if (( FREE_KB < MIN_FREE_KB )); then
-  echo "${CONTEXT}: insufficient disk headroom after retry: ${FREE_KB}KB free, need at least ${MIN_FREE_KB}KB." >&2
-  echo "${CONTEXT}: for deeper cleanup run scripts/reclaim_build_space.sh --aggressive." >&2
+  echo "${CONTEXT}: insufficient disk headroom: ${FREE_KB}KB free, need at least ${MIN_FREE_KB}KB." >&2
+  echo "${CONTEXT}: for cleanup, dry-run and review scripts/reclaim_build_space.sh --profile dev-clean, then execute the confirmed plan." >&2
   if [[ "$STRICT_MODE" == "1" ]]; then
     exit 2
   fi

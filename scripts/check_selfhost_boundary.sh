@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -78,6 +81,9 @@ resolve_base() {
   fi
 
   if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
+    if declare -F genesis_gate_telemetry_event >/dev/null 2>&1; then
+      genesis_gate_telemetry_event network-attempt 1
+    fi
     git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF" >/dev/null 2>&1 || true
     local mb
     mb="$(git merge-base HEAD "origin/${GITHUB_BASE_REF}" 2>/dev/null || true)"

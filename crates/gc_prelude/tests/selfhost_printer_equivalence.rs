@@ -72,16 +72,16 @@ fn selfhost_printer_matches_rust_canonical_printer_for_terms_and_modules() {
         let t = parse_term(t_src).unwrap();
         let got = print_term_fn
             .clone()
-            .apply(&mut ctx, Value::Data(t.clone()))
+            .apply(&mut ctx, Value::data(t.clone()))
             .unwrap();
-        let Value::Data(Term::Str(got_s)) = got else {
+        let Some(Term::Str(got_s)) = got.as_data() else {
             panic!(
                 "print-term must return string datum for case {t_src}, got {}",
                 got.debug_repr()
             );
         };
         let want_s = print_term(&t);
-        assert_eq!(got_s, want_s, "term case: {t_src}");
+        assert_eq!(got_s, &want_s, "term case: {t_src}");
     }
 
     let module_src = r#"
@@ -93,14 +93,14 @@ fn selfhost_printer_matches_rust_canonical_printer_for_terms_and_modules() {
     let module_term = Term::Vector(module_forms.clone());
     let got = print_module_fn
         .clone()
-        .apply(&mut ctx, Value::Data(module_term))
+        .apply(&mut ctx, Value::data(module_term))
         .unwrap();
-    let Value::Data(Term::Str(got_s)) = got else {
+    let Some(Term::Str(got_s)) = got.as_data() else {
         panic!(
             "print-module must return string datum, got {}",
             got.debug_repr()
         );
     };
     let want_s = print_module(&module_forms);
-    assert_eq!(got_s, want_s);
+    assert_eq!(got_s, &want_s);
 }

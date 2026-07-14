@@ -57,8 +57,15 @@ pub(super) fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, 
         ));
     }
     let expect = match m.get(&TermOrdKey(Term::symbol(":expect-h"))) {
-        Some(Value::Data(Term::Str(s))) => s.to_ascii_lowercase(),
-        Some(Value::Data(Term::Symbol(s))) => s.to_ascii_lowercase(),
+        Some(Value::Data(t)) => match t.as_ref() {
+            Term::Str(s) | Term::Symbol(s) => s.to_ascii_lowercase(),
+            _ => {
+                return Err(ObligationError::Test(format!(
+                    "golden entry :expect-h must be string/symbol, got {}",
+                    Value::Data(t.clone()).debug_repr()
+                )));
+            }
+        },
         Some(other) => {
             return Err(ObligationError::Test(format!(
                 "golden entry :expect-h must be string/symbol, got {}",
@@ -77,25 +84,25 @@ pub(super) fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, 
         ));
     }
     let expect_png_hash = match m.get(&TermOrdKey(Term::symbol(":expect-png-h"))) {
-        None | Some(Value::Data(Term::Nil)) => None,
-        Some(Value::Data(Term::Str(s))) => {
-            let h = s.to_ascii_lowercase();
-            if !is_hex32(&h) {
-                return Err(ObligationError::Test(
-                    "golden entry :expect-png-h must be 64 lowercase hex chars".to_string(),
-                ));
+        None => None,
+        Some(Value::Data(t)) => match t.as_ref() {
+            Term::Nil => None,
+            Term::Str(s) | Term::Symbol(s) => {
+                let h = s.to_ascii_lowercase();
+                if !is_hex32(&h) {
+                    return Err(ObligationError::Test(
+                        "golden entry :expect-png-h must be 64 lowercase hex chars".to_string(),
+                    ));
+                }
+                Some(h)
             }
-            Some(h)
-        }
-        Some(Value::Data(Term::Symbol(s))) => {
-            let h = s.to_ascii_lowercase();
-            if !is_hex32(&h) {
-                return Err(ObligationError::Test(
-                    "golden entry :expect-png-h must be 64 lowercase hex chars".to_string(),
-                ));
+            _ => {
+                return Err(ObligationError::Test(format!(
+                    "golden entry :expect-png-h must be string/symbol or nil, got {}",
+                    Value::Data(t.clone()).debug_repr()
+                )));
             }
-            Some(h)
-        }
+        },
         Some(other) => {
             return Err(ObligationError::Test(format!(
                 "golden entry :expect-png-h must be string/symbol or nil, got {}",
@@ -111,12 +118,20 @@ pub(super) fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, 
         ));
     }
     let kind = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
-        Some(Value::Data(Term::Symbol(s))) | Some(Value::Data(Term::Str(s))) => match s.as_str() {
-            ":frame-graph" | "frame-graph" => GfxGoldenKind::FrameGraph,
-            ":scene" | "scene" => GfxGoldenKind::Scene,
+        Some(Value::Data(t)) => match t.as_ref() {
+            Term::Symbol(s) | Term::Str(s) => match s.as_str() {
+                ":frame-graph" | "frame-graph" => GfxGoldenKind::FrameGraph,
+                ":scene" | "scene" => GfxGoldenKind::Scene,
+                _ => {
+                    return Err(ObligationError::Test(format!(
+                        "golden entry :kind must be :frame-graph or :scene, got {s}"
+                    )));
+                }
+            },
             _ => {
                 return Err(ObligationError::Test(format!(
-                    "golden entry :kind must be :frame-graph or :scene, got {s}"
+                    "golden entry :kind must be symbol/string, got {}",
+                    Value::Data(t.clone()).debug_repr()
                 )));
             }
         },
@@ -286,20 +301,24 @@ pub(super) fn is_hex32(s: &str) -> bool {
     s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
 }
 
-fn parse_u32_field(
-    m: &BTreeMap<TermOrdKey, Value>,
-    key: &str,
-) -> Result<Option<u32>, ObligationError> {
+fn parse_u32_field(m: &gc_kernel::ValueMap, key: &str) -> Result<Option<u32>, ObligationError> {
     match m.get(&TermOrdKey(Term::symbol(key))) {
-        None | Some(Value::Data(Term::Nil)) => Ok(None),
-        Some(Value::Data(Term::Int(i))) => {
-            let n = i.to_u64().ok_or_else(|| {
-                ObligationError::Test(format!("{key} must be a non-negative integer"))
-            })?;
-            let n = u32::try_from(n)
-                .map_err(|_| ObligationError::Test(format!("{key} exceeds u32 range")))?;
-            Ok(Some(n))
-        }
+        None => Ok(None),
+        Some(Value::Data(t)) => match t.as_ref() {
+            Term::Nil => Ok(None),
+            Term::Int(i) => {
+                let n = i.to_u64().ok_or_else(|| {
+                    ObligationError::Test(format!("{key} must be a non-negative integer"))
+                })?;
+                let n = u32::try_from(n)
+                    .map_err(|_| ObligationError::Test(format!("{key} exceeds u32 range")))?;
+                Ok(Some(n))
+            }
+            _ => Err(ObligationError::Test(format!(
+                "{key} must be int or nil, got {}",
+                Value::Data(t.clone()).debug_repr()
+            ))),
+        },
         Some(other) => Err(ObligationError::Test(format!(
             "{key} must be int or nil, got {}",
             other.debug_repr()

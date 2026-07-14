@@ -27,10 +27,19 @@ fn parse_error_code_at(e: &ParseError) -> (&'static str, usize) {
 
 fn arg_utf8_src(args: &[Value], idx: usize) -> Result<String, KernelError> {
     match args.get(idx) {
-        Some(Value::Data(Term::Str(s))) => Ok(s.clone()),
-        Some(Value::Data(Term::Bytes(bs))) => std::str::from_utf8(bs)
-            .map(str::to_owned)
-            .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string())),
+        Some(Value::Data(t)) => match t.as_ref() {
+            Term::Str(s) => Ok(s.clone()),
+            Term::Bytes(bs) => std::str::from_utf8(bs)
+                .map(str::to_owned)
+                .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string())),
+            _ => Err(KernelError::new(
+                KernelErrorKind::Type,
+                format!(
+                    "expected utf8 string or bytes, got {}",
+                    Value::Data(t.clone()).debug_repr()
+                ),
+            )),
+        },
         Some(other) => Err(KernelError::new(
             KernelErrorKind::Type,
             format!("expected utf8 string or bytes, got {}", other.debug_repr()),
@@ -48,7 +57,15 @@ fn term_vec_from_value(v: &Value) -> Result<Vec<Term>, KernelError> {
             .iter()
             .map(value_to_data_term)
             .collect::<Result<Vec<_>, _>>(),
-        Value::Data(Term::Vector(xs)) => Ok(xs.clone()),
+        Value::Data(t) if matches!(t.as_ref(), Term::Vector(_)) => {
+            let Term::Vector(xs) = t.as_ref() else {
+                return Err(KernelError::new(
+                    KernelErrorKind::Type,
+                    "expected vector of terms",
+                ));
+            };
+            Ok(xs.clone())
+        }
         other => Err(KernelError::new(
             KernelErrorKind::Type,
             format!("expected vector of terms, got {}", other.debug_repr()),
@@ -65,7 +82,7 @@ pub(super) fn nf_coreform_parse_term(
         Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
     };
     match parse_term(&src) {
-        Ok(t) => Ok(Value::Data(t)),
+        Ok(t) => Ok(Value::data(t)),
         Err(e) => {
             let (code, at) = parse_error_code_at(&e);
             Ok(mk_error_with(ctx, code, e.to_string(), Some(at)))
@@ -82,7 +99,7 @@ pub(super) fn nf_coreform_parse_module(
         Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
     };
     match parse_module(&src) {
-        Ok(forms) => Ok(Value::Data(Term::Vector(forms))),
+        Ok(forms) => Ok(Value::data(Term::Vector(forms))),
         Err(e) => {
             let (code, at) = parse_error_code_at(&e);
             Ok(mk_error_with(ctx, code, e.to_string(), Some(at)))
@@ -107,7 +124,7 @@ pub(super) fn nf_coreform_canonicalize_module(
         Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
     };
     match canonicalize_module(forms) {
-        Ok(canon) => Ok(Value::Data(Term::Vector(canon))),
+        Ok(canon) => Ok(Value::data(Term::Vector(canon))),
         Err(e) => Ok(mk_error_with(ctx, "core/bad-form", e.to_string(), None)),
     }
 }
@@ -123,7 +140,7 @@ pub(super) fn nf_coreform_print_term(
         Ok(t) => t,
         Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
     };
-    Ok(Value::Data(Term::Str(print_term(&t))))
+    Ok(Value::data(Term::Str(print_term(&t))))
 }
 
 pub(super) fn nf_coreform_print_module(
@@ -137,7 +154,7 @@ pub(super) fn nf_coreform_print_module(
         Ok(x) => x,
         Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
     };
-    Ok(Value::Data(Term::Str(print_module(&forms))))
+    Ok(Value::data(Term::Str(print_module(&forms))))
 }
 
 pub(super) fn nf_coreform_fmt_module(
@@ -159,7 +176,7 @@ pub(super) fn nf_coreform_fmt_module(
         Ok(c) => c,
         Err(e) => return Ok(mk_error_with(ctx, "core/bad-form", e.to_string(), None)),
     };
-    Ok(Value::Data(Term::Str(print_module(&canon))))
+    Ok(Value::data(Term::Str(print_module(&canon))))
 }
 
 pub(super) fn nf_coreform_hash_term(
@@ -178,7 +195,7 @@ pub(super) fn nf_coreform_hash_term(
         Ok(x) => x,
         Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
     };
-    Ok(Value::Data(Term::Str(hex32(hash_term(&t)))))
+    Ok(Value::data(Term::Str(hex32(hash_term(&t)))))
 }
 
 pub(super) fn nf_coreform_hash_module(
@@ -197,7 +214,7 @@ pub(super) fn nf_coreform_hash_module(
         Ok(x) => x,
         Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
     };
-    Ok(Value::Data(Term::Str(hex32(hash_module(&forms)))))
+    Ok(Value::data(Term::Str(hex32(hash_module(&forms)))))
 }
 
 pub(super) fn nf_coreform_hash_module_src(
@@ -219,5 +236,5 @@ pub(super) fn nf_coreform_hash_module_src(
         Ok(c) => c,
         Err(e) => return Ok(mk_error_with(ctx, "core/bad-form", e.to_string(), None)),
     };
-    Ok(Value::Data(Term::Str(hex32(hash_module(&canon)))))
+    Ok(Value::data(Term::Str(hex32(hash_module(&canon)))))
 }

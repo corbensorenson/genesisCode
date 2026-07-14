@@ -1,0 +1,17 @@
+{
+  "aggregateSampleIntervalMs": 250,
+  "diskRoots": [
+    ".genesis/build",
+    ".genesis/perf",
+    "target"
+  ],
+  "eventKinds": [
+    "cache-hit",
+    "network-attempt"
+  ],
+  "kind": "genesis/gate-resource-telemetry-policy-v0.1",
+  "maxEventCount": 1000000,
+  "maxEventLineBytes": 128,
+  "sampleIntervalMs": 20,
+  "version": "0.1"
+}

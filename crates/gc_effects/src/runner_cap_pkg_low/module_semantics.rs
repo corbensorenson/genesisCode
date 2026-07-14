@@ -205,7 +205,7 @@ pub(super) fn handle_load_package(
         TermOrdKey(Term::symbol(":modules")),
         Term::Vector(modules_out),
     );
-    Ok(Value::Data(Term::Map(out)))
+    Ok(Value::data(Term::Map(out)))
 }
 
 pub(super) fn handle_snapshot(
@@ -402,5 +402,5 @@ pub(super) fn handle_snapshot(
         TermOrdKey(Term::Symbol(":modules".to_string())),
         Term::Vector(modules_out),
     );
-    Ok(Value::Data(Term::Map(out)))
+    Ok(Value::data(Term::Map(out)))
 }

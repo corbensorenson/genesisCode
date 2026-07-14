@@ -1,0 +1,113 @@
+{
+  "budgets": {
+    "GB-1": {
+      "compilation": false,
+      "maxAdditionalDiskBytes": 67108864,
+      "maxWarmDurationMs": 15000,
+      "network": "deny",
+      "subject": "static-gates"
+    },
+    "GB-2": {
+      "maxAdditionalDiskBytes": 1073741824,
+      "maxWarmDurationMs": 120000,
+      "network": "deny",
+      "subject": "changed-file-gate"
+    },
+    "GB-3": {
+      "maxAdditionalDiskBytes": 3221225472,
+      "maxWarmDurationMs": 480000,
+      "subject": "prepush-standard"
+    },
+    "GB-4": {
+      "maxArtifactBytes": 21474836480,
+      "maxReferenceDurationMs": 2700000,
+      "subject": "release-full"
+    },
+    "GB-5": {
+      "cleanupProfile": "dev-clean",
+      "maxNormalBuildBytes": 8589934592,
+      "maxPostCleanGeneratedBytes": 2147483648,
+      "subject": "development-footprint"
+    },
+    "GB-6": {
+      "compilerInvocation": false,
+      "maxOfflineDurationMs": 300000,
+      "network": "deny",
+      "subject": "prebuilt-evidence-verification"
+    },
+    "GB-7": {
+      "enforcementMilestone": "M3",
+      "maxProductionRustFileLines": 1000,
+      "maxSemanticCrateLines": 20000,
+      "subject": "source-concentration"
+    },
+    "GB-8": {
+      "minimumPython": "3.9",
+      "prerequisiteManifest": "genesis.prerequisites.json",
+      "subject": "fresh-clone-prerequisites",
+      "undeclaredPythonModules": 0
+    }
+  },
+  "kind": "genesis/engineering-gate-budget-policy-v0.1",
+  "panicAssurance": {
+    "compilerGate": "scripts/check_no_user_panics_compiler.sh",
+    "staticGate": "scripts/check_no_user_panics.sh"
+  },
+  "profileSubjects": {
+    "changedFileScript": "scripts/test_changed_fast.sh",
+    "evidenceVerifierScript": "scripts/verify_prebuilt_evidence_bundle.sh",
+    "profileRunner": "scripts/render_upgrade_plan_health_report.sh"
+  },
+  "roadmapTask": "R0.4.f",
+  "releaseFullOnlyGates": [
+    "scripts/check_agent_generative_workloads.sh",
+    "scripts/check_ai_iteration_slo.sh",
+    "scripts/check_domain_starter_registry_bootstrap.sh",
+    "scripts/check_gfx_runtime_profile.sh",
+    "scripts/check_gpu_gfx_headroom_conformance.sh",
+    "scripts/check_gpu_xr_productization_kits.sh",
+    "scripts/check_perf_budgets.sh",
+    "scripts/check_production_cli_help_surface.sh",
+    "scripts/check_runtime_backend_feature_matrix.sh",
+    "scripts/check_runtime_microbench_budgets.sh",
+    "scripts/check_source_decomposition_tracked_parity.sh",
+    "scripts/check_task_concurrency_stress.sh"
+  ],
+  "semanticCrateWaivers": [
+    {
+      "crate": "crates/gc_cli_driver",
+      "expiresAtMilestone": "M3",
+      "owner": "gc-cli-runtime",
+      "rationale": "The command and host orchestration crate is being decomposed behind tracked parity gates before M3."
+    },
+    {
+      "crate": "crates/gc_effects",
+      "expiresAtMilestone": "M3",
+      "owner": "effects-runtime",
+      "rationale": "Capability-family modules remain in one crate until the semantic dispatch boundaries are split before M3."
+    }
+  ],
+  "staticReclassifications": [
+    {
+      "entrypoint": "scripts/check_agent_generative_workloads.sh",
+      "kind": "benchmark",
+      "profile": "release-full"
+    },
+    {
+      "entrypoint": "scripts/check_docs_quickstart.sh",
+      "kind": "build",
+      "profile": "prepush-standard"
+    },
+    {
+      "entrypoint": "scripts/check_gfx_runtime_profile.sh",
+      "kind": "benchmark",
+      "profile": "release-full"
+    },
+    {
+      "entrypoint": "scripts/check_selfhost_boundary.sh",
+      "kind": "test",
+      "profile": "prepush-standard"
+    }
+  ],
+  "version": "0.1"
+}

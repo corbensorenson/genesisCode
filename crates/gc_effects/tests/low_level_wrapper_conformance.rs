@@ -10,7 +10,7 @@ fn sealed_error_code(value: &Value, error_tok: gc_kernel::SealId) -> Option<Stri
     if *token != error_tok {
         return None;
     }
-    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+    let Some(Term::Map(m)) = payload.as_ref().as_data() else {
         return None;
     };
     match m.get(&TermOrdKey(Term::symbol(":error/code"))) {
@@ -89,7 +89,7 @@ wasi_bridge_response = "{:ok true :process-id \"proc-1\" :backend \"bridge-proce
     assert_eq!(run_out.log.entries[0].op, "sys/process::spawn");
     assert_eq!(run_out.log.entries[0].decision, Decision::Allow);
 
-    let Value::Data(Term::Map(payload)) = &run_out.value else {
+    let Some(Term::Map(payload)) = run_out.value.as_data() else {
         panic!("expected map payload");
     };
     assert_eq!(

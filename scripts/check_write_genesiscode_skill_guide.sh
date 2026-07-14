@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -40,15 +43,24 @@ if missing:
     )
 
 required_refs = [
-    "/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-    "/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
-    "/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
-    "/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
+    "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+    "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+    "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+    "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+    "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
+    "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
+    "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
 ]
 missing_refs = [r for r in required_refs if r not in text]
 if missing_refs:
     raise SystemExit(
         "write-genesiscode-skill-guide: missing canonical reference(s): " + ", ".join(missing_refs)
+    )
+
+if "/Users/" in text:
+    raise SystemExit(
+        "write-genesiscode-skill-guide: canonical references must be repository-relative"
     )
 
 numbered = re.findall(r"^\d+\. ", text, flags=re.MULTILINE)

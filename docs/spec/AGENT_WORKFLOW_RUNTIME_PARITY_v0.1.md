@@ -11,15 +11,16 @@ This is a strict parity gate, not a smoke test.
 
 ## Runner
 
-- Script: `scripts/check_agent_workflow_runtime_parity.sh`
-- Primary report: `.genesis/perf/agent_workflow_runtime_parity_report.json`
-- History: `.genesis/perf/agent_workflow_runtime_parity_history.jsonl`
-- Mutation parity companion report: `.genesis/perf/agent_generative_workloads_parity_report.json`
+- Read-only check: `scripts/check_agent_workflow_runtime_parity.sh`
+- Explicit producer: `scripts/update_agent_workflow_runtime_parity_report.sh`
+- Optional primary report: `.genesis/perf/agent_workflow_runtime_parity_report.json`
+- Optional history: `.genesis/perf/agent_workflow_runtime_parity_history.jsonl`
+- Optional mutation parity companion report: `.genesis/perf/agent_generative_workloads_parity_report.json`
 - Default minimum history floor for p95 enforcement: `GENESIS_AGENT_PARITY_P95_MIN_SAMPLES=8`
 
 ## Inputs
 
-The parity runner executes `scripts/check_agent_reference_workflows.sh` twice in parallel:
+For a fresh run, the parity renderer executes the reference-workflow renderer twice in parallel:
 
 1. native lane (`runtime_profile = "native"`)
 2. wasi lane (`runtime_profile = "wasi-wasm-host-bridge"`)
@@ -27,9 +28,14 @@ The parity runner executes `scripts/check_agent_reference_workflows.sh` twice in
 Reference workflow set includes browser-runtime, XR runtime, and deployment lanes, so
 parity checks cover all platform runtime additions automatically via shared gauntlet inputs.
 
-After native/wasi gauntlets complete, parity runner invokes
-`scripts/check_agent_generative_workloads.sh` with both lane reports to verify replay-digest
+After native/wasi gauntlets complete, the parity renderer invokes the generative-workload
+renderer with both lane reports to verify replay-digest
 parity across deterministic mutation cases derived from the shared workflow pool.
+
+Validated retained native/WASI reports may be reused when their kind, profile,
+runtime profile, status, and freshness satisfy the reuse contract. Checks never
+refresh those retained reports; only the explicit producer retains fresh lane,
+generative, aggregate, and history outputs.
 
 Each lane emits a gauntlet report with per-workflow:
 

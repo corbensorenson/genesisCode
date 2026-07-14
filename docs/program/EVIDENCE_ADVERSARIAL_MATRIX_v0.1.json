@@ -1,0 +1,137 @@
+{
+  "controls": [
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "dirty source requires dirtyPathsDigest",
+      "fixture": "dirty-paths-digest-missing",
+      "id": "dirty-paths-digest-required",
+      "layer": "source-policy"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/json.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "duplicate JSON key",
+      "fixture": "bundle-duplicate-key",
+      "id": "duplicate-json-key",
+      "layer": "json-parser"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "source missing fields: dirtyPolicy",
+      "fixture": "dirty-policy-missing",
+      "id": "implicit-dirty-policy",
+      "layer": "source-policy"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "signature verification failed",
+      "fixture": "forged-signature",
+      "id": "invalid-signature",
+      "layer": "signature"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "bundle missing fields: kind",
+      "fixture": "bundle-missing-field",
+      "id": "missing-required-field",
+      "layer": "schema-profile"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "normalized relative path",
+      "fixture": "artifact-path-alias",
+      "id": "noncanonical-path-alias",
+      "layer": "artifact-path"
+    },
+    {
+      "authority": "crates/gc_effects/src/runner.rs",
+      "command": "cargo test -p gc_effects --lib replay_adversarial_matrix_rejects_reordered_and_altered_facts --locked --offline",
+      "expectedDiagnostic": "ReplayMismatch",
+      "fixture": "replay_adversarial_matrix_rejects_reordered_and_altered_facts",
+      "id": "replay-fact-mutation",
+      "layer": "replay"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "source repository URI does not match trust policy",
+      "fixture": "source-repository-stale",
+      "id": "stale-source-repository",
+      "layer": "source-policy"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "source revision does not match trust policy",
+      "fixture": "source-revision-stale",
+      "id": "stale-source-revision",
+      "layer": "source-policy"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "source tree digest does not match trust policy",
+      "fixture": "source-tree-stale",
+      "id": "stale-source-tree",
+      "layer": "source-policy"
+    },
+    {
+      "authority": "tools/genesis-evidence-verifier/src/verify.rs",
+      "command": "cargo test --manifest-path tools/genesis-evidence-verifier/Cargo.toml published_adversarial_vectors_fail_closed_at_expected_boundary --locked --offline",
+      "expectedDiagnostic": "bundle version: expected 0.1, observed 9.9",
+      "fixture": "bundle-version-unsupported",
+      "id": "unsupported-schema-version",
+      "layer": "schema-profile"
+    }
+  ],
+  "kind": "genesis/evidence-adversarial-matrix-v0.1",
+  "requirements": [
+    {
+      "controlIds": ["missing-required-field"],
+      "id": "missing-fields",
+      "statement": "Required evidence fields are rejected before trust decisions are evaluated."
+    },
+    {
+      "controlIds": ["duplicate-json-key"],
+      "id": "duplicate-keys",
+      "statement": "Duplicate JSON object keys are rejected before deserialization."
+    },
+    {
+      "controlIds": ["noncanonical-path-alias"],
+      "id": "path-aliases",
+      "statement": "Artifact paths have one canonical repository-relative spelling."
+    },
+    {
+      "controlIds": ["unsupported-schema-version"],
+      "id": "unsupported-schema-versions",
+      "statement": "Unsupported evidence versions fail closed rather than using compatibility inference."
+    },
+    {
+      "controlIds": ["replay-fact-mutation"],
+      "id": "reordered-altered-replay-facts",
+      "statement": "Reordering, truncating, extending, or altering executable replay facts is rejected."
+    },
+    {
+      "controlIds": ["invalid-signature"],
+      "id": "forged-signatures",
+      "statement": "Cryptographically invalid signatures cannot satisfy an authorized role or threshold."
+    },
+    {
+      "controlIds": ["stale-source-repository", "stale-source-revision", "stale-source-tree"],
+      "id": "stale-source-identities",
+      "statement": "Repository, revision, and source-tree identities must exactly match the out-of-band trust policy."
+    },
+    {
+      "controlIds": ["dirty-paths-digest-required", "implicit-dirty-policy"],
+      "id": "dirty-input-without-policy",
+      "statement": "Dirty input cannot be represented without an explicit policy and dirty-path digest."
+    }
+  ],
+  "roadmapTask": "R0.2.e",
+  "version": "0.1"
+}

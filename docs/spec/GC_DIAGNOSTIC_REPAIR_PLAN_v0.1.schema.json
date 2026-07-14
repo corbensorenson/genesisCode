@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-diagnostic-repair-plan-v0.1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "diagnostic_id", "catalog_identity_sha256", "action", "guardrails", "authorization", "policy_diff"],
+  "properties": {
+    "schema": {"const": "genesis/diagnostic-repair-plan-v0.1"},
+    "diagnostic_id": {"type": "string", "pattern": "^genesis/diagnostic/v1/[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"},
+    "catalog_identity_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "action": {"$ref": "#/$defs/action"},
+    "guardrails": {"$ref": "#/$defs/guardrails"},
+    "authorization": {"$ref": "#/$defs/authorization"},
+    "policy_diff": {
+      "oneOf": [{"type": "null"}, {"$ref": "#/$defs/policyDiff"}]
+    }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "kind", "policyEffect", "obligationEffect", "automaticEligible", "requiresReview", "preconditions", "postconditions"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "description": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["inspect", "verify-command", "source-patch", "effect-command", "policy-review"]},
+        "policyEffect": {"enum": ["none", "review-required"]},
+        "obligationEffect": {"enum": ["preserve", "rerun-required"]},
+        "automaticEligible": {"type": "boolean"},
+        "requiresReview": {"type": "boolean"},
+        "preconditions": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}},
+        "postconditions": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}},
+        "command": {"type": "string", "minLength": 1}
+      }
+    },
+    "guardrails": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "promptAuthority", "policyBroadening", "obligationSuppression", "automaticActionPolicy"],
+      "properties": {
+        "schema": {"const": "genesis/diagnostic-repair-guardrails-v0.1"},
+        "promptAuthority": {"const": "none"},
+        "policyBroadening": {"const": "separate-reviewed-diff"},
+        "obligationSuppression": {"const": "forbidden"},
+        "automaticActionPolicy": {"const": "catalog-eligible-only"}
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["automatic_allowed", "policy_change_allowed", "obligation_suppression_allowed", "requires_review", "requires_separate_policy_diff"],
+      "properties": {
+        "automatic_allowed": {"type": "boolean"},
+        "policy_change_allowed": {"const": false},
+        "obligation_suppression_allowed": {"const": false},
+        "requires_review": {"type": "boolean"},
+        "requires_separate_policy_diff": {"type": "boolean"}
+      }
+    },
+    "policyDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "status", "operation", "capability", "base_policy_identity_sha256", "requires_review", "auto_apply"],
+      "properties": {
+        "schema": {"const": "genesis/capability-policy-diff-v0.1"},
+        "status": {"const": "proposal"},
+        "operation": {"const": "add-allow"},
+        "capability": {"type": "string", "minLength": 1},
+        "base_policy_identity_sha256": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-f]{64}$"}]},
+        "requires_review": {"const": true},
+        "auto_apply": {"const": false}
+      }
+    }
+  }
+}

@@ -8,7 +8,8 @@ use anyhow::Context;
 use once_cell::sync::Lazy;
 
 use gc_coreform::{
-    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
+    HASH_DOMAIN_PREFIX, Term, TermOrdKey, canonicalize_module, hash_module, parse_module,
+    parse_term, print_term,
 };
 use gc_kernel::{
     CompiledModule, Env, EvalCtx, EvalObservedCounters, MemLimits, Value, compile_module,
@@ -30,7 +31,9 @@ const SELFHOST_TOOLCHAIN_EMBEDDED_ARTIFACT_SRC: &str =
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
 const SELFHOST_COMPILED_CACHE_DIR_ENV: &str = "GENESIS_SELFHOST_COMPILED_CACHE_DIR";
 const SELFHOST_COMPILED_CACHE_DISABLE_ENV: &str = "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE";
-const SELFHOST_TOOLCHAIN_ARTIFACT_KIND: &str = "genesis/selfhost-toolchain-artifact-v0.2";
+pub const BOOTSTRAP_PROFILE_ID: &str = "genesis/bootstrap-profile/v0.2";
+pub const SELFHOST_TOOLCHAIN_ARTIFACT_KIND: &str = "genesis/selfhost-toolchain-artifact-v0.2";
+pub const SELFHOST_TOOLCHAIN_ARTIFACT_VERSION: i64 = 1;
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const DEFAULT_SELFHOST_COMPILED_CACHE_REL: &str = ".genesis/cache/selfhost_compiled_v1";
 const SELFHOST_COMPILED_CACHE_FILE_MAGIC: &[u8] = b"GCSHC1\0";
@@ -284,7 +287,7 @@ fn set_bootstrap_evidence_binding(env: &mut Env, evidence: Term) {
     *env = Env::with_binding(
         env,
         SELFHOST_BOOTSTRAP_EVIDENCE_SYMBOL,
-        Value::Data(evidence),
+        Value::data(evidence),
     );
 }
 
@@ -383,7 +386,8 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
 ) -> anyhow::Result<()> {
     // Fast-path: reuse compiled modules for identical artifact bytes.
     let mut h = blake3::Hasher::new();
-    h.update(b"GCv0.2\0selfhost-artifact\0");
+    h.update(HASH_DOMAIN_PREFIX);
+    h.update(b"selfhost-artifact\0");
     h.update(src.as_bytes());
     let artifact_h: [u8; 32] = *h.finalize().as_bytes();
 
@@ -448,8 +452,10 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         Some(Term::Int(i)) => i,
         _ => return Err(anyhow::anyhow!("artifact missing :v int")),
     };
-    if v != &1.into() {
-        return Err(anyhow::anyhow!("artifact :v must be 1, got {v}"));
+    if v != &SELFHOST_TOOLCHAIN_ARTIFACT_VERSION.into() {
+        return Err(anyhow::anyhow!(
+            "artifact :v must be {SELFHOST_TOOLCHAIN_ARTIFACT_VERSION}, got {v}"
+        ));
     }
 
     let modules = match map_get(&root, ":modules") {

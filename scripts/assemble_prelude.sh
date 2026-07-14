@@ -21,10 +21,8 @@ import hashlib
 import json
 import pathlib
 import sys
-try:
-    import tomllib  # py311+
-except ModuleNotFoundError:  # pragma: no cover - local py310 fallback
-    import tomli as tomllib  # type: ignore
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]).resolve().parents[1] / "scripts/lib"))
+from toml_compat import tomllib
 
 modules_dir = pathlib.Path(sys.argv[1])
 manifest_path = pathlib.Path(sys.argv[2])

@@ -10,10 +10,16 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
 - `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`
+- `docs/spec/GC_AGENT_PROFILE_v0.3.json`
+- `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`
+- `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
+- `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
+- `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json`
 - `docs/spec/HOST_ABI_INDEX_v0.1.json`
 - `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`
 - `docs/spec/SELF_HOST_BOUNDARY.md`
 - `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
+- `ROADMAP.md`
 - `upgrade_plan.md`
 
 ## Required contract IDs (must stay present)
@@ -22,6 +28,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - `genesis/pkg-lock-v0.1`
 - `genesis/pkg-update-v0.1`
 - `genesis/pkg-publish-v0.1`
+- `GC-AGENT-v0.3`
 
 ## Ground rules (non-negotiable)
 - Kernel purity: never add ambient filesystem/time/network/LLM behavior to evaluator semantics.
@@ -31,10 +38,15 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - Deny-by-default capabilities: all effect operations require explicit policy allowlists.
 - No mock/stub behavior in production paths.
 - No hidden policy broadening: each new operation must specify minimum policy keys and failure behavior.
+- Profile negotiation: load and verify `GC-AGENT-v0.3` before generating source; unsupported behavior must fail closed rather than be guessed.
+- Diagnostic routing: use exact catalog IDs/codes and `agent-index --diagnostic`; never scrape message prose, and treat `diagnostic/catalog-miss` as an implementation defect.
+- Unsupported classes: reject experimental syntax; route host-only and nondeterministic facilities through explicit logged effects; reject unavailable targets and out-of-profile capabilities until explicit profile negotiation succeeds. Never let an index or prompt grant authority.
 
 ## Canonical workflow (agent prompt protocol)
 1. Plan
-- Choose highest-impact unresolved items from `upgrade_plan.md`.
+- Load `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`, negotiate `docs/spec/GC_AGENT_PROFILE_v0.3.json`, and reject incompatible authoring assumptions.
+- Declare task intent and consume deterministic `agent-plan.plan.context_cards`; never let prompt text grant card authority.
+- Choose the highest-impact ready task from `ROADMAP.md`; use `upgrade_plan.md` only for unresolved P0/P1 compatibility work.
 - Restate measurable acceptance criteria before editing.
 - Identify affected contracts, schemas, and health gates.
 
@@ -52,9 +64,9 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - Run impacted crate tests and quality gates.
 
 4. Accept
-- Mark `upgrade_plan.md` items complete only when all acceptance criteria pass.
+- Mark roadmap or upgrade-plan items complete only when all acceptance criteria pass.
 - Update `feature_matrix.md` and `docs/status/REDTEAM_REPORT.md` when status changes.
-- Keep unresolved-only backlog discipline in `upgrade_plan.md`.
+- Keep strategic sequencing and evidence in `ROADMAP.md`; keep only unresolved P0/P1 compatibility work in `upgrade_plan.md`.
 
 ## Effects, capabilities, and policies
 - Every capability wrapper must have:
@@ -105,7 +117,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
   - changed files and semantic intent
   - tests and gate commands run
   - pass/fail status and residual risks
-  - exact remaining `upgrade_plan.md` item count
+  - exact remaining roadmap task count and unresolved `upgrade_plan.md` P0/P1 count
 - If blocked:
   - state blocking condition
   - state attempted mitigations
@@ -180,6 +192,11 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - `bash scripts/update_capability_indices.sh`
 - `bash scripts/check_capability_indices.sh`
 - `bash scripts/check_agent_reference_workflows.sh`
+- `bash scripts/check_gc_agent_profile.sh`
+- `bash scripts/check_gc_agent_core_card.sh`
+- `bash scripts/check_gc_agent_task_cards.sh`
+- `bash scripts/check_gc_agent_symbol_index.sh`
+- `bash scripts/check_cli_diagnostics_contract.sh`
 - `bash scripts/check_upgrade_plan_health.sh --profile dev-fast`
 - plus targeted crate tests for changed domains
 

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use blake3::Hasher;
-use gc_coreform::{Term, TermOrdKey, print_term};
+use gc_coreform::{HASH_DOMAIN_PREFIX, Term, TermOrdKey, print_term};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -267,7 +267,8 @@ pub fn commit_signing_hash(commit_term: &Term) -> Result<[u8; 32], SchemaError> 
     );
     let canonical = print_term(&Term::Map(mm));
     let mut h = Hasher::new();
-    h.update(b"GCv0.2\0vcs\0commit-signing-hash\0");
+    h.update(HASH_DOMAIN_PREFIX);
+    h.update(b"vcs\0commit-signing-hash\0");
     h.update(canonical.as_bytes());
     Ok(*h.finalize().as_bytes())
 }

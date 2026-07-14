@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/deterministic-cleanup-result-v0.1.json",
+  "title": "GenesisCode Deterministic Cleanup Result v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "status", "planSha256", "deletedRoots", "deletedAllocatedBytes", "deletedLogicalBytes"],
+  "properties": {
+    "kind": {"const": "genesis/deterministic-cleanup-result-v0.1"},
+    "version": {"const": "0.1"},
+    "status": {"const": "executed"},
+    "planSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "deletedRoots": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"}
+    },
+    "deletedAllocatedBytes": {"type": "integer", "minimum": 0},
+    "deletedLogicalBytes": {"type": "integer", "minimum": 0}
+  }
+}

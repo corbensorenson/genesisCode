@@ -22,8 +22,10 @@ members = [
 ]
 
 [workspace.package]
+version = "0.2.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
+publish = false
 
 [workspace.dependencies]
 anyhow = "1"
@@ -48,6 +50,8 @@ wasm-encoder = "0.245"
 wasmi = "1.0"
 sha2 = "0.10"
 semver = "1"
+rpds = "1.2.1"
+url = "2"
 
 [profile.selfhost-strict]
 inherits = "test"

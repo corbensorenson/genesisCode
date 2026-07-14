@@ -231,3 +231,30 @@ pub(super) fn write_compiled_cache(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use gc_coreform::Term;
+    use gc_kernel::compile_module;
+
+    use super::{ToolchainManifest, decode_compiled_cache_blob, encode_compiled_cache_blob};
+
+    #[test]
+    fn cache_writer_emits_current_magic() {
+        let forms: Vec<Term> = Vec::new();
+        let modules = vec![("empty.gc".to_string(), compile_module(&forms).unwrap())];
+        let bytes = encode_compiled_cache_blob([9; 32], &modules).unwrap();
+        assert!(bytes.starts_with(b"GCSHC1\0"));
+
+        let manifest = ToolchainManifest {
+            module_paths: vec!["empty.gc".to_string()],
+            required_symbols: Vec::new(),
+        };
+        let mut obsolete = bytes;
+        obsolete[..7].copy_from_slice(b"GCSHC0\0");
+        let error = decode_compiled_cache_blob(&obsolete, [9; 32], &manifest)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("magic mismatch"), "{error}");
+    }
+}

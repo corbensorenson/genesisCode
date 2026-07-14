@@ -105,7 +105,7 @@ fn gfx_and_gpu_ops_use_first_party_backends_without_bridge_policy() {
         "gc_effects-test".to_string(),
     )
     .expect("run gfx/window");
-    let Value::Data(Term::Map(mm)) = out_window.value else {
+    let Some(Term::Map(mm)) = out_window.value.as_data() else {
         panic!(
             "gfx/window should use first-party backend without bridge policy, got {}",
             out_window.value.debug_repr()
@@ -135,7 +135,7 @@ fn gfx_and_gpu_ops_use_first_party_backends_without_bridge_policy() {
         "gc_effects-test".to_string(),
     )
     .expect("run gfx/gpu");
-    let Value::Data(Term::Map(mm)) = out_gpu.value else {
+    let Some(Term::Map(mm)) = out_gpu.value.as_data() else {
         panic!(
             "gfx/gpu should use first-party backend without bridge policy, got {}",
             out_gpu.value.debug_repr()
@@ -165,7 +165,7 @@ fn gfx_and_gpu_ops_use_first_party_backends_without_bridge_policy() {
         "gc_effects-test".to_string(),
     )
     .expect("run gpu/compute");
-    let Value::Data(Term::Map(mm)) = out_compute.value else {
+    let Some(Term::Map(mm)) = out_compute.value.as_data() else {
         panic!(
             "gpu/compute should use first-party backend without bridge policy, got {}",
             out_compute.value.debug_repr()
@@ -292,7 +292,7 @@ timeout_ms = 10
         panic!("timeout must return sealed error");
     };
     assert_eq!(token, error_tok);
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("sealed error map expected");
     };
     assert_eq!(
@@ -339,7 +339,7 @@ max_bytes = 8
         panic!("max-bytes must return sealed error");
     };
     assert_eq!(token, error_tok);
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("sealed error map expected");
     };
     assert_eq!(
@@ -386,7 +386,7 @@ bridge_cmd_allowlist = ["different_bridge.sh"]
         panic!("allowlist mismatch must return sealed error");
     };
     assert_eq!(token, error_tok);
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("sealed error map expected");
     };
     assert_eq!(
@@ -433,7 +433,7 @@ bridge_cmd_sha256 = "sha256:0000000000000000000000000000000000000000000000000000
         panic!("hash mismatch must return sealed error");
     };
     assert_eq!(token, error_tok);
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("sealed error map expected");
     };
     assert_eq!(
@@ -503,7 +503,7 @@ wasi_bridge_response = "{:ok true :source :wasi-profile}"
     let mut ctx1 = EvalCtx::new();
     let (prog1, h) = parse_and_eval(&mut ctx1, src);
     let out = run(&mut ctx1, &policy, prog1, h, "gc_effects-test".to_string()).expect("run");
-    let Value::Data(Term::Map(mm)) = &out.value else {
+    let Some(Term::Map(mm)) = out.value.as_data() else {
         panic!("wasi bridge profile response should be data map");
     };
     assert_eq!(

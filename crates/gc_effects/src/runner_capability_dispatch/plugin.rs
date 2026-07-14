@@ -196,7 +196,7 @@ pub(super) fn capability_host_plugin_command(
                     Some(op),
                 ));
             }
-            Ok(Value::Data(resp))
+            Ok(Value::data(resp))
         }
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }

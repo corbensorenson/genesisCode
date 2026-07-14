@@ -69,7 +69,7 @@ pub(super) fn dispatch_patch_contract(
                 TermOrdKey(Term::symbol(":values")),
                 Term::Vector(values.into_iter().map(Term::Str).collect()),
             );
-            Ok(Value::Data(Term::Map(out)))
+            Ok(Value::data(Term::Map(out)))
         }
         "core/vcs-low::apply-patch" => {
             let store = store.ok_or_else(|| {
@@ -121,7 +121,7 @@ pub(super) fn dispatch_patch_contract(
             let mut out = BTreeMap::new();
             out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             out.insert(TermOrdKey(Term::symbol(":snapshot-term")), snapshot_t);
-            Ok(Value::Data(Term::Map(out)))
+            Ok(Value::data(Term::Map(out)))
         }
         "core/vcs-low::merge3-contract-snapshots" => Ok(
             merge_ops::handle_merge3_contract_snapshots(payload, error_tok, op),

@@ -48,6 +48,11 @@ cargo build -p gc_cli --no-default-features --features profile-backend
 - `gcpm env` runtime backend contract mapping under each profile build
   (`gcpm_env_runtime_backend_profile_contract_is_machine_readable`).
 
+The guard renders its report and history into a private temporary directory.
+Use `scripts/update_runtime_backend_feature_matrix_report.sh` when retained E0
+evidence is required; CI uses that explicit producer before downstream skill
+conformance consumes the report.
+
 ## GCPM Integration
 
 `genesis gcpm` workspace/profile descriptors can carry runtime backend contracts:

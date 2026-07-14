@@ -1,0 +1,23 @@
+{
+  "exampleIds": {
+    "negative": [
+      "eval-unbound-symbol",
+      "step-limit",
+      "vector-limit"
+    ],
+    "positive": [
+      "eval-arithmetic",
+      "eval-lexical-closure",
+      "eval-effect-program"
+    ]
+  },
+  "kind": "genesis/gc-agent-core-card-policy-v0.3",
+  "maxAsciiBytes": 4000,
+  "outputs": {
+    "card": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+    "manifest": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json"
+  },
+  "profile": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+  "profileId": "GC-AGENT-v0.3",
+  "version": "0.3"
+}

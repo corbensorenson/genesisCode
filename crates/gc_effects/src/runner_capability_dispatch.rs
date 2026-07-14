@@ -475,7 +475,7 @@ pub(super) fn call_capability(
                         .as_millis())
                 })?;
                 return Ok(match r {
-                    Some(t) => Value::Data(Term::Int(BigInt::from(t))),
+                    Some(t) => Value::data(Term::Int(BigInt::from(t))),
                     None => mk_error(
                         error_tok,
                         "core/caps/timeout",
@@ -488,7 +488,7 @@ pub(super) fn call_capability(
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis();
-            Ok(Value::Data(Term::Int(BigInt::from(t))))
+            Ok(Value::data(Term::Int(BigInt::from(t))))
         }
         "gfx/time::frame-tick" => {
             if let Some(ms) = timeout_ms {
@@ -505,7 +505,7 @@ pub(super) fn call_capability(
                             TermOrdKey(Term::Symbol(":time-ms".to_string())),
                             Term::Int(BigInt::from(t)),
                         );
-                        Value::Data(Term::Map(m))
+                        Value::data(Term::Map(m))
                     }
                     None => mk_error(
                         error_tok,
@@ -524,7 +524,7 @@ pub(super) fn call_capability(
                 TermOrdKey(Term::Symbol(":time-ms".to_string())),
                 Term::Int(BigInt::from(t)),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "io/fs::read" => {
             let path_s = payload_path(payload)?;
@@ -546,10 +546,10 @@ pub(super) fn call_capability(
                     Ok((path, bytes))
                 })?;
                 return Ok(match r {
-                    Some((_path, Ok(bytes))) => Value::Data(Term::Bytes(bytes.into())),
+                    Some((_path, Ok(bytes))) => Value::data(Term::Bytes(bytes.into())),
                     Some((path, Err(FsReadError::Io(e)))) => Value::Sealed {
                         token: error_tok,
-                        payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+                        payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
                     },
                     Some((path, Err(FsReadError::LimitExceeded { observed, limit }))) => {
                         mk_error_with_ctx(
@@ -593,10 +593,10 @@ pub(super) fn call_capability(
             }
             let path = sandbox_path_read(&base_dir, &path_s)?;
             match read_file_with_optional_limit(&path, max_read_bytes, None) {
-                Ok(bytes) => Ok(Value::Data(Term::Bytes(bytes.into()))),
+                Ok(bytes) => Ok(Value::data(Term::Bytes(bytes.into()))),
                 Err(FsReadError::Io(e)) => Ok(Value::Sealed {
                     token: error_tok,
-                    payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+                    payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
                 }),
                 Err(FsReadError::LimitExceeded { observed, limit }) => Ok(mk_error_with_ctx(
                     error_tok,
@@ -635,10 +635,10 @@ pub(super) fn call_capability(
             let create_dirs = pol.is_some_and(|p| p.create_dirs);
             let path = sandbox_path_write(&base_dir, &path_s, create_dirs)?;
             match write_file_no_follow(&path, &data) {
-                Ok(()) => Ok(Value::Data(Term::Nil)),
+                Ok(()) => Ok(Value::data(Term::Nil)),
                 Err(e) => Ok(Value::Sealed {
                     token: error_tok,
-                    payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+                    payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
                 }),
             }
         }

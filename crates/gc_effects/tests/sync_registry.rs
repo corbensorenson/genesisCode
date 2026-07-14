@@ -891,7 +891,7 @@ fn is_sealed_error(ctx: &EvalCtx, v: &Value, code: &str) -> bool {
     if *token != proto.error {
         return false;
     }
-    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+    let Some(Term::Map(m)) = payload.as_ref().as_data() else {
         return false;
     };
     matches!(

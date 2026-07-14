@@ -7,17 +7,17 @@ This document defines maintainability boundaries for source-of-truth `.gc` modul
 Applies to:
 
 - all `.gc` paths resolved from policy `gc_source_roots` (directories scanned recursively):
-  - `/Users/corbensorenson/Documents/genesisCode/prelude/modules`
-  - `/Users/corbensorenson/Documents/genesisCode/selfhost`
-  - `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc`
+  - `prelude/modules`
+  - `selfhost`
+  - `prelude/prelude.gc`
 
 Generated artifacts are excluded:
 
-- policy allowlist `gc_generated_exclude_paths` (currently `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc`)
+- policy allowlist `gc_generated_exclude_paths` (currently `prelude/prelude.gc`)
 
 Notes:
 
-- `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain.gc` remains a generated assembly artifact, but is now emitted in compact CoreForm form and stays within enforced `.gc` line budgets (no policy carve-out).
+- `selfhost/toolchain.gc` remains a generated assembly artifact, but is now emitted in compact CoreForm form and stays within enforced `.gc` line budgets (no policy carve-out).
 - `gc_prelude` bootstrap now assembles embedded prelude source from `prelude/modules/manifest.toml` at build time; runtime no longer consumes `prelude/prelude.gc` as its source of truth.
 
 ## Boundary Rules
@@ -38,8 +38,8 @@ Notes:
 
 `.gc` source budgets are enforced by:
 
-- `/Users/corbensorenson/Documents/genesisCode/scripts/check_gc_source_size_budget.sh`
-- policy file: `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml`
+- `scripts/check_gc_source_size_budget.sh`
+- policy file: `policies/source_size_budget.toml`
 
 Current policy tracks:
 
@@ -62,11 +62,21 @@ explicit closure-plan rows in `tracked_over_budget_rows` (in
   - `waiver_owner`
   - `waiver_scope` (bounded ownership surface)
   - `waiver_rationale`
-  - `waiver_review_by` (`YYYY-MM-DD`)
+  - `waiver_review_by` (`YYYY-MM-DD`, must not precede the gate review date)
 
 `scripts/check_source_decomposition_progress.sh` fails closed when any over-budget
 production file is neither decomposed nor represented by one of these explicit
-closure-plan rows.
+closure-plan rows. The check renders only to a private temporary path; use
+`scripts/update_source_decomposition_progress_report.sh` when a retained local
+E0 report is required.
+
+`scripts/check_source_decomposition_tracked_parity.sh` executes every reviewed
+parity command and rejects expired waivers using the UTC review date. Override
+`GENESIS_SOURCE_DECOMPOSITION_REVIEW_DATE` only for deterministic historical
+replay. Retained command diagnostics canonicalize workspace, temporary, home,
+and platform drive roots so the E0 report does not disclose or depend on the
+producing host's absolute paths. Retain the parity observation only with
+`scripts/update_source_decomposition_tracked_parity_report.sh`.
 
 ## AI-First Rationale
 
@@ -83,7 +93,7 @@ Phase model:
 - `phase-0`: extraction planning complete, no behavior moved yet.
 - `phase-1`: shared contract/data model moved to GC modules with parity harness checks.
 - `phase-2`: runtime dispatch moved to GC-first path, Rust path retained as parity-only sidecar.
-- `phase-3`: Rust implementation removed from production path; historical logic archived under `old_bootstrap/` or parity-only test harnesses.
+- `phase-3`: Rust implementation removed from production path; historical logic archived under the legacy bootstrap archive or parity-only test harnesses.
 
 | Rust module | Target GC module(s) | Parity evidence gate | Phase | Status |
 |---|---|---|---|---|

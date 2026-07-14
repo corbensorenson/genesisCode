@@ -13,12 +13,13 @@ pub(super) fn unseal_effect_request(
     let Value::EffectRequest(r) = payload.as_ref() else {
         return Err(EffectsError::BadEffectSeal);
     };
-    Ok((r.clone(), *token))
+    Ok((r.as_ref().clone(), *token))
 }
 
 pub(super) fn hash_request(op: &str, payload_h: [u8; 32], cont_h: [u8; 32]) -> [u8; 32] {
     let mut h = Hasher::new();
-    h.update(b"GCv0.2\0effect-req\0");
+    h.update(HASH_DOMAIN_PREFIX);
+    h.update(b"effect-req\0");
     h.update(op.as_bytes());
     h.update(b"\0");
     h.update(&payload_h);
@@ -66,7 +67,7 @@ pub(super) fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&s
     );
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(m))),
+        payload: Box::new(Value::data(Term::Map(m))),
     }
 }
 
@@ -83,7 +84,7 @@ pub(super) fn mk_error_with_ctx(
         other => {
             return Value::Sealed {
                 token: error_tok,
-                payload: Box::new(Value::Data(Term::Map(
+                payload: Box::new(Value::data(Term::Map(
                     [
                         (
                             TermOrdKey(Term::Symbol(":error/code".to_string())),
@@ -103,11 +104,22 @@ pub(super) fn mk_error_with_ctx(
             };
         }
     };
-    let Value::Data(Term::Map(mut m)) = *payload else {
-        return Value::Sealed {
-            token,
-            payload: Box::new(Value::Data(Term::Map(BTreeMap::new()))),
-        };
+    let mut m = match payload.as_ref() {
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(m) => m.clone(),
+            _ => {
+                return Value::Sealed {
+                    token,
+                    payload: Box::new(Value::data(Term::Map(BTreeMap::new()))),
+                };
+            }
+        },
+        _ => {
+            return Value::Sealed {
+                token,
+                payload: Box::new(Value::data(Term::Map(BTreeMap::new()))),
+            };
+        }
     };
     let mut ctxm = match m.remove(&TermOrdKey(Term::Symbol(":error/context".to_string()))) {
         Some(Term::Map(mm)) => mm,
@@ -124,7 +136,7 @@ pub(super) fn mk_error_with_ctx(
     );
     Value::Sealed {
         token,
-        payload: Box::new(Value::Data(Term::Map(m))),
+        payload: Box::new(Value::data(Term::Map(m))),
     }
 }
 
@@ -141,14 +153,14 @@ pub(super) fn logged_resp(
 
 pub(super) fn logged_resp_inline(v: &Value, error_tok: SealId) -> Result<LoggedResp, EffectsError> {
     match v {
-        Value::Data(t) => Ok(LoggedResp::Ok(t.clone())),
+        Value::Data(t) => Ok(LoggedResp::Ok(t.as_ref().clone())),
         Value::Sealed { token, payload } if *token == error_tok => {
             let Value::Data(t) = payload.as_ref() else {
                 return Err(EffectsError::Log(
                     "sealed ERROR payload must be a datum for logging".to_string(),
                 ));
             };
-            Ok(LoggedResp::Error(t.clone()))
+            Ok(LoggedResp::Error(t.as_ref().clone()))
         }
         _ => Err(EffectsError::Log(format!(
             "response not serializable: {}",
@@ -217,10 +229,10 @@ pub(super) fn resp_from_log(
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     match resp {
-        LoggedResp::Ok(t) => Ok(Value::Data(t.clone())),
+        LoggedResp::Ok(t) => Ok(Value::data(t.clone())),
         LoggedResp::Error(payload) => Ok(Value::Sealed {
             token: error_tok,
-            payload: Box::new(Value::Data(payload.clone())),
+            payload: Box::new(Value::data(payload.clone())),
         }),
         LoggedResp::OkArtifact { artifact } => {
             let store = store.ok_or_else(|| {
@@ -232,7 +244,7 @@ pub(super) fn resp_from_log(
             })?;
             let t = gc_coreform::parse_term(&s)
                 .map_err(|e| EffectsError::ReplayMismatch(format!("bad artifact term: {e}")))?;
-            Ok(Value::Data(t))
+            Ok(Value::data(t))
         }
         LoggedResp::ErrorArtifact { artifact } => {
             let store = store.ok_or_else(|| {
@@ -248,7 +260,7 @@ pub(super) fn resp_from_log(
                 .map_err(|e| EffectsError::ReplayMismatch(format!("bad artifact term: {e}")))?;
             Ok(Value::Sealed {
                 token: error_tok,
-                payload: Box::new(Value::Data(t)),
+                payload: Box::new(Value::data(t)),
             })
         }
         LoggedResp::OkBytesArtifact { artifact } => {
@@ -258,7 +270,7 @@ pub(super) fn resp_from_log(
                 )
             })?;
             let bytes = store.get_bytes(artifact)?;
-            Ok(Value::Data(Term::Bytes(bytes.into())))
+            Ok(Value::data(Term::Bytes(bytes.into())))
         }
         LoggedResp::ErrorBytesArtifact { artifact } => {
             let store = store.ok_or_else(|| {
@@ -269,7 +281,7 @@ pub(super) fn resp_from_log(
             let bytes = store.get_bytes(artifact)?;
             Ok(Value::Sealed {
                 token: error_tok,
-                payload: Box::new(Value::Data(Term::Bytes(bytes.into()))),
+                payload: Box::new(Value::data(Term::Bytes(bytes.into()))),
             })
         }
     }

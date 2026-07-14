@@ -1,0 +1,348 @@
+{
+  "kind": "genesis/v1-compatibility-registry-v0.1",
+  "version": "0.1",
+  "namespace": "genesis/compat/v1",
+  "releaseClaim": "reserved-not-stable",
+  "stabilizationTask": "R9.1.a",
+  "policy": {
+    "candidateChange": "A candidate binding may change before v1 freeze only with a new candidate ID, migration record, golden vectors, and an updated source authority.",
+    "dependencyRule": "A surface cannot become stable before every dependency is stable under the same v1 release candidate.",
+    "reservation": "Stable IDs are permanently reserved, must never be reassigned, and do not claim compatibility until promoted to stable.",
+    "retirementRule": "A stable v1 reader may be retired only by a later major compatibility policy with an offline migrator, telemetry or corpus evidence, and a published support window.",
+    "stabilityRule": "Promotion is monotonic and requires every named promotion requirement; stable bytes or semantics require a new stable ID rather than reinterpretation."
+  },
+  "promotionRequirements": [
+    {
+      "id": "P-NORMATIVE-SPEC",
+      "description": "A complete normative grammar or wire specification defines canonical encoding, semantics, limits, and fail-closed behavior."
+    },
+    {
+      "id": "P-GOLDEN-CORPUS",
+      "description": "Portable positive, negative, legacy, malformed, and future-version vectors are retained with deterministic identities."
+    },
+    {
+      "id": "P-INDEPENDENT-VERIFIER",
+      "description": "A separately built verifier or implementation accepts and rejects the same corpus without importing the production implementation."
+    },
+    {
+      "id": "P-MIGRATION",
+      "description": "Every accepted predecessor has a deterministic migrator, semantic-delta statement, support window, and rollback procedure."
+    },
+    {
+      "id": "P-TIER-PARITY",
+      "description": "All shipping interpreters, compilers, hosts, and selfhost stages agree on identity and observable semantics."
+    },
+    {
+      "id": "P-SECURITY",
+      "description": "Fuzzing, resource-limit, ambiguity, downgrade, and cross-profile confusion controls pass with no open release blocker."
+    },
+    {
+      "id": "P-R9-FREEZE",
+      "description": "R9.1.a records an independently verified release-candidate freeze and changes the binding state without changing the reserved stable ID."
+    }
+  ],
+  "entries": [
+    {
+      "key": "language-profile",
+      "stableId": "genesis/compat/v1/language-profile",
+      "state": "candidate",
+      "candidateId": "genesis/language-profile/v0.2",
+      "compatibilityClass": "semantic",
+      "dependencies": [],
+      "authorities": [
+        {
+          "path": "crates/gc_coreform/src/term.rs",
+          "contains": "LANGUAGE_PROFILE_ID: &str = \"genesis/language-profile/v0.2\""
+        }
+      ],
+      "components": [
+        {
+          "id": "language-semantics-v0.2",
+          "currentWriter": "v0.2",
+          "acceptedReaders": ["v0.2"],
+          "missingDiscriminator": "not-applicable",
+          "migrationRecords": []
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "coreform",
+      "stableId": "genesis/compat/v1/coreform",
+      "state": "candidate",
+      "candidateId": "genesis/coreform/v0.2",
+      "compatibilityClass": "wire-and-semantic",
+      "dependencies": ["language-profile"],
+      "authorities": [
+        {
+          "path": "crates/gc_coreform/src/term.rs",
+          "contains": "COREFORM_PROFILE_ID: &str = \"genesis/coreform/v0.2\""
+        },
+        {
+          "path": "crates/gc_coreform/src/term.rs",
+          "contains": "HASH_PROFILE_ID: &str = \"genesis/hash-profile/gcv0.2-blake3\""
+        }
+      ],
+      "components": [
+        {
+          "id": "canonical-coreform-v0.2",
+          "currentWriter": "genesis/coreform/v0.2",
+          "acceptedReaders": ["genesis/coreform/v0.2"],
+          "missingDiscriminator": "profile-selected-by-language-toolchain",
+          "migrationRecords": []
+        },
+        {
+          "id": "canonical-term-hash",
+          "currentWriter": "genesis/hash-profile/gcv0.2-blake3",
+          "acceptedReaders": ["genesis/hash-profile/gcv0.2-blake3"],
+          "missingDiscriminator": "profile-selected-by-container-or-toolchain",
+          "migrationRecords": []
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "value-effect-hash",
+      "stableId": "genesis/compat/v1/value-effect-hash",
+      "state": "candidate",
+      "candidateId": "genesis/value-effect-hash/v0.2",
+      "compatibilityClass": "identity",
+      "dependencies": ["coreform"],
+      "authorities": [
+        {
+          "path": "crates/gc_kernel/src/value.rs",
+          "contains": "VALUE_EFFECT_HASH_PROFILE_ID: &str = \"genesis/value-effect-hash/v0.2\""
+        },
+        {
+          "path": "crates/gc_coreform/src/term.rs",
+          "contains": "HASH_DOMAIN_PREFIX: &[u8] = b\"GCv0.2\\0\""
+        }
+      ],
+      "components": [
+        {
+          "id": "value-and-effect-request-hash",
+          "currentWriter": "genesis/value-effect-hash/v0.2",
+          "acceptedReaders": ["genesis/value-effect-hash/v0.2"],
+          "missingDiscriminator": "profile-selected-by-log-or-toolchain",
+          "migrationRecords": []
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "effect-log",
+      "stableId": "genesis/compat/v1/effect-log",
+      "state": "candidate",
+      "candidateId": "genesis/effect-log/v3",
+      "compatibilityClass": "wire-and-replay",
+      "dependencies": ["coreform", "value-effect-hash"],
+      "authorities": [
+        {
+          "path": "crates/gc_effects/src/log.rs",
+          "contains": "GCLOG_PROFILE_ID: &str = \"genesis/effect-log/v3\""
+        },
+        {
+          "path": "crates/gc_effects/src/log.rs",
+          "contains": "GCLOG_CURRENT_VERSION: u64 = 3"
+        }
+      ],
+      "components": [
+        {
+          "id": "gclog",
+          "currentWriter": "3",
+          "acceptedReaders": ["2", "3"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": ["M-GCLOG-2-TO-3"]
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "evidence",
+      "stableId": "genesis/compat/v1/evidence",
+      "state": "candidate",
+      "candidateId": "genesis/evidence-profile/v0.1",
+      "compatibilityClass": "attestation",
+      "dependencies": ["language-profile"],
+      "authorities": [
+        {
+          "path": "scripts/lib/genesis_evidence_profile.py",
+          "contains": "GENESIS_EVIDENCE_PROFILE_ID = \"genesis/evidence-profile/v0.1\""
+        }
+      ],
+      "components": [
+        {
+          "id": "evidence-bundle-v0.1",
+          "currentWriter": "genesis/evidence-profile/v0.1",
+          "acceptedReaders": ["genesis/evidence-profile/v0.1"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": []
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "package",
+      "stableId": "genesis/compat/v1/package",
+      "state": "candidate",
+      "candidateId": "genesis/package-profile/v0.2",
+      "compatibilityClass": "container-and-resolution",
+      "dependencies": ["coreform", "evidence", "patch", "snapshot"],
+      "authorities": [
+        {
+          "path": "crates/gc_pkg/src/lib.rs",
+          "contains": "PACKAGE_PROFILE_ID: &str = \"genesis/package-profile/v0.2\""
+        },
+        {
+          "path": "crates/gc_pkg/src/lock.rs",
+          "contains": "GENESIS_LOCK_CURRENT_VERSION: u64 = 2"
+        },
+        {
+          "path": "crates/gc_vcs/src/gpk.rs",
+          "contains": "GPK_CURRENT_VERSION: u32 = 2"
+        }
+      ],
+      "components": [
+        {
+          "id": "package-manifest",
+          "currentWriter": "1",
+          "acceptedReaders": ["pre-schema", "1"],
+          "missingDiscriminator": "M-PACKAGE-PRESCHEMA-TO-1",
+          "migrationRecords": ["M-PACKAGE-PRESCHEMA-TO-1"]
+        },
+        {
+          "id": "workspace",
+          "currentWriter": "1",
+          "acceptedReaders": ["1"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": []
+        },
+        {
+          "id": "lock",
+          "currentWriter": "2",
+          "acceptedReaders": ["1", "2"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": ["M-LOCK-1-TO-2"]
+        },
+        {
+          "id": "gpk",
+          "currentWriter": "2",
+          "acceptedReaders": ["1", "2"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": ["M-GPK-1-TO-2"]
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "patch",
+      "stableId": "genesis/compat/v1/patch",
+      "state": "candidate",
+      "candidateId": "genesis/patch-profile/v0.2",
+      "compatibilityClass": "semantic-transform",
+      "dependencies": ["coreform", "snapshot"],
+      "authorities": [
+        {
+          "path": "crates/gc_patches/src/lib.rs",
+          "contains": "SEMANTIC_PATCH_PROFILE_ID: &str = \"genesis/patch-profile/v0.2\""
+        },
+        {
+          "path": "crates/gc_patches/src/lib.rs",
+          "contains": "SEMANTIC_PATCH_VERSION: u64 = 1"
+        },
+        {
+          "path": "crates/gc_vcs/src/patch.rs",
+          "contains": "VCS_PATCH_PROFILE_ID: &str = \"genesis/vcs-patch/v1\""
+        }
+      ],
+      "components": [
+        {
+          "id": "semantic-gcpatch",
+          "currentWriter": "1",
+          "acceptedReaders": ["1"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": []
+        },
+        {
+          "id": "vcs-patch",
+          "currentWriter": "1",
+          "acceptedReaders": ["1"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": []
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "bytecode",
+      "stableId": "genesis/compat/v1/bytecode",
+      "state": "unbound",
+      "candidateId": null,
+      "compatibilityClass": "executable",
+      "dependencies": ["language-profile", "coreform", "value-effect-hash", "effect-log"],
+      "authorities": [],
+      "components": [],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "snapshot",
+      "stableId": "genesis/compat/v1/snapshot",
+      "state": "candidate",
+      "candidateId": "genesis/vcs-snapshot/v1",
+      "compatibilityClass": "content-addressed-state",
+      "dependencies": ["coreform"],
+      "authorities": [
+        {
+          "path": "crates/gc_vcs/src/snapshot.rs",
+          "contains": "VCS_SNAPSHOT_PROFILE_ID: &str = \"genesis/vcs-snapshot/v1\""
+        },
+        {
+          "path": "crates/gc_vcs/src/snapshot.rs",
+          "contains": "VCS_SNAPSHOT_VERSION: i64 = 1"
+        }
+      ],
+      "components": [
+        {
+          "id": "vcs-snapshot",
+          "currentWriter": "1",
+          "acceptedReaders": ["1"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": []
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    },
+    {
+      "key": "bootstrap",
+      "stableId": "genesis/compat/v1/bootstrap",
+      "state": "candidate",
+      "candidateId": "genesis/bootstrap-profile/v0.2",
+      "compatibilityClass": "trusted-bootstrap",
+      "dependencies": ["language-profile", "coreform", "value-effect-hash"],
+      "authorities": [
+        {
+          "path": "crates/gc_prelude/src/selfhost_coreform_v1.rs",
+          "contains": "BOOTSTRAP_PROFILE_ID: &str = \"genesis/bootstrap-profile/v0.2\""
+        },
+        {
+          "path": "crates/gc_prelude/src/selfhost_coreform_v1.rs",
+          "contains": "\"genesis/selfhost-toolchain-artifact-v0.2\""
+        },
+        {
+          "path": "crates/gc_prelude/src/selfhost_coreform_v1.rs",
+          "contains": "SELFHOST_TOOLCHAIN_ARTIFACT_VERSION: i64 = 1"
+        }
+      ],
+      "components": [
+        {
+          "id": "selfhost-toolchain-artifact",
+          "currentWriter": "genesis/selfhost-toolchain-artifact-v0.2/:v=1",
+          "acceptedReaders": ["genesis/selfhost-toolchain-artifact-v0.2/:v=1"],
+          "missingDiscriminator": "reject",
+          "migrationRecords": []
+        }
+      ],
+      "promotionRequirements": ["P-NORMATIVE-SPEC", "P-GOLDEN-CORPUS", "P-INDEPENDENT-VERIFIER", "P-MIGRATION", "P-TIER-PARITY", "P-SECURITY", "P-R9-FREEZE"]
+    }
+  ]
+}

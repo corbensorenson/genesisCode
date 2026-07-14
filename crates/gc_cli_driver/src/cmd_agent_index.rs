@@ -4,6 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 const HOST_ABI_INDEX_PATH: &str = "docs/spec/HOST_ABI_INDEX_v0.1.json";
 const HOST_ABI_SCHEMA_INDEX_PATH: &str = "docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json";
 const PRELUDE_CAP_INDEX_PATH: &str = "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json";
+const AGENT_SYMBOL_INDEX_PATH: &str = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json";
+const AGENT_SYMBOL_INDEX_JSON: &str =
+    include_str!("../../../docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json");
 const SELFHOST_TOOLCHAIN_MANIFEST_PATH: &str = "selfhost/toolchain_manifest.gc";
 const SELFHOST_SYMBOL_OWNERSHIP_SCHEMA: &str = "genesis/selfhost-symbol-ownership-index-v0.1";
 
@@ -293,9 +296,163 @@ fn read_selfhost_symbol_ownership_index(repo_root: &Path) -> (serde_json::Value,
     )
 }
 
-pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
+pub(super) fn embedded_agent_symbol_index() -> Result<serde_json::Value, CliError> {
+    let index: serde_json::Value =
+        serde_json::from_str(AGENT_SYMBOL_INDEX_JSON).map_err(|error| {
+            cli_err(
+                EX_INTERNAL,
+                "agent-index/symbol-index-invalid",
+                format!("embedded GC-AGENT-v0.3 symbol index is invalid: {error}"),
+            )
+        })?;
+    let symbols = index
+        .get("symbols")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            cli_err(
+                EX_INTERNAL,
+                "agent-index/symbol-index-invalid",
+                "embedded GC-AGENT-v0.3 symbol index has no symbols array",
+            )
+        })?;
+    let declared = index.get("symbolCount").and_then(serde_json::Value::as_u64);
+    if declared != u64::try_from(symbols.len()).ok() {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "agent-index/symbol-index-invalid",
+            "embedded GC-AGENT-v0.3 symbol count does not match its entries",
+        ));
+    }
+    Ok(index)
+}
+
+fn cmd_agent_symbol(cli: &Cli, symbol: &str) -> Result<CmdOut, CliError> {
+    if symbol.is_empty() || symbol.trim() != symbol {
+        return Err(cli_err(
+            EX_PARSE,
+            "agent-index/symbol-invalid",
+            "--symbol must be a nonempty, unpadded exact GC-AGENT-v0.3 name",
+        ));
+    }
+    let index = embedded_agent_symbol_index()?;
+    let matches: Vec<&serde_json::Value> = index["symbols"]
+        .as_array()
+        .expect("validated symbols array")
+        .iter()
+        .filter(|entry| entry.get("symbol").and_then(serde_json::Value::as_str) == Some(symbol))
+        .collect();
+    if matches.len() != 1 {
+        return Err(cli_err(
+            EX_PARSE,
+            "agent-index/symbol-not-found",
+            format!("symbol `{symbol}` is not an exact GC-AGENT-v0.3 name"),
+        ));
+    }
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/agent-symbol-v0.3",
+        data: Some(serde_json::json!({
+            "schema": "genesis/gc-agent-symbol-index-v0.3",
+            "profile_id": index["profileId"],
+            "profile_identity_sha256": index["profileIdentitySha256"],
+            "index_identity_sha256": index["indexIdentitySha256"],
+            "lookup": index["lookup"],
+            "symbol": matches[0],
+        })),
+        error: None,
+    };
+    let json = json_envelope_value(env)?;
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", json_canonical_string(&json))
+        },
+        json,
+    })
+}
+
+fn embedded_agent_diagnostic_catalog() -> Result<&'static serde_json::Value, CliError> {
+    diagnostics::embedded_diagnostic_catalog().map_err(|message| {
+        cli_err(
+            EX_INTERNAL,
+            "agent-index/diagnostic-catalog-invalid",
+            message,
+        )
+    })
+}
+
+fn cmd_agent_diagnostic(cli: &Cli, code: &str) -> Result<CmdOut, CliError> {
+    if code.is_empty() || code.trim() != code {
+        return Err(cli_err(
+            EX_PARSE,
+            "agent-index/diagnostic-invalid",
+            "--diagnostic must be a nonempty, unpadded exact diagnostic code",
+        ));
+    }
+    let catalog = embedded_agent_diagnostic_catalog()?;
+    let matches: Vec<&serde_json::Value> = catalog["diagnostics"]
+        .as_array()
+        .expect("validated diagnostics array")
+        .iter()
+        .filter(|entry| entry.get("code").and_then(serde_json::Value::as_str) == Some(code))
+        .collect();
+    if matches.len() != 1 {
+        return Err(cli_err(
+            EX_PARSE,
+            "agent-index/diagnostic-not-found",
+            format!("diagnostic `{code}` is not an exact catalog code"),
+        ));
+    }
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/diagnostic-v0.1",
+        data: Some(serde_json::json!({
+            "schema": catalog["kind"],
+            "catalog_version": catalog["version"],
+            "catalog_identity_sha256": catalog["catalogIdentitySha256"],
+            "lookup": catalog["lookup"],
+            "diagnostic": matches[0],
+        })),
+        error: None,
+    };
+    let json = json_envelope_value(env)?;
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", json_canonical_string(&json))
+        },
+        json,
+    })
+}
+
+pub(super) fn cmd_agent_index(
+    cli: &Cli,
+    symbol: Option<&str>,
+    diagnostic: Option<&str>,
+    search_symbol: Option<&str>,
+    card: Option<AgentCardArg>,
+    max_results: u64,
+) -> Result<CmdOut, CliError> {
+    if let Some(symbol) = symbol {
+        return cmd_agent_symbol(cli, symbol);
+    }
+    if let Some(code) = diagnostic {
+        return cmd_agent_diagnostic(cli, code);
+    }
+    if let Some(query) = search_symbol {
+        return cmd_agent_lookup::cmd_agent_symbol_search(cli, query, max_results);
+    }
+    if let Some(card) = card {
+        return cmd_agent_lookup::cmd_agent_card(cli, card);
+    }
     let profile = runtime_profile();
     let cli_schema = cli_schema::build_cli_schema(profile);
+    let agent_symbol_index = embedded_agent_symbol_index()?;
+    let diagnostic_catalog = embedded_agent_diagnostic_catalog()?;
     let cwd = std::env::current_dir().map_err(|e| cli_err(EX_IO, "io/cwd", format!("{e}")))?;
     let repo_root = resolve_repo_root(&cwd);
 
@@ -349,6 +506,26 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
                 },
             },
             "selfhost_symbol_index": selfhost_symbol_index,
+            "language_symbol_index": {
+                "path": AGENT_SYMBOL_INDEX_PATH,
+                "kind": agent_symbol_index["kind"],
+                "profile_id": agent_symbol_index["profileId"],
+                "profile_identity_sha256": agent_symbol_index["profileIdentitySha256"],
+                "index_identity_sha256": agent_symbol_index["indexIdentitySha256"],
+                "symbol_count": agent_symbol_index["symbolCount"],
+                "unsupported_behavior_count": agent_symbol_index["unsupportedBehaviorCount"],
+                "unsupported_behavior_identity_sha256": agent_symbol_index["unsupportedBehaviorIdentitySha256"],
+                "unsupported_classes": agent_symbol_index["unsupportedClasses"],
+                "lookup": agent_symbol_index["lookup"],
+            },
+            "diagnostic_catalog": {
+                "path": diagnostics::DIAGNOSTIC_CATALOG_PATH,
+                "schema": diagnostic_catalog["kind"],
+                "version": diagnostic_catalog["version"],
+                "identity_sha256": diagnostic_catalog["catalogIdentitySha256"],
+                "diagnostic_count": diagnostic_catalog["diagnosticCount"],
+                "lookup": diagnostic_catalog["lookup"],
+            },
             "obligation_defaults": [
                 "core/obligation::unit-tests",
                 "core/obligation::replayable-tests",
@@ -366,6 +543,11 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
                 "agent_index": "docs/spec/AGENT_INDEX_v0.1.md",
                 "agent_plan": "docs/spec/AGENT_INDEX_v0.1.md#agent-plan-v01",
                 "agent_authoring_bundle": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+                "gc_agent_profile": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+                "gc_agent_core_card": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+                "gc_agent_task_cards": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+                "gc_agent_symbol_index": AGENT_SYMBOL_INDEX_PATH,
+                "diagnostic_catalog": diagnostics::DIAGNOSTIC_CATALOG_PATH,
                 "write_genesiscode_skill_pack": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
                 "write_genesiscode_skill_distribution": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
                 "selfhost_symbol_ownership": "docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.md",

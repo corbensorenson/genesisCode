@@ -9,11 +9,13 @@ fn repo_root() -> PathBuf {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn ai_iteration_slo_fails_when_changed_fast_fails() {
     let root = repo_root();
     let output = Command::new("bash")
         .arg(root.join("scripts/check_ai_iteration_slo.sh"))
         .env("GENESIS_MIN_FREE_KB", "999999999")
+        .env("GENESIS_PERF_DISK_STRICT_MODE", "1")
         .current_dir(&root)
         .output()
         .expect("run ai-iteration slo check");

@@ -4,7 +4,6 @@ use super::*;
 fn selfhost_only_accepts_pkg_vcs_gc_gpk_wrappers_with_replay_parity() {
     let dir = tempdir().unwrap();
     let artifact = build_selfhost_artifact(dir.path());
-    std::fs::write(dir.path().join("bad.gpk"), b"not-a-gpk-bundle").unwrap();
     std::fs::write(
         dir.path().join("pins.toml"),
         "version = 1\n\n[pins]\nkeep = []\nkeep_refs = []\nkeep_evidence_for = []\n",
@@ -19,7 +18,9 @@ allow = [
   "core/pkg-low::init",
   "core/vcs-low::log",
   "core/gc-low::plan",
-  "core/gpk-low::import"
+  "core/gpk-low::export",
+  "core/gpk-low::import",
+  "core/store::put"
 ]
 
 [store]
@@ -38,9 +39,51 @@ create_dirs = true
 
 [op."core/gpk-low::import"]
 base_dir = "."
+
+[op."core/gpk-low::export"]
+base_dir = "."
+create_dirs = true
 "#,
     )
     .unwrap();
+
+    let patch = store_put(
+        dir.path(),
+        &caps,
+        "{:type :vcs/patch :v 1 :ops []}",
+        "patch.gc",
+    );
+    let snapshot = store_put(
+        dir.path(),
+        &caps,
+        "{:type :vcs/snapshot :v 1 :kind :package :pkg/name \"wrapper\" :pkg/version \"0\" :modules [] :obligations []}",
+        "snapshot.gc",
+    );
+    let commit = store_put(
+        dir.path(),
+        &caps,
+        &format!(
+            "{{:type :vcs/commit :v 1 :parents [] :target {{:kind :package :name \"wrapper\"}} :base nil :patch \"{patch}\" :result \"{snapshot}\" :obligations [] :evidence [] :attestations [] :message \"wrapper fixture\"}}"
+        ),
+        "commit.gc",
+    );
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "pkg",
+            "--caps",
+            caps.to_str().unwrap(),
+            "export",
+            "--snapshot",
+            &snapshot,
+            "--out",
+            "valid.gpk",
+        ])
+        .assert()
+        .success();
 
     let workflows = [
         (
@@ -49,15 +92,18 @@ base_dir = "."
               (def prog
                 ((((core/pkg::init "genesis.lock") "ws") "policy:default-v0.1") nil))
               prog
-            "#,
+            "#
+            .to_string(),
         ),
         (
             "vcs_log",
-            r#"
+            format!(
+                r#"
               (def prog
-                ((core/vcs::log nil) 4))
+                ((core/vcs::log "{commit}") 4))
               prog
-            "#,
+            "#
+            ),
         ),
         (
             "gc_plan",
@@ -65,15 +111,17 @@ base_dir = "."
               (def prog
                 (((((core/gc::plan "genesis.lock") "pins.toml") 8) true) true))
               prog
-            "#,
+            "#
+            .to_string(),
         ),
         (
             "gpk_import",
             r#"
               (def prog
-                (core/gpk::import "bad.gpk"))
+                (core/gpk::import "valid.gpk"))
               prog
-            "#,
+            "#
+            .to_string(),
         ),
     ];
 

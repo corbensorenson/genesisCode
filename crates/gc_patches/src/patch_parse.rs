@@ -5,7 +5,8 @@ impl Patch {
         let Term::Map(m) = t else {
             return Err(PatchError::Validate("patch must be a map".to_string()));
         };
-        let version = get_int(m, ":version")?.unwrap_or(1);
+        let version = get_int(m, ":version")?
+            .ok_or_else(|| PatchError::Validate("missing :version".to_string()))?;
         let intent = get_str(m, ":intent")?.unwrap_or_else(|| "".to_string());
         let provenance = m
             .get(&TermOrdKey(Term::Symbol(":provenance".to_string())))
@@ -380,4 +381,54 @@ pub(super) fn get_optional_sym_or_str_vec(
         return Ok(Some(get_sym_or_str_vec(m, k)?));
     }
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn patch_term(version: Option<u64>) -> Term {
+        let mut m = BTreeMap::from([
+            (
+                TermOrdKey(Term::Symbol(":intent".to_string())),
+                Term::Str(String::new()),
+            ),
+            (
+                TermOrdKey(Term::Symbol(":provenance".to_string())),
+                Term::Map(BTreeMap::new()),
+            ),
+            (
+                TermOrdKey(Term::Symbol(":ops".to_string())),
+                Term::Vector(Vec::new()),
+            ),
+        ]);
+        if let Some(version) = version {
+            m.insert(
+                TermOrdKey(Term::Symbol(":version".to_string())),
+                Term::Int(version.into()),
+            );
+        }
+        Term::Map(m)
+    }
+
+    #[test]
+    fn semantic_patch_requires_explicit_version() {
+        let err = Patch::from_term(&patch_term(None)).expect_err("missing version must fail");
+        assert!(err.to_string().contains("missing :version"));
+    }
+
+    #[test]
+    fn semantic_patch_accepts_current_version() {
+        let patch = Patch::from_term(&patch_term(Some(SEMANTIC_PATCH_VERSION)))
+            .expect("current version must parse");
+        assert_eq!(patch.version, SEMANTIC_PATCH_VERSION);
+    }
+
+    #[test]
+    fn semantic_patch_preserves_future_version_for_apply_rejection() {
+        let future = SEMANTIC_PATCH_VERSION + 1;
+        let patch = Patch::from_term(&patch_term(Some(future)))
+            .expect("schema parsing must preserve explicit future versions");
+        assert_eq!(patch.version, future);
+    }
 }

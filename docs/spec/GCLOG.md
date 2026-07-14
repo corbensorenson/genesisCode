@@ -13,7 +13,7 @@ Top-level keys:
 
 - `:version` (int): log schema version (v0.2 uses `3`; parser accepts legacy `2`).
 - `:program-hash` (bytes32): CoreForm module hash of the executed program/module.
-- `:toolchain` (string): toolchain identifier (e.g. `genesis 0.1.0`).
+- `:toolchain` (string): toolchain identifier (e.g. `genesis 0.2.0`).
 - `:entries` (vector): ordered list of entries.
 
 ## Entry Schema
@@ -35,6 +35,7 @@ Each entry is a map with keys:
 - `:resp-h` (bytes32): `value_hash(response_value)`.
 
 Notes:
+- `:version` is mandatory. Missing or unknown versions fail before entry interpretation; only explicit versions `2` and `3` are accepted under migration `M-GCLOG-2-TO-3`.
 - `:cap` is intended for stable, non-secret configuration metadata. The v0.2 toolchain does not record filesystem paths (such as `base_dir`) in logs to avoid nondeterminism and path leakage.
 - Replay validates request/response hashes and deterministic scheduler metadata, and enforces `:decision`/`:cap` structural consistency (`allow` => cap map with `:op`, `deny` => `nil` cap).
 

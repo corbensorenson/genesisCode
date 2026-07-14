@@ -1,8 +1,9 @@
 [package]
 name = "gc_cli_driver_parity"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 
 [lib]
 path = "../gc_cli_driver/src/lib.rs"
@@ -27,6 +28,7 @@ ed25519-dalek.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+url.workspace = true
 wasm-encoder.workspace = true
 thiserror.workspace = true
 toml.workspace = true

@@ -41,13 +41,16 @@ allow = [
 
     let has_backend = |v: &Value| match v {
         Value::Map(m) => matches!(
-            m.get(&TermOrdKey(Term::symbol(":backend"))),
-            Some(Value::Data(Term::Str(s))) if s == "first-party-runtime"
-        ),
-        Value::Data(Term::Map(m)) => matches!(
-            m.get(&TermOrdKey(Term::symbol(":backend"))),
+            m.get(&TermOrdKey(Term::symbol(":backend"))).and_then(Value::as_data),
             Some(Term::Str(s)) if s == "first-party-runtime"
         ),
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(m) => matches!(
+                m.get(&TermOrdKey(Term::symbol(":backend"))),
+                Some(Term::Str(s)) if s == "first-party-runtime"
+            ),
+            _ => false,
+        },
         _ => false,
     };
 
@@ -91,8 +94,9 @@ allow = [
             "{key} should report first-party backend"
         );
     }
-    let Some(Value::Data(Term::Map(read_buffer))) =
-        buffer_top.get(&TermOrdKey(Term::symbol(":read-buffer")))
+    let Some(Term::Map(read_buffer)) = buffer_top
+        .get(&TermOrdKey(Term::symbol(":read-buffer")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :read-buffer map response");
     };
@@ -142,8 +146,9 @@ allow = [
             "{key} should report first-party backend"
         );
     }
-    let Some(Value::Data(Term::Map(read_texture))) =
-        texture_top.get(&TermOrdKey(Term::symbol(":read-texture")))
+    let Some(Term::Map(read_texture)) = texture_top
+        .get(&TermOrdKey(Term::symbol(":read-texture")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :read-texture map response");
     };
@@ -398,7 +403,7 @@ first_party_profile = "browser"
         prog
     "#;
     let create_v = run_once(&headless_pol, create_src);
-    let Value::Data(Term::Map(create_resp)) = create_v else {
+    let Some(Term::Map(create_resp)) = create_v.as_data() else {
         panic!("expected create-surface map response");
     };
     assert_eq!(
@@ -411,7 +416,7 @@ first_party_profile = "browser"
     );
 
     let desktop_create_v = run_once(&desktop_pol, create_src);
-    let Value::Data(Term::Map(desktop_create_resp)) = desktop_create_v else {
+    let Some(Term::Map(desktop_create_resp)) = desktop_create_v.as_data() else {
         panic!("expected desktop create-surface map response");
     };
     assert_eq!(
@@ -434,7 +439,7 @@ first_party_profile = "browser"
     );
 
     let browser_create_v = run_once(&browser_pol, create_src);
-    let Value::Data(Term::Map(browser_create_resp)) = browser_create_v else {
+    let Some(Term::Map(browser_create_resp)) = browser_create_v.as_data() else {
         panic!("expected browser create-surface map response");
     };
     assert_eq!(
@@ -459,7 +464,7 @@ first_party_profile = "browser"
         prog
     "#;
     let audio_v = run_once(&headless_pol, audio_src);
-    let Value::Data(Term::Map(audio_resp)) = audio_v else {
+    let Some(Term::Map(audio_resp)) = audio_v.as_data() else {
         panic!("expected audio set-master map response");
     };
     assert_eq!(
@@ -472,7 +477,7 @@ first_party_profile = "browser"
     );
 
     let desktop_audio_v = run_once(&desktop_pol, audio_src);
-    let Value::Data(Term::Map(desktop_audio_resp)) = desktop_audio_v else {
+    let Some(Term::Map(desktop_audio_resp)) = desktop_audio_v.as_data() else {
         panic!("expected desktop audio set-master map response");
     };
     assert_eq!(
@@ -485,7 +490,7 @@ first_party_profile = "browser"
     );
 
     let browser_audio_v = run_once(&browser_pol, audio_src);
-    let Value::Data(Term::Map(browser_audio_resp)) = browser_audio_v else {
+    let Some(Term::Map(browser_audio_resp)) = browser_audio_v.as_data() else {
         panic!("expected browser audio set-master map response");
     };
     assert_eq!(
@@ -522,16 +527,16 @@ first_party_profile = "browser"
     let desktop_poll_v = run_once(&desktop_pol, poll_src);
     let browser_poll_v = run_once(&browser_pol, poll_src);
 
-    let Value::Data(Term::Map(headless_poll_resp)) = headless_poll_v else {
+    let Some(Term::Map(headless_poll_resp)) = headless_poll_v.as_data() else {
         panic!("expected headless poll map response");
     };
-    let Value::Data(Term::Map(interactive_poll_resp)) = interactive_poll_v else {
+    let Some(Term::Map(interactive_poll_resp)) = interactive_poll_v.as_data() else {
         panic!("expected interactive poll map response");
     };
-    let Value::Data(Term::Map(desktop_poll_resp)) = desktop_poll_v else {
+    let Some(Term::Map(desktop_poll_resp)) = desktop_poll_v.as_data() else {
         panic!("expected desktop poll map response");
     };
-    let Value::Data(Term::Map(browser_poll_resp)) = browser_poll_v else {
+    let Some(Term::Map(browser_poll_resp)) = browser_poll_v.as_data() else {
         panic!("expected browser poll map response");
     };
     assert_eq!(
@@ -648,7 +653,7 @@ runtime_profile = "production"
     let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
     assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
 
-    let Value::Data(Term::Map(resp)) = run_out.value else {
+    let Some(Term::Map(resp)) = run_out.value.as_data() else {
         panic!("expected create-surface map response");
     };
     let Some(Term::Str(adapter)) = resp.get(&TermOrdKey(Term::symbol(":adapter"))) else {
@@ -761,7 +766,7 @@ create_dirs = true
         prog
     "#;
     let clip_v = run_once(clip_src);
-    let Value::Data(Term::Map(clip_resp)) = clip_v else {
+    let Some(Term::Map(clip_resp)) = clip_v.as_data() else {
         panic!("expected clipboard map response");
     };
     assert_eq!(
@@ -786,7 +791,7 @@ create_dirs = true
         prog
     "#;
     let dialog_v = run_once(dialog_src);
-    let Value::Data(Term::Map(dialog_resp)) = dialog_v else {
+    let Some(Term::Map(dialog_resp)) = dialog_v.as_data() else {
         panic!("expected dialog map response");
     };
     assert_eq!(
@@ -822,7 +827,7 @@ create_dirs = true
         root.display()
     );
     let watch_v = run_once(&watch_src);
-    let Value::Data(Term::Map(watch_resp)) = watch_v else {
+    let Some(Term::Map(watch_resp)) = watch_v.as_data() else {
         panic!("expected watch map response");
     };
     assert_eq!(
@@ -864,7 +869,7 @@ create_dirs = true
         prog
     "#;
     let task_v = run_once(task_src);
-    let Value::Data(Term::Map(task_resp)) = task_v else {
+    let Some(Term::Map(task_resp)) = task_v.as_data() else {
         panic!("expected task poll map response");
     };
     assert_eq!(
@@ -901,7 +906,7 @@ create_dirs = true
         root.display()
     );
     let typecheck_v = run_once(&typecheck_src);
-    let Value::Data(Term::Map(typecheck_resp)) = typecheck_v else {
+    let Some(Term::Map(typecheck_resp)) = typecheck_v.as_data() else {
         panic!("expected typecheck map response");
     };
     let Some(Term::Map(typecheck_result)) =
@@ -936,7 +941,7 @@ create_dirs = true
         root.display()
     );
     let test_v = run_once(&test_src);
-    let Value::Data(Term::Map(test_resp)) = test_v else {
+    let Some(Term::Map(test_resp)) = test_v.as_data() else {
         panic!("expected test-pkg map response");
     };
     let Some(Term::Map(test_result)) = test_resp.get(&TermOrdKey(Term::symbol(":result"))) else {
@@ -952,15 +957,9 @@ create_dirs = true
     );
 
     fn value_to_term(value: &Value) -> Term {
-        match value {
-            Value::Data(term) => term.clone(),
-            Value::Map(map) => Term::Map(
-                map.iter()
-                    .map(|(key, value)| (key.clone(), value_to_term(value)))
-                    .collect(),
-            ),
-            _ => Term::Str(value.debug_repr()),
-        }
+        value
+            .to_plain_term()
+            .unwrap_or_else(|| Term::Str(value.debug_repr()))
     }
 
     let run_spawn_with_three_polls = |task_kind: &str,
@@ -996,7 +995,13 @@ create_dirs = true
         );
         let value = run_once(&src);
         match value {
-            Value::Data(Term::Map(resp)) => resp,
+            Value::Data(t) => match t.as_ref() {
+                Term::Map(resp) => resp.clone(),
+                _ => panic!(
+                    "expected workflow response map, got {}",
+                    Value::Data(t).debug_repr()
+                ),
+            },
             Value::Map(resp) => resp
                 .iter()
                 .map(|(key, value)| (key.clone(), value_to_term(value)))

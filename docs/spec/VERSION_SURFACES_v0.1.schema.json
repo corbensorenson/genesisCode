@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/version-surfaces-v0.1.json",
+  "title": "GenesisCode Version Surfaces v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "release_train", "policy", "surfaces", "migrations"],
+  "properties": {
+    "schema": {"const": "genesis/version-surfaces-v0.1"},
+    "release_train": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_writer_only", "future_versions", "missing_discriminator", "legacy_reader_rule"],
+      "properties": {
+        "current_writer_only": {"const": true},
+        "future_versions": {"const": "reject"},
+        "missing_discriminator": {"const": "reject-except-named-migration"},
+        "legacy_reader_rule": {"type": "string", "minLength": 1}
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/surface"}
+    },
+    "migrations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/migration"}
+    }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "discriminator", "current_writer", "accepted_readers", "authorities", "specs", "migrations"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "kind": {"type": "string", "minLength": 1},
+        "discriminator": {"type": "string", "minLength": 1},
+        "current_writer": {"type": "string", "minLength": 1},
+        "accepted_readers": {"$ref": "#/$defs/nonEmptyStrings"},
+        "wire_identity": {"type": "string", "minLength": 1},
+        "authorities": {"$ref": "#/$defs/nonEmptyStrings"},
+        "specs": {"$ref": "#/$defs/nonEmptyStrings"},
+        "migrations": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^M-[A-Z0-9-]+$"}}
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "surface", "from", "to", "reader", "writer", "semantic_delta", "user_action", "tests", "retirement"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^M-[A-Z0-9-]+$"},
+        "surface": {"type": "string", "minLength": 1},
+        "from": {"type": "string", "minLength": 1},
+        "to": {"type": "string", "minLength": 1},
+        "reader": {"type": "string", "minLength": 1},
+        "writer": {"type": "string", "minLength": 1},
+        "semantic_delta": {"type": "string", "minLength": 1},
+        "user_action": {"type": "string", "minLength": 1},
+        "tests": {"$ref": "#/$defs/nonEmptyStrings"},
+        "retirement": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/evidence-predicate-v0.1.json",
+  "title": "GenesisCode Evidence Predicate v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "evidenceClass",
+    "source",
+    "toolchains",
+    "environment",
+    "networkPolicy",
+    "commands",
+    "negativeControls",
+    "artifacts",
+    "measurements",
+    "verifier",
+    "evidenceRefs"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/evidence-predicate-v0.1"},
+    "version": {"const": "0.1"},
+    "evidenceClass": {"enum": ["E1", "E2", "E3", "E4"]},
+    "source": {"$ref": "#/$defs/source"},
+    "toolchains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/toolchain"}
+    },
+    "environment": {"$ref": "#/$defs/environment"},
+    "networkPolicy": {"$ref": "#/$defs/networkPolicy"},
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/command"}
+    },
+    "negativeControls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/negativeControl"}
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/artifact"}
+    },
+    "measurements": {"$ref": "#/$defs/measurements"},
+    "verifier": {"$ref": "#/$defs/verifier"},
+    "evidenceRefs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidenceRef"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": {"sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vcs",
+        "repositoryUri",
+        "revision",
+        "treeDigest",
+        "dirty",
+        "dirtyPolicy",
+        "dirtyPathsDigest"
+      ],
+      "properties": {
+        "vcs": {"const": "git"},
+        "repositoryUri": {"type": "string", "format": "uri"},
+        "revision": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"},
+        "treeDigest": {"$ref": "#/$defs/digest"},
+        "dirty": {"type": "boolean"},
+        "dirtyPolicy": {"enum": ["reject", "allow-declared"]},
+        "dirtyPathsDigest": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/digest"}]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"dirty": {"const": true}}, "required": ["dirty"]},
+          "then": {
+            "properties": {
+              "dirtyPolicy": {"const": "allow-declared"},
+              "dirtyPathsDigest": {"$ref": "#/$defs/digest"}
+            }
+          },
+          "else": {
+            "properties": {
+              "dirtyPathsDigest": {"type": "null"}
+            }
+          }
+        }
+      ]
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "artifact"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "artifact": {"$ref": "#/$defs/artifactIdentity"}
+      }
+    },
+    "artifactIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "digest"],
+      "properties": {
+        "uri": {"type": "string", "format": "uri"},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "os", "architecture", "container", "declaredVariables"],
+      "properties": {
+        "profile": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*$"},
+        "os": {"type": "string", "minLength": 1},
+        "architecture": {"type": "string", "minLength": 1},
+        "container": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/artifactIdentity"}]
+        },
+        "declaredVariables": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$"}
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "inputs"],
+      "properties": {
+        "mode": {"enum": ["deny", "declared-only"]},
+        "inputs": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/networkInput"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"mode": {"const": "deny"}}, "required": ["mode"]},
+          "then": {"properties": {"inputs": {"maxItems": 0}}},
+          "else": {"properties": {"inputs": {"minItems": 1}}}
+        }
+      ]
+    },
+    "networkInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "digest", "purpose"],
+      "properties": {
+        "uri": {"type": "string", "format": "uri"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "purpose": {"type": "string", "minLength": 1}
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "cwd", "declaredEnvironment", "exitCode"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "cwd": {"$ref": "#/$defs/relativePath"},
+        "declaredEnvironment": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$"}
+        },
+        "exitCode": {"type": "integer"}
+      }
+    },
+    "negativeControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "expected", "observed", "passed", "artifact"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*$"},
+        "expected": {"type": "string", "minLength": 1},
+        "observed": {"type": "string", "minLength": 1},
+        "passed": {"const": true},
+        "artifact": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/artifactIdentity"}]
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "digest", "sizeBytes", "mediaType"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "path": {"$ref": "#/$defs/relativePath"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "sizeBytes": {"type": "integer", "minimum": 0},
+        "mediaType": {"type": "string", "minLength": 1}
+      }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["durationNs", "peakRssBytes", "diskDeltaBytes", "rawSamples"],
+      "properties": {
+        "durationNs": {"type": "integer", "minimum": 0},
+        "peakRssBytes": {"type": "integer", "minimum": 0},
+        "diskDeltaBytes": {"type": "integer"},
+        "rawSamples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/rawSample"}
+        }
+      }
+    },
+    "rawSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "unit", "values"],
+      "properties": {
+        "metric": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*$"},
+        "unit": {"enum": ["ns", "bytes", "count", "basis-points"]},
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "integer"}
+        }
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "artifact"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "artifact": {"$ref": "#/$defs/artifactIdentity"}
+      }
+    },
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "uri", "digest", "mediaType"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "uri": {"type": "string", "format": "uri"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "mediaType": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

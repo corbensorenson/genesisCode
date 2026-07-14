@@ -47,7 +47,9 @@ compile_error!(
 mod cli_json;
 mod cli_schema;
 mod cmd_agent_index;
+mod cmd_agent_lookup;
 mod cmd_agent_plan;
+mod cmd_agent_task_cards;
 mod cmd_commit;
 mod cmd_core;
 mod cmd_debug;
@@ -58,6 +60,7 @@ mod cmd_refs;
 mod cmd_registry;
 mod cmd_security_ops;
 mod cmd_selfhost;
+mod cmd_source;
 mod cmd_store;
 mod cmd_sync;
 mod cmd_vcs;
@@ -66,6 +69,7 @@ mod diagnostics;
 mod gc_contract;
 mod host_bridge_runtime;
 mod kernel_exec;
+mod mcp;
 mod package_obligation_cmds;
 mod pkg_abi;
 mod pkg_assurance_ops;
@@ -83,14 +87,22 @@ mod pkg_workspace_ops;
 mod policy_config;
 mod program_builders;
 mod refs_contract;
+mod repair_hints;
 mod runtime_backend_profile;
 mod selfhost_bridge;
 mod selfhost_frontend;
 mod semantic_workspace;
+mod structured_failures;
 mod sync_contract;
 mod vcs_contract;
 mod vcs_helpers;
+mod warm_protocol;
+mod warm_request;
 mod warm_session;
+mod warm_session_config;
+mod warm_state;
+mod warm_worker;
+mod warm_workspace;
 
 use cli_json::*;
 use cli_schema::cmd_cli_schema;
@@ -106,11 +118,13 @@ use cmd_refs::cmd_refs;
 use cmd_registry::cmd_registry;
 use cmd_security_ops::*;
 use cmd_selfhost::*;
+use cmd_source::*;
 use cmd_store::cmd_store;
 use cmd_sync::cmd_sync;
 use cmd_vcs::cmd_vcs;
 use diagnostics::annotate_envelope;
 use kernel_exec::eval_module_default;
+use mcp::cmd_mcp;
 use package_obligation_cmds::{cmd_pack, cmd_test, obligation_err};
 use policy_config::*;
 use program_builders::*;
@@ -202,9 +216,12 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
         return code;
     }
     let cli = Cli::parse();
+    let stdio_server = matches!(cli.cmd, Cmd::Mcp { .. });
     match dispatch(&cli, flavor) {
         Ok(out) => {
-            if cli.json {
+            if stdio_server {
+                // MCP owns stdout for the full process lifetime.
+            } else if cli.json {
                 // JSON mode: exactly one JSON object on stdout.
                 println!("{}", json_canonical_string(&out.json));
             } else if !out.stdout.is_empty() {
@@ -213,7 +230,9 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
             std::process::ExitCode::from(out.exit_code)
         }
         Err(e) => {
-            if cli.json {
+            if stdio_server {
+                eprintln!("{}", e.json.message);
+            } else if cli.json {
                 let out = match json_envelope_value(JsonEnvelope::<serde_json::Value> {
                     ok: false,
                     kind: "genesis/error-v0.2",
@@ -257,9 +276,12 @@ pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process
         return code;
     }
     let cli = Cli::parse();
+    let stdio_server = matches!(cli.cmd, Cmd::Mcp { .. });
     match dispatch(&cli, flavor) {
         Ok(out) => {
-            if cli.json {
+            if stdio_server {
+                // MCP owns stdout for the full process lifetime.
+            } else if cli.json {
                 println!("{}", json_canonical_string(&out.json));
             } else if !out.stdout.is_empty() {
                 print!("{}", out.stdout);
@@ -267,7 +289,9 @@ pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process
             std::process::ExitCode::from(out.exit_code)
         }
         Err(e) => {
-            if cli.json {
+            if stdio_server {
+                eprintln!("{}", e.json.message);
+            } else if cli.json {
                 let out = match json_envelope_value(JsonEnvelope::<serde_json::Value> {
                     ok: false,
                     kind: "genesis/error-v0.2",
@@ -313,6 +337,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
     let _backend_flags = (gpu_device_backend_enabled(), gfx_desktop_backend_enabled());
     enforce_selfhost_only_cmd(cli, flavor)?;
     let mut out = match &cli.cmd {
+        Cmd::Parse { file, engine } => cmd_parse(cli, file, *engine),
         Cmd::Fmt {
             file,
             check,
@@ -368,9 +393,59 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         Cmd::SelfhostDashboard { markdown, store } => {
             cmd_selfhost_dashboard(cli, markdown.as_deref(), store.as_deref())
         }
-        Cmd::Warm { prime_selfhost } => cmd_warm(cli, flavor, *prime_selfhost),
+        Cmd::Warm {
+            prime_selfhost,
+            max_queue,
+            max_frame_bytes,
+            max_workspaces,
+            workspace_idle_ms,
+            max_requests,
+            workspace_root,
+        } => cmd_warm(
+            cli,
+            flavor,
+            *prime_selfhost,
+            *max_queue,
+            *max_frame_bytes,
+            *max_workspaces,
+            *workspace_idle_ms,
+            *max_requests,
+            workspace_root,
+        ),
+        Cmd::Mcp {
+            prime_selfhost,
+            max_queue,
+            max_frame_bytes,
+            max_output_bytes,
+            max_requests,
+            max_roots,
+            workspace_root,
+        } => cmd_mcp(
+            cli,
+            flavor,
+            *prime_selfhost,
+            *max_queue,
+            *max_frame_bytes,
+            *max_output_bytes,
+            *max_requests,
+            *max_roots,
+            workspace_root,
+        ),
         Cmd::CliSchema => cmd_cli_schema(cli),
-        Cmd::AgentIndex => cmd_agent_index(cli),
+        Cmd::AgentIndex {
+            symbol,
+            diagnostic,
+            search_symbol,
+            card,
+            max_results,
+        } => cmd_agent_index(
+            cli,
+            symbol.as_deref(),
+            diagnostic.as_deref(),
+            search_symbol.as_deref(),
+            *card,
+            *max_results,
+        ),
         Cmd::AgentPlan {
             intent,
             caps,
@@ -468,13 +543,32 @@ fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> Cli
     }
 }
 
-fn cli_err_anyhow(exit_code: u8, code: &'static str, err: anyhow::Error) -> CliError {
-    // Preserve the full anyhow chain so JSON diagnostics show the real root cause.
-    cli_err(exit_code, code, format!("{err:#}"))
+fn cli_err_with_context(
+    exit_code: u8,
+    code: &'static str,
+    message: impl Into<String>,
+    context: serde_json::Value,
+) -> CliError {
+    CliError {
+        exit_code,
+        json: JsonError {
+            code,
+            message: message.into(),
+            context: Some(context),
+        },
+    }
 }
 
 fn caps_parse_cli_err(err: anyhow::Error) -> CliError {
-    cli_err_anyhow(EX_PARSE, "caps/parse", err)
+    let message = format!("{err:#}");
+    let context = structured_failures::FailureContext::new(
+        "policy",
+        "capability-manifest-parse",
+        "policy/load-capabilities",
+    )
+    .fact("reason", message.clone())
+    .into_value();
+    cli_err_with_context(EX_PARSE, "caps/parse", message, context)
 }
 
 fn normalize_newlines(s: &str) -> String {

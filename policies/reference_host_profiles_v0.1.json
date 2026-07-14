@@ -1,0 +1,249 @@
+{
+  "kind": "genesis/reference-host-profiles-v0.1",
+  "metadataDimensions": [
+    "compiler",
+    "cpu",
+    "filesystem",
+    "memory",
+    "operating-system",
+    "power-mode"
+  ],
+  "observationPolicy": {
+    "allowAbsolutePaths": false,
+    "allowHostnames": false,
+    "allowSerialNumbers": false,
+    "allowUserNames": false,
+    "identityAlgorithm": "sha256-canonical-json",
+    "storageClassBeforeSigning": "E0"
+  },
+  "profiles": [
+    {
+      "benchmarkControls": {
+        "backgroundLoadMaxPercent": 5,
+        "exclusiveHostRequired": true,
+        "thermalStateRequired": "nominal",
+        "virtualizationAllowed": false
+      },
+      "compiler": {
+        "nativeFamilies": [
+          "apple-clang"
+        ],
+        "nativeVersion": {
+          "maxExclusive": "17.0.0",
+          "minInclusive": "16.0.0"
+        },
+        "rustcHostPattern": "^aarch64-apple-darwin$",
+        "rustcVersion": "1.90.0"
+      },
+      "cpu": {
+        "architecture": "arm64",
+        "minLogicalCores": 8,
+        "minPhysicalCores": 8,
+        "modelPattern": "^Apple M1(?: Pro| Max| Ultra)?$"
+      },
+      "filesystem": {
+        "allowedTypes": [
+          "apfs"
+        ],
+        "caseSensitivity": "either",
+        "minBlockSizeBytes": 4096
+      },
+      "id": "darwin-arm64-apple-m1-16g",
+      "memory": {
+        "minBytes": 17179869184
+      },
+      "operatingSystem": {
+        "family": "darwin",
+        "version": {
+          "maxExclusive": "16.0.0",
+          "minInclusive": "15.0.0"
+        }
+      },
+      "platformId": "darwin-arm64",
+      "powerMode": {
+        "allowedGovernorModes": [
+          "not-applicable"
+        ],
+        "lowPowerModeAllowed": false,
+        "requiredSource": "ac"
+      },
+      "promotionStatus": "reference",
+      "tier": 1
+    },
+    {
+      "benchmarkControls": {
+        "backgroundLoadMaxPercent": 5,
+        "exclusiveHostRequired": true,
+        "thermalStateRequired": "nominal",
+        "virtualizationAllowed": false
+      },
+      "compiler": {
+        "nativeFamilies": [
+          "clang",
+          "gcc"
+        ],
+        "nativeVersion": {
+          "maxExclusive": "21.0.0",
+          "minInclusive": "11.0.0"
+        },
+        "rustcHostPattern": "^aarch64-unknown-linux-gnu$",
+        "rustcVersion": "1.90.0"
+      },
+      "cpu": {
+        "architecture": "arm64",
+        "minLogicalCores": 8,
+        "minPhysicalCores": 8,
+        "modelPattern": "^(?:ARM )?Neoverse-(?:N1|N2|V1)(?: .*)?$"
+      },
+      "filesystem": {
+        "allowedTypes": [
+          "ext4",
+          "xfs"
+        ],
+        "caseSensitivity": "sensitive",
+        "minBlockSizeBytes": 4096
+      },
+      "id": "linux-arm64-neoverse-16g",
+      "memory": {
+        "minBytes": 17179869184
+      },
+      "operatingSystem": {
+        "family": "linux",
+        "version": {
+          "maxExclusive": "7.0.0",
+          "minInclusive": "5.15.0"
+        }
+      },
+      "platformId": "linux-arm64",
+      "powerMode": {
+        "allowedGovernorModes": [
+          "performance",
+          "schedutil"
+        ],
+        "lowPowerModeAllowed": false,
+        "requiredSource": "ac"
+      },
+      "promotionStatus": "candidate",
+      "tier": 2
+    },
+    {
+      "benchmarkControls": {
+        "backgroundLoadMaxPercent": 5,
+        "exclusiveHostRequired": true,
+        "thermalStateRequired": "nominal",
+        "virtualizationAllowed": false
+      },
+      "compiler": {
+        "nativeFamilies": [
+          "clang",
+          "gcc"
+        ],
+        "nativeVersion": {
+          "maxExclusive": "21.0.0",
+          "minInclusive": "11.0.0"
+        },
+        "rustcHostPattern": "^x86_64-unknown-linux-gnu$",
+        "rustcVersion": "1.90.0"
+      },
+      "cpu": {
+        "architecture": "x86_64",
+        "minLogicalCores": 16,
+        "minPhysicalCores": 8,
+        "modelPattern": "^(?:AMD EPYC 7763|Intel\\(R\\) Xeon\\(R\\) Platinum 8370C)(?: .*)?$"
+      },
+      "filesystem": {
+        "allowedTypes": [
+          "ext4",
+          "xfs"
+        ],
+        "caseSensitivity": "sensitive",
+        "minBlockSizeBytes": 4096
+      },
+      "id": "linux-x86-64-server-16g",
+      "memory": {
+        "minBytes": 17179869184
+      },
+      "operatingSystem": {
+        "family": "linux",
+        "version": {
+          "maxExclusive": "7.0.0",
+          "minInclusive": "5.15.0"
+        }
+      },
+      "platformId": "linux-x86-64",
+      "powerMode": {
+        "allowedGovernorModes": [
+          "performance",
+          "schedutil"
+        ],
+        "lowPowerModeAllowed": false,
+        "requiredSource": "ac"
+      },
+      "promotionStatus": "reference",
+      "tier": 1
+    },
+    {
+      "benchmarkControls": {
+        "backgroundLoadMaxPercent": 5,
+        "exclusiveHostRequired": true,
+        "thermalStateRequired": "nominal",
+        "virtualizationAllowed": false
+      },
+      "compiler": {
+        "nativeFamilies": [
+          "msvc"
+        ],
+        "nativeVersion": {
+          "maxExclusive": "20.0.0",
+          "minInclusive": "19.40.0"
+        },
+        "rustcHostPattern": "^x86_64-pc-windows-msvc$",
+        "rustcVersion": "1.90.0"
+      },
+      "cpu": {
+        "architecture": "x86_64",
+        "minLogicalCores": 16,
+        "minPhysicalCores": 8,
+        "modelPattern": "^(?:AMD EPYC 7763|Intel\\(R\\) Xeon\\(R\\) Platinum 8370C)(?: .*)?$"
+      },
+      "filesystem": {
+        "allowedTypes": [
+          "ntfs"
+        ],
+        "caseSensitivity": "insensitive",
+        "minBlockSizeBytes": 4096
+      },
+      "id": "windows-x86-64-server-16g",
+      "memory": {
+        "minBytes": 17179869184
+      },
+      "operatingSystem": {
+        "family": "windows",
+        "version": {
+          "maxExclusive": "11.0.0",
+          "minInclusive": "10.0.0"
+        }
+      },
+      "platformId": "windows-x86-64",
+      "powerMode": {
+        "allowedGovernorModes": [
+          "high-performance",
+          "ultimate-performance"
+        ],
+        "lowPowerModeAllowed": false,
+        "requiredSource": "ac"
+      },
+      "promotionStatus": "candidate",
+      "tier": 2
+    }
+  ],
+  "promotionPolicy": {
+    "minimumIndependentHosts": 2,
+    "minimumSamplesPerWorkload": 30,
+    "requiredEvidenceClass": "E3",
+    "requiredOperatingSystems": 1,
+    "requireIndependentVerification": true,
+    "requireSignedBaseline": true
+  },
+  "version": "0.1"
+}

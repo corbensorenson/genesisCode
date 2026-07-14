@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/evidence-bundle-v0.1.json",
+  "title": "GenesisCode Evidence Bundle v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "profile", "attestations"],
+  "properties": {
+    "kind": {"const": "genesis/evidence-bundle-v0.1"},
+    "version": {"const": "0.1"},
+    "profile": {"enum": ["E1", "E2", "E3", "E4"]},
+    "attestations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/attestation"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"profile": {"enum": ["E3", "E4"]}}, "required": ["profile"]},
+      "then": {
+        "properties": {
+          "attestations": {
+            "items": {
+              "properties": {"envelope": {"$ref": "#/$defs/authenticatedEnvelope"}}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mediaType", "statement", "envelope"],
+      "properties": {
+        "mediaType": {"const": "application/vnd.in-toto+json"},
+        "statement": {
+          "oneOf": [
+            {"$ref": "https://genesiscode.dev/schemas/evidence-statement-v0.1.json"},
+            {"$ref": "https://genesiscode.dev/schemas/slsa-build-profile-v1.json"}
+          ]
+        },
+        "envelope": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/authenticatedEnvelope"}]
+        }
+      }
+    },
+    "authenticatedEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["payloadType", "payload", "signatures"],
+      "properties": {
+        "payloadType": {"const": "application/vnd.in-toto+json"},
+        "payload": {
+          "type": "string",
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+        },
+        "signatures": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["keyid", "sig"],
+            "properties": {
+              "keyid": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "sig": {
+                "type": "string",
+                "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

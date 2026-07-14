@@ -262,7 +262,7 @@ pub(super) fn handle_pkg_install(
             .collect(),
         ),
     );
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 fn dependency_registry_alias<'a>(
@@ -422,7 +422,10 @@ fn is_not_found_error(v: &Value) -> bool {
     let Value::Sealed { payload, .. } = v else {
         return false;
     };
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Value::Data(t) = payload.as_ref() else {
+        return false;
+    };
+    let Term::Map(mm) = t.as_ref() else {
         return false;
     };
     matches!(
@@ -560,5 +563,5 @@ pub(super) fn handle_pkg_verify(
         TermOrdKey(Term::symbol(":missing")),
         Term::Vector(missing_hashes),
     );
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }

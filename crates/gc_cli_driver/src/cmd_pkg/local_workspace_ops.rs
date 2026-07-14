@@ -137,7 +137,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
                 .with_context(|| format!("write {}", log_path.display()))
                 .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
 
-            let value_v = Value::Data(local.value.clone());
+            let value_v = Value::data(local.value.clone());
             let ok = extract_pkg_ok_bool(&value_v).unwrap_or(true);
             let exit_code = if ok { EX_OK } else { EX_OBLIGATIONS };
             let value = gc_coreform::print_term(&local.value);
@@ -248,7 +248,16 @@ pub(super) fn cmd_pkg_local_workspace_ops(
                 resolved_step_limit(cli),
                 resolved_mem_limits(cli),
             )
-            .map_err(|e| cli_err(EX_PARSE, "pkg/build", e))?,
+            .map_err(|e| {
+                let context = structured_failures::FailureContext::new(
+                    "build",
+                    "package-build",
+                    "build/package",
+                )
+                .fact("reason", e.clone())
+                .into_value();
+                cli_err_with_context(EX_PARSE, "pkg/build", e, context)
+            })?,
         ),
         PkgCmd::Remove { name, lock } => Some(
             pkg_workspace_ops::handle_remove(name, lock)
@@ -392,8 +401,8 @@ pub(super) fn cmd_pkg_local_workspace_ops(
                         && let Value::Sealed { token, payload } = &run.value
                         && *token == proto.error
                     {
-                        let (code, message) = match payload.as_ref() {
-                            Value::Data(Term::Map(m)) => {
+                        let (code, message) = match payload.as_ref().as_data() {
+                            Some(Term::Map(m)) => {
                                 let code = m
                                     .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
                                     .and_then(|t| match t {
@@ -483,7 +492,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
         .with_context(|| format!("write {}", log_path.display()))
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
 
-    let value_v = Value::Data(local.value.clone());
+    let value_v = Value::data(local.value.clone());
     let ok = extract_pkg_ok_bool(&value_v).unwrap_or(true);
     let exit_code = if ok { EX_OK } else { EX_VERIFY };
     let value = gc_coreform::print_term(&local.value);

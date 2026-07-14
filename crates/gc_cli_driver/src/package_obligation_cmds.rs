@@ -3,14 +3,29 @@ use std::path::Path;
 use super::*;
 
 pub(crate) fn obligation_err(e: gc_obligations::ObligationError) -> CliError {
+    let context = structured_failures::obligation_context("obligation/run", &e);
     match e {
-        gc_obligations::ObligationError::Manifest(s) => cli_err(EX_PARSE, "manifest/error", s),
-        gc_obligations::ObligationError::Module(s) => cli_err(EX_PARSE, "module/error", s),
-        gc_obligations::ObligationError::Test(s) => cli_err(EX_EVAL, "test/error", s),
-        gc_obligations::ObligationError::Typecheck(s) => cli_err(EX_EVAL, "typecheck/error", s),
-        gc_obligations::ObligationError::Opt(s) => cli_err(EX_INTERNAL, "opt/error", s),
-        gc_obligations::ObligationError::Store(s) => cli_err(EX_INTERNAL, "store/error", s),
-        gc_obligations::ObligationError::Io(e) => cli_err(EX_IO, "io/error", format!("{e}")),
+        gc_obligations::ObligationError::Manifest(s) => {
+            cli_err_with_context(EX_PARSE, "manifest/error", s, context)
+        }
+        gc_obligations::ObligationError::Module(s) => {
+            cli_err_with_context(EX_PARSE, "module/error", s, context)
+        }
+        gc_obligations::ObligationError::Test(s) => {
+            cli_err_with_context(EX_EVAL, "test/error", s, context)
+        }
+        gc_obligations::ObligationError::Typecheck(s) => {
+            cli_err_with_context(EX_EVAL, "typecheck/error", s, context)
+        }
+        gc_obligations::ObligationError::Opt(s) => {
+            cli_err_with_context(EX_INTERNAL, "opt/error", s, context)
+        }
+        gc_obligations::ObligationError::Store(s) => {
+            cli_err_with_context(EX_INTERNAL, "store/error", s, context)
+        }
+        gc_obligations::ObligationError::Io(e) => {
+            cli_err_with_context(EX_IO, "io/error", format!("{e}"), context)
+        }
     }
 }
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -41,6 +44,11 @@ if not included_paths:
 
 required_included = [
     "docs/spec/CLI_TOOLING_BUNDLE_v0.1.md",
+    "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+    "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+    "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+    "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
     "docs/spec/GCPM_BUNDLE_v0.1.md",
     "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
     "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -90,6 +98,30 @@ if bundle_rel not in agent_index_spec:
 if bundle_rel not in agent_index_cmd:
     raise SystemExit(
         "agent-authoring-bundle: cmd_agent_index must expose authoring bundle in docs map"
+    )
+
+profile_rel = "docs/spec/GC_AGENT_PROFILE_v0.3.json"
+if profile_rel not in agent_index_spec or profile_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index spec and command must expose GC-AGENT-v0.3"
+    )
+
+card_rel = "docs/spec/GC_AGENT_CORE_CARD_v0.3.md"
+if card_rel not in agent_index_spec or card_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index spec and command must expose the compact core card"
+    )
+
+task_cards_rel = "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"
+if task_cards_rel not in agent_index_spec or task_cards_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index spec and command must expose task cards"
+    )
+
+symbol_index_rel = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"
+if symbol_index_rel not in agent_index_spec or symbol_index_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index spec and command must expose exact symbol lookup"
     )
 
 print(

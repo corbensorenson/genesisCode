@@ -66,7 +66,7 @@ pub(super) fn sealed_error_code(value: &Value, error_tok: gc_kernel::SealId) -> 
     if *token != error_tok {
         return None;
     }
-    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+    let Some(Term::Map(m)) = payload.as_ref().as_data() else {
         return None;
     };
     match m.get(&TermOrdKey(Term::symbol(":error/code"))) {

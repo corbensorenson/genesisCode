@@ -492,15 +492,19 @@ pub(super) fn dispatch_publish(
             )?;
 
             let out = match sync_out {
-                Value::Data(Term::Map(mut m)) => {
-                    m.insert(TermOrdKey(Term::symbol(":commit")), Term::Str(commit_hex));
-                    m.insert(TermOrdKey(Term::symbol(":ref")), Term::Str(refname));
-                    m.insert(
-                        TermOrdKey(Term::symbol(":provenance")),
-                        commit_provenance_term(&commit),
-                    );
-                    Value::Data(Term::Map(m))
-                }
+                Value::Data(t) => match t.as_ref() {
+                    Term::Map(m) => {
+                        let mut m = m.clone();
+                        m.insert(TermOrdKey(Term::symbol(":commit")), Term::Str(commit_hex));
+                        m.insert(TermOrdKey(Term::symbol(":ref")), Term::Str(refname));
+                        m.insert(
+                            TermOrdKey(Term::symbol(":provenance")),
+                            commit_provenance_term(&commit),
+                        );
+                        Value::data(Term::Map(m))
+                    }
+                    _ => Value::Data(t),
+                },
                 other => other,
             };
             Ok(out)
@@ -918,34 +922,43 @@ pub(super) fn dispatch_publish(
             )?;
             let signature = match sign_out {
                 Value::Sealed { .. } => return Ok(sign_out),
-                Value::Data(Term::Map(mm)) => match mm.get(&TermOrdKey(Term::symbol(":signature")))
-                {
-                    Some(Term::Bytes(sig)) if sig.len() == 64 => sig.to_vec(),
-                    Some(Term::Bytes(sig)) => {
+                Value::Data(t) => {
+                    let Term::Map(mm) = t.as_ref() else {
                         return Ok(mk_error(
                             error_tok,
                             "core/pkg/bridge-signature",
-                            format!("signature must be 64 bytes, got {}", sig.len()),
+                            "core/crypto::sign response must be a map".to_string(),
                             Some(op),
                         ));
+                    };
+                    match mm.get(&TermOrdKey(Term::symbol(":signature"))) {
+                        Some(Term::Bytes(sig)) if sig.len() == 64 => sig.to_vec(),
+                        Some(Term::Bytes(sig)) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bridge-signature",
+                                format!("signature must be 64 bytes, got {}", sig.len()),
+                                Some(op),
+                            ));
+                        }
+                        Some(other) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bridge-signature",
+                                format!("signature must be bytes, got {}", print_term(other)),
+                                Some(op),
+                            ));
+                        }
+                        None => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bridge-signature",
+                                "core/crypto::sign response missing :signature".to_string(),
+                                Some(op),
+                            ));
+                        }
                     }
-                    Some(other) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bridge-signature",
-                            format!("signature must be bytes, got {}", print_term(other)),
-                            Some(op),
-                        ));
-                    }
-                    None => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bridge-signature",
-                            "core/crypto::sign response missing :signature".to_string(),
-                            Some(op),
-                        ));
-                    }
-                },
+                }
                 other => {
                     return Ok(mk_error(
                         error_tok,
@@ -1199,7 +1212,7 @@ pub(super) fn dispatch_publish(
                 TermOrdKey(Term::symbol(":lock-h")),
                 lock_h.map(Term::Str).unwrap_or(Term::Nil),
             );
-            Ok(Value::Data(Term::Map(out)))
+            Ok(Value::data(Term::Map(out)))
         }
         _ => Ok(mk_error(
             error_tok,

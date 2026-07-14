@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+if [[ $# -ne 2 || -z "${1:-}" || -z "${2:-}" ]]; then
+  echo "usage: scripts/render_selfhost_dashboard_fresh_report.sh <report-path> <history-path>" >&2
+  exit 2
+fi
+
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+REPORT_PATH="$1"
+HISTORY_PATH="$2"
+BUDGET_MS="${GENESIS_SELFHOST_DASHBOARD_FRESH_BUDGET_MS:-600000}"
+
+DASHBOARD_MD="$ROOT_DIR/docs/status/SELFHOST_CUTOVER.md"
+[[ -f "$DASHBOARD_MD" ]] || {
+  echo "selfhost-dashboard-fresh: missing committed dashboard at $DASHBOARD_MD" >&2
+  exit 1
+}
+DISK_MIN_FREE_KB="${GENESIS_SELFHOST_DASHBOARD_FRESH_MIN_FREE_KB:-1048576}"
+DISK_STRICT_MODE="${GENESIS_SELFHOST_DASHBOARD_FRESH_DISK_STRICT_MODE:-1}"
+GENESIS_BIN_OVERRIDE="${GENESIS_BIN:-}"
+
+DEFAULT_DEBUG_DIR="$ROOT_DIR/target/debug"
+if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
+  DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
+fi
+if [[ -n "$GENESIS_BIN_OVERRIDE" ]]; then
+  GENESIS_BIN="$GENESIS_BIN_OVERRIDE"
+else
+  GENESIS_BIN="$DEFAULT_DEBUG_DIR/genesis"
+fi
+if [[ ! -x "$GENESIS_BIN" ]]; then
+  bash scripts/check_disk_headroom.sh \
+    --path "$ROOT_DIR" \
+    --context "selfhost-dashboard-fresh" \
+    --min-kb "$DISK_MIN_FREE_KB" \
+    --strict "$DISK_STRICT_MODE"
+  genesis_configure_cargo_target_dir \
+    "$ROOT_DIR" \
+    "selfhost-dashboard-fresh" \
+    root-host
+  if [[ -z "$GENESIS_BIN_OVERRIDE" ]]; then
+    GENESIS_BIN="$CARGO_TARGET_DIR/debug/genesis"
+  fi
+  cargo build -p gc_cli >/dev/null
+fi
+
+TMP_DIR="$(mktemp -d)"
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
+REBUILT_MD="$TMP_DIR/SELFHOST_CUTOVER.md"
+"$GENESIS_BIN" \
+  --selfhost-artifact "selfhost/toolchain.gc" \
+  selfhost-dashboard \
+  --markdown "$REBUILT_MD" \
+  >/dev/null
+
+if ! cmp -s "$DASHBOARD_MD" "$REBUILT_MD"; then
+  echo "selfhost-dashboard-fresh: committed dashboard is stale." >&2
+  echo "  expected: docs/status/SELFHOST_CUTOVER.md matches fresh selfhost-dashboard output" >&2
+  echo "  fix: cargo run -p gc_cli -- --selfhost-artifact selfhost/toolchain.gc selfhost-dashboard --markdown docs/status/SELFHOST_CUTOVER.md" >&2
+  exit 1
+fi
+
+genesis_profile_gate_emit_runtime_report \
+  "selfhost-dashboard-fresh" \
+  "genesis/selfhost-dashboard-fresh-v0.1" \
+  "$REPORT_PATH" \
+  "$HISTORY_PATH" \
+  "$START_MS" \
+  "$BUDGET_MS"
+
+echo "selfhost-dashboard-fresh: ok"

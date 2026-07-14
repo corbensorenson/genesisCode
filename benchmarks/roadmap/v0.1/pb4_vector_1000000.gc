@@ -1,0 +1,9 @@
+(def bench/vec-build-loop
+  (fn (i)
+    (fn (n)
+      (fn (acc)
+        (if ((core/int::eq? i) n)
+          acc
+          (((bench/vec-build-loop ((core/int::add i) 1)) n)
+            ((core/vec::push acc) i)))))))
+(((bench/vec-build-loop 0) 1000000) [])

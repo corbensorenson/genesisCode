@@ -1,0 +1,186 @@
+{
+  "kind": "genesis/repair-utility-workloads-v0.1",
+  "version": "0.1.0",
+  "caseCount": 18,
+  "mutationFamilies": [
+    "capability-policy-denial",
+    "extra-closing-delimiter",
+    "integer-literal-type",
+    "missing-closing-delimiter",
+    "primitive-name-edit",
+    "unsupported-package-schema"
+  ],
+  "cases": [
+    {
+      "id": "capability-denial-fs",
+      "family": "capability-policy-denial",
+      "repairability": "review-required",
+      "command": ["run", "main.gc", "--caps", "caps.toml", "--log", "run.gclog"],
+      "verification": [],
+      "expectedDiagnostic": {"code": "caps/denied", "domain": "policy", "kind": "capability-denied", "actionId": "review-policy-denial", "automaticAllowed": false},
+      "files": [
+        {"path": "caps.toml", "role": "policy", "mutable": false, "mutated": "allow = []\n", "expected": "allow = []\n"},
+        {"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/effect::perform 'io/fs::read nil (fn (x) (core/effect::pure x)))\n", "expected": "(core/effect::perform 'io/fs::read nil (fn (x) (core/effect::pure x)))\n"}
+      ]
+    },
+    {
+      "id": "capability-denial-net",
+      "family": "capability-policy-denial",
+      "repairability": "review-required",
+      "command": ["run", "main.gc", "--caps", "caps.toml", "--log", "run.gclog"],
+      "verification": [],
+      "expectedDiagnostic": {"code": "caps/denied", "domain": "policy", "kind": "capability-denied", "actionId": "review-policy-denial", "automaticAllowed": false},
+      "files": [
+        {"path": "caps.toml", "role": "policy", "mutable": false, "mutated": "allow = []\n", "expected": "allow = []\n"},
+        {"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/effect::perform 'net/http::request nil (fn (x) (core/effect::pure x)))\n", "expected": "(core/effect::perform 'net/http::request nil (fn (x) (core/effect::pure x)))\n"}
+      ]
+    },
+    {
+      "id": "capability-denial-time",
+      "family": "capability-policy-denial",
+      "repairability": "review-required",
+      "command": ["run", "main.gc", "--caps", "caps.toml", "--log", "run.gclog"],
+      "verification": [],
+      "expectedDiagnostic": {"code": "caps/denied", "domain": "policy", "kind": "capability-denied", "actionId": "review-policy-denial", "automaticAllowed": false},
+      "files": [
+        {"path": "caps.toml", "role": "policy", "mutable": false, "mutated": "allow = []\n", "expected": "allow = []\n"},
+        {"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/effect::perform 'sys/time::now nil (fn (x) (core/effect::pure x)))\n", "expected": "(core/effect::perform 'sys/time::now nil (fn (x) (core/effect::pure x)))\n"}
+      ]
+    },
+    {
+      "id": "extra-close-list",
+      "family": "extra-closing-delimiter",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "selfhost/error", "domain": "parser", "kind": "selfhost-protocol", "actionId": "verify-selfhost-artifact", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::add 1 2))\n", "expected": "(core/int::add 1 2)\n"}]
+    },
+    {
+      "id": "extra-close-map",
+      "family": "extra-closing-delimiter",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "selfhost/error", "domain": "parser", "kind": "selfhost-protocol", "actionId": "verify-selfhost-artifact", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "{:answer 42}}\n", "expected": "{:answer 42}\n"}]
+    },
+    {
+      "id": "extra-close-vector",
+      "family": "extra-closing-delimiter",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "selfhost/error", "domain": "parser", "kind": "selfhost-protocol", "actionId": "verify-selfhost-artifact", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "[1 2 3]]\n", "expected": "[1 2 3]\n"}]
+    },
+    {
+      "id": "int-literal-add",
+      "family": "integer-literal-type",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "eval/error", "domain": "evaluator", "kind": "selfhost-protocol", "actionId": "inspect-evaluation-trace", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::add \"1\" 2)\n", "expected": "(core/int::add 1 2)\n"}]
+    },
+    {
+      "id": "int-literal-mul",
+      "family": "integer-literal-type",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "eval/error", "domain": "evaluator", "kind": "selfhost-protocol", "actionId": "inspect-evaluation-trace", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::mul \"6\" 7)\n", "expected": "(core/int::mul 6 7)\n"}]
+    },
+    {
+      "id": "int-literal-sub",
+      "family": "integer-literal-type",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "eval/error", "domain": "evaluator", "kind": "selfhost-protocol", "actionId": "inspect-evaluation-trace", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::sub 9 \"4\")\n", "expected": "(core/int::sub 9 4)\n"}]
+    },
+    {
+      "id": "missing-close-list",
+      "family": "missing-closing-delimiter",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "selfhost/error", "domain": "parser", "kind": "selfhost-protocol", "actionId": "verify-selfhost-artifact", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::add 1 2\n", "expected": "(core/int::add 1 2)\n"}]
+    },
+    {
+      "id": "missing-close-map",
+      "family": "missing-closing-delimiter",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "selfhost/error", "domain": "parser", "kind": "selfhost-protocol", "actionId": "verify-selfhost-artifact", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "{:answer 42\n", "expected": "{:answer 42}\n"}]
+    },
+    {
+      "id": "missing-close-vector",
+      "family": "missing-closing-delimiter",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "selfhost/error", "domain": "parser", "kind": "selfhost-protocol", "actionId": "verify-selfhost-artifact", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "[1 2 3\n", "expected": "[1 2 3]\n"}]
+    },
+    {
+      "id": "primitive-edit-add",
+      "family": "primitive-name-edit",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "eval/error", "domain": "evaluator", "kind": "unbound-symbol", "actionId": "inspect-evaluation-trace", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::ad 1 2)\n", "expected": "(core/int::add 1 2)\n"}]
+    },
+    {
+      "id": "primitive-edit-mul",
+      "family": "primitive-name-edit",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "eval/error", "domain": "evaluator", "kind": "unbound-symbol", "actionId": "inspect-evaluation-trace", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::ml 6 7)\n", "expected": "(core/int::mul 6 7)\n"}]
+    },
+    {
+      "id": "primitive-edit-sub",
+      "family": "primitive-name-edit",
+      "repairability": "automatic",
+      "command": ["eval", "main.gc"],
+      "verification": [["eval", "main.gc"]],
+      "expectedDiagnostic": {"code": "eval/error", "domain": "evaluator", "kind": "unbound-symbol", "actionId": "inspect-evaluation-trace", "automaticAllowed": true},
+      "files": [{"path": "main.gc", "role": "source", "mutable": true, "mutated": "(core/int::sb 9 4)\n", "expected": "(core/int::sub 9 4)\n"}]
+    },
+    {
+      "id": "schema-version-2",
+      "family": "unsupported-package-schema",
+      "repairability": "automatic",
+      "command": ["typecheck", "--pkg", "package.toml"],
+      "verification": [["typecheck", "--pkg", "package.toml"]],
+      "expectedDiagnostic": {"code": "manifest/error", "domain": "package", "kind": "manifest", "actionId": "repair-parse-input", "automaticAllowed": true},
+      "files": [{"path": "package.toml", "role": "manifest", "mutable": true, "mutated": "schema = 2\nname = \"repair-schema-2\"\nversion = \"0.0.1\"\ndependencies = []\nobligations = []\ntests = []\nmodules = []\n", "expected": "schema = 1\nname = \"repair-schema-2\"\nversion = \"0.0.1\"\ndependencies = []\nobligations = []\ntests = []\nmodules = []\n"}]
+    },
+    {
+      "id": "schema-version-9",
+      "family": "unsupported-package-schema",
+      "repairability": "automatic",
+      "command": ["typecheck", "--pkg", "package.toml"],
+      "verification": [["typecheck", "--pkg", "package.toml"]],
+      "expectedDiagnostic": {"code": "manifest/error", "domain": "package", "kind": "manifest", "actionId": "repair-parse-input", "automaticAllowed": true},
+      "files": [{"path": "package.toml", "role": "manifest", "mutable": true, "mutated": "schema = 9\nname = \"repair-schema-9\"\nversion = \"0.0.1\"\ndependencies = []\nobligations = []\ntests = []\nmodules = []\n", "expected": "schema = 1\nname = \"repair-schema-9\"\nversion = \"0.0.1\"\ndependencies = []\nobligations = []\ntests = []\nmodules = []\n"}]
+    },
+    {
+      "id": "schema-version-99",
+      "family": "unsupported-package-schema",
+      "repairability": "automatic",
+      "command": ["typecheck", "--pkg", "package.toml"],
+      "verification": [["typecheck", "--pkg", "package.toml"]],
+      "expectedDiagnostic": {"code": "manifest/error", "domain": "package", "kind": "manifest", "actionId": "repair-parse-input", "automaticAllowed": true},
+      "files": [{"path": "package.toml", "role": "manifest", "mutable": true, "mutated": "schema = 99\nname = \"repair-schema-99\"\nversion = \"0.0.1\"\ndependencies = []\nobligations = []\ntests = []\nmodules = []\n", "expected": "schema = 1\nname = \"repair-schema-99\"\nversion = \"0.0.1\"\ndependencies = []\nobligations = []\ntests = []\nmodules = []\n"}]
+    }
+  ]
+}

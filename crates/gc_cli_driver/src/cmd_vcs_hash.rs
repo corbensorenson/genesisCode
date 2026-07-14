@@ -31,7 +31,7 @@ pub(super) fn handle_vcs_hash(cli: &Cli, cmd: &VcsCmd) -> Result<CmdOut, CliErro
         ctx.steps = 0;
         ctx.step_limit = resolved_step_limit(cli).resolve();
         let r = f
-            .apply(&mut ctx, Value::Data(Term::Str(src.clone())))
+            .apply(&mut ctx, Value::data(Term::Str(src.clone())))
             .map_err(|e| {
                 cli_err(
                     EX_EVAL,
@@ -50,7 +50,14 @@ pub(super) fn handle_vcs_hash(cli: &Cli, cmd: &VcsCmd) -> Result<CmdOut, CliErro
             });
         }
         let (hash_hex, hk) = match r {
-            Value::Data(Term::Map(m)) => {
+            Value::Data(t) => {
+                let Term::Map(m) = t.as_ref() else {
+                    return Err(cli_err(
+                        EX_INTERNAL,
+                        "selfhost/bad-return",
+                        "selfhost vcs hash return must be a map",
+                    ));
+                };
                 let hash_hex = match m.get(&TermOrdKey(Term::symbol(":hash"))) {
                     Some(Term::Str(s)) => s.clone(),
                     _ => {
@@ -75,8 +82,17 @@ pub(super) fn handle_vcs_hash(cli: &Cli, cmd: &VcsCmd) -> Result<CmdOut, CliErro
             }
             Value::Map(m) => {
                 let hash_hex = match m.get(&TermOrdKey(Term::symbol(":hash"))) {
-                    Some(Value::Data(Term::Str(s))) => s.clone(),
-                    _ => {
+                    Some(v) => match v.as_data() {
+                        Some(Term::Str(s)) => s.clone(),
+                        _ => {
+                            return Err(cli_err(
+                                EX_INTERNAL,
+                                "selfhost/bad-return",
+                                "selfhost vcs hash return missing :hash string",
+                            ));
+                        }
+                    },
+                    None => {
                         return Err(cli_err(
                             EX_INTERNAL,
                             "selfhost/bad-return",
@@ -85,8 +101,17 @@ pub(super) fn handle_vcs_hash(cli: &Cli, cmd: &VcsCmd) -> Result<CmdOut, CliErro
                     }
                 };
                 let hk = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
-                    Some(Value::Data(Term::Str(s))) if s == "term" || s == "module" => s.clone(),
-                    _ => {
+                    Some(v) => match v.as_data() {
+                        Some(Term::Str(s)) if s == "term" || s == "module" => s.clone(),
+                        _ => {
+                            return Err(cli_err(
+                                EX_INTERNAL,
+                                "selfhost/bad-return",
+                                "selfhost vcs hash return missing :kind string",
+                            ));
+                        }
+                    },
+                    None => {
                         return Err(cli_err(
                             EX_INTERNAL,
                             "selfhost/bad-return",

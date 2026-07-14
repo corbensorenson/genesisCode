@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use blake3::Hasher;
+use gc_coreform::HASH_DOMAIN_PREFIX;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -160,7 +161,7 @@ impl Runtime {
 
     pub fn respond_data(&mut self, resp_term_src: &str) -> Result<JsValue, JsValue> {
         let term = parse_term(resp_term_src).map_err(|e| js_err("parse", e))?;
-        self.respond_value(Value::Data(term))
+        self.respond_value(Value::data(term))
     }
 
     pub fn respond_denied(&mut self) -> Result<JsValue, JsValue> {
@@ -374,12 +375,13 @@ fn unseal_effect_request(v: &Value, effect_tok: SealId) -> Result<EffectRequest,
     let Value::EffectRequest(r) = payload.as_ref() else {
         return Err(js_err("effect", "bad effect request payload"));
     };
-    Ok(r.clone())
+    Ok(r.as_ref().clone())
 }
 
 pub(crate) fn hash_request(op: &str, payload_h: [u8; 32], cont_h: [u8; 32]) -> [u8; 32] {
     let mut h = Hasher::new();
-    h.update(b"GCv0.2\0effect-req\0");
+    h.update(HASH_DOMAIN_PREFIX);
+    h.update(b"effect-req\0");
     h.update(op.as_bytes());
     h.update(b"\0");
     h.update(&payload_h);
@@ -428,6 +430,6 @@ fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Val
     );
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(m))),
+        payload: Box::new(Value::data(Term::Map(m))),
     }
 }

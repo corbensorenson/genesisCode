@@ -12,6 +12,7 @@ fn write_caps(dir: &Path) -> PathBuf {
         r#"
 allow = [
   "core/store::put",
+  "core/pkg-low::load-package",
   "core/pkg-low::snapshot",
   "core/gpk-low::export",
   "core/gpk-low::import",
@@ -24,6 +25,9 @@ dir = "./.genesis/store"
 
 [refs]
 path = "./.genesis/refs.gc"
+
+[op."core/pkg-low::load-package"]
+base_dir = "."
 
 [op."core/pkg-low::snapshot"]
 base_dir = "."
@@ -49,6 +53,7 @@ fn pkg_snapshot_then_export_import_gpk_shallow_roundtrip() {
     fs::write(
         dir.join("package.toml"),
         r#"
+schema = 1
 name = "mini"
 version = "0.0.1"
 dependencies = []
@@ -114,6 +119,12 @@ path = "mini.gc"
             .eval(&bundle_h)
     );
     assert!(bundle.exists());
+    let bundle_bytes = fs::read(&bundle).unwrap();
+    assert_eq!(&bundle_bytes[..4], b"GPK\0");
+    assert_eq!(
+        u32::from_le_bytes(bundle_bytes[4..8].try_into().unwrap()),
+        2
+    );
 
     // Simulate empty store.
     let store_dir = dir.join(".genesis").join("store");

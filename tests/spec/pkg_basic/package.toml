@@ -9,6 +9,7 @@ obligations = [
     "core/obligation::typecheck",
     "core/obligation::translation-validation",
 ]
+schema = 1
 tests = ["pkg/basic::tests"]
 version = "0.0.1"
 

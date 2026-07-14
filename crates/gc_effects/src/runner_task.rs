@@ -108,7 +108,7 @@ pub(crate) fn task_runtime_call(
             let scope = map_field_str_or_symbol(payload, ":scope")
                 .map(Term::Str)
                 .unwrap_or(Term::Nil);
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":scope", scope),
                 (":state", Term::symbol(":entered")),
             ])))
@@ -127,7 +127,7 @@ pub(crate) fn task_runtime_call(
                     closed: false,
                 },
             );
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":channel-id", Term::Str(channel_id)),
                 (
                     ":capacity",
@@ -183,7 +183,7 @@ pub(crate) fn task_runtime_call(
                 ));
             }
             channel.queue.push_back(value);
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":channel-id", Term::Str(channel_id)),
                 (":size", Term::Int(BigInt::from(channel.queue.len()))),
                 (":state", Term::symbol(":open")),
@@ -212,7 +212,7 @@ pub(crate) fn task_runtime_call(
                 } else {
                     Term::symbol(":open")
                 };
-                Some(Value::Data(task_map([
+                Some(Value::data(task_map([
                     (":channel-id", Term::Str(channel_id)),
                     (":has-value", Term::Bool(true)),
                     (":value", value),
@@ -220,7 +220,7 @@ pub(crate) fn task_runtime_call(
                     (":state", state),
                 ])))
             } else {
-                Some(Value::Data(task_map([
+                Some(Value::data(task_map([
                     (":channel-id", Term::Str(channel_id)),
                     (":has-value", Term::Bool(false)),
                     (":value", Term::Nil),
@@ -254,7 +254,7 @@ pub(crate) fn task_runtime_call(
                 ));
             };
             channel.closed = true;
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":channel-id", Term::Str(channel_id)),
                 (":size", Term::Int(BigInt::from(channel.queue.len()))),
                 (":state", Term::symbol(":closed")),
@@ -277,7 +277,7 @@ pub(crate) fn task_runtime_call(
                     Some(op),
                 ));
             };
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":channel-id", Term::Str(channel_id)),
                 (":size", Term::Int(BigInt::from(channel.queue.len()))),
                 (
@@ -322,7 +322,7 @@ pub(crate) fn task_runtime_call(
                 .get(&task_id)
                 .map(|t| task_state_term(&t.state))
                 .unwrap_or(Term::symbol(":failed"));
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":task-id", Term::Str(task_id)),
                 (":state", state),
             ])))
@@ -344,7 +344,7 @@ pub(crate) fn task_runtime_call(
                     Some(op),
                 ));
             };
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":task-id", Term::Str(task_id)),
                 (":state", task_state_term(&rec.state)),
                 (
@@ -414,7 +414,7 @@ pub(crate) fn task_runtime_call(
                     Some(op),
                 ));
             };
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":task-id", Term::Str(task_id)),
                 (":state", task_state_term(&rec.state)),
                 (
@@ -500,7 +500,7 @@ pub(crate) fn task_runtime_call(
                     (Term::Nil, Term::Nil)
                 }
             };
-            Some(Value::Data(task_map([
+            Some(Value::data(task_map([
                 (":task-id", Term::Str(task_id)),
                 (":state", task_state_term(&rec.state)),
                 (
@@ -636,6 +636,6 @@ fn mk_error_with_ctx(
     mm.insert(TermOrdKey(Term::symbol(":error/context")), ctx);
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(mm))),
+        payload: Box::new(Value::data(Term::Map(mm))),
     }
 }

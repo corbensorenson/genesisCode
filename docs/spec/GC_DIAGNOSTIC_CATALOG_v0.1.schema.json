@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-diagnostic-catalog-v0.1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "catalogIdentitySha256", "lookup", "repairPlanSchema", "repairGuardrails", "sourceIdentities", "spanSchema", "diagnosticCount", "diagnostics"],
+  "properties": {
+    "kind": {"const": "genesis/diagnostic-catalog-v0.1"},
+    "version": {"const": "0.1.0"},
+    "catalogIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "lookup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseSensitive", "normalization", "maxResults", "command"],
+      "properties": {
+        "caseSensitive": {"const": true},
+        "normalization": {"const": "none"},
+        "maxResults": {"const": 1},
+        "command": {"const": "genesis --json agent-index --diagnostic <exact-code>"}
+      }
+    },
+    "repairPlanSchema": {"const": "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json"},
+    "repairGuardrails": {"$ref": "#/$defs/repairGuardrails"},
+    "sourceIdentities": {
+      "type": "object",
+      "minProperties": 4,
+      "propertyNames": {"pattern": "^[^/].+"},
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "spanSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields", "required"],
+      "properties": {
+        "fields": {"const": ["source", "startLine", "startColumn", "endLine", "endColumn"]},
+        "required": {"const": ["source", "startLine", "startColumn", "endLine", "endColumn"]}
+      }
+    },
+    "diagnosticCount": {"type": "integer", "minimum": 1},
+    "diagnostics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/diagnostic"}
+    }
+  },
+  "$defs": {
+    "documentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "anchor"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^[^/].+"},
+        "anchor": {"type": "string", "minLength": 1}
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "required", "description"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "type": {"enum": ["string", "integer", "number", "boolean", "object", "array", "null"]},
+        "required": {"type": "boolean"},
+        "description": {"type": "string", "minLength": 1}
+      }
+    },
+    "repair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "kind", "policyEffect", "obligationEffect", "automaticEligible", "requiresReview", "preconditions", "postconditions"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "description": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["inspect", "verify-command", "source-patch", "effect-command", "policy-review"]},
+        "policyEffect": {"enum": ["none", "review-required"]},
+        "obligationEffect": {"enum": ["preserve", "rerun-required"]},
+        "automaticEligible": {"type": "boolean"},
+        "requiresReview": {"type": "boolean"},
+        "preconditions": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}},
+        "postconditions": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}},
+        "command": {"type": "string", "minLength": 1}
+      }
+    },
+    "repairGuardrails": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "promptAuthority", "policyBroadening", "obligationSuppression", "automaticActionPolicy"],
+      "properties": {
+        "schema": {"const": "genesis/diagnostic-repair-guardrails-v0.1"},
+        "promptAuthority": {"const": "none"},
+        "policyBroadening": {"const": "separate-reviewed-diff"},
+        "obligationSuppression": {"const": "forbidden"},
+        "automaticActionPolicy": {"const": "catalog-eligible-only"}
+      }
+    },
+    "spanAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "required", "availability"],
+      "properties": {
+        "field": {"enum": ["primary_span", "related_spans"]},
+        "required": {"type": "boolean"},
+        "availability": {"enum": ["nullable-until-localized", "zero-or-more"]}
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "code", "version", "severity", "phase", "primarySpan", "relatedSpans", "parameters", "likelyCauses", "safeRepairActions", "documentation", "sourceAuthorities"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^genesis/diagnostic/v1/[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"},
+        "code": {"type": "string", "pattern": "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"},
+        "version": {"const": 1},
+        "severity": {"enum": ["error", "warning", "info", "hint"]},
+        "phase": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "primarySpan": {"$ref": "#/$defs/spanAssignment"},
+        "relatedSpans": {"$ref": "#/$defs/spanAssignment"},
+        "parameters": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/parameter"}},
+        "likelyCauses": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "safeRepairActions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/repair"}},
+        "documentation": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/documentation"}},
+        "sourceAuthorities": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[^/].+:[1-9][0-9]*$"}}
+      }
+    }
+  }
+}

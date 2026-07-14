@@ -1,6 +1,6 @@
 # GenesisCode Docs Index
 
-Last updated: 2026-02-26
+Last updated: 2026-07-14
 
 This is the canonical entrypoint for project documentation.
 
@@ -10,22 +10,164 @@ This is the canonical entrypoint for project documentation.
 - `docs/GETTING_STARTED.md` - local setup and first workflows.
 - `docs/PAPER_v0.2.md` - language thesis and architecture.
 - `docs/TECH_HANDOFF.md` - implementation handoff details.
+- `CHANGELOG.md` - release notes, migration notes, and pre-1.0 compatibility record.
 - `README.md` - workspace build/test quickstart.
 
 ## Live Status and Planning
 
+- `ROADMAP.md` - canonical v0.2-to-v1 roadmap (phases R0-R9 plus post-v1 frontier work): truthful evidence, agent-ready authoring, bounded/validated execution, semantic selfhost authority, platform delivery, and a reproducible trust release; strategic plan, not release evidence.
+- `docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json` - machine-readable roadmap execution manifest schema.
+- `docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json` - generated, deterministic execution graph covering every roadmap task; scheduling aid, not completion authority.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#roadmap-execution-manifest` - normative authority, dependency, readiness, evidence, rollback, and check/update contract for the generated roadmap graph.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#gate-manifest` - normative gate inventory, resource, network, platform, dependency, and sharding contract.
+- `docs/spec/GATE_MANIFEST_v0.1.schema.json` - closed schema for the generated `genesis.gates.json` execution contract.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#gate-resource-telemetry` - normative local gate-observation, fidelity, event-channel, and semantic-isolation contract.
+- `docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json` - closed schema for one governed gate resource observation.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#engineering-gate-budgets` - normative GB-1 through GB-8 enforcement, panic-assurance split, source-waiver, and prerequisite-closure contract.
+- `docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json` - closed engineering budget authority for static, changed-file, profile, footprint, verifier, concentration, and fresh-clone limits.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#reference-host-profiles` - normative tier-1/tier-2 benchmark host classes, metadata dimensions, privacy boundary, and promotion rules.
+- `docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json` - closed reference-host policy schema.
+- `docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json` - closed portable E0 host-observation schema with canonical identity.
+- `policies/reference_host_profiles_v0.1.json` - authoritative macOS/Linux/Windows reference and candidate host profiles.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#normalized-roadmap-workloads` - normative PB-1 through PB-10 source, input, outcome, measurement, availability, and statistical contract.
+- `docs/spec/ROADMAP_WORKLOADS_v0.1.schema.json` - closed schema for the normalized runtime workload authority.
+- `policies/perf/roadmap_workloads_v0.1.json` - content-addressed PB-1 through PB-10 workload and measurement policy.
+- `docs/spec/ROADMAP_BASELINE_STATEMENT_v0.1.schema.json` - closed raw-sample, failure-preserving E0 baseline statement schema.
+- `docs/spec/ROADMAP_BASELINE_BUNDLE_v0.1.schema.json` - closed DSSE wrapper schema whose fixture-integrity signature grants no authority.
+- `docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json` - signed, independently verified E0 baseline preserving 120 raw samples and current failures.
+- `scripts/check_roadmap_baseline.sh` - read-only baseline/schema/statistics/signature/adversarial gate; `scripts/update_roadmap_baseline.sh` is the sole append-only capture producer.
+- `docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json` - closed policy schema for canonical release-note authorities, outputs, lockfiles, and security gates.
+- `docs/spec/RELEASE_NOTES_v0.1.schema.json` - closed machine-readable compatibility, migration, gap, capability, evidence, dependency, and security note schema.
+- `policies/release_notes_v0.1.json` - reviewed release-note generation and authority policy.
+- `docs/program/RELEASE_NOTES_v0.2.0.json` - deterministic E1 release-fact artifact; it records requirements and limitations but cannot attest runtime gate success.
+- `scripts/check_release_notes.sh` - read-only freshness and unsupported-claim gate; `scripts/update_release_notes.sh` is the explicit JSON and changelog generator.
+- `docs/spec/GC_AGENT_PROFILE_v0.3.schema.json` - recursively closed schema for the frozen agent-training language profile.
+- `policies/gc_agent_profile_v0.3.json` - reviewed GC-AGENT-v0.3 syntax, semantics, value, contract, module, effect, package, error, resource, compatibility, and actionable five-class unsupported-behavior authority.
+- `docs/spec/GC_AGENT_PROFILE_v0.3.json` - content-addressed resolved profile with exact source identities and executable conformance cases.
+- `scripts/check_gc_agent_profile.sh` - read-only profile/source/corpus/adversarial gate; `scripts/update_gc_agent_profile.sh` is its explicit resolver.
+- `docs/spec/GC_AGENT_CORE_CARD_v0.3.md` - generated 4,000-byte ASCII-bounded core language card for low-context agent retrieval.
+- `docs/spec/GC_AGENT_CORE_CARD_v0.3.json` - content-addressed card manifest with complete symbols, examples, unsupported classes/records, source identities, and tokenizer-independent budget evidence.
+- `scripts/check_gc_agent_core_card.sh` - read-only card freshness/adversarial/parser gate; `scripts/update_gc_agent_core_card.sh` is its explicit generator.
+- `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` - generated capability, package, patch, replay, testing, deployment, and troubleshooting card compendium.
+- `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json` - embedded intent-selector registry with per-card content, budgets, source hashes, and selector contracts.
+- `scripts/check_gc_agent_task_cards.sh` - read-only registry/reference/production parity gate; `scripts/update_gc_agent_task_cards.sh` is its explicit generator.
+- `policies/gc_agent_symbol_index_v0.3.json` - reviewed exact-lookup signature, effect, capability, diagnostic, and deprecation policy for every frozen symbol.
+- `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json` - recursively closed machine-readable symbol-record schema.
+- `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json` - generated content-addressed 166-symbol index with bounded exact lookup through `agent-index --symbol`.
+- `scripts/check_gc_agent_symbol_index.sh` - read-only freshness, authority, tamper, primitive-closure, and production lookup gate; `scripts/update_gc_agent_symbol_index.sh` is its explicit generator.
+- `policies/gc_diagnostic_catalog_v0.1.json` - reviewed production diagnostic-family, phase, cause, safe-repair, and documentation policy.
+- `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json` - recursively closed schema for versioned diagnostic records, spans, parameters, repairs, and source authorities.
+- `docs/spec/GC_FAILURE_CONTEXT_v0.1.schema.json` - recursively closed nine-domain structured failure-context contract used inside cataloged diagnostics.
+- `docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json` - closed guarded repair-plan and separately reviewable capability-policy-diff contract.
+- `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json` - generated content-addressed exact catalog for every production CLI diagnostic code.
+- `tests/diagnostics/goldens/v0.1/diagnostics.json` - exact ten-class, path-normalized diagnostic and guarded-repair projection corpus.
+- `benchmarks/diagnostics/repair_utility/v0.1/workloads.json` - 18-case deterministic repair and safe-abstention mutation authority.
+- `benchmarks/diagnostics/repair_utility/v0.1/report.json` - retained two-run deterministic reference-agent repair utility evidence.
+- `docs/spec/GC_REPAIR_UTILITY_REPORT_v0.1.schema.json` - closed recovery, over-repair, policy-broadening, regression, abstention, and exact token-cost report contract.
+- `policies/gc_repair_utility_v0.1.json` - pinned agents, context, decoding, two-turn, AB-6, and zero-tolerance safety policy.
+- `scripts/check_cli_diagnostics_contract.sh` - read-only catalog/golden/repair-utility freshness, tamper, and runtime gate; `scripts/update_gc_diagnostic_catalog.sh`, `scripts/update_cli_diagnostic_goldens.sh`, and `scripts/update_gc_repair_utility_report.sh` are its explicit reviewed generators.
+- `docs/spec/WARM_PROTOCOL_v0.2.schema.json` - recursively closed warm initialize/execute/control/response/error wire contract; normative lifecycle, bounds, isolation, and capability semantics are in `docs/spec/CLI_JSON_SCHEMAS_v0.1.md#warm-protocol-v02`.
+- `scripts/check_warm_protocol_contract.sh` - read-only warm/MCP schema-source parity, adversarial parser, lifecycle, roots, generated-tool, resource, cancellation, and production CLI protocol gate.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#deterministic-cleanup` - normative dry-run, provenance marker, reviewed class, drift binding, quarantine, and user-data protection contract.
+- `docs/spec/DETERMINISTIC_CLEANUP_POLICY_v0.1.schema.json` - closed cleanup root/class/profile policy schema.
+- `docs/spec/DETERMINISTIC_CLEANUP_MARKER_v0.1.schema.json` - closed producer-provenance marker schema.
+- `docs/spec/DETERMINISTIC_CLEANUP_PLAN_v0.1.schema.json` - closed portable cleanup plan schema.
+- `docs/spec/DETERMINISTIC_CLEANUP_RESULT_v0.1.schema.json` - closed execution-result schema binding the confirmed plan and deleted roots.
+- `docs/spec/GENESIS_EVIDENCE_PREDICATE_v0.1.schema.json` - closed Genesis execution-evidence predicate schema.
+- `docs/spec/GENESIS_EVIDENCE_STATEMENT_v0.1.schema.json` - in-toto Statement v1 producer profile for Genesis evidence.
+- `docs/spec/GENESIS_SLSA_BUILD_v1.schema.json` - strict SLSA Provenance v1 producer profile for Genesis builds.
+- `docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json` - versioned Statement/DSSE evidence bundle schema.
+- `docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json` - deterministic authenticated Genesis/SLSA conformance vector.
+- `docs/spec/GENESIS_EVIDENCE_TRUST_POLICY_v0.1.schema.json` - externally pinned verifier trust and compatibility policy schema.
+- `docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json` - domain-separated SHA-256 Merkle artifact manifest schema.
+- `docs/spec/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.schema.json` - independent-verifier rejection-vector catalog schema.
+- `docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json` - deterministic artifact hash-tree vector.
+- `docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json` - 30-case verifier adversarial catalog.
+- `docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json` - R0.2.e requirement-to-control matrix schema.
+- `docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json` - exact cross-boundary adversarial evidence and replay control map.
+- `docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json` - E0-E4 storage, authority, immutable release-asset, and mirror policy schema.
+- `policies/evidence_storage_classes_v0.1.json` - normative E0-E4 storage and publication policy.
+- `docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json` - exact in-tree evidence fixture classification schema.
+- `docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json` - generated E2/test-only classification for all retained evidence vectors.
+- `docs/spec/PREREQUISITES_v0.1.md` - normative tool/profile/platform prerequisite and read-only diagnostic contract.
+- `docs/spec/PREREQUISITES_v0.1.schema.json` - machine-readable prerequisite manifest representation.
+- `genesis.prerequisites.json` - authoritative pinned prerequisite manifest.
+- `docs/spec/DEPENDENCY_MIRROR_v0.1.md` - normative fetch-once, content-addressed mirror, clean offline-build, and hard network-denial contract.
+- `docs/spec/DEPENDENCY_MIRROR_v0.1.schema.json` - closed dependency-mirror policy schema.
+- `docs/spec/DEPENDENCY_MIRROR_MANIFEST_v0.1.schema.json` - closed generated mirror-evidence schema.
+- `genesis.dependency-mirror.json` - authoritative repository dependency-mirror policy.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#cargo-cache-policy` - normative content-addressed Cargo cache scopes, key inputs, override boundary, and rebuild-island prohibition.
+- `docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json` - closed Cargo cache policy schema.
+- `policies/cargo_cache_v0.1.json` - authoritative four-scope Cargo cache policy.
+- `docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json` - closed changed-impact selection policy schema.
+- `policies/changed_impact_v0.1.json` - conservative crate, gate, generated-authority, and profile-fallback selection policy.
 - `upgrade_plan.md` - unresolved red-team backlog only.
 - `docs/status/REDTEAM_REPORT.md` - active P0/P1 risk summary.
-- `docs/status/SELFHOST_CUTOVER.md` - generated selfhost cutover dashboard.
-- `.genesis/perf/selfhost_readiness_report.json` - machine-readable selfhost readiness scorecard.
+- `docs/status/SELFHOST_CUTOVER.md` - generated selfhost command-routing dashboard; routing is not semantic authority.
+- `docs/status/SELFHOST_AUTHORITY_v0.1.md` - generated H0-H4 semantic selfhost authority view.
+- `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
+- `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.
+- `.genesis/perf/full_selfhost_cutover_profile_report.json` - optional local full-cutover aggregate observation, produced only by `scripts/update_full_selfhost_cutover_profile_report.sh`.
+- `.genesis/perf/remote_registry_runtime_parity_report.json` - optional local native/WASI registry-parity observation, produced only by `scripts/update_remote_registry_runtime_parity_report.sh`.
+- `.genesis/perf/gcpm_operation_contract_pack_report.json` - optional local GCPM contract-pack observation, produced only by `scripts/update_gcpm_operation_contract_pack_report.sh`.
+- `.genesis/perf/vcs_selfhost_contract_report.json` - optional local VCS self-host contract observation, produced only by `scripts/update_vcs_selfhost_contract_report.sh`.
+- `.genesis/perf/selfhost_symbol_ownership_report.json` - optional local symbol-ownership observation, produced only by `scripts/update_selfhost_symbol_ownership_report.sh`.
+- `.genesis/perf/cli_diagnostics_contract_report.json` - optional local CLI-diagnostics timing observation, produced only by `scripts/update_cli_diagnostics_contract_report.sh`.
+- `.genesis/perf/foundation_stdlib_conformance_report.json` - optional local foundation-stdlib timing observation, produced only by `scripts/update_foundation_stdlib_conformance_report.sh`.
+- `.genesis/perf/fuzz_differential_hardening_report.json` - optional local fuzz/differential timing observation, produced only by `scripts/update_fuzz_differential_hardening_report.sh`.
+- `.genesis/perf/wasm_production_surface_report.json` - optional local WASM production-surface observation, produced only by `scripts/update_wasm_production_surface_report.sh`.
+- `.genesis/perf/webxr_browser_conformance_report.json` - optional local browser-native WebXR observation, produced only by `scripts/update_webxr_browser_conformance_report.sh`.
+- `.genesis/perf/gfx_runtime_profile_report.json` - optional local GFX workflow observation with a separate runtime report/history, produced only by `scripts/update_gfx_runtime_profile_report.sh`.
+- `.genesis/perf/production_cli_help_surface_report.json` - optional local production CLI help-surface timing observation, produced only by `scripts/update_production_cli_help_surface_report.sh`.
+- `.genesis/perf/production_cli_parse_surface_report.json` - optional local production/parity CLI parse-surface timing observation, produced only by `scripts/update_production_cli_parse_surface_report.sh`.
+- `.genesis/perf/agent_capability_gauntlet_report.json` - optional local agent workflow/domain observation, produced only by `scripts/update_agent_reference_workflows_report.sh`.
+- `.genesis/perf/agent_generative_workloads_report.json` - optional local generated-workload observation, produced only by `scripts/update_agent_generative_workloads_report.sh`.
+- `.genesis/perf/agent_scenario_perf_report.json` - optional local multi-domain scenario observation, produced only by `scripts/update_agent_scenario_perf_report.sh`.
+- `.genesis/perf/agent_workflow_runtime_parity_report.json` - optional local native/WASI agent parity observation, produced only by `scripts/update_agent_workflow_runtime_parity_report.sh`.
+- `.genesis/perf/runtime_microbench_metrics.json` - optional local runtime microbenchmark/SLO/timing observation set, produced only by `scripts/update_runtime_microbench_budgets_report.sh`.
+- `.genesis/perf/hot_path_metrics.json` - optional local parser/evaluator/effect/sync/package hot-path metrics and runtime-history set, produced only by `scripts/update_hot_path_budgets_report.sh`.
+- `.genesis/perf/perf_budget_metrics.json` - optional local CLI/selfhost/obligation budget metrics and runtime-history set, produced only by `scripts/update_perf_budgets_report.sh`.
+- `.genesis/perf/runtime_workload_bench_report.json` - optional local evaluator workload metrics, sample history, and runtime-history set, produced only by `scripts/update_runtime_workload_budgets_report.sh`.
+- `.genesis/perf/ai_iteration_slo_metrics.json` - optional local AI iteration-loop metrics and bounded history set, produced only by `scripts/update_ai_iteration_slo_report.sh`.
+- `.genesis/perf/ai_stress_suite_metrics.json` - optional local task/bridge/GPU/replay stress observation and bounded history set, produced only by `scripts/update_ai_stress_suite_report.sh`.
+- `.genesis/perf/backend_starter_workflows_report.json` - optional local backend scaffold/bridge/run-replay observation and bounded history set, produced only by `scripts/update_backend_starter_workflows_report.sh`.
+- `.genesis/perf/domain_starter_registry_bootstrap_report.json` - optional local signed domain-starter publish/pull/install observation with portable bundle identities, produced only by `scripts/update_domain_starter_registry_bootstrap_report.sh`.
+- `.genesis/perf/gpu_compute_runtime_profile.json` - optional local compute-only GPU metrics/guard/timing observation set, produced only by `scripts/update_gpu_compute_runtime_profile_report.sh`.
+- `.genesis/perf/gpu_device_conformance_report.json` - optional local device-lane conformance observation and artifact directory, produced only by `scripts/update_gpu_compute_device_conformance_report.sh`.
+- `.genesis/perf/gpu_device_lane_parity_report.json` - optional local device-lane contract-parity observation, produced only by `scripts/update_gpu_device_conformance_lane_parity_report.sh`.
+- `.genesis/perf/gpu_device_conformance_matrix_report.json` - optional local multi-vendor/OS device-matrix observation, produced only by `scripts/update_gpu_device_conformance_matrix_report.sh`.
+- `.genesis/perf/gpu_gfx_headroom_conformance_report.json` - optional local normal/low-headroom GPU workflow observation and history, produced only by `scripts/update_gpu_gfx_headroom_conformance_report.sh`.
+- `.genesis/perf/gpu_xr_productization_kits_report.json` - optional local GPU/XR productization observation, produced only by `scripts/update_gpu_xr_productization_kits_report.sh`.
+- `.genesis/perf/task_concurrency_stress_report.json` - optional local task replay/failure-rate stress observation and history, produced only by `scripts/update_task_concurrency_stress_report.sh`.
+- `.genesis/perf/host_bridge_fault_injection_report.json` - optional local host-bridge failure-matrix observation and history, produced only by `scripts/update_host_bridge_fault_injection_report.sh`.
+- `scripts/check_host_bridge_fault_injection.sh` - read-only deterministic bridge-fault and 48-case hard-cancellation gate covering process-tree termination, child reap, worker quiescence, and post-timeout recovery for both bridge transports.
 - `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md` - governance-control status register (program backlog/closed state).
 - `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md` - signed closure bundle index + immutable reference map.
 - `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.json` - canonical machine-readable closure registry.
-- `.genesis/perf/doc_complexity_report.json` - machine-readable docs complexity budget report.
-- `.genesis/perf/selfhost_gc_migration_plan_report.json` - machine-readable migration-plan drift report for high-churn selfhost surfaces.
-- `.genesis/perf/source_decomposition_tracked_parity_report.json` - tracked over-budget module parity + waiver-contract evidence report.
-- `.genesis/perf/gcpm_target_runtime_evidence_report.json` - target runtime evidence report (including non-synthetic runtime classes and replay artifacts).
-- `feature_matrix.md` - capability comparison vs common languages.
+- `.genesis/perf/doc_complexity_report.json` - optional mutable local docs-complexity observation, produced only by `scripts/update_doc_complexity_report.sh`.
+- `.genesis/perf/selfhost_gc_migration_plan_report.json` - optional local migration-plan drift report, produced only by `scripts/update_selfhost_gc_migration_plan_report.sh`.
+- `.genesis/perf/source_decomposition_progress_report.json` - optional local source-budget observation, produced only by `scripts/update_source_decomposition_progress_report.sh`.
+- `.genesis/perf/host_api_evolution_contract_report.json` - optional local host-API contract observation, produced only by `scripts/update_host_api_evolution_contract_report.sh`.
+- `.genesis/perf/tool_qualification_lineage_report.json` - optional local qualification-lineage observation, produced only by `scripts/update_tool_qualification_lineage_report.sh`.
+- `.genesis/perf/assurance_profile_packs_report.json` - optional local assurance-profile observation, produced only by `scripts/update_assurance_profile_packs_report.sh`.
+- `.genesis/perf/assurance_standards_crosswalk_report.json` - optional local assurance-crosswalk observation, produced only by `scripts/update_assurance_standards_crosswalk_report.sh`.
+- `.genesis/perf/test_changed_fast_metrics.json` - optional local changed-loop timing observation, produced only by `scripts/update_test_changed_fast_metrics.sh`.
+- `.genesis/perf/no_user_panics_report.json` - optional local panic-guard timing observation, produced only by `scripts/update_no_user_panics_report.sh`.
+- `.genesis/perf/selfhost_artifact_fresh_report.json` - optional local artifact-freshness timing observation, produced only by `scripts/update_selfhost_artifact_fresh_report.sh`.
+- `.genesis/perf/selfhost_dashboard_fresh_report.json` - optional local dashboard-freshness timing observation, produced only by `scripts/update_selfhost_dashboard_fresh_report.sh`.
+- `.genesis/perf/source_decomposition_tracked_parity_report.json` - optional tracked over-budget module parity and waiver-contract observation, produced only by `scripts/update_source_decomposition_tracked_parity_report.sh`.
+- `.genesis/perf/full_cross_host_profile_report.json` - optional local full-cross-host aggregate observation, produced only by `scripts/update_full_cross_host_profile_budget_report.sh`.
+- `.genesis/perf/gcpm_target_runtime_evidence_report.json` - optional local target-runtime evidence observation with replay artifacts, produced only by `scripts/update_gcpm_target_runtime_pipelines_report.sh`.
+- `.genesis/perf/runtime_backend_feature_matrix_report.json` - optional local runtime-backend matrix observation, produced only by `scripts/update_runtime_backend_feature_matrix_report.sh`.
+- `.genesis/perf/write_genesiscode_skill_conformance_report.json` - optional local write-skill conformance observation, produced only by `scripts/update_write_genesiscode_skill_conformance_report.sh`.
+- `.genesis/perf/large_workspace_agent_perf_report.json` - optional local large-workspace performance observation, produced only by `scripts/update_large_workspace_agent_perf_report.sh`.
+- `.genesis/perf/upgrade_plan_health_profile_report.json` - optional local aggregate health-profile observation, produced only by `scripts/update_upgrade_plan_health_report.sh`.
+- `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json` - canonical capability claims, authorities, platform maturity, selfhost level, evidence IDs, and open roadmap gaps.
+- `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json` - machine-readable capability-ledger contract.
+- `feature_matrix.md` - generated per-platform capability compatibility, maturity, and release-claim eligibility view.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md` - normative read-only check, explicit update, reachable-helper, and mutation prohibition contract.
+- `policies/check_update_boundary_v0.1.json` - reviewed reachable compilation/network declarations and zero-growth output/mutation ratchets for every check entrypoint.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json` - generated 100%-coverage check/update boundary inventory and R0.2.a progress report.
 - `docs/spec/DOC_TOPOLOGY_v0.1.md` - canonical documentation topology and drift contract.
 - `docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md` - numeric docs complexity targets.
 - `docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md` - ownership + canonical source registry for retained top-level leaf docs.
@@ -54,6 +196,13 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/TYPES.md`
   - `docs/spec/MODULE_SCOPE.md`
 - Tooling/CLI/project manager:
+  - `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#cargo-cache-policy`
+  - `docs/spec/VERSIONING_v0.1.md`
+  - `genesis.version-surfaces.json`
+  - `docs/spec/VERSION_SURFACES_v0.1.md`
+  - `docs/spec/VERSION_SURFACES_v0.1.schema.json`
+  - `docs/spec/RELEASE_SMOKE_v0.1.md`
+  - `docs/spec/DEPENDENCY_MIRROR_v0.1.md`
   - `docs/spec/CLI.md`
   - `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
   - `docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json`
@@ -102,4 +251,4 @@ This is the canonical entrypoint for project documentation.
 
 - `docs/DEPRECATION_MAP_v0.1.md` - explicit superseded/overlapping doc mapping.
 - `docs/spec/BOOTSTRAP_OLD.md` - bootstrap/parity historical reference only.
-- `old_bootstrap/` - archived bootstrap artifacts and compatibility material.
+- Legacy bootstrap archive - archived bootstrap artifacts and compatibility material; see `docs/spec/BOOTSTRAP_OLD.md`.

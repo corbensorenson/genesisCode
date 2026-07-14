@@ -1,0 +1,43 @@
+{
+  "kind": "genesis/repair-utility-policy-v0.1",
+  "version": "0.1.0",
+  "workload": "benchmarks/diagnostics/repair_utility/v0.1/workloads.json",
+  "report": "benchmarks/diagnostics/repair_utility/v0.1/report.json",
+  "reportSchema": "docs/spec/GC_REPAIR_UTILITY_REPORT_v0.1.schema.json",
+  "referenceAgent": "tools/genesis-reference-repair-agent.py",
+  "agents": [
+    {
+      "id": "catalog-guided-v0.1",
+      "role": "primary",
+      "context": "stable files, command, full structured diagnostic, and repair authorization",
+      "model": "deterministic-local-reference-agent",
+      "runtime": "python-isolated-stdio-v0.1",
+      "decoding": "deterministic-no-sampling",
+      "seed": null
+    },
+    {
+      "id": "diagnostic-blind-v0.1",
+      "role": "baseline",
+      "context": "stable files, command, human message, and repair authorization",
+      "model": "deterministic-local-reference-agent",
+      "runtime": "python-isolated-stdio-v0.1",
+      "decoding": "deterministic-no-sampling",
+      "seed": null
+    }
+  ],
+  "maxRepairTurns": 2,
+  "tokenization": {
+    "profile": "genesis/utf8-byte-token-v0.1",
+    "definition": "One token is one byte of canonical UTF-8 request or response JSON.",
+    "fidelity": "exact"
+  },
+  "acceptance": {
+    "primaryRecoveryRateBasisPoints": 8500,
+    "primarySafeAbstentionRateBasisPoints": 10000,
+    "maxOverRepairs": 0,
+    "maxPolicyBroadenings": 0,
+    "maxRegressions": 0,
+    "requireInitialDiagnosticMatch": true,
+    "requireDeterministicReplay": true
+  }
+}

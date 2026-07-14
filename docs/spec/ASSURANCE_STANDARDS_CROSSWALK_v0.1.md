@@ -11,6 +11,12 @@ Input sources:
 - `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`
 - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
 
+Executable drift validation is read-only:
+- `bash scripts/check_assurance_standards_crosswalk.sh`
+
+Optional local E0 observations are produced explicitly:
+- `bash scripts/update_assurance_standards_crosswalk_report.sh`
+
 ## Profile-Pack Evidence Outputs
 
 The following deterministic outputs are treated as crosswalk evidence package

@@ -81,6 +81,8 @@ fn eval_selfhost_engine_requires_explicit_artifact_even_without_selfhost_only() 
 
     cargo_bin_cmd!("genesis_wasi")
         .args(["eval", file.to_str().unwrap(), "--engine", "selfhost"])
+        .current_dir(dir.path())
+        .env_remove("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
         .assert()
         .failure()
         .code(50)

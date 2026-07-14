@@ -1,0 +1,311 @@
+{
+  "$id": "https://genesiscode.dev/schemas/release-notes-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "documentClass": {"const": "E1"},
+        "runtimeGateClaims": {"const": "requirements-only-unverified"},
+        "unqualifiedCapabilityRule": {"type": "string", "minLength": 1}
+      },
+      "required": ["documentClass", "runtimeGateClaims", "unqualifiedCapabilityRule"],
+      "type": "object"
+    },
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "kind": {"const": "genesis/release-notes-v0.1"},
+    "releaseTrain": {"pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "type": "string"},
+    "sections": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilityEvidence": {"$ref": "#/$defs/capabilityEvidence"},
+        "compatibility": {"$ref": "#/$defs/compatibility"},
+        "dependencies": {"$ref": "#/$defs/dependencies"},
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "knownGaps": {"$ref": "#/$defs/knownGaps"},
+        "migrations": {"$ref": "#/$defs/migrations"},
+        "security": {"$ref": "#/$defs/security"}
+      },
+      "required": ["capabilityEvidence", "compatibility", "dependencies", "evidence", "knownGaps", "migrations", "security"],
+      "type": "object"
+    },
+    "sourceIdentities": {
+      "additionalProperties": {"$ref": "#/$defs/sha256"},
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/path"},
+      "type": "object"
+    },
+    "version": {"const": "0.1"}
+  },
+  "required": ["authority", "contentIdentitySha256", "kind", "releaseTrain", "sections", "sourceIdentities", "version"],
+  "type": "object",
+  "$defs": {
+    "baseline": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {"type": "string"},
+        "baselineIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "evidenceClass": {"enum": ["E0", "E1", "E2", "E3", "E4"]},
+        "overall": {"$ref": "#/$defs/baselineOverall"},
+        "path": {"$ref": "#/$defs/path"},
+        "signatureGrantsAuthority": {"const": false}
+      },
+      "required": ["authority", "baselineIdentitySha256", "evidenceClass", "overall", "path", "signatureGrantsAuthority"],
+      "type": "object"
+    },
+    "capability": {
+      "additionalProperties": false,
+      "properties": {
+        "evidenceIds": {"items": {"type": "string"}, "type": "array"},
+        "gapIds": {"items": {"type": "string"}, "type": "array"},
+        "id": {"pattern": "^CAP-[A-Z0-9-]+$", "type": "string"},
+        "immutableEvidenceIds": {"items": {"type": "string"}, "type": "array"},
+        "limitations": {"type": "string"},
+        "maturity": {"pattern": "^L[0-5]$", "type": "string"},
+        "maturityByPlatform": {"additionalProperties": {"pattern": "^L[0-5]$", "type": "string"}, "propertyNames": {"pattern": "^[a-z0-9_-]+$"}, "type": "object"},
+        "releaseClaimEligible": {"type": "boolean"},
+        "selfhostLevel": {"enum": ["N/A", "H0", "H1", "H2", "H3", "H4"]},
+        "title": {"type": "string", "minLength": 1}
+      },
+      "required": ["evidenceIds", "gapIds", "id", "immutableEvidenceIds", "limitations", "maturity", "maturityByPlatform", "releaseClaimEligible", "selfhostLevel", "title"],
+      "type": "object"
+    },
+    "capabilityEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "authorizedUnqualifiedClaims": {"items": {"type": "string"}, "type": "array"},
+        "claims": {"items": {"$ref": "#/$defs/capability"}, "type": "array"},
+        "platforms": {"items": {"$ref": "#/$defs/platform"}, "type": "array"}
+      },
+      "required": ["authorizedUnqualifiedClaims", "claims", "platforms"],
+      "type": "object"
+    },
+    "compatibility": {
+      "additionalProperties": false,
+      "properties": {
+        "entries": {"items": {"$ref": "#/$defs/compatibilityEntry"}, "type": "array"},
+        "releaseClaim": {"type": "string"},
+        "surfaces": {"items": {"$ref": "#/$defs/surface"}, "type": "array"}
+      },
+      "required": ["entries", "releaseClaim", "surfaces"],
+      "type": "object"
+    },
+    "dependencies": {
+      "additionalProperties": false,
+      "properties": {
+        "lockfiles": {"items": {"$ref": "#/$defs/lockfile"}, "type": "array"},
+        "mirror": {"$ref": "#/$defs/mirror"},
+        "npm": {"$ref": "#/$defs/npm"}
+      },
+      "required": ["lockfiles", "mirror", "npm"],
+      "type": "object"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "baselines": {"items": {"$ref": "#/$defs/baseline"}, "type": "array"},
+        "fixtureAuthority": {"const": false},
+        "fixtureDistributionClass": {"enum": ["E0", "E1", "E2", "E3", "E4"]},
+        "fixtures": {"items": {"$ref": "#/$defs/fixture"}, "type": "array"}
+      },
+      "required": ["baselines", "fixtureAuthority", "fixtureDistributionClass", "fixtures"],
+      "type": "object"
+    },
+    "gap": {
+      "additionalProperties": false,
+      "properties": {
+        "affectedClaims": {"items": {"type": "string"}, "type": "array"},
+        "id": {"type": "string"},
+        "summary": {"type": "string", "minLength": 1}
+      },
+      "required": ["affectedClaims", "id", "summary"],
+      "type": "object"
+    },
+    "knownGaps": {
+      "additionalProperties": false,
+      "properties": {
+        "activeDefectIds": {"items": {"type": "string"}, "type": "array"},
+        "roadmapGaps": {"items": {"$ref": "#/$defs/gap"}, "type": "array"}
+      },
+      "required": ["activeDefectIds", "roadmapGaps"],
+      "type": "object"
+    },
+    "migrations": {
+      "additionalProperties": false,
+      "properties": {
+        "entries": {"items": {"$ref": "#/$defs/migration"}, "type": "array"}
+      },
+      "required": ["entries"],
+      "type": "object"
+    },
+    "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$", "type": "string"},
+    "security": {
+      "additionalProperties": false,
+      "properties": {
+        "activeDefectIds": {"items": {"type": "string"}, "type": "array"},
+        "claimState": {"const": "requirements-only-unverified"},
+        "mandatoryChecks": {"items": {"$ref": "#/$defs/mandatoryCheck"}, "type": "array"},
+        "passedChecks": {"maxItems": 0, "type": "array"},
+        "policySha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["activeDefectIds", "claimState", "mandatoryChecks", "passedChecks", "policySha256"],
+      "type": "object"
+    },
+    "baselineOverall": {
+      "additionalProperties": false,
+      "properties": {
+        "budgetFailing": {"minimum": 0, "type": "integer"},
+        "budgetPassing": {"minimum": 0, "type": "integer"},
+        "decisionGated": {"minimum": 0, "type": "integer"},
+        "observed": {"minimum": 0, "type": "integer"},
+        "runnerUnavailable": {"minimum": 0, "type": "integer"},
+        "status": {"type": "string"}
+      },
+      "required": ["budgetFailing", "budgetPassing", "decisionGated", "observed", "runnerUnavailable", "status"],
+      "type": "object"
+    },
+    "component": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptedReaders": {"items": {"type": "string"}, "type": "array"},
+        "currentWriter": {"type": "string"},
+        "id": {"type": "string"},
+        "migrationRecords": {"items": {"type": "string"}, "type": "array"},
+        "missingDiscriminator": {"type": "string"}
+      },
+      "required": ["acceptedReaders", "currentWriter", "id", "migrationRecords", "missingDiscriminator"],
+      "type": "object"
+    },
+    "compatibilityEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "candidateId": {"type": ["null", "string"]},
+        "compatibilityClass": {"type": "string"},
+        "components": {"items": {"$ref": "#/$defs/component"}, "type": "array"},
+        "dependencies": {"items": {"type": "string"}, "type": "array"},
+        "key": {"type": "string"},
+        "stableId": {"type": "string"},
+        "state": {"enum": ["candidate", "stable", "unbound"]}
+      },
+      "required": ["candidateId", "compatibilityClass", "components", "dependencies", "key", "stableId", "state"],
+      "type": "object"
+    },
+    "fetchPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "cargoRegistryIndex": {"type": "string"},
+        "mode": {"type": "string"},
+        "npmRegistryOrigin": {"type": "string"},
+        "redirects": {"type": "string"},
+        "requireTls": {"type": "boolean"}
+      },
+      "required": ["cargoRegistryIndex", "mode", "npmRegistryOrigin", "redirects", "requireTls"],
+      "type": "object"
+    },
+    "fixture": {
+      "additionalProperties": false,
+      "properties": {
+        "claimedEvidenceClass": {"enum": ["none", "E0", "E1", "E2", "E3", "E4"]},
+        "path": {"$ref": "#/$defs/path"},
+        "role": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "testOnly": {"type": "boolean"}
+      },
+      "required": ["claimedEvidenceClass", "path", "role", "sha256", "testOnly"],
+      "type": "object"
+    },
+    "lockfile": {
+      "additionalProperties": false,
+      "properties": {
+        "gitPackageRecords": {"minimum": 0, "type": "integer"},
+        "path": {"$ref": "#/$defs/path"},
+        "pathOrWorkspacePackageRecords": {"minimum": 0, "type": "integer"},
+        "registryPackageRecords": {"minimum": 0, "type": "integer"},
+        "schemaVersion": {"minimum": 1, "type": "integer"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "totalPackageRecords": {"minimum": 1, "type": "integer"},
+        "uniquePackageIdentities": {"minimum": 1, "type": "integer"}
+      },
+      "required": ["gitPackageRecords", "path", "pathOrWorkspacePackageRecords", "registryPackageRecords", "schemaVersion", "sha256", "totalPackageRecords", "uniquePackageIdentities"],
+      "type": "object"
+    },
+    "mandatoryCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "claim": {"const": "required-but-not-attested"},
+        "entrypoint": {"$ref": "#/$defs/path"},
+        "executionIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "gateId": {"type": "string"},
+        "kind": {"type": "string"},
+        "networkMode": {"type": "string"},
+        "profile": {"type": "string"}
+      },
+      "required": ["claim", "entrypoint", "executionIdentitySha256", "gateId", "kind", "networkMode", "profile"],
+      "type": "object"
+    },
+    "migration": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {"type": "string"},
+        "id": {"type": "string"},
+        "reader": {"type": "string"},
+        "retirement": {"type": "string"},
+        "semantic_delta": {"type": "string"},
+        "surface": {"type": "string"},
+        "tests": {"items": {"$ref": "#/$defs/path"}, "type": "array"},
+        "to": {"type": "string"},
+        "user_action": {"type": "string"},
+        "writer": {"type": "string"}
+      },
+      "required": ["from", "id", "reader", "retirement", "semantic_delta", "surface", "tests", "to", "user_action", "writer"],
+      "type": "object"
+    },
+    "mirror": {
+      "additionalProperties": false,
+      "properties": {
+        "authorityFiles": {"items": {"$ref": "#/$defs/path"}, "type": "array"},
+        "fetchPolicy": {"$ref": "#/$defs/fetchPolicy"},
+        "offlineChecks": {"items": {"type": "string"}, "type": "array"},
+        "storeMode": {"type": "string"}
+      },
+      "required": ["authorityFiles", "fetchPolicy", "offlineChecks", "storeMode"],
+      "type": "object"
+    },
+    "npm": {
+      "additionalProperties": false,
+      "properties": {
+        "externalPackageRecords": {"minimum": 0, "type": "integer"},
+        "integrityAlgorithms": {"items": {"type": "string"}, "type": "array"},
+        "lockfileVersion": {"minimum": 1, "type": "integer"},
+        "path": {"const": "package-lock.json"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["externalPackageRecords", "integrityAlgorithms", "lockfileVersion", "path", "sha256"],
+      "type": "object"
+    },
+    "platform": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string"},
+        "label": {"type": "string"},
+        "tier": {"enum": [1, 2]}
+      },
+      "required": ["id", "label", "tier"],
+      "type": "object"
+    },
+    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "surface": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptedReaders": {"items": {"type": "string"}, "type": "array"},
+        "currentWriter": {"type": "string"},
+        "id": {"type": "string"},
+        "kind": {"type": "string"},
+        "migrations": {"items": {"type": "string"}, "type": "array"}
+      },
+      "required": ["acceptedReaders", "currentWriter", "id", "kind", "migrations"],
+      "type": "object"
+    }
+  }
+}

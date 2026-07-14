@@ -452,9 +452,25 @@ Browser-native WebXR runtime conformance:
 - Deterministic browser lane checker: `scripts/check_webxr_browser_conformance.sh`
 - Runtime harness: `scripts/webxr_browser_conformance.mjs`
 - Artifact contract: `.genesis/perf/webxr_browser_conformance_report.json`
+- Explicit artifact producer: `scripts/update_webxr_browser_conformance_report.sh`
 - Replay invariant: `run_a_hash == run_b_hash` for captured WebXR session/frame/input/haptics behavior.
 
 ## Crypto/Network/Process Capability Contracts
+
+### Host-Bridge Fault Evidence Lifecycle
+
+- Read-only fault-injection check: `scripts/check_host_bridge_fault_injection.sh`
+- The same gate executes 48 repeated hard-timeout cases across `spawn-per-op` and `persistent-stdio`, verifies bridge leaders and descendants are gone, proves child reap and I/O-worker join before return, and forbids automatic retry of an uncertain timed-out request.
+- Explicit report/history producer: `scripts/update_host_bridge_fault_injection_report.sh`
+- Renderer with caller-owned destinations: `scripts/render_host_bridge_fault_injection_report.sh`
+- Optional E0 report: `.genesis/perf/host_bridge_fault_injection_report.json`
+- Optional one-row-per-invocation history: `.genesis/perf/host_bridge_fault_injection_history.jsonl`
+
+The check executes the real filesystem, network, process, and plugin bridge failure matrix
+and verifies deterministic replay while writing only private temporary outputs.
+`GENESIS_HOST_BRIDGE_FAULT_HISTORY` is input-only for the check. The explicit producer
+retains the validated report and appends one history row after enforcing elapsed-time and
+failure-rate budgets.
 
 - `core/crypto::hash`
   - Required payload fields: `:algorithm` (string/symbol), `:data` (bytes|string).

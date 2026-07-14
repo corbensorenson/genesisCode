@@ -1,0 +1,5 @@
+# Generated artifacts that are intentionally checked into source control.
+# Format: one repo-relative path per line. Blank lines and # comments are ignored.
+#
+# Policy: .genesis/perf/*.json and .genesis/perf/*.jsonl are local/CI reports and
+# must remain untracked unless a release owner adds an explicit evidence exception.

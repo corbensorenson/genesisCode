@@ -70,7 +70,7 @@ pub(super) fn dispatch_lock_io(
                 TermOrdKey(Term::symbol(":lock-h")),
                 Term::Str(lock_h.clone()),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::add" => {
@@ -162,7 +162,7 @@ pub(super) fn dispatch_lock_io(
                 TermOrdKey(Term::symbol(":lock-h")),
                 Term::Str(lock_h.clone()),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::list" => {
@@ -254,7 +254,7 @@ pub(super) fn dispatch_lock_io(
                 Term::Vector(reqs),
             );
             m.insert(TermOrdKey(Term::symbol(":locked")), Term::Vector(locks));
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::load-lock" => {
@@ -365,7 +365,7 @@ pub(super) fn dispatch_lock_io(
                 Term::Map(registries),
             );
             m.insert(TermOrdKey(Term::symbol(":artifacts")), Term::Map(artifacts));
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
         "core/pkg-low::load-package" => handle_load_package(payload, pol, error_tok, op),
         "core/pkg-low::save-lock" => save_lock::dispatch_save_lock(payload, pol, error_tok, op),

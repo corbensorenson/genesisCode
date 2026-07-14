@@ -188,26 +188,26 @@ path = "{base_dir}/.genesis/refs.coreform"
         panic!("expected map, got {}", r.value.debug_repr());
     };
     match out.get(&TermOrdKey(Term::symbol(":snapshot"))) {
-        Some(Value::Data(Term::Str(s))) => assert_eq!(s, &snapshot_hex),
+        Some(v) if matches!(v.as_data(), Some(Term::Str(s)) if s == &snapshot_hex) => {}
         other => panic!("expected :snapshot string, got {other:?}"),
     }
     let Some(Value::Vector(mods)) = out.get(&TermOrdKey(Term::symbol(":modules"))) else {
         panic!("expected :modules vector");
     };
     assert_eq!(mods.len(), 1);
-    let Value::Map(m0) = &mods[0] else {
+    let Some(Value::Map(m0)) = mods.get(0) else {
         panic!("expected module map");
     };
     match m0.get(&TermOrdKey(Term::symbol(":path"))) {
-        Some(Value::Data(Term::Str(s))) => assert_eq!(s, "m.gc"),
+        Some(v) if matches!(v.as_data(), Some(Term::Str(s)) if s == "m.gc") => {}
         other => panic!("expected :path string, got {other:?}"),
     }
     match m0.get(&TermOrdKey(Term::symbol(":hash"))) {
-        Some(Value::Data(Term::Str(s))) => assert_eq!(s, &module_hex),
+        Some(v) if matches!(v.as_data(), Some(Term::Str(s)) if s == &module_hex) => {}
         other => panic!("expected :hash string, got {other:?}"),
     }
     match m0.get(&TermOrdKey(Term::symbol(":forms"))) {
-        Some(Value::Data(t)) => assert_eq!(print_term(t), print_term(&module_art)),
+        Some(Value::Data(t)) => assert_eq!(print_term(t.as_ref()), print_term(&module_art)),
         other => panic!("expected :forms datum, got {other:?}"),
     }
 }

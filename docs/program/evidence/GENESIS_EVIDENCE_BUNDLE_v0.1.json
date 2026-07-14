@@ -1,0 +1,260 @@
+{
+  "attestations": [
+    {
+      "envelope": {
+        "payload": "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjEiLCJwcmVkaWNhdGUiOnsiYXJ0aWZhY3RzIjpbeyJkaWdlc3QiOnsic2hhMjU2IjoiZDhiMWM0OTQ2YTgxNGU4NzRjMGViMTA5Njc0ZDVlNGZkNDlmODRmMzMxNzc5NGRjNjlkMjRiMjY3YTRhYTcyZCJ9LCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvbi9vY3RldC1zdHJlYW0iLCJuYW1lIjoiZ2VuZXNpcy1leGFtcGxlIiwicGF0aCI6ImFydGlmYWN0L2dlbmVzaXMtZXhhbXBsZS5iaW4iLCJzaXplQnl0ZXMiOjM0fV0sImNvbW1hbmRzIjpbeyJhcmd2IjpbImJhc2giLCJzY3JpcHRzL2NoZWNrX2dlbmVzaXNfZXZpZGVuY2VfcHJvZmlsZS5zaCJdLCJjd2QiOiIuIiwiZGVjbGFyZWRFbnZpcm9ubWVudCI6WyJMQU5HIiwiU09VUkNFX0RBVEVfRVBPQ0giLCJUWiJdLCJleGl0Q29kZSI6MH1dLCJlbnZpcm9ubWVudCI6eyJhcmNoaXRlY3R1cmUiOiJhcm02NCIsImNvbnRhaW5lciI6bnVsbCwiZGVjbGFyZWRWYXJpYWJsZXMiOlsiTEFORyIsIlNPVVJDRV9EQVRFX0VQT0NIIiwiVFoiXSwib3MiOiJkYXJ3aW4iLCJwcm9maWxlIjoiZGFyd2luLWFybTY0L2hlcm1ldGljLXYwLjEifSwiZXZpZGVuY2VDbGFzcyI6IkUzIiwiZXZpZGVuY2VSZWZzIjpbeyJkaWdlc3QiOnsic2hhMjU2IjoiNGJjOTQ0YWZlMmQyNmQwNTcwOGM1YTA3YzRmNWVhYzM4OTc0NmNkYWI0MTcwY2I2MDdlYWYzNGU0ODQ5Yjg2NSJ9LCJraW5kIjoiZ2VuZXNpcy9hcnRpZmFjdC1oYXNoLXRyZWUtdjAuMSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5nZW5lc2lzY29kZS5hcnRpZmFjdC1oYXNoLXRyZWUranNvbiIsInVyaSI6InVybjpnZW5lc2lzOmhhc2gtdHJlZTpzaGEyNTY6NGJjOTQ0YWZlMmQyNmQwNTcwOGM1YTA3YzRmNWVhYzM4OTc0NmNkYWI0MTcwY2I2MDdlYWYzNGU0ODQ5Yjg2NSJ9LHsiZGlnZXN0Ijp7InNoYTI1NiI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUifSwia2luZCI6ImdlbmVzaXMvYWNjZXB0YW5jZS12MC4yIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb24vdm5kLmdlbmVzaXNjb2RlLmNvcmVmb3JtIiwidXJpIjoidXJuOmdlbmVzaXM6c3RvcmU6c2hhMjU2OmVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUifV0sImtpbmQiOiJnZW5lc2lzL2V2aWRlbmNlLXByZWRpY2F0ZS12MC4xIiwibWVhc3VyZW1lbnRzIjp7ImRpc2tEZWx0YUJ5dGVzIjo0MDk2LCJkdXJhdGlvbk5zIjoxMjUwMDAwMCwicGVha1Jzc0J5dGVzIjo2NzEwODg2NCwicmF3U2FtcGxlcyI6W3sibWV0cmljIjoiZHVyYXRpb24iLCJ1bml0IjoibnMiLCJ2YWx1ZXMiOlsxMjQwMDAwMCwxMjUwMDAwMCwxMjYwMDAwMF19LHsibWV0cmljIjoicGVhay1yc3MiLCJ1bml0IjoiYnl0ZXMiLCJ2YWx1ZXMiOls2NjA2MDI4OCw2NzEwODg2NF19XX0sIm5lZ2F0aXZlQ29udHJvbHMiOlt7ImFydGlmYWN0Ijp7ImRpZ2VzdCI6eyJzaGEyNTYiOiJlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlIn0sInVyaSI6InVybjpnZW5lc2lzOmV2aWRlbmNlOm5lZ2F0aXZlLWNvbnRyb2w6ZHVwbGljYXRlLWpzb24ta2V5In0sImV4cGVjdGVkIjoicmVqZWN0IiwiaWQiOiJkdXBsaWNhdGUtanNvbi1rZXkiLCJvYnNlcnZlZCI6InJlamVjdGVkIiwicGFzc2VkIjp0cnVlfV0sIm5ldHdvcmtQb2xpY3kiOnsiaW5wdXRzIjpbXSwibW9kZSI6ImRlbnkifSwic291cmNlIjp7ImRpcnR5IjpmYWxzZSwiZGlydHlQYXRoc0RpZ2VzdCI6bnVsbCwiZGlydHlQb2xpY3kiOiJyZWplY3QiLCJyZXBvc2l0b3J5VXJpIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvZ2VuZXNpc0NvZGUuZ2l0IiwicmV2aXNpb24iOiIwMTIzNDU2Nzg5YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwidHJlZURpZ2VzdCI6eyJzaGEyNTYiOiJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIn0sInZjcyI6ImdpdCJ9LCJ0b29sY2hhaW5zIjpbeyJhcnRpZmFjdCI6eyJkaWdlc3QiOnsic2hhMjU2IjoiY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyJ9LCJ1cmkiOiJ1cm46Z2VuZXNpczp0b29sY2hhaW46Z2VuZXNpczowLjIuMCJ9LCJuYW1lIjoiZ2VuZXNpcyIsInZlcnNpb24iOiIwLjIuMCJ9XSwidmVyaWZpZXIiOnsiYXJ0aWZhY3QiOnsiZGlnZXN0Ijp7InNoYTI1NiI6ImRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQifSwidXJpIjoidXJuOmdlbmVzaXM6dmVyaWZpZXI6ZXZpZGVuY2UtcHJvZmlsZTowLjEuMCJ9LCJuYW1lIjoiZ2VuZXNpcy1ldmlkZW5jZS1wcm9maWxlIiwidmVyc2lvbiI6IjAuMS4wIn0sInZlcnNpb24iOiIwLjEifSwicHJlZGljYXRlVHlwZSI6Imh0dHBzOi8vZ2VuZXNpc2NvZGUuZGV2L2F0dGVzdGF0aW9ucy9ldmlkZW5jZS92MC4xIiwic3ViamVjdCI6W3siZGlnZXN0Ijp7InNoYTI1NiI6ImQ4YjFjNDk0NmE4MTRlODc0YzBlYjEwOTY3NGQ1ZTRmZDQ5Zjg0ZjMzMTc3OTRkYzY5ZDI0YjI2N2E0YWE3MmQifSwibmFtZSI6ImFydGlmYWN0L2dlbmVzaXMtZXhhbXBsZS5iaW4ifV19",
+        "payloadType": "application/vnd.in-toto+json",
+        "signatures": [
+          {
+            "keyid": "sha256:f76b9b7dfd8dfc5be35b538f36bc318afcfd37a2a7ae2ca6b7cf888ea1585336",
+            "sig": "IrPq1IZFkIZCzwbKFxDv3rR67420pv3ZR2T/Fxrc15LAjqrWIJL4qYYxyUAj6e2sdqz+QkRamKVo0bqJhC9NBQ=="
+          }
+        ]
+      },
+      "mediaType": "application/vnd.in-toto+json",
+      "statement": {
+        "_type": "https://in-toto.io/Statement/v1",
+        "predicate": {
+          "artifacts": [
+            {
+              "digest": {
+                "sha256": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d"
+              },
+              "mediaType": "application/octet-stream",
+              "name": "genesis-example",
+              "path": "artifact/genesis-example.bin",
+              "sizeBytes": 34
+            }
+          ],
+          "commands": [
+            {
+              "argv": [
+                "bash",
+                "scripts/check_genesis_evidence_profile.sh"
+              ],
+              "cwd": ".",
+              "declaredEnvironment": [
+                "LANG",
+                "SOURCE_DATE_EPOCH",
+                "TZ"
+              ],
+              "exitCode": 0
+            }
+          ],
+          "environment": {
+            "architecture": "arm64",
+            "container": null,
+            "declaredVariables": [
+              "LANG",
+              "SOURCE_DATE_EPOCH",
+              "TZ"
+            ],
+            "os": "darwin",
+            "profile": "darwin-arm64/hermetic-v0.1"
+          },
+          "evidenceClass": "E3",
+          "evidenceRefs": [
+            {
+              "digest": {
+                "sha256": "4bc944afe2d26d05708c5a07c4f5eac389746cdab4170cb607eaf34e4849b865"
+              },
+              "kind": "genesis/artifact-hash-tree-v0.1",
+              "mediaType": "application/vnd.genesiscode.artifact-hash-tree+json",
+              "uri": "urn:genesis:hash-tree:sha256:4bc944afe2d26d05708c5a07c4f5eac389746cdab4170cb607eaf34e4849b865"
+            },
+            {
+              "digest": {
+                "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+              },
+              "kind": "genesis/acceptance-v0.2",
+              "mediaType": "application/vnd.genesiscode.coreform",
+              "uri": "urn:genesis:store:sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            }
+          ],
+          "kind": "genesis/evidence-predicate-v0.1",
+          "measurements": {
+            "diskDeltaBytes": 4096,
+            "durationNs": 12500000,
+            "peakRssBytes": 67108864,
+            "rawSamples": [
+              {
+                "metric": "duration",
+                "unit": "ns",
+                "values": [
+                  12400000,
+                  12500000,
+                  12600000
+                ]
+              },
+              {
+                "metric": "peak-rss",
+                "unit": "bytes",
+                "values": [
+                  66060288,
+                  67108864
+                ]
+              }
+            ]
+          },
+          "negativeControls": [
+            {
+              "artifact": {
+                "digest": {
+                  "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                },
+                "uri": "urn:genesis:evidence:negative-control:duplicate-json-key"
+              },
+              "expected": "reject",
+              "id": "duplicate-json-key",
+              "observed": "rejected",
+              "passed": true
+            }
+          ],
+          "networkPolicy": {
+            "inputs": [],
+            "mode": "deny"
+          },
+          "source": {
+            "dirty": false,
+            "dirtyPathsDigest": null,
+            "dirtyPolicy": "reject",
+            "repositoryUri": "https://example.invalid/genesisCode.git",
+            "revision": "0123456789abcdef0123456789abcdef01234567",
+            "treeDigest": {
+              "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "vcs": "git"
+          },
+          "toolchains": [
+            {
+              "artifact": {
+                "digest": {
+                  "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+                },
+                "uri": "urn:genesis:toolchain:genesis:0.2.0"
+              },
+              "name": "genesis",
+              "version": "0.2.0"
+            }
+          ],
+          "verifier": {
+            "artifact": {
+              "digest": {
+                "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "uri": "urn:genesis:verifier:evidence-profile:0.1.0"
+            },
+            "name": "genesis-evidence-profile",
+            "version": "0.1.0"
+          },
+          "version": "0.1"
+        },
+        "predicateType": "https://genesiscode.dev/attestations/evidence/v0.1",
+        "subject": [
+          {
+            "digest": {
+              "sha256": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d"
+            },
+            "name": "artifact/genesis-example.bin"
+          }
+        ]
+      }
+    },
+    {
+      "envelope": {
+        "payload": "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjEiLCJwcmVkaWNhdGUiOnsiYnVpbGREZWZpbml0aW9uIjp7ImJ1aWxkVHlwZSI6Imh0dHBzOi8vZ2VuZXNpc2NvZGUuZGV2L2J1aWxkdHlwZXMvcm9hZG1hcC1ldmlkZW5jZS92MC4xIiwiZXh0ZXJuYWxQYXJhbWV0ZXJzIjp7ImNvbW1hbmRzIjpbeyJhcmd2IjpbImJhc2giLCJzY3JpcHRzL2NoZWNrX2dlbmVzaXNfZXZpZGVuY2VfcHJvZmlsZS5zaCJdLCJjd2QiOiIuIiwiZGVjbGFyZWRFbnZpcm9ubWVudCI6WyJMQU5HIiwiU09VUkNFX0RBVEVfRVBPQ0giLCJUWiJdLCJleGl0Q29kZSI6MH1dLCJldmlkZW5jZVByb2ZpbGUiOiIwLjEifSwiaW50ZXJuYWxQYXJhbWV0ZXJzIjp7ImVudmlyb25tZW50UHJvZmlsZSI6ImRhcndpbi1hcm02NC9oZXJtZXRpYy12MC4xIiwibmV0d29ya01vZGUiOiJkZW55In0sInJlc29sdmVkRGVwZW5kZW5jaWVzIjpbeyJhbm5vdGF0aW9ucyI6eyJnZW5lc2lzX3ZjcyI6ImdpdCJ9LCJkaWdlc3QiOnsic2hhMjU2IjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYiJ9LCJ1cmkiOiJnaXQraHR0cHM6Ly9leGFtcGxlLmludmFsaWQvZ2VuZXNpc0NvZGUuZ2l0QDAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2Nzg5YWJjZGVmMDEyMzQ1NjcifSx7ImFubm90YXRpb25zIjp7ImdlbmVzaXNfdmVyc2lvbiI6IjAuMi4wIn0sImRpZ2VzdCI6eyJzaGEyNTYiOiJjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjIn0sInVyaSI6InVybjpnZW5lc2lzOnRvb2xjaGFpbjpnZW5lc2lzOjAuMi4wIn1dfSwicnVuRGV0YWlscyI6eyJidWlsZGVyIjp7ImJ1aWxkZXJEZXBlbmRlbmNpZXMiOltdLCJpZCI6Imh0dHBzOi8vZ2VuZXNpc2NvZGUuZGV2L2J1aWxkZXJzL2xvY2FsLXJvYWRtYXAtZXZpZGVuY2UvdjAuMSIsInZlcnNpb24iOnsiZ2VuZXNpcy1ldmlkZW5jZS1wcm9maWxlIjoiMC4xLjAifX0sImJ5cHJvZHVjdHMiOlt7ImRpZ2VzdCI6eyJzaGEyNTYiOiJmMWExMzdlZmZjYTliZmIwMTY4OTgwYWQ3NzdiN2M3OTMzNWFhYzkwNmQ2OWM0MWFlNDE1N2U4YzZiMjYzNTU4In0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJ1cmkiOiJ1cm46Z2VuZXNpczpzdGF0ZW1lbnQ6c2hhMjU2OmYxYTEzN2VmZmNhOWJmYjAxNjg5ODBhZDc3N2I3Yzc5MzM1YWFjOTA2ZDY5YzQxYWU0MTU3ZThjNmIyNjM1NTgifV0sIm1ldGFkYXRhIjp7Imludm9jYXRpb25JZCI6InVybjpnZW5lc2lzOmludm9jYXRpb246c2hhMjU2OmYxYTEzN2VmZmNhOWJmYjAxNjg5ODBhZDc3N2I3Yzc5MzM1YWFjOTA2ZDY5YzQxYWU0MTU3ZThjNmIyNjM1NTgifX19LCJwcmVkaWNhdGVUeXBlIjoiaHR0cHM6Ly9zbHNhLmRldi9wcm92ZW5hbmNlL3YxIiwic3ViamVjdCI6W3siZGlnZXN0Ijp7InNoYTI1NiI6ImQ4YjFjNDk0NmE4MTRlODc0YzBlYjEwOTY3NGQ1ZTRmZDQ5Zjg0ZjMzMTc3OTRkYzY5ZDI0YjI2N2E0YWE3MmQifSwibmFtZSI6ImFydGlmYWN0L2dlbmVzaXMtZXhhbXBsZS5iaW4ifV19",
+        "payloadType": "application/vnd.in-toto+json",
+        "signatures": [
+          {
+            "keyid": "sha256:f76b9b7dfd8dfc5be35b538f36bc318afcfd37a2a7ae2ca6b7cf888ea1585336",
+            "sig": "ydX7i8B2mwgipZqCcYBFTI286Z8X/CTxRykPgN6vUx0AL+jJ5QK2km/3zwhxHsgV4v06ZnEIksdVk+12GbO9Bw=="
+          }
+        ]
+      },
+      "mediaType": "application/vnd.in-toto+json",
+      "statement": {
+        "_type": "https://in-toto.io/Statement/v1",
+        "predicate": {
+          "buildDefinition": {
+            "buildType": "https://genesiscode.dev/buildtypes/roadmap-evidence/v0.1",
+            "externalParameters": {
+              "commands": [
+                {
+                  "argv": [
+                    "bash",
+                    "scripts/check_genesis_evidence_profile.sh"
+                  ],
+                  "cwd": ".",
+                  "declaredEnvironment": [
+                    "LANG",
+                    "SOURCE_DATE_EPOCH",
+                    "TZ"
+                  ],
+                  "exitCode": 0
+                }
+              ],
+              "evidenceProfile": "0.1"
+            },
+            "internalParameters": {
+              "environmentProfile": "darwin-arm64/hermetic-v0.1",
+              "networkMode": "deny"
+            },
+            "resolvedDependencies": [
+              {
+                "annotations": {
+                  "genesis_vcs": "git"
+                },
+                "digest": {
+                  "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                },
+                "uri": "git+https://example.invalid/genesisCode.git@0123456789abcdef0123456789abcdef01234567"
+              },
+              {
+                "annotations": {
+                  "genesis_version": "0.2.0"
+                },
+                "digest": {
+                  "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+                },
+                "uri": "urn:genesis:toolchain:genesis:0.2.0"
+              }
+            ]
+          },
+          "runDetails": {
+            "builder": {
+              "builderDependencies": [],
+              "id": "https://genesiscode.dev/builders/local-roadmap-evidence/v0.1",
+              "version": {
+                "genesis-evidence-profile": "0.1.0"
+              }
+            },
+            "byproducts": [
+              {
+                "digest": {
+                  "sha256": "f1a137effca9bfb0168980ad777b7c79335aac906d69c41ae4157e8c6b263558"
+                },
+                "mediaType": "application/vnd.in-toto+json",
+                "uri": "urn:genesis:statement:sha256:f1a137effca9bfb0168980ad777b7c79335aac906d69c41ae4157e8c6b263558"
+              }
+            ],
+            "metadata": {
+              "invocationId": "urn:genesis:invocation:sha256:f1a137effca9bfb0168980ad777b7c79335aac906d69c41ae4157e8c6b263558"
+            }
+          }
+        },
+        "predicateType": "https://slsa.dev/provenance/v1",
+        "subject": [
+          {
+            "digest": {
+              "sha256": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d"
+            },
+            "name": "artifact/genesis-example.bin"
+          }
+        ]
+      }
+    }
+  ],
+  "kind": "genesis/evidence-bundle-v0.1",
+  "profile": "E3",
+  "version": "0.1"
+}

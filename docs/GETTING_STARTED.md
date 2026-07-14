@@ -8,6 +8,8 @@ This walkthrough uses the real toolchain and a small example package in `example
 cargo build --workspace
 ```
 
+The preferred test runner is `cargo nextest` when installed; local scripts auto-fallback to `cargo test` when it is absent. Install `cargo-nextest` before long local sessions if you want the same runner CI uses.
+
 ## 2) CoreForm Formatting And Evaluation
 
 Canonical formatting is stable and idempotent:
@@ -46,30 +48,36 @@ Both commands print the same final value, and `replay` hard-fails if the log doe
 
 ## 5) Package Snapshots And `.gpk` Export/Import
 
-Create a `:vcs/snapshot` for the example package and store it in `.genesis/store/`:
+Create a `:vcs/snapshot` for the example package and store it in
+`examples/hello_pkg/.genesis/store/`. Run the package commands from the package
+directory so package paths stay inside the caps sandbox:
 
 ```sh
-SNAP="$(cargo run -p gc_cli -- pkg --caps examples/hello_pkg/toolcaps.toml snapshot --pkg package.toml)"
-echo "$SNAP"
+(
+  cd examples/hello_pkg
+  SNAP="$(cargo run -p gc_cli --manifest-path ../../Cargo.toml -- pkg --caps toolcaps.toml snapshot --pkg package.toml)"
+  echo "$SNAP"
+)
 ```
 
-Export a shallow bundle:
+Export a shallow bundle and import it back into the local store (idempotent):
 
 ```sh
-cargo run -p gc_cli -- pkg --caps examples/hello_pkg/toolcaps.toml export --snapshot "$SNAP" --out hello.gpk
+(
+  cd examples/hello_pkg
+  SNAP="$(cargo run -p gc_cli --manifest-path ../../Cargo.toml -- pkg --caps toolcaps.toml snapshot --pkg package.toml)"
+  mkdir -p .tmp
+  cargo run -p gc_cli --manifest-path ../../Cargo.toml -- pkg --caps toolcaps.toml export --snapshot "$SNAP" --out .tmp/hello.gpk
+  cargo run -p gc_cli --manifest-path ../../Cargo.toml -- pkg --caps toolcaps.toml import --input .tmp/hello.gpk
+)
 ```
 
-Import it back into the local store (idempotent):
-
-```sh
-cargo run -p gc_cli -- pkg --caps examples/hello_pkg/toolcaps.toml import --input hello.gpk
-```
-
-## 4) WASI (Run Tooling On WASM)
+## 6) WASI (Run Tooling On WASM)
 
 Build the WASI bootstrap CLI:
 
 ```sh
+# genesis-doc-skip: requires optional wasm32-wasip1 target installation
 rustup target add wasm32-wasip1
 cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
 ```
@@ -77,10 +85,11 @@ cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
 Then run inside `wasmtime` (requires a preopened directory):
 
 ```sh
+# genesis-doc-skip: requires optional wasmtime runtime and WASI build artifact
 wasmtime --dir . target/wasm32-wasip1/release/genesis_wasi.wasm test --pkg examples/hello_pkg/package.toml
 ```
 
-## 6) Browser WASM (Pure Kernel + Host Bridge)
+## 7) Browser WASM (Pure Kernel + Host Bridge)
 
 The pure kernel + stepping interface is exposed via `wasm-bindgen` (`crates/gc_wasm`).
 
@@ -88,7 +97,7 @@ See:
 - `docs/spec/WASM.md` for build and smoke instructions
 - `docs/spec/WASM_HOST_BRIDGE.md` for the normative step/resume protocol
 
-## 7) Graphics Demos (2D UI, 3D Scene, Hybrid View)
+## 8) Graphics Demos (2D UI, 3D Scene, Hybrid View)
 
 Run the end-to-end `.gc` graphics demos:
 

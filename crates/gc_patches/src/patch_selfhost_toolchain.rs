@@ -167,7 +167,7 @@ impl SelfhostPatchToolchain {
         let out = self
             .validate_patch
             .clone()
-            .apply(&mut self.ctx, Value::Data(patch_term.clone()))
+            .apply(&mut self.ctx, Value::data(patch_term.clone()))
             .map_err(|e| PatchError::Validate(format!("selfhost validate-patch apply: {e}")))?;
         if let Some(e) = extract_protocol_error(&out, self.error_token) {
             return Err(PatchError::Validate(format!(
@@ -197,20 +197,20 @@ impl SelfhostPatchToolchain {
         let out = self
             .apply_replace_node
             .clone()
-            .apply(&mut self.ctx, Value::Data(req))
+            .apply(&mut self.ctx, Value::data(req))
             .map_err(|e| PatchError::Validate(format!("selfhost apply-replace-node apply: {e}")))?;
         if let Some(e) = extract_protocol_error(&out, self.error_token) {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli apply-replace-node failed: {e}"
             )));
         }
-        let Value::Data(Term::Vector(forms)) = out else {
+        let Some(Term::Vector(forms)) = out.as_data() else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli apply-replace-node must return vector of forms, got {}",
                 out.debug_repr()
             )));
         };
-        Ok(forms)
+        Ok(forms.clone())
     }
 
     pub(super) fn print_module_forms_term(
@@ -222,20 +222,20 @@ impl SelfhostPatchToolchain {
         let out = self
             .print_module_forms
             .clone()
-            .apply(&mut self.ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .apply(&mut self.ctx, Value::data(Term::Vector(forms.to_vec())))
             .map_err(|e| PatchError::Validate(format!("selfhost print-module-forms apply: {e}")))?;
         if let Some(e) = extract_protocol_error(&out, self.error_token) {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli print-module-forms failed: {e}"
             )));
         }
-        let Value::Data(Term::Str(s)) = out else {
+        let Some(Term::Str(s)) = out.as_data() else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli print-module-forms must return string, got {}",
                 out.debug_repr()
             )));
         };
-        Ok(s)
+        Ok(s.clone())
     }
 
     pub(super) fn print_module_from_content_term(
@@ -247,7 +247,7 @@ impl SelfhostPatchToolchain {
         let out = self
             .print_module_from_content
             .clone()
-            .apply(&mut self.ctx, Value::Data(content.clone()))
+            .apply(&mut self.ctx, Value::data(content.clone()))
             .map_err(|e| {
                 PatchError::Validate(format!("selfhost print-module-from-content apply: {e}"))
             })?;
@@ -256,13 +256,13 @@ impl SelfhostPatchToolchain {
                 "selfhost core/cli print-module-from-content failed: {e}"
             )));
         }
-        let Value::Data(Term::Str(s)) = out else {
+        let Some(Term::Str(s)) = out.as_data() else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli print-module-from-content must return string, got {}",
                 out.debug_repr()
             )));
         };
-        Ok(s)
+        Ok(s.clone())
     }
 
     pub(super) fn manifest_apply_add_module_term(
@@ -275,11 +275,11 @@ impl SelfhostPatchToolchain {
         let out = self
             .manifest_apply_add_module
             .clone()
-            .apply(&mut self.ctx, Value::Data(manifest.clone()))
+            .apply(&mut self.ctx, Value::data(manifest.clone()))
             .and_then(|f| {
                 f.apply(
                     &mut self.ctx,
-                    Value::Data(Term::Str(module_path.to_string())),
+                    Value::data(Term::Str(module_path.to_string())),
                 )
             })
             .map_err(|e| {
@@ -296,7 +296,7 @@ impl SelfhostPatchToolchain {
                 out.debug_repr()
             )));
         };
-        Ok(t)
+        Ok(t.as_ref().clone())
     }
 
     pub(super) fn manifest_apply_remove_module_term(
@@ -309,11 +309,11 @@ impl SelfhostPatchToolchain {
         let out = self
             .manifest_apply_remove_module
             .clone()
-            .apply(&mut self.ctx, Value::Data(manifest.clone()))
+            .apply(&mut self.ctx, Value::data(manifest.clone()))
             .and_then(|f| {
                 f.apply(
                     &mut self.ctx,
-                    Value::Data(Term::Str(module_path.to_string())),
+                    Value::data(Term::Str(module_path.to_string())),
                 )
             })
             .map_err(|e| {
@@ -330,7 +330,7 @@ impl SelfhostPatchToolchain {
                 out.debug_repr()
             )));
         };
-        Ok(t)
+        Ok(t.as_ref().clone())
     }
 
     pub(super) fn manifest_apply_move_module_term(
@@ -344,17 +344,17 @@ impl SelfhostPatchToolchain {
         let out = self
             .manifest_apply_move_module
             .clone()
-            .apply(&mut self.ctx, Value::Data(manifest.clone()))
+            .apply(&mut self.ctx, Value::data(manifest.clone()))
             .and_then(|f| {
                 f.apply(
                     &mut self.ctx,
-                    Value::Data(Term::Str(from_module_path.to_string())),
+                    Value::data(Term::Str(from_module_path.to_string())),
                 )
             })
             .and_then(|f| {
                 f.apply(
                     &mut self.ctx,
-                    Value::Data(Term::Str(to_module_path.to_string())),
+                    Value::data(Term::Str(to_module_path.to_string())),
                 )
             })
             .map_err(|e| {
@@ -371,7 +371,7 @@ impl SelfhostPatchToolchain {
                 out.debug_repr()
             )));
         };
-        Ok(t)
+        Ok(t.as_ref().clone())
     }
 
     pub(super) fn manifest_apply_update_manifest_op_term(
@@ -384,8 +384,8 @@ impl SelfhostPatchToolchain {
         let out = self
             .manifest_apply_update_manifest_op
             .clone()
-            .apply(&mut self.ctx, Value::Data(manifest.clone()))
-            .and_then(|f| f.apply(&mut self.ctx, Value::Data(op.clone())))
+            .apply(&mut self.ctx, Value::data(manifest.clone()))
+            .and_then(|f| f.apply(&mut self.ctx, Value::data(op.clone())))
             .map_err(|e| {
                 PatchError::Validate(format!(
                     "selfhost manifest-apply-update-manifest-op apply: {e}"
@@ -402,7 +402,7 @@ impl SelfhostPatchToolchain {
                 out.debug_repr()
             )));
         };
-        Ok(t)
+        Ok(t.as_ref().clone())
     }
 
     pub(super) fn rename_symbol_forms_term(
@@ -434,7 +434,7 @@ impl SelfhostPatchToolchain {
         let out = self
             .rename_symbol_forms
             .clone()
-            .apply(&mut self.ctx, Value::Data(req))
+            .apply(&mut self.ctx, Value::data(req))
             .map_err(|e| {
                 PatchError::Validate(format!("selfhost rename-symbol-forms apply: {e}"))
             })?;
@@ -443,7 +443,7 @@ impl SelfhostPatchToolchain {
                 "selfhost core/cli rename-symbol-forms failed: {e}"
             )));
         }
-        let Value::Data(Term::Map(m)) = out else {
+        let Some(Term::Map(m)) = out.as_data() else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli rename-symbol-forms must return map, got {}",
                 out.debug_repr()
@@ -495,14 +495,14 @@ impl SelfhostPatchToolchain {
         let out = self
             .split_module_forms
             .clone()
-            .apply(&mut self.ctx, Value::Data(req))
+            .apply(&mut self.ctx, Value::data(req))
             .map_err(|e| PatchError::Validate(format!("selfhost split-module-forms apply: {e}")))?;
         if let Some(e) = extract_protocol_error(&out, self.error_token) {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli split-module-forms failed: {e}"
             )));
         }
-        let Value::Data(Term::Map(m)) = out else {
+        let Some(Term::Map(m)) = out.as_data() else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli split-module-forms must return map, got {}",
                 out.debug_repr()
@@ -578,7 +578,7 @@ impl SelfhostPatchToolchain {
         let out = self
             .rewrite_meta_list_forms
             .clone()
-            .apply(&mut self.ctx, Value::Data(Term::Map(req)))
+            .apply(&mut self.ctx, Value::data(Term::Map(req)))
             .map_err(|e| {
                 PatchError::Validate(format!("selfhost rewrite-meta-list-forms apply: {e}"))
             })?;
@@ -587,7 +587,7 @@ impl SelfhostPatchToolchain {
                 "selfhost core/cli rewrite-meta-list-forms failed: {e}"
             )));
         }
-        let Value::Data(Term::Map(m)) = out else {
+        let Some(Term::Map(m)) = out.as_data() else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli rewrite-meta-list-forms must return map, got {}",
                 out.debug_repr()
@@ -653,7 +653,7 @@ impl SelfhostPatchToolchain {
         let out = self
             .migrate_contract_signature_forms
             .clone()
-            .apply(&mut self.ctx, Value::Data(req))
+            .apply(&mut self.ctx, Value::data(req))
             .map_err(|e| {
                 PatchError::Validate(format!(
                     "selfhost migrate-contract-signature-forms apply: {e}"
@@ -664,7 +664,7 @@ impl SelfhostPatchToolchain {
                 "selfhost core/cli migrate-contract-signature-forms failed: {e}"
             )));
         }
-        let Value::Data(Term::Map(m)) = out else {
+        let Some(Term::Map(m)) = out.as_data() else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli migrate-contract-signature-forms must return map, got {}",
                 out.debug_repr()

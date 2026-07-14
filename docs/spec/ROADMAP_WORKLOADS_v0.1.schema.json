@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/roadmap-workloads-v0.1.json",
+  "title": "GenesisCode Roadmap Workloads v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["identityAlgorithm", "inputHashAlgorithm", "kind", "protocols", "referenceHostPolicy", "roadmapTask", "version", "workloads"],
+  "properties": {
+    "identityAlgorithm": {"const": "sha256-canonical-json"},
+    "inputHashAlgorithm": {"const": "sha256"},
+    "kind": {"const": "genesis/roadmap-workloads-v0.1"},
+    "protocols": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/protocol"}
+    },
+    "referenceHostPolicy": {"const": "policies/reference_host_profiles_v0.1.json"},
+    "roadmapTask": {"const": "R0.5.b"},
+    "version": {"const": "0.1"},
+    "workloads": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {"$ref": "#/$defs/workload"}
+    }
+  },
+  "$defs": {
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confidence", "decisionStatistic", "dispersion", "failurePolicy", "id", "integerRounding", "outlierPolicy", "primary", "secondary", "sampleOrdering"],
+      "properties": {
+        "confidence": {"type": "string", "minLength": 1},
+        "decisionStatistic": {"type": "string", "minLength": 1},
+        "dispersion": {"type": "string", "minLength": 1},
+        "failurePolicy": {"type": "string", "minLength": 1},
+        "id": {"enum": ["exact-all-v0.1", "leak-30-v0.1", "timing-30-v0.1"]},
+        "integerRounding": {"enum": ["floor-after-exact-rational", "not-applicable"]},
+        "outlierPolicy": {"const": "retain-all"},
+        "primary": {"type": "string", "minLength": 1},
+        "secondary": {"type": "string", "minLength": 1},
+        "sampleOrdering": {"type": "string", "minLength": 1}
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "path", "role", "sha256"],
+      "properties": {
+        "bytes": {"type": "integer", "minimum": 1},
+        "path": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$"},
+        "role": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cacheState", "protocolId", "sampleCount", "sampleUnit", "timeoutMs", "warmup"],
+      "properties": {
+        "cacheState": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+        "protocolId": {"enum": ["exact-all-v0.1", "leak-30-v0.1", "timing-30-v0.1"]},
+        "sampleCount": {"type": "integer", "minimum": 1},
+        "sampleUnit": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+        "timeoutMs": {"type": "integer", "minimum": 1, "maximum": 2700000},
+        "warmup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "unit"],
+          "properties": {
+            "count": {"type": "integer", "minimum": 0},
+            "unit": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"}
+          }
+        }
+      }
+    },
+    "size": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "unit", "value"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+        "unit": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+        "value": {"type": "integer", "minimum": 1}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["comparison", "unit", "value"],
+      "properties": {
+        "comparison": {"enum": ["eq", "gte", "lte"]},
+        "unit": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+        "value": {"type": "integer", "minimum": 1}
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "id", "inputs", "measurement", "runner", "sizes", "status", "target"],
+      "properties": {
+        "expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["canonicalDescriptor", "sha256"],
+          "properties": {
+            "canonicalDescriptor": {"type": "string", "minLength": 3},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          }
+        },
+        "id": {"pattern": "^PB-(?:[1-9]|10)$"},
+        "inputs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/input"}},
+        "measurement": {"$ref": "#/$defs/measurement"},
+        "runner": {"type": "string", "pattern": "^[a-z][a-z0-9_-]+/[a-z][a-z0-9-]+$"},
+        "sizes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/size"}},
+        "status": {"enum": ["active", "decision-gated", "roadmap-blocked"]},
+        "target": {"$ref": "#/$defs/target"}
+      }
+    }
+  }
+}

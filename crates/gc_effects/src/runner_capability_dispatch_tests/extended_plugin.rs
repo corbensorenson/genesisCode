@@ -168,7 +168,7 @@ wasi_bridge_response = "{:ok true :status \"ok\"}"
         SealId(19),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected data map");
     };
     assert_eq!(
@@ -409,7 +409,7 @@ wasi_bridge_response = "{:ok true :result {:exit-code 0}}"
         SealId(23),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected data map");
     };
     assert_eq!(

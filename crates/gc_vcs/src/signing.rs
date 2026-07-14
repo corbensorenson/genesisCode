@@ -1,4 +1,5 @@
 use ed25519_dalek::{Signature, VerifyingKey};
+use gc_coreform::HASH_DOMAIN_PREFIX;
 use thiserror::Error;
 
 use crate::schema::Attestation;
@@ -13,7 +14,8 @@ pub enum CommitAttestationError {
 
 pub fn commit_attestation_message(commit_hash: &[u8; 32]) -> Vec<u8> {
     let mut msg = Vec::with_capacity(32 + 24);
-    msg.extend_from_slice(b"GCv0.2\0vcs\0commit-sign\0");
+    msg.extend_from_slice(HASH_DOMAIN_PREFIX);
+    msg.extend_from_slice(b"vcs\0commit-sign\0");
     msg.extend_from_slice(commit_hash);
     msg
 }

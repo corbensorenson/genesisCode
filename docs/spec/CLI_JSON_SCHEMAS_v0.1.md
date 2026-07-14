@@ -16,22 +16,112 @@ All commands use the global envelope from `docs/spec/CLI.md`:
 - top-level `data` object for success
 - top-level `error` object for failures
 - `diagnostics_schema = "genesis/diagnostics-schema-v1"`
+- `diagnostic_catalog` identifies `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json`,
+  its semantic version, and its SHA-256 content identity
 - `diagnostics` array (empty on success, non-empty on failure)
 
 Failure diagnostics (`diagnostics[*]`) include stable machine-actionable routing fields:
+- `id` (`genesis/diagnostic/v1/<family>/<name>`) and exact `code`
+- `catalog_version` and `catalog_identity_sha256`
+- `severity` and lifecycle `phase`
+- `primary_span` (span object or `null`) and `related_spans` (array)
+- `parameters` (JSON object; prose is not a routing contract)
+- non-empty `likely_causes`, `safe_repair_actions`, and `documentation`
 - `error_class` (string)
 - `candidate_fix` (string)
 - `blocking_capability` (string or `null`)
 - `next_safe_action` (string)
+- `repair_plan` (`genesis/diagnostic-repair-plan-v0.1` object)
 
-Failure envelopes always use:
+The generated catalog is closed by
+`docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json`. Exact lookup is available as
+`genesis --json agent-index --diagnostic <exact-code>`. Unknown emitted codes
+fail closed as `diagnostic/catalog-miss`; the unrecognized token is retained as
+`parameters.reported_code` for implementation debugging.
 
-- `kind = "genesis/error-v0.2"`
+An absent `primary_span` means the current producer has not localized the
+failure; it does not implicate the entire input. Safe repair metadata never
+authorizes a prompt-derived policy change. Any repair with
+`policyEffect = "review-required"` requires a separate, explicit policy diff;
+agents must not silently broaden capabilities or suppress obligations.
+
+`repair_plan.action` distinguishes inspection, verification commands, source
+patches, effectful commands, and policy review. Its preconditions and
+postconditions bind the current diagnostic/content identities, require the
+original command to be rerun, and preserve all declared obligations. The
+authorization object always sets `policy_change_allowed = false` and
+`obligation_suppression_allowed = false`. A concrete denied capability may
+produce a `genesis/capability-policy-diff-v0.1` proposal, but that proposal is
+never applicable by itself: `requires_review = true`, `auto_apply = false`,
+and the active policy remains unchanged until a separate reviewed diff is
+explicitly accepted. Prompt text has no repair or policy authority.
+
+Every failure envelope exposes `error.context.schema =
+"genesis/failure-context-v0.1"`, closed by
+`docs/spec/GC_FAILURE_CONTEXT_v0.1.schema.json`. Its `domain`, `kind`, and
+`operation` fields are stable routing facts; `facts` contains typed
+domain-specific values. Parser, typechecker, evaluator, package, policy,
+replay, patch, build, and deployment authorities emit richer typed contexts at
+their source boundary. The envelope normalizer fail-closes any remaining
+legacy context into the same schema, preserves scrubbed legacy details under
+`facts.legacy_context`, and never permits an absolute host path in that
+fallback. Human messages remain concise renderings and are not the only
+failure contract.
+
+Failures emitted before a command result use `kind = "genesis/error-v0.2"`.
+Command-result envelopes may retain the command-specific `kind` with
+`ok = false`, structured `error`, and non-empty `diagnostics`; this preserves
+the schema identity of deterministic result data such as obligation reports.
+
+The versioned diagnostic golden authority is
+`tests/diagnostics/goldens/v0.1/diagnostics.json`. It freezes exact catalog-bound
+failure projections for malformed syntax, type/effect mismatch, unhandled
+effects, seal misuse, replay tampering, path normalization, exhausted budgets,
+invalid packages, stale semantic patches, and incompatible runtime profiles.
+`scripts/check_cli_diagnostics_contract.sh` rejects host-path leakage and
+weakened repair authorization, then reproduces all ten vectors through the
+production CLI. Intentional contract changes use the separate
+`scripts/update_cli_diagnostic_goldens.sh` generator followed by review; normal
+checks are read-only and never bless drift.
+
+Diagnostic repair utility is measured by the versioned corpus at
+`benchmarks/diagnostics/repair_utility/v0.1/workloads.json` and retained report
+at `benchmarks/diagnostics/repair_utility/v0.1/report.json`. The corpus contains
+18 sorted cases: 15 automatically repairable mutations across missing and
+extra delimiters, integer operand types, primitive-name edits, and package
+schema versions, plus three deny-by-default capability cases where the only
+safe automatic outcome is abstention. Hidden `expected` bytes are available
+only to the benchmark runner; pinned reference agents receive stable filenames,
+current bytes, the original command, repair authorization, and either the
+human message or the full structured diagnostic. The agent implementation is
+source-hashed, runs through isolated stdio without filesystem, subprocess, or
+network imports, and is rejected if it embeds case IDs or oracle fields.
+
+`exactRecovery` requires exact expected bytes, a successful original-command
+retry, and an identical structured result from an independent semantic replay
+within two repair turns. `overRepair`, `policyBroadening`, and `regression` are
+separate zero-tolerance metrics. Review-required capability cases must preserve
+all source and policy bytes and emit `safeAbstention`; a non-applicable policy
+proposal is never a repair. Token cost uses the exact, model-independent
+`genesis/utf8-byte-token-v0.1` profile over canonical request and response JSON.
+Every report publishes the agent model/runtime version, decoding mode, context,
+seed, attempts, failure codes, and cost. The retained report is accepted only
+after two production CLI executions are byte-identical and the independent
+verifier recomputes all identities, counts, rates, comparisons, and safety
+decisions. This deterministic reference result measures the utility of the
+current API; it is not a substitute for the held-out multi-model evidence
+required by later agent-corpus milestones.
+
+The report is closed by
+`docs/spec/GC_REPAIR_UTILITY_REPORT_v0.1.schema.json`. Normal diagnostics checks
+verify it read-only. Intentional corpus, agent, or diagnostic changes require
+`scripts/update_gc_repair_utility_report.sh` followed by review.
 
 ## Command -> Kind
 
 ### Core runtime commands
 
+- `parse` -> `genesis/parse-v0.1`
 - `fmt` -> `genesis/fmt-v0.2`
 - `eval` -> `genesis/eval-v0.2`
 - `explain` -> `genesis/explain-v0.2`
@@ -48,8 +138,10 @@ Failure envelopes always use:
 - `pack` -> `genesis/pack-v0.2`
 - `cli-schema` -> `genesis/cli-schema-v0.1`
 - `agent-index` -> `genesis/agent-index-v0.1`
+- `agent-index --search-symbol` -> `genesis/agent-symbol-search-v0.3`
+- `agent-index --card` -> `genesis/agent-card-v0.3`
 - `agent-plan` -> `genesis/agent-plan-v0.1`
-- `warm` -> `genesis/warm-session-v0.1`
+- `warm` -> `genesis/warm-session-v0.2`
 
 ### Security / optimization / semantic tooling
 
@@ -107,6 +199,77 @@ Failure envelopes always use:
 - `vcs merge3` -> `genesis/vcs-merge3-v0.1`
 - `vcs resolve-conflict` -> `genesis/vcs-resolve-conflict-v0.1`
 
+## Warm Protocol v0.2
+
+`genesis warm` is a long-lived newline-delimited JSON transport. Every input
+line and every output line is one UTF-8 JSON value closed by
+`docs/spec/WARM_PROTOCOL_v0.2.schema.json`. The wire protocol is
+`genesis/warm-protocol-v0.2`; responses use
+`genesis/warm-response-v0.2`, typed errors use
+`genesis/warm-protocol-error-v0.2`, and the final command envelope (when
+observed by an embedding runtime) uses `genesis/warm-session-v0.2`.
+
+### Lifecycle and ordering
+
+1. `initialize` MUST be the first accepted method in generation zero and after
+   every successful restart or worker-crash reset. It returns the exact server
+   limits and capabilities clients may rely on.
+2. Every request frame carries a 1..128 byte ASCII identifier. IDs are unique
+   within a generation. Execute IDs intentionally identify both the immediate
+   `accepted` response and exactly one terminal `completed` or typed-error
+   response. `meta.sequence` totally orders emitted responses.
+3. `execute` binds a stable workspace ID to one base-relative root and queues a
+   parsed CLI command. Rebinding an active workspace ID, absolute paths, parent
+   traversal, and symlink escape fail closed. A single serialized dispatcher
+   prevents process-current-directory overlap between workspaces.
+4. `cancel` removes queued work immediately. For running pure CLI work in v0.2,
+   cancellation and deadlines are cooperative result suppression: the command
+   is allowed to quiesce, but its result is replaced by `warm/cancelled` or
+   `warm/deadline-exceeded`. Initialization advertises
+   `hard_termination = false`; clients MUST NOT infer process termination.
+   Kill-and-reap semantics for effectful host children are a separate R1.3.b
+   contract.
+5. `restart` succeeds only while idle, advances the generation, clears all
+   workspace and ID bindings, and requires a new `initialize`. A contained
+   worker panic performs the same generation reset, emits
+   `warm/worker-crash`, and fails queued requests as
+   `warm/worker-restarted` rather than replaying uncertain work.
+6. `shutdown` stops admission and drains accepted work. EOF has the same drain
+   behavior. No accepted request is silently discarded during an ordinary
+   shutdown.
+
+### Bounds and isolation
+
+- Frame allocation is bounded before UTF-8 or JSON decoding. Oversized lines
+  are fully drained so the next frame remains parseable.
+- Input transport capacity, execute queue depth, workspace count, argv count,
+  argv entry size, deadline, session frame count, and workspace idle lifetime
+  are finite and reported by `initialize`.
+- Valid, malformed, oversized, and invalid-UTF-8 frames all consume the finite
+  session frame budget. EOF and transport failures do not.
+- Workspace roots resolve beneath `--workspace-root`; response metadata and
+  typed errors do not expose the configured absolute root. Idle eviction never
+  removes a queued or running request's workspace.
+- Native mode accepts cancellation and control frames while one worker runs.
+  WASI mode advertises `concurrent_control = false` and processes the same wire
+  format sequentially. Clients negotiate from capabilities instead of assuming
+  runtime parity where concurrency is unavailable.
+
+### Closed frame examples
+
+```json
+{"protocol":"genesis/warm-protocol-v0.2","id":"init-1","method":"initialize","client":{"name":"agent","version":"1.0"}}
+{"protocol":"genesis/warm-protocol-v0.2","id":"eval-1","method":"execute","workspace":{"id":"repo","root":"."},"argv":["--json","eval","main.gc"],"deadline_ms":5000}
+{"protocol":"genesis/warm-protocol-v0.2","id":"cancel-1","method":"cancel","target_id":"eval-1"}
+{"protocol":"genesis/warm-protocol-v0.2","id":"stop-1","method":"shutdown"}
+```
+
+Unknown fields, methods, protocol versions, duplicate IDs, uninitialized use,
+invalid bounds, nested `warm`, workspace escape, queue overflow, stale cancel
+targets, busy restart, and session exhaustion always produce a typed protocol
+error. Schema IDs are immutable; incompatible framing requires a new protocol
+version rather than permissive parsing.
+
 ## Determinism / versioning
 
 - Schema IDs are immutable contracts for agent workflows.
@@ -144,7 +307,12 @@ agent planning.
         "positional": false,
         "value_names": ["COREFORM_FRONTEND"],
         "default_values": [],
-        "allowed_values": ["selfhost"]
+        "allowed_values": ["selfhost"],
+        "action": "set",
+        "value_type": "string",
+        "multiple": false,
+        "min_values": 1,
+        "max_values": 1
       }
     ],
     "subcommands": [
@@ -156,6 +324,11 @@ agent planning.
         "subcommands": []
       }
     ]
+  },
+  "mcp_interface": {
+    "schema": "genesis/mcp-interface-v0.1",
+    "protocolVersion": "2025-11-25",
+    "identitySha256": "64 lowercase hexadecimal characters"
   }
 }
 ```
@@ -171,3 +344,77 @@ agent planning.
 
 - Option and subcommand entries are emitted in deterministic sorted order.
 - Backward-incompatible schema changes require a `kind` version bump.
+
+## Generated MCP Interface v0.1
+
+`genesis mcp` implements the Model Context Protocol revision `2025-11-25`
+over stdio. The transport is newline-delimited UTF-8 JSON-RPC 2.0. Stdout is
+reserved exclusively for protocol frames; diagnostics and process failures use
+stderr. Every input and output frame, queued call, root set, session frame count,
+and argument vector has a finite configured bound.
+
+### Lifecycle and capabilities
+
+- `initialize` is the first request. The server selects protocol version
+  `2025-11-25`, returns server identity and capabilities, and waits for
+  `notifications/initialized` before serving normal requests.
+- The core profile advertises `tools` and `resources`. It does not advertise
+  prompts, logging, completion, elicitation, sampling, or Tasks.
+- MCP Tasks are experimental in revision `2025-11-25`. Every core tool declares
+  `execution.taskSupport = "forbidden"`; task methods and task-augmented calls
+  fail unless a future separately versioned extension is explicitly negotiated.
+- EOF terminates the session after the active in-process command boundary has
+  returned. There is no private shutdown method.
+
+### Generated tool authority
+
+The reviewed exposure-policy table selects canonical CLI command paths. Tool
+names, descriptions, required arguments, allowed values, Draft 2020-12 input
+schemas, and argv spellings are derived from the same Clap command tree emitted
+by `genesis cli-schema`. Startup fails closed if a selected command or argument
+disappears, a required CLI argument is omitted, or an exposed argument is
+duplicated. Tool calls re-enter normal CLI dispatch and therefore cannot acquire
+private semantics.
+
+The exact core tools are `parse`, `format`, `check`, `run`, `test`, `explain`,
+`search-symbol`, `get-card`, `diff`, `apply-patch`, `verify`, `replay`, `package`,
+and `build`. Each returns the canonical CLI JSON envelope as both text content
+and `structuredContent`; command failures use `isError = true`. Unknown fields,
+wrong JSON types, missing required fields, nested server commands, and unsupported
+pagination fail with JSON-RPC errors.
+
+### Roots and resources
+
+When the client advertises roots, the server requests `roots/list` after
+initialization. Only bounded local `file://` directory URIs are accepted. Each
+root is canonicalized and must remain beneath the configured `--workspace-root`;
+parent, absolute argument, symlink, non-file, duplicate, inaccessible, and
+unadvertised-root escapes fail closed. Calls must select an exact returned URI
+when multiple roots exist. Clients without the roots capability receive only the
+configured boundary as their implicit root.
+
+`resources/list` and `resources/read` expose the generated CLI schema, generated
+MCP profile, core card, agent profile, task-card registry, symbol index, and
+diagnostic catalog under `genesis://` URIs. Resource templates are an empty,
+valid list. Embedded JSON is parsed before use; malformed authorities fail closed.
+
+### Cancellation, progress, and errors
+
+- A valid `_meta.progressToken` produces strictly increasing progress values
+  `0` then `1`; no progress is emitted after completion or cancellation.
+- `notifications/cancelled` removes queued calls. For an active in-process CLI
+  call it marks the request cancelled and suppresses every late progress/result
+  frame. Host bridge children reached by that call retain the hard kill-and-reap
+  timeout guarantee specified by R1.3.b. General per-call wall/CPU isolation is
+  intentionally owned by R1.3.e and is not claimed here.
+- Parse, request-shape, method, parameter, initialization, root, queue, frame,
+  output, worker, and resource failures use bounded JSON-RPC errors. CLI semantic
+  failures remain typed Genesis tool results rather than transport failures.
+- Request cancellation never applies to `initialize`, because initialization is
+  complete before its response can be targeted as an active tool request.
+
+The implementation authorities are `crates/gc_cli_driver/src/mcp/`,
+`crates/gc_cli_driver/src/cli_schema.rs`, and the canonical command handlers.
+`scripts/check_warm_protocol_contract.sh` verifies schema generation, lifecycle,
+roots, resources, progress, cancellation controls, task rejection, malformed
+frames, output purity, and production CLI execution.

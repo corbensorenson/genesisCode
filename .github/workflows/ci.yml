@@ -71,10 +71,37 @@ jobs:
         with:
           toolchain: 1.90.0
           components: rustfmt, clippy
-          targets: wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown, wasm32-wasip1
+
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
 
       - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.137
+
+      - name: Install cargo-deny
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.19.0
+
+      - name: Prerequisite Manifest Guard
+        run: bash scripts/check_prerequisite_manifest.sh
+
+      - name: Reference Host Profile Guard
+        run: bash scripts/check_reference_host_profiles.sh
+
+      - name: Roadmap Workload Normalization Guard
+        run: bash scripts/check_roadmap_workloads.sh
+
+      - name: Signed Roadmap Baseline Guard
+        run: bash scripts/check_roadmap_baseline.sh
+
+      - name: Dependency Mirror Contract Guard
+        run: bash scripts/check_dependency_mirror_contract.sh
 
       - uses: Swatinem/rust-cache@v2
 
@@ -108,17 +135,87 @@ jobs:
       - name: Capability Indices Guard
         run: bash scripts/check_capability_indices.sh
 
+      - name: Generated Artifact Policy Guard
+        run: bash scripts/check_generated_artifact_policy.sh
+
+      - name: Genesis Evidence Profile Guard
+        run: bash scripts/check_genesis_evidence_profile.sh
+
+      - name: Genesis Evidence Verifier Guard
+        run: bash scripts/check_genesis_evidence_verifier.sh
+
+      - name: Evidence Adversarial Matrix Guard
+        run: bash scripts/check_evidence_adversarial_matrix.sh
+
+      - name: Evidence Storage Classes Guard
+        run: bash scripts/check_evidence_storage_classes.sh
+
+      - name: Check Update Boundary Guard
+        run: bash scripts/check_check_update_boundary.sh
+
+      - name: Gate Resource Telemetry Guard
+        run: bash scripts/check_gate_resource_telemetry.sh
+
+      - name: Deterministic Cleanup Guard
+        run: bash scripts/check_deterministic_cleanup.sh
+
+      - name: Gate Manifest Guard
+        run: bash scripts/check_gate_manifest.sh
+
+      - name: Engineering Gate Budget Guard
+        run: bash scripts/check_engineering_gate_contract.sh
+
+      - name: Generated Release Notes Guard
+        run: bash scripts/check_release_notes.sh
+
+      - name: Versioning Release Hygiene Guard
+        run: bash scripts/check_versioning_release_hygiene.sh
+
+      - name: Version Surfaces Guard
+        run: bash scripts/check_version_surfaces.sh
+
+      - name: V1 Compatibility Registry Guard
+        run: bash scripts/check_v1_compatibility.sh
+
+      - name: Supply Chain Guard
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_supply_chain.sh
+
+      - name: Release Smoke Gate
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_release_smoke.sh
+
       - name: Assurance Profile Pack Guard
         run: bash scripts/check_assurance_profile_packs.sh
 
       - name: Agent Authoring Bundle Guard
         run: bash scripts/check_agent_authoring_bundle.sh
 
+      - name: GC Agent Profile Guard
+        run: bash scripts/check_gc_agent_profile.sh
+
+      - name: GC Agent Core Card Guard
+        run: bash scripts/check_gc_agent_core_card.sh
+
+      - name: GC Agent Task Cards Guard
+        run: bash scripts/check_gc_agent_task_cards.sh
+
+      - name: GC Agent Symbol Index Guard
+        run: bash scripts/check_gc_agent_symbol_index.sh
+
       - name: GenesisCode Authoring Skill Guard
         run: bash scripts/check_genesiscode_authoring_skill.sh
 
       - name: Domain Kit Workflow Guard
         run: bash scripts/check_domain_kit_workflows.sh
+
+      - name: Backend Starter Workflow Evidence
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/update_backend_starter_workflows_report.sh
+
+      - name: Domain Starter Registry Bootstrap Evidence
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/update_domain_starter_registry_bootstrap_report.sh
 
       - name: Selfhost Refactor Guard
         run: bash scripts/check_selfhost_refactor_guard.sh
@@ -131,6 +228,10 @@ jobs:
 
       - name: User-Path Panic Guard
         run: bash scripts/check_no_user_panics.sh
+
+      - name: User-Path Panic Compiler Assurance
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_no_user_panics_compiler.sh
 
       - name: Rust Engine Compatibility Guard
         run: bash scripts/check_rust_engine_compat.sh
@@ -150,6 +251,13 @@ jobs:
       - name: Test Execution Profile Matrix Guard
         run: bash scripts/check_test_execution_profile_matrix.sh
 
+      - name: Changed Impact Contract Guard
+        run: bash scripts/check_changed_impact.sh
+
+      - name: Docs Quickstart Gate
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_docs_quickstart.sh
+
       - name: GPU Conformance Lane Matrix Guard
         run: bash scripts/check_gpu_conformance_lane_matrix.sh
 
@@ -167,7 +275,7 @@ jobs:
 
       - name: Runtime Backend Feature Matrix Guard
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_runtime_backend_feature_matrix.sh
+        run: bash scripts/update_runtime_backend_feature_matrix_report.sh
 
       - name: Test
         run: |
@@ -200,6 +308,14 @@ jobs:
             bash scripts/test_changed_fast.sh --runner nextest --min-history 1
           fi
 
+      - name: Ignored Perf Gate Regression Tests
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/test_perf_gates.sh
+
+      - name: Local Workspace Test Contract (CI unset)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: env -u CI cargo test --workspace --profile selfhost-strict
+
       - name: Upload Test Shard Artifacts
         if: ${{ always() && env.GENESIS_TEST_SHARDS_TOTAL != '1' }}
         uses: actions/upload-artifact@v4
@@ -210,27 +326,31 @@ jobs:
 
       - name: Performance Budgets
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_perf_budgets.sh
+        run: bash scripts/update_perf_budgets_report.sh
 
       - name: AI Iteration SLO
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_ai_iteration_slo.sh
+        run: bash scripts/update_ai_iteration_slo_report.sh
 
       - name: AI Stress Suite (Tasks + Bridge + GPU/Compute)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_ai_stress_suite.sh
+        run: bash scripts/update_ai_stress_suite_report.sh
 
       - name: Hot Path Budgets
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_hot_path_budgets.sh
+        run: bash scripts/update_hot_path_budgets_report.sh
 
       - name: Runtime Microbench Budgets
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_runtime_microbench_budgets.sh
+        run: bash scripts/update_runtime_microbench_budgets_report.sh
+
+      - name: Runtime Workload Budgets
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/update_runtime_workload_budgets_report.sh
 
       - name: GPU Compute Runtime Profile (Compute-Only)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_gpu_compute_runtime_profile.sh
+        run: bash scripts/update_gpu_compute_runtime_profile_report.sh
 
       - name: Upload Perf Trend Artifacts
         if: ${{ always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') }}
@@ -264,13 +384,26 @@ jobs:
 
       - name: WASM Build (Pure Kernel)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: cargo build -p gc_wasm --target wasm32-unknown-unknown
+        run: |
+          source scripts/lib/cargo_target_dir.sh
+          genesis_configure_cargo_target_dir "$PWD" ci-wasm-build root-wasm
+          cargo build -p gc_wasm --target wasm32-unknown-unknown
 
       - name: Install Node
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Prepare Content-Addressed Dependency Mirror
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
+        run: |
+          mirror="$(bash scripts/update_dependency_mirror.sh --format path)"
+          echo "GENESIS_DEPENDENCY_MIRROR=${mirror}" >> "$GITHUB_ENV"
+
+      - name: Clean Offline Build With Hard Network Denial
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/test_offline_dependency_mirror.sh --mirror "$GENESIS_DEPENDENCY_MIRROR"
 
       - name: Install wasm-bindgen-cli
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
@@ -290,7 +423,7 @@ jobs:
 
       - name: Full Cross-Host Runtime Budget Gate
         if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
-        run: bash scripts/check_full_cross_host_profile_budget.sh
+        run: bash scripts/update_full_cross_host_profile_budget_report.sh
 
       - name: Install JS Deps (Playwright)
         if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
@@ -308,14 +441,17 @@ jobs:
 
       - name: Install wasmtime
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        uses: bytecodealliance/wasmtime-action@v1
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+        with:
+          version: 36.0.9
 
       - name: WASI Build + Smoke (genesis_wasi.wasm)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: |
-          rustup target add wasm32-wasip1
+          source scripts/lib/cargo_target_dir.sh
+          genesis_configure_cargo_target_dir "$PWD" ci-wasi-build root-wasi
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
-          bash scripts/wasi_smoke.sh target/wasm32-wasip1/release/genesis_wasi.wasm
+          bash scripts/wasi_smoke.sh "$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
 
   pr_strict_equivalence_gate:
     if: ${{ github.event_name == 'pull_request' }}
@@ -330,6 +466,10 @@ jobs:
         with:
           toolchain: 1.90.0
           targets: wasm32-unknown-unknown
+
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
 
       - uses: Swatinem/rust-cache@v2
 
@@ -350,7 +490,7 @@ jobs:
           node scripts/wasm_cross_host_determinism.mjs
 
       - name: Full Cross-Host Runtime Budget Gate (PR Required)
-        run: bash scripts/check_full_cross_host_profile_budget.sh
+        run: bash scripts/update_full_cross_host_profile_budget_report.sh
 
   webxr_browser_conformance:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
@@ -372,7 +512,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Browser-Native WebXR Conformance (Deterministic Capture/Replay)
-        run: bash scripts/check_webxr_browser_conformance.sh
+        run: bash scripts/update_webxr_browser_conformance_report.sh
 
       - name: Upload WebXR Browser Conformance Artifact
         if: ${{ always() }}
@@ -402,13 +542,17 @@ jobs:
         with:
           toolchain: 1.90.0
 
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
+
       - uses: Swatinem/rust-cache@v2
 
       - name: Device Bridge Replay Determinism (Feature Gate)
         run: cargo test -p gc_runtime_bench --features device-bridge --test device_bridge_replay --quiet
 
       - name: GPU Device Conformance Lane (Require Device Backend)
-        run: bash scripts/check_gpu_compute_device_conformance.sh
+        run: bash scripts/update_gpu_compute_device_conformance_report.sh
 
       - name: Upload GPU Perf Artifacts
         if: ${{ always() }}
@@ -441,10 +585,14 @@ jobs:
         with:
           toolchain: 1.90.0
 
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
+
       - uses: Swatinem/rust-cache@v2
 
       - name: GPU Device Conformance Lane (Deterministic Runner)
-        run: bash scripts/check_gpu_compute_device_conformance.sh
+        run: bash scripts/update_gpu_compute_device_conformance_report.sh
 
       - name: Upload GPU Perf Artifacts
         if: ${{ always() }}
@@ -479,7 +627,7 @@ jobs:
 
       - name: GPU Device Conformance Lane Parity Gate
         run: |
-          bash scripts/check_gpu_device_conformance_lane_parity.sh \
+          bash scripts/update_gpu_device_conformance_lane_parity_report.sh \
             --lane-a .genesis/perf/lane_a/gpu_device_conformance_report.json \
             --lane-b .genesis/perf/lane_b/gpu_device_conformance_deterministic_report.json \
             --out .genesis/perf/gpu_device_lane_parity_report.json
@@ -513,9 +661,12 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.90.0
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
       - name: GPU Device Conformance Lane (NVIDIA Linux)
-        run: bash scripts/check_gpu_compute_device_conformance.sh
+        run: bash scripts/update_gpu_compute_device_conformance_report.sh
       - name: Upload GPU Perf Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -547,9 +698,12 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.90.0
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
       - name: GPU Device Conformance Lane (AMD Linux)
-        run: bash scripts/check_gpu_compute_device_conformance.sh
+        run: bash scripts/update_gpu_compute_device_conformance_report.sh
       - name: Upload GPU Perf Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -581,10 +735,13 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.90.0
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
       - name: GPU Device Conformance Lane (Intel Windows)
         shell: bash
-        run: bash scripts/check_gpu_compute_device_conformance.sh
+        run: bash scripts/update_gpu_compute_device_conformance_report.sh
       - name: Upload GPU Perf Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -616,9 +773,12 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.90.0
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
       - name: GPU Device Conformance Lane (Apple macOS)
-        run: bash scripts/check_gpu_compute_device_conformance.sh
+        run: bash scripts/update_gpu_compute_device_conformance_report.sh
       - name: Upload GPU Perf Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -661,7 +821,7 @@ jobs:
           path: .genesis/perf/gpu_matrix/apple_macos
       - name: GPU Device Conformance Matrix Gate
         run: |
-          bash scripts/check_gpu_device_conformance_matrix.sh \
+          bash scripts/update_gpu_device_conformance_matrix_report.sh \
             --config policies/perf/gpu_device_conformance_matrix.toml \
             --lane nvidia-linux=.genesis/perf/gpu_matrix/nvidia_linux/gpu_device_conformance_nvidia_linux_report.json \
             --lane amd-linux=.genesis/perf/gpu_matrix/amd_linux/gpu_device_conformance_amd_linux_report.json \

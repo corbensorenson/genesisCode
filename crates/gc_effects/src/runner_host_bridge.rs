@@ -4,12 +4,44 @@ use std::collections::HashMap;
 #[cfg(not(target_os = "wasi"))]
 use std::io::{BufRead as _, BufReader, Read as _, Write as _};
 #[cfg(not(target_os = "wasi"))]
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::{ChildStdout, Command, Stdio};
 #[cfg(not(target_os = "wasi"))]
 use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::policy::OpPolicy;
 use crate::runner_io_ops::{effective_base_dir, sandbox_path_read};
+#[cfg(not(target_os = "wasi"))]
+use crate::runner_process_control::{
+    configure_killable_process, hard_process_tree_termination_supported, terminate_and_reap,
+    terminate_descendants,
+};
+
+#[cfg(not(target_os = "wasi"))]
+static ACTIVE_BRIDGE_IO_PUMPS: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
+#[cfg(not(target_os = "wasi"))]
+struct ActiveBridgeIoPump;
+
+#[cfg(not(target_os = "wasi"))]
+impl ActiveBridgeIoPump {
+    fn enter() -> Self {
+        ACTIVE_BRIDGE_IO_PUMPS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Self
+    }
+}
+
+#[cfg(not(target_os = "wasi"))]
+impl Drop for ActiveBridgeIoPump {
+    fn drop(&mut self) {
+        ACTIVE_BRIDGE_IO_PUMPS.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+#[cfg(all(test, not(target_os = "wasi")))]
+fn active_bridge_io_pumps_for_tests() -> usize {
+    ACTIVE_BRIDGE_IO_PUMPS.load(std::sync::atomic::Ordering::SeqCst)
+}
 #[path = "runner_host_bridge_persistent.rs"]
 mod runner_host_bridge_persistent;
 #[path = "runner_host_bridge_policy.rs"]
@@ -54,16 +86,11 @@ pub(crate) fn call_host_bridge(
     runner_host_bridge_policy::enforce_bridge_identity(family, &cmd_raw, &cmd_path, pol)?;
     let args = runner_host_bridge_policy::bridge_args(pol);
     let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
-    if timeout_ms.is_some()
-        && matches!(
-            transport,
-            runner_host_bridge_policy::BridgeTransport::PersistentStdio
-        )
-    {
+    #[cfg(not(target_os = "wasi"))]
+    if timeout_ms.is_some() && !hard_process_tree_termination_supported() {
         return Err(BridgeError {
             code: format!("{family}/bridge-policy"),
-            message:
-                "timeout_ms is not supported for bridge_transport `persistent-stdio`; use `spawn-per-op` for hard timeout enforcement".to_string(),
+            message: "timeout_ms requires platform process-tree termination support".to_string(),
         });
     }
     match transport {
@@ -181,7 +208,7 @@ fn run_bridge_process_once_with_timeout(
     args: &[String],
     timeout_ms: u64,
 ) -> Result<std::process::Output, BridgeError> {
-    use std::io::Write as _;
+    use std::io::{Read as _, Write as _};
     use std::process::{Command, Stdio};
     use std::time::{Duration, Instant};
 
@@ -196,26 +223,98 @@ fn run_bridge_process_once_with_timeout(
     cmd.stdin(Stdio::piped());
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
+    configure_killable_process(&mut cmd);
     let mut child = cmd.spawn().map_err(|e| BridgeError {
         code: format!("{family}/bridge-spawn"),
         message: e.to_string(),
     })?;
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(payload_frame.as_bytes())
-            .map_err(|e| BridgeError {
-                code: format!("{family}/bridge-stdin-write"),
-                message: e.to_string(),
-            })?;
-    }
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
-    loop {
+    let process_id = child.id();
+    let stdin = child.stdin.take();
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let payload = payload_frame.as_bytes().to_vec();
+    let writer = std::thread::Builder::new()
+        .name("gc-bridge-stdin".to_string())
+        .spawn(move || {
+            let _active = ActiveBridgeIoPump::enter();
+            let Some(mut stdin) = stdin else {
+                return Ok(());
+            };
+            stdin.write_all(&payload)
+        });
+    let writer = match writer {
+        Ok(writer) => writer,
+        Err(error) => {
+            let _ = terminate_and_reap(&mut child);
+            return Err(BridgeError {
+                code: format!("{family}/bridge-thread"),
+                message: error.to_string(),
+            });
+        }
+    };
+    let reader = std::thread::Builder::new()
+        .name("gc-bridge-stdout".to_string())
+        .spawn(move || {
+            let _active = ActiveBridgeIoPump::enter();
+            let mut bytes = Vec::new();
+            if let Some(mut stdout) = stdout {
+                stdout.read_to_end(&mut bytes)?;
+            }
+            Ok::<_, std::io::Error>(bytes)
+        });
+    let reader = match reader {
+        Ok(reader) => reader,
+        Err(error) => {
+            let _ = terminate_and_reap(&mut child);
+            let _ = writer.join();
+            return Err(BridgeError {
+                code: format!("{family}/bridge-thread"),
+                message: error.to_string(),
+            });
+        }
+    };
+    let error_reader = std::thread::Builder::new()
+        .name("gc-bridge-stderr".to_string())
+        .spawn(move || {
+            let _active = ActiveBridgeIoPump::enter();
+            let mut bytes = Vec::new();
+            if let Some(mut stderr) = stderr {
+                stderr.read_to_end(&mut bytes)?;
+            }
+            Ok::<_, std::io::Error>(bytes)
+        });
+    let error_reader = match error_reader {
+        Ok(error_reader) => error_reader,
+        Err(error) => {
+            let _ = terminate_and_reap(&mut child);
+            let _ = writer.join();
+            let _ = reader.join();
+            return Err(BridgeError {
+                code: format!("{family}/bridge-thread"),
+                message: error.to_string(),
+            });
+        }
+    };
+    let deadline = Instant::now()
+        .checked_add(Duration::from_millis(timeout_ms))
+        .unwrap_or_else(Instant::now);
+    let status = loop {
         match child.try_wait() {
-            Ok(Some(_status)) => break,
+            Ok(Some(status)) => break status,
             Ok(None) => {
                 if Instant::now() >= deadline {
-                    let _ = child.kill();
-                    let _ = child.wait();
+                    let termination = terminate_and_reap(&mut child);
+                    let _ = writer.join();
+                    let _ = reader.join();
+                    let _ = error_reader.join();
+                    if let Err(error) = termination {
+                        return Err(BridgeError {
+                            code: format!("{family}/bridge-reap"),
+                            message: format!(
+                                "bridge timeout failed to terminate and reap process tree: {error}"
+                            ),
+                        });
+                    }
                     return Err(BridgeError {
                         code: format!("{family}/bridge-timeout"),
                         message: format!("bridge command timed out after {timeout_ms}ms"),
@@ -224,17 +323,54 @@ fn run_bridge_process_once_with_timeout(
                 std::thread::sleep(Duration::from_millis(2));
             }
             Err(e) => {
+                let _ = terminate_and_reap(&mut child);
+                let _ = writer.join();
+                let _ = reader.join();
+                let _ = error_reader.join();
                 return Err(BridgeError {
                     code: format!("{family}/bridge-exec"),
                     message: e.to_string(),
                 });
             }
         }
-    }
-    let out = child.wait_with_output().map_err(|e| BridgeError {
-        code: format!("{family}/bridge-exec"),
-        message: e.to_string(),
+    };
+    terminate_descendants(process_id).map_err(|error| BridgeError {
+        code: format!("{family}/bridge-reap"),
+        message: format!("failed to terminate residual bridge descendants: {error}"),
     })?;
+    let write_result = writer.join().map_err(|_| BridgeError {
+        code: format!("{family}/bridge-thread"),
+        message: "bridge stdin pump panicked".to_string(),
+    })?;
+    write_result.map_err(|error| BridgeError {
+        code: format!("{family}/bridge-stdin-write"),
+        message: error.to_string(),
+    })?;
+    let stdout = reader
+        .join()
+        .map_err(|_| BridgeError {
+            code: format!("{family}/bridge-thread"),
+            message: "bridge stdout pump panicked".to_string(),
+        })?
+        .map_err(|error| BridgeError {
+            code: format!("{family}/bridge-stdout-read"),
+            message: error.to_string(),
+        })?;
+    let stderr = error_reader
+        .join()
+        .map_err(|_| BridgeError {
+            code: format!("{family}/bridge-thread"),
+            message: "bridge stderr pump panicked".to_string(),
+        })?
+        .map_err(|error| BridgeError {
+            code: format!("{family}/bridge-stderr-read"),
+            message: error.to_string(),
+        })?;
+    let out = std::process::Output {
+        status,
+        stdout,
+        stderr,
+    };
     if !out.status.success() {
         let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
         let msg = if stderr.is_empty() {

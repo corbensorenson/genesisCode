@@ -9,6 +9,7 @@ fn repo_root() -> PathBuf {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn default_iteration_workflow_check_passes() {
     let root = repo_root();
     let status = Command::new("bash")

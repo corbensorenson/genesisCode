@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 KIT_ROOT="${GENESIS_WRITE_SKILL_DIST_ROOT:-docs/skill_pack/write_genesiscode_v1}"
 MANIFEST_PATH="${GENESIS_WRITE_SKILL_DIST_MANIFEST:-$KIT_ROOT/manifest.json}"
 VERIFY_RUNTIME="${GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME:-0}"
-CONFORMANCE_AUTO_RUN="${GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN:-1}"
 
 [[ -f "$MANIFEST_PATH" ]] || {
   echo "write-genesiscode-skill-distribution: missing manifest: $MANIFEST_PATH" >&2
@@ -164,8 +166,7 @@ print(
 PY
 
 if [[ "$VERIFY_RUNTIME" == "1" ]]; then
-  GENESIS_WRITE_SKILL_CONFORMANCE_AUTO_RUN="$CONFORMANCE_AUTO_RUN" \
-    bash scripts/check_write_genesiscode_skill_conformance.sh
+  bash scripts/check_write_genesiscode_skill_conformance.sh
   python3 - "$MANIFEST_PATH" <<'PY'
 import json
 import pathlib
@@ -187,7 +188,10 @@ for item in reports:
         raise SystemExit("write-genesiscode-skill-distribution: expected report path must be a non-empty string")
     report_path = pathlib.Path(report_path_raw)
     if not report_path.is_file():
-        raise SystemExit(f"write-genesiscode-skill-distribution: expected report missing: {report_path}")
+        raise SystemExit(
+            f"write-genesiscode-skill-distribution: expected report missing: {report_path}; "
+            "produce it with: bash scripts/update_write_genesiscode_skill_conformance_report.sh"
+        )
     report = json.loads(report_path.read_text(encoding="utf-8"))
     if report.get("kind") != kind:
         raise SystemExit(
@@ -197,6 +201,10 @@ for item in reports:
         raise SystemExit(
             f"write-genesiscode-skill-distribution: score below minimum for {report_path}: "
             f"{report.get('score')} < {min_score}"
+        )
+    if report.get("ok") is not True:
+        raise SystemExit(
+            f"write-genesiscode-skill-distribution: retained report is not ok: {report_path}"
         )
 
 print("write-genesiscode-skill-distribution: runtime verification ok")

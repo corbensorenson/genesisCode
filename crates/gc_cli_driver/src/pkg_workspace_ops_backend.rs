@@ -49,7 +49,12 @@ fn absolutize(path: &Path) -> Result<PathBuf, String> {
     }
     std::env::current_dir()
         .map(|cwd| cwd.join(path))
-        .map_err(|e| format!("resolve absolute workspace root from `{}`: {e}", path.display()))
+        .map_err(|e| {
+            format!(
+                "resolve absolute workspace root from `{}`: {e}",
+                path.display()
+            )
+        })
 }
 
 fn resolve_backend_bridge_cmd(workspace_root: &Path) -> Result<Option<PathBuf>, String> {

@@ -68,7 +68,7 @@ fn selfhost_optimize(forms: &[Term]) -> Vec<Term> {
         .get("core/cli::optimize-module")
         .expect("missing core/cli::optimize-module");
     let out = optimize
-        .apply(&mut ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .apply(&mut ctx, Value::data(Term::Vector(forms.to_vec())))
         .expect("selfhost optimize-module apply");
     let Some(Term::Vector(v)) = out.as_data() else {
         panic!("optimize-module returned non-vector: {}", out.debug_repr());

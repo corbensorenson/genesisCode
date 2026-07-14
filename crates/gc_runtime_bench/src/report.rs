@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
-use crate::config::Budgets;
+use crate::config::{Budgets, WorkloadBudgets, WorkloadSizes};
 
 #[derive(Debug, Clone, Copy, serde::Serialize)]
 pub struct Metrics {
@@ -42,6 +42,47 @@ pub struct ReportMeta {
     pub repeats: usize,
     pub gpu_compute_backend: String,
     pub gpu_compute_adapter: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub struct WorkloadMetrics {
+    pub fib_ms: u128,
+    pub vec_build_ms: u128,
+    pub map_build_ms: u128,
+    pub str_concat_ms: u128,
+    pub selfhost_parse_ms: u128,
+    pub dispatch_ms: u128,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct WorkloadReport {
+    kind: &'static str,
+    build_profile: String,
+    build_mode: String,
+    bench_mode: String,
+    workload_profile: String,
+    warmups: usize,
+    repeats: usize,
+    sizes: WorkloadSizes,
+    roadmap_sizes: WorkloadSizes,
+    selfhost_parse_corpus: Vec<String>,
+    roadmap_selfhost_parse_corpus: Vec<String>,
+    budgets: WorkloadBudgets,
+    metrics: WorkloadMetrics,
+}
+
+#[derive(Debug)]
+pub struct WorkloadReportMeta {
+    pub build_profile: String,
+    pub build_mode: String,
+    pub bench_mode: String,
+    pub workload_profile: String,
+    pub warmups: usize,
+    pub repeats: usize,
+    pub sizes: WorkloadSizes,
+    pub roadmap_sizes: WorkloadSizes,
+    pub selfhost_parse_corpus: Vec<String>,
+    pub roadmap_selfhost_parse_corpus: Vec<String>,
 }
 
 impl Report {
@@ -125,6 +166,88 @@ impl Report {
         if !violations.is_empty() {
             bail!(
                 "runtime microbenchmark budget failures: {}",
+                violations.join(", ")
+            );
+        }
+        Ok(())
+    }
+}
+
+impl WorkloadReport {
+    pub fn new(
+        meta: WorkloadReportMeta,
+        budgets: WorkloadBudgets,
+        metrics: WorkloadMetrics,
+    ) -> Self {
+        Self {
+            kind: "genesis/runtime-workload-bench-v0.1",
+            build_profile: meta.build_profile,
+            build_mode: meta.build_mode,
+            bench_mode: meta.bench_mode,
+            workload_profile: meta.workload_profile,
+            warmups: meta.warmups,
+            repeats: meta.repeats,
+            sizes: meta.sizes,
+            roadmap_sizes: meta.roadmap_sizes,
+            selfhost_parse_corpus: meta.selfhost_parse_corpus,
+            roadmap_selfhost_parse_corpus: meta.roadmap_selfhost_parse_corpus,
+            budgets,
+            metrics,
+        }
+    }
+
+    pub fn write_json(&self, path: &Path) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("create {}", parent.display()))?;
+        }
+        let bytes = serde_json::to_vec_pretty(self).context("serialize workload bench report")?;
+        std::fs::write(path, bytes).with_context(|| format!("write {}", path.display()))?;
+        Ok(())
+    }
+
+    pub fn enforce_budgets(&self) -> Result<()> {
+        let mut violations: Vec<String> = Vec::new();
+        if self.metrics.fib_ms > self.budgets.fib_ms {
+            violations.push(format!(
+                "fib_ms={} > {}",
+                self.metrics.fib_ms, self.budgets.fib_ms
+            ));
+        }
+        if self.metrics.vec_build_ms > self.budgets.vec_build_ms {
+            violations.push(format!(
+                "vec_build_ms={} > {}",
+                self.metrics.vec_build_ms, self.budgets.vec_build_ms
+            ));
+        }
+        if self.metrics.map_build_ms > self.budgets.map_build_ms {
+            violations.push(format!(
+                "map_build_ms={} > {}",
+                self.metrics.map_build_ms, self.budgets.map_build_ms
+            ));
+        }
+        if self.metrics.str_concat_ms > self.budgets.str_concat_ms {
+            violations.push(format!(
+                "str_concat_ms={} > {}",
+                self.metrics.str_concat_ms, self.budgets.str_concat_ms
+            ));
+        }
+        if self.metrics.selfhost_parse_ms > self.budgets.selfhost_parse_ms {
+            violations.push(format!(
+                "selfhost_parse_ms={} > {}",
+                self.metrics.selfhost_parse_ms, self.budgets.selfhost_parse_ms
+            ));
+        }
+        if self.metrics.dispatch_ms > self.budgets.dispatch_ms {
+            violations.push(format!(
+                "dispatch_ms={} > {}",
+                self.metrics.dispatch_ms, self.budgets.dispatch_ms
+            ));
+        }
+
+        if !violations.is_empty() {
+            bail!(
+                "runtime workload benchmark budget failures: {}",
                 violations.join(", ")
             );
         }

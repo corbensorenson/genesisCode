@@ -139,7 +139,7 @@ Some ops may accept a per-op policy object. This is represented as a TOML table 
 Supported keys:
 - `base_dir` (string): base directory sandbox for `io/fs::*` ops. Paths must remain under this directory after canonicalization.
 - `create_dirs` (bool): if true, `io/fs::write` and `io/fs::rename` may create parent directories.
-- `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops and `bridge_transport = "spawn-per-op"`.
+- `timeout_ms` (int): optional runner-side hard timeout (milliseconds). Supported for non-mutating bridge operations under both bridge transports; timeout terminates and reaps the isolated bridge process tree before returning.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
 - `bridge_cmd` (string): optional host-bridge executable path under `base_dir`.
   - used by host-integrated ops such as `host/plugin::command`,
@@ -156,7 +156,7 @@ Supported keys:
     - `spawn-per-op` (default): spawn a new bridge process for each op request.
     - `persistent-stdio`: keep a per-op bridge process/session alive and exchange framed request/response payloads over persistent stdio.
   - `persistent-stdio` requires the bridge executable to support repeated framed request processing in a single process lifetime.
-  - `timeout_ms` is rejected when `bridge_transport = "persistent-stdio"` (policy error, fail-closed).
+  - `timeout_ms` terminates and evicts a timed-out `persistent-stdio` session; the uncertain request is never retried.
 - `first_party_profile` (string): optional profile selector for first-party host backends.
   - currently used by `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`.
   - supported values:
@@ -458,8 +458,8 @@ Notes on `timeout_ms`:
   `io/fs::remove`, `io/fs::rename`, `sys/process::exec`, `sys/process::spawn`,
   `sys/process::kill`, and `sys/process::stdin-write` (policy error), to avoid
   "timed out but side-effect happened" ambiguity.
-- Bridge-backed ops honor `timeout_ms` only under `bridge_transport = "spawn-per-op"`; timeout yields deterministic `<family>/bridge-timeout`.
-- `bridge_transport = "persistent-stdio"` with `timeout_ms` is rejected with deterministic `<family>/bridge-policy`.
+- Bridge-backed ops honor `timeout_ms` under both transports; timeout yields deterministic `<family>/bridge-timeout` only after process-tree termination, child reap, and I/O worker quiescence.
+- A timed-out `persistent-stdio` session is evicted and recreated only for a later request; the timed-out request is never automatically replayed.
 
 Bridge protocol:
 - Bridge-backed ops use framed stdin/stdout payloads as defined in

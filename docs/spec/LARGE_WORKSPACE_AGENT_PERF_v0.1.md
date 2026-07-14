@@ -17,6 +17,10 @@ The gate is wired into:
 
 - `scripts/check_upgrade_plan_health.sh --profile release-full`
 
+The check writes metrics and runtime history only beneath a private temporary
+root. Use `scripts/update_large_workspace_agent_perf_report.sh` to retain E0
+reports and append their histories.
+
 ## Workload Contract
 
 - Generate a deterministic workspace with `GENESIS_LARGE_WORKSPACE_MODULE_COUNT`
@@ -40,6 +44,8 @@ Default build target:
   - `.genesis/perf/large_workspace_agent_runtime_report.json`
   - history: `.genesis/perf/large_workspace_agent_runtime_history.jsonl`
   - kind: `genesis/large-workspace-agent-runtime-v0.1`
+- explicit retained producer:
+  - `scripts/update_large_workspace_agent_perf_report.sh`
 
 ## Budget Knobs
 

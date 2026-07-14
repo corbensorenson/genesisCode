@@ -1,0 +1,54 @@
+{
+  "buildEnvironment": [
+    "CARGO_BUILD_RUSTC_WRAPPER",
+    "CARGO_ENCODED_RUSTFLAGS",
+    "CARGO_INCREMENTAL",
+    "RUSTC_BOOTSTRAP",
+    "RUSTC_WRAPPER",
+    "RUSTFLAGS"
+  ],
+  "cacheRoot": ".genesis/build/cargo-cache/v1",
+  "keyAlgorithm": "sha256-canonical-json",
+  "kind": "genesis/cargo-cache-policy-v0.1",
+  "metadataFile": ".genesis-cargo-cache-key.json",
+  "scopes": [
+    {
+      "id": "evidence-verifier-host",
+      "manifestGlobs": [
+        "tools/genesis-evidence-verifier/Cargo.toml"
+      ],
+      "target": "host",
+      "workspace": "tools/genesis-evidence-verifier"
+    },
+    {
+      "id": "root-host",
+      "manifestGlobs": [
+        "Cargo.toml",
+        "crates/*/Cargo.toml"
+      ],
+      "target": "host",
+      "workspace": "."
+    },
+    {
+      "id": "root-wasi",
+      "manifestGlobs": [
+        "Cargo.toml",
+        "crates/*/Cargo.toml"
+      ],
+      "target": "wasm32-wasip1",
+      "workspace": "."
+    },
+    {
+      "id": "root-wasm",
+      "manifestGlobs": [
+        "Cargo.toml",
+        "crates/*/Cargo.toml"
+      ],
+      "target": "wasm32-unknown-unknown",
+      "workspace": "."
+    }
+  ],
+  "sourceInputs": "cargo-fingerprinted-not-cache-addressed",
+  "strategyVersion": 1,
+  "version": "0.1"
+}

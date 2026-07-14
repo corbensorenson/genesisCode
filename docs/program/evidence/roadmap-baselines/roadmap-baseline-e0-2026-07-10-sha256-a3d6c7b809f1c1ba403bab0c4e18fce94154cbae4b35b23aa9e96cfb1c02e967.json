@@ -1,0 +1,1313 @@
+{
+  "authority": "observation",
+  "envelope": {
+    "payload": "eyJhdXRob3JpdGF0aXZlIjpmYWxzZSwiYmFzZWxpbmVJZGVudGl0eVNoYTI1NiI6ImEzZDZjN2I4MDlmMWMxYmE0MDNiYWIwYzRlMThmY2U5NDE1NGNiYWU0YjM1YjIzYWE5ZTk2Y2ZiMWMwMmU5NjciLCJidWlsZCI6eyJiaW5hcnlTaGEyNTYiOiI1ZTg5YjU3ZjcxOGEwMDk1YjA5YmY3N2EzOWM3MDU1ZjI5ZDdjODY3NjAyMTRlNGU3MWJjMjhjOWNjMTA2ZDUyIiwicHJvZmlsZSI6InNlbGZob3N0LXN0cmljdCIsInJ1c3RjSG9zdCI6ImFhcmNoNjQtYXBwbGUtZGFyd2luIiwicnVzdGNWZXJzaW9uIjoiMS45MC4wIiwic291cmNlRGlydHkiOnRydWUsInNvdXJjZURpcnR5TWF0ZXJpYWxTaGEyNTYiOiI1MzAwMjBkOWE4OTIzMWQ1ZDlmMzllMTZlZTNmMzk2Y2NhOTljNGE1YTZlYmZmNjNhMzljNDdmYWVjM2M1ZjNjIiwic291cmNlUmV2aXNpb24iOiIxNmVlMThiM2Y1ZTY5NWVkNWJiYWY3YzkyNzU3NTEzMGQ4ODc4ZTMzIn0sImNhcHR1cmVEYXRlIjoiMjAyNi0wNy0xMCIsImV2aWRlbmNlQ2xhc3MiOiJFMCIsImhvc3RPYnNlcnZhdGlvbiI6eyJjb25mb3JtYW5jZSI6eyJmYWlsdXJlcyI6W10sIm9rIjp0cnVlfSwiaWRlbnRpdHlTaGEyNTYiOiI1NzhkZjRhZGZiOGIwNGMyYzFjZDk5MTBhZDE5NWRhZTc0NDg3NTBhZmIyOTNhMjVlM2E4NThjMjQ3ZGM3YzhjIiwia2luZCI6ImdlbmVzaXMvcmVmZXJlbmNlLWhvc3Qtb2JzZXJ2YXRpb24tdjAuMSIsIm1ldGFkYXRhIjp7ImNvbXBpbGVyIjp7Im5hdGl2ZUZhbWlseSI6ImFwcGxlLWNsYW5nIiwibmF0aXZlVmVyc2lvbiI6IjE2LjAuMCIsInJ1c3RjSG9zdCI6ImFhcmNoNjQtYXBwbGUtZGFyd2luIiwicnVzdGNWZXJzaW9uIjoiMS45MC4wIn0sImNwdSI6eyJhcmNoaXRlY3R1cmUiOiJhcm02NCIsImxvZ2ljYWxDb3JlcyI6OCwibW9kZWwiOiJBcHBsZSBNMSIsInBoeXNpY2FsQ29yZXMiOjh9LCJmaWxlc3lzdGVtIjp7ImJsb2NrU2l6ZUJ5dGVzIjo0MDk2LCJjYXNlU2Vuc2l0aXZlIjpmYWxzZSwidHlwZSI6ImFwZnMifSwibWVtb3J5Ijp7InRvdGFsQnl0ZXMiOjE3MTc5ODY5MTg0fSwib3BlcmF0aW5nU3lzdGVtIjp7ImZhbWlseSI6ImRhcndpbiIsImtlcm5lbFJlbGVhc2UiOiIyNC4wLjAiLCJ2ZXJzaW9uIjoiMTUuMCJ9LCJwb3dlck1vZGUiOnsiZ292ZXJub3JNb2RlIjoibm90LWFwcGxpY2FibGUiLCJsb3dQb3dlck1vZGUiOmZhbHNlLCJzb3VyY2UiOiJhYyJ9fSwicGxhdGZvcm1JZCI6ImRhcndpbi1hcm02NCIsInByb2ZpbGVJZCI6ImRhcndpbi1hcm02NC1hcHBsZS1tMS0xNmciLCJwcm9tb3Rpb25TdGF0dXMiOiJyZWZlcmVuY2UiLCJ0aWVyIjoxLCJ2ZXJzaW9uIjoiMC4xIn0sImtpbmQiOiJnZW5lc2lzL3JvYWRtYXAtYmFzZWxpbmUtc3RhdGVtZW50LXYwLjEiLCJvdmVyYWxsIjp7ImJ1ZGdldEZhaWxpbmciOjIsImJ1ZGdldFBhc3NpbmciOjIsImRlY2lzaW9uR2F0ZWQiOjEsIm9ic2VydmVkIjo0LCJydW5uZXJVbmF2YWlsYWJsZSI6NSwic3RhdHVzIjoib2JzZXJ2ZWQtd2l0aC1mYWlsdXJlcyJ9LCJ2ZXJzaW9uIjoiMC4xIiwid29ya2xvYWRQb2xpY3lJZGVudGl0eVNoYTI1NiI6IjRmZGI3ZjU3ZmRmNjhhMGVmMzNkY2RmMDc1YzM2OTdjODIxMzMxNzk1OGUzNTRjMWQ1NWU1MTg3ODRmNjlkZWEiLCJ3b3JrbG9hZHMiOlt7ImV4cGVjdGVkRGVzY3JpcHRvclNoYTI1NiI6IjM1Zjc0MGVkNjljN2ExYzg5ZWZmM2VkZWY5ZDdjM2QxODVjNTMxNTJhOTBhMzQxYWUyMDJmZTkyYTA4YjM3MzEiLCJmYWlsdXJlcyI6W10sImlkIjoiUEItMSIsInBvbGljeVN0YXR1cyI6ImFjdGl2ZSIsInNhbXBsZXMiOlt7ImR1cmF0aW9uTnMiOjIxMTQ0NjI1MCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjowLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjA5MTk3ODc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjoyMDAyMzg5MTYsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6Miwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjE5NDU4NTQ1OSwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjozLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjE2MDA3NzUwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjoyMTkzODg4MzMsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6NSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjE4NDczODQ1OCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4Ijo2LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjAwNjc0NTAwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjcsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjoxOTU0MjQxMjUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6OCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjIxNDczMDU4MywiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4Ijo5LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTk0NDkyMzc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEwLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjEwOTMyOTU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjExLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjgzMjMzOTU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEyLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjAwNDU2NDE3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEzLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTkxOTIwODc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE0LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTk1NTU0OTE3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE1LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjA0NDY5MTY3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE2LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjA3NTE5NjY2LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE3LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjA3MjQxMzc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE4LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTkyMTc0OTU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE5LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTk1OTIwMDg0LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIwLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjE1MzE1NTQxLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIxLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjE4MDM2MTI1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIyLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjIzMjUxNzA5LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIzLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTg5NDQxMTY3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI0LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjAwOTEwNTAwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI1LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjA1OTg4OTE2LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI2LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjA3NTIxNzUwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI3LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjEyNjUyMDg0LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI4LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTg3MTU4OTU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI5LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9XSwic3RhdHVzIjoib2JzZXJ2ZWQiLCJzdW1tYXJ5Ijp7ImRlY2lzaW9uU3RhdGlzdGljIjoidXBwZXItbWVkaWFuLTk1LWJvdW5kIiwiZGVjaXNpb25WYWx1ZSI6MjEwOTMyOTU4LCJsb3dlck1lZGlhbjk1IjoxOTU5MjAwODQsIm1hZCI6OTU4NzgzMywibWVkaWFuIjoyMDUyMjkwNDEsInA5NSI6MjIzMjUxNzA5LCJ0YXJnZXRQYXNzIjp0cnVlLCJ1bml0IjoibmFub3NlY29uZHMiLCJ1cHBlck1lZGlhbjk1IjoyMTA5MzI5NTh9LCJ0YXJnZXQiOnsiY29tcGFyaXNvbiI6Imx0ZSIsInVuaXQiOiJtaWxsaXNlY29uZHMiLCJ2YWx1ZSI6MjUwfSwid2FybXVwU2FtcGxlcyI6W3siZHVyYXRpb25OcyI6MTk0ODk0Mzc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjAsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjoyMTI3Mjc5MTcsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjIxMDU5Mzc5MSwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MjI3ODQ5OTE3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjoyMDY5NjgzNzUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6NCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifV19LHsiZXhwZWN0ZWREZXNjcmlwdG9yU2hhMjU2IjoiMzVmNzQwZWQ2OWM3YTFjODllZmYzZWRlZjlkN2MzZDE4NWM1MzE1MmE5MGEzNDFhZTIwMmZlOTJhMDhiMzczMSIsImZhaWx1cmVzIjpbeyJjb2RlIjoicnVubmVyLXVuYXZhaWxhYmxlIiwiZGV0YWlsIjoibm9ybWFsaXplZCBydW5uZXIgZ2NfcnVudGltZV9iZW5jaC9ieXRlY29kZSBpcyBub3QgaW1wbGVtZW50ZWQifV0sImlkIjoiUEItMiIsInBvbGljeVN0YXR1cyI6InJvYWRtYXAtYmxvY2tlZCIsInNhbXBsZXMiOltdLCJzdGF0dXMiOiJydW5uZXItdW5hdmFpbGFibGUiLCJzdW1tYXJ5IjpudWxsLCJ0YXJnZXQiOnsiY29tcGFyaXNvbiI6Imx0ZSIsInVuaXQiOiJtaWxsaXNlY29uZHMiLCJ2YWx1ZSI6NDB9LCJ3YXJtdXBTYW1wbGVzIjpbXX0seyJleHBlY3RlZERlc2NyaXB0b3JTaGEyNTYiOiIzNWY3NDBlZDY5YzdhMWM4OWVmZjNlZGVmOWQ3YzNkMTg1YzUzMTUyYTkwYTM0MWFlMjAyZmU5MmEwOGIzNzMxIiwiZmFpbHVyZXMiOlt7ImNvZGUiOiJkZWNpc2lvbi1ub3QtYXBwcm92ZWQiLCJkZXRhaWwiOiJvcHRpb25hbCBydW5uZXIgaGFzIG5vIGFwcHJvdmVkIGFyY2hpdGVjdHVyZSBkZWNpc2lvbiJ9XSwiaWQiOiJQQi0zIiwicG9saWN5U3RhdHVzIjoiZGVjaXNpb24tZ2F0ZWQiLCJzYW1wbGVzIjpbXSwic3RhdHVzIjoiZGVjaXNpb24tZ2F0ZWQiLCJzdW1tYXJ5IjpudWxsLCJ0YXJnZXQiOnsiY29tcGFyaXNvbiI6Imx0ZSIsInVuaXQiOiJtaWxsaXNlY29uZHMiLCJ2YWx1ZSI6OH0sIndhcm11cFNhbXBsZXMiOltdfSx7ImV4cGVjdGVkRGVzY3JpcHRvclNoYTI1NiI6IjhmOGQ1YzI5MzQ0ZDZjNmVmOTcxNzA4ZjExNTgzYmE3YjlhOWNiOWVhNzY2ODFiODJmNmJhMzI2NTBlYjBlZjMiLCJmYWlsdXJlcyI6W10sImlkIjoiUEItNCIsInBvbGljeVN0YXR1cyI6ImFjdGl2ZSIsInNhbXBsZXMiOlt7ImR1cmF0aW9uTnMiOjQzODY2MjUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjEwMTM1ODc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo3MDY5Mzc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo2OTAwNDU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo4NTIwNzkyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo3NDE2MDAwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjUsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0MTk4MDAwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjYsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NDExNTQyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjcsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo2NjI2MTI1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjgsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo2OTE2NjY3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjksIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo3MTgyMjkyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEwLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDc3NTc1MCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoxMSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjM3MDE2MjUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTIsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1MTQ0MTI1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEzLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6MTUyMTgyMDksImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0MzgyNjI1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE1LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6Njg5MzQ1OCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoxNiwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjQyNjQwNDIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTcsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0MjE2MTY3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE4LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6ODA2NDYyNSwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoxOSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjY5MjgwMDAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjAsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo5ODY2NjY3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIxLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDg1Mzk1OSwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyMiwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjY0NTEyOTIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo2ODMwMTY2LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI0LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6Njg4NTcwOCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyNSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjU2NzgxNjYsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjYsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo5NTM2MDgzLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI3LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDI1ODI1MCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyOCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjQxMTU3NTAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjksIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn1dLCJzdGF0dXMiOiJvYnNlcnZlZCIsInN1bW1hcnkiOnsiZGVjaXNpb25TdGF0aXN0aWMiOiJ1cHBlci1tZWRpYW4tOTUtYm91bmQiLCJkZWNpc2lvblZhbHVlIjo2OTI4MDAwLCJsb3dlck1lZGlhbjk1Ijo0Nzc1NzUwLCJtYWQiOjE4MzM0MTYsIm1lZGlhbiI6NjcyODE0NSwicDk1IjoxMDEzNTg3NSwidGFyZ2V0UGFzcyI6dHJ1ZSwidW5pdCI6Im5hbm9zZWNvbmRzIiwidXBwZXJNZWRpYW45NSI6NjkyODAwMH0sInRhcmdldCI6eyJjb21wYXJpc29uIjoibHRlIiwidW5pdCI6Im1pbGxpc2Vjb25kcyIsInZhbHVlIjoxNTB9LCJ3YXJtdXBTYW1wbGVzIjpbeyJkdXJhdGlvbk5zIjo2NDY3MjUwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjAsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0MjE0NzkyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo2ODQwMjkxLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0MzY1MDQyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjoxMzE4NjkxNiwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4Ijo0LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9XX0seyJleHBlY3RlZERlc2NyaXB0b3JTaGEyNTYiOiJiMDU1YzNmNGJiMmNkMjgyOWM0MzdjZDFiZDQwNjUwMzAxM2ZlNzgyNzRkMjZlZjYzN2Q5ZGZlMDJkZDc0YjBkIiwiZmFpbHVyZXMiOlt7ImNvZGUiOiJidWRnZXQtbWlzcyIsImRldGFpbCI6ImRpcmVjdGlvbmFsIDk1IHBlcmNlbnQgbWVkaWFuIGNvbmZpZGVuY2UgYm91bmQgbWlzc2VzIHRhcmdldCJ9XSwiaWQiOiJQQi01IiwicG9saWN5U3RhdHVzIjoiYWN0aXZlIiwic2FtcGxlcyI6W3siZHVyYXRpb25OcyI6NzE4NTQ5MjkxLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjAsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1MDY4NDI2MjUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjQ3NjkxMjM3NSwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDg4NTM1MjkyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0OTg2OTYwODMsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6NCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjQ3Nzk4MDAwMCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4Ijo1LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDU3MzU3MTY3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjYsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0ODAzNTU5NTksImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6Nywib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjYwNjQyMjMzNCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4Ijo4LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDg0NDkxNDU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjksIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0ODc4ODY3OTEsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTAsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0ODMxNzEzNzUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0OTIxNjg2MjUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTIsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0Nzc2MDAwMDAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NTkzNTYzMzMsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NTUxMTg1NDIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTUsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1MjI4NDU3NTAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTYsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NjQ5NTI4MzMsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTcsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0OTk0Mjc3NTAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTgsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NzM4OTAzNzUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTksIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1MDgxNTUyNTAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjAsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NjQ2MjY4MzQsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NTU2NzM4MzQsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjIsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0ODIxNDc0NTksImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NDU0MjIyNTAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NTYzMDgxNjcsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjUsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0NjQ0MTk3OTIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjYsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo3MjcwMTIwNDIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjcsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0Nzk2MzE3OTIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjgsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0Mzg3MDA0MTcsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjksIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn1dLCJzdGF0dXMiOiJvYnNlcnZlZCIsInN1bW1hcnkiOnsiZGVjaXNpb25TdGF0aXN0aWMiOiJ1cHBlci1tZWRpYW4tOTUtYm91bmQiLCJkZWNpc2lvblZhbHVlIjo0ODg1MzUyOTIsImxvd2VyTWVkaWFuOTUiOjQ2NDk1MjgzMywibWFkIjoxNzEzODE0NSwibWVkaWFuIjo0Nzk5OTM4NzUsInA5NSI6NzE4NTQ5MjkxLCJ0YXJnZXRQYXNzIjpmYWxzZSwidW5pdCI6Im5hbm9zZWNvbmRzIiwidXBwZXJNZWRpYW45NSI6NDg4NTM1MjkyfSwidGFyZ2V0Ijp7ImNvbXBhcmlzb24iOiJsdGUiLCJ1bml0IjoibWlsbGlzZWNvbmRzIiwidmFsdWUiOjMwMH0sIndhcm11cFNhbXBsZXMiOlt7ImR1cmF0aW9uTnMiOjQ5Mjc3MTc1MCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjowLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDY4Njk2NTQxLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1NDg3NzI1NDIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6Miwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjQ2MDkzMDc1MCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjozLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NTI1NzkxMDAwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn1dfSx7ImV4cGVjdGVkRGVzY3JpcHRvclNoYTI1NiI6IjUzZTkzZDliNjBiOGJlMWRlNTE4MWY0Yjk2N2JiMDFmZGU0NzZkMjlmMDE4NjIyZWZjNzVhOTM4Yzg2ODFlNTYiLCJmYWlsdXJlcyI6W3siY29kZSI6InJ1bm5lci11bmF2YWlsYWJsZSIsImRldGFpbCI6Im5vcm1hbGl6ZWQgcnVubmVyIGdlbmVzaXMvY2hlY2stc25hcHNob3QtY29sZC1wcm9jZXNzIGlzIG5vdCBpbXBsZW1lbnRlZCJ9XSwiaWQiOiJQQi02IiwicG9saWN5U3RhdHVzIjoicm9hZG1hcC1ibG9ja2VkIiwic2FtcGxlcyI6W10sInN0YXR1cyI6InJ1bm5lci11bmF2YWlsYWJsZSIsInN1bW1hcnkiOm51bGwsInRhcmdldCI6eyJjb21wYXJpc29uIjoibHRlIiwidW5pdCI6Im1pbGxpc2Vjb25kcyIsInZhbHVlIjozMH0sIndhcm11cFNhbXBsZXMiOltdfSx7ImV4cGVjdGVkRGVzY3JpcHRvclNoYTI1NiI6ImRjMGY2MmNhZjgxYjJjZDQ5NjlhN2QwNjE0ZThiODNjYmVhZmRkMmZkMTFlNDE4Yjk1ZjU3MWQwZmZhOTQ0MjkiLCJmYWlsdXJlcyI6W3siY29kZSI6ImJ1ZGdldC1taXNzIiwiZGV0YWlsIjoiZGlyZWN0aW9uYWwgOTUgcGVyY2VudCBtZWRpYW4gY29uZmlkZW5jZSBib3VuZCBtaXNzZXMgdGFyZ2V0In1dLCJpZCI6IlBCLTciLCJwb2xpY3lTdGF0dXMiOiJhY3RpdmUiLCJzYW1wbGVzIjpbeyJkdXJhdGlvbk5zIjo2Mjk0NzA1NDU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjAsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1Mjc2MDc1MjkyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1MzE2NTIwMDQxLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1MjQwNzAxNDU4LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjMsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1OTU4MzAzNzUwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1NDAxMDI1MjA5LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjUsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1NTI3NTQyMDgzLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjYsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1NDk3MDc5MjUwLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjcsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1NDU2MDU1NTgzLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjgsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1ODcwMTA2NTgzLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjksIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo0ODQ2NTU0MzMzLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEwLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NDQ4Mzk4ODY2NiwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoxMSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjUxODY1MTkwNDEsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTIsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1MzgwNDYyOTE2LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjEzLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NTcyMjYyMzc1MCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoxNCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjU4NjU2OTEwMDAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTUsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1NDYxMDI2NDE3LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE2LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NjU2MjgyNDE2NywiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoxNywib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjYzMDY2NzEzNzUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MTgsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo2MjE3MzE5MTI1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjE5LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NjI3MTM2NTQxNywiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyMCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjU3MDE0MDAxNjcsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjEsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo2NjUzMDY5NTQyLCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjIyLCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NjQwNjUwNzU0MSwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyMywib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjU5MTk5NTg3OTIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjQsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1ODExNTY3Mzc1LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI1LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NTg4MDY0NTAwMCwiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyNiwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjYyMjgzMTY4NzUsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MjcsIm91dGNvbWUiOiJwYXNzZWQiLCJzZW1hbnRpY0NoZWNrIjoicGFzc2VkIn0seyJkdXJhdGlvbk5zIjo1OTMxNTU5NTg0LCJmYWlsdXJlQ29kZSI6bnVsbCwiaW5kZXgiOjI4LCJvdXRjb21lIjoicGFzc2VkIiwic2VtYW50aWNDaGVjayI6InBhc3NlZCJ9LHsiZHVyYXRpb25OcyI6NTU3ODEwMzgzMywiZmFpbHVyZUNvZGUiOm51bGwsImluZGV4IjoyOSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifV0sInN0YXR1cyI6Im9ic2VydmVkIiwic3VtbWFyeSI6eyJkZWNpc2lvblN0YXRpc3RpYyI6Imxvd2VyLW1lZGlhbi05NS1ib3VuZCIsImRlY2lzaW9uVmFsdWUiOjQyODA0LCJsb3dlck1lZGlhbjk1Ijo0MjgwNCwibWFkIjozMDcxLCJtZWRpYW4iOjQ0MDI3LCJwOTUiOjUyMzg2LCJ0YXJnZXRQYXNzIjpmYWxzZSwidW5pdCI6ImJ5dGVzLXBlci1zZWNvbmQiLCJ1cHBlck1lZGlhbjk1Ijo0NjQ5Mn0sInRhcmdldCI6eyJjb21wYXJpc29uIjoiZ3RlIiwidW5pdCI6ImJ5dGVzLXBlci1zZWNvbmQiLCJ2YWx1ZSI6MTA0ODU3Nn0sIndhcm11cFNhbXBsZXMiOlt7ImR1cmF0aW9uTnMiOjU1NDA1MjEyOTIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjUwODc1NzU3NTAsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6MSwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjUyNTE3NTEwNDEsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6Miwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjU5NzQ1MDMwODMsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6Mywib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifSx7ImR1cmF0aW9uTnMiOjUwNjc0MjY3OTIsImZhaWx1cmVDb2RlIjpudWxsLCJpbmRleCI6NCwib3V0Y29tZSI6InBhc3NlZCIsInNlbWFudGljQ2hlY2siOiJwYXNzZWQifV19LHsiZXhwZWN0ZWREZXNjcmlwdG9yU2hhMjU2IjoiODkwODNkYmQzNjkyMjA3N2RlOWRlMWQzZDFmMGNjMDA3NjMyMTRhODBmYWY1YmMxMjk2M2Y0OTg0ZTFmYzc0MiIsImZhaWx1cmVzIjpbeyJjb2RlIjoicnVubmVyLXVuYXZhaWxhYmxlIiwiZGV0YWlsIjoibm9ybWFsaXplZCBydW5uZXIgZ2VuZXNpcy93YXJtLXJzcy1oYXJuZXNzIGlzIG5vdCBpbXBsZW1lbnRlZCJ9XSwiaWQiOiJQQi04IiwicG9saWN5U3RhdHVzIjoicm9hZG1hcC1ibG9ja2VkIiwic2FtcGxlcyI6W10sInN0YXR1cyI6InJ1bm5lci11bmF2YWlsYWJsZSIsInN1bW1hcnkiOm51bGwsInRhcmdldCI6eyJjb21wYXJpc29uIjoibHRlIiwidW5pdCI6InBlcmNlbnQtcnNzLWdyb3d0aCIsInZhbHVlIjo1fSwid2FybXVwU2FtcGxlcyI6W119LHsiZXhwZWN0ZWREZXNjcmlwdG9yU2hhMjU2IjoiZWFhODkxYTllNDQxYmIxNTZhMWUwYTViZTJhOTgyNDIyOTQ0ZjE5YjllNmIyNzIyYTIxYjk1YTJmNTA4MWNhNSIsImZhaWx1cmVzIjpbeyJjb2RlIjoicnVubmVyLXVuYXZhaWxhYmxlIiwiZGV0YWlsIjoibm9ybWFsaXplZCBydW5uZXIgZ2VuZXNpcy9zZW1hbnRpYy10aWVyLXBhcml0eSBpcyBub3QgaW1wbGVtZW50ZWQifV0sImlkIjoiUEItOSIsInBvbGljeVN0YXR1cyI6InJvYWRtYXAtYmxvY2tlZCIsInNhbXBsZXMiOltdLCJzdGF0dXMiOiJydW5uZXItdW5hdmFpbGFibGUiLCJzdW1tYXJ5IjpudWxsLCJ0YXJnZXQiOnsiY29tcGFyaXNvbiI6ImVxIiwidW5pdCI6InBlcmNlbnQtaWRlbnRpY2FsIiwidmFsdWUiOjEwMH0sIndhcm11cFNhbXBsZXMiOltdfSx7ImV4cGVjdGVkRGVzY3JpcHRvclNoYTI1NiI6IjgyNGRhMjdhYzlkNGIyMTBmMThlZmIxYTA3YzY5OTExODYzYzY5YTA4ZGUxMzZlZWZkNDZhM2UwODQyZGVhZDciLCJmYWlsdXJlcyI6W3siY29kZSI6InJ1bm5lci11bmF2YWlsYWJsZSIsImRldGFpbCI6Im5vcm1hbGl6ZWQgcnVubmVyIGdlbmVzaXMvYm9vdHN0cmFwLWZpeHBvaW50IGlzIG5vdCBpbXBsZW1lbnRlZCJ9XSwiaWQiOiJQQi0xMCIsInBvbGljeVN0YXR1cyI6InJvYWRtYXAtYmxvY2tlZCIsInNhbXBsZXMiOltdLCJzdGF0dXMiOiJydW5uZXItdW5hdmFpbGFibGUiLCJzdW1tYXJ5IjpudWxsLCJ0YXJnZXQiOnsiY29tcGFyaXNvbiI6ImVxIiwidW5pdCI6InBlcmNlbnQtYnl0ZS1pZGVudGljYWwiLCJ2YWx1ZSI6MTAwfSwid2FybXVwU2FtcGxlcyI6W119XX0K",
+    "payloadType": "application/vnd.genesiscode.roadmap-baseline.v0.1+json",
+    "signatures": [
+      {
+        "keyid": "sha256:f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
+        "sig": "RR5LH3rvl9TAtpWEIGSoYqukx3XnNjz0rmgpk74bKm0hIJe3RAeC2F+M3YG/meRgTdmNTggzatKiJrJFOvteDQ=="
+      }
+    ]
+  },
+  "evidenceClass": "E0",
+  "kind": "genesis/roadmap-baseline-bundle-v0.1",
+  "signing": {
+    "keyId": "sha256:f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
+    "publicKeySha256": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
+    "signatureGrantsAuthority": false,
+    "trust": "externally-pinned-fixture-integrity-only"
+  },
+  "statement": {
+    "authoritative": false,
+    "baselineIdentitySha256": "a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967",
+    "build": {
+      "binarySha256": "5e89b57f718a0095b09bf77a39c7055f29d7c86760214e4e71bc28c9cc106d52",
+      "profile": "selfhost-strict",
+      "rustcHost": "aarch64-apple-darwin",
+      "rustcVersion": "1.90.0",
+      "sourceDirty": true,
+      "sourceDirtyMaterialSha256": "530020d9a89231d5d9f39e16ee3f396cca99c4a5a6ebff63a39c47faec3c5f3c",
+      "sourceRevision": "16ee18b3f5e695ed5bbaf7c927575130d8878e33"
+    },
+    "captureDate": "2026-07-10",
+    "evidenceClass": "E0",
+    "hostObservation": {
+      "conformance": {
+        "failures": [],
+        "ok": true
+      },
+      "identitySha256": "578df4adfb8b04c2c1cd9910ad195dae7448750afb293a25e3a858c247dc7c8c",
+      "kind": "genesis/reference-host-observation-v0.1",
+      "metadata": {
+        "compiler": {
+          "nativeFamily": "apple-clang",
+          "nativeVersion": "16.0.0",
+          "rustcHost": "aarch64-apple-darwin",
+          "rustcVersion": "1.90.0"
+        },
+        "cpu": {
+          "architecture": "arm64",
+          "logicalCores": 8,
+          "model": "Apple M1",
+          "physicalCores": 8
+        },
+        "filesystem": {
+          "blockSizeBytes": 4096,
+          "caseSensitive": false,
+          "type": "apfs"
+        },
+        "memory": {
+          "totalBytes": 17179869184
+        },
+        "operatingSystem": {
+          "family": "darwin",
+          "kernelRelease": "24.0.0",
+          "version": "15.0"
+        },
+        "powerMode": {
+          "governorMode": "not-applicable",
+          "lowPowerMode": false,
+          "source": "ac"
+        }
+      },
+      "platformId": "darwin-arm64",
+      "profileId": "darwin-arm64-apple-m1-16g",
+      "promotionStatus": "reference",
+      "tier": 1,
+      "version": "0.1"
+    },
+    "kind": "genesis/roadmap-baseline-statement-v0.1",
+    "overall": {
+      "budgetFailing": 2,
+      "budgetPassing": 2,
+      "decisionGated": 1,
+      "observed": 4,
+      "runnerUnavailable": 5,
+      "status": "observed-with-failures"
+    },
+    "version": "0.1",
+    "workloadPolicyIdentitySha256": "4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea",
+    "workloads": [
+      {
+        "expectedDescriptorSha256": "35f740ed69c7a1c89eff3edef9d7c3d185c53152a90a341ae202fe92a08b3731",
+        "failures": [],
+        "id": "PB-1",
+        "policyStatus": "active",
+        "samples": [
+          {
+            "durationNs": 211446250,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 209197875,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 200238916,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 194585459,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 216007750,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 219388833,
+            "failureCode": null,
+            "index": 5,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 184738458,
+            "failureCode": null,
+            "index": 6,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 200674500,
+            "failureCode": null,
+            "index": 7,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 195424125,
+            "failureCode": null,
+            "index": 8,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 214730583,
+            "failureCode": null,
+            "index": 9,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 194492375,
+            "failureCode": null,
+            "index": 10,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 210932958,
+            "failureCode": null,
+            "index": 11,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 283233958,
+            "failureCode": null,
+            "index": 12,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 200456417,
+            "failureCode": null,
+            "index": 13,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 191920875,
+            "failureCode": null,
+            "index": 14,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 195554917,
+            "failureCode": null,
+            "index": 15,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 204469167,
+            "failureCode": null,
+            "index": 16,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 207519666,
+            "failureCode": null,
+            "index": 17,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 207241375,
+            "failureCode": null,
+            "index": 18,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 192174958,
+            "failureCode": null,
+            "index": 19,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 195920084,
+            "failureCode": null,
+            "index": 20,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 215315541,
+            "failureCode": null,
+            "index": 21,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 218036125,
+            "failureCode": null,
+            "index": 22,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 223251709,
+            "failureCode": null,
+            "index": 23,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 189441167,
+            "failureCode": null,
+            "index": 24,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 200910500,
+            "failureCode": null,
+            "index": 25,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 205988916,
+            "failureCode": null,
+            "index": 26,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 207521750,
+            "failureCode": null,
+            "index": 27,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 212652084,
+            "failureCode": null,
+            "index": 28,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 187158958,
+            "failureCode": null,
+            "index": 29,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ],
+        "status": "observed",
+        "summary": {
+          "decisionStatistic": "upper-median-95-bound",
+          "decisionValue": 210932958,
+          "lowerMedian95": 195920084,
+          "mad": 9587833,
+          "median": 205229041,
+          "p95": 223251709,
+          "targetPass": true,
+          "unit": "nanoseconds",
+          "upperMedian95": 210932958
+        },
+        "target": {
+          "comparison": "lte",
+          "unit": "milliseconds",
+          "value": 250
+        },
+        "warmupSamples": [
+          {
+            "durationNs": 194894375,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 212727917,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 210593791,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 227849917,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 206968375,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ]
+      },
+      {
+        "expectedDescriptorSha256": "35f740ed69c7a1c89eff3edef9d7c3d185c53152a90a341ae202fe92a08b3731",
+        "failures": [
+          {
+            "code": "runner-unavailable",
+            "detail": "normalized runner gc_runtime_bench/bytecode is not implemented"
+          }
+        ],
+        "id": "PB-2",
+        "policyStatus": "roadmap-blocked",
+        "samples": [],
+        "status": "runner-unavailable",
+        "summary": null,
+        "target": {
+          "comparison": "lte",
+          "unit": "milliseconds",
+          "value": 40
+        },
+        "warmupSamples": []
+      },
+      {
+        "expectedDescriptorSha256": "35f740ed69c7a1c89eff3edef9d7c3d185c53152a90a341ae202fe92a08b3731",
+        "failures": [
+          {
+            "code": "decision-not-approved",
+            "detail": "optional runner has no approved architecture decision"
+          }
+        ],
+        "id": "PB-3",
+        "policyStatus": "decision-gated",
+        "samples": [],
+        "status": "decision-gated",
+        "summary": null,
+        "target": {
+          "comparison": "lte",
+          "unit": "milliseconds",
+          "value": 8
+        },
+        "warmupSamples": []
+      },
+      {
+        "expectedDescriptorSha256": "8f8d5c29344d6c6ef971708f11583ba7b9a9cb9ea76681b82f6ba32650eb0ef3",
+        "failures": [],
+        "id": "PB-4",
+        "policyStatus": "active",
+        "samples": [
+          {
+            "durationNs": 4386625,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 10135875,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 7069375,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6900458,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 8520792,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 7416000,
+            "failureCode": null,
+            "index": 5,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4198000,
+            "failureCode": null,
+            "index": 6,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4411542,
+            "failureCode": null,
+            "index": 7,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6626125,
+            "failureCode": null,
+            "index": 8,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6916667,
+            "failureCode": null,
+            "index": 9,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 7182292,
+            "failureCode": null,
+            "index": 10,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4775750,
+            "failureCode": null,
+            "index": 11,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 3701625,
+            "failureCode": null,
+            "index": 12,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5144125,
+            "failureCode": null,
+            "index": 13,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 15218209,
+            "failureCode": null,
+            "index": 14,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4382625,
+            "failureCode": null,
+            "index": 15,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6893458,
+            "failureCode": null,
+            "index": 16,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4264042,
+            "failureCode": null,
+            "index": 17,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4216167,
+            "failureCode": null,
+            "index": 18,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 8064625,
+            "failureCode": null,
+            "index": 19,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6928000,
+            "failureCode": null,
+            "index": 20,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 9866667,
+            "failureCode": null,
+            "index": 21,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4853959,
+            "failureCode": null,
+            "index": 22,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6451292,
+            "failureCode": null,
+            "index": 23,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6830166,
+            "failureCode": null,
+            "index": 24,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6885708,
+            "failureCode": null,
+            "index": 25,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5678166,
+            "failureCode": null,
+            "index": 26,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 9536083,
+            "failureCode": null,
+            "index": 27,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4258250,
+            "failureCode": null,
+            "index": 28,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4115750,
+            "failureCode": null,
+            "index": 29,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ],
+        "status": "observed",
+        "summary": {
+          "decisionStatistic": "upper-median-95-bound",
+          "decisionValue": 6928000,
+          "lowerMedian95": 4775750,
+          "mad": 1833416,
+          "median": 6728145,
+          "p95": 10135875,
+          "targetPass": true,
+          "unit": "nanoseconds",
+          "upperMedian95": 6928000
+        },
+        "target": {
+          "comparison": "lte",
+          "unit": "milliseconds",
+          "value": 150
+        },
+        "warmupSamples": [
+          {
+            "durationNs": 6467250,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4214792,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6840291,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4365042,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 13186916,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ]
+      },
+      {
+        "expectedDescriptorSha256": "b055c3f4bb2cd2829c437cd1bd406503013fe78274d26ef637d9dfe02dd74b0d",
+        "failures": [
+          {
+            "code": "budget-miss",
+            "detail": "directional 95 percent median confidence bound misses target"
+          }
+        ],
+        "id": "PB-5",
+        "policyStatus": "active",
+        "samples": [
+          {
+            "durationNs": 718549291,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 506842625,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 476912375,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 488535292,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 498696083,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 477980000,
+            "failureCode": null,
+            "index": 5,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 457357167,
+            "failureCode": null,
+            "index": 6,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 480355959,
+            "failureCode": null,
+            "index": 7,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 606422334,
+            "failureCode": null,
+            "index": 8,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 484491458,
+            "failureCode": null,
+            "index": 9,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 487886791,
+            "failureCode": null,
+            "index": 10,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 483171375,
+            "failureCode": null,
+            "index": 11,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 492168625,
+            "failureCode": null,
+            "index": 12,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 477600000,
+            "failureCode": null,
+            "index": 13,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 459356333,
+            "failureCode": null,
+            "index": 14,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 455118542,
+            "failureCode": null,
+            "index": 15,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 522845750,
+            "failureCode": null,
+            "index": 16,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 464952833,
+            "failureCode": null,
+            "index": 17,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 499427750,
+            "failureCode": null,
+            "index": 18,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 473890375,
+            "failureCode": null,
+            "index": 19,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 508155250,
+            "failureCode": null,
+            "index": 20,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 464626834,
+            "failureCode": null,
+            "index": 21,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 455673834,
+            "failureCode": null,
+            "index": 22,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 482147459,
+            "failureCode": null,
+            "index": 23,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 445422250,
+            "failureCode": null,
+            "index": 24,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 456308167,
+            "failureCode": null,
+            "index": 25,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 464419792,
+            "failureCode": null,
+            "index": 26,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 727012042,
+            "failureCode": null,
+            "index": 27,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 479631792,
+            "failureCode": null,
+            "index": 28,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 438700417,
+            "failureCode": null,
+            "index": 29,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ],
+        "status": "observed",
+        "summary": {
+          "decisionStatistic": "upper-median-95-bound",
+          "decisionValue": 488535292,
+          "lowerMedian95": 464952833,
+          "mad": 17138145,
+          "median": 479993875,
+          "p95": 718549291,
+          "targetPass": false,
+          "unit": "nanoseconds",
+          "upperMedian95": 488535292
+        },
+        "target": {
+          "comparison": "lte",
+          "unit": "milliseconds",
+          "value": 300
+        },
+        "warmupSamples": [
+          {
+            "durationNs": 492771750,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 468696541,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 548772542,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 460930750,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 525791000,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ]
+      },
+      {
+        "expectedDescriptorSha256": "53e93d9b60b8be1de5181f4b967bb01fde476d29f018622efc75a938c8681e56",
+        "failures": [
+          {
+            "code": "runner-unavailable",
+            "detail": "normalized runner genesis/check-snapshot-cold-process is not implemented"
+          }
+        ],
+        "id": "PB-6",
+        "policyStatus": "roadmap-blocked",
+        "samples": [],
+        "status": "runner-unavailable",
+        "summary": null,
+        "target": {
+          "comparison": "lte",
+          "unit": "milliseconds",
+          "value": 30
+        },
+        "warmupSamples": []
+      },
+      {
+        "expectedDescriptorSha256": "dc0f62caf81b2cd4969a7d0614e8b83cbeafdd2fd11e418b95f571d0ffa94429",
+        "failures": [
+          {
+            "code": "budget-miss",
+            "detail": "directional 95 percent median confidence bound misses target"
+          }
+        ],
+        "id": "PB-7",
+        "policyStatus": "active",
+        "samples": [
+          {
+            "durationNs": 6294705458,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5276075292,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5316520041,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5240701458,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5958303750,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5401025209,
+            "failureCode": null,
+            "index": 5,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5527542083,
+            "failureCode": null,
+            "index": 6,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5497079250,
+            "failureCode": null,
+            "index": 7,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5456055583,
+            "failureCode": null,
+            "index": 8,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5870106583,
+            "failureCode": null,
+            "index": 9,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4846554333,
+            "failureCode": null,
+            "index": 10,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 4483988666,
+            "failureCode": null,
+            "index": 11,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5186519041,
+            "failureCode": null,
+            "index": 12,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5380462916,
+            "failureCode": null,
+            "index": 13,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5722623750,
+            "failureCode": null,
+            "index": 14,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5865691000,
+            "failureCode": null,
+            "index": 15,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5461026417,
+            "failureCode": null,
+            "index": 16,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6562824167,
+            "failureCode": null,
+            "index": 17,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6306671375,
+            "failureCode": null,
+            "index": 18,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6217319125,
+            "failureCode": null,
+            "index": 19,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6271365417,
+            "failureCode": null,
+            "index": 20,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5701400167,
+            "failureCode": null,
+            "index": 21,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6653069542,
+            "failureCode": null,
+            "index": 22,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6406507541,
+            "failureCode": null,
+            "index": 23,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5919958792,
+            "failureCode": null,
+            "index": 24,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5811567375,
+            "failureCode": null,
+            "index": 25,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5880645000,
+            "failureCode": null,
+            "index": 26,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 6228316875,
+            "failureCode": null,
+            "index": 27,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5931559584,
+            "failureCode": null,
+            "index": 28,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5578103833,
+            "failureCode": null,
+            "index": 29,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ],
+        "status": "observed",
+        "summary": {
+          "decisionStatistic": "lower-median-95-bound",
+          "decisionValue": 42804,
+          "lowerMedian95": 42804,
+          "mad": 3071,
+          "median": 44027,
+          "p95": 52386,
+          "targetPass": false,
+          "unit": "bytes-per-second",
+          "upperMedian95": 46492
+        },
+        "target": {
+          "comparison": "gte",
+          "unit": "bytes-per-second",
+          "value": 1048576
+        },
+        "warmupSamples": [
+          {
+            "durationNs": 5540521292,
+            "failureCode": null,
+            "index": 0,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5087575750,
+            "failureCode": null,
+            "index": 1,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5251751041,
+            "failureCode": null,
+            "index": 2,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5974503083,
+            "failureCode": null,
+            "index": 3,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          },
+          {
+            "durationNs": 5067426792,
+            "failureCode": null,
+            "index": 4,
+            "outcome": "passed",
+            "semanticCheck": "passed"
+          }
+        ]
+      },
+      {
+        "expectedDescriptorSha256": "89083dbd36922077de9de1d3d1f0cc00763214a80faf5bc12963f4984e1fc742",
+        "failures": [
+          {
+            "code": "runner-unavailable",
+            "detail": "normalized runner genesis/warm-rss-harness is not implemented"
+          }
+        ],
+        "id": "PB-8",
+        "policyStatus": "roadmap-blocked",
+        "samples": [],
+        "status": "runner-unavailable",
+        "summary": null,
+        "target": {
+          "comparison": "lte",
+          "unit": "percent-rss-growth",
+          "value": 5
+        },
+        "warmupSamples": []
+      },
+      {
+        "expectedDescriptorSha256": "eaa891a9e441bb156a1e0a5be2a982422944f19b9e6b2722a21b95a2f5081ca5",
+        "failures": [
+          {
+            "code": "runner-unavailable",
+            "detail": "normalized runner genesis/semantic-tier-parity is not implemented"
+          }
+        ],
+        "id": "PB-9",
+        "policyStatus": "roadmap-blocked",
+        "samples": [],
+        "status": "runner-unavailable",
+        "summary": null,
+        "target": {
+          "comparison": "eq",
+          "unit": "percent-identical",
+          "value": 100
+        },
+        "warmupSamples": []
+      },
+      {
+        "expectedDescriptorSha256": "824da27ac9d4b210f18efb1a07c69911863c69a08de136eefd46a3e0842dead7",
+        "failures": [
+          {
+            "code": "runner-unavailable",
+            "detail": "normalized runner genesis/bootstrap-fixpoint is not implemented"
+          }
+        ],
+        "id": "PB-10",
+        "policyStatus": "roadmap-blocked",
+        "samples": [],
+        "status": "runner-unavailable",
+        "summary": null,
+        "target": {
+          "comparison": "eq",
+          "unit": "percent-byte-identical",
+          "value": 100
+        },
+        "warmupSamples": []
+      }
+    ]
+  },
+  "version": "0.1"
+}

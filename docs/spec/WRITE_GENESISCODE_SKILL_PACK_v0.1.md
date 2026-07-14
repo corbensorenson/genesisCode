@@ -11,13 +11,18 @@ and tooling evolution code.
 - Skill source: `.agents/skills/genesiscode-authoring/SKILL.md`
 - Pointer/onboarding doc: `docs/write_genesisCode_skill.md`
 - Bundle entrypoint: `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+- Frozen training profile: `docs/spec/GC_AGENT_PROFILE_v0.3.json`
+- Generated compact core card: `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`
+- Intent-selected task-card registry: `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
+- Exact language-symbol registry: `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
 - Skill contract JSON: `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`
 - Executable conformance spec: `docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md`
 - Distribution kit spec: `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
 - Distribution manifest: `docs/skill_pack/write_genesiscode_v1/manifest.json`
 - Schema refs: `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`, `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
 - Test/profile refs: `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
-- Active backlog source: `upgrade_plan.md`
+- Strategic execution source: `ROADMAP.md`
+- Unresolved P0/P1 compatibility queue: `upgrade_plan.md`
 
 ## Pack Objectives
 
@@ -25,6 +30,8 @@ and tooling evolution code.
 2. Keep language/runtime evolution selfhost-biased.
 3. Keep edits machine-reviewable with explicit acceptance evidence.
 4. Keep plan-driven iteration (open backlog -> implement -> verify -> mark complete).
+5. Freeze authoring assumptions by negotiating `GC-AGENT-v0.3` before source generation.
+6. Enforce all five unsupported classes and their safe alternatives without prompt- or index-derived authority.
 
 ## Distribution Layout (Normative)
 
@@ -42,7 +49,7 @@ and tooling evolution code.
 ## Prompt Templates
 
 ### `backlog_slice`
-- Intent: complete highest-impact unresolved `upgrade_plan.md` items end-to-end.
+- Intent: complete the highest-impact ready `ROADMAP.md` task end-to-end, except unresolved P0/P1 compatibility work remains sourced from `upgrade_plan.md`.
 - Required output:
   - explicit task list
   - changed files
@@ -71,6 +78,10 @@ and tooling evolution code.
 - `bash scripts/check_planning_docs_fresh.sh`
 
 ### `authoring_contract`
+- `bash scripts/check_gc_agent_core_card.sh`
+- `bash scripts/check_gc_agent_task_cards.sh`
+- `bash scripts/check_gc_agent_symbol_index.sh`
+- `bash scripts/check_gc_agent_profile.sh`
 - `bash scripts/check_genesiscode_authoring_skill.sh`
 - `bash scripts/check_write_genesiscode_skill_pack.sh`
 - `bash scripts/check_write_genesiscode_skill_distribution.sh`
@@ -84,7 +95,7 @@ and tooling evolution code.
 - `bash scripts/check_agent_reference_workflows.sh`
 - `bash scripts/check_agent_generative_workloads.sh`
 - `bash scripts/check_write_genesiscode_skill_conformance.sh`
-- `GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh`
+- `GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 bash scripts/check_write_genesiscode_skill_distribution.sh`
 
 ### `selfhost_sidecar`
 - `bash scripts/check_selfhost_artifact_fresh.sh`
@@ -169,6 +180,10 @@ Every substantial turn should include:
 ## Conformance
 
 Gate:
+- `scripts/check_gc_agent_core_card.sh`
+- `scripts/check_gc_agent_task_cards.sh`
+- `scripts/check_gc_agent_symbol_index.sh`
+- `scripts/check_gc_agent_profile.sh`
 - `scripts/check_write_genesiscode_skill_pack.sh`
 - `scripts/check_write_genesiscode_skill_guide.sh`
 - `scripts/check_write_genesiscode_skill_distribution.sh`

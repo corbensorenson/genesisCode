@@ -158,35 +158,26 @@ fn poison_patch_schema_apply_replace_node_contract(artifact: &std::path::Path) {
             Term::Map(mm)
                 if matches!(
                     mm.get(&TermOrdKey(Term::symbol(":path"))),
-                    Some(Term::Str(path)) if path == "selfhost/patch_schema_v1.gc"
+                    Some(Term::Str(path)) if path == "selfhost/patch_schema_apply_v1.gc"
                 ) =>
             {
                 Some(mm)
             }
             _ => None,
         })
-        .expect("selfhost/patch_schema_v1.gc entry");
+        .expect("selfhost/patch_schema_apply_v1.gc entry");
 
-    let poisoned_src = r#"
-      (def core/cli::validate-patch (fn (t) true))
+    let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("patch apply module missing :source"),
+    };
+    let poisoned_src = format!(
+        r#"{module_src}
       (def core/cli::apply-replace-node
         (fn (req) ((core/error::make2 "core/poison") "apply-replace-node poisoned")))
-      (def core/cli::print-module-forms (fn (forms) ""))
-      (def core/cli::print-module-from-content
-        (fn (content) ((core/error::make2 "core/poison") "print-module-from-content poisoned")))
-      (def core/cli::manifest-apply-add-module
-        (fn (manifest)
-          (fn (module-path) ((core/error::make2 "core/poison") "manifest-apply-add-module poisoned"))))
-      (def core/cli::manifest-apply-remove-module
-        (fn (manifest)
-          (fn (module-path)
-            ((core/error::make2 "core/poison") "manifest-apply-remove-module poisoned"))))
-      (def core/cli::manifest-apply-update-manifest-op
-        (fn (manifest)
-          (fn (op)
-            ((core/error::make2 "core/poison") "manifest-apply-update-manifest-op poisoned"))))
-    "#;
-    let poisoned_forms = canonicalize_module(parse_module(poisoned_src).unwrap()).unwrap();
+"#
+    );
+    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).unwrap()).unwrap();
     let poisoned_hash = hash_module(&poisoned_forms);
     patch_mod.insert(
         TermOrdKey(Term::symbol(":source")),

@@ -11,6 +11,7 @@ fn write_caps(dir: &Path) -> PathBuf {
         &caps,
         r#"
 allow = [
+  "core/pkg-low::load-package",
   "core/pkg-low::snapshot",
   "core/gpk-low::export",
   "core/gpk-low::import",
@@ -25,6 +26,9 @@ dir = "./.genesis/store"
 
 [refs]
 path = "./.genesis/refs.gc"
+
+[op."core/pkg-low::load-package"]
+base_dir = "."
 
 [op."core/pkg-low::snapshot"]
 base_dir = "."

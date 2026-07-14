@@ -5,6 +5,7 @@ use std::io::Read;
 const KIND_AGENT_PLAN: &str = "genesis/agent-plan-v0.1";
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct AgentIntent {
     #[serde(default)]
     schema: Option<String>,
@@ -189,6 +190,19 @@ pub(super) fn cmd_agent_plan(
         .to_hex()
         .to_string();
     let catalog_hash_blake3 = catalog_hash_blake3(&workflow_catalog)?;
+    let context_cards = if intent.goal.is_empty() {
+        serde_json::Value::Null
+    } else {
+        cmd_agent_task_cards::select_task_cards(
+            &intent.goal,
+            &intent.domains,
+            &intent.required_workflows,
+            &intent.exclude_workflows,
+            &intent.required_ops,
+            intent.max_workflows,
+        )
+        .map_err(|error| cli_err(EX_INTERNAL, "agent-plan/task-cards", error))?
+    };
     let mut plan_core = serde_json::json!({
         "schema": KIND_AGENT_PLAN,
         "intent_hash_blake3": intent_hash_blake3,
@@ -205,6 +219,7 @@ pub(super) fn cmd_agent_plan(
             "error": policy.error,
         },
         "failures": failures_json,
+        "context_cards": context_cards,
     });
     let plan_hash_blake3 = blake3::hash(json_canonical_string(&plan_core).as_bytes())
         .to_hex()

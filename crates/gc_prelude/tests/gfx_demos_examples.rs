@@ -5,21 +5,30 @@ use gc_kernel::{EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
 fn value_to_data_term(v: &Value) -> Option<Term> {
+    v.to_plain_term()
+}
+
+fn non_data_path(v: &Value, path: &str) -> Option<String> {
     match v {
-        Value::Data(t) => Some(t.clone()),
-        Value::Vector(xs) => Some(Term::Vector(
-            xs.iter()
-                .map(value_to_data_term)
-                .collect::<Option<Vec<_>>>()?,
-        )),
-        Value::Map(m) => {
-            let mut out = std::collections::BTreeMap::new();
-            for (k, vv) in m {
-                out.insert(k.clone(), value_to_data_term(vv)?);
+        Value::Data(_) | Value::Int(_) => None,
+        Value::Vector(xs) => {
+            for (idx, item) in xs.iter().enumerate() {
+                if let Some(found) = non_data_path(item, &format!("{path}[{idx}]")) {
+                    return Some(found);
+                }
             }
-            Some(Term::Map(out))
+            None
         }
-        _ => None,
+        Value::Map(m) => {
+            for (k, item) in m.iter() {
+                let key = gc_coreform::print_term(&k.0);
+                if let Some(found) = non_data_path(item, &format!("{path}.{key}")) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        other => Some(format!("{path}: {}", other.debug_repr())),
     }
 }
 
@@ -36,7 +45,12 @@ fn eval_demo(name: &str) -> Term {
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
     let v = eval_module(&mut ctx, &mut env, &forms).expect("eval");
-    value_to_data_term(&v).expect("result must be data")
+    value_to_data_term(&v).unwrap_or_else(|| {
+        panic!(
+            "result must be data; first non-data value at {}",
+            non_data_path(&v, "$").unwrap_or_else(|| "<unknown>".to_string())
+        )
+    })
 }
 
 #[test]

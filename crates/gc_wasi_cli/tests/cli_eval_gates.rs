@@ -32,7 +32,7 @@ fn eval_stage2_gate_succeeds_for_scalar_pure_program() {
 }
 
 #[test]
-fn eval_stage2_gate_rejects_unsupported_non_scalar_module() {
+fn eval_stage2_gate_validates_non_scalar_module_via_constant_fallback() {
     let td = tempdir().unwrap();
     let file = td.path().join("map.gc");
     std::fs::write(
@@ -42,14 +42,34 @@ fn eval_stage2_gate_rejects_unsupported_non_scalar_module() {
         "#,
     )
     .unwrap();
-    cargo_bin_cmd!("genesis_wasi")
-        .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
+
+    let out = cargo_bin_cmd!("genesis_wasi")
+        .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
-        .failure()
-        .code(30)
-        .stderr(predicate::str::contains(
-            "core/obligation::translation-validation",
-        ));
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let stage2 = &v["data"]["stage2"];
+    assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
+    assert_eq!(
+        stage2["obligation"].as_str(),
+        Some("core/obligation::translation-validation"),
+        "{v}"
+    );
+    assert_eq!(
+        stage2["lowering_mode"].as_str(),
+        Some("constant-fallback"),
+        "{v}"
+    );
+    assert_eq!(stage2["value_kind"].as_str(), Some("term"), "{v}");
+    assert_eq!(
+        stage2["original_value_hash"].as_str(),
+        stage2["wasm_value_hash"].as_str(),
+        "{v}"
+    );
 }
 
 #[test]

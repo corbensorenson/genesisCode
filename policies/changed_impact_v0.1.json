@@ -1,0 +1,36 @@
+{
+  "fallbackProfile": "prepush-standard",
+  "fullFastPatterns": [
+    ".cargo/**",
+    ".github/**",
+    "Cargo.lock",
+    "Cargo.toml",
+    "package-lock.json",
+    "package.json",
+    "rust-toolchain.toml"
+  ],
+  "generatedClasses": [
+    {
+      "id": "generated-program-view",
+      "patterns": ["docs/program/**/*.json", "docs/program/*.json", "genesis.gates.json"],
+      "profile": "prepush-standard",
+      "requireGateMatch": true
+    },
+    {
+      "id": "json-schema",
+      "patterns": ["docs/spec/*.schema.json"],
+      "profile": "prepush-standard",
+      "requireGateMatch": true
+    }
+  ],
+  "kind": "genesis/changed-impact-policy-v0.1",
+  "maxTargetedCrates": 6,
+  "maxTargetedGates": 8,
+  "profileRanks": {
+    "agent-inner-loop": 1,
+    "local-fast": 0,
+    "prepush-standard": 2,
+    "release-full": 3
+  },
+  "version": "0.1"
+}

@@ -414,6 +414,45 @@ In Rust:
 
 Add `docs/spec/` that restates the *normative* rules (dispatch, seals, replay). Keep it small and enforced by tests.
 
+### **10.4 Runtime profiling and workload ratchets**
+
+Use the workload gate before and after evaluator performance changes:
+
+```bash
+bash scripts/check_runtime_workload_budgets.sh
+GENESIS_RUNTIME_WORKLOAD_PROFILE=roadmap \
+  GENESIS_RUNTIME_WORKLOAD_REQUIRE_ROADMAP_SIZES=1 \
+  bash scripts/check_runtime_workload_budgets.sh
+```
+
+The default `smoke` workload keeps CI practical before R1/R2 optimizations. The `roadmap`
+profile is the full target workload: `fib(25)`, 1M `vec/push`, 100k `map/put`, 10k
+`str/concat`, 100k dispatches through a 5-deep contract chain, and selfhost parsing of
+`selfhost/parse.gc` plus `prelude/prelude.gc`.
+
+Profile `genesis eval` on the fib workload:
+
+```bash
+cat > /tmp/genesis_fib25.gc <<'GC'
+(def bench/fib
+  (fn (n)
+    (if ((core/int::lt? n) 2)
+      n
+      ((core/int::add (bench/fib ((core/int::sub n) 1)))
+        (bench/fib ((core/int::sub n) 2))))))
+(bench/fib 25)
+GC
+
+cargo build --profile selfhost-strict -p gc_cli
+cargo flamegraph --profile selfhost-strict -p gc_cli --bin genesis -- eval /tmp/genesis_fib25.gc
+samply record -- ./target/selfhost-strict/genesis eval /tmp/genesis_fib25.gc
+```
+
+Perf PR rule: if a Tier change improves a workload metric, tighten the corresponding
+`GENESIS_BUDGET_WORKLOAD_*` default or policy seed in the same PR to `new p95 * 1.25`
+rounded up to a stable integer. Include the before/after workload report paths and the
+dominant flamegraph stacks in the PR notes.
+
 ---
 
 ## **11\) How to run this project best in Codex Desktop (threads \+ worktrees \+ skills)**
@@ -543,4 +582,3 @@ GPT‑5.3‑Codex is explicitly described as being able to handle long-running t
 ---
 
 If you want, I can also generate **a complete `docs/spec/` starter** (normative rules in one place) plus an initial **`tests/spec/` golden suite** (seal spoof tests, dispatch chain tests, determinism tests) so the Codex agent starts with a concrete acceptance harness on day 1\.
-

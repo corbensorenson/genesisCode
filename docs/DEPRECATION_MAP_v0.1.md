@@ -1,8 +1,14 @@
 # Documentation Deprecation Map v0.1
 
-Last updated: 2026-02-25
+Last updated: 2026-07-10
 
 Purpose: explicitly mark superseded/overlapping docs and point to canonical replacements.
+
+## Format Migration Notes
+
+| Format | Migration note |
+|---|---|
+| Compiled module blob `GCKM1` through `GCKM4` | Superseded by `GCKM5`. `GCKM5` adds `AppN` source-shape step metadata so compiled evaluation preserves semantic `ctx.steps` for both sugar applications and explicit left-associated applications. Compiled blobs are cache artifacts; regenerate from canonical CoreForm instead of accepting older blob bytes as durable trust artifacts. |
 
 ## Merged Split Specs (Removed)
 
@@ -26,6 +32,7 @@ and removed from active retrieval paths:
 | `docs/STACKS_v0.2.md` | `docs/PAPER_v0.2.md`, `docs/FOUNDATION_STDLIB_v0.2.md`, `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md` | Redirect stub only |
 | `docs/STYLE_GUIDE_v0.2.md` | `docs/spec/AI_STYLE.md`, `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`, `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md` | Redirect stub only |
 | `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.md` | `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`, `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md` | Redirect stub only |
+| `docs/spec/GCLOG_SCHEMA.md` | `docs/spec/GCLOG.md`, `docs/spec/VERSION_SURFACES_v0.1.md` | Redirect stub only |
 
 ## Stub Contract (Deprecated Docs)
 

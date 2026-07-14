@@ -3,6 +3,12 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use thiserror::Error;
 
+pub const PACKAGE_MANIFEST_SCHEMA_VERSION: u64 = 1;
+
+fn legacy_package_manifest_schema() -> u64 {
+    PACKAGE_MANIFEST_SCHEMA_VERSION
+}
+
 #[derive(Debug, Error)]
 pub enum ManifestError {
     #[error("manifest io error: {0}")]
@@ -17,6 +23,9 @@ pub enum ManifestError {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct PackageManifest {
+    /// Missing `schema` is the documented pre-schema form of schema 1.
+    #[serde(default = "legacy_package_manifest_schema")]
+    pub schema: u64,
     pub name: String,
     pub version: String,
     pub modules: Vec<ModuleEntry>,
@@ -150,6 +159,15 @@ impl PackageManifest {
             path: path.display().to_string(),
             msg: e.to_string(),
         })?;
+        if m.schema != PACKAGE_MANIFEST_SCHEMA_VERSION {
+            return Err(ManifestError::Invalid {
+                path: path.display().to_string(),
+                msg: format!(
+                    "unsupported package manifest schema {} (expected {})",
+                    m.schema, PACKAGE_MANIFEST_SCHEMA_VERSION
+                ),
+            });
+        }
         validate_manifest_paths(path, &m)?;
         let dir = path
             .parent()
@@ -215,7 +233,43 @@ fn validate_rel_path_str(s: &str, field: &str, pkg_toml: &Path) -> Result<(), Ma
 
 #[cfg(test)]
 mod tests {
-    use super::PackageManifest;
+    use super::{PACKAGE_MANIFEST_SCHEMA_VERSION, PackageManifest};
+
+    fn write_minimal_manifest(path: &std::path::Path, schema: Option<u64>) {
+        let schema = schema
+            .map(|value| format!("schema = {value}\n"))
+            .unwrap_or_default();
+        std::fs::write(
+            path,
+            format!("{schema}name = \"x\"\nversion = \"0.0.1\"\nmodules = []\nobligations = []\n"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn schema_one_and_documented_pre_schema_form_are_supported() {
+        let td = tempfile::tempdir().unwrap();
+        let pkg = td.path().join("package.toml");
+        for schema in [None, Some(PACKAGE_MANIFEST_SCHEMA_VERSION)] {
+            write_minimal_manifest(&pkg, schema);
+            assert_eq!(
+                PackageManifest::load(&pkg).unwrap().0.schema,
+                PACKAGE_MANIFEST_SCHEMA_VERSION
+            );
+        }
+    }
+
+    #[test]
+    fn future_schema_is_rejected() {
+        let td = tempfile::tempdir().unwrap();
+        let pkg = td.path().join("package.toml");
+        write_minimal_manifest(&pkg, Some(PACKAGE_MANIFEST_SCHEMA_VERSION + 1));
+        let error = PackageManifest::load(&pkg).unwrap_err().to_string();
+        assert!(
+            error.contains("unsupported package manifest schema"),
+            "{error}"
+        );
+    }
 
     #[test]
     fn rejects_parent_dir_in_module_path() {

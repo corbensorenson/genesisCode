@@ -124,7 +124,7 @@ pub(super) fn cmd_commit(
             );
             out.insert(TermOrdKey(Term::symbol(":artifact")), artifact);
             (
-                Value::Data(Term::Map(out)),
+                Value::data(Term::Map(out)),
                 if cli.json {
                     String::new()
                 } else {
@@ -152,7 +152,7 @@ pub(super) fn cmd_commit(
             out.insert(TermOrdKey(Term::symbol(":hash")), Term::Str(hash.clone()));
             out.insert(TermOrdKey(Term::symbol(":artifact")), artifact.clone());
             (
-                Value::Data(Term::Map(out)),
+                Value::data(Term::Map(out)),
                 if cli.json {
                     String::new()
                 } else {

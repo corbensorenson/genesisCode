@@ -6,8 +6,8 @@ use thiserror::Error;
 use crate::schema::{bytes32_to_hex, hex_to_bytes32};
 
 const MAGIC: &[u8; 4] = b"GPK\0";
-const VERSION_V1: u32 = 1;
-const VERSION_V2: u32 = 2;
+pub const GPK_LEGACY_VERSION: u32 = 1;
+pub const GPK_CURRENT_VERSION: u32 = 2;
 const KIND_RAW_CANONICAL: u8 = 0;
 const INDEX_ENTRY_BYTES: usize = 32 + 1 + 7 + 8 + 8;
 const HARD_MAX_ENTRIES: u64 = 100_000;
@@ -86,10 +86,10 @@ pub fn write_bundle<W: Write>(
     refs: Option<&[(String, String)]>,
 ) -> Result<(), GpkError> {
     w.write_all(MAGIC)?;
-    if version != VERSION_V1 && version != VERSION_V2 {
+    if version != GPK_LEGACY_VERSION && version != GPK_CURRENT_VERSION {
         return Err(GpkError::BadVersion(version));
     }
-    if version == VERSION_V1 && refs.is_some() {
+    if version == GPK_LEGACY_VERSION && refs.is_some() {
         return Err(GpkError::BadIndex(
             "v1 bundle cannot contain refs section".to_string(),
         ));
@@ -139,7 +139,7 @@ pub fn write_bundle<W: Write>(
     for (_, bytes) in entries {
         w.write_all(bytes)?;
     }
-    if version == VERSION_V2 {
+    if version == GPK_CURRENT_VERSION {
         let mut refs_vec: Vec<(String, [u8; 32])> = Vec::new();
         if let Some(rs) = refs {
             let mut seen_names: BTreeSet<String> = BTreeSet::new();
@@ -189,7 +189,7 @@ pub fn read_bundle_with_limits<R: Read>(
     let mut ver = [0u8; 4];
     r.read_exact(&mut ver).map_err(|_| GpkError::Truncated)?;
     let version = u32::from_le_bytes(ver);
-    if version != VERSION_V1 && version != VERSION_V2 {
+    if version != GPK_LEGACY_VERSION && version != GPK_CURRENT_VERSION {
         return Err(GpkError::BadVersion(version));
     }
     let mut root = [0u8; 32];
@@ -280,7 +280,7 @@ pub fn read_bundle_with_limits<R: Read>(
     }
 
     let mut refs: Vec<GpkRef> = Vec::new();
-    if version == VERSION_V1 {
+    if version == GPK_LEGACY_VERSION {
         // v1 has no extra sections; trailing bytes are treated as corruption.
         let mut extra = [0u8; 1];
         match r.read(&mut extra) {
@@ -340,4 +340,45 @@ pub fn read_bundle_with_limits<R: Read>(
         entries,
         refs,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{GPK_CURRENT_VERSION, GPK_LEGACY_VERSION, GpkError, read_bundle, write_bundle};
+
+    #[test]
+    fn current_version_roundtrips_with_an_empty_refs_section() {
+        let root = [7; 32];
+        let mut bytes = Vec::new();
+        write_bundle(&mut bytes, GPK_CURRENT_VERSION, root, &[], Some(&[])).unwrap();
+        assert_eq!(&bytes[..4], b"GPK\0");
+        assert_eq!(
+            u32::from_le_bytes(bytes[4..8].try_into().unwrap()),
+            GPK_CURRENT_VERSION
+        );
+        let bundle = read_bundle(bytes.as_slice()).unwrap();
+        assert_eq!(bundle.version, GPK_CURRENT_VERSION);
+        assert!(bundle.refs.is_empty());
+    }
+
+    #[test]
+    fn explicit_legacy_version_remains_readable_but_rejects_refs() {
+        let mut bytes = Vec::new();
+        write_bundle(&mut bytes, GPK_LEGACY_VERSION, [0; 32], &[], None).unwrap();
+        assert_eq!(
+            read_bundle(bytes.as_slice()).unwrap().version,
+            GPK_LEGACY_VERSION
+        );
+
+        let error =
+            write_bundle(Vec::new(), GPK_LEGACY_VERSION, [0; 32], &[], Some(&[])).unwrap_err();
+        assert!(matches!(error, GpkError::BadIndex(_)));
+    }
+
+    #[test]
+    fn future_version_is_rejected() {
+        let error =
+            write_bundle(Vec::new(), GPK_CURRENT_VERSION + 1, [0; 32], &[], None).unwrap_err();
+        assert!(matches!(error, GpkError::BadVersion(_)));
+    }
 }

@@ -472,6 +472,6 @@ fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Val
     mm.insert(TermOrdKey(Term::symbol(":error/context")), Term::Nil);
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(mm))),
+        payload: Box::new(Value::data(Term::Map(mm))),
     }
 }

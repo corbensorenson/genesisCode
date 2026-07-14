@@ -62,6 +62,26 @@ fn cli_schema_production_profile_emits_selfhost_only_values() {
     let fmt = find_subcommand_by_name(command, "fmt").expect("fmt subcommand");
     let engine_opt = find_option_by_long(fmt, "engine").expect("fmt engine option");
     assert_eq!(option_allowed_values(engine_opt), vec!["selfhost"]);
+    assert_eq!(engine_opt["action"], "set");
+    assert_eq!(engine_opt["value_type"], "string");
+    assert_eq!(engine_opt["multiple"], false);
+    assert_eq!(
+        json.pointer("/data/mcp_interface/protocolVersion")
+            .and_then(Value::as_str),
+        Some("2025-11-25")
+    );
+    assert_eq!(
+        json.pointer("/data/mcp_interface/tools")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(14)
+    );
+    assert_eq!(
+        json.pointer("/data/mcp_interface/identitySha256")
+            .and_then(Value::as_str)
+            .map(str::len),
+        Some(64)
+    );
 }
 
 #[test]

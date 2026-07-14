@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/reference-host-profiles-v0.1.json",
+  "title": "GenesisCode Reference Host Profiles v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "metadataDimensions", "observationPolicy", "profiles", "promotionPolicy"],
+  "properties": {
+    "kind": {"const": "genesis/reference-host-profiles-v0.1"},
+    "version": {"const": "0.1"},
+    "metadataDimensions": {"const": ["compiler", "cpu", "filesystem", "memory", "operating-system", "power-mode"]},
+    "observationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowAbsolutePaths", "allowHostnames", "allowSerialNumbers", "allowUserNames", "identityAlgorithm", "storageClassBeforeSigning"],
+      "properties": {
+        "allowAbsolutePaths": {"const": false},
+        "allowHostnames": {"const": false},
+        "allowSerialNumbers": {"const": false},
+        "allowUserNames": {"const": false},
+        "identityAlgorithm": {"const": "sha256-canonical-json"},
+        "storageClassBeforeSigning": {"const": "E0"}
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/profile"}
+    },
+    "promotionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumIndependentHosts", "minimumSamplesPerWorkload", "requiredEvidenceClass", "requiredOperatingSystems", "requireIndependentVerification", "requireSignedBaseline"],
+      "properties": {
+        "minimumIndependentHosts": {"type": "integer", "minimum": 2},
+        "minimumSamplesPerWorkload": {"type": "integer", "minimum": 30},
+        "requiredEvidenceClass": {"const": "E3"},
+        "requiredOperatingSystems": {"type": "integer", "minimum": 1},
+        "requireIndependentVerification": {"const": true},
+        "requireSignedBaseline": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "versionRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minInclusive", "maxExclusive"],
+      "properties": {
+        "minInclusive": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "maxExclusive": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "platformId", "tier", "promotionStatus", "cpu", "memory", "filesystem", "operatingSystem", "compiler", "powerMode", "benchmarkControls"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$"},
+        "platformId": {"enum": ["darwin-arm64", "linux-arm64", "linux-x86-64", "windows-x86-64"]},
+        "tier": {"enum": [1, 2]},
+        "promotionStatus": {"enum": ["reference", "candidate"]},
+        "cpu": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["architecture", "modelPattern", "minPhysicalCores", "minLogicalCores"],
+          "properties": {
+            "architecture": {"enum": ["arm64", "x86_64"]},
+            "modelPattern": {"type": "string", "minLength": 3},
+            "minPhysicalCores": {"type": "integer", "minimum": 1},
+            "minLogicalCores": {"type": "integer", "minimum": 1}
+          }
+        },
+        "memory": {"type": "object", "additionalProperties": false, "required": ["minBytes"], "properties": {"minBytes": {"type": "integer", "minimum": 8589934592}}},
+        "filesystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowedTypes", "caseSensitivity", "minBlockSizeBytes"],
+          "properties": {
+            "allowedTypes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9-]+$"}},
+            "caseSensitivity": {"enum": ["sensitive", "insensitive", "either"]},
+            "minBlockSizeBytes": {"type": "integer", "minimum": 512}
+          }
+        },
+        "operatingSystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["family", "version"],
+          "properties": {"family": {"enum": ["darwin", "linux", "windows"]}, "version": {"$ref": "#/$defs/versionRange"}}
+        },
+        "compiler": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rustcVersion", "rustcHostPattern", "nativeFamilies", "nativeVersion"],
+          "properties": {
+            "rustcVersion": {"const": "1.90.0"},
+            "rustcHostPattern": {"type": "string", "minLength": 3},
+            "nativeFamilies": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["apple-clang", "clang", "gcc", "msvc"]}},
+            "nativeVersion": {"$ref": "#/$defs/versionRange"}
+          }
+        },
+        "powerMode": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requiredSource", "lowPowerModeAllowed", "allowedGovernorModes"],
+          "properties": {
+            "requiredSource": {"const": "ac"},
+            "lowPowerModeAllowed": {"const": false},
+            "allowedGovernorModes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z-]+$"}}
+          }
+        },
+        "benchmarkControls": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exclusiveHostRequired", "virtualizationAllowed", "thermalStateRequired", "backgroundLoadMaxPercent"],
+          "properties": {
+            "exclusiveHostRequired": {"const": true},
+            "virtualizationAllowed": {"const": false},
+            "thermalStateRequired": {"const": "nominal"},
+            "backgroundLoadMaxPercent": {"type": "integer", "minimum": 0, "maximum": 5}
+          }
+        }
+      }
+    }
+  }
+}

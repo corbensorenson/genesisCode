@@ -9,7 +9,7 @@ fn code_from_error(v: Value) -> String {
     let Value::Sealed { payload, .. } = v else {
         panic!("expected sealed error value");
     };
-    let Value::Data(Term::Map(mm)) = *payload else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("expected sealed payload map");
     };
     let Some(Term::Str(code)) = mm.get(&TermOrdKey(Term::symbol(":error/code"))) else {
@@ -22,7 +22,7 @@ fn msg_from_error(v: Value) -> String {
     let Value::Sealed { payload, .. } = v else {
         panic!("expected sealed error value");
     };
-    let Value::Data(Term::Map(mm)) = *payload else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("expected sealed payload map");
     };
     let Some(Term::Str(msg)) = mm.get(&TermOrdKey(Term::symbol(":error/message"))) else {
@@ -140,7 +140,7 @@ wasi_bridge_response = "{:ok true :status 200 :body \"ok\"}"
         SealId(9),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected data map");
     };
     assert_eq!(
@@ -232,7 +232,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(12),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(open_map)) = open_out else {
+    let Some(Term::Map(open_map)) = open_out.as_data() else {
         panic!("expected ws-open data map");
     };
     assert_eq!(
@@ -265,7 +265,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(14),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(send_map)) = send_out else {
+    let Some(Term::Map(send_map)) = send_out.as_data() else {
         panic!("expected ws-send data map");
     };
     assert_eq!(
@@ -292,7 +292,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(16),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(recv_map)) = recv_out else {
+    let Some(Term::Map(recv_map)) = recv_out.as_data() else {
         panic!("expected ws-recv data map");
     };
     assert_eq!(
@@ -319,7 +319,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(18),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(close_map)) = close_out else {
+    let Some(Term::Map(close_map)) = close_out.as_data() else {
         panic!("expected ws-close data map");
     };
     assert_eq!(
@@ -357,7 +357,7 @@ wasi_bridge_response = "{:ok true :exit 0 :stdout \"ok\" :stderr \"\"}"
         SealId(91),
     )
     .expect("process exec");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected process data map");
     };
     assert_eq!(
@@ -397,7 +397,7 @@ wasi_bridge_response = "{:ok true :status \"ok\"}"
         SealId(92),
     )
     .expect("plugin command");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected plugin data map");
     };
     assert_eq!(
@@ -446,7 +446,7 @@ wasi_bridge_response = "{:ok true :signature b\"\x01\"}"
         SealId(93),
     )
     .expect("crypto sign");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected crypto data map");
     };
     assert_eq!(
@@ -538,7 +538,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(34),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(open_map)) = open_out else {
+    let Some(Term::Map(open_map)) = open_out.as_data() else {
         panic!("expected tcp-open data map");
     };
     assert_eq!(
@@ -570,7 +570,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(36),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(send_map)) = send_out else {
+    let Some(Term::Map(send_map)) = send_out.as_data() else {
         panic!("expected tcp-send data map");
     };
     assert_eq!(
@@ -596,7 +596,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(38),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(recv_map)) = recv_out else {
+    let Some(Term::Map(recv_map)) = recv_out.as_data() else {
         panic!("expected tcp-recv data map");
     };
     assert_eq!(
@@ -622,7 +622,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(40),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(close_map)) = close_out else {
+    let Some(Term::Map(close_map)) = close_out.as_data() else {
         panic!("expected tcp-close data map");
     };
     assert_eq!(
@@ -716,7 +716,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(44),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(bind_map)) = bind_out else {
+    let Some(Term::Map(bind_map)) = bind_out.as_data() else {
         panic!("expected udp-bind data map");
     };
     assert_eq!(
@@ -752,7 +752,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(46),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(send_map)) = send_out else {
+    let Some(Term::Map(send_map)) = send_out.as_data() else {
         panic!("expected udp-send data map");
     };
     assert_eq!(
@@ -778,7 +778,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(48),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(recv_map)) = recv_out else {
+    let Some(Term::Map(recv_map)) = recv_out.as_data() else {
         panic!("expected udp-recv data map");
     };
     assert_eq!(
@@ -804,7 +804,7 @@ wasi_bridge_response = "{:ok true :closed true}"
         SealId(50),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(close_map)) = close_out else {
+    let Some(Term::Map(close_map)) = close_out.as_data() else {
         panic!("expected udp-close data map");
     };
     assert_eq!(
@@ -884,7 +884,7 @@ wasi_bridge_response = "{:ok true :records [{:type \"A\" :value \"127.0.0.1\"}]}
         SealId(54),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected dns-resolve data map");
     };
     assert!(mm.contains_key(&TermOrdKey(Term::symbol(":records"))));
@@ -994,7 +994,7 @@ wasi_bridge_response = "{:ok true :stream-id \"ws-accepted-1\"}"
         SealId(58),
     )
     .expect("http-listen");
-    let Value::Data(Term::Map(listen_map)) = listen_out else {
+    let Some(Term::Map(listen_map)) = listen_out.as_data() else {
         panic!("expected http-listen data map");
     };
     assert_eq!(
@@ -1019,7 +1019,7 @@ wasi_bridge_response = "{:ok true :stream-id \"ws-accepted-1\"}"
         SealId(59),
     )
     .expect("ws-accept");
-    let Value::Data(Term::Map(ws_accept_map)) = ws_accept_out else {
+    let Some(Term::Map(ws_accept_map)) = ws_accept_out.as_data() else {
         panic!("expected ws-accept data map");
     };
     assert_eq!(
@@ -1084,7 +1084,7 @@ wasi_bridge_response = "{:ok true :sent true}"
         SealId(61),
     )
     .expect("http-respond");
-    let Value::Data(Term::Map(mm)) = good_out else {
+    let Some(Term::Map(mm)) = good_out.as_data() else {
         panic!("expected http-respond data map");
     };
     assert_eq!(
@@ -1126,7 +1126,7 @@ wasi_bridge_response = "{:ok true :listener-id \"tcp-1\"}"
         SealId(94),
     )
     .expect("tcp listen");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected tcp-listen data map");
     };
     assert_eq!(

@@ -12,6 +12,12 @@ Related artifact contracts:
 - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
 - `docs/spec/REGISTRY_POLICY.md`
 
+Executable drift validation is read-only:
+- `bash scripts/check_assurance_profile_packs.sh`
+
+Optional local E0 observations are produced explicitly:
+- `bash scripts/update_assurance_profile_packs_report.sh`
+
 Consolidated source:
 - legacy top-level policy defaults guidance (redirected through the deprecation map)
 

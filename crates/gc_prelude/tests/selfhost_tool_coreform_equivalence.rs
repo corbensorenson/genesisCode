@@ -90,25 +90,37 @@ fn selfhost_coreform_tool_fmt_and_hash_match_rust_bootstrap_api() {
     let fmt_rust = match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
         ":fmt_rust",
     ))) {
-        Some(Value::Data(gc_coreform::Term::Str(s))) => s.clone(),
+        Some(v) => match v.as_data() {
+            Some(gc_coreform::Term::Str(s)) => s.clone(),
+            _ => panic!("expected :fmt_rust string, got {v:?}"),
+        },
         other => panic!("expected :fmt_rust string, got {other:?}"),
     };
     let fmt_sh = match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
         ":fmt_sh",
     ))) {
-        Some(Value::Data(gc_coreform::Term::Str(s))) => s.clone(),
+        Some(v) => match v.as_data() {
+            Some(gc_coreform::Term::Str(s)) => s.clone(),
+            _ => panic!("expected :fmt_sh string, got {v:?}"),
+        },
         other => panic!("expected :fmt_sh string, got {other:?}"),
     };
     let hash_rust = match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
         ":hash_rust",
     ))) {
-        Some(Value::Data(gc_coreform::Term::Str(s))) => s.clone(),
+        Some(v) => match v.as_data() {
+            Some(gc_coreform::Term::Str(s)) => s.clone(),
+            _ => panic!("expected :hash_rust string, got {v:?}"),
+        },
         other => panic!("expected :hash_rust string, got {other:?}"),
     };
     let hash_sh = match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
         ":hash_sh",
     ))) {
-        Some(Value::Data(gc_coreform::Term::Str(s))) => s.clone(),
+        Some(v) => match v.as_data() {
+            Some(gc_coreform::Term::Str(s)) => s.clone(),
+            _ => panic!("expected :hash_sh string, got {v:?}"),
+        },
         other => panic!("expected :hash_sh string, got {other:?}"),
     };
 

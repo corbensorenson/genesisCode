@@ -417,15 +417,11 @@ fn cmd_debug_timeline(
     })
 }
 
-fn cmd_debug_bisect(
-    cli: &Cli,
-    baseline: &Path,
-    candidate: &Path,
-) -> Result<CmdOut, CliError> {
+fn cmd_debug_bisect(cli: &Cli, baseline: &Path, candidate: &Path) -> Result<CmdOut, CliError> {
     let baseline_term = read_timeline_artifact(baseline, "debug/bisect")?;
     let candidate_term = read_timeline_artifact(candidate, "debug/bisect")?;
-    let baseline_frames = extract_timeline_frames(&baseline_term, "debug/bisect baseline")?;
-    let candidate_frames = extract_timeline_frames(&candidate_term, "debug/bisect candidate")?;
+    let baseline_frames = extract_timeline_frames(&baseline_term, "debug/bisect")?;
+    let candidate_frames = extract_timeline_frames(&candidate_term, "debug/bisect")?;
 
     let (mismatch_index, reason) = first_timeline_mismatch(baseline_frames, candidate_frames);
     let baseline_frame = mismatch_index
@@ -880,7 +876,7 @@ fn build_debug_trace(
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
     let contract = eval_term(&mut ctx, &env, &contract_term)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("--contract: {e}")))?;
-    let msg_val = Value::Data(msg_term);
+    let msg_val = Value::data(msg_term);
     let explain = env.get("core/contract::explain").ok_or_else(|| {
         cli_err(
             EX_INTERNAL,

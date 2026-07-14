@@ -11,8 +11,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "test-fast-full" \
-  ".genesis/build/cargo" \
-  "GENESIS_TEST_FAST_FULL_CARGO_TARGET_DIR"
+  root-host
 
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-fast-full"
 

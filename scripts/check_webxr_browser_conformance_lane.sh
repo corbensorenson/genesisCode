@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -26,7 +29,7 @@ require_pattern() {
 
 require_pattern "webxr_browser_conformance:" "missing webxr browser conformance job"
 require_pattern "github.event_name == 'pull_request'" "webxr lane must run on pull_request events"
-require_pattern "bash scripts/check_webxr_browser_conformance.sh" "missing webxr browser conformance checker invocation"
+require_pattern "bash scripts/update_webxr_browser_conformance_report.sh" "missing explicit webxr browser conformance producer invocation"
 require_pattern "webxr-browser-conformance-artifacts" "missing webxr browser conformance artifact upload"
 
 echo "webxr-browser-conformance-lane: ok"

@@ -5,6 +5,11 @@ use blake3::Hasher;
 use bytes::Bytes;
 use num_bigint::BigInt;
 
+pub const LANGUAGE_PROFILE_ID: &str = "genesis/language-profile/v0.2";
+pub const COREFORM_PROFILE_ID: &str = "genesis/coreform/v0.2";
+pub const HASH_PROFILE_ID: &str = "genesis/hash-profile/gcv0.2-blake3";
+pub const HASH_DOMAIN_PREFIX: &[u8] = b"GCv0.2\0";
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Term {
     Nil,
@@ -132,7 +137,7 @@ impl Term {
 pub fn hash_term(term: &Term) -> [u8; 32] {
     let s = crate::print::print_term(term);
     let mut h = Hasher::new();
-    h.update(b"GCv0.2\0");
+    h.update(HASH_DOMAIN_PREFIX);
     h.update(s.as_bytes());
     *h.finalize().as_bytes()
 }
@@ -140,7 +145,8 @@ pub fn hash_term(term: &Term) -> [u8; 32] {
 pub fn hash_module(forms: &[Term]) -> [u8; 32] {
     let s = crate::print::print_module(forms);
     let mut h = Hasher::new();
-    h.update(b"GCv0.2\0module\0");
+    h.update(HASH_DOMAIN_PREFIX);
+    h.update(b"module\0");
     h.update(s.as_bytes());
     *h.finalize().as_bytes()
 }

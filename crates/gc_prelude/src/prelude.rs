@@ -6,7 +6,7 @@ use blake3::Hasher;
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
 use gc_kernel::{
     Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError, KernelErrorKind,
-    NativeFn, ProtocolTokens, SealId, Value, value_hash,
+    NativeFn, ProtocolTokens, SealId, Value, ValueMap, value_hash,
 };
 
 mod prelude_assembled {
@@ -56,12 +56,12 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/protocol::unhandled",
-        Value::NativeFn(NativeFn::new("core/protocol::unhandled", 1, nf_unhandled)),
+        Value::native_fn(NativeFn::new("core/protocol::unhandled", 1, nf_unhandled)),
     );
     env = Env::with_binding(
         &env,
         "core/protocol::is-unhandled",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/protocol::is-unhandled",
             1,
             nf_is_unhandled,
@@ -70,39 +70,39 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/protocol::effect",
-        Value::NativeFn(NativeFn::new("core/protocol::effect", 1, nf_effect_wrap)),
+        Value::native_fn(NativeFn::new("core/protocol::effect", 1, nf_effect_wrap)),
     );
     env = Env::with_binding(
         &env,
         "core/protocol::is-effect",
-        Value::NativeFn(NativeFn::new("core/protocol::is-effect", 1, nf_is_effect)),
+        Value::native_fn(NativeFn::new("core/protocol::is-effect", 1, nf_is_effect)),
     );
     env = Env::with_binding(
         &env,
         "core/protocol::error",
-        Value::NativeFn(NativeFn::new("core/protocol::error", 1, nf_error)),
+        Value::native_fn(NativeFn::new("core/protocol::error", 1, nf_error)),
     );
     env = Env::with_binding(
         &env,
         "core/protocol::is-error",
-        Value::NativeFn(NativeFn::new("core/protocol::is-error", 1, nf_is_error)),
+        Value::native_fn(NativeFn::new("core/protocol::is-error", 1, nf_is_error)),
     );
     env = Env::with_binding(
         &env,
         "core/protocol::unerror",
-        Value::NativeFn(NativeFn::new("core/protocol::unerror", 1, nf_unerror)),
+        Value::native_fn(NativeFn::new("core/protocol::unerror", 1, nf_unerror)),
     );
 
     // Contract API.
     env = Env::with_binding(
         &env,
         "core/contract::make",
-        Value::NativeFn(NativeFn::new("core/contract::make", 3, nf_contract_make)),
+        Value::native_fn(NativeFn::new("core/contract::make", 3, nf_contract_make)),
     );
     env = Env::with_binding(
         &env,
         "core/contract::extend",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/contract::extend",
             3,
             nf_contract_extend,
@@ -111,7 +111,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/contract::dispatch",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/contract::dispatch",
             2,
             nf_contract_dispatch,
@@ -120,7 +120,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/contract::explain",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/contract::explain",
             2,
             nf_contract_explain,
@@ -129,51 +129,51 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/contract::meta",
-        Value::NativeFn(NativeFn::new("core/contract::meta", 1, nf_contract_meta)),
+        Value::native_fn(NativeFn::new("core/contract::meta", 1, nf_contract_meta)),
     );
     env = Env::with_binding(
         &env,
         "core/contract::proto",
-        Value::NativeFn(NativeFn::new("core/contract::proto", 1, nf_contract_proto)),
+        Value::native_fn(NativeFn::new("core/contract::proto", 1, nf_contract_proto)),
     );
     env = Env::with_binding(
         &env,
         "core/contract::shape",
-        Value::NativeFn(NativeFn::new("core/contract::shape", 1, nf_contract_shape)),
+        Value::native_fn(NativeFn::new("core/contract::shape", 1, nf_contract_shape)),
     );
 
     // Message helpers.
     env = Env::with_binding(
         &env,
         "core/msg::make",
-        Value::NativeFn(NativeFn::new("core/msg::make", 2, nf_msg_make)),
+        Value::native_fn(NativeFn::new("core/msg::make", 2, nf_msg_make)),
     );
     env = Env::with_binding(
         &env,
         "core/msg::op",
-        Value::NativeFn(NativeFn::new("core/msg::op", 1, nf_msg_op)),
+        Value::native_fn(NativeFn::new("core/msg::op", 1, nf_msg_op)),
     );
     env = Env::with_binding(
         &env,
         "core/msg::payload",
-        Value::NativeFn(NativeFn::new("core/msg::payload", 1, nf_msg_payload)),
+        Value::native_fn(NativeFn::new("core/msg::payload", 1, nf_msg_payload)),
     );
 
     // Effects.
     env = Env::with_binding(
         &env,
         "core/effect::pure",
-        Value::NativeFn(NativeFn::new("core/effect::pure", 1, nf_effect_pure)),
+        Value::native_fn(NativeFn::new("core/effect::pure", 1, nf_effect_pure)),
     );
     env = Env::with_binding(
         &env,
         "core/effect::perform",
-        Value::NativeFn(NativeFn::new("core/effect::perform", 3, nf_effect_perform)),
+        Value::native_fn(NativeFn::new("core/effect::perform", 3, nf_effect_perform)),
     );
     env = Env::with_binding(
         &env,
         "core/effect::bind",
-        Value::NativeFn(NativeFn::new("core/effect::bind", 2, nf_effect_bind)),
+        Value::native_fn(NativeFn::new("core/effect::bind", 2, nf_effect_bind)),
     );
 
     // Bootstrap CoreForm API (pure, deterministic).
@@ -184,7 +184,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::parse-term",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::parse-term",
             1,
             nf_coreform_parse_term,
@@ -193,7 +193,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::parse-module",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::parse-module",
             1,
             nf_coreform_parse_module,
@@ -202,7 +202,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::canonicalize-module",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::canonicalize-module",
             1,
             nf_coreform_canonicalize_module,
@@ -211,7 +211,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::print-term",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::print-term",
             1,
             nf_coreform_print_term,
@@ -220,7 +220,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::print-module",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::print-module",
             1,
             nf_coreform_print_module,
@@ -229,7 +229,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::fmt-module",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::fmt-module",
             1,
             nf_coreform_fmt_module,
@@ -238,7 +238,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::hash-term",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::hash-term",
             1,
             nf_coreform_hash_term,
@@ -247,7 +247,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::hash-module",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::hash-module",
             1,
             nf_coreform_hash_module,
@@ -256,7 +256,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/coreform::hash-module-src",
-        Value::NativeFn(NativeFn::new(
+        Value::native_fn(NativeFn::new(
             "core/coreform::hash-module-src",
             1,
             nf_coreform_hash_module_src,
@@ -363,7 +363,7 @@ fn mk_error_with(ctx: &mut EvalCtx, code: &str, msg: String, at: Option<usize>) 
     );
     Value::Sealed {
         token: p.error,
-        payload: Box::new(Value::Data(Term::Map(m))),
+        payload: Box::new(Value::data(Term::Map(m))),
     }
 }
 
@@ -372,7 +372,7 @@ fn mk_unhandled(ctx: &mut EvalCtx, msg_term: Term) -> Value {
     let payload = Term::list(vec![Term::Symbol("unhandled".to_string()), msg_term]);
     Value::Sealed {
         token: p.unhandled,
-        payload: Box::new(Value::Data(payload)),
+        payload: Box::new(Value::data(payload)),
     }
 }
 
@@ -384,25 +384,8 @@ fn sealed_matches(v: &Value, tok: SealId) -> Option<&Value> {
 }
 
 fn value_to_data_term(v: &Value) -> Result<Term, KernelError> {
-    match v {
-        Value::Data(t) => Ok(t.clone()),
-        Value::Vector(xs) => Ok(Term::Vector(
-            xs.iter()
-                .map(value_to_data_term)
-                .collect::<Result<Vec<_>, _>>()?,
-        )),
-        Value::Map(m) => {
-            let mut out = BTreeMap::new();
-            for (k, vv) in m.iter() {
-                out.insert(TermOrdKey(k.0.clone()), value_to_data_term(vv)?);
-            }
-            Ok(Term::Map(out))
-        }
-        _ => Err(KernelError::new(
-            KernelErrorKind::Type,
-            "expected immutable datum",
-        )),
-    }
+    v.to_plain_term()
+        .ok_or_else(|| KernelError::new(KernelErrorKind::Type, "expected immutable datum"))
 }
 
 fn parse_msg_term(t: &Term) -> Result<(Term, Term), KernelError> {

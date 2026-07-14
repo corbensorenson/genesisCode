@@ -1,0 +1,58 @@
+{
+  "$id": "https://genesiscode.dev/schemas/release-notes-policy-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "documentClass": {"const": "E1"},
+        "runtimeGateClaims": {"const": "requirements-only-unverified"},
+        "unqualifiedCapabilityRule": {"type": "string", "minLength": 1}
+      },
+      "required": ["documentClass", "runtimeGateClaims", "unqualifiedCapabilityRule"],
+      "type": "object"
+    },
+    "baselineFixtureRole": {"const": "signed-e0-baseline"},
+    "dependencyLockfiles": {
+      "items": {"$ref": "#/$defs/path"},
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "kind": {"const": "genesis/release-notes-policy-v0.1"},
+    "output": {
+      "additionalProperties": false,
+      "properties": {
+        "changelog": {"const": "CHANGELOG.md"},
+        "endMarker": {"type": "string", "minLength": 1},
+        "json": {"$ref": "#/$defs/path"},
+        "startMarker": {"type": "string", "minLength": 1}
+      },
+      "required": ["changelog", "endMarker", "json", "startMarker"],
+      "type": "object"
+    },
+    "securityGateAuthority": {"const": "genesis.gates.json"},
+    "securityGateEntrypoints": {
+      "items": {"pattern": "^scripts/check_[a-z0-9_]+\\.sh$", "type": "string"},
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "sourcePaths": {
+      "items": {"$ref": "#/$defs/path"},
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "version": {"const": "0.1"}
+  },
+  "required": ["authority", "baselineFixtureRole", "dependencyLockfiles", "kind", "output", "securityGateAuthority", "securityGateEntrypoints", "sourcePaths", "version"],
+  "type": "object",
+  "$defs": {
+    "path": {
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$",
+      "type": "string"
+    }
+  }
+}

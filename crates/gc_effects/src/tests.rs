@@ -33,7 +33,7 @@ fn sealed_error_payload_map<'a>(value: &'a Value, ctx: &EvalCtx) -> &'a BTreeMap
         panic!("expected sealed error, got {}", value.debug_repr());
     };
     assert_eq!(*token, ctx.protocol.expect("protocol").error);
-    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+    let Some(Term::Map(m)) = payload.as_ref().as_data() else {
         panic!("expected sealed error payload map");
     };
     m
@@ -437,6 +437,125 @@ fn replay_detects_tampered_await_edge_for_task_events() {
     );
 }
 
+fn assert_replay_rejects(forms: &[Term], log: &EffectLog, expected: &str) {
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let program = eval_module(&mut ctx, &mut env, forms).expect("eval replay fixture");
+    let error = replay(&mut ctx, program, log).expect_err("tampered replay log was accepted");
+    let EffectsError::ReplayMismatch(message) = error else {
+        panic!("expected replay mismatch containing `{expected}`, got {error}");
+    };
+    assert!(
+        message.contains(expected),
+        "expected replay mismatch containing `{expected}`, got `{message}`"
+    );
+}
+
+#[test]
+fn replay_adversarial_matrix_rejects_reordered_and_altered_facts() {
+    let src = r#"
+        (def prog
+          ((core/effect::bind (((core/task::spawn "scope/main") "build") {:job "compile"}))
+            (fn (spawn-resp)
+              (let ((tid ((core/map::get spawn-resp) ':task-id)))
+                ((core/effect::bind (core/task::status tid))
+                  (fn (_status-resp)
+                    (core/task::await tid)))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse replay fixture");
+    let program_hash = hash_module(&forms);
+    let mut run_ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut run_ctx);
+    let mut run_env = prelude.env;
+    let program = eval_module(&mut run_ctx, &mut run_env, &forms).expect("eval run fixture");
+    let policy = CapsPolicy::from_toml_str(
+        r#"allow = ["core/task::spawn", "core/task::status", "core/task::await"]"#,
+    )
+    .expect("parse replay policy");
+    let baseline = run(
+        &mut run_ctx,
+        &policy,
+        program,
+        program_hash,
+        "gc_effects-replay-adversarial-v0.1".to_owned(),
+    )
+    .expect("run replay fixture")
+    .log;
+    assert_eq!(baseline.entries.len(), 3);
+
+    let mut altered = baseline.clone();
+    altered.entries.swap(0, 1);
+    assert_replay_rejects(&forms, &altered, "entry index mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries.pop();
+    assert_replay_rejects(&forms, &altered, "log ended before program finished");
+
+    let mut altered = baseline.clone();
+    altered.entries.push(baseline.entries[2].clone());
+    assert_replay_rejects(&forms, &altered, "remaining log entries");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].i = 99;
+    assert_replay_rejects(&forms, &altered, "entry index mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].op = "core/task::forged".to_owned();
+    assert_replay_rejects(&forms, &altered, "op mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].payload_h[0] ^= 0xff;
+    assert_replay_rejects(&forms, &altered, "payload hash mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].cont_h[0] ^= 0xff;
+    assert_replay_rejects(&forms, &altered, "continuation hash mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].req_h[0] ^= 0xff;
+    assert_replay_rejects(&forms, &altered, "request hash mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].decision = Decision::Deny;
+    assert_replay_rejects(&forms, &altered, "deny decisions must carry nil cap");
+
+    let mut altered = baseline.clone();
+    let Term::Map(cap) = &mut altered.entries[0].cap else {
+        panic!("allow entry did not contain a cap descriptor");
+    };
+    cap.insert(
+        TermOrdKey(Term::symbol(":op")),
+        Term::symbol("core/task::forged"),
+    );
+    assert_replay_rejects(&forms, &altered, ":cap mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].resp = LoggedResp::Ok(Term::Nil);
+    assert_replay_rejects(&forms, &altered, "response hash mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].resp_h[0] ^= 0xff;
+    assert_replay_rejects(&forms, &altered, "response hash mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].schedule_step = Some(99);
+    assert_replay_rejects(&forms, &altered, "schedule-step mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].task_id = Some("task-forged".to_owned());
+    assert_replay_rejects(&forms, &altered, "task-id mismatch");
+
+    let mut altered = baseline.clone();
+    altered.entries[0].parent_task = Some("scope/forged".to_owned());
+    assert_replay_rejects(&forms, &altered, "parent-task mismatch");
+
+    let mut altered = baseline;
+    altered.entries[2].await_edge = Some("task-forged".to_owned());
+    assert_replay_rejects(&forms, &altered, "await-edge mismatch");
+}
+
 #[test]
 fn task_policy_max_tasks_limit_overrides_capability_result() {
     let (forms, h) = mk_prog_for("core/task::await", "{:task-id \"task-1\"}");
@@ -462,7 +581,7 @@ max_tasks = 0
     match r.value {
         Value::Sealed { token, payload } => {
             assert_eq!(token, ctx.protocol.expect("protocol").error);
-            let Value::Data(Term::Map(m)) = payload.as_ref() else {
+            let Some(Term::Map(m)) = payload.as_ref().as_data() else {
                 panic!("expected error payload map");
             };
             assert_eq!(
@@ -508,28 +627,37 @@ fn deterministic_task_scheduler_spawn_status_await_roundtrip_replays() {
 
     let await_state =
         match &r1.value {
-            Value::Data(Term::Map(root)) => match root.get(&TermOrdKey(Term::symbol(":await"))) {
-                Some(Term::Map(await_m)) => await_m
-                    .get(&TermOrdKey(Term::symbol(":state")))
-                    .and_then(|t| match t {
-                        Term::Symbol(s) => Some(s.clone()),
-                        _ => None,
-                    }),
+            Value::Data(t) => match t.as_ref() {
+                Term::Map(root) => match root.get(&TermOrdKey(Term::symbol(":await"))) {
+                    Some(Term::Map(await_m)) => await_m
+                        .get(&TermOrdKey(Term::symbol(":state")))
+                        .and_then(|t| match t {
+                            Term::Symbol(s) => Some(s.clone()),
+                            _ => None,
+                        }),
+                    _ => None,
+                },
                 _ => None,
             },
             Value::Map(root) => match root.get(&TermOrdKey(Term::symbol(":await"))) {
                 Some(Value::Map(await_m)) => await_m
                     .get(&TermOrdKey(Term::symbol(":state")))
                     .and_then(|t| match t {
-                        Value::Data(Term::Symbol(s)) => Some(s.clone()),
+                        Value::Data(t) => match t.as_ref() {
+                            Term::Symbol(s) => Some(s.clone()),
+                            _ => None,
+                        },
                         _ => None,
                     }),
-                Some(Value::Data(Term::Map(await_m))) => await_m
-                    .get(&TermOrdKey(Term::symbol(":state")))
-                    .and_then(|t| match t {
-                        Term::Symbol(s) => Some(s.clone()),
-                        _ => None,
-                    }),
+                Some(Value::Data(t)) => match t.as_ref() {
+                    Term::Map(await_m) => await_m
+                        .get(&TermOrdKey(Term::symbol(":state")))
+                        .and_then(|t| match t {
+                            Term::Symbol(s) => Some(s.clone()),
+                            _ => None,
+                        }),
+                    _ => None,
+                },
                 _ => None,
             },
             _ => None,
@@ -573,17 +701,22 @@ fn deterministic_task_scheduler_cancelled_task_awaits_as_cancelled() {
     let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
     assert_eq!(r.log.entries.len(), 3);
     let state = match &r.value {
-        Value::Data(Term::Map(m)) => {
-            m.get(&TermOrdKey(Term::symbol(":state")))
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(m) => m
+                .get(&TermOrdKey(Term::symbol(":state")))
                 .and_then(|t| match t {
                     Term::Symbol(s) => Some(s.clone()),
                     _ => None,
-                })
-        }
+                }),
+            _ => None,
+        },
         Value::Map(m) => m
             .get(&TermOrdKey(Term::symbol(":state")))
             .and_then(|t| match t {
-                Value::Data(Term::Symbol(s)) => Some(s.clone()),
+                Value::Data(t) => match t.as_ref() {
+                    Term::Symbol(s) => Some(s.clone()),
+                    _ => None,
+                },
                 _ => None,
             }),
         _ => None,
@@ -646,7 +779,10 @@ max_workers = 1
             Value::Map(m) => m
                 .get(&TermOrdKey(Term::symbol(":state")))
                 .and_then(|x| match x {
-                    Value::Data(Term::Symbol(s)) => Some(s.clone()),
+                    Value::Data(t) => match t.as_ref() {
+                        Term::Symbol(s) => Some(s.clone()),
+                        _ => None,
+                    },
                     _ => None,
                 }),
             _ => None,
@@ -654,18 +790,24 @@ max_workers = 1
     }
 
     let before_state = match &r.value {
-        Value::Data(Term::Map(root)) => root
-            .get(&TermOrdKey(Term::symbol(":before")))
-            .and_then(state_from_term_entry),
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(root) => root
+                .get(&TermOrdKey(Term::symbol(":before")))
+                .and_then(state_from_term_entry),
+            _ => None,
+        },
         Value::Map(root) => root
             .get(&TermOrdKey(Term::symbol(":before")))
             .and_then(state_from_value_entry),
         _ => None,
     };
     let after_state = match &r.value {
-        Value::Data(Term::Map(root)) => root
-            .get(&TermOrdKey(Term::symbol(":after")))
-            .and_then(state_from_term_entry),
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(root) => root
+                .get(&TermOrdKey(Term::symbol(":after")))
+                .and_then(state_from_term_entry),
+            _ => None,
+        },
         Value::Map(root) => root
             .get(&TermOrdKey(Term::symbol(":after")))
             .and_then(state_from_value_entry),
@@ -705,7 +847,7 @@ fn task_program_executes_arithmetic_work_unit_and_replays() {
     assert_eq!(run_out.log.entries.len(), 2);
     assert_eq!(run_out.log.entries[0].op, "core/task::spawn");
     assert_eq!(run_out.log.entries[1].op, "core/task::await");
-    let Value::Data(Term::Map(m)) = &run_out.value else {
+    let Some(Term::Map(m)) = run_out.value.as_data() else {
         panic!(
             "expected await response map, got {}",
             run_out.value.debug_repr()
@@ -755,7 +897,7 @@ fn task_program_type_mismatch_returns_failed_state_with_program_error() {
     let mut env = prelude.env;
     let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
     let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
-    let Value::Data(Term::Map(m)) = out.value else {
+    let Some(Term::Map(m)) = out.value.as_data() else {
         panic!("expected await response map");
     };
     assert_eq!(
@@ -799,7 +941,7 @@ fn task_eval_payload_executes_callable_effect_program_and_replays() {
     assert_eq!(run_out.log.entries.len(), 2);
     assert_eq!(run_out.log.entries[0].op, "core/task::spawn");
     assert_eq!(run_out.log.entries[1].op, "core/task::await");
-    let Value::Data(Term::Map(m)) = &run_out.value else {
+    let Some(Term::Map(m)) = run_out.value.as_data() else {
         panic!("expected await response map");
     };
     assert_eq!(
@@ -847,7 +989,7 @@ fn task_eval_effect_program_respects_parent_cap_policy() {
     let mut env = prelude.env;
     let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
     let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
-    let Value::Data(Term::Map(m)) = out.value else {
+    let Some(Term::Map(m)) = out.value.as_data() else {
         panic!("expected await response map");
     };
     assert_eq!(
@@ -892,7 +1034,7 @@ max_queue = 0
     match r.value {
         Value::Sealed { token, payload } => {
             assert_eq!(token, ctx.protocol.expect("protocol").error);
-            let Value::Data(Term::Map(m)) = payload.as_ref() else {
+            let Some(Term::Map(m)) = payload.as_ref().as_data() else {
                 panic!("expected error payload map");
             };
             assert_eq!(
@@ -1222,7 +1364,10 @@ fn gfx_frame_tick_is_supported_and_replayable() {
     let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
     match &r1.value {
-        Value::Data(Term::Map(m)) => {
+        Value::Data(t) if matches!(t.as_ref(), Term::Map(_)) => {
+            let Term::Map(m) = t.as_ref() else {
+                panic!("expected frame-tick map");
+            };
             assert!(matches!(
                 m.get(&TermOrdKey(Term::symbol(":time-ms"))),
                 Some(Term::Int(_))
@@ -1318,7 +1463,7 @@ fn task_runtime_await_surfaces_failed_state_and_error_payload() {
         CapsPolicy::from_toml_str(r#"allow = ["core/task::spawn", "core/task::await"]"#).unwrap();
     let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
 
-    let Value::Data(Term::Map(m)) = r.value else {
+    let Some(Term::Map(m)) = r.value.as_data() else {
         panic!("expected task await map result");
     };
     assert_eq!(
@@ -1391,12 +1536,18 @@ fn task_channels_are_fifo_and_replay_deterministic() {
 
     let read_entry_map = |k: &str| -> Option<&std::collections::BTreeMap<TermOrdKey, Term>> {
         match &run_out.value {
-            Value::Data(Term::Map(root)) => match root.get(&TermOrdKey(Term::symbol(k))) {
-                Some(Term::Map(entry)) => Some(entry),
+            Value::Data(t) => match t.as_ref() {
+                Term::Map(root) => match root.get(&TermOrdKey(Term::symbol(k))) {
+                    Some(Term::Map(entry)) => Some(entry),
+                    _ => None,
+                },
                 _ => None,
             },
             Value::Map(root) => match root.get(&TermOrdKey(Term::symbol(k))) {
-                Some(Value::Data(Term::Map(entry))) => Some(entry),
+                Some(Value::Data(t)) => match t.as_ref() {
+                    Term::Map(entry) => Some(entry),
+                    _ => None,
+                },
                 _ => None,
             },
             _ => None,
@@ -1457,10 +1608,10 @@ fn parallel_reduce_bounded_is_deterministic_and_parallel() {
         let started = std::time::Instant::now();
         let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
         let elapsed = started.elapsed().as_millis();
-        let Value::Data(Term::Int(v)) = r.value else {
+        let Some(Term::Int(v)) = r.value.to_plain_term() else {
             panic!("parallel reduce must return int");
         };
-        assert_eq!(v, 72.into());
+        assert_eq!(v, num_bigint::BigInt::from(72));
         for e in &r.log.entries {
             assert!(
                 matches!(e.op.as_str(), "core/task::spawn" | "core/task::await"),

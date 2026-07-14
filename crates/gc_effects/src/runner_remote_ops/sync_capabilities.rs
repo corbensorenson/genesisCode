@@ -187,7 +187,7 @@ pub(super) fn capability_sync_pull(
         Term::Int((already as i64).into()),
     );
     m.insert(TermOrdKey(Term::symbol(":heads")), Term::Vector(heads));
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 pub(super) fn capability_sync_push(
@@ -384,7 +384,7 @@ pub(super) fn capability_sync_push(
         TermOrdKey(Term::symbol(":refs-updated")),
         Term::Int((refs_updated as i64).into()),
     );
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 pub(super) fn sync_closure_local(

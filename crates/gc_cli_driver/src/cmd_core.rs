@@ -1,109 +1,5 @@
 use super::*;
 
-pub(super) fn cmd_fmt(
-    cli: &Cli,
-    file: &PathBuf,
-    check: bool,
-    engine: Option<FmtEngine>,
-) -> Result<CmdOut, CliError> {
-    let engine = resolved_engine(cli, "fmt", engine)?;
-    let src = std::fs::read_to_string(file)
-        .with_context(|| format!("read {}", file.display()))
-        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-
-    let out = match engine {
-        #[cfg(feature = "parity-harness")]
-        FmtEngine::Rust => {
-            let forms = parse_module(&src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-            let canon = canonicalize_module(forms)
-                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-            print_module(&canon)
-        }
-        FmtEngine::Selfhost => {
-            // Toolchain bootstrap is trusted; do not charge it against the step limit for the file being formatted.
-            // Memory limits still apply deterministically.
-            let mut ctx = EvalCtx::with_step_limit(None);
-            ctx.set_mem_limits(resolved_mem_limits(cli));
-            let prelude = build_prelude(&mut ctx);
-            let mut env = prelude.env;
-
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
-
-            let f = env.get("core/cli::fmt-module").ok_or_else(|| {
-                cli_err(
-                    EX_INTERNAL,
-                    "selfhost/missing",
-                    "missing binding core/cli::fmt-module",
-                )
-            })?;
-
-            // Now apply the user-configured step limit to the formatting work itself.
-            ctx.steps = 0;
-            ctx.step_limit = resolved_step_limit(cli).resolve();
-            let r = f
-                .apply(&mut ctx, Value::Data(Term::Str(src.clone())))
-                .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost fmt failed: {e}")))?;
-
-            if let Some((code, message, payload)) = extract_protocol_error(&ctx, &r) {
-                return Err(CliError {
-                    exit_code: EX_PARSE,
-                    json: JsonError {
-                        code: "selfhost/error",
-                        message: format!("{code}: {message}"),
-                        context: payload.map(serde_json::Value::String),
-                    },
-                });
-            }
-
-            let Some(Term::Str(s)) = r.as_data() else {
-                return Err(cli_err(
-                    EX_INTERNAL,
-                    "selfhost/bad-return",
-                    format!("selfhost fmt returned non-string: {}", r.debug_repr()),
-                ));
-            };
-            s.clone()
-        }
-    };
-
-    let changed = normalize_newlines(&src) != normalize_newlines(&out);
-    let ok = if check { !changed } else { true };
-    let exit_code = if ok { EX_OK } else { EX_FMT };
-
-    if !check && changed {
-        std::fs::write(file, out)
-            .with_context(|| format!("write {}", file.display()))
-            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
-    }
-
-    let env = JsonEnvelope {
-        ok,
-        kind: "genesis/fmt-v0.2",
-        data: Some(serde_json::json!({
-            "file": file.display().to_string(),
-            "check": check,
-            "changed": changed,
-            "engine": engine.as_str(),
-            "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
-        })),
-        error: if ok {
-            None
-        } else {
-            Some(JsonError {
-                code: "fmt/not-canonical",
-                message: format!("{} is not canonically formatted", file.display()),
-                context: None,
-            })
-        },
-    };
-    Ok(CmdOut {
-        exit_code,
-        stdout: String::new(),
-        json: json_envelope_value(env)?,
-    })
-}
-
 pub(super) fn cmd_eval(
     cli: &Cli,
     file: &PathBuf,
@@ -120,8 +16,14 @@ pub(super) fn cmd_eval(
     let (mut ctx, mut env, mut forms) = match engine {
         #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
-            let forms = parse_module(&src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = parse_module(&src).map_err(|e| {
+                cli_err_with_context(
+                    EX_PARSE,
+                    "parse/coreform",
+                    e.to_string(),
+                    structured_failures::parser_context("eval/parse", file, &src, &e),
+                )
+            })?;
             let forms = canonicalize_module(forms)
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
 
@@ -209,8 +111,16 @@ pub(super) fn cmd_eval(
         }
     }
 
-    let (v, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+    let (v, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms).map_err(|e| {
+        cli_err_with_context(
+            EX_EVAL,
+            "eval/error",
+            format!("{e}"),
+            structured_failures::evaluator_context("eval/module", &e),
+        )
+    })?;
+
+    ensure_no_protocol_error(&ctx, &v, false, "evaluator", "eval/result", "eval/error")?;
 
     let (value, value_format) = render_value_for_cli(&ctx, &v);
     let env = JsonEnvelope {
@@ -253,14 +163,42 @@ pub(super) fn cmd_explain(
     let (mut ctx, mut env, forms, contract_term, msg_term) = match engine {
         #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
-            let forms = parse_module(&src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = parse_module(&src).map_err(|e| {
+                cli_err_with_context(
+                    EX_PARSE,
+                    "parse/coreform",
+                    e.to_string(),
+                    structured_failures::parser_context("explain/parse", file, &src, &e),
+                )
+            })?;
             let forms = canonicalize_module(forms)
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-            let contract_term = parse_term(contract_src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--contract: {e}")))?;
-            let msg_term = parse_term(msg_src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--msg: {e}")))?;
+            let contract_term = parse_term(contract_src).map_err(|e| {
+                cli_err_with_context(
+                    EX_PARSE,
+                    "parse/term",
+                    format!("--contract: {e}"),
+                    structured_failures::parser_context(
+                        "explain/parse-contract",
+                        Path::new("<contract>"),
+                        contract_src,
+                        &e,
+                    ),
+                )
+            })?;
+            let msg_term = parse_term(msg_src).map_err(|e| {
+                cli_err_with_context(
+                    EX_PARSE,
+                    "parse/term",
+                    format!("--msg: {e}"),
+                    structured_failures::parser_context(
+                        "explain/parse-message",
+                        Path::new("<message>"),
+                        msg_src,
+                        &e,
+                    ),
+                )
+            })?;
             let mut ctx = mk_ctx(cli);
             let prelude = build_prelude(&mut ctx);
             (ctx, prelude.env, forms, contract_term, msg_term)
@@ -287,13 +225,25 @@ pub(super) fn cmd_explain(
         }
     };
 
-    let (_, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+    let (_, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms).map_err(|e| {
+        cli_err_with_context(
+            EX_EVAL,
+            "eval/error",
+            format!("{e}"),
+            structured_failures::evaluator_context("explain/module", &e),
+        )
+    })?;
 
-    let contract = eval_term(&mut ctx, &env, &contract_term)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("--contract: {e}")))?;
+    let contract = eval_term(&mut ctx, &env, &contract_term).map_err(|e| {
+        cli_err_with_context(
+            EX_EVAL,
+            "eval/error",
+            format!("--contract: {e}"),
+            structured_failures::evaluator_context("explain/contract", &e),
+        )
+    })?;
 
-    let msg_val = Value::Data(msg_term);
+    let msg_val = Value::data(msg_term);
 
     let explain = env.get("core/contract::explain").ok_or_else(|| {
         cli_err(
@@ -304,9 +254,23 @@ pub(super) fn cmd_explain(
     })?;
     let r = explain
         .apply(&mut ctx, contract)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("apply contract: {e}")))?
+        .map_err(|e| {
+            cli_err_with_context(
+                EX_EVAL,
+                "eval/error",
+                format!("apply contract: {e}"),
+                structured_failures::evaluator_context("explain/apply-contract", &e),
+            )
+        })?
         .apply(&mut ctx, msg_val)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("explain failed: {e}")))?;
+        .map_err(|e| {
+            cli_err_with_context(
+                EX_EVAL,
+                "eval/error",
+                format!("explain failed: {e}"),
+                structured_failures::evaluator_context("explain/dispatch", &e),
+            )
+        })?;
 
     let (value, value_format) = render_value_for_cli(&ctx, &r);
     let env = JsonEnvelope {
@@ -350,8 +314,14 @@ pub(super) fn cmd_run(
     let (mut ctx, mut env, forms) = match engine {
         #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
-            let forms = parse_module(&src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = parse_module(&src).map_err(|e| {
+                cli_err_with_context(
+                    EX_PARSE,
+                    "parse/coreform",
+                    e.to_string(),
+                    structured_failures::parser_context("run/parse", file, &src, &e),
+                )
+            })?;
             let forms = canonicalize_module(forms)
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
             let mut ctx = mk_ctx(cli);
@@ -382,15 +352,27 @@ pub(super) fn cmd_run(
         .with_context(|| format!("read {}", caps.display()))
         .map_err(caps_parse_cli_err)?;
 
-    let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+    let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms).map_err(|e| {
+        cli_err_with_context(
+            EX_EVAL,
+            "eval/error",
+            format!("{e}"),
+            structured_failures::evaluator_context("run/evaluate", &e),
+        )
+    })?;
 
     let toolchain = match flavor {
         Flavor::Native => format!("genesis/{} (native)", env!("CARGO_PKG_VERSION")),
         Flavor::Wasi => format!("genesis_wasi/{} (wasi)", env!("CARGO_PKG_VERSION")),
     };
-    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
-        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain).map_err(|e| {
+        cli_err_with_context(
+            EX_EVAL,
+            "effects/run",
+            format!("{e}"),
+            structured_failures::effects_context("run/effects", &e),
+        )
+    })?;
     enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "run", &r.log)?;
 
     let log_path = log
@@ -400,8 +382,25 @@ pub(super) fn cmd_run(
         .with_context(|| format!("write {}", log_path.display()))
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
 
-    let denied = r.log.entries.iter().any(|e| e.decision == Decision::Deny);
+    let denied_op = r
+        .log
+        .entries
+        .iter()
+        .find(|entry| entry.decision == Decision::Deny)
+        .map(|entry| entry.op.clone());
+    let denied = denied_op.is_some();
+    ensure_no_runner_protocol_error(&ctx, &r.value, denied)?;
     let exit_code = if denied { EX_CAPS_DENIED } else { EX_OK };
+    let error = denied_op.as_ref().map(|op| JsonError {
+        code: "caps/denied",
+        message: format!("capability denied for effect operation {op}"),
+        context: Some(
+            structured_failures::FailureContext::new("policy", "capability-denied", "run/effects")
+                .fact("effect_op", op.clone())
+                .fact("blocking_capability", op.clone())
+                .into_value(),
+        ),
+    });
 
     let (value, value_format) = render_value_for_cli(&ctx, &r.value);
     let env = JsonEnvelope {
@@ -420,7 +419,7 @@ pub(super) fn cmd_run(
             "value": value,
             "value_format": value_format,
         })),
-        error: None,
+        error,
     };
     Ok(CmdOut {
         exit_code,
@@ -461,8 +460,14 @@ pub(super) fn cmd_replay(
     let (mut ctx, mut env, forms) = match engine {
         #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
-            let forms = parse_module(&src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = parse_module(&src).map_err(|e| {
+                cli_err_with_context(
+                    EX_PARSE,
+                    "parse/coreform",
+                    e.to_string(),
+                    structured_failures::parser_context("replay/parse-program", file, &src, &e),
+                )
+            })?;
             let forms = canonicalize_module(forms)
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
             let mut ctx = mk_ctx(cli);
@@ -492,20 +497,46 @@ pub(super) fn cmd_replay(
     let log_src = std::fs::read_to_string(log_path)
         .with_context(|| format!("read {}", log_path.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let log_term =
-        parse_term(&log_src).map_err(|e| cli_err(EX_PARSE, "parse/log", e.to_string()))?;
-    let log = EffectLog::from_term(&log_term)
-        .map_err(|e| cli_err(EX_PARSE, "parse/log", format!("{e}")))?;
+    let log_term = parse_term(&log_src).map_err(|e| {
+        cli_err_with_context(
+            EX_PARSE,
+            "parse/log",
+            e.to_string(),
+            structured_failures::parser_context("replay/parse-log", log_path, &log_src, &e),
+        )
+    })?;
+    let log = EffectLog::from_term(&log_term).map_err(|e| {
+        cli_err_with_context(
+            EX_PARSE,
+            "parse/log",
+            format!("{e}"),
+            structured_failures::effects_context("replay/decode-log", &e),
+        )
+    })?;
     if log.program_hash != program_hash {
-        return Err(cli_err(
+        return Err(cli_err_with_context(
             EX_REPLAY_MISMATCH,
             "replay/program-hash-mismatch",
             "program hash mismatch: log is for different program",
+            structured_failures::FailureContext::new(
+                "replay",
+                "program-hash-mismatch",
+                "replay/verify-program",
+            )
+            .fact("expected_program_hash", hex32(program_hash))
+            .fact("logged_program_hash", hex32(log.program_hash))
+            .into_value(),
         ));
     }
 
-    let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+    let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms).map_err(|e| {
+        cli_err_with_context(
+            EX_EVAL,
+            "eval/error",
+            format!("{e}"),
+            structured_failures::evaluator_context("replay/evaluate", &e),
+        )
+    })?;
     let store = match store_dir {
         Some(p) => Some(
             gc_effects::ArtifactStore::open(p)
@@ -518,8 +549,10 @@ pub(super) fn cmd_replay(
             gc_effects::EffectsError::ReplayMismatch(_) => "replay/mismatch",
             _ => "replay/error",
         };
-        cli_err(EX_REPLAY_MISMATCH, code, format!("{e}"))
+        let context = structured_failures::effects_context("replay/execute", &e);
+        cli_err_with_context(EX_REPLAY_MISMATCH, code, format!("{e}"), context)
     })?;
+    ensure_no_protocol_error(&ctx, &v, false, "replay", "replay/result", "replay/error")?;
 
     let (value, value_format) = render_value_for_cli(&ctx, &v);
     let env = JsonEnvelope {

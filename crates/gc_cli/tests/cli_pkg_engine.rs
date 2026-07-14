@@ -136,6 +136,24 @@ fn json_value(stdout: &[u8]) -> String {
         .to_string()
 }
 
+fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
+    let p = dir.join(filename);
+    fs::write(&p, term_src).unwrap();
+    let out = cmd()
+        .current_dir(dir)
+        .args(["--coreform-frontend", "rust"])
+        .args(["store", "--caps"])
+        .arg(caps)
+        .args(["put", "--input"])
+        .arg(filename)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    String::from_utf8(out).unwrap().trim().to_string()
+}
+
 fn json_frontend_name(stdout: &[u8]) -> String {
     let v: serde_json::Value = serde_json::from_slice(stdout).unwrap();
     v.get("data")
@@ -425,7 +443,11 @@ fn pkg_lock_value_matches_between_frontends() {
 
     let rust_lock = rust_dir.join("genesis.lock");
     let self_lock = self_dir.join("genesis.lock");
-    let snap_h = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let snapshot_src = r#"{:type :vcs/snapshot :v 1 :kind :module :module/name "dep" :defs {} :exports [] :obligations []}"#;
+    let rust_snap_h = store_put(&rust_dir, &rust_caps, snapshot_src, "dep_snapshot.gc");
+    let self_snap_h = store_put(&self_dir, &self_caps, snapshot_src, "dep_snapshot.gc");
+    assert_eq!(rust_snap_h, self_snap_h);
+    let snap_h = rust_snap_h;
 
     let rust_init = cmd()
         .current_dir(&rust_dir)

@@ -86,7 +86,7 @@ pub(super) fn cmd_sync(
                     .into_iter()
                     .collect(),
                 );
-                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                let prog = f.apply(&mut ctx, Value::data(req)).map_err(|e| {
                     cli_err(
                         EX_EVAL,
                         "eval/error",
@@ -185,7 +185,7 @@ pub(super) fn cmd_sync(
                     .into_iter()
                     .collect(),
                 );
-                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                let prog = f.apply(&mut ctx, Value::data(req)).map_err(|e| {
                     cli_err(
                         EX_EVAL,
                         "eval/error",
@@ -245,7 +245,7 @@ pub(super) fn cmd_sync(
     {
         ok = false;
         exit_code = EX_EVAL;
-        if let Value::Data(Term::Map(m)) = payload.as_ref()
+        if let Some(Term::Map(m)) = payload.as_ref().as_data()
             && matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
                 Some(Term::Str(s)) if s == "core/caps/denied"

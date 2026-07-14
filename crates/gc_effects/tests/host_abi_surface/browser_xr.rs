@@ -64,7 +64,10 @@ allow = [
     let Value::Map(top) = &run_out.value else {
         panic!("expected run output map");
     };
-    let Some(Value::Data(Term::Map(open_map))) = top.get(&TermOrdKey(Term::symbol(":open"))) else {
+    let Some(Term::Map(open_map)) = top
+        .get(&TermOrdKey(Term::symbol(":open")))
+        .and_then(Value::as_data)
+    else {
         panic!("expected :open map");
     };
     assert_eq!(
@@ -244,14 +247,19 @@ max_haptics_duration_ms = 64
     let Value::Map(top) = &run_out.value else {
         panic!("expected run output map");
     };
-    let Some(Value::Data(Term::Map(open_map))) = top.get(&TermOrdKey(Term::symbol(":open"))) else {
+    let Some(Term::Map(open_map)) = top
+        .get(&TermOrdKey(Term::symbol(":open")))
+        .and_then(Value::as_data)
+    else {
         panic!("expected :open map");
     };
     assert_eq!(
         open_map.get(&TermOrdKey(Term::symbol(":backend"))),
         Some(&Term::Str("xr-first-party-runtime".to_string()))
     );
-    let Some(Value::Data(Term::Map(input_map))) = top.get(&TermOrdKey(Term::symbol(":input")))
+    let Some(Term::Map(input_map)) = top
+        .get(&TermOrdKey(Term::symbol(":input")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :input map");
     };
@@ -259,7 +267,9 @@ max_haptics_duration_ms = 64
         panic!("expected :input :inputs vector");
     };
     assert_eq!(inputs.len(), 2);
-    let Some(Value::Data(Term::Map(haptics_map))) = top.get(&TermOrdKey(Term::symbol(":haptics")))
+    let Some(Term::Map(haptics_map)) = top
+        .get(&TermOrdKey(Term::symbol(":haptics")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :haptics map");
     };
@@ -485,7 +495,10 @@ wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :closed true}"
     let Value::Map(top) = &run_out.value else {
         panic!("expected run output map");
     };
-    let Some(Value::Data(Term::Map(open_map))) = top.get(&TermOrdKey(Term::symbol(":open"))) else {
+    let Some(Term::Map(open_map)) = top
+        .get(&TermOrdKey(Term::symbol(":open")))
+        .and_then(Value::as_data)
+    else {
         panic!("expected :open map");
     };
     assert_eq!(
@@ -504,7 +517,9 @@ wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :closed true}"
         open_env.get(&TermOrdKey(Term::symbol(":source"))),
         Some(&Term::symbol(":webxr-device"))
     );
-    let Some(Value::Data(Term::Map(close_map))) = top.get(&TermOrdKey(Term::symbol(":close")))
+    let Some(Term::Map(close_map)) = top
+        .get(&TermOrdKey(Term::symbol(":close")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :close map");
     };
@@ -563,7 +578,7 @@ wasi_bridge_response = "{:ok true :session-id \"xr-prod-1\" :mode \"immersive-vr
     assert_eq!(run_out.log.entries.len(), 1);
     assert_eq!(run_out.log.entries[0].op, "gfx/xr::session-open");
 
-    let Value::Data(Term::Map(open_map)) = &run_out.value else {
+    let Some(Term::Map(open_map)) = run_out.value.as_data() else {
         panic!("expected session-open map");
     };
     assert_eq!(
@@ -625,7 +640,7 @@ runtime_profile = "production"
     let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
     let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
 
-    let Value::Data(Term::Map(err)) = &run_out.value else {
+    let Some(Term::Map(err)) = run_out.value.as_data() else {
         panic!("expected policy-disabled map");
     };
     assert_eq!(
@@ -761,15 +776,17 @@ allow = [
     let Value::Map(top) = &run_out.value else {
         panic!("expected run output map");
     };
-    let Some(Value::Data(Term::Map(anchor_create_map))) =
-        top.get(&TermOrdKey(Term::symbol(":anchor-create")))
+    let Some(Term::Map(anchor_create_map)) = top
+        .get(&TermOrdKey(Term::symbol(":anchor-create")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :anchor-create map");
     };
     assert!(anchor_create_map.contains_key(&TermOrdKey(Term::symbol(":anchor-id"))));
 
-    let Some(Value::Data(Term::Map(layer_create_map))) =
-        top.get(&TermOrdKey(Term::symbol(":layer-create")))
+    let Some(Term::Map(layer_create_map)) = top
+        .get(&TermOrdKey(Term::symbol(":layer-create")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :layer-create map");
     };

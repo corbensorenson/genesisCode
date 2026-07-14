@@ -1,0 +1,49 @@
+{
+  "authority": {
+    "documentClass": "E1",
+    "runtimeGateClaims": "requirements-only-unverified",
+    "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
+  },
+  "baselineFixtureRole": "signed-e0-baseline",
+  "dependencyLockfiles": [
+    "Cargo.lock",
+    "tools/genesis-evidence-producer/Cargo.lock",
+    "tools/genesis-evidence-verifier/Cargo.lock"
+  ],
+  "kind": "genesis/release-notes-policy-v0.1",
+  "output": {
+    "changelog": "CHANGELOG.md",
+    "endMarker": "<!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->",
+    "json": "docs/program/RELEASE_NOTES_v0.2.0.json",
+    "startMarker": "<!-- BEGIN GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->"
+  },
+  "securityGateAuthority": "genesis.gates.json",
+  "securityGateEntrypoints": [
+    "scripts/check_dependency_mirror_contract.sh",
+    "scripts/check_evidence_adversarial_matrix.sh",
+    "scripts/check_genesis_evidence_verifier.sh",
+    "scripts/check_no_user_panics.sh",
+    "scripts/check_no_user_panics_compiler.sh",
+    "scripts/check_release_smoke.sh",
+    "scripts/check_root_lock_policy.sh",
+    "scripts/check_supply_chain.sh",
+    "scripts/check_versioning_release_hygiene.sh"
+  ],
+  "sourcePaths": [
+    "Cargo.lock",
+    "Cargo.toml",
+    "deny.toml",
+    "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+    "genesis.compatibility.json",
+    "genesis.dependency-mirror.json",
+    "genesis.lock",
+    "genesis.version-surfaces.json",
+    "package-lock.json",
+    "policies/evidence_storage_classes_v0.1.json",
+    "policies/release_notes_v0.1.json",
+    "tools/genesis-evidence-producer/Cargo.lock",
+    "tools/genesis-evidence-verifier/Cargo.lock"
+  ],
+  "version": "0.1"
+}

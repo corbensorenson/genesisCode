@@ -92,7 +92,7 @@ pub fn fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String
         .get("selfhost/tool::fmt-module")
         .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::fmt-module"))?;
     let r = f
-        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .apply(&mut ctx, Value::data(Term::Str(src.to_owned())))
         .map_err(|e| js_err("selfhost/eval", e))?;
 
     if let Some(s) = extract_protocol_error_string(&ctx, &r) {
@@ -128,7 +128,7 @@ pub fn fmt_coreform_module_selfhost_with_artifact(
         .get("selfhost/tool::fmt-module")
         .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::fmt-module"))?;
     let r = f
-        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .apply(&mut ctx, Value::data(Term::Str(src.to_owned())))
         .map_err(|e| js_err("selfhost/eval", e))?;
     if let Some(s) = extract_protocol_error_string(&ctx, &r) {
         return Err(js_err("selfhost/error", s));
@@ -163,7 +163,7 @@ pub fn hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<Strin
         .get("selfhost/tool::hash-module-src")
         .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::hash-module-src"))?;
     let r = f
-        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .apply(&mut ctx, Value::data(Term::Str(src.to_owned())))
         .map_err(|e| js_err("selfhost/eval", e))?;
 
     if let Some(s) = extract_protocol_error_string(&ctx, &r) {
@@ -199,7 +199,7 @@ pub fn hash_coreform_module_selfhost_with_artifact(
         .get("selfhost/tool::hash-module-src")
         .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::hash-module-src"))?;
     let r = f
-        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .apply(&mut ctx, Value::data(Term::Str(src.to_owned())))
         .map_err(|e| js_err("selfhost/eval", e))?;
     if let Some(s) = extract_protocol_error_string(&ctx, &r) {
         return Err(js_err("selfhost/error", s));

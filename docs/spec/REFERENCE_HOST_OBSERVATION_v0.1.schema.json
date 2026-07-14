@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/reference-host-observation-v0.1.json",
+  "title": "GenesisCode Reference Host Observation v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "profileId", "platformId", "tier", "promotionStatus", "metadata", "conformance", "identitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/reference-host-observation-v0.1"},
+    "version": {"const": "0.1"},
+    "profileId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$"},
+    "platformId": {"enum": ["darwin-arm64", "linux-arm64", "linux-x86-64", "windows-x86-64"]},
+    "tier": {"enum": [1, 2]},
+    "promotionStatus": {"enum": ["reference", "candidate"]},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu", "memory", "filesystem", "operatingSystem", "compiler", "powerMode"],
+      "properties": {
+        "cpu": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["architecture", "model", "physicalCores", "logicalCores"],
+          "properties": {
+            "architecture": {"enum": ["arm64", "x86_64"]},
+            "model": {"type": "string", "minLength": 1},
+            "physicalCores": {"type": "integer", "minimum": 1},
+            "logicalCores": {"type": "integer", "minimum": 1}
+          }
+        },
+        "memory": {"type": "object", "additionalProperties": false, "required": ["totalBytes"], "properties": {"totalBytes": {"type": "integer", "minimum": 1}}},
+        "filesystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "blockSizeBytes", "caseSensitive"],
+          "properties": {
+            "type": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+            "blockSizeBytes": {"type": "integer", "minimum": 1},
+            "caseSensitive": {"type": "boolean"}
+          }
+        },
+        "operatingSystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["family", "version", "kernelRelease"],
+          "properties": {
+            "family": {"enum": ["darwin", "linux", "windows"]},
+            "version": {"type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+){0,3}$"},
+            "kernelRelease": {"type": "string", "minLength": 1}
+          }
+        },
+        "compiler": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rustcVersion", "rustcHost", "nativeFamily", "nativeVersion"],
+          "properties": {
+            "rustcVersion": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "rustcHost": {"type": "string", "minLength": 3},
+            "nativeFamily": {"enum": ["apple-clang", "clang", "gcc", "msvc"]},
+            "nativeVersion": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+          }
+        },
+        "powerMode": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "lowPowerMode", "governorMode"],
+          "properties": {
+            "source": {"enum": ["ac", "battery", "unknown"]},
+            "lowPowerMode": {"type": "boolean"},
+            "governorMode": {"type": "string", "pattern": "^[a-z-]+$"}
+          }
+        }
+      }
+    },
+    "conformance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "failures"],
+      "properties": {
+        "ok": {"type": "boolean"},
+        "failures": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9.-]+$"}}
+      }
+    },
+    "identitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

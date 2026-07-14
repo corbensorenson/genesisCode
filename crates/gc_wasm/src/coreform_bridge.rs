@@ -45,7 +45,7 @@ pub(crate) fn selfhost_parse_and_canon_forms(
         .get("selfhost/parse::parse-module")
         .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/parse::parse-module"))?;
     let parsed = parse_fn
-        .apply(ctx, Value::Data(Term::Str(src.to_owned())))
+        .apply(ctx, Value::data(Term::Str(src.to_owned())))
         .map_err(|e| js_err("selfhost/eval", e))?;
     if let Some(s) = extract_protocol_error_string(ctx, &parsed) {
         return Err(js_err("selfhost/error", s));
@@ -69,7 +69,7 @@ pub(crate) fn selfhost_parse_and_canon_forms(
             )
         })?;
     let canon = canon_fn
-        .apply(ctx, Value::Data(Term::Vector(parsed_forms.clone())))
+        .apply(ctx, Value::data(Term::Vector(parsed_forms.clone())))
         .map_err(|e| js_err("selfhost/eval", e))?;
     if let Some(s) = extract_protocol_error_string(ctx, &canon) {
         return Err(js_err("selfhost/error", s));

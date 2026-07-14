@@ -129,3 +129,16 @@ Absent non-task policy entries default to deny.
 
 Throughput/latency SLO enforcement for task scheduler and GPU/compute bridge paths is defined in:
 - `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`.
+
+## Stress Evidence Lifecycle
+
+- Read-only stress check: `scripts/check_task_concurrency_stress.sh`
+- Explicit report/history producer: `scripts/update_task_concurrency_stress_report.sh`
+- Renderer with caller-owned destinations: `scripts/render_task_concurrency_stress_report.sh`
+- Optional E0 report: `.genesis/perf/task_concurrency_stress_report.json`
+- Optional one-row-per-invocation history: `.genesis/perf/task_concurrency_stress_history.jsonl`
+
+The check executes the real cancellation, channel-close, and bounded parallel-reduce replay
+matrix but writes only private temporary outputs. `GENESIS_TASK_STRESS_HISTORY` is input-only
+for the check and cannot redirect retained output. The producer preserves the same
+failure-rate, per-test, and suite-budget enforcement while appending exactly one report row.

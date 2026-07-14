@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/changed-impact-policy-v0.1.json",
+  "title": "GenesisCode Changed Impact Policy v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "fallbackProfile", "profileRanks", "fullFastPatterns", "generatedClasses", "maxTargetedCrates", "maxTargetedGates"],
+  "properties": {
+    "kind": {"const": "genesis/changed-impact-policy-v0.1"},
+    "version": {"const": "0.1"},
+    "fallbackProfile": {"const": "prepush-standard"},
+    "profileRanks": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}, "minProperties": 4},
+    "fullFastPatterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "generatedClasses": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["id", "patterns", "profile", "requireGateMatch"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}, "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "profile": {"type": "string", "minLength": 1}, "requireGateMatch": {"const": true}}}},
+    "maxTargetedCrates": {"type": "integer", "minimum": 1},
+    "maxTargetedGates": {"type": "integer", "minimum": 1}
+  }
+}

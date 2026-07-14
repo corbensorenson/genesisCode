@@ -17,6 +17,7 @@ pub struct PackageTestResult {
 pub struct PackageTypecheckResult {
     pub ok: bool,
     pub report_coreform: String,
+    pub diagnostics: Vec<gc_types::TypecheckDiagnostic>,
 }
 
 #[derive(Debug, Clone)]
@@ -494,5 +495,6 @@ pub fn typecheck_package_with_step_limit_and_frontend(
     Ok(PackageTypecheckResult {
         ok: report.ok,
         report_coreform,
+        diagnostics: report.diagnostics,
     })
 }

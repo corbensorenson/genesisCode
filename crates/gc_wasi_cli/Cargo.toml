@@ -1,8 +1,10 @@
 [package]
 name = "gc_wasi_cli"
-version = "0.1.0"
+default-run = "genesis_wasi"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 
 [[bin]]
 name = "genesis_wasi"

@@ -23,7 +23,7 @@ fn sealed_error_code(v: &Value) -> Option<String> {
     let Value::Sealed { payload, .. } = v else {
         return None;
     };
-    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+    let Some(Term::Map(m)) = payload.as_ref().as_data() else {
         return None;
     };
     match m.get(&TermOrdKey(Term::symbol(":error/code"))) {
@@ -72,10 +72,10 @@ dir = "./.genesis/store"
     )
     .unwrap();
 
-    let Value::Data(Term::Map(put_m)) = r_put.value else {
+    let Some(Term::Map(put_m)) = r_put.value.as_data() else {
         panic!("expected put result map, got {}", r_put.value.debug_repr());
     };
-    let h = extract_str_field(&put_m, ":hash");
+    let h = extract_str_field(put_m, ":hash");
 
     let stored_path = td.path().join(".genesis").join("store").join(&h);
     assert!(stored_path.exists(), "stored artifact path missing");
@@ -103,7 +103,7 @@ dir = "./.genesis/store"
     )
     .unwrap();
 
-    let Value::Data(Term::Map(has_m)) = r_has.value else {
+    let Some(Term::Map(has_m)) = r_has.value.as_data() else {
         panic!("expected has result map, got {}", r_has.value.debug_repr());
     };
     match has_m.get(&TermOrdKey(Term::symbol(":present"))) {
@@ -134,7 +134,7 @@ dir = "./.genesis/store"
         "gc_effects-test".to_string(),
     )
     .unwrap();
-    let Value::Data(Term::Map(has2_m)) = r_has2.value else {
+    let Some(Term::Map(has2_m)) = r_has2.value.as_data() else {
         panic!(
             "expected has(missing) result map, got {}",
             r_has2.value.debug_repr()
@@ -168,7 +168,7 @@ dir = "./.genesis/store"
     )
     .unwrap();
 
-    let Value::Data(Term::Map(get_m)) = &r_get.value else {
+    let Some(Term::Map(get_m)) = r_get.value.as_data() else {
         panic!("expected get result map, got {}", r_get.value.debug_repr());
     };
     match get_m.get(&TermOrdKey(Term::symbol(":artifact"))) {
@@ -272,10 +272,10 @@ max_bytes = 128
         "gc_effects-test".to_string(),
     )
     .unwrap();
-    let Value::Data(Term::Map(put_m)) = r_put.value else {
+    let Some(Term::Map(put_m)) = r_put.value.as_data() else {
         panic!("expected put result map");
     };
-    let h = extract_str_field(&put_m, ":hash");
+    let h = extract_str_field(put_m, ":hash");
 
     let get_src = format!(
         r#"

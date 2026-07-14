@@ -54,7 +54,7 @@ pub(crate) fn gpu_host_call(
             && gpu_op_prefers_device_backend(op, backend_kind)
         {
             return Some(match call_device_backend(op, payload) {
-                Ok(resp) => Value::Data(resp),
+                Ok(resp) => Value::data(resp),
                 Err(err) => match gpu_backend_fallback_policy(pol) {
                     GpuBackendFallbackPolicy::RequireDevice => mk_error(
                         error_tok,
@@ -71,15 +71,15 @@ pub(crate) fn gpu_host_call(
                             gpu_backend_kind_label(backend_kind),
                             &err.message,
                         );
-                        Value::Data(decorated)
+                        Value::data(decorated)
                     }
                 },
             });
         }
-        return Some(Value::Data(first_party_gpu_response(runtime, op, payload)));
+        return Some(Value::data(first_party_gpu_response(runtime, op, payload)));
     }
     Some(match call_host_bridge("gpu", op, payload, pol) {
-        Ok(resp) => Value::Data(resp),
+        Ok(resp) => Value::data(resp),
         Err(err) => mk_error(error_tok, &err, Some(op)),
     })
 }
@@ -625,6 +625,6 @@ fn mk_error(error_tok: SealId, err: &BridgeError, op: Option<&str>) -> Value {
     );
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(mm))),
+        payload: Box::new(Value::data(Term::Map(mm))),
     }
 }

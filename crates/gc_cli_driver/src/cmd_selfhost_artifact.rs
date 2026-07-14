@@ -88,7 +88,11 @@ pub(super) fn cmd_selfhost_artifact(
         let term = parse_term(&src).ok()?;
         let Term::Map(root) = term else { return None };
         match root.get(&TermOrdKey(Term::symbol(":kind"))) {
-            Some(Term::Str(s)) if s == "genesis/selfhost-toolchain-artifact-v0.2" => {}
+            Some(Term::Str(s)) if s == gc_prelude::SELFHOST_TOOLCHAIN_ARTIFACT_KIND => {}
+            _ => return None,
+        }
+        match root.get(&TermOrdKey(Term::symbol(":v"))) {
+            Some(Term::Int(v)) if v == &gc_prelude::SELFHOST_TOOLCHAIN_ARTIFACT_VERSION.into() => {}
             _ => return None,
         }
         let generated_by = match root.get(&TermOrdKey(Term::symbol(":generated-by"))) {
@@ -763,9 +767,12 @@ pub(super) fn cmd_selfhost_artifact(
         [
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/selfhost-toolchain-artifact-v0.2".to_string()),
+                Term::Str(gc_prelude::SELFHOST_TOOLCHAIN_ARTIFACT_KIND.to_string()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (
+                TermOrdKey(Term::symbol(":v")),
+                Term::Int(gc_prelude::SELFHOST_TOOLCHAIN_ARTIFACT_VERSION.into()),
+            ),
             (TermOrdKey(Term::symbol(":ok")), Term::Bool(all_ok)),
             (
                 TermOrdKey(Term::symbol(":generated-by")),

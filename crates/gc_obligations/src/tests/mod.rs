@@ -2,6 +2,7 @@ use super::*;
 use gc_coreform::{TermOrdKey, canonicalize_module, parse_module};
 use gc_kernel::eval_module;
 
+mod frontend_contracts;
 mod selfhost_literal_op;
 
 fn eval_gc_term(src: &str) -> Term {
@@ -96,6 +97,224 @@ fn cache_artifact_presence_check_respects_missing_artifacts() {
         obligation_results: Vec::new(),
     };
     assert!(!cache_artifacts_present_and_valid(&store, &miss_result).unwrap());
+}
+
+fn cache_key_fixture(dir: &Path) -> (PathBuf, PackageManifest, Vec<LoadedModule>) {
+    let pkg_toml = dir.join("package.toml");
+    std::fs::write(&pkg_toml, "name = \"pkg_cache\"\nversion = \"0.0.1\"\n").unwrap();
+    let entry = ModuleEntry {
+        path: "mod.gc".to_string(),
+        hash: None,
+    };
+    let forms = vec![Term::Nil];
+    let manifest = PackageManifest {
+        schema: gc_pkg::PACKAGE_MANIFEST_SCHEMA_VERSION,
+        name: "pkg_cache".to_string(),
+        version: "0.0.1".to_string(),
+        modules: vec![entry.clone()],
+        dependencies: Vec::new(),
+        obligations: vec!["core/obligation::unit-tests".to_string()],
+        tests: vec!["pkg/cache::tests".to_string()],
+        property_tests: Vec::new(),
+        caps_policy: None,
+        limits: Default::default(),
+        budgets: Default::default(),
+        property: Default::default(),
+        gfx: Default::default(),
+    };
+    let modules = vec![LoadedModule {
+        entry,
+        abs_path: dir.join("mod.gc"),
+        forms: forms.clone(),
+        meta: None,
+        hash: hash_module(&forms),
+    }];
+    (pkg_toml, manifest, modules)
+}
+
+fn legacy_v01_frontend_term(frontend: &CoreformFrontend) -> Term {
+    if let CoreformFrontend::Selfhost(cfg) = frontend {
+        let mode = match cfg.bootstrap_mode {
+            SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
+            SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
+            SelfhostBootstrapMode::Embedded => ":embedded",
+        };
+        Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::symbol(":frontend/selfhost"),
+                ),
+                (TermOrdKey(Term::symbol(":mode")), Term::symbol(mode)),
+                (
+                    TermOrdKey(Term::symbol(":artifact")),
+                    cfg.artifact
+                        .as_ref()
+                        .map(|p| Term::Str(p.display().to_string()))
+                        .unwrap_or(Term::Nil),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        )
+    } else {
+        Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":kind")),
+                Term::symbol(":frontend/rust"),
+            )]
+            .into_iter()
+            .collect(),
+        )
+    }
+}
+
+fn legacy_v01_obligation_cache_key(
+    pkg_toml: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    caps_policy_hash: Option<&str>,
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
+) -> String {
+    let pkg_toml_hash = hash_optional_file(Some(pkg_toml))
+        .unwrap()
+        .unwrap_or_default();
+    let module_hashes = Term::Vector(
+        modules
+            .iter()
+            .map(|m| {
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":path")),
+                            Term::Str(m.entry.path.clone()),
+                        ),
+                        (TermOrdKey(Term::symbol(":hash")), Term::Str(hex32(m.hash))),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )
+            })
+            .collect(),
+    );
+    let key_term = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/obligation-cache-key-v0.1".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pkg-name")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pkg-version")),
+                Term::Str(manifest.version.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pkg-toml-h")),
+                Term::Str(pkg_toml_hash),
+            ),
+            (TermOrdKey(Term::symbol(":module-hashes")), module_hashes),
+            (
+                TermOrdKey(Term::symbol(":caps-policy-h")),
+                caps_policy_hash
+                    .map(|s| Term::Str(s.to_string()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (
+                TermOrdKey(Term::symbol(":obligations")),
+                Term::Vector(
+                    manifest
+                        .obligations
+                        .iter()
+                        .cloned()
+                        .map(Term::Symbol)
+                        .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":tests")),
+                Term::Vector(manifest.tests.iter().cloned().map(Term::Symbol).collect()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":property-tests")),
+                Term::Vector(
+                    manifest
+                        .property_tests
+                        .iter()
+                        .cloned()
+                        .map(Term::Symbol)
+                        .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":step-limit")),
+                step_limit_term(limits.step_limit),
+            ),
+            (
+                TermOrdKey(Term::symbol(":mem-limits")),
+                mem_limits_term(limits.mem_limits),
+            ),
+            (
+                TermOrdKey(Term::symbol(":frontend")),
+                legacy_v01_frontend_term(frontend),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    hex32(hash_term(&key_term))
+}
+
+#[test]
+fn obligation_cache_key_is_separated_from_legacy_toolchain_identity() {
+    let dir = tempfile::tempdir().unwrap();
+    let (pkg_toml, manifest, modules) = cache_key_fixture(dir.path());
+    let limits = KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+    let frontend = CoreformFrontend::Rust;
+
+    let current =
+        obligation_cache_key(&pkg_toml, &manifest, &modules, None, limits, &frontend).unwrap();
+    let legacy =
+        legacy_v01_obligation_cache_key(&pkg_toml, &manifest, &modules, None, limits, &frontend);
+
+    assert_ne!(
+        current, legacy,
+        "v0.2 cache keys must not accept stale v0.1 entries that omitted toolchain identity"
+    );
+}
+
+#[test]
+fn obligation_cache_key_changes_when_selfhost_artifact_bytes_change() {
+    let dir = tempfile::tempdir().unwrap();
+    let (pkg_toml, manifest, modules) = cache_key_fixture(dir.path());
+    let artifact = dir.path().join("toolchain.gc");
+    let limits = KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+
+    std::fs::write(&artifact, "artifact version a").unwrap();
+    let frontend = CoreformFrontend::Selfhost(SelfhostFrontendConfig {
+        bootstrap_mode: SelfhostBootstrapMode::ArtifactOnly,
+        artifact: Some(artifact.clone()),
+    });
+    let first =
+        obligation_cache_key(&pkg_toml, &manifest, &modules, None, limits, &frontend).unwrap();
+
+    std::fs::write(&artifact, "artifact version b").unwrap();
+    let second =
+        obligation_cache_key(&pkg_toml, &manifest, &modules, None, limits, &frontend).unwrap();
+
+    assert_ne!(
+        first, second,
+        "selfhost cache keys must include artifact content, not only artifact path"
+    );
 }
 
 #[test]
@@ -578,351 +797,4 @@ fn obligation_acceptance_ok_routes_through_gc_contract() {
     ];
     let ok = obligation_acceptance_ok(&results).expect("acceptance fold should succeed");
     assert!(!ok, "acceptance fold should reflect failed obligations");
-}
-
-#[test]
-fn lint_autofix_builds_replace_node_patch_for_missing_types() {
-    let src = r#"
-          (def ::meta (quote {:exports [pkg/a::x pkg/a::y]}))
-          (def pkg/a::x 1)
-          (def pkg/a::y 2)
-        "#;
-    let forms = parse_module(src).unwrap();
-    let (patch, reasons) =
-        obligation_lint::lint_autofix_patch_for_module("lint.gc", &forms).unwrap();
-    assert!(reasons.iter().any(|r| r == "editor/lint/missing-types-map"));
-    assert!(reasons.iter().any(|r| r == "editor/lint/missing-type"));
-
-    let Term::Map(m) = patch else {
-        panic!("patch must be map")
-    };
-    let ops = m
-        .get(&TermOrdKey(Term::symbol(":ops")))
-        .expect("patch must contain :ops");
-    let Term::Vector(ops) = ops else {
-        panic!(":ops must be vector")
-    };
-    assert_eq!(ops.len(), 1);
-    let Term::Map(opm) = &ops[0] else {
-        panic!("op must be map")
-    };
-    assert!(matches!(
-        opm.get(&TermOrdKey(Term::symbol(":op"))),
-        Some(Term::Symbol(s)) if s == ":replace-node"
-    ));
-}
-
-#[test]
-fn lint_autofix_returns_none_when_types_are_complete() {
-    let src = r#"
-          (def ::meta (quote {:exports [pkg/a::x] :types {pkg/a::x Int}}))
-          (def pkg/a::x 1)
-        "#;
-    let forms = parse_module(src).unwrap();
-    assert!(obligation_lint::lint_autofix_patch_for_module("lint.gc", &forms).is_none());
-}
-
-#[test]
-fn env_truthy_accepts_expected_values() {
-    let is_truthy = |v: &str| {
-        matches!(
-            v.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        )
-    };
-    for v in ["1", "true", "TRUE", " yes ", "On"] {
-        assert!(is_truthy(v), "expected truthy: {v}");
-    }
-    for v in ["0", "false", "no", "", "off", "wat"] {
-        assert!(!is_truthy(v), "expected falsey: {v}");
-    }
-}
-
-#[test]
-fn eval_module_default_executes_with_compiled_fast_path() {
-    let forms = parse_module("(def pkg/a::x 41)\n(prim int/add pkg/a::x 1)\n").expect("parse");
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let value =
-        eval_module_default(&mut env, &mut ctx, &forms, "tests/eval_default.gc").expect("eval");
-    let Value::Data(Term::Int(n)) = value else {
-        panic!("expected int result");
-    };
-    assert_eq!(n, BigInt::from(42));
-}
-
-#[test]
-fn selfhost_only_rejects_rust_frontend_at_library_boundary() {
-    let rust_frontend = rust_coreform_frontend();
-    let err =
-        crate::frontend::enforce_frontend_allowed_with_flag(&rust_frontend, "test", true, true)
-            .expect_err("rust frontend must be blocked in selfhost-only mode");
-    assert!(format!("{err}").contains("selfhost-only mode forbids Rust frontend"));
-    crate::frontend::enforce_frontend_allowed_with_flag(
-        &default_coreform_frontend(),
-        "test",
-        true,
-        true,
-    )
-    .expect("selfhost frontend must be allowed");
-}
-
-#[test]
-fn rust_frontend_requires_compat_flag_at_library_boundary() {
-    let rust_frontend = rust_coreform_frontend();
-    let err =
-        crate::frontend::enforce_frontend_allowed_with_flag(&rust_frontend, "test", false, false)
-            .expect_err("rust frontend must require explicit compatibility mode");
-    assert!(format!("{err}").contains("Rust frontend is disabled in this profile"));
-    crate::frontend::enforce_frontend_allowed_with_flag(&rust_frontend, "test", false, true)
-        .expect("rust frontend should be permitted when compatibility mode is enabled");
-}
-
-#[test]
-fn non_artifact_bootstrap_mode_is_dev_only_at_library_boundary() {
-    let frontend = CoreformFrontend::Selfhost(SelfhostFrontendConfig {
-        bootstrap_mode: SelfhostBootstrapMode::Embedded,
-        artifact: None,
-    });
-    let err = crate::frontend::enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", false)
-        .expect_err("embedded bootstrap should be blocked outside development mode");
-    assert!(format!("{err}").contains("development-only"));
-    crate::frontend::enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", true)
-        .expect("embedded bootstrap should be allowed in development mode");
-}
-
-#[test]
-fn selfhost_parse_prefers_core_cli_canonicalize_handler_when_present() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        SelfhostBootstrapMode::ArtifactOnly,
-        Some(&artifact),
-    )
-    .expect("load selfhost toolchain");
-
-    // Shadow the core/cli binding with an invalid value. If the function prefers
-    // core/cli when present, this must fail before falling back to low-level bindings.
-    env.set_local(
-        "core/cli::canonicalize-module-src",
-        Value::Data(Term::Str("shadowed".to_string())),
-    );
-
-    let err = selfhost_parse_canonicalize_module(&mut ctx, &env, "(def x 1)\n x\n").unwrap_err();
-    assert!(
-        format!("{err}").contains("not callable"),
-        "expected core/cli path to be attempted first, got: {err}"
-    );
-}
-
-#[test]
-fn selfhost_meta_prefers_core_cli_module_meta_handler_when_present() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        SelfhostBootstrapMode::ArtifactOnly,
-        Some(&artifact),
-    )
-    .expect("load selfhost toolchain");
-
-    // Shadow the core/cli meta extractor with invalid data. If module-meta prefers
-    // core/cli when present, this must fail before any static fallback path.
-    env.set_local(
-        "core/cli::module-meta",
-        Value::Data(Term::Str("shadowed".to_string())),
-    );
-
-    let forms = canonicalize_module(parse_module("(def ::meta (quote {:caps []}))\n").unwrap())
-        .expect("canonical module");
-    let err = selfhost_extract_module_meta(&mut ctx, &env, &forms).unwrap_err();
-    assert!(
-        format!("{err}").contains("not callable"),
-        "expected core/cli module-meta path to be attempted first, got: {err}"
-    );
-}
-
-#[test]
-fn selfhost_hash_prefers_core_cli_hash_module_forms_handler_when_present() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        SelfhostBootstrapMode::ArtifactOnly,
-        Some(&artifact),
-    )
-    .expect("load selfhost toolchain");
-
-    env.set_local(
-        "core/cli::hash-module-forms",
-        Value::Data(Term::Str("shadowed".to_string())),
-    );
-
-    let forms = canonicalize_module(parse_module("(def x 1)\n x\n").unwrap()).unwrap();
-    let err = selfhost_hash_module_forms(&mut ctx, &env, &forms).unwrap_err();
-    assert!(
-        format!("{err}").contains("not callable"),
-        "expected core/cli hash-module-forms path to be attempted first, got: {err}"
-    );
-}
-
-#[test]
-fn selfhost_hash_requires_a_selfhost_hash_binding_and_does_not_fallback_to_rust() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let env = prelude.env;
-    let forms = canonicalize_module(parse_module("(def x 1)\n x\n").unwrap()).unwrap();
-    let err = selfhost_hash_module_forms(&mut ctx, &env, &forms).unwrap_err();
-    assert!(
-        format!("{err}").contains("missing binding core/cli::hash-module-forms"),
-        "expected missing-binding error, got: {err}"
-    );
-}
-
-#[test]
-fn selfhost_optimize_prefers_core_cli_optimize_module_handler_when_present() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        SelfhostBootstrapMode::ArtifactOnly,
-        Some(&artifact),
-    )
-    .expect("load selfhost toolchain");
-
-    env.set_local(
-        "core/cli::optimize-module",
-        Value::Data(Term::Str("shadowed".to_string())),
-    );
-
-    let forms = canonicalize_module(parse_module("(def x (prim int/add 1 2))\n x\n").unwrap())
-        .expect("canonical module");
-    let err = selfhost_optimize_module_forms(&mut ctx, &env, &forms).unwrap_err();
-    assert!(
-        format!("{err}").contains("not callable"),
-        "expected core/cli optimize-module path to be attempted first, got: {err}"
-    );
-}
-
-#[test]
-fn selfhost_optimize_requires_core_cli_binding_and_does_not_fallback_to_rust() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let env = prelude.env;
-    let forms = canonicalize_module(parse_module("(def x (prim int/add 1 2))\n x\n").unwrap())
-        .expect("canonical module");
-    let err = selfhost_optimize_module_forms(&mut ctx, &env, &forms).unwrap_err();
-    assert!(
-        format!("{err}").contains("missing binding core/cli::optimize-module"),
-        "expected missing-binding error, got: {err}"
-    );
-}
-
-#[test]
-fn selfhost_infer_effects_prefers_core_cli_handler_when_present() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        SelfhostBootstrapMode::ArtifactOnly,
-        Some(&artifact),
-    )
-    .expect("load selfhost toolchain");
-
-    env.set_local(
-        "core/cli::infer-effects",
-        Value::Data(Term::Str("shadowed".to_string())),
-    );
-
-    let forms = canonicalize_module(
-        parse_module("(def p (core/effect::perform 'sys/time::now {} (fn (x) x)))\n").unwrap(),
-    )
-    .expect("canonical module");
-    let err = selfhost_infer_effects_forms(&mut ctx, &env, &forms).unwrap_err();
-    assert!(
-        format!("{err}").contains("not callable"),
-        "expected core/cli infer-effects path to be attempted first, got: {err}"
-    );
-}
-
-#[test]
-fn selfhost_infer_effects_matches_gc_types_for_pkg_basic_fixture() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        SelfhostBootstrapMode::ArtifactOnly,
-        Some(&artifact),
-    )
-    .expect("load selfhost toolchain");
-
-    let forms = canonicalize_module(
-        parse_module(include_str!("../../../../tests/spec/pkg_basic/basic.gc")).unwrap(),
-    )
-    .expect("canonical module");
-    let rust = gc_types::infer_effects(&forms);
-    let selfhost = selfhost_infer_effects_forms(&mut ctx, &env, &forms).expect("infer");
-    assert_eq!(selfhost.unknown, rust.unknown);
-    assert_eq!(selfhost.ops, rust.ops);
-}
-
-#[test]
-fn selfhost_infer_effects_matches_gc_types_for_pkg_fail_caps_declared_fixture() {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        SelfhostBootstrapMode::ArtifactOnly,
-        Some(&artifact),
-    )
-    .expect("load selfhost toolchain");
-
-    let forms = canonicalize_module(
-        parse_module(include_str!(
-            "../../../../tests/spec/pkg_fail_caps_declared/fail.gc"
-        ))
-        .unwrap(),
-    )
-    .expect("canonical module");
-    let rust = gc_types::infer_effects(&forms);
-    let selfhost = selfhost_infer_effects_forms(&mut ctx, &env, &forms).expect("infer");
-    assert_eq!(selfhost.unknown, rust.unknown);
-    assert_eq!(selfhost.ops, rust.ops);
 }

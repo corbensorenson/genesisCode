@@ -89,7 +89,7 @@ fn selfhost_parse_canonicalize_module(
 ) -> Result<Vec<Term>, ObligationError> {
     if let Some(canon_src_fn) = env.get("core/cli::canonicalize-module-src") {
         let out = canon_src_fn
-            .apply(ctx, Value::Data(Term::Str(src.to_string())))
+            .apply(ctx, Value::data(Term::Str(src.to_string())))
             .map_err(|e| ObligationError::Module(e.to_string()))?;
         if let Some(e) = extract_protocol_error(ctx, &out) {
             return Err(ObligationError::Module(format!(
@@ -109,7 +109,7 @@ fn selfhost_parse_canonicalize_module(
         ObligationError::Module("missing binding selfhost/parse::parse-module".to_string())
     })?;
     let parsed = parse_fn
-        .apply(ctx, Value::Data(Term::Str(src.to_string())))
+        .apply(ctx, Value::data(Term::Str(src.to_string())))
         .map_err(|e| ObligationError::Module(e.to_string()))?;
     if let Some(e) = extract_protocol_error(ctx, &parsed) {
         return Err(ObligationError::Module(format!(
@@ -131,7 +131,7 @@ fn selfhost_parse_canonicalize_module(
             )
         })?;
     let canon = canon_fn
-        .apply(ctx, Value::Data(Term::Vector(parsed_forms.clone())))
+        .apply(ctx, Value::data(Term::Vector(parsed_forms.clone())))
         .map_err(|e| ObligationError::Module(e.to_string()))?;
     if let Some(e) = extract_protocol_error(ctx, &canon) {
         return Err(ObligationError::Module(format!(
@@ -154,7 +154,7 @@ fn selfhost_extract_module_meta(
 ) -> Result<Option<Term>, ObligationError> {
     if let Some(meta_fn) = env.get("core/cli::module-meta") {
         let out = meta_fn
-            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
             .map_err(|e| ObligationError::Module(e.to_string()))?;
         if let Some(e) = extract_protocol_error(ctx, &out) {
             return Err(ObligationError::Module(format!(
@@ -206,7 +206,7 @@ fn selfhost_hash_module_forms(
 ) -> Result<[u8; 32], ObligationError> {
     if let Some(hash_forms_fn) = env.get("core/cli::hash-module-forms") {
         let out = hash_forms_fn
-            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
             .map_err(|e| ObligationError::Module(e.to_string()))?;
         if let Some(e) = extract_protocol_error(ctx, &out) {
             return Err(ObligationError::Module(format!(
@@ -224,7 +224,7 @@ fn selfhost_hash_module_forms(
 
     if let Some(hash_fn) = env.get("selfhost/hash::hash-module") {
         let out = hash_fn
-            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
             .map_err(|e| ObligationError::Module(e.to_string()))?;
         if let Some(e) = extract_protocol_error(ctx, &out) {
             return Err(ObligationError::Module(format!(
@@ -254,7 +254,7 @@ fn selfhost_optimize_module_forms(
         ObligationError::Module("missing binding core/cli::optimize-module".to_string())
     })?;
     let out = optimize_fn
-        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
         .map_err(|e| ObligationError::Opt(e.to_string()))?;
     if let Some(e) = extract_protocol_error(ctx, &out) {
         return Err(ObligationError::Opt(format!(
@@ -279,7 +279,7 @@ fn selfhost_infer_effects_forms(
         ObligationError::Typecheck("missing binding core/cli::infer-effects".to_string())
     })?;
     let out = infer_fn
-        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
         .map_err(|e| ObligationError::Typecheck(e.to_string()))?;
     if let Some(e) = extract_protocol_error(ctx, &out) {
         return Err(ObligationError::Typecheck(format!(

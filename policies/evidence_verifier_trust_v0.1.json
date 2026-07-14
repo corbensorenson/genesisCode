@@ -1,0 +1,86 @@
+{
+  "acceptedBundleProfiles": [
+    "E3"
+  ],
+  "artifactTreePolicy": {
+    "algorithm": "sha256-merkle-v0.1",
+    "manifestDigest": {
+      "sha256": "4bc944afe2d26d05708c5a07c4f5eac389746cdab4170cb607eaf34e4849b865"
+    },
+    "required": true
+  },
+  "compatibility": {
+    "allowedBuildTypes": [
+      "https://genesiscode.dev/buildtypes/roadmap-evidence/v0.1"
+    ],
+    "allowedBuilderIds": [
+      "https://genesiscode.dev/builders/local-roadmap-evidence/v0.1"
+    ],
+    "allowedEnvironmentProfiles": [
+      "darwin-arm64/hermetic-v0.1"
+    ],
+    "allowedVerifiers": [
+      {
+        "artifactDigest": {
+          "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        },
+        "artifactUri": "urn:genesis:verifier:evidence-profile:0.1.0",
+        "name": "genesis-evidence-profile",
+        "version": "0.1.0"
+      }
+    ]
+  },
+  "compatibilityProfile": "genesis-evidence-v0.1+slsa-v1+dsse-v1",
+  "kind": "genesis/evidence-verifier-trust-policy-v0.1",
+  "limits": {
+    "maxArtifactBytes": 1073741824,
+    "maxArtifacts": 4096,
+    "maxAttestations": 8,
+    "maxInputBytes": 16777216,
+    "maxSignaturesPerAttestation": 16,
+    "maxSubjects": 4096
+  },
+  "negativeControlPolicy": {
+    "minimumCount": 1,
+    "requireAllPassed": true
+  },
+  "networkPolicy": {
+    "requiredMode": "deny"
+  },
+  "requiredPredicateTypes": [
+    "https://genesiscode.dev/attestations/evidence/v0.1",
+    "https://slsa.dev/provenance/v1"
+  ],
+  "signaturePolicy": {
+    "predicateRoles": {
+      "https://genesiscode.dev/attestations/evidence/v0.1": "genesis-evidence",
+      "https://slsa.dev/provenance/v1": "slsa-builder"
+    },
+    "thresholdsByProfile": {
+      "E3": 1
+    },
+    "trustedKeys": [
+      {
+        "algorithm": "ed25519",
+        "keyid": "sha256:f76b9b7dfd8dfc5be35b538f36bc318afcfd37a2a7ae2ca6b7cf888ea1585336",
+        "publicKey": "9K8NaZx/E/HLFnxB4zwr3iqG5kwBGfqbH7xEOOJqImE=",
+        "roles": [
+          "genesis-evidence",
+          "slsa-builder"
+        ]
+      }
+    ]
+  },
+  "sourcePolicy": {
+    "allowedDirtyPolicies": [
+      "reject"
+    ],
+    "expectedRepositoryUri": "https://example.invalid/genesisCode.git",
+    "expectedRevision": "0123456789abcdef0123456789abcdef01234567",
+    "expectedTreeDigest": {
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "requireClean": true
+  },
+  "version": "0.1"
+}

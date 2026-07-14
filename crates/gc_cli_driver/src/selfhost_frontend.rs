@@ -135,14 +135,15 @@ pub(super) fn resolved_explicit_selfhost_artifact(cli: &Cli) -> Option<PathBuf> 
 }
 
 fn workspace_descriptor_candidates() -> Vec<PathBuf> {
-    vec![
-        std::env::current_dir()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join("genesis.workspace.toml"),
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../..")
-            .join("genesis.workspace.toml"),
-    ]
+    let mut candidates = Vec::new();
+    let mut dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    loop {
+        candidates.push(dir.join("genesis.workspace.toml"));
+        if !dir.pop() {
+            break;
+        }
+    }
+    candidates
 }
 
 fn resolve_workspace_toolchain_path(workspace_file: &Path, toolchain: &str) -> Option<PathBuf> {
@@ -540,6 +541,7 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
     }
 
     match &cli.cmd {
+        Cmd::Parse { engine, .. } => enforce_selfhost_engine(cli, "parse", *engine),
         Cmd::Fmt { engine, .. } => enforce_selfhost_engine(cli, "fmt", *engine),
         Cmd::Eval { engine, .. } => enforce_selfhost_engine(cli, "eval", *engine),
         Cmd::Explain { engine, .. } => enforce_selfhost_engine(cli, "explain", *engine),
@@ -611,8 +613,9 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::Verify { .. } => Ok(()),
         Cmd::SelfhostDashboard { .. } => Ok(()),
         Cmd::Warm { .. } => Ok(()),
+        Cmd::Mcp { .. } => Ok(()),
         Cmd::CliSchema => Ok(()),
-        Cmd::AgentIndex => Ok(()),
+        Cmd::AgentIndex { .. } => Ok(()),
         Cmd::AgentPlan { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },

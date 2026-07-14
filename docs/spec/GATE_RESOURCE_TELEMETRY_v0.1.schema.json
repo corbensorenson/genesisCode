@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gate-resource-telemetry-v0.1.json",
+  "title": "GenesisCode Gate Resource Telemetry v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "gate", "result", "metrics", "platform"],
+  "properties": {
+    "kind": {"const": "genesis/gate-resource-telemetry-v0.1"},
+    "version": {"const": "0.1"},
+    "gate": {"type": "object", "additionalProperties": false, "required": ["id", "entrypoint", "executionIdentitySha256"], "properties": {"id": {"type": "string", "pattern": "^gate/[a-z0-9-]+$"}, "entrypoint": {"type": "string", "pattern": "^scripts/check_[A-Za-z0-9_]+\\.sh$"}, "executionIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "result": {"type": "object", "additionalProperties": false, "required": ["exitCode", "status"], "properties": {"exitCode": {"type": "integer", "minimum": 0, "maximum": 255}, "status": {"enum": ["passed", "failed", "signaled"]}}},
+    "platform": {"enum": ["darwin", "linux", "windows", "unsupported"]},
+    "metrics": {"type": "object", "additionalProperties": false, "required": ["durationNs", "peakRssBytes", "ioReadBytes", "ioWriteBytes", "generatedDiskDeltaBytes", "cacheHits", "networkAttempts"], "properties": {
+      "durationNs": {"$ref": "#/$defs/durationMetric"},
+      "peakRssBytes": {"$ref": "#/$defs/byteMetric"},
+      "ioReadBytes": {"$ref": "#/$defs/byteMetric"},
+      "ioWriteBytes": {"$ref": "#/$defs/byteMetric"},
+      "generatedDiskDeltaBytes": {"$ref": "#/$defs/signedMetric"},
+      "cacheHits": {"$ref": "#/$defs/eventMetric"},
+      "networkAttempts": {"$ref": "#/$defs/eventMetric"}
+    }}
+  },
+  "$defs": {
+    "durationMetric": {"type": "object", "additionalProperties": false, "required": ["value", "unit", "method", "completeness"], "properties": {"value": {"type": "integer", "minimum": 0}, "unit": {"const": "nanoseconds"}, "method": {"const": "monotonic-parent-clock"}, "completeness": {"const": "exact"}}},
+    "byteMetric": {"type": "object", "additionalProperties": false, "required": ["value", "unit", "method", "completeness"], "properties": {"value": {"type": "integer", "minimum": 0}, "unit": {"const": "bytes"}, "method": {"type": "string", "minLength": 1}, "completeness": {"enum": ["exact", "sampled", "estimated", "unavailable"]}}},
+    "eventMetric": {"type": "object", "additionalProperties": false, "required": ["value", "unit", "method", "completeness"], "properties": {"value": {"type": "integer", "minimum": 0}, "unit": {"const": "count"}, "method": {"const": "explicit-event-channel"}, "completeness": {"const": "instrumented"}}},
+    "signedMetric": {"type": "object", "additionalProperties": false, "required": ["value", "unit", "method", "completeness"], "properties": {"value": {"type": "integer"}, "unit": {"const": "bytes"}, "method": {"type": "string", "minLength": 1}, "completeness": {"enum": ["exact", "sampled", "estimated", "unavailable"]}}}
+  }
+}

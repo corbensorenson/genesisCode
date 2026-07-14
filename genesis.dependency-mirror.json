@@ -1,0 +1,75 @@
+{
+  "authorityFiles": [
+    "Cargo.lock",
+    "Cargo.toml",
+    "package-lock.json",
+    "package.json",
+    "tools/genesis-evidence-verifier/Cargo.lock",
+    "tools/genesis-evidence-verifier/Cargo.toml"
+  ],
+  "cargo": {
+    "maxArchiveBytes": 536870912,
+    "maxExpandedBytes": 2147483648,
+    "maxExpandedFiles": 100000,
+    "registrySource": "registry+https://github.com/rust-lang/crates.io-index",
+    "vendorArchive": {
+      "compression": "gzip",
+      "format": "ustar",
+      "metadataProfile": "genesis/canonical-archive-v0.1"
+    },
+    "workspaces": [
+      {
+        "id": "evidence-verifier",
+        "lockfile": "tools/genesis-evidence-verifier/Cargo.lock",
+        "manifest": "tools/genesis-evidence-verifier/Cargo.toml"
+      },
+      {
+        "id": "root",
+        "lockfile": "Cargo.lock",
+        "manifest": "Cargo.toml"
+      }
+    ]
+  },
+  "fetchPolicy": {
+    "cargoRegistryIndex": "https://github.com/rust-lang/crates.io-index",
+    "mode": "declared-once",
+    "npmRegistryOrigin": "https://registry.npmjs.org/",
+    "redirects": "deny",
+    "requireTls": true
+  },
+  "kind": "genesis/dependency-mirror-policy-v0.1",
+  "mirror": {
+    "manifestKind": "genesis/dependency-mirror-manifest-v0.1",
+    "root": ".genesis/dependency-mirrors",
+    "storeMode": "create-new-sha256"
+  },
+  "networkIsolation": {
+    "darwin": {
+      "backend": "sandbox-exec",
+      "minimumEvidence": "live-loopback-connect-denied"
+    },
+    "linux": {
+      "backend": "network-namespace",
+      "minimumEvidence": "live-loopback-connect-denied"
+    },
+    "windows": {
+      "backend": "unsupported-fail-closed",
+      "minimumEvidence": "none"
+    }
+  },
+  "npm": {
+    "lockfile": "package-lock.json",
+    "manifest": "package.json",
+    "maxPackageBytes": 268435456,
+    "maxTotalBytes": 1073741824,
+    "requiredIntegrity": "sha512"
+  },
+  "offlineChecks": [
+    "cargo-cli-build",
+    "cargo-evidence-verifier-check",
+    "cargo-workspace-check",
+    "npm-clean-install",
+    "npm-playwright-import"
+  ],
+  "version": "0.1"
+}

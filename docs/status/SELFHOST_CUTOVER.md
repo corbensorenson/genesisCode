@@ -1,5 +1,8 @@
 # Selfhost Cutover Dashboard (v0.2)
 
+**Scope: command routing only.** This dashboard does not prove GenesisCode semantic implementation authority, strict Rust-authority retirement, or bootstrap fixpoint closure.
+Semantic authority source: `docs/status/SELFHOST_AUTHORITY_v0.1.md`.
+
 - Artifact hash: `5f9ee4a25a6eb3acd6998b136e03e555f22b0dcda43f2b62240916261c09ee5f`
 - Store artifact: `.genesis/store/5f9ee4a25a6eb3acd6998b136e03e555f22b0dcda43f2b62240916261c09ee5f`
 - Selfhost toolchain artifact configured: `selfhost/toolchain.gc`

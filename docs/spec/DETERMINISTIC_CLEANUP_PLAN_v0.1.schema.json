@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/deterministic-cleanup-plan-v0.1.json",
+  "title": "GenesisCode Deterministic Cleanup Plan v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "profile", "policySha256", "entries", "summary"],
+  "properties": {
+    "kind": {"const": "genesis/deterministic-cleanup-plan-v0.1"},
+    "version": {"const": "0.1"},
+    "profile": {"enum": ["dev-clean", "generated-clean", "mirror-clean", "observations-clean"]},
+    "policySha256": {"$ref": "#/$defs/sha256"},
+    "entries": {"type": "array", "items": {"$ref": "#/$defs/entry"}},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["absentRoots", "deleteRoots", "preserveRoots", "deleteAllocatedBytes", "deleteLogicalBytes"],
+      "properties": {
+        "absentRoots": {"type": "integer", "minimum": 0},
+        "deleteRoots": {"type": "integer", "minimum": 0},
+        "preserveRoots": {"type": "integer", "minimum": 0},
+        "deleteAllocatedBytes": {"type": "integer", "minimum": 0},
+        "deleteLogicalBytes": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "repoPath": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"},
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "allocatedBytes", "class", "entries", "logicalBytes", "markerSha256", "path", "reason", "treeIdentitySha256"],
+      "properties": {
+        "action": {"enum": ["absent", "delete", "preserve"]},
+        "allocatedBytes": {"type": "integer", "minimum": 0},
+        "class": {"enum": ["dependency-mirror", "rebuildable-output", "retained-evidence", "user-authored"]},
+        "entries": {"type": "integer", "minimum": 0},
+        "logicalBytes": {"type": "integer", "minimum": 0},
+        "markerSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "path": {"$ref": "#/$defs/repoPath"},
+        "reason": {"enum": ["class-not-selected", "eligible", "invalid-marker", "missing", "missing-marker", "policy-user-authored", "symlink-root", "tracked-content", "unknown-untracked-root"]},
+        "treeIdentitySha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
+      }
+    }
+  }
+}

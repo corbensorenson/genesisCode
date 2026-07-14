@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schema/capability-evidence-ledger-v0.1.json",
+  "title": "GenesisCode Capability Evidence Ledger v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "audit_date",
+    "platforms",
+    "active_defect_ids",
+    "gap_catalog",
+    "primary_evidence_paths",
+    "claims"
+  ],
+  "properties": {
+    "kind": {
+      "const": "genesis/capability-evidence-ledger-v0.1"
+    },
+    "version": {
+      "const": "0.1"
+    },
+    "audit_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/platform"
+      }
+    },
+    "active_defect_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^P[0-9]+\\.[0-9]+$"
+      }
+    },
+    "gap_catalog": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "primary_evidence_paths": {
+      "$ref": "#/$defs/nonEmptyPathArray"
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    }
+  },
+  "$defs": {
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "tier"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tier": {
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ]
+        }
+      }
+    },
+    "maturity": {
+      "type": "string",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    "pathArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "not": {
+          "pattern": "^(?:/|.*(?:^|/)\\.\\.(?:/|$))"
+        }
+      }
+    },
+    "nonEmptyPathArray": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/pathArray"
+        },
+        {
+          "minItems": 1
+        }
+      ]
+    },
+    "evidenceIdArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^E[1-4]:[a-z0-9][a-z0-9._/-]*$"
+      }
+    },
+    "gapIdArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?:P[0-9]+\\.[0-9]+|R[0-9]+\\.[0-9]+(?:\\.[a-z])?|F[0-9]+(?:\\.[a-z])?)$"
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category",
+        "owner",
+        "maturity",
+        "maturity_by_platform",
+        "selfhost_level",
+        "spec_paths",
+        "implementation_paths",
+        "host_binding_paths",
+        "check_paths",
+        "evidence_ids",
+        "immutable_evidence_ids",
+        "gap_ids",
+        "limitations"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CAP-[A-Z0-9]+(?:-[A-Z0-9]+)*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity"
+        },
+        "maturity_by_platform": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/maturity"
+          }
+        },
+        "selfhost_level": {
+          "type": "string",
+          "enum": [
+            "N/A",
+            "H0",
+            "H1",
+            "H2",
+            "H3",
+            "H4"
+          ]
+        },
+        "spec_paths": {
+          "$ref": "#/$defs/nonEmptyPathArray"
+        },
+        "implementation_paths": {
+          "$ref": "#/$defs/nonEmptyPathArray"
+        },
+        "host_binding_paths": {
+          "$ref": "#/$defs/pathArray"
+        },
+        "check_paths": {
+          "$ref": "#/$defs/nonEmptyPathArray"
+        },
+        "evidence_ids": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/evidenceIdArray"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        },
+        "immutable_evidence_ids": {
+          "$ref": "#/$defs/evidenceIdArray"
+        },
+        "gap_ids": {
+          "$ref": "#/$defs/gapIdArray"
+        },
+        "limitations": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

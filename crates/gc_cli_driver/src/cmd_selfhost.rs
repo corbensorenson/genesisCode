@@ -136,6 +136,9 @@ pub(super) fn cmd_selfhost_dashboard(
         let mut lines = vec![
             "# Selfhost Cutover Dashboard (v0.2)".to_string(),
             "".to_string(),
+            "**Scope: command routing only.** This dashboard does not prove GenesisCode semantic implementation authority, strict Rust-authority retirement, or bootstrap fixpoint closure.".to_string(),
+            "Semantic authority source: `docs/status/SELFHOST_AUTHORITY_v0.1.md`.".to_string(),
+            "".to_string(),
             format!("- Artifact hash: `{artifact_hash}`"),
             format!("- Store artifact: `{}`", artifact_path_fs.display()),
             format!(

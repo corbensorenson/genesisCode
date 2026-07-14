@@ -14,12 +14,18 @@ fn editor_clipboard_capability_roundtrip_is_supported_and_replayable() {
     let pol = &fixture.policy;
     let r1 = run(&mut ctx1, pol, prog1, h, "gc_effects-test".to_string()).expect("run");
     match &r1.value {
-        Value::Data(Term::Map(m)) => {
-            assert_eq!(
-                m.get(&TermOrdKey(Term::symbol(":ok"))),
-                Some(&Term::Bool(true))
-            );
-        }
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(m) => {
+                assert_eq!(
+                    m.get(&TermOrdKey(Term::symbol(":ok"))),
+                    Some(&Term::Bool(true))
+                );
+            }
+            _ => panic!(
+                "expected clipboard map response, got {}",
+                Value::Data(t.clone()).debug_repr()
+            ),
+        },
         other => panic!(
             "expected clipboard map response, got {}",
             other.debug_repr()
@@ -374,13 +380,16 @@ allow = [
 
     let has_backend = |v: &Value| match v {
         Value::Map(m) => matches!(
-            m.get(&TermOrdKey(Term::symbol(":backend"))),
-            Some(Value::Data(Term::Str(s))) if s == "first-party-runtime"
-        ),
-        Value::Data(Term::Map(m)) => matches!(
-            m.get(&TermOrdKey(Term::symbol(":backend"))),
+            m.get(&TermOrdKey(Term::symbol(":backend"))).and_then(Value::as_data),
             Some(Term::Str(s)) if s == "first-party-runtime"
         ),
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(m) => matches!(
+                m.get(&TermOrdKey(Term::symbol(":backend"))),
+                Some(Term::Str(s)) if s == "first-party-runtime"
+            ),
+            _ => false,
+        },
         _ => false,
     };
 
@@ -477,7 +486,7 @@ gpu_backend_policy = "allow-fallback"
     let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
     let out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
-    let Value::Data(Term::Map(map)) = &out.value else {
+    let Some(Term::Map(map)) = out.value.as_data() else {
         panic!(
             "expected map response for fallback submit, got {}",
             out.value.debug_repr()
@@ -572,7 +581,10 @@ gpu_backend = "device-runtime"
         ":read-buffer",
         ":destroy-buffer",
     ] {
-        let Some(Value::Data(Term::Map(entry))) = top.get(&TermOrdKey(Term::symbol(key))) else {
+        let Some(Term::Map(entry)) = top
+            .get(&TermOrdKey(Term::symbol(key)))
+            .and_then(Value::as_data)
+        else {
             panic!("missing map entry {key}");
         };
         assert_eq!(
@@ -702,7 +714,10 @@ gpu_backend_policy = "allow-fallback"
         ":read-buffer",
         ":destroy-buffer",
     ] {
-        let Some(Value::Data(Term::Map(entry))) = top.get(&TermOrdKey(Term::symbol(key))) else {
+        let Some(Term::Map(entry)) = top
+            .get(&TermOrdKey(Term::symbol(key)))
+            .and_then(Value::as_data)
+        else {
             panic!("missing map entry {key}");
         };
         assert_eq!(
@@ -758,13 +773,16 @@ allow = [
 
     let has_backend = |v: &Value| match v {
         Value::Map(m) => matches!(
-            m.get(&TermOrdKey(Term::symbol(":backend"))),
-            Some(Value::Data(Term::Str(s))) if s == "first-party-runtime"
-        ),
-        Value::Data(Term::Map(m)) => matches!(
-            m.get(&TermOrdKey(Term::symbol(":backend"))),
+            m.get(&TermOrdKey(Term::symbol(":backend"))).and_then(Value::as_data),
             Some(Term::Str(s)) if s == "first-party-runtime"
         ),
+        Value::Data(t) => match t.as_ref() {
+            Term::Map(m) => matches!(
+                m.get(&TermOrdKey(Term::symbol(":backend"))),
+                Some(Term::Str(s)) if s == "first-party-runtime"
+            ),
+            _ => false,
+        },
         _ => false,
     };
 
@@ -806,45 +824,49 @@ allow = [
         );
     };
 
-    let Some(Value::Data(Term::Map(create_buffer))) =
-        buffer_top.get(&TermOrdKey(Term::symbol(":create-buffer")))
+    let Some(Term::Map(create_buffer)) = buffer_top
+        .get(&TermOrdKey(Term::symbol(":create-buffer")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :create-buffer map response");
     };
-    assert!(has_backend(&Value::Data(Term::Map(create_buffer.clone()))));
+    assert!(has_backend(&Value::data(Term::Map(create_buffer.clone()))));
     assert_eq!(
         create_buffer.get(&TermOrdKey(Term::symbol(":kind"))),
         Some(&Term::symbol(":buffer"))
     );
 
-    let Some(Value::Data(Term::Map(write_buffer))) =
-        buffer_top.get(&TermOrdKey(Term::symbol(":write-buffer")))
+    let Some(Term::Map(write_buffer)) = buffer_top
+        .get(&TermOrdKey(Term::symbol(":write-buffer")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :write-buffer map response");
     };
-    assert!(has_backend(&Value::Data(Term::Map(write_buffer.clone()))));
+    assert!(has_backend(&Value::data(Term::Map(write_buffer.clone()))));
     assert_eq!(
         write_buffer.get(&TermOrdKey(Term::symbol(":written"))),
         Some(&Term::Int(3_i64.into()))
     );
 
-    let Some(Value::Data(Term::Map(read_buffer))) =
-        buffer_top.get(&TermOrdKey(Term::symbol(":read-buffer")))
+    let Some(Term::Map(read_buffer)) = buffer_top
+        .get(&TermOrdKey(Term::symbol(":read-buffer")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :read-buffer map response");
     };
-    assert!(has_backend(&Value::Data(Term::Map(read_buffer.clone()))));
+    assert!(has_backend(&Value::data(Term::Map(read_buffer.clone()))));
     let Some(Term::Bytes(read_bytes)) = read_buffer.get(&TermOrdKey(Term::symbol(":data"))) else {
         panic!("expected :read-buffer :data bytes");
     };
     assert_eq!(read_bytes.as_ref(), &[0_u8, 0, 1, 2, 3, 0, 0, 0]);
 
-    let Some(Value::Data(Term::Map(destroy_buffer))) =
-        buffer_top.get(&TermOrdKey(Term::symbol(":destroy-buffer")))
+    let Some(Term::Map(destroy_buffer)) = buffer_top
+        .get(&TermOrdKey(Term::symbol(":destroy-buffer")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :destroy-buffer map response");
     };
-    assert!(has_backend(&Value::Data(Term::Map(destroy_buffer.clone()))));
+    assert!(has_backend(&Value::data(Term::Map(destroy_buffer.clone()))));
     assert_eq!(
         destroy_buffer.get(&TermOrdKey(Term::symbol(":destroyed"))),
         Some(&Term::Bool(true))
@@ -876,12 +898,13 @@ allow = [
         );
     };
 
-    let Some(Value::Data(Term::Map(create_kernel))) =
-        kernel_top.get(&TermOrdKey(Term::symbol(":create-kernel")))
+    let Some(Term::Map(create_kernel)) = kernel_top
+        .get(&TermOrdKey(Term::symbol(":create-kernel")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :create-kernel map response");
     };
-    assert!(has_backend(&Value::Data(Term::Map(create_kernel.clone()))));
+    assert!(has_backend(&Value::data(Term::Map(create_kernel.clone()))));
     assert_eq!(
         create_kernel.get(&TermOrdKey(Term::symbol(":kind"))),
         Some(&Term::Str("compute-pipeline".to_string()))
@@ -895,12 +918,13 @@ allow = [
         "first-party kernel creation must keep structured descriptor metadata"
     );
 
-    let Some(Value::Data(Term::Map(destroy_kernel))) =
-        kernel_top.get(&TermOrdKey(Term::symbol(":destroy-kernel")))
+    let Some(Term::Map(destroy_kernel)) = kernel_top
+        .get(&TermOrdKey(Term::symbol(":destroy-kernel")))
+        .and_then(Value::as_data)
     else {
         panic!("expected :destroy-kernel map response");
     };
-    assert!(has_backend(&Value::Data(Term::Map(destroy_kernel.clone()))));
+    assert!(has_backend(&Value::data(Term::Map(destroy_kernel.clone()))));
     assert_eq!(
         destroy_kernel.get(&TermOrdKey(Term::symbol(":destroyed"))),
         Some(&Term::Bool(true))
@@ -932,7 +956,7 @@ gpu_backend_policy = "require-device"
     let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
     let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
-    let Value::Data(Term::Map(entry)) = &run_out.value else {
+    let Some(Term::Map(entry)) = run_out.value.as_data() else {
         panic!(
             "expected create-buffer map for device-runtime-full test, got {}",
             run_out.value.debug_repr()
@@ -1044,7 +1068,7 @@ gpu_backend_policy = "require-device"
     let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
     let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
-    let Value::Data(Term::Map(submit)) = &run_out.value else {
+    let Some(Term::Map(submit)) = run_out.value.as_data() else {
         panic!(
             "expected submit map in interop response, got {}",
             run_out.value.debug_repr()
@@ -1178,7 +1202,7 @@ gpu_backend_policy = "require-device"
     let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
     let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
-    let Value::Data(Term::Map(submit)) = &run_out.value else {
+    let Some(Term::Map(submit)) = run_out.value.as_data() else {
         panic!(
             "expected submit map in gfx interop response, got {}",
             run_out.value.debug_repr()

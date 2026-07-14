@@ -11,8 +11,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "selfhost-default-profile-guard" \
-  ".genesis/build/cargo" \
-  "GENESIS_SELFHOST_DEFAULT_PROFILE_GUARD_CARGO_TARGET_DIR"
+  root-host
 
 DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
 GEN="${GEN:-$DEFAULT_DEBUG_DIR/genesis}"

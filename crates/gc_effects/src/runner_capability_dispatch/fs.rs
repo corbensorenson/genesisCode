@@ -32,7 +32,7 @@ pub(super) fn capability_io_fs_stat(
         Err(e) => {
             return Ok(Value::Sealed {
                 token: error_tok,
-                payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+                payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
             });
         }
     };
@@ -73,7 +73,7 @@ pub(super) fn capability_io_fs_stat(
             out.insert(TermOrdKey(Term::symbol(":readonly")), Term::Bool(false));
         }
     }
-    Ok(Value::Data(Term::Map(out)))
+    Ok(Value::data(Term::Map(out)))
 }
 
 pub(super) fn capability_io_fs_list(
@@ -90,7 +90,7 @@ pub(super) fn capability_io_fs_list(
         Err(e) => {
             return Ok(Value::Sealed {
                 token: error_tok,
-                payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+                payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
             });
         }
     };
@@ -102,7 +102,7 @@ pub(super) fn capability_io_fs_list(
             Err(e) => {
                 return Ok(Value::Sealed {
                     token: error_tok,
-                    payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+                    payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
                 });
             }
         };
@@ -112,7 +112,7 @@ pub(super) fn capability_io_fs_list(
             Err(e) => {
                 return Ok(Value::Sealed {
                     token: error_tok,
-                    payload: Box::new(Value::Data(io_error_payload(
+                    payload: Box::new(Value::data(io_error_payload(
                         op,
                         &base_dir,
                         &entry_path,
@@ -139,7 +139,7 @@ pub(super) fn capability_io_fs_list(
         entries.push(Term::Map(row));
     }
     entries.sort_by_key(print_term);
-    Ok(Value::Data(Term::Vector(entries)))
+    Ok(Value::data(Term::Vector(entries)))
 }
 
 pub(super) fn capability_io_fs_mkdir(
@@ -158,10 +158,10 @@ pub(super) fn capability_io_fs_mkdir(
         std::fs::create_dir(&path)
     };
     match result {
-        Ok(()) => Ok(Value::Data(Term::Nil)),
+        Ok(()) => Ok(Value::data(Term::Nil)),
         Err(e) => Ok(Value::Sealed {
             token: error_tok,
-            payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+            payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
         }),
     }
 }
@@ -182,12 +182,12 @@ pub(super) fn capability_io_fs_remove(
         Err(e) => {
             return Ok(Value::Sealed {
                 token: error_tok,
-                payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+                payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
             });
         }
     };
     let Some(md) = md else {
-        return Ok(Value::Data(Term::Nil));
+        return Ok(Value::data(Term::Nil));
     };
     let file_type = md.file_type();
     let result = if file_type.is_dir() && !file_type.is_symlink() {
@@ -200,10 +200,10 @@ pub(super) fn capability_io_fs_remove(
         std::fs::remove_file(&path)
     };
     match result {
-        Ok(()) => Ok(Value::Data(Term::Nil)),
+        Ok(()) => Ok(Value::data(Term::Nil)),
         Err(e) => Ok(Value::Sealed {
             token: error_tok,
-            payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
+            payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
         }),
     }
 }
@@ -235,7 +235,7 @@ pub(super) fn capability_io_fs_rename(
     let result = if overwrite && to.exists() {
         let md = std::fs::symlink_metadata(&to).map_err(|e| Value::Sealed {
             token: error_tok,
-            payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &to, &e))),
+            payload: Box::new(Value::data(io_error_payload(op, &base_dir, &to, &e))),
         });
         match md {
             Ok(md) => {
@@ -247,7 +247,7 @@ pub(super) fn capability_io_fs_rename(
                 if let Err(e) = remove_result {
                     return Ok(Value::Sealed {
                         token: error_tok,
-                        payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &to, &e))),
+                        payload: Box::new(Value::data(io_error_payload(op, &base_dir, &to, &e))),
                     });
                 }
                 std::fs::rename(&from, &to)
@@ -258,10 +258,10 @@ pub(super) fn capability_io_fs_rename(
         std::fs::rename(&from, &to)
     };
     match result {
-        Ok(()) => Ok(Value::Data(Term::Nil)),
+        Ok(()) => Ok(Value::data(Term::Nil)),
         Err(e) => Ok(Value::Sealed {
             token: error_tok,
-            payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &from, &e))),
+            payload: Box::new(Value::data(io_error_payload(op, &base_dir, &from, &e))),
         }),
     }
 }

@@ -194,7 +194,7 @@ pub(crate) fn obligation_coverage(
         )?;
 
         let value = test_body
-            .apply(&mut ctx, Value::Data(Term::Nil))
+            .apply(&mut ctx, Value::data(Term::Nil))
             .map_err(|e| ObligationError::Test(format!("test apply failed: {e}")))?;
 
         match (value, &t.effect_log) {

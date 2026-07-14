@@ -5,17 +5,10 @@ use gc_kernel::{Apply, EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
 fn value_to_term_vec(v: &Value) -> Vec<Term> {
-    match v {
-        Value::Data(Term::Vector(xs)) => xs.clone(),
-        Value::Vector(xs) => xs
-            .iter()
-            .map(|x| match x {
-                Value::Data(t) => t.clone(),
-                _ => panic!("expected vector of datum terms, got {}", v.debug_repr()),
-            })
-            .collect(),
-        _ => panic!("expected vector value, got {}", v.debug_repr()),
-    }
+    let Some(Term::Vector(xs)) = v.to_plain_term() else {
+        panic!("expected vector value, got {}", v.debug_repr());
+    };
+    xs
 }
 
 #[test]
@@ -49,7 +42,7 @@ fn selfhost_canonicalize_module_matches_rust() {
 
         let got_v = canon_mod_fn
             .clone()
-            .apply(&mut ctx, Value::Data(Term::Vector(raw)))
+            .apply(&mut ctx, Value::data(Term::Vector(raw)))
             .unwrap();
 
         // If the self-host pass returns an ERROR, surface it as a hard failure.
@@ -68,7 +61,7 @@ fn selfhost_canonicalize_module_matches_rust() {
         // Idempotence: canonicalizing already-canonical code is a no-op.
         let got2_v = canon_mod_fn
             .clone()
-            .apply(&mut ctx, Value::Data(Term::Vector(got_forms.clone())))
+            .apply(&mut ctx, Value::data(Term::Vector(got_forms.clone())))
             .unwrap();
         let got2_forms = value_to_term_vec(&got2_v);
         assert_eq!(

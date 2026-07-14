@@ -18,16 +18,28 @@ This profile is compute-product focused and is used to ensure:
 
 ## Entry Point
 
-- Script: `scripts/check_gpu_compute_runtime_profile.sh`
-- Primary artifact: `.genesis/perf/gpu_compute_runtime_profile.json`
-- Guard artifact: `.genesis/perf/gpu_compute_runtime_profile_guard.json`
+- Read-only check: `scripts/check_gpu_compute_runtime_profile.sh`
+- Explicit producer: `scripts/update_gpu_compute_runtime_profile_report.sh`
+- Renderer with caller-owned outputs: `scripts/render_gpu_compute_runtime_profile_report.sh`
+- Optional primary artifact: `.genesis/perf/gpu_compute_runtime_profile.json`
+- Optional guard artifact: `.genesis/perf/gpu_compute_runtime_profile_guard.json`
+- Optional timing evidence: `.genesis/perf/gpu_compute_runtime_profile_runtime_report.json`
+  and `.genesis/perf/gpu_compute_runtime_profile_runtime_history.jsonl`
+
+The check always renders into a private temporary directory and treats retained
+history as input-only. Output environment overrides are accepted only by the
+explicit producer. CI lanes that upload E0 observations invoke the producer;
+ordinary validation and health profiles invoke the read-only check.
 
 ## Runtime Invocation
 
 The profile executes `gc_runtime_bench` in compute-only mode:
 
 ```bash
-cargo run -p gc_runtime_bench -- --mode compute-only --out .genesis/perf/gpu_compute_runtime_profile.json
+bash scripts/check_gpu_compute_runtime_profile.sh
+
+# Retain a local E0 report set explicitly.
+bash scripts/update_gpu_compute_runtime_profile_report.sh
 ```
 
 Compute-only mode requirements:
@@ -83,8 +95,12 @@ Per-op `caps.toml` knobs for first-party runtime lanes:
 
 CI enforces this profile in standard/full lanes before strict selfhost suites:
 
-- `.github/workflows/ci.yml` runs `bash scripts/check_gpu_compute_runtime_profile.sh`.
-- `.github/workflows/ci.yml` also runs `bash scripts/check_gpu_compute_device_conformance.sh`
+- `.github/workflows/ci.yml` runs
+  `bash scripts/update_gpu_compute_runtime_profile_report.sh` because that lane uploads the
+  resulting E0 metrics, guard, report, and history files. Read-only aggregate health profiles
+  use `bash scripts/check_gpu_compute_runtime_profile.sh`.
+- `.github/workflows/ci.yml` also runs
+  `bash scripts/update_gpu_compute_device_conformance_report.sh`
   in two independent lanes:
   - `gpu_device_microbench` (`self-hosted, linux, x64, gpu`)
   - `gpu_device_microbench_deterministic` (`ubuntu-latest` deterministic runtime command)
@@ -96,13 +112,18 @@ CI enforces this profile in standard/full lanes before strict selfhost suites:
   - `gpu_device_microbench_intel_windows`
   - `gpu_device_microbench_apple_macos`
   Each lane emits adapter-suffixed retention artifacts plus lane-scoped summary reports with
-  `lane_id`, `gpu_vendor`, and `os_family`.
-- `.github/workflows/ci.yml` runs `bash scripts/check_gpu_device_conformance_lane_parity.sh`
-  in `gpu_device_conformance_release_gate` and fails release-profile runs when lane contracts
-  are unavailable or mismatched.
-- `.github/workflows/ci.yml` runs `bash scripts/check_gpu_device_conformance_matrix.sh`
-  in `gpu_device_conformance_matrix_gate` to enforce representative NVIDIA/AMD/Intel +
-  Linux/macOS/Windows lane coverage against `policies/perf/gpu_device_conformance_matrix.toml`.
+  `lane_id`, `gpu_vendor`, and `os_family`. Each summary preserves the stable four-key
+  `artifacts` contract and carries runtime report/history paths in the separate,
+  backward-compatible `timing_artifacts` map.
+- `.github/workflows/ci.yml` runs
+  `bash scripts/update_gpu_device_conformance_lane_parity_report.sh` in
+  `gpu_device_conformance_release_gate`; it validates downloaded lane contracts and retains
+  the uploaded parity E0 artifact. Local validation uses the paired read-only check.
+- `.github/workflows/ci.yml` runs
+  `bash scripts/update_gpu_device_conformance_matrix_report.sh` in
+  `gpu_device_conformance_matrix_gate` to enforce representative NVIDIA/AMD/Intel +
+  Linux/macOS/Windows lane coverage and retain the matrix E0 artifact. Local validation uses
+  `scripts/check_gpu_device_conformance_matrix.sh`.
 - `scripts/check_upgrade_plan_health.sh` includes the same guard for prepush/release profiles.
   `release-full` requires device conformance by default; `dev-fast`/`prepush-standard`
   opt in with `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.

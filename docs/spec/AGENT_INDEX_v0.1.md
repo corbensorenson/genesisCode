@@ -8,6 +8,8 @@ Provide a single machine-oriented planning artifact for AI agents that combines:
 
 - CLI command schema (`genesis/cli-schema-v0.1`)
 - Host/prelude capability indices
+- Frozen language-symbol index metadata and exact bounded lookup
+- Closed diagnostic-catalog metadata and exact bounded lookup
 - Default obligation set
 - Reference workflow pointers
 
@@ -15,6 +17,8 @@ Provide a single machine-oriented planning artifact for AI agents that combines:
 
 ```bash
 genesis --json agent-index
+genesis --json agent-index --symbol <exact-name>
+genesis --json agent-index --diagnostic <exact-code>
 ```
 
 ## Envelope
@@ -54,10 +58,34 @@ genesis --json agent-index
   - `unresolved_required_symbols`: vector<string>
   - `duplicate_symbol_owners`: vector<{symbol, module_paths[]}>
   - `symbols`: vector<{symbol, module_path, module_intent|null, required}>
+- `language_symbol_index`:
+  - `path`: `"docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"`
+  - `kind`: `"genesis/gc-agent-symbol-index-v0.3"`
+  - `profile_id`, `profile_identity_sha256`, `index_identity_sha256`
+  - `symbol_count`: exact count of unique frozen profile symbols
+  - `unsupported_behavior_count`, `unsupported_behavior_identity_sha256`
+  - `unsupported_classes`: the five mandatory fail-closed profile classes
+  - `lookup`: case-sensitive, normalization-free, single-result lookup contract
+- `diagnostic_catalog`:
+  - `path`: `"docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json"`
+  - `schema`, `version`, `identity_sha256`, and exact `diagnostic_count`
+  - `lookup`: case-sensitive, normalization-free, single-result lookup contract
 - `obligation_defaults`: vector of obligation symbols
 - `reference_workflows`: vector of workflow descriptors
 - `missing_sources`: vector of unresolved source paths
 - `docs`: canonical doc pointer map
+  - includes `gc_agent_profile = "docs/spec/GC_AGENT_PROFILE_v0.3.json"` as the frozen
+    language, semantic, package, error, resource, compatibility, and unsupported-behavior
+    profile that an authoring agent must negotiate before emitting source.
+  - includes `gc_agent_core_card = "docs/spec/GC_AGENT_CORE_CARD_v0.3.md"` as the generated
+    <=4,000-byte retrieval card whose symbols and examples are parser-checked against the profile.
+  - includes `gc_agent_task_cards = "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"` as the
+    embedded seven-card registry used by deterministic intent selection.
+  - includes `gc_agent_symbol_index = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"` as the
+    content-addressed exact-lookup authority for signatures, effects, capabilities,
+    contracts, examples, diagnostics, deprecations, and source links.
+  - includes `diagnostic_catalog = "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json"` as the
+    closed, content-addressed authority for versioned diagnostic routes and safe repair metadata.
   - includes `agent_authoring_bundle = "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md"` as the
     normative retrieval entrypoint for common authoring workflows.
   - includes `write_genesiscode_skill_pack = "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md"`
@@ -70,6 +98,12 @@ genesis --json agent-index
 - Output must be deterministic for identical repository state.
 - `reference_workflows` are sorted lexicographically by workflow directory name.
 - Missing optional indices are represented via `loaded=false` and `index=null` rather than hard failure.
+- The complete language-symbol array is not embedded in the unfiltered planning response.
+  `--symbol` performs an exact case-sensitive lookup and returns at most one self-contained
+  `genesis/agent-symbol-v0.3` record; unknown, padded, or case-drifted names fail closed.
+- The complete diagnostic array is not embedded in the unfiltered planning response.
+  `--diagnostic` returns at most one self-contained `genesis/diagnostic-v0.1` record;
+  unknown, padded, or case-drifted codes fail closed.
 
 ## Agent Plan v0.1
 
@@ -109,6 +143,10 @@ Expected JSON fields:
   - `required_ops`
   - `policy` precheck results (`ok`, `denied_ops`, optional `error`)
   - `plan_hash_blake3`
+  - `context_cards`: selected capability, package, patch, replay, testing, deployment,
+    and/or troubleshooting cards with reasons, complete content, per-card source hashes,
+    aggregate token upper bound, registry identity, and selection identity. This field is
+    included in `plan_hash_blake3`.
 - `execution`:
   - `kind = genesis/agent-workflow-dag-v0.1`
   - deterministic step list and expected `effect_log_op`

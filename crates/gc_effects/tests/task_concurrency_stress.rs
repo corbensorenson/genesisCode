@@ -106,7 +106,7 @@ fn task_concurrency_stress_matrix_is_replay_deterministic_under_budget() {
     for _ in 0..iterations {
         let (run_hash, replay_hash, cancel_value) = run_and_replay_hash(cancel_src, cancel_policy);
         assert_eq!(run_hash, replay_hash, "cancel-path run/replay mismatch");
-        let Value::Data(Term::Map(cancel_map)) = cancel_value else {
+        let Some(Term::Map(cancel_map)) = cancel_value.as_data() else {
             panic!("cancel-path expected map");
         };
         assert_eq!(
@@ -120,12 +120,18 @@ fn task_concurrency_stress_matrix_is_replay_deterministic_under_budget() {
         assert_eq!(run_hash, replay_hash, "channel-path run/replay mismatch");
         let read_entry_map = |k: &str| -> Option<&std::collections::BTreeMap<TermOrdKey, Term>> {
             match &channel_value {
-                Value::Data(Term::Map(root)) => match root.get(&TermOrdKey(Term::symbol(k))) {
-                    Some(Term::Map(entry)) => Some(entry),
+                Value::Data(t) => match t.as_ref() {
+                    Term::Map(root) => match root.get(&TermOrdKey(Term::symbol(k))) {
+                        Some(Term::Map(entry)) => Some(entry),
+                        _ => None,
+                    },
                     _ => None,
                 },
                 Value::Map(root) => match root.get(&TermOrdKey(Term::symbol(k))) {
-                    Some(Value::Data(Term::Map(entry))) => Some(entry),
+                    Some(Value::Data(t)) => match t.as_ref() {
+                        Term::Map(entry) => Some(entry),
+                        _ => None,
+                    },
                     _ => None,
                 },
                 _ => None,
@@ -156,10 +162,14 @@ fn task_concurrency_stress_matrix_is_replay_deterministic_under_budget() {
 
         let (run_hash, replay_hash, reduce_value) = run_and_replay_hash(reduce_src, reduce_policy);
         assert_eq!(run_hash, replay_hash, "parallel-reduce run/replay mismatch");
-        let Value::Data(Term::Int(sum)) = reduce_value else {
+        let Some(Term::Int(sum)) = reduce_value.to_plain_term() else {
             panic!("parallel-reduce expected int");
         };
-        assert_eq!(sum, 272.into(), "parallel-reduce result mismatch");
+        assert_eq!(
+            sum,
+            num_bigint::BigInt::from(272),
+            "parallel-reduce result mismatch"
+        );
     }
 
     let elapsed_ms = started.elapsed().as_millis();

@@ -83,7 +83,7 @@ fn execute_task_eval(
             if cancel_flag.load(Ordering::Acquire) {
                 return TaskOutcome::Cancelled;
             }
-            current = match current.apply(&mut ctx, Value::Data(x)) {
+            current = match current.apply(&mut ctx, Value::data(x)) {
                 Ok(v) => v,
                 Err(e) => {
                     return TaskOutcome::Failed(task_program_error(
@@ -94,7 +94,7 @@ fn execute_task_eval(
             };
         }
     } else if let Some(arg_t) = arg {
-        current = match current.apply(&mut ctx, Value::Data(arg_t)) {
+        current = match current.apply(&mut ctx, Value::data(arg_t)) {
             Ok(v) => v,
             Err(e) => {
                 return TaskOutcome::Failed(task_program_error(
@@ -158,26 +158,13 @@ fn resolve_task_value(
 
 fn value_to_term(v: &Value) -> Result<Term, String> {
     match v {
-        Value::Data(t) => Ok(t.clone()),
-        Value::Vector(xs) => {
-            let mut out = Vec::with_capacity(xs.len());
-            for x in xs {
-                out.push(value_to_term(x)?);
-            }
-            Ok(Term::Vector(out))
-        }
-        Value::Map(m) => {
-            let mut out = BTreeMap::new();
-            for (k, vv) in m {
-                out.insert(TermOrdKey(k.0.clone()), value_to_term(vv)?);
-            }
-            Ok(Term::Map(out))
-        }
         Value::Sealed { payload, .. } => value_to_term(payload.as_ref()),
-        _ => Err(format!(
-            "task evaluation returned non-datum value: {}",
-            v.debug_repr()
-        )),
+        _ => v.to_plain_term().ok_or_else(|| {
+            format!(
+                "task evaluation returned non-datum value: {}",
+                v.debug_repr()
+            )
+        }),
     }
 }
 

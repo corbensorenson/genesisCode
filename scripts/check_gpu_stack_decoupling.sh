@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 COMPUTE_BUNDLE="docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md"
 GFX_BUNDLE="docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md"
 COMBINED_BUNDLE="docs/spec/GPU_GFX_BUNDLE_v0.1.md"
-HEALTH_SCRIPT="scripts/check_upgrade_plan_health.sh"
+HEALTH_SCRIPT="scripts/render_upgrade_plan_health_report.sh"
 COMPUTE_LANE_SCRIPT="scripts/check_gpu_compute_runtime_profile.sh"
 GFX_LANE_SCRIPT="scripts/check_gfx_runtime_profile.sh"
 VERIFY_RUNTIME="${GENESIS_GPU_STACK_DECOUPLING_VERIFY_RUNTIME:-0}"

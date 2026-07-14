@@ -169,7 +169,7 @@ pub(super) fn semantic_refactor_plan_conflicts_from_contract(
             )
         })?;
     let out = contract
-        .apply(&mut ctx, Value::Data(payload))
+        .apply(&mut ctx, Value::data(payload))
         .map_err(|e| {
             cli_err(
                 EX_EVAL,
@@ -231,7 +231,7 @@ pub(super) fn semantic_refactor_target_conflicts_from_contract(
             )
         })?;
     let out = contract
-        .apply(&mut ctx, Value::Data(payload))
+        .apply(&mut ctx, Value::data(payload))
         .map_err(|e| {
             cli_err(
                 EX_EVAL,
@@ -288,7 +288,7 @@ pub(super) fn semantic_refactor_validate_from_contract(
             )
         })?;
     let out = contract
-        .apply(&mut ctx, Value::Data(payload))
+        .apply(&mut ctx, Value::data(payload))
         .map_err(|e| {
             cli_err(
                 EX_EVAL,

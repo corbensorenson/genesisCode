@@ -6,6 +6,9 @@ use thiserror::Error;
 
 use crate::schema::{SchemaError, validate_hex_hash};
 
+pub const VCS_PATCH_PROFILE_ID: &str = "genesis/vcs-patch/v1";
+pub const VCS_PATCH_VERSION: i64 = 1;
+
 #[derive(Debug, Error)]
 pub enum PatchError {
     #[error("{0}")]
@@ -120,7 +123,7 @@ impl Patch {
             return Err(SchemaError::Bad(format!("patch: wrong :type {ty}")));
         }
         let v = req_i64(m, ":v", "patch")?;
-        if v != 1 {
+        if v != VCS_PATCH_VERSION {
             return Err(SchemaError::Bad(format!("patch: unsupported :v {v}")));
         }
         let ops_t = m

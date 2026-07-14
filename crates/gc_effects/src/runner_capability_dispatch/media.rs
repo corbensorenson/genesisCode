@@ -114,7 +114,7 @@ fn media_hash_response(op: &str, data: &[u8], kind: Option<&str>, algorithm: &st
             Term::Str(kind.to_string()),
         );
     }
-    Value::Data(Term::Map(response))
+    Value::data(Term::Map(response))
 }
 
 pub(super) fn capability_core_media_asset_hash(
@@ -396,7 +396,7 @@ pub(super) fn capability_core_media_image_transcode(
         TermOrdKey(Term::symbol(":data")),
         Term::Bytes(std::mem::take(&mut output).into()),
     );
-    Ok(Value::Data(Term::Map(response)))
+    Ok(Value::data(Term::Map(response)))
 }
 
 pub(super) fn capability_core_media_audio_transcode(
@@ -645,5 +645,5 @@ pub(super) fn capability_core_media_audio_transcode(
         TermOrdKey(Term::symbol(":data")),
         Term::Bytes(output.into()),
     );
-    Ok(Value::Data(Term::Map(response)))
+    Ok(Value::data(Term::Map(response)))
 }

@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use gc_coreform::{Term, TermOrdKey, print_term};
 
+mod diagnostics;
 mod effect_inference;
 mod infer;
 mod ty;
@@ -10,6 +11,8 @@ use crate::effect_inference::is_core_task_effect_op;
 use crate::infer::{InferSession, infer_module_types};
 use crate::ty::{EffRow, RowTail, Ty, parse_type_term};
 
+pub use crate::diagnostics::TypecheckDiagnostic;
+use crate::diagnostics::module_diagnostics;
 pub use crate::effect_inference::{infer_effects, infer_effects_in_term};
 
 #[derive(Debug, Clone)]
@@ -30,6 +33,7 @@ pub struct TypecheckReport {
     pub ok: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
+    pub diagnostics: Vec<TypecheckDiagnostic>,
     pub modules: Vec<ModuleReport>,
 }
 
@@ -65,6 +69,7 @@ pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
         ok: true,
         errors: Vec::new(),
         warnings: Vec::new(),
+        diagnostics: Vec::new(),
         modules: Vec::new(),
     };
     for m in mods {
@@ -72,6 +77,9 @@ pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
         report.ok &= mr.ok;
         report.errors.extend(mr.errors.iter().cloned());
         report.warnings.extend(mr.warnings.iter().cloned());
+        report
+            .diagnostics
+            .extend(module_diagnostics(&mr.path, &mr.errors, &mr.warnings));
         report.modules.push(mr);
     }
     report
@@ -554,28 +562,6 @@ fn meta_strict_shapes(meta: &Term) -> Result<bool, String> {
             "::meta :strict-shapes must be bool, got {}",
             print_term(other)
         )),
-    }
-}
-
-impl TypecheckReport {
-    pub fn to_term(&self) -> Term {
-        let mut m = BTreeMap::new();
-        m.insert(
-            TermOrdKey(Term::symbol(":kind")),
-            Term::Str("genesis/typecheck-v0.2".to_string()),
-        );
-        m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(self.ok));
-        m.insert(
-            TermOrdKey(Term::symbol(":errors")),
-            Term::Vector(self.errors.iter().cloned().map(Term::Str).collect()),
-        );
-        m.insert(
-            TermOrdKey(Term::symbol(":warnings")),
-            Term::Vector(self.warnings.iter().cloned().map(Term::Str).collect()),
-        );
-        let mods: Vec<Term> = self.modules.iter().map(|x| x.to_term()).collect();
-        m.insert(TermOrdKey(Term::symbol(":modules")), Term::Vector(mods));
-        Term::Map(m)
     }
 }
 

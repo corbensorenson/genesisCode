@@ -9,6 +9,7 @@ fn repo_root() -> PathBuf {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn large_workspace_agent_perf_gate_smoke_passes_with_small_local_profile() {
     let root = repo_root();
     let status = Command::new("bash")

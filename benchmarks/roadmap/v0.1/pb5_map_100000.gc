@@ -1,0 +1,9 @@
+(def bench/map-build-loop
+  (fn (i)
+    (fn (n)
+      (fn (acc)
+        (if ((core/int::eq? i) n)
+          acc
+          (((bench/map-build-loop ((core/int::add i) 1)) n)
+            (((core/map::put acc) i) i)))))))
+(((bench/map-build-loop 0) 100000) {})

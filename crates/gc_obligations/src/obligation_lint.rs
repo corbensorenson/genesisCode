@@ -19,8 +19,8 @@ pub(super) fn obligation_lint(
     let mut autofix_patches: Vec<Term> = Vec::new();
 
     for m in modules {
-        let p = Value::Data(Term::Str(m.entry.path.clone()));
-        let forms = Value::Data(Term::Vector(m.forms.clone()));
+        let p = Value::data(Term::Str(m.entry.path.clone()));
+        let forms = Value::data(Term::Vector(m.forms.clone()));
         let applied = lint_fn
             .clone()
             .apply(&mut ctx, p)

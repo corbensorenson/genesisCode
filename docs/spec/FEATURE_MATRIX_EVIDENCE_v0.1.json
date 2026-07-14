@@ -1,12 +1,36 @@
 {
+  "audit_date": "2026-07-14",
   "entries": [
     {
       "capability": "Pure deterministic kernel separated from effects",
+      "capability_id": "CAP-KERNEL-DETERMINISM",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-kernel-determinism/check-1",
+        "E1:cap-kernel-determinism/check-2"
+      ],
+      "gap_ids": [
+        "R7.2.a"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_kernel/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "kernel-runtime",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SEALS_DISPATCH_REPLAY.md",
         "docs/spec/DETERMINISM.md"
@@ -14,21 +38,68 @@
     },
     {
       "capability": "Canonical CoreForm IR + stable content hash identity",
+      "capability_id": "CAP-COREFORM-IDENTITY",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-coreform-identity/check-1"
+      ],
+      "gap_ids": [
+        "R4.2.a",
+        "R7.2.f"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_coreform/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "coreform",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/COREFORM_CANON_HASH.md"
       ]
     },
     {
       "capability": "Sealed unforgeable `UNHANDLED`/`EFFECT`/`ERROR` protocol",
+      "capability_id": "CAP-SEALED-PROTOCOL",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-sealed-protocol/check-1",
+        "E1:cap-sealed-protocol/check-2"
+      ],
+      "gap_ids": [
+        "R7.2.b"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_kernel/src",
+        "crates/gc_prelude/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "kernel-runtime",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SEALS_DISPATCH_REPLAY.md",
         "docs/spec/DETERMINISM.md"
@@ -36,20 +107,71 @@
     },
     {
       "capability": "Deny-by-default capability policy runtime",
+      "capability_id": "CAP-DENY-DEFAULT-POLICY",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-deny-default-policy/check-1"
+      ],
+      "gap_ids": [
+        "R4.2.d",
+        "R7.3.a"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "effect-runtime",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md"
       ]
     },
     {
       "capability": "Deterministic effect logs + replay checker",
+      "capability_id": "CAP-EFFECT-REPLAY",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-effect-replay/check-1",
+        "E1:cap-effect-replay/check-2"
+      ],
+      "gap_ids": [
+        "P0.1",
+        "R7.2.c"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "effect-runtime",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SEALS_DISPATCH_REPLAY.md",
         "docs/spec/DETERMINISM.md"
@@ -57,20 +179,69 @@
     },
     {
       "capability": "Built-in semantic VCS (`commit`/`patch`/`refs`/`merge3`)",
+      "capability_id": "CAP-SEMANTIC-VCS",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-semantic-vcs/check-1"
+      ],
+      "gap_ids": [
+        "R4.2.c",
+        "R4.2.e"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_vcs/src",
+        "crates/gc_patches/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "vcs-patches",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md"
       ]
     },
     {
       "capability": "Built-in package/project manager (`pkg`/`gcpm`)",
+      "capability_id": "CAP-PACKAGE-MANAGER",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-package-manager/check-1",
+        "E1:cap-package-manager/check-2"
+      ],
+      "gap_ids": [
+        "R4.2.e",
+        "R6.1.a"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_pkg/src",
+        "crates/gc_cli_driver/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "package-registry",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GCPM_BUNDLE_v0.1.md",
         "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md"
@@ -78,13 +249,39 @@
     },
     {
       "capability": "Reachability-based artifact GC (`refs` + locks + pins)",
+      "capability_id": "CAP-ARTIFACT-GC",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh",
         "scripts/check_selfhost_boundary.sh",
         "scripts/check_selfhost_artifact_fresh.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-artifact-gc/check-1",
+        "E1:cap-artifact-gc/check-2",
+        "E1:cap-artifact-gc/check-3",
+        "E1:cap-artifact-gc/check-4"
+      ],
+      "gap_ids": [
+        "R4.2.e"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_pkg/src",
+        "crates/gc_vcs/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "package-registry",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GCPM_BUNDLE_v0.1.md",
         "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
@@ -93,64 +290,217 @@
     },
     {
       "capability": "Obligation/evidence/attestation-gated publish + ref updates",
+      "capability_id": "CAP-EVIDENCE-GATED-PUBLISH",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-evidence-gated-publish/check-1"
+      ],
+      "gap_ids": [
+        "R4.2.d",
+        "R6.2.d"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_obligations/src",
+        "crates/gc_registry/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "obligations-registry",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md"
       ]
     },
     {
       "capability": "Native + WASI + wasm-host runtime surfaces",
+      "capability_id": "CAP-RUNTIME-SURFACES",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-runtime-surfaces/check-1"
+      ],
+      "gap_ids": [
+        "R3.2.a",
+        "R6.3.a"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli/src",
+        "crates/gc_wasi_cli/src",
+        "crates/gc_wasm/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "runtime-platforms",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md"
       ]
     },
     {
       "capability": "Selfhost frontend default in production CLIs",
+      "capability_id": "CAP-SELFHOST-FRONTEND",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_selfhost_boundary.sh",
         "scripts/check_selfhost_artifact_fresh.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-selfhost-frontend/check-1",
+        "E1:cap-selfhost-frontend/check-2",
+        "E1:cap-selfhost-frontend/check-3"
+      ],
+      "gap_ids": [
+        "R4.2.a",
+        "R4.2.g"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "selfhost",
+        "crates/gc_cli_driver/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "selfhost-toolchain",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SELF_HOST_BOUNDARY.md"
       ]
     },
     {
       "capability": "Full selfhost cutover profile + readiness scorecard",
+      "capability_id": "CAP-SELFHOST-CUTOVER",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_selfhost_boundary.sh",
         "scripts/check_selfhost_artifact_fresh.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-selfhost-cutover/check-1",
+        "E1:cap-selfhost-cutover/check-2",
+        "E1:cap-selfhost-cutover/check-3"
+      ],
+      "gap_ids": [
+        "R4.4.c"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "selfhost",
+        "scripts"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "selfhost-toolchain",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SELF_HOST_BOUNDARY.md"
       ]
     },
     {
       "capability": "Strict no-production Rust semantic fallback guard",
+      "capability_id": "CAP-STRICT-NO-FALLBACK",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-strict-no-fallback/check-1"
+      ],
+      "gap_ids": [
+        "R4.1.c",
+        "R4.1.e"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src",
+        "scripts"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "selfhost-toolchain",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md"
       ]
     },
     {
       "capability": "CLI + GCPM JSON schema contracts for agent automation",
+      "capability_id": "CAP-AGENT-JSON-CONTRACTS",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh",
         "scripts/check_cli_diagnostics_contract.sh",
         "scripts/check_agent_reference_workflows.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-agent-json-contracts/check-1",
+        "E1:cap-agent-json-contracts/check-2",
+        "E1:cap-agent-json-contracts/check-3",
+        "E1:cap-agent-json-contracts/check-4"
+      ],
+      "gap_ids": [
+        "P1.2",
+        "R1.3.c"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src",
+        "docs/spec"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "agent-interface",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GCPM_BUNDLE_v0.1.md",
         "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
@@ -161,11 +511,36 @@
     },
     {
       "capability": "Agent index + skill-pack conformance contracts",
+      "capability_id": "CAP-AGENT-SKILL-PACK",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_agent_reference_workflows.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-agent-skill-pack/check-1",
+        "E1:cap-agent-skill-pack/check-2"
+      ],
+      "gap_ids": [
+        "R1.5.a",
+        "R1.5.f"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        ".agents/skills/genesiscode-authoring",
+        "docs/skill_pack/write_genesiscode_v1"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "agent-authoring",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
         "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
@@ -173,11 +548,35 @@
     },
     {
       "capability": "Domain starter registry for agent workflows",
+      "capability_id": "CAP-DOMAIN-STARTERS",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_agent_reference_workflows.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-domain-starters/check-1",
+        "E1:cap-domain-starters/check-2"
+      ],
+      "gap_ids": [
+        "R8.3.a"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "examples",
+        "docs/spec"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "agent-authoring",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
         "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
@@ -185,11 +584,36 @@
     },
     {
       "capability": "Agent generative workload parity gates (native vs WASI)",
+      "capability_id": "CAP-AGENT-WORKLOAD-PARITY",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_agent_reference_workflows.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-agent-workload-parity/check-1",
+        "E1:cap-agent-workload-parity/check-2"
+      ],
+      "gap_ids": [
+        "R1.4.c",
+        "R8.2.a"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "examples",
+        "scripts"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "agent-evaluation",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
         "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
@@ -197,13 +621,40 @@
     },
     {
       "capability": "Large-workspace agent iteration perf lane",
+      "capability_id": "CAP-AGENT-WORKSPACE-PERF",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh",
         "scripts/check_agent_reference_workflows.sh",
         "scripts/check_perf_budgets.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-agent-workspace-perf/check-1",
+        "E1:cap-agent-workspace-perf/check-2",
+        "E1:cap-agent-workspace-perf/check-3",
+        "E1:cap-agent-workspace-perf/check-4"
+      ],
+      "gap_ids": [
+        "P1.3",
+        "R2.3.e"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "scripts",
+        "crates/gc_cli_driver/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "agent-evaluation",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GCPM_BUNDLE_v0.1.md",
         "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
@@ -214,24 +665,79 @@
     },
     {
       "capability": "Concurrency/task replay stress lane",
+      "capability_id": "CAP-CONCURRENCY-REPLAY",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_task_concurrency_stress.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-concurrency-replay/check-1",
+        "E1:cap-concurrency-replay/check-2"
+      ],
+      "gap_ids": [
+        "R5.2.a",
+        "R5.2.e"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src",
+        "prelude"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "effect-runtime",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/CONCURRENCY_v0.1.md"
       ]
     },
     {
       "capability": "GPU compute capability independent of graphics surface",
+      "capability_id": "CAP-GPU-COMPUTE",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_gpu_compute_runtime_profile.sh",
         "scripts/check_gpu_stack_decoupling.sh",
         "scripts/check_gfx_runtime_profile.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-gpu-compute/check-1",
+        "E1:cap-gpu-compute/check-2",
+        "E1:cap-gpu-compute/check-3",
+        "E1:cap-gpu-compute/check-4"
+      ],
+      "gap_ids": [
+        "R8.2.h"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_gfx/src",
+        "crates/gc_effects/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "graphics-compute",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
         "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
@@ -240,13 +746,41 @@
     },
     {
       "capability": "Graphics/window/input/audio capability families",
+      "capability_id": "CAP-GRAPHICS-RUNTIME",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_gpu_compute_runtime_profile.sh",
         "scripts/check_gpu_stack_decoupling.sh",
         "scripts/check_gfx_runtime_profile.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-graphics-runtime/check-1",
+        "E1:cap-graphics-runtime/check-2",
+        "E1:cap-graphics-runtime/check-3",
+        "E1:cap-graphics-runtime/check-4"
+      ],
+      "gap_ids": [
+        "R8.3.a"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_gfx/src",
+        "crates/gc_effects/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "graphics-compute",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
         "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
@@ -255,11 +789,37 @@
     },
     {
       "capability": "Browser + XR runtime families",
+      "capability_id": "CAP-BROWSER-XR",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_webxr_browser_conformance_lane.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-browser-xr/check-1",
+        "E1:cap-browser-xr/check-2"
+      ],
+      "gap_ids": [
+        "R8.2.e"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_gfx/src",
+        "crates/gc_effects/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "runtime-platforms",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/XR_HOST_RUNTIME_v0.1.md",
         "docs/spec/BROWSER_HOST_RUNTIME_v0.1.md"
@@ -267,12 +827,40 @@
     },
     {
       "capability": "Host plugin + FFI schemas/contracts",
+      "capability_id": "CAP-PLUGIN-FFI",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_host_abi_conformance.sh",
         "scripts/check_cli_diagnostics_contract.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-plugin-ffi/check-1",
+        "E1:cap-plugin-ffi/check-2",
+        "E1:cap-plugin-ffi/check-3"
+      ],
+      "gap_ids": [
+        "R5.5.a",
+        "R5.5.c"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src",
+        "docs/spec"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "effect-runtime",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/HOST_ABI.md",
         "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md",
@@ -281,11 +869,38 @@
     },
     {
       "capability": "First-party bridge for network/process/db/crypto/plugin/ffi",
+      "capability_id": "CAP-HOST-BRIDGE",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_host_abi_conformance.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-host-bridge/check-1",
+        "E1:cap-host-bridge/check-2"
+      ],
+      "gap_ids": [
+        "P1.1",
+        "R2.2.f",
+        "R7.3.b"
+      ],
+      "host_binding_paths": [
+        "crates/gc_effects/src"
+      ],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "effect-runtime",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/HOST_ABI.md",
         "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md"
@@ -293,22 +908,72 @@
     },
     {
       "capability": "Stage2 CoreForm->WASM translation-validation",
+      "capability_id": "CAP-STAGE2-WASM-VALIDATION",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-stage2-wasm-validation/check-1"
+      ],
+      "gap_ids": [
+        "R3.2.a",
+        "R3.2.b"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_wasm/src",
+        "crates/gc_opt/src"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "wasm-optimizer",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/COREFORM_CANON_HASH.md"
       ]
     },
     {
       "capability": "Deployment target pipeline in core toolchain",
+      "capability_id": "CAP-DEPLOYMENT-PIPELINE",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
         "examples/agent_deploy_bundle_workflow/workflow.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-deployment-pipeline/check-1",
+        "E1:cap-deployment-pipeline/check-2",
+        "E1:cap-deployment-pipeline/check-3"
+      ],
+      "gap_ids": [
+        "R6.3.b",
+        "R6.3.c"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src",
+        "examples/agent_deploy_bundle_workflow"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "package-registry",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
         "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md"
@@ -316,12 +981,40 @@
     },
     {
       "capability": "Assurance profile packs + standards crosswalk",
+      "capability_id": "CAP-ASSURANCE-PROFILES",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_assurance_profile_packs.sh",
         "scripts/check_assurance_standards_crosswalk.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-assurance-profiles/check-1",
+        "E1:cap-assurance-profiles/check-2",
+        "E1:cap-assurance-profiles/check-3"
+      ],
+      "gap_ids": [
+        "P1.2",
+        "P1.3",
+        "R7.1.a",
+        "R7.3.a"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "docs/spec",
+        "scripts"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "assurance",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
         "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
@@ -331,25 +1024,73 @@
     },
     {
       "capability": "Tool qualification lineage + evidence closures",
+      "capability_id": "CAP-TOOL-QUALIFICATION",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-tool-qualification/check-1"
+      ],
+      "gap_ids": [
+        "R7.1.e",
+        "R9.2.c"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_obligations/src",
+        "docs/program"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "assurance",
+      "selfhost_level": "H0",
+      "spec_paths": [
         "docs/spec/CLI.md"
       ]
     },
     {
       "capability": "AI-first modular decomposition + boundary guards",
+      "capability_id": "CAP-MODULAR-BOUNDARIES",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "evidence_paths": [
+      "evidence_ids": [
+        "E1:cap-modular-boundaries/check-1"
+      ],
+      "gap_ids": [
+        "R4.3.a",
+        "R4.3.b"
+      ],
+      "host_binding_paths": [],
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates",
+        "scripts"
+      ],
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "maturity": "L1",
+      "maturity_by_platform": {
+        "linux-arm64": "L0",
+        "linux-x86_64": "L1",
+        "macos-arm64": "L1",
+        "windows-x86_64": "L0"
+      },
+      "owner": "architecture",
+      "selfhost_level": "N/A",
+      "spec_paths": [
         "docs/spec/CLI.md"
       ]
     }
   ],
   "entry_count": 29,
   "kind": "genesis/feature-matrix-evidence-v0.1",
-  "source_feature_matrix": "feature_matrix.md",
+  "source_ledger": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
   "version": "0.1"
 }

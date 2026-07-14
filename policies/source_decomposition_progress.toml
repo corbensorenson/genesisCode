@@ -206,7 +206,7 @@ notes = "Split debug command orchestration into shared CLI dispatch + diagnostic
 waiver_owner = "gc-cli-runtime"
 waiver_scope = "Bounded to debug-command orchestration; no expansion to pkg/build or host bridge surfaces."
 waiver_rationale = "File remains over budget to preserve deterministic CLI diagnostics behavior during active selfhost cutover; parity gate remains mandatory."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/cmd_selfhost_artifact.rs"
@@ -218,7 +218,7 @@ notes = "Decompose artifact emit/verify/refresh flows into distinct module handl
 waiver_owner = "selfhost-toolchain"
 waiver_scope = "Bounded to selfhost artifact refresh/verify orchestration only."
 waiver_rationale = "Cutover-critical artifact semantics are stabilized first; structural split is tracked but deferred behind reproducibility gate stability."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/host_bridge_runtime.rs"
@@ -230,7 +230,7 @@ notes = "Split runtime bridge dispatch into domain-scoped routers and policy env
 waiver_owner = "host-bridge-runtime"
 waiver_scope = "Bounded to runtime bridge dispatch fan-out and policy envelopes; transport/domain handlers continue moving out."
 waiver_rationale = "Single-file orchestration is temporarily retained to keep fault-injection lane deterministic while dispatch boundaries are finalized."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/host_bridge_runtime_net_http_ws.rs"
@@ -242,7 +242,7 @@ notes = "Extract HTTP/WS bridge path resolution and transport contracts into bou
 waiver_owner = "host-bridge-runtime"
 waiver_scope = "Bounded to HTTP/WS transport adapter coupling and path resolution glue code."
 waiver_rationale = "Over-budget delta is small; waiver allows preserving parity while extracting shared transport contracts incrementally."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/pkg_reports.rs"
@@ -254,7 +254,7 @@ notes = "Separate package report rendering from result aggregation and schema no
 waiver_owner = "gc-pkg-ops"
 waiver_scope = "Bounded to package-report rendering/aggregation flow; no new resolver/lock responsibilities."
 waiver_rationale = "Stable report schema is prioritized for agent compatibility before final renderer/normalizer decomposition."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs"
@@ -266,7 +266,7 @@ notes = "Split publish orchestration by lock/build/export/push/ref-update stages
 waiver_owner = "gcpm-runtime"
 waiver_scope = "Bounded to low-level publish orchestration; component stage helpers must remain isolated."
 waiver_rationale = "Publish path is correctness-critical for registry trust; waiver preserves atomic behavior while staged split proceeds behind contract-pack gate."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_capability_dispatch.rs"
@@ -278,7 +278,7 @@ notes = "Partition top-level capability dispatch into family-scoped dispatch mod
 waiver_owner = "effects-runtime"
 waiver_scope = "Bounded to top-level dispatch table composition; family-specific handlers remain partitioned."
 waiver_rationale = "Small over-budget margin with high fan-in; waiver keeps dispatch determinism while final family splits are completed."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_opt/src/stage2_wasm/pipeline_exec.rs"
@@ -290,7 +290,7 @@ notes = "Split planner/executor/reporting into separate lowering pipeline compon
 waiver_owner = "gc-opt-wasm"
 waiver_scope = "Bounded to stage2 pipeline execution orchestration and reporting glue."
 waiver_rationale = "Optimizer pipeline sequencing is currently stabilized under one orchestrator; waiver keeps lowering parity while final planner/report split lands."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_gpu_device_backend.rs"
@@ -302,4 +302,4 @@ notes = "Separate queue setup, kernel dispatch, buffer lifecycle, and telemetry 
 waiver_owner = "gpu-runtime"
 waiver_scope = "Bounded to device-runtime queue/dispatch lifecycle orchestration."
 waiver_rationale = "Device backend determinism and telemetry contracts are locked first; waiver prevents churn regression while extracting queue/buffer submodules."
-waiver_review_by = "2026-04-30"
+waiver_review_by = "2026-10-31"

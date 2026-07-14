@@ -120,7 +120,7 @@ pub(super) fn semantic_workspace_graph_model_from_contract(
             )
         })?;
     let out = contract
-        .apply(&mut ctx, Value::Data(payload))
+        .apply(&mut ctx, Value::data(payload))
         .map_err(|e| {
             cli_err(
                 EX_EVAL,

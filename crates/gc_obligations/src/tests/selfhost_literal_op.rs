@@ -28,7 +28,7 @@ fn selfhost_literal_op_and_flatten_app_detect_quoted_effect_op() {
         .expect("flatten-app binding");
     let flat_v = flatten
         .clone()
-        .apply(&mut ctx, Value::Data(app.clone()))
+        .apply(&mut ctx, Value::data(app.clone()))
         .expect("flatten apply");
     let flat_t = flat_v.to_term_for_log(ctx.protocol.map(|p| p.error));
     let flat_map = match flat_t {
@@ -52,7 +52,7 @@ fn selfhost_literal_op_and_flatten_app_detect_quoted_effect_op() {
     let flat_render = print_term(&Term::Map(flat_map.clone()));
     let flat_inner_v = flatten
         .clone()
-        .apply(&mut ctx, Value::Data(inner))
+        .apply(&mut ctx, Value::data(inner))
         .expect("flatten inner apply");
     let flat_inner_t = flat_inner_v.to_term_for_log(ctx.protocol.map(|p| p.error));
     let flat_inner_render = print_term(&flat_inner_t);
@@ -60,7 +60,7 @@ fn selfhost_literal_op_and_flatten_app_detect_quoted_effect_op() {
         let arg_render = print_term(&arg);
         let op_v = lit
             .clone()
-            .apply(&mut ctx, Value::Data(arg))
+            .apply(&mut ctx, Value::data(arg))
             .expect("literal-op apply");
         let op_t = op_v.to_term_for_log(ctx.protocol.map(|p| p.error));
         debug_rows.push(format!("{arg_render} => {}", print_term(&op_t)));

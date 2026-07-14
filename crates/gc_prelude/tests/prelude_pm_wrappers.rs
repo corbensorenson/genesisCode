@@ -15,7 +15,7 @@ fn get_req(v: Value) -> EffectRequest {
     let Value::EffectRequest(req) = payload.as_ref() else {
         panic!("expected effect request payload");
     };
-    req.clone()
+    req.as_ref().clone()
 }
 
 fn payload_flag(req: &EffectRequest, key: &str) -> Option<bool> {

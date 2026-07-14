@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/evidence-storage-policy-v0.1.json",
+  "title": "GenesisCode Evidence Storage Policy v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "authorityRules",
+    "classes",
+    "releaseAssetProfile",
+    "mirrorProfile"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/evidence-storage-policy-v0.1"},
+    "version": {"const": "0.1"},
+    "authorityRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claimedClassDoesNotGrantAuthority",
+        "inTreeFixtureMaximumClass",
+        "releaseAuthorityRequiresExternalPolicy",
+        "selfPublicationForbidden"
+      ],
+      "properties": {
+        "claimedClassDoesNotGrantAuthority": {"const": true},
+        "inTreeFixtureMaximumClass": {"const": "E2"},
+        "releaseAuthorityRequiresExternalPolicy": {"const": true},
+        "selfPublicationForbidden": {"const": true}
+      }
+    },
+    "classes": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {"$ref": "#/$defs/storageClass"}
+    },
+    "releaseAssetProfile": {"$ref": "#/$defs/releaseAssetProfile"},
+    "mirrorProfile": {"$ref": "#/$defs/mirrorProfile"}
+  },
+  "$defs": {
+    "storageClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "authority", "root", "tracked", "mutable", "requirements", "publication"],
+      "properties": {
+        "id": {"enum": ["E0", "E1", "E2", "E3", "E4"]},
+        "authority": {"type": "string", "minLength": 1},
+        "root": {"type": "string", "minLength": 1},
+        "tracked": {"type": "boolean"},
+        "mutable": {"type": "boolean"},
+        "requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authentication", "independentVerification", "minimumSignatures", "minimumMirrors"],
+          "properties": {
+            "authentication": {"type": "string", "minLength": 1},
+            "independentVerification": {"type": "boolean"},
+            "minimumSignatures": {"type": "integer", "minimum": 0},
+            "minimumMirrors": {"type": "integer", "minimum": 0}
+          }
+        },
+        "publication": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["channel", "immutable", "offlineVerifiable"],
+          "properties": {
+            "channel": {"type": "string", "minLength": 1},
+            "immutable": {"type": "boolean"},
+            "offlineVerifiable": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "releaseAssetProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "mediaType",
+        "sourceDateEpoch",
+        "fileMode",
+        "directoryMode",
+        "ownerId",
+        "groupId",
+        "maximumAssetBytes",
+        "contentAddressedFilename",
+        "requiredArchiveEntries",
+        "forbiddenArchivePrefixes"
+      ],
+      "properties": {
+        "format": {"const": "ustar"},
+        "mediaType": {"type": "string", "minLength": 1},
+        "sourceDateEpoch": {"const": 0},
+        "fileMode": {"const": 420},
+        "directoryMode": {"const": 493},
+        "ownerId": {"const": 0},
+        "groupId": {"const": 0},
+        "maximumAssetBytes": {"type": "integer", "minimum": 1},
+        "contentAddressedFilename": {"type": "string", "pattern": "\\{class\\}.*\\{release\\}.*\\{digest\\}"},
+        "requiredArchiveEntries": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "forbiddenArchivePrefixes": {"$ref": "#/$defs/nonEmptyUniqueStrings"}
+      }
+    },
+    "mirrorProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "copyMode",
+        "overwriteForbidden",
+        "verifyBeforeAndAfterCopy",
+        "trustPolicyDistribution",
+        "requiredInstructions"
+      ],
+      "properties": {
+        "copyMode": {"const": "create-new"},
+        "overwriteForbidden": {"const": true},
+        "verifyBeforeAndAfterCopy": {"const": true},
+        "trustPolicyDistribution": {"const": "out-of-band"},
+        "requiredInstructions": {"$ref": "#/$defs/nonEmptyUniqueStrings"}
+      }
+    },
+    "nonEmptyUniqueStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

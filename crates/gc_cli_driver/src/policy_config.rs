@@ -1,5 +1,19 @@
 use super::*;
 
+fn policy_error(
+    exit_code: u8,
+    code: &'static str,
+    kind: &'static str,
+    operation: &'static str,
+    message: impl Into<String>,
+) -> CliError {
+    let message = message.into();
+    let context = structured_failures::FailureContext::new("policy", kind, operation)
+        .fact("reason", message.clone())
+        .into_value();
+    cli_err_with_context(exit_code, code, message, context)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct PoliciesConfig {
     #[serde(default = "policy_config_version_one")]
@@ -71,10 +85,18 @@ pub(super) fn load_policies_config(path: &Path) -> Result<PoliciesConfig, CliErr
     }
     let s = std::fs::read_to_string(path)
         .with_context(|| format!("read {}", path.display()))
-        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let cfg: PoliciesConfig =
-        toml::from_str(&s).map_err(|e| cli_err(EX_PARSE, "policy/parse", format!("{e}")))?;
-    normalize_policies_config(cfg).map_err(|e| cli_err(EX_PARSE, "policy/parse", e))
+        .map_err(|e| policy_error(EX_IO, "io/read", "io", "policy/load", format!("{e}")))?;
+    let cfg: PoliciesConfig = toml::from_str(&s).map_err(|e| {
+        policy_error(
+            EX_PARSE,
+            "policy/parse",
+            "config-parse",
+            "policy/load",
+            format!("{e}"),
+        )
+    })?;
+    normalize_policies_config(cfg)
+        .map_err(|e| policy_error(EX_PARSE, "policy/parse", "config-invalid", "policy/load", e))
 }
 
 pub(super) fn save_policies_config(path: &Path, cfg: &PoliciesConfig) -> Result<(), CliError> {
@@ -83,13 +105,20 @@ pub(super) fn save_policies_config(path: &Path, cfg: &PoliciesConfig) -> Result<
     {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("create {}", parent.display()))
-            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+            .map_err(|e| policy_error(EX_IO, "io/write", "io", "policy/save", format!("{e}")))?;
     }
-    let s = toml::to_string_pretty(cfg)
-        .map_err(|e| cli_err(EX_INTERNAL, "policy/serialize", format!("{e}")))?;
+    let s = toml::to_string_pretty(cfg).map_err(|e| {
+        policy_error(
+            EX_INTERNAL,
+            "policy/serialize",
+            "config-serialize",
+            "policy/save",
+            format!("{e}"),
+        )
+    })?;
     std::fs::write(path, s)
         .with_context(|| format!("write {}", path.display()))
-        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))
+        .map_err(|e| policy_error(EX_IO, "io/write", "io", "policy/save", format!("{e}")))
 }
 
 pub(super) fn resolve_policy_selector(

@@ -2,12 +2,114 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
 use std::sync::Arc;
+#[cfg(not(debug_assertions))]
+use std::sync::OnceLock;
 
 use blake3::Hasher;
 
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
-use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
+use gc_coreform::{HASH_DOMAIN_PREFIX, Term, TermOrdKey, hash_term, print_term};
+
+pub const VALUE_EFFECT_HASH_PROFILE_ID: &str = "genesis/value-effect-hash/v0.2";
+
+pub type ValueMap = rpds::RedBlackTreeMap<TermOrdKey, Value>;
+pub type Sym = Rc<str>;
+
+#[derive(Clone, Debug)]
+pub enum ValueVector {
+    Flat(Vec<Value>),
+    Persistent(rpds::Vector<Value>),
+}
+
+impl ValueVector {
+    pub fn new() -> Self {
+        Self::Flat(Vec::new())
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Flat(xs) => xs.len(),
+            Self::Persistent(xs) => xs.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn get(&self, idx: usize) -> Option<&Value> {
+        match self {
+            Self::Flat(xs) => xs.get(idx),
+            Self::Persistent(xs) => xs.get(idx),
+        }
+    }
+
+    pub fn iter(&self) -> Box<dyn Iterator<Item = &Value> + '_> {
+        match self {
+            Self::Flat(xs) => Box::new(xs.iter()),
+            Self::Persistent(xs) => Box::new(xs.iter()),
+        }
+    }
+
+    pub fn push_rc(xs: &mut Rc<Self>, value: Value) {
+        if Rc::strong_count(xs) == 1 {
+            match Rc::make_mut(xs) {
+                Self::Flat(vec) => vec.push(value),
+                Self::Persistent(vec) => vec.push_back_mut(value),
+            }
+            return;
+        }
+        let mut persistent = xs.as_ref().to_persistent();
+        persistent.push_back_mut(value);
+        *xs = Rc::new(Self::Persistent(persistent));
+    }
+
+    pub fn set_rc(xs: &mut Rc<Self>, idx: usize, value: Value) -> bool {
+        if idx >= xs.len() {
+            return false;
+        }
+        if Rc::strong_count(xs) == 1 {
+            match Rc::make_mut(xs) {
+                Self::Flat(vec) => {
+                    vec[idx] = value;
+                    true
+                }
+                Self::Persistent(vec) => vec.set_mut(idx, value),
+            }
+        } else {
+            let mut persistent = xs.as_ref().to_persistent();
+            let ok = persistent.set_mut(idx, value);
+            *xs = Rc::new(Self::Persistent(persistent));
+            ok
+        }
+    }
+
+    fn to_persistent(&self) -> rpds::Vector<Value> {
+        match self {
+            Self::Persistent(xs) => xs.clone(),
+            Self::Flat(xs) => {
+                let mut out = rpds::Vector::new();
+                for x in xs {
+                    out.push_back_mut(x.clone());
+                }
+                out
+            }
+        }
+    }
+}
+
+impl Default for ValueVector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FromIterator<Value> for ValueVector {
+    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
+        Self::Flat(iter.into_iter().collect())
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SealId(pub u64);
@@ -17,45 +119,67 @@ pub struct SealId(pub u64);
 /// This is intentionally not constructible by user code; it exists so the runtime can carry
 /// compiled closures without exposing the compiler IR as part of the public API.
 #[derive(Clone, Debug)]
-pub struct CompiledExpr(Arc<crate::compiled::CExpr>);
+pub struct CompiledExpr {
+    expr: Arc<crate::compiled::CExpr>,
+    coverage_sites: Arc<crate::compiled::CompiledCoverageSites>,
+}
 
 impl CompiledExpr {
-    pub(crate) fn new(e: Arc<crate::compiled::CExpr>) -> Self {
-        Self(e)
+    pub(crate) fn new(
+        expr: Arc<crate::compiled::CExpr>,
+        coverage_sites: Arc<crate::compiled::CompiledCoverageSites>,
+    ) -> Self {
+        Self {
+            expr,
+            coverage_sites,
+        }
     }
 
     pub(crate) fn inner(&self) -> &Arc<crate::compiled::CExpr> {
-        &self.0
+        &self.expr
+    }
+
+    pub(crate) fn coverage_sites(&self) -> &Arc<crate::compiled::CompiledCoverageSites> {
+        &self.coverage_sites
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum Value {
-    Data(Term),
-    Vector(Vec<Value>),
-    Map(BTreeMap<TermOrdKey, Value>),
-    Closure {
-        param: String,
-        body: Term,
-        env: Env,
-    },
+    Data(Rc<Term>),
+    Int(i64),
+    Vector(Rc<ValueVector>),
+    Map(Rc<ValueMap>),
+    Closure(Rc<ClosureData>),
     /// A compiled closure stores its original `body` term (for stable hashing/logging) and a
     /// compiled expression for faster evaluation.
-    CompiledClosure {
-        param: String,
-        body: Term,
-        body_c: CompiledExpr,
-        env: Env,
-    },
+    CompiledClosure(Rc<CompiledClosureData>),
     SealToken(SealId),
     Sealed {
         token: SealId,
         payload: Box<Value>,
     },
-    NativeFn(NativeFn),
+    NativeFn(Rc<NativeFn>),
     Contract(Rc<Contract>),
     EffectProgram(Box<EffectProgram>),
-    EffectRequest(EffectRequest),
+    EffectRequest(Rc<EffectRequest>),
+}
+
+#[derive(Clone, Debug)]
+pub struct ClosureData {
+    pub param: Sym,
+    pub body: Term,
+    pub env: Env,
+}
+
+#[derive(Clone, Debug)]
+pub struct CompiledClosureData {
+    pub param: Sym,
+    pub body: Term,
+    pub body_c: CompiledExpr,
+    pub env: Env,
+    pub compiled_env: Option<crate::compiled::CompiledLexicalEnv>,
+    pub module_env: Option<crate::compiled::CompiledModuleCells>,
 }
 
 #[derive(Clone)]
@@ -93,25 +217,30 @@ impl NativeFn {
     pub fn apply(&self, ctx: &mut crate::eval::EvalCtx, arg: Value) -> Result<Value, KernelError> {
         let mut collected = self.collected.clone();
         collected.push(arg);
+        ctx.run_panic_guarded("native function application", |ctx| {
+            self.apply_collected(ctx, collected)
+        })
+    }
+
+    pub(crate) fn apply_collected(
+        &self,
+        ctx: &mut crate::eval::EvalCtx,
+        collected: Vec<Value>,
+    ) -> Result<Value, KernelError> {
         if collected.len() < self.arity {
-            Ok(Value::NativeFn(NativeFn {
+            Ok(Value::native_fn(NativeFn {
                 name: self.name,
                 arity: self.arity,
                 collected,
                 func: self.func,
             }))
         } else if collected.len() == self.arity {
-            // Native functions are required to be total and panic-free; this is a
-            // hardening boundary so a bug can't crash the whole evaluator.
-            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if native_per_call_panic_guard_enabled() {
+                ctx.run_panic_guarded_always("native function application", |ctx| {
+                    (self.func)(ctx, collected)
+                })
+            } else {
                 (self.func)(ctx, collected)
-            }));
-            match r {
-                Ok(v) => v,
-                Err(_) => Err(KernelError::new(
-                    KernelErrorKind::Internal,
-                    format!("native fn {} panicked", self.name),
-                )),
             }
         } else {
             Err(KernelError::new(
@@ -119,6 +248,18 @@ impl NativeFn {
                 format!("native fn {} applied to too many args", self.name),
             ))
         }
+    }
+}
+
+fn native_per_call_panic_guard_enabled() -> bool {
+    #[cfg(debug_assertions)]
+    {
+        std::env::var_os("GENESIS_NATIVE_PANIC_GUARD_EACH").is_some()
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        *ENABLED.get_or_init(|| std::env::var_os("GENESIS_NATIVE_PANIC_GUARD_EACH").is_some())
     }
 }
 
@@ -151,20 +292,80 @@ pub trait Apply {
 
 impl Apply for Value {
     fn apply(self, ctx: &mut crate::eval::EvalCtx, arg: Value) -> Result<Value, KernelError> {
+        ctx.run_panic_guarded("value application", |ctx| self.apply_inner(ctx, arg))
+    }
+}
+
+impl Value {
+    pub fn data(term: Term) -> Self {
+        Self::Data(Rc::new(term))
+    }
+
+    pub fn int(n: i64) -> Self {
+        Self::Int(n)
+    }
+
+    pub fn vector(xs: ValueVector) -> Self {
+        Self::Vector(Rc::new(xs))
+    }
+
+    pub fn map(m: ValueMap) -> Self {
+        Self::Map(Rc::new(m))
+    }
+
+    pub fn closure(param: String, body: Term, env: Env) -> Self {
+        Self::Closure(Rc::new(ClosureData {
+            param: Rc::<str>::from(param),
+            body,
+            env,
+        }))
+    }
+
+    pub fn compiled_closure(
+        param: String,
+        body: Term,
+        body_c: CompiledExpr,
+        env: Env,
+        compiled_env: Option<crate::compiled::CompiledLexicalEnv>,
+        module_env: Option<crate::compiled::CompiledModuleCells>,
+    ) -> Self {
+        Self::CompiledClosure(Rc::new(CompiledClosureData {
+            param: Rc::<str>::from(param),
+            body,
+            body_c,
+            env,
+            compiled_env,
+            module_env,
+        }))
+    }
+
+    pub fn native_fn(f: NativeFn) -> Self {
+        Self::NativeFn(Rc::new(f))
+    }
+
+    pub fn effect_request(r: EffectRequest) -> Self {
+        Self::EffectRequest(Rc::new(r))
+    }
+
+    fn apply_inner(self, ctx: &mut crate::eval::EvalCtx, arg: Value) -> Result<Value, KernelError> {
         match self {
-            Value::Closure { param, body, env } => {
-                let env2 = Env::with_binding(&env, param, arg);
-                crate::eval::eval_term(ctx, &env2, &body)
+            Value::Closure(data) => {
+                let env2 = Env::with_binding(&data.env, data.param.as_ref(), arg);
+                crate::eval::eval_term(ctx, &env2, &data.body)
             }
-            Value::CompiledClosure {
-                param,
-                body: _,
-                body_c,
-                env,
-            } => {
-                let env2 = Env::with_binding(&env, param, arg);
-                crate::compiled::eval_cexpr(ctx, &env2, body_c.inner())
-            }
+            Value::CompiledClosure(data) => crate::compiled::apply_compiled_closure(
+                ctx,
+                crate::compiled::CompiledClosureCall {
+                    external_env: data.env.clone(),
+                    lexical_env: data.compiled_env.clone(),
+                    module_env: data.module_env.clone(),
+                    coverage_sites: data.body_c.coverage_sites().clone(),
+                    param: data.param.clone(),
+                    bind_external_param: false,
+                    body: data.body_c.inner().clone(),
+                    arg,
+                },
+            ),
             Value::NativeFn(f) => f.apply(ctx, arg),
             _ => Err(KernelError::new(
                 KernelErrorKind::NotCallable,
@@ -198,48 +399,48 @@ impl ValueHasher {
     }
 
     fn hash_into(&mut self, h: &mut Hasher, v: &Value) {
-        h.update(b"GCv0.2\0value\0");
+        h.update(HASH_DOMAIN_PREFIX);
+        h.update(b"value\0");
         match v {
             Value::Data(t) => {
                 h.update(b"data\0");
-                h.update(&hash_term(t));
+                h.update(&hash_term(t.as_ref()));
+            }
+            Value::Int(n) => {
+                h.update(b"data\0");
+                h.update(&hash_term(&Term::Int(num_bigint::BigInt::from(*n))));
             }
             Value::Vector(xs) => {
                 h.update(b"vec\0");
                 h.update(&(xs.len() as u64).to_le_bytes());
-                for x in xs {
+                for x in xs.iter() {
                     let hx = self.hash(x);
                     h.update(&hx);
                 }
             }
             Value::Map(m) => {
                 h.update(b"map\0");
-                h.update(&(m.len() as u64).to_le_bytes());
-                for (k, v) in m {
+                h.update(&(m.size() as u64).to_le_bytes());
+                for (k, v) in m.iter() {
                     h.update(&hash_term(&k.0));
                     let hv = self.hash(v);
                     h.update(&hv);
                 }
             }
-            Value::Closure { param, body, env } => {
+            Value::Closure(data) => {
                 h.update(b"closure\0");
-                h.update(param.as_bytes());
+                h.update(data.param.as_bytes());
                 h.update(b"\0");
-                h.update(&hash_term(body));
-                let he = self.hash_env(env);
+                h.update(&hash_term(&data.body));
+                let he = self.hash_env(&data.env);
                 h.update(&he);
             }
-            Value::CompiledClosure {
-                param,
-                body,
-                body_c: _,
-                env,
-            } => {
+            Value::CompiledClosure(data) => {
                 h.update(b"closure\0");
-                h.update(param.as_bytes());
+                h.update(data.param.as_bytes());
                 h.update(b"\0");
-                h.update(&hash_term(body));
-                let he = self.hash_env(env);
+                h.update(&hash_term(&data.body));
+                let he = self.hash_env(&data.env);
                 h.update(&he);
             }
             Value::SealToken(SealId(id)) => {
@@ -302,7 +503,8 @@ impl ValueHasher {
         // with a stable marker.
         if !self.env_in_progress.insert(ptr) {
             let mut h = Hasher::new();
-            h.update(b"GCv0.2\0env-cycle\0");
+            h.update(HASH_DOMAIN_PREFIX);
+            h.update(b"env-cycle\0");
             return *h.finalize().as_bytes();
         }
         if let Some((cached_rev, h)) = self.env_cache.get(&ptr)
@@ -313,7 +515,8 @@ impl ValueHasher {
         }
 
         let mut h = Hasher::new();
-        h.update(b"GCv0.2\0env\0");
+        h.update(HASH_DOMAIN_PREFIX);
+        h.update(b"env\0");
 
         // Parent hash first to preserve a stable chain structure.
         if let Some(parent) = &env.0.parent {
@@ -344,28 +547,53 @@ impl ValueHasher {
 impl Value {
     pub fn as_symbol(&self) -> Option<&str> {
         match self {
-            Value::Data(Term::Symbol(s)) => Some(s.as_str()),
+            Value::Data(t) => match t.as_ref() {
+                Term::Symbol(s) => Some(s.as_str()),
+                _ => None,
+            },
+            Value::Int(_) => None,
             _ => None,
         }
     }
 
     pub fn truthy(&self) -> bool {
-        !matches!(
-            self,
-            Value::Data(Term::Nil) | Value::Data(Term::Bool(false))
-        )
+        !matches!(self, Value::Data(t) if matches!(t.as_ref(), Term::Nil | Term::Bool(false)))
     }
 
     pub fn as_data(&self) -> Option<&Term> {
         match self {
-            Value::Data(t) => Some(t),
+            Value::Data(t) => Some(t.as_ref()),
+            Value::Int(_) => None,
+            _ => None,
+        }
+    }
+
+    pub fn to_plain_term(&self) -> Option<Term> {
+        match self {
+            Value::Data(t) => Some(t.as_ref().clone()),
+            Value::Int(n) => Some(Term::Int(num_bigint::BigInt::from(*n))),
+            Value::Vector(xs) => {
+                let mut out = Vec::with_capacity(xs.len());
+                for x in xs.iter() {
+                    out.push(x.to_plain_term()?);
+                }
+                Some(Term::Vector(out))
+            }
+            Value::Map(m) => {
+                let mut out = std::collections::BTreeMap::new();
+                for (k, v) in m.iter() {
+                    out.insert(TermOrdKey(k.0.clone()), v.to_plain_term()?);
+                }
+                Some(Term::Map(out))
+            }
             _ => None,
         }
     }
 
     pub fn debug_repr(&self) -> String {
         match self {
-            Value::Data(t) => print_term(t),
+            Value::Data(t) => print_term(t.as_ref()),
+            Value::Int(n) => n.to_string(),
             Value::Vector(xs) => {
                 let inner: Vec<String> = xs.iter().map(|x| x.debug_repr()).collect();
                 format!("[{}]", inner.join(" "))
@@ -384,11 +612,11 @@ impl Value {
                 inner.push('}');
                 inner
             }
-            Value::Closure { param, body, .. } => {
-                format!("(closure {} {})", param, print_term(body))
+            Value::Closure(data) => {
+                format!("(closure {} {})", data.param, print_term(&data.body))
             }
-            Value::CompiledClosure { param, body, .. } => {
-                format!("(closure {} {})", param, print_term(body))
+            Value::CompiledClosure(data) => {
+                format!("(closure {} {})", data.param, print_term(&data.body))
             }
             Value::SealToken(SealId(id)) => format!("#<seal-token {}>", id),
             Value::Sealed {
@@ -406,7 +634,8 @@ impl Value {
 
     pub fn to_term_for_log(&self, protocol_error: Option<SealId>) -> Term {
         match self {
-            Value::Data(t) => t.clone(),
+            Value::Data(t) => t.as_ref().clone(),
+            Value::Int(n) => Term::Int(num_bigint::BigInt::from(*n)),
             Value::Vector(xs) => Term::Vector(
                 xs.iter()
                     .map(|x| x.to_term_for_log(protocol_error))

@@ -1,8 +1,10 @@
 [package]
 name = "gc_cli"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
+default-run = "genesis"
 
 [[bin]]
 name = "genesis"
@@ -34,5 +36,8 @@ serde_json.workspace = true
 blake3.workspace = true
 gc_coreform = { path = "../gc_coreform" }
 gc_effects = { path = "../gc_effects" }
+gc_kernel = { path = "../gc_kernel" }
+gc_pkg = { path = "../gc_pkg" }
+gc_prelude = { path = "../gc_prelude" }
 gc_vcs = { path = "../gc_vcs" }
 gc_registry = { path = "../gc_registry" }

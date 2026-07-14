@@ -308,7 +308,10 @@ fn extract_sealed_error_code(ctx: &EvalCtx, v: &Value) -> Option<String> {
         return None;
     }
     match payload.as_ref() {
-        Value::Data(Term::Map(m)) => {
+        Value::Data(t) if matches!(t.as_ref(), Term::Map(_)) => {
+            let Term::Map(m) = t.as_ref() else {
+                return None;
+            };
             m.get(&TermOrdKey(Term::symbol(":error/code")))
                 .and_then(|t| match t {
                     Term::Str(s) => Some(s.clone()),
@@ -318,7 +321,10 @@ fn extract_sealed_error_code(ctx: &EvalCtx, v: &Value) -> Option<String> {
         Value::Map(m) => m
             .get(&TermOrdKey(Term::symbol(":error/code")))
             .and_then(|vv| match vv {
-                Value::Data(Term::Str(s)) => Some(s.clone()),
+                Value::Data(t) => match t.as_ref() {
+                    Term::Str(s) => Some(s.clone()),
+                    _ => None,
+                },
                 _ => None,
             }),
         _ => None,

@@ -61,12 +61,12 @@ pub(crate) fn editor_host_call(
         return None;
     }
     if is_first_party_editor_op(op) && !has_explicit_bridge_profile(pol) {
-        return Some(Value::Data(first_party_editor_response(
+        return Some(Value::data(first_party_editor_response(
             runtime, op, payload,
         )));
     }
     Some(match call_host_bridge("editor", op, payload, pol) {
-        Ok(resp) => Value::Data(resp),
+        Ok(resp) => Value::data(resp),
         Err(err) => mk_error(error_tok, &err, Some(op)),
     })
 }
@@ -529,6 +529,6 @@ fn mk_error(error_tok: SealId, err: &BridgeError, op: Option<&str>) -> Value {
     );
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(mm))),
+        payload: Box::new(Value::data(Term::Map(mm))),
     }
 }

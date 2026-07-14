@@ -41,7 +41,7 @@ pub(super) fn obligation_replayable(
                 })?,
         )?;
         let value = test_body
-            .apply(&mut ctx, Value::Data(Term::Nil))
+            .apply(&mut ctx, Value::data(Term::Nil))
             .map_err(|e| ObligationError::Test(format!("test apply failed: {e}")))?;
         let Value::EffectProgram(_) = value else {
             ok = false;
@@ -176,7 +176,7 @@ pub(super) fn obligation_concurrency_replay(
                 })?,
         )?;
         let value = test_body
-            .apply(&mut ctx, Value::Data(Term::Nil))
+            .apply(&mut ctx, Value::data(Term::Nil))
             .map_err(|e| ObligationError::Test(format!("test apply failed: {e}")))?;
         let Value::EffectProgram(_) = value else {
             ok = false;

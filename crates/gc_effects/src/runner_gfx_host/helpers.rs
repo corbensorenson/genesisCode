@@ -90,6 +90,6 @@ pub(super) fn mk_error(error_tok: SealId, err: &BridgeError, op: Option<&str>) -
     );
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(mm))),
+        payload: Box::new(Value::data(Term::Map(mm))),
     }
 }

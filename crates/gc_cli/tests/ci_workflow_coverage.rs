@@ -53,8 +53,8 @@ fn ci_has_gpu_device_microbench_lane() {
         "gpu lane must compile runtime microbench with first-party device bridge feature"
     );
     assert!(
-        ci.contains("bash scripts/check_gpu_compute_device_conformance.sh"),
-        "gpu lane must run dedicated gpu device conformance checks"
+        ci.contains("bash scripts/update_gpu_compute_device_conformance_report.sh"),
+        "gpu lane must run the explicit gpu device conformance producer"
     );
     assert!(
         ci.contains("Device Bridge Replay Determinism (Feature Gate)"),
@@ -94,8 +94,8 @@ fn ci_has_secondary_gpu_deterministic_lane_and_release_parity_gate() {
         "release parity gate must depend on both conformance lanes"
     );
     assert!(
-        ci.contains("bash scripts/check_gpu_device_conformance_lane_parity.sh"),
-        "release parity gate must compare conformance artifacts for contract parity"
+        ci.contains("bash scripts/update_gpu_device_conformance_lane_parity_report.sh"),
+        "release parity gate must retain validated conformance parity evidence"
     );
     assert!(
         ci.contains("gpu-device-conformance-lane-parity"),
@@ -153,8 +153,8 @@ fn ci_deduplicates_pr_strict_equivalence_and_enforces_gc_source_budget() {
         "ci workflow must enforce dedicated compute-only runtime profile gate"
     );
     assert!(
-        ci.contains("bash scripts/check_gpu_compute_runtime_profile.sh"),
-        "ci workflow must run compute-only runtime profile guard script"
+        ci.contains("bash scripts/update_gpu_compute_runtime_profile_report.sh"),
+        "ci workflow must retain the validated compute-only runtime profile report"
     );
     assert!(
         ci.contains("GenesisCode Authoring Skill Guard"),

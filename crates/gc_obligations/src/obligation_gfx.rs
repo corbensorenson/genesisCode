@@ -90,11 +90,11 @@ pub(super) fn obligation_gfx_golden_images(
         let mut actual_h = Term::Nil;
         let mut actual_png_h = Term::Nil;
         let mut ctx = mk_eval_ctx(limits);
-        let value = match c.body.clone().apply(&mut ctx, Value::Data(Term::Nil)) {
+        let value = match c.body.clone().apply(&mut ctx, Value::data(Term::Nil)) {
             Ok(v) => v,
             Err(e) => {
                 runtime_error = Some(format!("apply failed: {e}"));
-                Value::Data(Term::Nil)
+                Value::data(Term::Nil)
             }
         };
 
@@ -343,11 +343,11 @@ pub(super) fn obligation_gfx_frame_budgets(
         let mut frame_time_ms: Option<u64> = None;
 
         let mut ctx = mk_eval_ctx(limits);
-        let value = match c.body.clone().apply(&mut ctx, Value::Data(Term::Nil)) {
+        let value = match c.body.clone().apply(&mut ctx, Value::data(Term::Nil)) {
             Ok(v) => v,
             Err(e) => {
                 runtime_error = Some(format!("apply failed: {e}"));
-                Value::Data(Term::Nil)
+                Value::data(Term::Nil)
             }
         };
 

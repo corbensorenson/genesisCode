@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "genesis/warm-protocol-v0.2",
+  "title": "GenesisCode warm protocol v0.2",
+  "oneOf": [
+    {"$ref": "#/$defs/initialize"},
+    {"$ref": "#/$defs/execute"},
+    {"$ref": "#/$defs/cancel"},
+    {"$ref": "#/$defs/control"},
+    {"$ref": "#/$defs/response"}
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "root"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "root": {"type": "string", "minLength": 1}
+      }
+    },
+    "initialize": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "id", "method", "client"],
+      "properties": {
+        "protocol": {"const": "genesis/warm-protocol-v0.2"},
+        "id": {"$ref": "#/$defs/id"},
+        "method": {"const": "initialize"},
+        "client": {"$ref": "#/$defs/client"}
+      }
+    },
+    "execute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "id", "method", "workspace", "argv"],
+      "properties": {
+        "protocol": {"const": "genesis/warm-protocol-v0.2"},
+        "id": {"$ref": "#/$defs/id"},
+        "method": {"const": "execute"},
+        "workspace": {"$ref": "#/$defs/workspace"},
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {"type": "string", "minLength": 1, "maxLength": 16384}
+        },
+        "deadline_ms": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 86400000
+        }
+      }
+    },
+    "cancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "id", "method", "target_id"],
+      "properties": {
+        "protocol": {"const": "genesis/warm-protocol-v0.2"},
+        "id": {"$ref": "#/$defs/id"},
+        "method": {"const": "cancel"},
+        "target_id": {"$ref": "#/$defs/id"}
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "id", "method"],
+      "properties": {
+        "protocol": {"const": "genesis/warm-protocol-v0.2"},
+        "id": {"$ref": "#/$defs/id"},
+        "method": {"enum": ["ping", "restart", "shutdown"]}
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "code", "message", "retryable", "details"],
+      "properties": {
+        "schema": {"const": "genesis/warm-protocol-error-v0.2"},
+        "code": {"type": "string", "pattern": "^warm/[a-z0-9-]+$"},
+        "message": {"type": "string", "minLength": 1},
+        "retryable": {"type": "boolean"},
+        "details": {"type": "object"}
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generation",
+        "sequence",
+        "session_cache_key",
+        "queue_depth",
+        "workspace_count",
+        "evicted_workspace_count",
+        "crash_count"
+      ],
+      "properties": {
+        "generation": {"type": "integer", "minimum": 0},
+        "sequence": {"type": "integer", "minimum": 0},
+        "session_cache_key": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "queue_depth": {"type": "integer", "minimum": 0},
+        "workspace_count": {"type": "integer", "minimum": 0},
+        "evicted_workspace_count": {"type": "integer", "minimum": 0},
+        "crash_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "id", "kind", "ok", "status", "data", "error", "meta"],
+      "properties": {
+        "protocol": {"const": "genesis/warm-protocol-v0.2"},
+        "id": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "kind": {"const": "genesis/warm-response-v0.2"},
+        "ok": {"type": "boolean"},
+        "status": {"type": "string", "minLength": 1},
+        "data": {"type": ["object", "null"]},
+        "error": {"oneOf": [{"$ref": "#/$defs/error"}, {"type": "null"}]},
+        "meta": {"$ref": "#/$defs/meta"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"ok": {"const": true}}, "required": ["ok"]},
+          "then": {"properties": {"data": {"type": "object"}, "error": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
+          "then": {"properties": {"data": {"type": "null"}, "error": {"$ref": "#/$defs/error"}}}
+        }
+      ]
+    }
+  }
+}

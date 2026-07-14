@@ -165,7 +165,10 @@ fn compute_bridge_policy(
 }
 
 fn extract_adapter_name(value: &Value) -> Option<String> {
-    let Value::Data(Term::Map(mm)) = value else {
+    let Value::Data(t) = value else {
+        return None;
+    };
+    let Term::Map(mm) = t.as_ref() else {
         return None;
     };
     let adapter = mm
@@ -323,7 +326,7 @@ mod tests {
 
     #[test]
     fn extract_adapter_name_reads_symbol_and_string_keys() {
-        let adapter_value = Value::Data(Term::Map(
+        let adapter_value = Value::data(Term::Map(
             [(
                 TermOrdKey(Term::symbol(":adapter")),
                 Term::Str("GPU Adapter 0".to_string()),
@@ -336,7 +339,7 @@ mod tests {
             Some("GPU Adapter 0".to_string())
         );
 
-        let adapter_string_key = Value::Data(Term::Map(
+        let adapter_string_key = Value::data(Term::Map(
             [(
                 TermOrdKey(Term::Str(":adapter".to_string())),
                 Term::Str("GPU Adapter 1".to_string()),

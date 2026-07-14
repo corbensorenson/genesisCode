@@ -36,7 +36,7 @@ pub(super) fn cap_store_put(
     };
     let mut m = BTreeMap::new();
     m.insert(TermOrdKey(Term::Symbol(":hash".to_string())), Term::Str(h));
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 pub(super) fn cap_store_has(
@@ -88,7 +88,7 @@ pub(super) fn cap_store_has(
         TermOrdKey(Term::Symbol(":present".to_string())),
         Term::Bool(present),
     );
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 #[expect(
@@ -235,7 +235,7 @@ pub(super) fn cap_store_get(
     };
     let mut m = BTreeMap::new();
     m.insert(TermOrdKey(Term::Symbol(":artifact".to_string())), t);
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 pub(super) fn cap_store_verify(
@@ -342,5 +342,5 @@ pub(super) fn cap_store_verify(
     if let Some(h) = maybe_hash {
         out.insert(TermOrdKey(Term::symbol(":hash")), Term::Str(h));
     }
-    Ok(Value::Data(Term::Map(out)))
+    Ok(Value::data(Term::Map(out)))
 }

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/dependency-mirror-policy-v0.1.json",
+  "title": "GenesisCode Dependency Mirror Policy v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "authorityFiles",
+    "cargo",
+    "npm",
+    "fetchPolicy",
+    "mirror",
+    "networkIsolation",
+    "offlineChecks"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/dependency-mirror-policy-v0.1"},
+    "version": {"const": "0.1"},
+    "authorityFiles": {"$ref": "#/$defs/paths"},
+    "cargo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registrySource",
+        "workspaces",
+        "vendorArchive",
+        "maxArchiveBytes",
+        "maxExpandedBytes",
+        "maxExpandedFiles"
+      ],
+      "properties": {
+        "registrySource": {"const": "registry+https://github.com/rust-lang/crates.io-index"},
+        "workspaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/cargoWorkspace"}
+        },
+        "vendorArchive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "compression", "metadataProfile"],
+          "properties": {
+            "format": {"const": "ustar"},
+            "compression": {"const": "gzip"},
+            "metadataProfile": {"const": "genesis/canonical-archive-v0.1"}
+          }
+        },
+        "maxArchiveBytes": {"type": "integer", "minimum": 1},
+        "maxExpandedBytes": {"type": "integer", "minimum": 1},
+        "maxExpandedFiles": {"type": "integer", "minimum": 1}
+      }
+    },
+    "npm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest",
+        "lockfile",
+        "requiredIntegrity",
+        "maxPackageBytes",
+        "maxTotalBytes"
+      ],
+      "properties": {
+        "manifest": {"$ref": "#/$defs/path"},
+        "lockfile": {"$ref": "#/$defs/path"},
+        "requiredIntegrity": {"const": "sha512"},
+        "maxPackageBytes": {"type": "integer", "minimum": 1},
+        "maxTotalBytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "fetchPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "requireTls",
+        "redirects",
+        "cargoRegistryIndex",
+        "npmRegistryOrigin"
+      ],
+      "properties": {
+        "mode": {"const": "declared-once"},
+        "requireTls": {"const": true},
+        "redirects": {"const": "deny"},
+        "cargoRegistryIndex": {"const": "https://github.com/rust-lang/crates.io-index"},
+        "npmRegistryOrigin": {"const": "https://registry.npmjs.org/"}
+      }
+    },
+    "mirror": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "storeMode", "manifestKind"],
+      "properties": {
+        "root": {"const": ".genesis/dependency-mirrors"},
+        "storeMode": {"const": "create-new-sha256"},
+        "manifestKind": {"const": "genesis/dependency-mirror-manifest-v0.1"}
+      }
+    },
+    "networkIsolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["darwin", "linux", "windows"],
+      "properties": {
+        "darwin": {"$ref": "#/$defs/isolation"},
+        "linux": {"$ref": "#/$defs/isolation"},
+        "windows": {"$ref": "#/$defs/isolation"}
+      }
+    },
+    "offlineChecks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "cargo-cli-build",
+          "cargo-evidence-verifier-check",
+          "cargo-workspace-check",
+          "npm-clean-install",
+          "npm-playwright-import"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "cargoWorkspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "manifest", "lockfile"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "manifest": {"$ref": "#/$defs/path"},
+        "lockfile": {"$ref": "#/$defs/path"}
+      }
+    },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "minimumEvidence"],
+      "properties": {
+        "backend": {
+          "enum": ["sandbox-exec", "network-namespace", "unsupported-fail-closed"]
+        },
+        "minimumEvidence": {"enum": ["live-loopback-connect-denied", "none"]}
+      }
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/path"}
+    }
+  }
+}

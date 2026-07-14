@@ -1,8 +1,9 @@
 [package]
 name = "gc_kernel"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 
 [dependencies]
 anyhow.workspace = true
@@ -12,6 +13,7 @@ num-bigint.workspace = true
 num-traits.workspace = true
 thiserror.workspace = true
 stacker.workspace = true
+rpds.workspace = true
 
 # local
 gc_coreform = { path = "../gc_coreform" }

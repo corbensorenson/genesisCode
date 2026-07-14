@@ -39,7 +39,7 @@ pub(super) fn capability_io_net_tcp_listen(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -72,7 +72,7 @@ pub(super) fn capability_io_net_tcp_accept(
         ));
     }
     match call_host_bridge("net", op, &effective_payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -121,7 +121,7 @@ pub(super) fn capability_io_net_http_listen(
         ));
     }
     match call_host_bridge("net", op, &effective_payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -149,7 +149,7 @@ pub(super) fn capability_io_net_http_respond(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -183,7 +183,7 @@ pub(super) fn capability_io_net_ws_accept(
         ));
     }
     match call_host_bridge("net", op, &effective_payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -212,7 +212,7 @@ pub(super) fn capability_io_net_http_request(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -241,7 +241,7 @@ pub(super) fn capability_io_net_ws_open(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -270,7 +270,7 @@ pub(super) fn capability_io_net_tcp_open(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -292,7 +292,7 @@ pub(super) fn capability_io_net_tcp_send(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -313,7 +313,7 @@ pub(super) fn capability_io_net_tcp_recv_or_close(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -342,7 +342,7 @@ pub(super) fn capability_io_net_udp_bind(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -373,7 +373,7 @@ pub(super) fn capability_io_net_udp_send(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -394,7 +394,7 @@ pub(super) fn capability_io_net_udp_recv_or_close(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -424,7 +424,7 @@ pub(super) fn capability_io_net_dns_resolve(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -446,7 +446,7 @@ pub(super) fn capability_io_net_ws_send(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -467,7 +467,7 @@ pub(super) fn capability_io_net_ws_recv_or_close(
         ));
     }
     match call_host_bridge("net", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }

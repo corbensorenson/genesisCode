@@ -72,7 +72,7 @@ pub(super) fn cmd_store(
                             "missing binding core/cli::store-put-program",
                         )
                     })?;
-                    let prog = f.apply(&mut ctx, Value::Data(art.clone())).map_err(|e| {
+                    let prog = f.apply(&mut ctx, Value::data(art.clone())).map_err(|e| {
                         cli_err(
                             EX_EVAL,
                             "eval/error",
@@ -104,7 +104,7 @@ pub(super) fn cmd_store(
                         )
                     })?;
                     let prog = f
-                        .apply(&mut ctx, Value::Data(Term::Str(hash.to_string())))
+                        .apply(&mut ctx, Value::data(Term::Str(hash.to_string())))
                         .map_err(|e| {
                             cli_err(
                                 EX_EVAL,
@@ -137,7 +137,7 @@ pub(super) fn cmd_store(
                         )
                     })?;
                     let prog = f
-                        .apply(&mut ctx, Value::Data(Term::Str(hash.to_string())))
+                        .apply(&mut ctx, Value::data(Term::Str(hash.to_string())))
                         .map_err(|e| {
                             cli_err(
                                 EX_EVAL,
@@ -227,7 +227,7 @@ fn finish_store_command(
     {
         ok = false;
         exit_code = EX_EVAL;
-        if let Value::Data(Term::Map(m)) = payload.as_ref()
+        if let Some(Term::Map(m)) = payload.as_ref().as_data()
             && let Some(Term::Str(s)) = m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
         {
             error_code = store_error_json_code(s);

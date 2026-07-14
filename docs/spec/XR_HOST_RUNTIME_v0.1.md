@@ -66,6 +66,9 @@ Browser-native conformance lane:
 - checker: `scripts/check_webxr_browser_conformance.sh`
 - runtime harness: `scripts/webxr_browser_conformance.mjs`
 - artifact: `.genesis/perf/webxr_browser_conformance_report.json`
+- explicit artifact producer: `scripts/update_webxr_browser_conformance_report.sh`
+- CI invokes the explicit producer because it uploads the report; the checker always uses a
+  private temporary output.
 - conformance scope:
   - real browser `navigator.xr` session open (`inline`) + reference-space request
   - deterministic render-layer initialization (`XRWebGLLayer`) before frame probe

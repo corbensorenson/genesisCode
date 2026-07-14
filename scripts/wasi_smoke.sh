@@ -8,8 +8,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "wasi-smoke" \
-  ".genesis/build/cargo" \
-  "GENESIS_WASI_SMOKE_CARGO_TARGET_DIR"
+  root-wasi
 
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required for wasi_smoke.sh" >&2
@@ -22,6 +21,12 @@ if [[ -z "${WASM_BIN}" ]]; then
   cargo build -p gc_wasi_cli --target wasm32-wasip1 --release >/dev/null
   WASM_BIN="$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
 fi
+
+# Native comparison commands use the host scope; retain the resolved Wasm path.
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "wasi-smoke-native" \
+  root-host
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT

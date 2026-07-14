@@ -196,23 +196,23 @@ pub(super) fn handle_build(
             ),
             (
                 TermOrdKey(Term::symbol(":artifact-path")),
-                Term::Str(executable_bundle.package_path.display().to_string()),
+                Term::Str(artifact_layout.package_rel.to_string()),
             ),
             (
                 TermOrdKey(Term::symbol(":signature-path")),
-                Term::Str(executable_bundle.signature_path.display().to_string()),
+                Term::Str(artifact_layout.signature_rel.to_string()),
             ),
             (
                 TermOrdKey(Term::symbol(":executable-path")),
-                Term::Str(executable_bundle.executable_path.display().to_string()),
+                Term::Str(artifact_layout.executable_rel.to_string()),
             ),
             (
                 TermOrdKey(Term::symbol(":entrypoint-path")),
-                Term::Str(executable_bundle.entrypoint_path.display().to_string()),
+                Term::Str(artifact_layout.entrypoint_rel.to_string()),
             ),
             (
                 TermOrdKey(Term::symbol(":launcher-path")),
-                Term::Str(executable_bundle.launcher_path.display().to_string()),
+                Term::Str(artifact_layout.launcher_rel.to_string()),
             ),
             (
                 TermOrdKey(Term::symbol(":entrypoint-h")),

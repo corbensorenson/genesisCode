@@ -442,12 +442,12 @@ pub(super) fn handle_resolve_conflict(
             let mut out = BTreeMap::new();
             out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
             out.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
-            return Ok(Value::Data(Term::Map(out)));
+            return Ok(Value::data(Term::Map(out)));
         }
         let mut out = BTreeMap::new();
         out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
         out.insert(TermOrdKey(Term::symbol(":conflict-term")), conflict_term);
-        return Ok(Value::Data(Term::Map(out)));
+        return Ok(Value::data(Term::Map(out)));
     }
 
     let merged_snapshot = gc_vcs::ContractSnapshot {
@@ -515,7 +515,7 @@ pub(super) fn handle_resolve_conflict(
             TermOrdKey(Term::symbol(":values")),
             Term::Vector(values.into_iter().map(Term::Str).collect()),
         );
-        return Ok(Value::Data(Term::Map(out)));
+        return Ok(Value::data(Term::Map(out)));
     }
     let mut out = BTreeMap::new();
     out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -525,5 +525,5 @@ pub(super) fn handle_resolve_conflict(
         TermOrdKey(Term::symbol(":values")),
         Term::Vector(values.into_iter().map(Term::Str).collect()),
     );
-    Ok(Value::Data(Term::Map(out)))
+    Ok(Value::data(Term::Map(out)))
 }

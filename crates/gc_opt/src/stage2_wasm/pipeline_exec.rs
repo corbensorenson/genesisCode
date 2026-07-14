@@ -13,8 +13,13 @@ pub(super) fn eval_original_data(
     let v = eval_module(&mut ctx, &mut env, forms)
         .map_err(|e| Stage2CompileError::Unsupported(format!("kernel eval failed: {e}")))?;
     match v {
+        Value::Int(n) => {
+            let term = Term::Int(num_bigint::BigInt::from(n));
+            let h = value_hash(&Value::Int(n));
+            Ok((Stage2ValueKind::Int, term, h))
+        }
         Value::Data(term) => {
-            let kind = match &term {
+            let kind = match term.as_ref() {
                 Term::Int(_) => Stage2ValueKind::Int,
                 Term::Bool(_) => Stage2ValueKind::Bool,
                 Term::Nil => Stage2ValueKind::Nil,
@@ -24,18 +29,18 @@ pub(super) fn eval_original_data(
                 Term::Pair(_, _) | Term::Vector(_) | Term::Map(_) => Stage2ValueKind::Term,
             };
             let h = value_hash(&Value::Data(term.clone()));
-            Ok((kind, term, h))
+            Ok((kind, term.as_ref().clone(), h))
         }
         Value::Vector(items) => {
             let value = Value::Vector(items);
             let term = value.to_term_for_log(None);
-            let h = value_hash(&Value::Data(term.clone()));
+            let h = value_hash(&Value::data(term.clone()));
             Ok((Stage2ValueKind::Term, term, h))
         }
         Value::Map(items) => {
             let value = Value::Map(items);
             let term = value.to_term_for_log(None);
-            let h = value_hash(&Value::Data(term.clone()));
+            let h = value_hash(&Value::data(term.clone()));
             Ok((Stage2ValueKind::Term, term, h))
         }
         Value::EffectProgram(program) => {
@@ -52,7 +57,7 @@ pub(super) fn eval_original_data(
                 Term::Str(hex32(effect_hash)),
             );
             let projected = Term::Map(mm);
-            let h = value_hash(&Value::Data(projected.clone()));
+            let h = value_hash(&Value::data(projected.clone()));
             Ok((Stage2ValueKind::Term, projected, h))
         }
         other => Err(Stage2CompileError::Unsupported(format!(
@@ -793,7 +798,7 @@ pub(super) fn stage2_validation_report_pipeline(forms: &[Term]) -> Stage2Validat
             };
         }
     };
-    let wasm_value_hash = value_hash(&Value::Data(wasm_term.clone()));
+    let wasm_value_hash = value_hash(&Value::data(wasm_term.clone()));
 
     if original_term != wasm_term {
         errors.push("stage2 wasm result differs from kernel result".to_string());

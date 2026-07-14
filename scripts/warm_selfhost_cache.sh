@@ -8,8 +8,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "warm-selfhost-cache" \
-  ".genesis/build/cargo" \
-  "GENESIS_WARM_SELFHOST_CACHE_CARGO_TARGET_DIR"
+  root-host
 
 DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
 GENESIS_BIN="$DEFAULT_DEBUG_DIR/genesis"

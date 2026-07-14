@@ -46,3 +46,18 @@ avoid markdown sprawl:
 Determinism enforcement for combined non-gfx GPU + XR lanes:
 
 - `scripts/check_gpu_xr_productization_kits.sh`
+
+The check renders its report into a private temporary path. It consumes declared gauntlet
+and WebXR reports, may render missing prerequisites privately only when
+`GENESIS_GPU_XR_PRODUCTIZATION_AUTO_RUN_GAUNTLET=1`, and never retains them. Use
+`scripts/update_gpu_xr_productization_kits_report.sh` to retain the productization report;
+with auto-run enabled, that explicit producer may also invoke the paired gauntlet and WebXR
+producers. Missing prerequisites otherwise fail with the exact producer command.
+
+GPU/GFX headroom follows the same lifecycle:
+
+- read-only validation: `scripts/check_gpu_gfx_headroom_conformance.sh`
+- explicit report/history producer: `scripts/update_gpu_gfx_headroom_conformance_report.sh`
+- retained report and history are input-only to the check through
+  `GENESIS_GPU_GFX_HEADROOM_REPORT_INPUT` and
+  `GENESIS_GPU_GFX_HEADROOM_HISTORY_INPUT`.

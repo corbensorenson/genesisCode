@@ -65,8 +65,10 @@ Example:
   - `bridge_cmd_allowlist` (array<string>): explicit command identity allowlist.
     - entries may match `bridge_cmd` token, resolved absolute path, or executable filename.
   - `bridge_cmd_sha256` (string): expected executable digest (64 hex, optional `sha256:` prefix).
-- `timeout_ms` applies to bridge execution only for `spawn-per-op` transport.
-  - configuring `timeout_ms` with `persistent-stdio` is rejected as policy error (`<family>/bridge-policy`).
+- `timeout_ms` is a hard process-tree deadline for both transports.
+  - `spawn-per-op` terminates residual descendants, reaps the child, and joins all I/O pumps before returning `<family>/bridge-timeout`.
+  - `persistent-stdio` terminates and evicts the whole session, joins its sole worker, and never retries the uncertain timed-out request.
+- Hard bridge timeouts require platform process-tree termination support. Current Unix hosts use a dedicated process group per bridge tree. Other hosts fail closed with `<family>/bridge-policy` instead of advertising or attempting a cooperative timeout.
 - `max_bytes` applies to both request payload size and response payload size.
 - Violations return deterministic sealed errors with family-scoped codes:
   - `<family>/bridge-required`

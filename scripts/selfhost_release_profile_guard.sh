@@ -21,8 +21,7 @@ bash scripts/check_disk_headroom.sh \
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "selfhost-release-profile-guard" \
-  ".genesis/build/selfhost_release_profile_guard" \
-  "GENESIS_RELEASE_GUARD_CARGO_TARGET_DIR"
+  root-host
 
 DEFAULT_RELEASE_DIR="$ROOT_DIR/target/release"
 if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then

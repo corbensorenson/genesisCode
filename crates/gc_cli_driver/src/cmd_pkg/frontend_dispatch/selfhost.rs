@@ -76,7 +76,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -122,7 +122,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -173,7 +173,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -214,7 +214,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -253,7 +253,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -292,7 +292,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -337,7 +337,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -380,7 +380,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -457,7 +457,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -561,7 +561,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",
@@ -647,7 +647,7 @@ pub(super) fn build(
                 .into_iter()
                 .collect(),
             );
-            let prog = f.apply(ctx, Value::Data(req)).map_err(|e| {
+            let prog = f.apply(ctx, Value::data(req)).map_err(|e| {
                 cli_err(
                     EX_EVAL,
                     "eval/error",

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate_telemetry.sh"
+genesis_gate_telemetry_reexec "$0" "$@"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -65,7 +68,7 @@ if "DOC_COMPLEXITY_TARGETS_v0.1.md" not in index_text:
 if "DOC_LEAF_OWNERSHIP_v0.1.md" not in index_text:
     raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md")
 
-if "/upgrade_plan.md" not in feature_text:
+if "upgrade_plan.md" not in feature_text:
     raise SystemExit("planning-docs-fresh: feature_matrix.md evidence list must reference upgrade_plan.md")
 
 for required in (

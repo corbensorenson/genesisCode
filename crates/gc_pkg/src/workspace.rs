@@ -4,6 +4,8 @@ use std::path::Path;
 use serde::Deserialize;
 use thiserror::Error;
 
+pub const GENESIS_WORKSPACE_VERSION: u64 = 1;
+
 #[derive(Debug, Error)]
 pub enum WorkspaceError {
     #[error("workspace io error: {0}")]
@@ -158,7 +160,7 @@ impl WorkspaceConfig {
     pub fn empty(workspace: impl Into<String>) -> Self {
         let workspace = workspace.into();
         Self {
-            version: 1,
+            version: GENESIS_WORKSPACE_VERSION,
             workspace: workspace.clone(),
             members: vec![WorkspaceMember {
                 name: workspace,
@@ -186,8 +188,11 @@ impl WorkspaceConfig {
             path: path.display().to_string(),
             msg: e.to_string(),
         })?;
-        let version = wt.version.unwrap_or(1);
-        if version != 1 {
+        let version = wt.version.ok_or_else(|| WorkspaceError::Invalid {
+            path: path.display().to_string(),
+            msg: "missing version".to_string(),
+        })?;
+        if version != GENESIS_WORKSPACE_VERSION {
             return Err(WorkspaceError::Invalid {
                 path: path.display().to_string(),
                 msg: format!("unsupported version {version}"),
@@ -309,7 +314,7 @@ impl WorkspaceConfig {
 
     pub fn to_toml_canonical(&self) -> String {
         let mut out = String::new();
-        out.push_str("version = 1\n");
+        out.push_str(&format!("version = {GENESIS_WORKSPACE_VERSION}\n"));
         out.push_str(&format!("workspace = {}\n\n", toml_str(&self.workspace)));
 
         for m in &self.members {
@@ -476,6 +481,21 @@ mod tests {
                 .and_then(|p| p.runtime_backend.as_deref()),
             Some(RUNTIME_BACKEND_HEADLESS)
         );
+    }
+
+    #[test]
+    fn version_is_required() {
+        let body = r#"
+workspace = "root"
+[[members]]
+name = "root"
+path = "."
+"#;
+        let error =
+            WorkspaceConfig::from_toml_str(std::path::Path::new("genesis.workspace.toml"), body)
+                .unwrap_err()
+                .to_string();
+        assert!(error.contains("missing version"), "{error}");
     }
 
     #[test]

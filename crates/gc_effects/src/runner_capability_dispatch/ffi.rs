@@ -42,10 +42,8 @@ fn ffi_enforce_signed_policy_opt_in(
     if !ffi_signed_policy_required(pol) {
         return Ok(());
     }
-    let policy_artifact_h =
-        ffi_required_nonempty_string(pol, "policy_artifact_h", op).map_err(|msg| {
-            mk_error(error_tok, "core/caps/policy-error", msg, Some(op))
-        })?;
+    let policy_artifact_h = ffi_required_nonempty_string(pol, "policy_artifact_h", op)
+        .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
     if !is_hex64(&policy_artifact_h) {
         return Err(mk_error(
             error_tok,
@@ -54,10 +52,8 @@ fn ffi_enforce_signed_policy_opt_in(
             Some(op),
         ));
     }
-    let policy_signature_h =
-        ffi_required_nonempty_string(pol, "policy_signature_h", op).map_err(|msg| {
-            mk_error(error_tok, "core/caps/policy-error", msg, Some(op))
-        })?;
+    let policy_signature_h = ffi_required_nonempty_string(pol, "policy_signature_h", op)
+        .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
     if !is_hex64(&policy_signature_h) {
         return Err(mk_error(
             error_tok,
@@ -148,7 +144,12 @@ fn term_bytes_or_string_len(value: &Term) -> Result<usize, String> {
     }
 }
 
-fn ffi_boundary_envelope(op: &str, payload: &Term, response: Term, pol: Option<&OpPolicy>) -> Value {
+fn ffi_boundary_envelope(
+    op: &str,
+    payload: &Term,
+    response: Term,
+    pol: Option<&OpPolicy>,
+) -> Value {
     let request_envelope = Term::Map(
         [
             (
@@ -227,14 +228,8 @@ fn ffi_boundary_envelope(op: &str, payload: &Term, response: Term, pol: Option<&
                     TermOrdKey(Term::symbol(":evidence-mode")),
                     Term::Str(evidence_mode.to_string()),
                 ),
-                (
-                    TermOrdKey(Term::symbol(":request-h")),
-                    Term::Str(request_h),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":result-h")),
-                    Term::Str(result_h),
-                ),
+                (TermOrdKey(Term::symbol(":request-h")), Term::Str(request_h)),
+                (TermOrdKey(Term::symbol(":result-h")), Term::Str(result_h)),
             ]
             .into_iter()
             .collect(),
@@ -242,7 +237,7 @@ fn ffi_boundary_envelope(op: &str, payload: &Term, response: Term, pol: Option<&
         envelope.insert(TermOrdKey(Term::symbol(":ffi-provenance")), provenance);
     }
 
-    Value::Data(Term::Map(envelope))
+    Value::data(Term::Map(envelope))
 }
 
 fn ffi_check_schema_ids(
@@ -486,7 +481,9 @@ fn capability_host_ffi_call(
                 return mk_error(
                     error_tok,
                     "core/caps/policy-error",
-                    format!("{op} requires max_call_payload_bytes when signed_policy_required=true"),
+                    format!(
+                        "{op} requires max_call_payload_bytes when signed_policy_required=true"
+                    ),
                     Some(op),
                 );
             }

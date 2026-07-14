@@ -421,8 +421,8 @@ path = "./.genesis/refs.gc"
     .unwrap();
 
     match r.value {
-        Value::Sealed { payload, .. } => match *payload {
-            Value::Data(Term::Map(mm)) => {
+        Value::Sealed { payload, .. } => match payload.as_ref().as_data() {
+            Some(Term::Map(mm)) => {
                 let code = mm
                     .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
                     .and_then(|t| match t {
@@ -432,7 +432,7 @@ path = "./.genesis/refs.gc"
                     .unwrap_or_default();
                 assert_eq!(code, "core/refs/role-independence-violation");
             }
-            other => panic!("expected map payload, got {}", other.debug_repr()),
+            other => panic!("expected map payload, got {other:?}"),
         },
         other => panic!("expected sealed error, got {}", other.debug_repr()),
     }
@@ -550,8 +550,8 @@ path = "./.genesis/refs.gc"
     .unwrap();
 
     match r.value {
-        Value::Sealed { payload, .. } => match *payload {
-            Value::Data(Term::Map(mm)) => {
+        Value::Sealed { payload, .. } => match payload.as_ref().as_data() {
+            Some(Term::Map(mm)) => {
                 let code = mm
                     .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
                     .and_then(|t| match t {
@@ -561,7 +561,7 @@ path = "./.genesis/refs.gc"
                     .unwrap_or_default();
                 assert_eq!(code, "core/refs/invalid-requirements-trace");
             }
-            other => panic!("expected map payload, got {}", other.debug_repr()),
+            other => panic!("expected map payload, got {other:?}"),
         },
         other => panic!("expected sealed error, got {}", other.debug_repr()),
     }
@@ -673,8 +673,8 @@ path = "./.genesis/refs.gc"
     .unwrap();
 
     match r.value {
-        Value::Sealed { payload, .. } => match *payload {
-            Value::Data(Term::Map(mm)) => {
+        Value::Sealed { payload, .. } => match payload.as_ref().as_data() {
+            Some(Term::Map(mm)) => {
                 let code = mm
                     .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
                     .and_then(|t| match t {
@@ -684,7 +684,7 @@ path = "./.genesis/refs.gc"
                     .unwrap_or_default();
                 assert_eq!(code, "core/refs/invalid-tool-qualification");
             }
-            other => panic!("expected map payload, got {}", other.debug_repr()),
+            other => panic!("expected map payload, got {other:?}"),
         },
         other => panic!("expected sealed error, got {}", other.debug_repr()),
     }

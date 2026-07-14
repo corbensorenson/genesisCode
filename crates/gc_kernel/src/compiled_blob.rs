@@ -1,19 +1,34 @@
 use std::sync::Arc;
 
 use crate::error::{KernelError, KernelErrorKind};
+use crate::eval::PrimOp;
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 
-use super::{CExpr, COMPILED_MODULE_BLOB_MAGIC, CompiledForm, CompiledModule};
+use super::{
+    CExpr, COMPILED_MODULE_BLOB_MAGIC, CompiledCoverageSites, CompiledForm, CompiledModule,
+    SymbolInterner, VarResolution,
+};
 
 pub(super) fn encode_compiled_module_blob(m: &CompiledModule) -> Result<Vec<u8>, KernelError> {
     let mut out = Vec::new();
     out.extend_from_slice(COMPILED_MODULE_BLOB_MAGIC);
+    push_u32(&mut out, m.module_names.len())?;
+    for name in &m.module_names {
+        push_str(&mut out, name)?;
+    }
+    push_str_slice(&mut out, m.coverage_sites.statement_sites())?;
+    push_str_slice(&mut out, m.coverage_sites.decision_sites())?;
     push_u32(&mut out, m.forms.len())?;
     for f in &m.forms {
         match f {
-            CompiledForm::Def(name, expr) => {
+            CompiledForm::Def {
+                name,
+                module_slot,
+                expr,
+            } => {
                 out.push(0);
                 push_str(&mut out, name)?;
+                out.extend_from_slice(&module_slot.to_le_bytes());
                 encode_cexpr(&mut out, expr)?;
             }
             CompiledForm::Expr(expr) => {
@@ -34,18 +49,31 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
             "compiled module blob magic mismatch",
         ));
     }
+    let module_names_len = cur.read_u32()? as usize;
+    let mut module_names = Vec::with_capacity(module_names_len);
+    for _ in 0..module_names_len {
+        module_names.push(cur.read_str()?);
+    }
+    let statement_sites = cur.read_str_vec()?;
+    let decision_sites = cur.read_str_vec()?;
     let forms_len = cur.read_u32()? as usize;
+    let mut interner = SymbolInterner::default();
     let mut forms = Vec::with_capacity(forms_len);
     for _ in 0..forms_len {
         let tag = cur.read_u8()?;
         match tag {
             0 => {
                 let name = cur.read_str()?;
-                let expr = decode_cexpr(&mut cur)?;
-                forms.push(CompiledForm::Def(name, expr));
+                let module_slot = cur.read_u32()?;
+                let expr = decode_cexpr(&mut cur, &mut interner)?;
+                forms.push(CompiledForm::Def {
+                    name,
+                    module_slot,
+                    expr,
+                });
             }
             1 => {
-                let expr = decode_cexpr(&mut cur)?;
+                let expr = decode_cexpr(&mut cur, &mut interner)?;
                 forms.push(CompiledForm::Expr(expr));
             }
             _ => {
@@ -62,7 +90,18 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
             "compiled module blob has trailing bytes",
         ));
     }
-    Ok(CompiledModule { forms })
+    let decision_conditions = super::compiled_coverage::collect_decision_conditions_and_validate(
+        &forms,
+        statement_sites.len(),
+        decision_sites.len(),
+    )?;
+    let coverage_sites =
+        CompiledCoverageSites::from_parts(statement_sites, decision_sites, decision_conditions)?;
+    Ok(CompiledModule {
+        forms,
+        module_names,
+        coverage_sites,
+    })
 }
 
 fn push_u32(out: &mut Vec<u8>, n: usize) -> Result<(), KernelError> {
@@ -86,6 +125,14 @@ fn push_str(out: &mut Vec<u8>, s: &str) -> Result<(), KernelError> {
     push_bytes(out, s.as_bytes())
 }
 
+fn push_str_slice(out: &mut Vec<u8>, xs: &[String]) -> Result<(), KernelError> {
+    push_u32(out, xs.len())?;
+    for x in xs {
+        push_str(out, x)?;
+    }
+    Ok(())
+}
+
 fn push_term(out: &mut Vec<u8>, t: &Term) -> Result<(), KernelError> {
     let rendered = print_term(t);
     push_str(out, &rendered)
@@ -97,10 +144,16 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
             out.push(0);
             push_term(out, t)
         }
-        CExpr::Var { name, site_id } => {
+        CExpr::Var {
+            name,
+            sym: _,
+            resolution,
+            statement_site,
+        } => {
             out.push(1);
             push_str(out, name)?;
-            push_str(out, site_id)
+            out.extend_from_slice(&statement_site.to_le_bytes());
+            encode_var_resolution(out, *resolution)
         }
         CExpr::Vector(items) => {
             out.push(2);
@@ -127,10 +180,10 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
             cond,
             then_expr,
             else_expr,
-            site_id,
+            decision_site,
         } => {
             out.push(5);
-            push_str(out, site_id)?;
+            out.extend_from_slice(&decision_site.to_le_bytes());
             encode_cexpr(out, cond)?;
             encode_cexpr(out, then_expr)?;
             encode_cexpr(out, else_expr)
@@ -164,6 +217,15 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
         }
         CExpr::Prim { op, args } => {
             out.push(9);
+            push_str(out, op.as_str())?;
+            push_u32(out, args.len())?;
+            for a in args {
+                encode_cexpr(out, a)?;
+            }
+            Ok(())
+        }
+        CExpr::PrimUnknown { op, args } => {
+            out.push(9);
             push_str(out, op)?;
             push_u32(out, args.len())?;
             for a in args {
@@ -190,7 +252,39 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
             encode_cexpr(out, f)?;
             encode_cexpr(out, x)
         }
+        CExpr::AppN {
+            callee,
+            args,
+            extra_app_ticks,
+        } => {
+            out.push(14);
+            out.extend_from_slice(&extra_app_ticks.to_le_bytes());
+            encode_cexpr(out, callee)?;
+            push_u32(out, args.len())?;
+            for a in args.iter() {
+                encode_cexpr(out, a)?;
+            }
+            Ok(())
+        }
     }
+}
+
+fn encode_var_resolution(out: &mut Vec<u8>, resolution: VarResolution) -> Result<(), KernelError> {
+    match resolution {
+        VarResolution::Local { depth, slot } => {
+            out.push(0);
+            out.extend_from_slice(&depth.to_le_bytes());
+            out.extend_from_slice(&slot.to_le_bytes());
+        }
+        VarResolution::Module { slot } => {
+            out.push(1);
+            out.extend_from_slice(&slot.to_le_bytes());
+        }
+        VarResolution::External => {
+            out.push(2);
+        }
+    }
+    Ok(())
 }
 
 struct DecodeCursor<'a> {
@@ -225,6 +319,12 @@ impl<'a> DecodeCursor<'a> {
         Ok(u32::from_le_bytes(buf))
     }
 
+    fn read_u16(&mut self) -> Result<u16, KernelError> {
+        let mut buf = [0u8; 2];
+        buf.copy_from_slice(self.read_exact(2)?);
+        Ok(u16::from_le_bytes(buf))
+    }
+
     fn read_bytes(&mut self) -> Result<&'a [u8], KernelError> {
         let n = self.read_u32()? as usize;
         self.read_exact(n)
@@ -241,6 +341,15 @@ impl<'a> DecodeCursor<'a> {
         Ok(s.to_string())
     }
 
+    fn read_str_vec(&mut self) -> Result<Vec<String>, KernelError> {
+        let n = self.read_u32()? as usize;
+        let mut out = Vec::with_capacity(n);
+        for _ in 0..n {
+            out.push(self.read_str()?);
+        }
+        Ok(out)
+    }
+
     fn read_term(&mut self) -> Result<Term, KernelError> {
         let s = self.read_str()?;
         parse_term(&s).map_err(|e| {
@@ -252,14 +361,25 @@ impl<'a> DecodeCursor<'a> {
     }
 }
 
-fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
+fn decode_cexpr(
+    cur: &mut DecodeCursor<'_>,
+    interner: &mut SymbolInterner,
+) -> Result<Arc<CExpr>, KernelError> {
     let tag = cur.read_u8()?;
     let out = match tag {
         0 => CExpr::Atom(cur.read_term()?),
-        1 => CExpr::Var {
-            name: cur.read_str()?,
-            site_id: cur.read_str()?,
-        },
+        1 => {
+            let name = cur.read_str()?;
+            let statement_site = cur.read_u32()?;
+            let resolution = decode_var_resolution(cur)?;
+            let sym = interner.intern(&name)?;
+            CExpr::Var {
+                name,
+                sym,
+                resolution,
+                statement_site,
+            }
+        }
         2 => {
             let n = cur.read_u32()? as usize;
             let mut items = Vec::with_capacity(n);
@@ -273,23 +393,23 @@ fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
             let mut entries = Vec::with_capacity(n);
             for _ in 0..n {
                 let key = TermOrdKey(cur.read_term()?);
-                let val = decode_cexpr(cur)?;
+                let val = decode_cexpr(cur, interner)?;
                 entries.push((key, val));
             }
             CExpr::Map(entries)
         }
         4 => CExpr::Quote(cur.read_term()?),
         5 => CExpr::If {
-            site_id: cur.read_str()?,
-            cond: decode_cexpr(cur)?,
-            then_expr: decode_cexpr(cur)?,
-            else_expr: decode_cexpr(cur)?,
+            decision_site: cur.read_u32()?,
+            cond: decode_cexpr(cur, interner)?,
+            then_expr: decode_cexpr(cur, interner)?,
+            else_expr: decode_cexpr(cur, interner)?,
         },
         6 => {
             let n = cur.read_u32()? as usize;
             let mut items = Vec::with_capacity(n);
             for _ in 0..n {
-                items.push(decode_cexpr(cur)?);
+                items.push(decode_cexpr(cur, interner)?);
             }
             CExpr::Begin(items)
         }
@@ -298,16 +418,16 @@ fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
             let mut bindings = Vec::with_capacity(n);
             for _ in 0..n {
                 let name = cur.read_str()?;
-                let rhs = decode_cexpr(cur)?;
+                let rhs = decode_cexpr(cur, interner)?;
                 bindings.push((name, rhs));
             }
-            let body = decode_cexpr(cur)?;
+            let body = decode_cexpr(cur, interner)?;
             CExpr::Let(bindings, body)
         }
         8 => {
             let param = cur.read_str()?;
             let body_term = cur.read_term()?;
-            let body = decode_cexpr(cur)?;
+            let body = decode_cexpr(cur, interner)?;
             CExpr::FnUnary {
                 param,
                 body_term,
@@ -319,14 +439,32 @@ fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
             let n = cur.read_u32()? as usize;
             let mut args = Vec::with_capacity(n);
             for _ in 0..n {
-                args.push(decode_cexpr(cur)?);
+                args.push(decode_cexpr(cur, interner)?);
             }
-            CExpr::Prim { op, args }
+            if let Some(op) = PrimOp::from_str(&op) {
+                CExpr::Prim { op, args }
+            } else {
+                CExpr::PrimUnknown { op, args }
+            }
         }
         10 => CExpr::SealNew,
-        11 => CExpr::Seal(decode_cexpr(cur)?, decode_cexpr(cur)?),
-        12 => CExpr::Unseal(decode_cexpr(cur)?, decode_cexpr(cur)?),
-        13 => CExpr::App(decode_cexpr(cur)?, decode_cexpr(cur)?),
+        11 => CExpr::Seal(decode_cexpr(cur, interner)?, decode_cexpr(cur, interner)?),
+        12 => CExpr::Unseal(decode_cexpr(cur, interner)?, decode_cexpr(cur, interner)?),
+        13 => CExpr::App(decode_cexpr(cur, interner)?, decode_cexpr(cur, interner)?),
+        14 => {
+            let extra_app_ticks = cur.read_u32()?;
+            let callee = decode_cexpr(cur, interner)?;
+            let n = cur.read_u32()? as usize;
+            let mut args = Vec::with_capacity(n);
+            for _ in 0..n {
+                args.push(decode_cexpr(cur, interner)?);
+            }
+            CExpr::AppN {
+                callee,
+                args: args.into_boxed_slice(),
+                extra_app_ticks,
+            }
+        }
         _ => {
             return Err(KernelError::new(
                 KernelErrorKind::Internal,
@@ -335,4 +473,21 @@ fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
         }
     };
     Ok(Arc::new(out))
+}
+
+fn decode_var_resolution(cur: &mut DecodeCursor<'_>) -> Result<VarResolution, KernelError> {
+    match cur.read_u8()? {
+        0 => Ok(VarResolution::Local {
+            depth: cur.read_u16()?,
+            slot: cur.read_u16()?,
+        }),
+        1 => Ok(VarResolution::Module {
+            slot: cur.read_u32()?,
+        }),
+        2 => Ok(VarResolution::External),
+        tag => Err(KernelError::new(
+            KernelErrorKind::Internal,
+            format!("invalid compiled var resolution tag: {tag}"),
+        )),
+    }
 }

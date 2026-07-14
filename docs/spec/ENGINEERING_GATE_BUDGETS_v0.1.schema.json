@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/engineering-gate-budgets-v0.1.json",
+  "title": "GenesisCode Engineering Gate Budget Policy v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "roadmapTask", "budgets", "panicAssurance", "profileSubjects", "releaseFullOnlyGates", "semanticCrateWaivers", "staticReclassifications"],
+  "properties": {
+    "kind": {"const": "genesis/engineering-gate-budget-policy-v0.1"},
+    "version": {"const": "0.1"},
+    "roadmapTask": {"const": "R0.4.f"},
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["GB-1", "GB-2", "GB-3", "GB-4", "GB-5", "GB-6", "GB-7", "GB-8"],
+      "properties": {
+        "GB-1": {"$ref": "#/$defs/staticBudget"},
+        "GB-2": {"$ref": "#/$defs/loopBudget"},
+        "GB-3": {"$ref": "#/$defs/profileBudget"},
+        "GB-4": {"$ref": "#/$defs/releaseBudget"},
+        "GB-5": {"$ref": "#/$defs/footprintBudget"},
+        "GB-6": {"$ref": "#/$defs/verifierBudget"},
+        "GB-7": {"$ref": "#/$defs/sourceBudget"},
+        "GB-8": {"$ref": "#/$defs/prerequisiteBudget"}
+      }
+    },
+    "panicAssurance": {"type": "object", "additionalProperties": false, "required": ["staticGate", "compilerGate"], "properties": {"staticGate": {"$ref": "#/$defs/repoPath"}, "compilerGate": {"$ref": "#/$defs/repoPath"}}},
+    "profileSubjects": {"type": "object", "additionalProperties": false, "required": ["changedFileScript", "profileRunner", "evidenceVerifierScript"], "properties": {"changedFileScript": {"$ref": "#/$defs/repoPath"}, "profileRunner": {"$ref": "#/$defs/repoPath"}, "evidenceVerifierScript": {"$ref": "#/$defs/repoPath"}}},
+    "releaseFullOnlyGates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/repoPath"}},
+    "semanticCrateWaivers": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["crate", "owner", "rationale", "expiresAtMilestone"], "properties": {"crate": {"$ref": "#/$defs/repoPath"}, "owner": {"type": "string", "minLength": 1}, "rationale": {"type": "string", "minLength": 20}, "expiresAtMilestone": {"const": "M3"}}}},
+    "staticReclassifications": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["entrypoint", "kind", "profile"], "properties": {"entrypoint": {"$ref": "#/$defs/repoPath"}, "kind": {"enum": ["build", "test", "benchmark", "proof", "release-only"]}, "profile": {"enum": ["prepush-standard", "release-full"]}}}}
+  },
+  "$defs": {
+    "positive": {"type": "integer", "minimum": 1},
+    "repoPath": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$"},
+    "staticBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "maxWarmDurationMs", "maxAdditionalDiskBytes", "network", "compilation"], "properties": {"subject": {"const": "static-gates"}, "maxWarmDurationMs": {"const": 15000}, "maxAdditionalDiskBytes": {"const": 67108864}, "network": {"const": "deny"}, "compilation": {"const": false}}},
+    "loopBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "maxWarmDurationMs", "maxAdditionalDiskBytes", "network"], "properties": {"subject": {"const": "changed-file-gate"}, "maxWarmDurationMs": {"const": 120000}, "maxAdditionalDiskBytes": {"const": 1073741824}, "network": {"const": "deny"}}},
+    "profileBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "maxWarmDurationMs", "maxAdditionalDiskBytes"], "properties": {"subject": {"const": "prepush-standard"}, "maxWarmDurationMs": {"const": 480000}, "maxAdditionalDiskBytes": {"const": 3221225472}}},
+    "releaseBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "maxReferenceDurationMs", "maxArtifactBytes"], "properties": {"subject": {"const": "release-full"}, "maxReferenceDurationMs": {"const": 2700000}, "maxArtifactBytes": {"const": 21474836480}}},
+    "footprintBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "maxNormalBuildBytes", "maxPostCleanGeneratedBytes", "cleanupProfile"], "properties": {"subject": {"const": "development-footprint"}, "maxNormalBuildBytes": {"const": 8589934592}, "maxPostCleanGeneratedBytes": {"const": 2147483648}, "cleanupProfile": {"const": "dev-clean"}}},
+    "verifierBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "maxOfflineDurationMs", "network", "compilerInvocation"], "properties": {"subject": {"const": "prebuilt-evidence-verification"}, "maxOfflineDurationMs": {"const": 300000}, "network": {"const": "deny"}, "compilerInvocation": {"const": false}}},
+    "sourceBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "maxProductionRustFileLines", "maxSemanticCrateLines", "enforcementMilestone"], "properties": {"subject": {"const": "source-concentration"}, "maxProductionRustFileLines": {"const": 1000}, "maxSemanticCrateLines": {"const": 20000}, "enforcementMilestone": {"const": "M3"}}},
+    "prerequisiteBudget": {"type": "object", "additionalProperties": false, "required": ["subject", "prerequisiteManifest", "minimumPython", "undeclaredPythonModules"], "properties": {"subject": {"const": "fresh-clone-prerequisites"}, "prerequisiteManifest": {"const": "genesis.prerequisites.json"}, "minimumPython": {"const": "3.9"}, "undeclaredPythonModules": {"const": 0}}}
+  }
+}

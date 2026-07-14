@@ -1,0 +1,156 @@
+{
+  "cases": [
+    {
+      "expectedDiagnostic": "artifact digest mismatch",
+      "id": "artifact-content-substitution",
+      "surface": "artifact"
+    },
+    {
+      "expectedDiagnostic": "normalized relative path",
+      "id": "artifact-path-alias",
+      "surface": "artifact-tree"
+    },
+    {
+      "expectedDiagnostic": "normalized relative path",
+      "id": "artifact-path-traversal",
+      "surface": "artifact-tree"
+    },
+    {
+      "expectedDiagnostic": "Merkle root mismatch",
+      "id": "artifact-tree-root-substitution",
+      "surface": "artifact-tree"
+    },
+    {
+      "expectedDiagnostic": "artifact size mismatch",
+      "id": "artifact-type-substitution",
+      "surface": "artifact"
+    },
+    {
+      "expectedDiagnostic": "duplicate JSON key",
+      "id": "bundle-duplicate-key",
+      "surface": "bundle"
+    },
+    {
+      "expectedDiagnostic": "bundle missing fields: kind",
+      "id": "bundle-missing-field",
+      "surface": "bundle"
+    },
+    {
+      "expectedDiagnostic": "bundle profile is not allowed",
+      "id": "bundle-profile-unsupported",
+      "surface": "bundle"
+    },
+    {
+      "expectedDiagnostic": "bundle version: expected 0.1, observed 9.9",
+      "id": "bundle-version-unsupported",
+      "surface": "bundle"
+    },
+    {
+      "expectedDiagnostic": "dirty source requires dirtyPathsDigest",
+      "id": "dirty-paths-digest-missing",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "source missing fields: dirtyPolicy",
+      "id": "dirty-policy-missing",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "clean source required",
+      "id": "dirty-source",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "negative control did not pass",
+      "id": "failed-negative-control",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "floating-point JSON is forbidden",
+      "id": "float-number",
+      "surface": "bundle"
+    },
+    {
+      "expectedDiagnostic": "signature verification failed",
+      "id": "forged-signature",
+      "surface": "dsse"
+    },
+    {
+      "expectedDiagnostic": "artifact tree manifest digest does not match trust policy",
+      "id": "hash-tree-policy-substitution",
+      "surface": "policy"
+    },
+    {
+      "expectedDiagnostic": "required predicate is missing",
+      "id": "missing-slsa-companion",
+      "surface": "bundle"
+    },
+    {
+      "expectedDiagnostic": "network mode is not allowed",
+      "id": "network-policy-bypass",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "DSSE payload does not match statement",
+      "id": "payload-substitution",
+      "surface": "dsse"
+    },
+    {
+      "expectedDiagnostic": "policy SHA-256 mismatch",
+      "id": "policy-self-trust-injection",
+      "surface": "policy"
+    },
+    {
+      "expectedDiagnostic": "signature threshold not met",
+      "id": "signature-threshold-bypass",
+      "surface": "dsse"
+    },
+    {
+      "expectedDiagnostic": "build type is not allowed",
+      "id": "slsa-build-type-substitution",
+      "surface": "slsa-predicate"
+    },
+    {
+      "expectedDiagnostic": "builder id is not allowed",
+      "id": "slsa-builder-substitution",
+      "surface": "slsa-predicate"
+    },
+    {
+      "expectedDiagnostic": "source repository URI does not match trust policy",
+      "id": "source-repository-stale",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "source revision does not match trust policy",
+      "id": "source-revision-stale",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "source tree digest does not match trust policy",
+      "id": "source-tree-stale",
+      "surface": "genesis-predicate"
+    },
+    {
+      "expectedDiagnostic": "statement subjects differ",
+      "id": "statement-subject-divergence",
+      "surface": "statement"
+    },
+    {
+      "expectedDiagnostic": "predicate type is not allowed",
+      "id": "unsupported-predicate",
+      "surface": "statement"
+    },
+    {
+      "expectedDiagnostic": "signature key is not trusted",
+      "id": "untrusted-key",
+      "surface": "dsse"
+    },
+    {
+      "expectedDiagnostic": "verifier is not allowed",
+      "id": "verifier-identity-substitution",
+      "surface": "genesis-predicate"
+    }
+  ],
+  "kind": "genesis/evidence-verifier-negative-vectors-v0.1",
+  "version": "0.1"
+}

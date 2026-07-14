@@ -1,0 +1,357 @@
+{
+  "kind": "genesis/roadmap-execution-policy-v0.1",
+  "version": "0.1",
+  "audit_date": "2026-07-14",
+  "resource_classes": [
+    "static",
+    "build",
+    "benchmark",
+    "proof",
+    "release",
+    "research"
+  ],
+  "risk_classes": {
+    "low": {
+      "negative_controls": [
+        "reject roadmap/manifest coverage or generated-view drift"
+      ],
+      "rollback": "Revert the reviewed source change, regenerate derived views, and preserve the rejected diff as evidence."
+    },
+    "medium": {
+      "negative_controls": [
+        "reject missing prerequisites, acceptance evidence, or source identities",
+        "reject undeclared output and compatibility changes"
+      ],
+      "rollback": "Restore the prior compatible artifact or profile, rerun its guards, and retain the failed candidate for diagnosis."
+    },
+    "high": {
+      "negative_controls": [
+        "reject stale identities, unknown fields, host-specific paths, and evidence produced by update commands",
+        "reject capability, policy, format, or resource broadening without an explicit reviewed contract"
+      ],
+      "rollback": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
+    },
+    "critical": {
+      "negative_controls": [
+        "reject any semantic, authority, seal, replay, capability, bootstrap, or release-policy bypass",
+        "reject self-verification, unsigned authority changes, and incomplete independent evidence"
+      ],
+      "rollback": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
+    }
+  },
+  "execution_profiles": {
+    "planning-truth": {
+      "risk_class": "high",
+      "resource_class": "static",
+      "owner_paths": [
+        "ROADMAP.md",
+        "upgrade_plan.md",
+        "feature_matrix.md",
+        "docs/status",
+        "scripts/lib"
+      ],
+      "guard_checks": [
+        "scripts/check_planning_docs_fresh.sh",
+        "scripts/check_doc_topology_drift.sh",
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "negative_controls": [
+        "reject duplicate, missing, reordered, or self-completing roadmap task records"
+      ]
+    },
+    "evidence-authority": {
+      "risk_class": "critical",
+      "resource_class": "static",
+      "owner_paths": [
+        "docs/spec",
+        "docs/program",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_check_update_boundary.sh",
+        "scripts/check_generated_artifact_policy.sh",
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "negative_controls": [
+        "reject a check that mutates retained evidence or treats freshly produced material as independent proof"
+      ]
+    },
+    "hermetic-foundation": {
+      "risk_class": "high",
+      "resource_class": "build",
+      "owner_paths": [
+        "Cargo.toml",
+        "Cargo.lock",
+        "genesis.lock",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_root_lock_policy.sh",
+        "scripts/check_versioning_release_hygiene.sh",
+        "scripts/check_supply_chain.sh"
+      ],
+      "negative_controls": [
+        "reject undeclared tools, network inputs, rebuild islands, and benchmark environments"
+      ]
+    },
+    "agent-contract": {
+      "risk_class": "high",
+      "resource_class": "build",
+      "owner_paths": [
+        ".agents",
+        "docs/skill_pack",
+        "docs/spec",
+        "examples",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_agent_authoring_bundle.sh",
+        "scripts/check_cli_diagnostics_contract.sh",
+        "scripts/check_write_genesiscode_skill_conformance.sh"
+      ],
+      "negative_controls": [
+        "reject stale cards, prompt-injected authority, policy broadening, and training/evaluation leakage"
+      ]
+    },
+    "runtime-core": {
+      "risk_class": "critical",
+      "resource_class": "benchmark",
+      "owner_paths": [
+        "crates/gc_kernel",
+        "crates/gc_effects",
+        "crates/gc_prelude",
+        "prelude",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_kernel_tcb_contract.sh",
+        "scripts/check_runtime_workload_budgets.sh",
+        "scripts/check_perf_budgets.sh"
+      ],
+      "negative_controls": [
+        "reject tier divergence, resource-accounting bypass, host leaks, unbounded allocation, and user-reachable panic"
+      ]
+    },
+    "validated-tier": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "crates/gc_kernel",
+        "crates/gc_opt",
+        "crates/gc_wasm",
+        "crates/gc_wasi_cli",
+        "docs/spec"
+      ],
+      "guard_checks": [
+        "scripts/check_wasm_production_surface.sh",
+        "scripts/check_kernel_tcb_contract.sh",
+        "scripts/check_fuzz_differential_hardening.sh"
+      ],
+      "negative_controls": [
+        "reject malformed artifacts, undeclared fallback, duplicated effects, forged seals, and optimizer-only success"
+      ]
+    },
+    "selfhost-authority": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "selfhost",
+        "crates/gc_cli_driver",
+        "crates/gc_patches",
+        "crates/gc_obligations",
+        "docs/status",
+        "policies"
+      ],
+      "guard_checks": [
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/check_selfhost_readiness_scorecard.sh",
+        "scripts/check_source_decomposition_progress.sh"
+      ],
+      "negative_controls": [
+        "reject routed-only selfhost claims, hidden Rust semantic fallback, non-fixpoint bootstrap, and trusting-trust blind spots"
+      ]
+    },
+    "language-contract": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "docs/PAPER_v0.2.md",
+        "docs/TECH_HANDOFF.md",
+        "docs/spec",
+        "crates/gc_types",
+        "crates/gc_coreform",
+        "crates/gc_prelude"
+      ],
+      "guard_checks": [
+        "scripts/check_foundation_stdlib_conformance.sh",
+        "scripts/check_host_abi_conformance.sh",
+        "scripts/check_no_user_panics.sh"
+      ],
+      "negative_controls": [
+        "reject undocumented semantics, profile confusion, ambient authority, and cross-host identity drift"
+      ]
+    },
+    "ecosystem-delivery": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "crates/gc_pkg",
+        "crates/gc_registry",
+        "crates/gc_vcs",
+        "examples",
+        "docs/spec"
+      ],
+      "guard_checks": [
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_remote_registry_runtime_parity.sh",
+        "scripts/check_gcpm_target_runtime_pipelines.sh"
+      ],
+      "negative_controls": [
+        "reject mutable resolution, signature or rollback bypass, secret disclosure, non-reproducible artifacts, and undeclared deployment effects"
+      ]
+    },
+    "assurance": {
+      "risk_class": "critical",
+      "resource_class": "proof",
+      "owner_paths": [
+        "docs/program",
+        "docs/spec",
+        "crates",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_no_user_panics.sh",
+        "scripts/check_fuzz_differential_hardening.sh",
+        "scripts/check_supply_chain.sh"
+      ],
+      "negative_controls": [
+        "reject decorative proofs, uncovered runtime forms, unshrunk failures, and mutation suites that do not kill weakened trust checks"
+      ]
+    },
+    "product-proof": {
+      "risk_class": "high",
+      "resource_class": "benchmark",
+      "owner_paths": [
+        "examples",
+        "docs/skill_pack",
+        "docs/spec",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_agent_generative_workloads.sh",
+        "scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "negative_controls": [
+        "reject benchmark contamination, private prompt dependence, human code edits hidden as agent success, and unsupported-domain claims"
+      ]
+    },
+    "trust-release": {
+      "risk_class": "critical",
+      "resource_class": "release",
+      "owner_paths": [
+        ".github",
+        "CHANGELOG.md",
+        "docs/spec",
+        "docs/status",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_release_smoke.sh",
+        "scripts/check_green_front_door.sh",
+        "scripts/check_supply_chain.sh"
+      ],
+      "negative_controls": [
+        "reject unreproduced artifacts, unsigned claims, incompatible upgrades, compromised roots, and release evidence verified only by its producer"
+      ]
+    },
+    "frontier-research": {
+      "risk_class": "critical",
+      "resource_class": "research",
+      "owner_paths": [
+        "ROADMAP.md",
+        "docs/program",
+        "docs/spec",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_green_front_door.sh",
+        "scripts/check_check_update_boundary.sh",
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "negative_controls": [
+        "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
+      ]
+    }
+  },
+  "workstreams": {
+    "R0.1": {"profile": "planning-truth", "start_after": [], "sequential": false},
+    "R0.2": {"profile": "evidence-authority", "start_after": ["R0.1.e"], "sequential": true},
+    "R0.3": {"profile": "hermetic-foundation", "start_after": ["R0.1.e"], "sequential": true},
+    "R0.4": {"profile": "hermetic-foundation", "start_after": ["R0.2.a", "R0.3.a"], "sequential": true},
+    "R0.5": {"profile": "hermetic-foundation", "start_after": ["R0.3.b", "R0.4.d"], "sequential": true},
+    "R1.1": {"profile": "agent-contract", "start_after": ["R0.2.e", "R0.3", "R0.5"], "sequential": true},
+    "R1.2": {"profile": "agent-contract", "start_after": ["R1.1"], "sequential": true},
+    "R1.3": {"profile": "agent-contract", "start_after": ["R1.1"], "sequential": true},
+    "R1.4": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2"], "sequential": true},
+    "R1.5": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2", "R1.4"], "sequential": true},
+    "R1.6": {"profile": "agent-contract", "start_after": ["R0.2", "R1.3"], "sequential": true},
+    "R2.1": {"profile": "runtime-core", "start_after": ["R0.5"], "sequential": true},
+    "R2.2": {"profile": "runtime-core", "start_after": ["R0.2"], "sequential": true},
+    "R2.3": {"profile": "runtime-core", "start_after": ["R2.1", "R2.2"], "sequential": true},
+    "R2.4": {"profile": "runtime-core", "start_after": ["R2.1"], "sequential": true},
+    "R3.1": {"profile": "validated-tier", "start_after": ["R2.1", "R2.2"], "sequential": true},
+    "R3.2": {"profile": "validated-tier", "start_after": ["R2.1", "R2.2"], "sequential": true},
+    "R3.3": {"profile": "validated-tier", "start_after": ["R3.1", "R3.2"], "sequential": true},
+    "R3.4": {"profile": "validated-tier", "start_after": ["R2.3", "R3.3"], "sequential": true},
+    "R4.1": {"profile": "selfhost-authority", "start_after": ["R0.1.f", "R0.2"], "sequential": true},
+    "R4.2": {"profile": "selfhost-authority", "start_after": ["R4.1", "R3.1", "R3.2", "R5.1", "R5.3"], "sequential": true},
+    "R4.3": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
+    "R4.4": {"profile": "selfhost-authority", "start_after": ["R4.2", "R4.3"], "sequential": true},
+    "R4.5": {"profile": "selfhost-authority", "start_after": ["R4.2"], "sequential": true},
+    "R5.1": {"profile": "language-contract", "start_after": ["R0.3", "R2.1", "R3.2"], "sequential": true},
+    "R5.2": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
+    "R5.3": {"profile": "language-contract", "start_after": ["R0.3", "R5.1"], "sequential": true},
+    "R5.4": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
+    "R5.5": {"profile": "language-contract", "start_after": ["R2.2", "R3.2", "R5.1"], "sequential": true},
+    "R6.1": {"profile": "ecosystem-delivery", "start_after": ["R4.2", "R5.3"], "sequential": true},
+    "R6.2": {"profile": "ecosystem-delivery", "start_after": ["R0.2", "R6.1"], "sequential": true},
+    "R6.3": {"profile": "ecosystem-delivery", "start_after": ["R4.2", "R5.5", "R6.1"], "sequential": true},
+    "R6.4": {"profile": "ecosystem-delivery", "start_after": ["R6.3"], "sequential": true},
+    "R7.1": {"profile": "assurance", "start_after": ["R0.2", "R0.4"], "sequential": true},
+    "R7.2": {"profile": "assurance", "start_after": ["R3.1", "R5.1"], "sequential": false},
+    "R7.3": {"profile": "assurance", "start_after": ["R0.2", "R5.5", "R6.2"], "sequential": true},
+    "R7.4": {"profile": "assurance", "start_after": ["R2.2", "R6.4"], "sequential": true},
+    "R8.1": {"profile": "product-proof", "start_after": ["R1.5", "R1.6", "R6.4", "R7.1"], "sequential": true},
+    "R8.2": {"profile": "product-proof", "start_after": ["R8.1", "R7.3"], "sequential": false},
+    "R8.3": {"profile": "product-proof", "start_after": ["R8.2"], "sequential": true},
+    "R8.4": {"profile": "product-proof", "start_after": ["R1.2", "R2.3"], "sequential": true},
+    "R9.1": {"profile": "trust-release", "start_after": ["R4.5", "R5.5", "R6.4", "R7.4", "R8.3", "R8.4"], "sequential": true},
+    "R9.2": {"profile": "trust-release", "start_after": ["R4.4", "R6.3", "R7.3", "R9.1"], "sequential": true},
+    "R9.3": {"profile": "trust-release", "start_after": ["R6.4", "R7.3", "R9.1"], "sequential": true},
+    "R9.4": {"profile": "trust-release", "start_after": ["R9.1", "R9.2", "R9.3"], "sequential": true},
+    "F1": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true},
+    "F2": {"profile": "frontier-research", "start_after": ["R3.4", "R9.4"], "sequential": true},
+    "F3": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true},
+    "F4": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true}
+  },
+  "task_prerequisites": {
+    "R0.1.f": [
+      "R0.1.b",
+      "R0.1.c",
+      "R0.1.d",
+      "R0.1.e"
+    ],
+    "R1.3.f": [
+      "R2.2"
+    ],
+    "R8.4.e": [
+      "R8.3"
+    ]
+  }
+}

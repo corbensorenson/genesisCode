@@ -8,8 +8,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "selfhost-strict-smoke" \
-  ".genesis/build/cargo" \
-  "GENESIS_SELFHOST_STRICT_SMOKE_CARGO_TARGET_DIR"
+  root-host
 
 source "$ROOT_DIR/scripts/lib/selfhost_artifact_cache.sh"
 

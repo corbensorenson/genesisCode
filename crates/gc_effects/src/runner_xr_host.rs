@@ -110,7 +110,7 @@ pub(crate) fn xr_host_call(
     }
     let backend_kind = match parse_xr_backend_kind(pol, op) {
         Ok(kind) => kind,
-        Err(err) => return Some(Value::Data(err)),
+        Err(err) => return Some(Value::data(err)),
     };
     if backend_kind == XrBackendKind::WebxrDevice {
         return Some(webxr_device_bridge_call(
@@ -121,30 +121,30 @@ pub(crate) fn xr_host_call(
     if op == "gfx/xr::haptics-pulse" {
         let request = match parse_haptics_request(payload, op) {
             Ok(req) => req,
-            Err(err) => return Some(Value::Data(err)),
+            Err(err) => return Some(Value::data(err)),
         };
         let haptics_policy = match parse_haptics_policy(pol, op) {
             Ok(policy) => policy,
-            Err(err) => return Some(Value::Data(err)),
+            Err(err) => return Some(Value::data(err)),
         };
         if let Err(err) = validate_haptics_policy(&request, &haptics_policy, op) {
-            return Some(Value::Data(err));
+            return Some(Value::data(err));
         }
         if !has_explicit_bridge_profile(pol) {
-            return Some(Value::Data(first_party_haptics_pulse(runtime, &request)));
+            return Some(Value::data(first_party_haptics_pulse(runtime, &request)));
         }
         return Some(match call_host_bridge("gfx-xr", op, payload, pol) {
-            Ok(resp) => Value::Data(resp),
+            Ok(resp) => Value::data(resp),
             Err(err) => mk_error(error_tok, &err, Some(op)),
         });
     }
     if !has_explicit_bridge_profile(pol) {
-        return Some(Value::Data(first_party_xr_response(
+        return Some(Value::data(first_party_xr_response(
             runtime, op, payload, pol,
         )));
     }
     Some(match call_host_bridge("gfx-xr", op, payload, pol) {
-        Ok(resp) => Value::Data(resp),
+        Ok(resp) => Value::data(resp),
         Err(err) => mk_error(error_tok, &err, Some(op)),
     })
 }
@@ -238,13 +238,13 @@ fn webxr_device_bridge_call(
     error_tok: SealId,
 ) -> Value {
     if !has_explicit_bridge_profile(pol) {
-        return Value::Data(policy_error(
+        return Value::data(policy_error(
             op,
             "`xr_backend = webxr-device` requires an explicit bridge profile (`bridge_cmd` or `wasi_bridge_profile`)",
         ));
     }
     match call_host_bridge("webxr-device", op, payload, pol) {
-        Ok(resp) => Value::Data(normalize_webxr_device_response(runtime, op, resp)),
+        Ok(resp) => Value::data(normalize_webxr_device_response(runtime, op, resp)),
         Err(err) => mk_error(error_tok, &err, Some(op)),
     }
 }
@@ -555,6 +555,6 @@ fn mk_error(error_tok: SealId, err: &BridgeError, op: Option<&str>) -> Value {
     );
     Value::Sealed {
         token: error_tok,
-        payload: Box::new(Value::Data(Term::Map(mm))),
+        payload: Box::new(Value::data(Term::Map(mm))),
     }
 }

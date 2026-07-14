@@ -94,7 +94,7 @@ pub(super) fn capability_io_db_connect(
         ));
     }
     match call_host_bridge("db", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -115,7 +115,7 @@ pub(super) fn capability_io_db_tx_begin(
         ));
     }
     match call_host_bridge("db", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -169,7 +169,7 @@ pub(super) fn capability_io_db_query_or_exec(
         ));
     }
     match call_host_bridge("db", op, &effective_payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -190,7 +190,7 @@ pub(super) fn capability_io_db_tx_finish(
         ));
     }
     match call_host_bridge("db", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -219,7 +219,7 @@ pub(super) fn capability_io_db_kv_open(
         ));
     }
     match call_host_bridge("db", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -253,7 +253,7 @@ pub(super) fn capability_io_db_kv_get(
         ));
     }
     match call_host_bridge("db", op, &effective_payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -288,7 +288,7 @@ pub(super) fn capability_io_db_kv_put(
         ));
     }
     match call_host_bridge("db", op, &effective_payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }
@@ -310,7 +310,7 @@ pub(super) fn capability_io_db_kv_delete(
         ));
     }
     match call_host_bridge("db", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }

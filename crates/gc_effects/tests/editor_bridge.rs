@@ -229,7 +229,7 @@ allow_commands = ["run"]
         panic!("plugin command without bridge should return sealed error");
     };
     assert_eq!(token, error_tok);
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("sealed error payload map expected");
     };
     assert_eq!(
@@ -310,7 +310,7 @@ wasi_bridge_response = "{:ok true}"
         panic!("host plugin command denied plugin should return sealed error");
     };
     assert_eq!(token, error_tok);
-    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+    let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
         panic!("sealed error payload map expected");
     };
     assert_eq!(

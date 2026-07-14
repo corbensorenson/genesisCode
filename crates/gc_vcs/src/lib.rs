@@ -11,10 +11,13 @@ pub use crate::assurance::{
     validate_requirements_trace_evidence, validate_tool_qualification_evidence,
 };
 pub use crate::gpk::{
-    GpkBundle, GpkEntry, GpkError, GpkReadLimits, GpkRef, read_bundle, read_bundle_with_limits,
-    write_bundle,
+    GPK_CURRENT_VERSION, GPK_LEGACY_VERSION, GpkBundle, GpkEntry, GpkError, GpkReadLimits, GpkRef,
+    read_bundle, read_bundle_with_limits, write_bundle,
 };
-pub use crate::patch::{Patch, PatchError, PatchOp, PathStep, path_from_term, path_to_term};
+pub use crate::patch::{
+    Patch, PatchError, PatchOp, PathStep, VCS_PATCH_PROFILE_ID, VCS_PATCH_VERSION, path_from_term,
+    path_to_term,
+};
 pub use crate::policy::{Policy, PolicyClass, PolicyError};
 pub use crate::schema::{
     Attestation, Commit, Conflict, ConflictEntry, Evidence, SchemaError, bytes32_to_hex,
@@ -25,5 +28,5 @@ pub use crate::signing::{
 };
 pub use crate::snapshot::{
     ContractSnapshot, ModuleSnapshot, PackageSnapshot, Snapshot, SnapshotError, SnapshotKind,
-    SnapshotModule, WorkspaceSnapshot,
+    SnapshotModule, VCS_SNAPSHOT_PROFILE_ID, VCS_SNAPSHOT_VERSION, WorkspaceSnapshot,
 };

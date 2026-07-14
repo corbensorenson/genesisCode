@@ -17,7 +17,8 @@ pub use eval::{
     EvalState, MemLimits, MemObservedCounters, ProtocolTokens, StepLimit, eval_module, eval_term,
 };
 pub use value::{
-    Apply, Contract, EffectProgram, EffectRequest, NativeFn, SealId, Value, value_hash,
+    Apply, Contract, EffectProgram, EffectRequest, NativeFn, SealId, Sym,
+    VALUE_EFFECT_HASH_PROFILE_ID, Value, ValueMap, ValueVector, value_hash,
 };
 
 pub use gc_coreform::Term;

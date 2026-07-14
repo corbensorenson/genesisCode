@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/dependency-mirror-manifest-v0.1.json",
+  "title": "GenesisCode Dependency Mirror Manifest v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "policySha256",
+    "authorities",
+    "cargo",
+    "npm",
+    "offlineChecks"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/dependency-mirror-manifest-v0.1"},
+    "version": {"const": "0.1"},
+    "policySha256": {"$ref": "#/$defs/sha256"},
+    "authorities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/authority"}
+    },
+    "cargo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registrySource", "packages", "archive"],
+      "properties": {
+        "registrySource": {"const": "registry+https://github.com/rust-lang/crates.io-index"},
+        "packages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/cargoPackage"}
+        },
+        "archive": {"$ref": "#/$defs/cargoArchive"}
+      }
+    },
+    "npm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packages", "totalBlobBytes"],
+      "properties": {
+        "packages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/npmPackage"}
+        },
+        "totalBlobBytes": {"$ref": "#/$defs/positiveInteger"}
+      }
+    },
+    "offlineChecks": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "cargo-cli-build",
+          "cargo-evidence-verifier-check",
+          "cargo-workspace-check",
+          "npm-clean-install",
+          "npm-playwright-import"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"$ref": "#/$defs/positiveInteger"}
+      }
+    },
+    "cargoArchive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "treeSha256",
+        "bytes",
+        "expandedBytes",
+        "expandedFiles"
+      ],
+      "properties": {
+        "path": {"const": "cargo/vendor.tar.gz"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "treeSha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"$ref": "#/$defs/positiveInteger"},
+        "expandedBytes": {"$ref": "#/$defs/positiveInteger"},
+        "expandedFiles": {"$ref": "#/$defs/positiveInteger"}
+      }
+    },
+    "cargoPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "source", "checksum"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "source": {"const": "registry+https://github.com/rust-lang/crates.io-index"},
+        "checksum": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "npmPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lockPath",
+        "resolved",
+        "integrity",
+        "sha512",
+        "blob",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "lockPath": {"type": "string", "minLength": 1},
+        "resolved": {"type": "string", "pattern": "^https://registry\\.npmjs\\.org/"},
+        "integrity": {"type": "string", "pattern": "^sha512-[A-Za-z0-9+/]+={0,2}$"},
+        "sha512": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
+        "blob": {"type": "string", "pattern": "^npm/sha512/[0-9a-f]{128}\\.tgz$"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"$ref": "#/$defs/positiveInteger"}
+      }
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "positiveInteger": {"type": "integer", "minimum": 1},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

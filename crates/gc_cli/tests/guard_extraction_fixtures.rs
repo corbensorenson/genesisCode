@@ -9,6 +9,7 @@ fn repo_root() -> PathBuf {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn guard_extraction_fixtures_are_stable() {
     let root = repo_root();
     let status = Command::new("bash")

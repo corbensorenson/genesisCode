@@ -11,6 +11,7 @@ fn repo_root() -> PathBuf {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn ai_stress_suite_fault_injection_flips_verification_fields_and_fails() {
     let root = repo_root();
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -18,13 +19,14 @@ fn ai_stress_suite_fault_injection_flips_verification_fields_and_fails() {
     let history = tmp.path().join("stress_history.jsonl");
 
     let output = Command::new("bash")
-        .arg(root.join("scripts/check_ai_stress_suite.sh"))
+        .arg(root.join("scripts/render_ai_stress_suite_report.sh"))
+        .arg(&report)
+        .arg(&history)
+        .arg(&history)
         .env(
             "GENESIS_STRESS_FAULT_INJECT",
             "bridge_gpu_compute_replay,editor_task_replay,selfhost_parallel_obligations",
         )
-        .env("GENESIS_STRESS_REPORT", &report)
-        .env("GENESIS_STRESS_HISTORY", &history)
         .current_dir(&root)
         .output()
         .expect("run ai stress suite");

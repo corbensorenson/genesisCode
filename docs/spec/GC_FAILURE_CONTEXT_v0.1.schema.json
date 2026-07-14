@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-failure-context-v0.1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "domain", "kind", "operation", "facts", "primary_span", "related_spans"],
+  "properties": {
+    "schema": {"const": "genesis/failure-context-v0.1"},
+    "domain": {
+      "enum": ["parser", "typechecker", "evaluator", "package", "policy", "replay", "patch", "build", "deployment"]
+    },
+    "kind": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "operation": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:/[a-z][a-z0-9-]*)*$"},
+    "facts": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"}
+    },
+    "primary_span": {
+      "oneOf": [{"type": "null"}, {"$ref": "#/$defs/span"}]
+    },
+    "related_spans": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/span"}
+    }
+  },
+  "$defs": {
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "startLine", "startColumn", "endLine", "endColumn"],
+      "properties": {
+        "source": {"type": "string", "minLength": 1},
+        "startLine": {"type": "integer", "minimum": 1},
+        "startColumn": {"type": "integer", "minimum": 1},
+        "endLine": {"type": "integer", "minimum": 1},
+        "endColumn": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

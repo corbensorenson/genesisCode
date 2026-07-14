@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use gc_coreform::{Term, hash_term};
 
 use super::{Env, EvalCtx, EvalOutcome, KernelError, KernelErrorKind, Value, eval_forms};
@@ -37,21 +35,21 @@ pub(super) fn eval_term_impl(
         ctx.tick()?;
 
         match &cur_term {
-            Term::Nil | Term::Bool(_) | Term::Int(_) => return Ok(Value::Data(cur_term.clone())),
+            Term::Nil | Term::Bool(_) | Term::Int(_) => return Ok(Value::data(cur_term.clone())),
             Term::Str(s) => {
                 ctx.mem_observe_string_len(s.len())?;
-                return Ok(Value::Data(cur_term.clone()));
+                return Ok(Value::data(cur_term.clone()));
             }
             Term::Bytes(b) => {
                 ctx.mem_observe_bytes_len(b.len())?;
-                return Ok(Value::Data(cur_term.clone()));
+                return Ok(Value::data(cur_term.clone()));
             }
             Term::Vector(xs) => {
                 ctx.mem_observe_vec_len(xs.len())?;
                 for x in xs {
                     ctx.mem_observe_data_term(x)?;
                 }
-                return Ok(Value::Vector(xs.iter().cloned().map(Value::Data).collect()));
+                return Ok(Value::vector(xs.iter().cloned().map(Value::data).collect()));
             }
             Term::Map(m) => {
                 // Map literal: keys are data terms (not evaluated), values are expressions (evaluated).
@@ -59,12 +57,12 @@ pub(super) fn eval_term_impl(
                 for (k, _v) in m.iter() {
                     ctx.mem_observe_data_term(&k.0)?;
                 }
-                let mut out = BTreeMap::new();
+                let mut out = crate::value::ValueMap::new();
                 for (k, v) in m.iter() {
                     let vv = super::eval_term(ctx, &cur_env, v)?;
-                    out.insert(k.clone(), vv);
+                    out.insert_mut(k.clone(), vv);
                 }
-                return Ok(Value::Map(out));
+                return Ok(Value::map(out));
             }
             Term::Symbol(s) => {
                 let value = cur_env.get(s).ok_or_else(|| {
@@ -93,7 +91,7 @@ fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, 
         ));
     };
     if items.is_empty() {
-        return Ok(EvalOutcome::Value(Value::Data(Term::Nil)));
+        return Ok(EvalOutcome::Value(Value::data(Term::Nil)));
     }
 
     // Special forms keyed by head symbol.
@@ -107,7 +105,7 @@ fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, 
                     ));
                 }
                 ctx.mem_observe_data_term(items[1])?;
-                return Ok(EvalOutcome::Value(Value::Data(items[1].clone())));
+                return Ok(EvalOutcome::Value(Value::data(items[1].clone())));
             }
             "fn" => {
                 return Ok(EvalOutcome::Value(eval_forms::eval_fn(ctx, env, items)?));
@@ -196,13 +194,9 @@ fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, 
     // Tail-call optimize the final apply when it is a closure call.
     let last_arg = super::eval_term(ctx, env, items[items.len() - 1])?;
     match acc {
-        Value::Closure {
-            param,
-            body,
-            env: fenv,
-        } => Ok(EvalOutcome::Tail {
-            env: Env::with_binding(&fenv, param, last_arg),
-            term: body,
+        Value::Closure(data) => Ok(EvalOutcome::Tail {
+            env: Env::with_binding(&data.env, data.param.as_ref(), last_arg),
+            term: data.body.clone(),
         }),
         other => Ok(EvalOutcome::Value(other.apply(ctx, last_arg)?)),
     }

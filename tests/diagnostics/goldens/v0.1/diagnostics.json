@@ -1,0 +1,1453 @@
+{
+  "case_count": 10,
+  "cases": [
+    {
+      "class": "path-normalization",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "manifest/error",
+            "context": {
+              "domain": "package",
+              "facts": {
+                "reason": "manifest parse error: path-package.toml: TOML parse error at line 1, column 1 | 1 | schema = 1 | ^ missing field `modules`"
+              },
+              "kind": "manifest",
+              "operation": "obligation/run",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "manifest",
+            "exit_code": 10,
+            "id": "genesis/diagnostic/v1/manifest/error",
+            "likely_causes": [
+              "Source or metadata does not satisfy its declared grammar or schema.",
+              "A required field or canonical representation is missing."
+            ],
+            "message": "manifest parse error: path-package.toml: TOML parse error at line 1, column 1 | 1 | schema = 1 | ^ missing field `modules`",
+            "next_safe_action": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+            "parameters": {
+              "context": {
+                "domain": "package",
+                "facts": {
+                  "reason": "manifest parse error: path-package.toml: TOML parse error at line 1, column 1 | 1 | schema = 1 | ^ missing field `modules`"
+                },
+                "kind": "manifest",
+                "operation": "obligation/run",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "parse",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "command": "genesis fmt --check <file>",
+                "description": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+                "id": "repair-parse-input",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/manifest/error",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "command": "genesis fmt --check <file>",
+                "description": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+                "id": "repair-parse-input",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "suggested_fix": "verify syntax and canonicalize with `genesis fmt --check <file>`.",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "manifest/error",
+          "context": {
+            "domain": "package",
+            "facts": {
+              "reason": "manifest parse error: path-package.toml: TOML parse error at line 1, column 1 | 1 | schema = 1 | ^ missing field `modules`"
+            },
+            "kind": "manifest",
+            "operation": "obligation/run",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "manifest parse error: path-package.toml: TOML parse error at line 1, column 1 | 1 | schema = 1 | ^ missing field `modules`"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "absolute-manifest-path-normalized"
+    },
+    {
+      "class": "incompatible-profiles",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "pkg/run",
+            "context": {
+              "domain": "package",
+              "facts": {
+                "requested_code": "pkg/run"
+              },
+              "kind": "legacy-error",
+              "operation": "diagnostics/normalize",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "pkg",
+            "exit_code": 10,
+            "id": "genesis/diagnostic/v1/pkg/run",
+            "likely_causes": [
+              "Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.",
+              "The requested package lifecycle transition cannot be verified."
+            ],
+            "message": "workspace runtime_backend `backend` (resolved from profile `dev`/defaults) is incompatible with active runtime backend profile `headless`",
+            "next_safe_action": "Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.",
+            "parameters": {
+              "context": {
+                "domain": "package",
+                "facts": {
+                  "requested_code": "pkg/run"
+                },
+                "kind": "legacy-error",
+                "operation": "diagnostics/normalize",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "package",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "description": "Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.",
+                "id": "verify-package-state",
+                "kind": "inspect",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/pkg/run",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "description": "Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.",
+                "id": "verify-package-state",
+                "kind": "inspect",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "pkg/run",
+          "context": {
+            "domain": "package",
+            "facts": {
+              "requested_code": "pkg/run"
+            },
+            "kind": "legacy-error",
+            "operation": "diagnostics/normalize",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "workspace runtime_backend `backend` (resolved from profile `dev`/defaults) is incompatible with active runtime backend profile `headless`"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "incompatible-runtime-backend"
+    },
+    {
+      "class": "exhausted-budgets",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "eval/error",
+            "context": {
+              "domain": "evaluator",
+              "facts": {
+                "kernel_kind": "StepLimit",
+                "reason": "step limit exceeded"
+              },
+              "kind": "step-limit",
+              "operation": "eval/module",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "eval",
+            "exit_code": 20,
+            "id": "genesis/diagnostic/v1/eval/error",
+            "likely_causes": [
+              "Evaluation reached an invalid form, value, call, or resource boundary.",
+              "A runtime precondition was not established by the program."
+            ],
+            "message": "step limit exceeded: step limit exceeded",
+            "next_safe_action": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+            "parameters": {
+              "context": {
+                "domain": "evaluator",
+                "facts": {
+                  "kernel_kind": "StepLimit",
+                  "reason": "step limit exceeded"
+                },
+                "kind": "step-limit",
+                "operation": "eval/module",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "evaluation",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "command": "genesis --json debug trace <file>",
+                "description": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+                "id": "inspect-evaluation-trace",
+                "kind": "verify-command",
+                "obligationEffect": "preserve",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/eval/error",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "command": "genesis --json debug trace <file>",
+                "description": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+                "id": "inspect-evaluation-trace",
+                "kind": "verify-command",
+                "obligationEffect": "preserve",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "eval/error",
+          "context": {
+            "domain": "evaluator",
+            "facts": {
+              "kernel_kind": "StepLimit",
+              "reason": "step limit exceeded"
+            },
+            "kind": "step-limit",
+            "operation": "eval/module",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "step limit exceeded: step limit exceeded"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "kernel-step-budget-exhausted"
+    },
+    {
+      "class": "malformed-syntax",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "parse/coreform",
+            "context": {
+              "domain": "parser",
+              "facts": {
+                "byte_offset": 0,
+                "reason": "unterminated list",
+                "source": "malformed.gc"
+              },
+              "kind": "unexpected-token",
+              "operation": "fmt/parse",
+              "primary_span": {
+                "endColumn": 1,
+                "endLine": 1,
+                "source": "malformed.gc",
+                "startColumn": 1,
+                "startLine": 1
+              },
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "parse",
+            "exit_code": 10,
+            "id": "genesis/diagnostic/v1/parse/coreform",
+            "likely_causes": [
+              "Source or metadata does not satisfy its declared grammar or schema.",
+              "A required field or canonical representation is missing."
+            ],
+            "message": "unexpected token at byte 0: unterminated list",
+            "next_safe_action": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+            "parameters": {
+              "context": {
+                "domain": "parser",
+                "facts": {
+                  "byte_offset": 0,
+                  "reason": "unterminated list",
+                  "source": "malformed.gc"
+                },
+                "kind": "unexpected-token",
+                "operation": "fmt/parse",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "parse",
+            "primary_span": {
+              "endColumn": 1,
+              "endLine": 1,
+              "source": "malformed.gc",
+              "startColumn": 1,
+              "startLine": 1
+            },
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "command": "genesis fmt --check <file>",
+                "description": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+                "id": "repair-parse-input",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/parse/coreform",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "command": "genesis fmt --check <file>",
+                "description": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+                "id": "repair-parse-input",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "suggested_fix": "verify syntax and canonicalize with `genesis fmt --check <file>`.",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "parse/coreform",
+          "context": {
+            "domain": "parser",
+            "facts": {
+              "byte_offset": 0,
+              "reason": "unterminated list",
+              "source": "malformed.gc"
+            },
+            "kind": "unexpected-token",
+            "operation": "fmt/parse",
+            "primary_span": {
+              "endColumn": 1,
+              "endLine": 1,
+              "source": "malformed.gc",
+              "startColumn": 1,
+              "startLine": 1
+            },
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "unexpected token at byte 0: unterminated list"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "malformed-syntax"
+    },
+    {
+      "class": "seal-misuse",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "eval/error",
+            "context": {
+              "domain": "evaluator",
+              "facts": {
+                "payload": "{\n  :error/code \"core/type-error\"\n  :error/context {:kind \"type\"}\n  :error/message \"seal expects a seal token as second argument\"}",
+                "protocol_code": "core/type-error"
+              },
+              "kind": "selfhost-protocol",
+              "operation": "eval/result",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "eval",
+            "exit_code": 20,
+            "id": "genesis/diagnostic/v1/eval/error",
+            "likely_causes": [
+              "Evaluation reached an invalid form, value, call, or resource boundary.",
+              "A runtime precondition was not established by the program."
+            ],
+            "message": "seal expects a seal token as second argument",
+            "next_safe_action": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+            "parameters": {
+              "context": {
+                "domain": "evaluator",
+                "facts": {
+                  "payload": "{\n  :error/code \"core/type-error\"\n  :error/context {:kind \"type\"}\n  :error/message \"seal expects a seal token as second argument\"}",
+                  "protocol_code": "core/type-error"
+                },
+                "kind": "selfhost-protocol",
+                "operation": "eval/result",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "evaluation",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "command": "genesis --json debug trace <file>",
+                "description": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+                "id": "inspect-evaluation-trace",
+                "kind": "verify-command",
+                "obligationEffect": "preserve",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/eval/error",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "command": "genesis --json debug trace <file>",
+                "description": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
+                "id": "inspect-evaluation-trace",
+                "kind": "verify-command",
+                "obligationEffect": "preserve",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "eval/error",
+          "context": {
+            "domain": "evaluator",
+            "facts": {
+              "payload": "{\n  :error/code \"core/type-error\"\n  :error/context {:kind \"type\"}\n  :error/message \"seal expects a seal token as second argument\"}",
+              "protocol_code": "core/type-error"
+            },
+            "kind": "selfhost-protocol",
+            "operation": "eval/result",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "seal expects a seal token as second argument"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "non-token-seal-argument"
+    },
+    {
+      "class": "stale-patches",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "patch/invalid",
+            "context": {
+              "domain": "patch",
+              "facts": {
+                "reason": "replace-node-id unknown :node-id ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff in module module.gc"
+              },
+              "kind": "validation",
+              "operation": "patch/apply",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "patch",
+            "exit_code": 10,
+            "id": "genesis/diagnostic/v1/patch/invalid",
+            "likely_causes": [
+              "A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.",
+              "The source graph no longer matches the plan preconditions."
+            ],
+            "message": "patch validation error: replace-node-id unknown :node-id ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff in module module.gc",
+            "next_safe_action": "Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.",
+            "parameters": {
+              "context": {
+                "domain": "patch",
+                "facts": {
+                  "reason": "replace-node-id unknown :node-id ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff in module module.gc"
+                },
+                "kind": "validation",
+                "operation": "patch/apply",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "semantic-edit",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "description": "Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.",
+                "id": "replan-semantic-edit",
+                "kind": "inspect",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/patch/invalid",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "description": "Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.",
+                "id": "replan-semantic-edit",
+                "kind": "inspect",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "patch/invalid",
+          "context": {
+            "domain": "patch",
+            "facts": {
+              "reason": "replace-node-id unknown :node-id ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff in module module.gc"
+            },
+            "kind": "validation",
+            "operation": "patch/apply",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "patch validation error: replace-node-id unknown :node-id ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff in module module.gc"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "stale-semantic-node-id"
+    },
+    {
+      "class": "replay-tampering",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "replay/mismatch",
+            "context": {
+              "domain": "replay",
+              "facts": {
+                "reason": ":cap mismatch at 0: deny decisions must carry nil cap"
+              },
+              "kind": "fact-mismatch",
+              "operation": "replay/execute",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "replay",
+            "exit_code": 40,
+            "id": "genesis/diagnostic/v1/replay/mismatch",
+            "likely_causes": [
+              "Program, request, response, policy, or scheduler facts differ from the recorded log.",
+              "The log belongs to another execution identity or is corrupted."
+            ],
+            "message": "replay mismatch: :cap mismatch at 0: deny decisions must carry nil cap",
+            "next_safe_action": "Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.",
+            "parameters": {
+              "context": {
+                "domain": "replay",
+                "facts": {
+                  "reason": ":cap mismatch at 0: deny decisions must carry nil cap"
+                },
+                "kind": "fact-mismatch",
+                "operation": "replay/execute",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "replay",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": false,
+                "command": "genesis run <file> --log-out <log>",
+                "description": "Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.",
+                "id": "regenerate-replay-log",
+                "kind": "effect-command",
+                "obligationEffect": "preserve",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": true
+              },
+              "authorization": {
+                "automatic_allowed": false,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": true,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/replay/mismatch",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": false,
+                "command": "genesis run <file> --log-out <log>",
+                "description": "Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.",
+                "id": "regenerate-replay-log",
+                "kind": "effect-command",
+                "obligationEffect": "preserve",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": true
+              }
+            ],
+            "severity": "error",
+            "suggested_fix": "preserve the mismatched log, then regenerate it from the exact current inputs.",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "replay/mismatch",
+          "context": {
+            "domain": "replay",
+            "facts": {
+              "reason": ":cap mismatch at 0: deny decisions must carry nil cap"
+            },
+            "kind": "fact-mismatch",
+            "operation": "replay/execute",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "replay mismatch: :cap mismatch at 0: deny decisions must carry nil cap"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "tampered-replay-decision"
+    },
+    {
+      "class": "type-effect-mismatch",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "typecheck/error",
+            "context": {
+              "domain": "typechecker",
+              "facts": {
+                "diagnostic_count": 1,
+                "diagnostics": [
+                  {
+                    "code": "typecheck/error",
+                    "domain": "typechecker",
+                    "id": "type-effect.gc#error#0",
+                    "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row",
+                    "module": "type-effect.gc",
+                    "ordinal": 0,
+                    "severity": "error"
+                  }
+                ]
+              },
+              "kind": "diagnostics",
+              "operation": "typechecker/check-package",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "typecheck",
+            "exit_code": 30,
+            "id": "genesis/diagnostic/v1/typecheck/error",
+            "likely_causes": [
+              "A type, proof, test, optimization, or translation obligation did not hold.",
+              "Required evidence is missing, stale, or mismatched."
+            ],
+            "message": "package typecheck failed",
+            "next_safe_action": "Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.",
+            "parameters": {
+              "context": {
+                "domain": "typechecker",
+                "facts": {
+                  "diagnostic_count": 1,
+                  "diagnostics": [
+                    {
+                      "code": "typecheck/error",
+                      "domain": "typechecker",
+                      "id": "type-effect.gc#error#0",
+                      "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row",
+                      "module": "type-effect.gc",
+                      "ordinal": 0,
+                      "severity": "error"
+                    }
+                  ]
+                },
+                "kind": "diagnostics",
+                "operation": "typechecker/check-package",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "obligation",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "command": "genesis test --pkg <package.toml>",
+                "description": "Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.",
+                "id": "resolve-obligation",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/typecheck/error",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "command": "genesis test --pkg <package.toml>",
+                "description": "Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.",
+                "id": "resolve-obligation",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "suggested_fix": "run `genesis test --pkg <package.toml>` and inspect obligation artifacts.",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "typecheck/error",
+          "context": {
+            "domain": "typechecker",
+            "facts": {
+              "diagnostic_count": 1,
+              "diagnostics": [
+                {
+                  "code": "typecheck/error",
+                  "domain": "typechecker",
+                  "id": "type-effect.gc#error#0",
+                  "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row",
+                  "module": "type-effect.gc",
+                  "ordinal": 0,
+                  "severity": "error"
+                }
+              ]
+            },
+            "kind": "diagnostics",
+            "operation": "typechecker/check-package",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "package typecheck failed"
+        },
+        "kind": "genesis/typecheck-v0.2",
+        "ok": false
+      },
+      "id": "type-effect-row-mismatch"
+    },
+    {
+      "class": "unhandled-effects",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "effects/run",
+            "context": {
+              "domain": "policy",
+              "facts": {
+                "payload": "{\n  :error/code \"core/caps/unknown-op\"\n  :error/context {:op agent/unknown::op :subsystem \"effects\"}\n  :error/message \"unknown capability op: agent/unknown::op\"\n  :error/op agent/unknown::op}",
+                "protocol_code": "core/caps/unknown-op"
+              },
+              "kind": "selfhost-protocol",
+              "operation": "run/result",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "effects",
+            "exit_code": 20,
+            "id": "genesis/diagnostic/v1/effects/run",
+            "likely_causes": [
+              "An effect program failed at the deny-by-default runner boundary.",
+              "The effect payload or response violated its contract."
+            ],
+            "message": "unknown capability op: agent/unknown::op",
+            "next_safe_action": "Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.",
+            "parameters": {
+              "context": {
+                "domain": "policy",
+                "facts": {
+                  "payload": "{\n  :error/code \"core/caps/unknown-op\"\n  :error/context {:op agent/unknown::op :subsystem \"effects\"}\n  :error/message \"unknown capability op: agent/unknown::op\"\n  :error/op agent/unknown::op}",
+                  "protocol_code": "core/caps/unknown-op"
+                },
+                "kind": "selfhost-protocol",
+                "operation": "run/result",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "effects",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": false,
+                "description": "Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.",
+                "id": "inspect-effect-boundary",
+                "kind": "policy-review",
+                "obligationEffect": "preserve",
+                "policyEffect": "review-required",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis.",
+                  "Any capability broadening is represented by a separate explicit policy diff."
+                ],
+                "requiresReview": true
+              },
+              "authorization": {
+                "automatic_allowed": false,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": true,
+                "requires_separate_policy_diff": true
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/effects/run",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": false,
+                "description": "Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.",
+                "id": "inspect-effect-boundary",
+                "kind": "policy-review",
+                "obligationEffect": "preserve",
+                "policyEffect": "review-required",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis.",
+                  "Any capability broadening is represented by a separate explicit policy diff."
+                ],
+                "requiresReview": true
+              }
+            ],
+            "severity": "error",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "effects/run",
+          "context": {
+            "domain": "policy",
+            "facts": {
+              "payload": "{\n  :error/code \"core/caps/unknown-op\"\n  :error/context {:op agent/unknown::op :subsystem \"effects\"}\n  :error/message \"unknown capability op: agent/unknown::op\"\n  :error/op agent/unknown::op}",
+              "protocol_code": "core/caps/unknown-op"
+            },
+            "kind": "selfhost-protocol",
+            "operation": "run/result",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "unknown capability op: agent/unknown::op"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "unhandled-effect-operation"
+    },
+    {
+      "class": "invalid-packages",
+      "envelope": {
+        "diagnostic_catalog": {
+          "identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+          "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "version": "0.1.0"
+        },
+        "diagnostics": [
+          {
+            "blocking_capability": null,
+            "candidate_fix": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+            "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+            "catalog_version": "0.1.0",
+            "code": "manifest/error",
+            "context": {
+              "domain": "package",
+              "facts": {
+                "reason": "manifest invalid: invalid-package.toml: unsupported package manifest schema 99 (expected 1)"
+              },
+              "kind": "manifest",
+              "operation": "obligation/run",
+              "primary_span": null,
+              "related_spans": [],
+              "schema": "genesis/failure-context-v0.1"
+            },
+            "documentation": [
+              {
+                "anchor": "Failure diagnostics",
+                "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+              }
+            ],
+            "error_class": "manifest",
+            "exit_code": 10,
+            "id": "genesis/diagnostic/v1/manifest/error",
+            "likely_causes": [
+              "Source or metadata does not satisfy its declared grammar or schema.",
+              "A required field or canonical representation is missing."
+            ],
+            "message": "manifest invalid: invalid-package.toml: unsupported package manifest schema 99 (expected 1)",
+            "next_safe_action": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+            "parameters": {
+              "context": {
+                "domain": "package",
+                "facts": {
+                  "reason": "manifest invalid: invalid-package.toml: unsupported package manifest schema 99 (expected 1)"
+                },
+                "kind": "manifest",
+                "operation": "obligation/run",
+                "schema": "genesis/failure-context-v0.1"
+              }
+            },
+            "phase": "parse",
+            "primary_span": null,
+            "related_spans": [],
+            "repair_plan": {
+              "action": {
+                "automaticEligible": true,
+                "command": "genesis fmt --check <file>",
+                "description": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+                "id": "repair-parse-input",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              },
+              "authorization": {
+                "automatic_allowed": true,
+                "obligation_suppression_allowed": false,
+                "policy_change_allowed": false,
+                "requires_review": false,
+                "requires_separate_policy_diff": false
+              },
+              "catalog_identity_sha256": "542ea7af6b1390a1fea2e9656b3b6e032716b46d28e9bed014b0c0e98c18b0aa",
+              "diagnostic_id": "genesis/diagnostic/v1/manifest/error",
+              "guardrails": {
+                "automaticActionPolicy": "catalog-eligible-only",
+                "obligationSuppression": "forbidden",
+                "policyBroadening": "separate-reviewed-diff",
+                "promptAuthority": "none",
+                "schema": "genesis/diagnostic-repair-guardrails-v0.1"
+              },
+              "policy_diff": null,
+              "schema": "genesis/diagnostic-repair-plan-v0.1"
+            },
+            "safe_repair_actions": [
+              {
+                "automaticEligible": true,
+                "command": "genesis fmt --check <file>",
+                "description": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
+                "id": "repair-parse-input",
+                "kind": "verify-command",
+                "obligationEffect": "rerun-required",
+                "policyEffect": "none",
+                "postconditions": [
+                  "The original failing command is rerun against the repaired content.",
+                  "All declared obligations remain enabled and are rerun when required."
+                ],
+                "preconditions": [
+                  "The diagnostic ID and catalog identity still match the current failure.",
+                  "The target content identity and active policy are unchanged since diagnosis."
+                ],
+                "requiresReview": false
+              }
+            ],
+            "severity": "error",
+            "suggested_fix": "verify syntax and canonicalize with `genesis fmt --check <file>`.",
+            "version": "v1"
+          }
+        ],
+        "diagnostics_schema": "genesis/diagnostics-schema-v1",
+        "error": {
+          "code": "manifest/error",
+          "context": {
+            "domain": "package",
+            "facts": {
+              "reason": "manifest invalid: invalid-package.toml: unsupported package manifest schema 99 (expected 1)"
+            },
+            "kind": "manifest",
+            "operation": "obligation/run",
+            "primary_span": null,
+            "related_spans": [],
+            "schema": "genesis/failure-context-v0.1"
+          },
+          "message": "manifest invalid: invalid-package.toml: unsupported package manifest schema 99 (expected 1)"
+        },
+        "kind": "genesis/error-v0.2",
+        "ok": false
+      },
+      "id": "unsupported-package-schema"
+    }
+  ],
+  "schema": "genesis/diagnostic-goldens-v0.1"
+}

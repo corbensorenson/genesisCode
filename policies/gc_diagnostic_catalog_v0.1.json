@@ -1,0 +1,185 @@
+{
+  "kind": "genesis/diagnostic-catalog-policy-v0.1",
+  "version": "0.1.0",
+  "schema": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
+  "repairPlanSchema": "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
+  "output": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+  "sourceRoots": ["crates/gc_cli_driver/src"],
+  "exactLookup": {
+    "caseSensitive": true,
+    "normalization": "none",
+    "maxResults": 1
+  },
+  "repairGuardrails": {
+    "schema": "genesis/diagnostic-repair-guardrails-v0.1",
+    "promptAuthority": "none",
+    "policyBroadening": "separate-reviewed-diff",
+    "obligationSuppression": "forbidden",
+    "automaticActionPolicy": "catalog-eligible-only"
+  },
+  "extraCodes": [
+    "debug/bisect",
+    "debug/break",
+    "debug/inspect",
+    "diagnostic/catalog-miss",
+    "error/unknown",
+    "replay/error",
+    "replay/mismatch"
+  ],
+  "commonParameters": [
+    {
+      "name": "blocking_capability",
+      "type": "string",
+      "required": false,
+      "description": "Capability or effect operation that prevents progress when one is known."
+    },
+    {
+      "name": "context",
+      "type": "object",
+      "required": false,
+      "description": "Command-specific, JSON-typed facts; prose is never a routing contract."
+    }
+  ],
+  "phases": [
+    {
+      "id": "invocation",
+      "families": ["agent-index", "agent-plan", "compat", "engine", "mcp", "prelude", "warm"],
+      "likelyCauses": ["The requested command, profile, or embedded agent authority is unavailable or inconsistent.", "An exact lookup or invocation precondition was not satisfied."],
+      "safeRepairActions": [{"id": "inspect-invocation-contract", "description": "Inspect the exact command schema or agent index record, correct only the rejected input, and retry.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "canonicalization",
+      "families": ["canon", "fmt"],
+      "likelyCauses": ["Input is not valid canonical CoreForm.", "Formatting would change the checked artifact."],
+      "safeRepairActions": [{"id": "canonicalize-input", "description": "Run the formatter on the reported source, review the deterministic diff, and retry the same check.", "policyEffect": "none", "command": "genesis fmt <file>"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "policy",
+      "families": ["caps", "policy"],
+      "likelyCauses": ["The requested operation is absent from the active deny-by-default policy.", "Policy syntax, schema, or selected profile is invalid."],
+      "safeRepairActions": [{"id": "review-policy-denial", "description": "Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.", "policyEffect": "review-required"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "parse",
+      "families": ["manifest", "module", "package", "parse"],
+      "likelyCauses": ["Source or metadata does not satisfy its declared grammar or schema.", "A required field or canonical representation is missing."],
+      "safeRepairActions": [{"id": "repair-parse-input", "description": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.", "policyEffect": "none", "command": "genesis fmt --check <file>"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "evaluation",
+      "families": ["eval"],
+      "likelyCauses": ["Evaluation reached an invalid form, value, call, or resource boundary.", "A runtime precondition was not established by the program."],
+      "safeRepairActions": [{"id": "inspect-evaluation-trace", "description": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.", "policyEffect": "none", "command": "genesis --json debug trace <file>"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "debugging",
+      "families": ["debug"],
+      "likelyCauses": ["A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.", "The inspected artifact is stale, malformed, or outside its valid bounds."],
+      "safeRepairActions": [{"id": "regenerate-debug-artifact", "description": "Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.", "policyEffect": "none", "command": "genesis --json debug trace <file>"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "effects",
+      "families": ["effects"],
+      "likelyCauses": ["An effect program failed at the deny-by-default runner boundary.", "The effect payload or response violated its contract."],
+      "safeRepairActions": [{"id": "inspect-effect-boundary", "description": "Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.", "policyEffect": "review-required"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "io",
+      "families": ["io"],
+      "likelyCauses": ["A base-relative path is missing, inaccessible, or outside the active sandbox.", "A deterministic filesystem operation failed."],
+      "safeRepairActions": [{"id": "verify-io-preconditions", "description": "Verify the reported base-relative path, permissions, and sandbox boundary, then retry without widening access.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "serialization",
+      "families": ["json"],
+      "likelyCauses": ["A command result could not be represented by the versioned JSON envelope.", "An internal value violated the serializer contract."],
+      "safeRepairActions": [{"id": "report-serialization-contract", "description": "Preserve the failing structured context and report the catalog ID as an implementation defect.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "obligation",
+      "families": ["obligation", "opt", "test", "typecheck"],
+      "likelyCauses": ["A type, proof, test, optimization, or translation obligation did not hold.", "Required evidence is missing, stale, or mismatched."],
+      "safeRepairActions": [{"id": "resolve-obligation", "description": "Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.", "policyEffect": "none", "command": "genesis test --pkg <package.toml>"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "package",
+      "families": ["pkg"],
+      "likelyCauses": ["Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.", "The requested package lifecycle transition cannot be verified."],
+      "safeRepairActions": [{"id": "verify-package-state", "description": "Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "semantic-edit",
+      "families": ["patch", "refactor", "semantic-edit"],
+      "likelyCauses": ["A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.", "The source graph no longer matches the plan preconditions."],
+      "safeRepairActions": [{"id": "replan-semantic-edit", "description": "Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "registry",
+      "families": ["registry"],
+      "likelyCauses": ["Registry configuration, storage, or serving preconditions are invalid.", "A registry artifact could not be read or verified."],
+      "safeRepairActions": [{"id": "verify-registry-input", "description": "Validate registry configuration and artifact identities before retrying the same operation.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "replay",
+      "families": ["replay"],
+      "likelyCauses": ["Program, request, response, policy, or scheduler facts differ from the recorded log.", "The log belongs to another execution identity or is corrupted."],
+      "safeRepairActions": [{"id": "regenerate-replay-log", "description": "Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.", "policyEffect": "none", "command": "genesis run <file> --log-out <log>"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "selfhost",
+      "families": ["selfhost", "selfhost-only"],
+      "likelyCauses": ["A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.", "The selected execution profile forbids a Rust fallback."],
+      "safeRepairActions": [{"id": "verify-selfhost-artifact", "description": "Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "security",
+      "families": ["sign", "transparency"],
+      "likelyCauses": ["Signature, acceptance, key, or transparency evidence failed verification.", "The artifact identity does not match the signed statement."],
+      "safeRepairActions": [{"id": "verify-security-evidence", "description": "Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "runtime-stage",
+      "families": ["stage1", "stage2"],
+      "likelyCauses": ["A staged translation or execution boundary returned an error or unsupported result.", "Cross-stage validation rejected the produced artifact."],
+      "safeRepairActions": [{"id": "inspect-stage-evidence", "description": "Inspect the stage result and translation-validation evidence; repair the producer rather than suppressing validation.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "storage",
+      "families": ["commit", "gc", "refs", "store", "sync"],
+      "likelyCauses": ["Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.", "A requested identity is missing or does not verify."],
+      "safeRepairActions": [{"id": "verify-storage-identity", "description": "Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "vcs",
+      "families": ["vcs"],
+      "likelyCauses": ["A version-control artifact, conflict resolution, or self-host dispatch result is invalid.", "The requested snapshot or symbol does not exist in the selected history."],
+      "safeRepairActions": [{"id": "inspect-vcs-precondition", "description": "Verify snapshot identities and conflict preconditions, regenerate the plan if stale, and preserve unresolved data.", "policyEffect": "none"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    },
+    {
+      "id": "internal",
+      "families": ["diagnostic", "error"],
+      "likelyCauses": ["Production emitted an uncataloged diagnostic or could not identify a structured failure.", "An internal invariant failed before a more specific diagnostic was available."],
+      "safeRepairActions": [{"id": "report-catalog-violation", "description": "Preserve the original code and context, run the diagnostic catalog gate, and report this as an implementation defect.", "policyEffect": "none", "command": "bash scripts/check_cli_diagnostics_contract.sh"}],
+      "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
+    }
+  ]
+}

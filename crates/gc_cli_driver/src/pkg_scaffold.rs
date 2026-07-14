@@ -336,7 +336,8 @@ fn build_workspace_tasks(archetype: Archetype) -> BTreeMap<String, WorkspaceTask
 
 fn render_package_toml(package_name: &str) -> String {
     format!(
-        r#"name = "{package_name}"
+        r#"schema = 1
+name = "{package_name}"
 version = "0.1.0"
 obligations = []
 dependencies = []

@@ -76,7 +76,14 @@ fn bootstrap_archive_is_not_referenced_by_active_code() {
     let allow_paths: BTreeSet<String> = [
         "docs/spec/BOOTSTRAP_OLD.md".to_string(),
         "docs/spec/WASI.md".to_string(),
+        "ROADMAP.md".to_string(),
+        "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json".to_string(),
+        "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json".to_string(),
+        "genesis.gates.json".to_string(),
+        "policies/check_update_boundary_v0.1.json".to_string(),
+        "policies/gates_v0.1.json".to_string(),
         "scripts/check_bootstrap_retirement_gate.sh".to_string(),
+        "scripts/render_bootstrap_retirement_gate_report.sh".to_string(),
         archive_checker_path,
         "upgrade_plan.md".to_string(),
     ]

@@ -30,7 +30,7 @@ pub fn apply_patch_with_step_limit_and_frontend(
     }
 
     let patch = Patch::from_term(&patch_term)?;
-    if patch.version != 1 {
+    if patch.version != SEMANTIC_PATCH_VERSION {
         return Err(PatchError::Validate(format!(
             "unsupported patch :version {}",
             patch.version

@@ -1,0 +1,730 @@
+{
+  "kind": "genesis/prerequisite-manifest-v0.1",
+  "version": "0.1",
+  "profiles": [
+    {
+      "description": "Android application/device development with the command-line SDK platform tools.",
+      "id": "android-device",
+      "optional": [],
+      "requireNativeSdk": true,
+      "requires": [
+        "adb"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64",
+        "windows-x86-64"
+      ]
+    },
+    {
+      "description": "Apple application/device development in addition to the native SDK.",
+      "id": "apple-device",
+      "optional": [
+        "idevice-id",
+        "ios-deploy"
+      ],
+      "requireNativeSdk": true,
+      "requires": [
+        "xcodebuild",
+        "xcrun"
+      ],
+      "platformIds": [
+        "darwin-arm64"
+      ]
+    },
+    {
+      "description": "Pinned standard CI test and supply-chain tooling.",
+      "id": "ci",
+      "optional": [],
+      "requireNativeSdk": true,
+      "requires": [
+        "bash",
+        "cargo",
+        "cargo-deny",
+        "cargo-nextest",
+        "clippy",
+        "git",
+        "jq",
+        "python",
+        "rustc",
+        "rustfmt"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64",
+        "windows-x86-64"
+      ]
+    },
+    {
+      "description": "Minimum supported local build, format, check, and deterministic native execution environment.",
+      "id": "core",
+      "optional": [
+        "cargo-nextest",
+        "jq",
+        "shellcheck"
+      ],
+      "requireNativeSdk": true,
+      "requires": [
+        "bash",
+        "cargo",
+        "clippy",
+        "git",
+        "python",
+        "rustc",
+        "rustfmt"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64",
+        "windows-x86-64"
+      ]
+    },
+    {
+      "description": "Lean 4 formal models and Lake-managed proof checks.",
+      "id": "formal",
+      "optional": [],
+      "requireNativeSdk": false,
+      "requires": [
+        "git",
+        "lake",
+        "lean"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64",
+        "windows-x86-64"
+      ]
+    },
+    {
+      "description": "Union of release-relevant core, CI, web, WASI, and formal prerequisites; device and fuzz profiles remain explicit opt-ins.",
+      "id": "full",
+      "optional": [
+        "shellcheck"
+      ],
+      "requireNativeSdk": true,
+      "requires": [
+        "bash",
+        "cargo",
+        "cargo-deny",
+        "cargo-nextest",
+        "clippy",
+        "git",
+        "jq",
+        "lake",
+        "lean",
+        "node",
+        "npm",
+        "playwright",
+        "python",
+        "rust-target-wasm32-unknown-unknown",
+        "rust-target-wasm32-wasip1",
+        "rustc",
+        "rustfmt",
+        "wasm-bindgen",
+        "wasmtime"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64",
+        "windows-x86-64"
+      ]
+    },
+    {
+      "description": "Rust fuzzing and mutation-corpus development.",
+      "id": "fuzz",
+      "optional": [
+        "cargo-nextest"
+      ],
+      "requireNativeSdk": true,
+      "requires": [
+        "cargo",
+        "cargo-fuzz",
+        "clang",
+        "rustc"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64"
+      ]
+    },
+    {
+      "description": "WASI Preview 1 CLI build and Wasmtime parity tests.",
+      "id": "wasi",
+      "optional": [],
+      "requireNativeSdk": true,
+      "requires": [
+        "bash",
+        "cargo",
+        "python",
+        "rust-target-wasm32-wasip1",
+        "rustc",
+        "wasmtime"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64",
+        "windows-x86-64"
+      ]
+    },
+    {
+      "description": "Browser and Node WebAssembly bindings, deterministic cross-host checks, and Playwright browser tests.",
+      "id": "web",
+      "optional": [],
+      "requireNativeSdk": true,
+      "requires": [
+        "bash",
+        "cargo",
+        "node",
+        "npm",
+        "playwright",
+        "python",
+        "rust-target-wasm32-unknown-unknown",
+        "rustc",
+        "wasm-bindgen"
+      ],
+      "platformIds": [
+        "darwin-arm64",
+        "linux-arm64",
+        "linux-x86-64",
+        "windows-x86-64"
+      ]
+    }
+  ],
+  "platforms": [
+    {
+      "architecture": "arm64",
+      "id": "darwin-arm64",
+      "operatingSystem": "darwin",
+      "probes": [
+        {
+          "argv": [
+            "xcrun",
+            "clang",
+            "--version"
+          ],
+          "constraint": {
+            "minInclusive": "16.0.0",
+            "maxExclusive": "17.0.0"
+          },
+          "id": "apple-clang",
+          "versionRegex": "Apple clang version ([0-9]+(?:\\.[0-9]+){0,2})"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "--sdk",
+            "macosx",
+            "--show-sdk-version"
+          ],
+          "constraint": {
+            "minInclusive": "15.2.0",
+            "maxExclusive": "16.0.0"
+          },
+          "id": "macos-sdk",
+          "versionRegex": "^([0-9]+(?:\\.[0-9]+){0,2})$"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-version"
+          ],
+          "constraint": {
+            "minInclusive": "16.2.0",
+            "maxExclusive": "17.0.0"
+          },
+          "id": "xcode",
+          "versionRegex": "Xcode ([0-9]+(?:\\.[0-9]+){0,2})"
+        }
+      ],
+      "tier": 1
+    },
+    {
+      "architecture": "arm64",
+      "id": "linux-arm64",
+      "operatingSystem": "linux",
+      "probes": [
+        {
+          "argv": [
+            "cc",
+            "--version"
+          ],
+          "constraint": null,
+          "id": "c-compiler",
+          "versionRegex": null
+        }
+      ],
+      "tier": 2
+    },
+    {
+      "architecture": "x86_64",
+      "id": "linux-x86-64",
+      "operatingSystem": "linux",
+      "probes": [
+        {
+          "argv": [
+            "cc",
+            "--version"
+          ],
+          "constraint": null,
+          "id": "c-compiler",
+          "versionRegex": null
+        }
+      ],
+      "tier": 1
+    },
+    {
+      "architecture": "x86_64",
+      "id": "windows-x86-64",
+      "operatingSystem": "windows",
+      "probes": [
+        {
+          "argv": [
+            "cl",
+            "/Bv"
+          ],
+          "constraint": null,
+          "id": "msvc",
+          "versionRegex": null
+        }
+      ],
+      "tier": 2
+    }
+  ],
+  "tools": [
+    {
+      "constraint": {
+        "minInclusive": "1.0.41",
+        "maxExclusive": "2.0.0"
+      },
+      "id": "adb",
+      "probe": {
+        "argv": [
+          "adb",
+          "version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "Android Debug Bridge version ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Android device bridge and emulator/device deployment",
+      "source": "Android SDK Platform-Tools"
+    },
+    {
+      "constraint": {
+        "minInclusive": "3.2.0",
+        "maxExclusive": "6.0.0"
+      },
+      "id": "bash",
+      "probe": {
+        "argv": [
+          "bash",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "version ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Repository scripts on macOS and Linux",
+      "source": "scripts/*.sh"
+    },
+    {
+      "constraint": {
+        "exact": "1.90.0"
+      },
+      "id": "cargo",
+      "probe": {
+        "argv": [
+          "cargo",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "cargo ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Rust workspace build and package orchestration",
+      "source": "rust-toolchain.toml"
+    },
+    {
+      "constraint": {
+        "exact": "0.19.0"
+      },
+      "id": "cargo-deny",
+      "probe": {
+        "argv": [
+          "cargo-deny",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "cargo-deny ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Supply-chain advisory, license, source, and duplicate-version policy",
+      "source": ".github/workflows/ci.yml"
+    },
+    {
+      "constraint": {
+        "exact": "0.13.1"
+      },
+      "id": "cargo-fuzz",
+      "probe": {
+        "argv": [
+          "cargo-fuzz",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "cargo-fuzz ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "R7 fuzz and adversarial parser/runtime campaigns",
+      "source": "ROADMAP.md#R7.1"
+    },
+    {
+      "constraint": {
+        "exact": "0.9.137"
+      },
+      "id": "cargo-nextest",
+      "probe": {
+        "argv": [
+          "cargo-nextest",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "cargo-nextest ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "CI and long-session deterministic test runner",
+      "source": ".github/workflows/ci.yml"
+    },
+    {
+      "constraint": {
+        "minInclusive": "16.0.0",
+        "maxExclusive": "21.0.0"
+      },
+      "id": "clang",
+      "probe": {
+        "argv": [
+          "clang",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "(?:Apple )?clang version ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "libFuzzer-compatible native compilation",
+      "source": "ROADMAP.md#R7.1"
+    },
+    {
+      "constraint": {
+        "exact": "0.1.90"
+      },
+      "id": "clippy",
+      "probe": {
+        "argv": [
+          "cargo",
+          "clippy",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "clippy ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Rust lint and no-user-panic enforcement",
+      "source": "rust-toolchain.toml"
+    },
+    {
+      "constraint": {
+        "minInclusive": "2.39.0",
+        "maxExclusive": "3.0.0"
+      },
+      "id": "git",
+      "probe": {
+        "argv": [
+          "git",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "git version ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Source identity, clean-state, VCS, and bootstrap provenance",
+      "source": "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md"
+    },
+    {
+      "constraint": null,
+      "id": "idevice-id",
+      "probe": {
+        "argv": [
+          "idevice_id",
+          "--version"
+        ],
+        "kind": "command-presence",
+        "versionRegex": null
+      },
+      "purpose": "Optional physical iOS device discovery",
+      "source": "scripts/render_gcpm_target_runtime_pipelines_report.sh"
+    },
+    {
+      "constraint": {
+        "minInclusive": "1.12.0",
+        "maxExclusive": "2.0.0"
+      },
+      "id": "ios-deploy",
+      "probe": {
+        "argv": [
+          "ios-deploy",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Optional physical iOS application deployment",
+      "source": "scripts/render_gcpm_target_runtime_pipelines_report.sh"
+    },
+    {
+      "constraint": {
+        "minInclusive": "1.6.0",
+        "maxExclusive": "2.0.0"
+      },
+      "id": "jq",
+      "probe": {
+        "argv": [
+          "jq",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "jq-([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Optional local JSON inspection; production checks must not depend on it",
+      "source": "developer convenience"
+    },
+    {
+      "constraint": {
+        "exact": "5.0.0"
+      },
+      "id": "lake",
+      "probe": {
+        "argv": [
+          "lake",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "Lake version ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Lean proof project build and dependency orchestration",
+      "source": "ROADMAP.md#R7.2"
+    },
+    {
+      "constraint": {
+        "exact": "4.31.0"
+      },
+      "id": "lean",
+      "probe": {
+        "argv": [
+          "lean",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "version ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Mechanized language, seal, replay, bytecode, and concurrency proofs",
+      "source": "ROADMAP.md#R7.2"
+    },
+    {
+      "constraint": {
+        "minInclusive": "22.0.0",
+        "maxExclusive": "23.0.0"
+      },
+      "id": "node",
+      "probe": {
+        "argv": [
+          "node",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "v([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Node WebAssembly runtime and browser test orchestration",
+      "source": "package.json#engines"
+    },
+    {
+      "constraint": {
+        "minInclusive": "10.0.0",
+        "maxExclusive": "11.0.0"
+      },
+      "id": "npm",
+      "probe": {
+        "argv": [
+          "npm",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "^([0-9]+(?:\\.[0-9]+){0,2})$"
+      },
+      "purpose": "Locked JavaScript development dependencies",
+      "source": "package.json#engines"
+    },
+    {
+      "constraint": {
+        "exact": "1.58.2"
+      },
+      "id": "playwright",
+      "probe": {
+        "kind": "node-package",
+        "packagePath": "node_modules/playwright/package.json",
+        "versionField": "version"
+      },
+      "purpose": "Headless Chromium Web and WebXR conformance",
+      "source": "package-lock.json"
+    },
+    {
+      "constraint": {
+        "minInclusive": "3.9.0",
+        "maxExclusive": "4.0.0"
+      },
+      "id": "python",
+      "probe": {
+        "argv": [
+          "python3",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "Python ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Dependency-free manifest, evidence, report, and gate helpers",
+      "source": "scripts/**/*.py"
+    },
+    {
+      "constraint": {
+        "exact": "1.90.0"
+      },
+      "id": "rust-target-wasm32-unknown-unknown",
+      "probe": {
+        "kind": "rustup-target",
+        "target": "wasm32-unknown-unknown"
+      },
+      "purpose": "Browser and Node WebAssembly library builds",
+      "source": "rust-toolchain.toml"
+    },
+    {
+      "constraint": {
+        "exact": "1.90.0"
+      },
+      "id": "rust-target-wasm32-wasip1",
+      "probe": {
+        "kind": "rustup-target",
+        "target": "wasm32-wasip1"
+      },
+      "purpose": "WASI Preview 1 command builds",
+      "source": "rust-toolchain.toml"
+    },
+    {
+      "constraint": {
+        "exact": "1.90.0"
+      },
+      "id": "rustc",
+      "probe": {
+        "argv": [
+          "rustc",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "rustc ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Authoritative Rust stage0/host workspace toolchain",
+      "source": "rust-toolchain.toml"
+    },
+    {
+      "constraint": {
+        "exact": "1.8.0"
+      },
+      "id": "rustfmt",
+      "probe": {
+        "argv": [
+          "rustfmt",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "rustfmt ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Canonical Rust source formatting",
+      "source": "rust-toolchain.toml"
+    },
+    {
+      "constraint": {
+        "exact": "0.10.0"
+      },
+      "id": "shellcheck",
+      "probe": {
+        "argv": [
+          "shellcheck",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "version: ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Optional shell static analysis",
+      "source": "developer/CI hygiene"
+    },
+    {
+      "constraint": {
+        "exact": "0.2.108"
+      },
+      "id": "wasm-bindgen",
+      "probe": {
+        "argv": [
+          "wasm-bindgen",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "wasm-bindgen ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Browser and Node JavaScript bindings",
+      "source": ".github/workflows/ci.yml"
+    },
+    {
+      "constraint": {
+        "exact": "36.0.9"
+      },
+      "id": "wasmtime",
+      "probe": {
+        "argv": [
+          "wasmtime",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "wasmtime ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Pinned maintained WASI runtime for CLI parity",
+      "source": ".github/workflows/ci.yml"
+    },
+    {
+      "constraint": {
+        "minInclusive": "16.2.0",
+        "maxExclusive": "17.0.0"
+      },
+      "id": "xcodebuild",
+      "probe": {
+        "argv": [
+          "xcodebuild",
+          "-version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "Xcode ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Apple simulator, application, signing, and device builds",
+      "source": "darwin-arm64 platform SDK expectation"
+    },
+    {
+      "constraint": null,
+      "id": "xcrun",
+      "probe": {
+        "argv": [
+          "xcrun",
+          "--version"
+        ],
+        "kind": "command-presence",
+        "versionRegex": null
+      },
+      "purpose": "Apple SDK tool discovery",
+      "source": "darwin-arm64 platform SDK expectation"
+    }
+  ]
+}

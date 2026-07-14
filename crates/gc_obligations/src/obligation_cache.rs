@@ -52,14 +52,17 @@ pub(super) fn mem_limits_term(mem: MemLimits) -> Term {
     )
 }
 
-pub(super) fn frontend_term(frontend: &CoreformFrontend) -> Term {
+pub(super) fn frontend_term(frontend: &CoreformFrontend) -> Result<Term, ObligationError> {
     if let CoreformFrontend::Selfhost(cfg) = frontend {
         let mode = match cfg.bootstrap_mode {
             SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
             SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
             SelfhostBootstrapMode::Embedded => ":embedded",
         };
-        Term::Map(
+        let artifact_h = hash_optional_file(cfg.artifact.as_deref())?
+            .map(Term::Str)
+            .unwrap_or(Term::Nil);
+        Ok(Term::Map(
             [
                 (
                     TermOrdKey(Term::symbol(":kind")),
@@ -73,19 +76,20 @@ pub(super) fn frontend_term(frontend: &CoreformFrontend) -> Term {
                         .map(|p| Term::Str(p.display().to_string()))
                         .unwrap_or(Term::Nil),
                 ),
+                (TermOrdKey(Term::symbol(":artifact-h")), artifact_h),
             ]
             .into_iter()
             .collect(),
-        )
+        ))
     } else {
-        Term::Map(
+        Ok(Term::Map(
             [(
                 TermOrdKey(Term::symbol(":kind")),
                 Term::symbol(":frontend/rust"),
             )]
             .into_iter()
             .collect(),
-        )
+        ))
     }
 }
 
@@ -120,7 +124,11 @@ pub(super) fn obligation_cache_key(
         [
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/obligation-cache-key-v0.1".to_string()),
+                Term::Str("genesis/obligation-cache-key-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":toolchain")),
+                Term::Str(format!("genesis {}", env!("CARGO_PKG_VERSION"))),
             ),
             (
                 TermOrdKey(Term::symbol(":pkg-name")),
@@ -177,7 +185,7 @@ pub(super) fn obligation_cache_key(
             ),
             (
                 TermOrdKey(Term::symbol(":frontend")),
-                frontend_term(frontend),
+                frontend_term(frontend)?,
             ),
         ]
         .into_iter()

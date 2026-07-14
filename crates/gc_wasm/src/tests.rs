@@ -198,11 +198,11 @@ fn runtime_steps_effect_program_and_resumes_with_data() {
     assert_eq!(cont_h, expected_cont_h);
     assert_eq!(req_h, expected_req_h);
 
-    let resp = Value::Data(parse_term("123").unwrap());
+    let resp = Value::data(parse_term("123").unwrap());
     let resumed = rt.respond_value_internal(resp).unwrap();
     assert_eq!(
         resumed.resp_h,
-        hex::encode(value_hash(&Value::Data(Term::Int(123.into()))))
+        hex::encode(value_hash(&Value::data(Term::Int(123.into()))))
     );
     match resumed.next {
         StepResult::Done { value, .. } => assert_eq!(value, "123"),

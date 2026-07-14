@@ -63,11 +63,17 @@ fn selfhost_hash_matches_rust_for_terms_and_modules() {
     };
 
     let term_h = match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":t"))) {
-        Some(Value::Data(gc_coreform::Term::Str(s))) => s.clone(),
+        Some(v) => match v.as_data() {
+            Some(gc_coreform::Term::Str(s)) => s.clone(),
+            _ => panic!("expected :t string, got {v:?}"),
+        },
         other => panic!("expected :t string, got {other:?}"),
     };
     let mod_h = match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":m"))) {
-        Some(Value::Data(gc_coreform::Term::Str(s))) => s.clone(),
+        Some(v) => match v.as_data() {
+            Some(gc_coreform::Term::Str(s)) => s.clone(),
+            _ => panic!("expected :m string, got {v:?}"),
+        },
         other => panic!("expected :m string, got {other:?}"),
     };
 

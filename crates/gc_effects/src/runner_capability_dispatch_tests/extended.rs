@@ -98,7 +98,7 @@ wasi_bridge_response = "{:ok true :rows [{:id 1 :name \"alice\"}] :row-count 1}"
         SealId(64),
     )
     .expect("query");
-    let Value::Data(Term::Map(mm)) = allowed else {
+    let Some(Term::Map(mm)) = allowed.as_data() else {
         panic!("expected query data map");
     };
     assert_eq!(
@@ -191,7 +191,7 @@ wasi_bridge_response = "{:ok true :deleted true}"
         SealId(65),
     )
     .expect("connect");
-    let Value::Data(Term::Map(connect_mm)) = connect else {
+    let Some(Term::Map(connect_mm)) = connect.as_data() else {
         panic!("expected connect map");
     };
     assert_eq!(
@@ -213,7 +213,7 @@ wasi_bridge_response = "{:ok true :deleted true}"
         SealId(66),
     )
     .expect("tx-begin");
-    let Value::Data(Term::Map(begin_mm)) = begin else {
+    let Some(Term::Map(begin_mm)) = begin.as_data() else {
         panic!("expected tx-begin map");
     };
     assert_eq!(
@@ -245,7 +245,7 @@ wasi_bridge_response = "{:ok true :deleted true}"
         SealId(67),
     )
     .expect("exec");
-    let Value::Data(Term::Map(exec_mm)) = exec else {
+    let Some(Term::Map(exec_mm)) = exec.as_data() else {
         panic!("expected exec map");
     };
     assert_eq!(
@@ -267,7 +267,7 @@ wasi_bridge_response = "{:ok true :deleted true}"
         SealId(68),
     )
     .expect("kv-open");
-    let Value::Data(Term::Map(kv_open_mm)) = kv_open else {
+    let Some(Term::Map(kv_open_mm)) = kv_open.as_data() else {
         panic!("expected kv-open map");
     };
     assert_eq!(
@@ -289,7 +289,7 @@ wasi_bridge_response = "{:ok true :deleted true}"
         SealId(69),
     )
     .expect("kv-get");
-    let Value::Data(Term::Map(kv_get_mm)) = kv_get else {
+    let Some(Term::Map(kv_get_mm)) = kv_get.as_data() else {
         panic!("expected kv-get map");
     };
     assert_eq!(
@@ -367,7 +367,7 @@ wasi_bridge_response = "{:ok true :status 0 :stdout \"ready\"}"
         SealId(13),
     )
     .expect("call capability");
-    let Value::Data(Term::Map(mm)) = out else {
+    let Some(Term::Map(mm)) = out.as_data() else {
         panic!("expected data map");
     };
     assert_eq!(
@@ -423,7 +423,7 @@ base_dir = "{base_dir}"
         SealId(70),
     )
     .expect("io/fs::mkdir");
-    assert!(matches!(mkdir_out, Value::Data(Term::Nil)));
+    assert!(matches!(mkdir_out.as_data(), Some(Term::Nil)));
 
     let write_payload = term_map([
         (
@@ -443,7 +443,7 @@ base_dir = "{base_dir}"
         SealId(71),
     )
     .expect("io/fs::write");
-    assert!(matches!(write_out, Value::Data(Term::Nil)));
+    assert!(matches!(write_out.as_data(), Some(Term::Nil)));
 
     let stat_payload = term_map([(
         Term::symbol(":path"),
@@ -460,7 +460,7 @@ base_dir = "{base_dir}"
         SealId(72),
     )
     .expect("io/fs::stat");
-    let Value::Data(Term::Map(stat_map)) = stat_out else {
+    let Some(Term::Map(stat_map)) = stat_out.as_data() else {
         panic!("expected stat data map");
     };
     assert_eq!(
@@ -484,7 +484,7 @@ base_dir = "{base_dir}"
         SealId(73),
     )
     .expect("io/fs::list");
-    let Value::Data(Term::Vector(entries)) = list_out else {
+    let Some(Term::Vector(entries)) = list_out.as_data() else {
         panic!("expected list vector");
     };
     assert!(entries.iter().any(|entry| {
@@ -515,7 +515,7 @@ base_dir = "{base_dir}"
         SealId(74),
     )
     .expect("io/fs::rename");
-    assert!(matches!(rename_out, Value::Data(Term::Nil)));
+    assert!(matches!(rename_out.as_data(), Some(Term::Nil)));
 
     let remove_payload = term_map([(
         Term::symbol(":path"),
@@ -532,7 +532,7 @@ base_dir = "{base_dir}"
         SealId(75),
     )
     .expect("io/fs::remove");
-    assert!(matches!(remove_out, Value::Data(Term::Nil)));
+    assert!(matches!(remove_out.as_data(), Some(Term::Nil)));
 
     let stat_missing_out = call_capability(
         "io/fs::stat",
@@ -548,7 +548,7 @@ base_dir = "{base_dir}"
         SealId(76),
     )
     .expect("io/fs::stat missing");
-    let Value::Data(Term::Map(missing_map)) = stat_missing_out else {
+    let Some(Term::Map(missing_map)) = stat_missing_out.as_data() else {
         panic!("expected stat data map");
     };
     assert_eq!(
@@ -627,7 +627,7 @@ allow_target_formats = ["pcm-s16le", "pcm-f32le"]
         SealId(200),
     )
     .expect("hash op");
-    let Value::Data(Term::Map(hash_map)) = hash_out else {
+    let Some(Term::Map(hash_map)) = hash_out.as_data() else {
         panic!("expected hash map");
     };
     assert_eq!(
@@ -666,7 +666,7 @@ allow_target_formats = ["pcm-s16le", "pcm-f32le"]
         SealId(201),
     )
     .expect("image transcode");
-    let Value::Data(Term::Map(image_map)) = image_out else {
+    let Some(Term::Map(image_map)) = image_out.as_data() else {
         panic!("expected image map");
     };
     assert_eq!(
@@ -705,7 +705,7 @@ allow_target_formats = ["pcm-s16le", "pcm-f32le"]
         SealId(202),
     )
     .expect("audio transcode");
-    let Value::Data(Term::Map(audio_map)) = audio_out else {
+    let Some(Term::Map(audio_map)) = audio_out.as_data() else {
         panic!("expected audio map");
     };
     assert_eq!(
@@ -768,7 +768,7 @@ allow_target_formats = ["pcm-s24le", "pcm-f64le"]
         SealId(204),
     )
     .expect("image transcode");
-    let Value::Data(Term::Map(image_map)) = image_out else {
+    let Some(Term::Map(image_map)) = image_out.as_data() else {
         panic!("expected image map");
     };
     let Some(Term::Bytes(image_bytes)) = image_map.get(&TermOrdKey(Term::symbol(":data"))) else {
@@ -803,7 +803,7 @@ allow_target_formats = ["pcm-s24le", "pcm-f64le"]
         SealId(205),
     )
     .expect("gray16 transcode");
-    let Value::Data(Term::Map(gray16_map)) = gray16_out else {
+    let Some(Term::Map(gray16_map)) = gray16_out.as_data() else {
         panic!("expected gray16 map");
     };
     let Some(Term::Bytes(gray16_bytes)) = gray16_map.get(&TermOrdKey(Term::symbol(":data"))) else {
@@ -834,7 +834,7 @@ allow_target_formats = ["pcm-s24le", "pcm-f64le"]
         SealId(206),
     )
     .expect("audio transcode");
-    let Value::Data(Term::Map(audio_map)) = audio_out else {
+    let Some(Term::Map(audio_map)) = audio_out.as_data() else {
         panic!("expected audio map");
     };
     let Some(Term::Bytes(audio_bytes)) = audio_map.get(&TermOrdKey(Term::symbol(":data"))) else {
@@ -865,7 +865,7 @@ allow_target_formats = ["pcm-s24le", "pcm-f64le"]
         SealId(207),
     )
     .expect("audio f64 transcode");
-    let Value::Data(Term::Map(audio_f64_map)) = audio_f64_out else {
+    let Some(Term::Map(audio_f64_map)) = audio_f64_out.as_data() else {
         panic!("expected audio f64 map");
     };
     let Some(Term::Bytes(audio_f64_bytes)) = audio_f64_map.get(&TermOrdKey(Term::symbol(":data")))
@@ -975,7 +975,7 @@ wasi_bridge_response = "{:ok true :data b\"\" :eof true}"
         SealId(78),
     )
     .expect("spawn");
-    let Value::Data(Term::Map(spawn_map)) = spawn_out else {
+    let Some(Term::Map(spawn_map)) = spawn_out.as_data() else {
         panic!("expected spawn map");
     };
     let Some(Term::Str(process_id)) = spawn_map.get(&TermOrdKey(Term::symbol(":process-id")))
@@ -996,7 +996,7 @@ wasi_bridge_response = "{:ok true :data b\"\" :eof true}"
         SealId(79),
     )
     .expect("wait");
-    let Value::Data(Term::Map(wait_map)) = wait_out else {
+    let Some(Term::Map(wait_map)) = wait_out.as_data() else {
         panic!("expected wait map");
     };
     assert_eq!(
@@ -1018,7 +1018,7 @@ wasi_bridge_response = "{:ok true :data b\"\" :eof true}"
         SealId(80),
     )
     .expect("stdin-write");
-    let Value::Data(Term::Map(write_map)) = write_out else {
+    let Some(Term::Map(write_map)) = write_out.as_data() else {
         panic!("expected stdin-write map");
     };
     assert_eq!(
@@ -1037,7 +1037,7 @@ wasi_bridge_response = "{:ok true :data b\"\" :eof true}"
         SealId(81),
     )
     .expect("stdout-read");
-    let Value::Data(Term::Map(stdout_map)) = stdout_out else {
+    let Some(Term::Map(stdout_map)) = stdout_out.as_data() else {
         panic!("expected stdout-read map");
     };
     assert_eq!(
@@ -1056,7 +1056,7 @@ wasi_bridge_response = "{:ok true :data b\"\" :eof true}"
         SealId(82),
     )
     .expect("stderr-read");
-    let Value::Data(Term::Map(stderr_map)) = stderr_out else {
+    let Some(Term::Map(stderr_map)) = stderr_out.as_data() else {
         panic!("expected stderr-read map");
     };
     assert_eq!(
@@ -1075,7 +1075,7 @@ wasi_bridge_response = "{:ok true :data b\"\" :eof true}"
         SealId(83),
     )
     .expect("kill");
-    let Value::Data(Term::Map(kill_map)) = kill_out else {
+    let Some(Term::Map(kill_map)) = kill_out.as_data() else {
         panic!("expected kill map");
     };
     assert_eq!(

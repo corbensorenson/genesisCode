@@ -85,12 +85,12 @@ pub(crate) fn gfx_host_call(
         return None;
     }
     if !has_explicit_bridge_profile(pol) {
-        return Some(Value::Data(first_party_gfx_response(
+        return Some(Value::data(first_party_gfx_response(
             runtime, op, payload, pol,
         )));
     }
     Some(match call_host_bridge("gfx", op, payload, pol) {
-        Ok(resp) => Value::Data(resp),
+        Ok(resp) => Value::data(resp),
         Err(err) => mk_error(error_tok, &err, Some(op)),
     })
 }

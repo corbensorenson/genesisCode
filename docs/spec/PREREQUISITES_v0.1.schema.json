@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/prerequisite-manifest-v0.1.json",
+  "title": "GenesisCode Prerequisite Manifest v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "profiles", "platforms", "tools"],
+  "properties": {
+    "kind": {"const": "genesis/prerequisite-manifest-v0.1"},
+    "version": {"const": "0.1"},
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/profile"}
+    },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/platform"}
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/tool"}
+    }
+  },
+  "$defs": {
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "exact": {"$ref": "#/$defs/version"},
+        "minInclusive": {"$ref": "#/$defs/version"},
+        "maxExclusive": {"$ref": "#/$defs/version"}
+      }
+    },
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "operatingSystem", "architecture", "tier", "probes"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "operatingSystem": {"enum": ["darwin", "linux", "windows"]},
+        "architecture": {"enum": ["arm64", "x86_64"]},
+        "tier": {"enum": [1, 2]},
+        "probes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/platformProbe"}
+        }
+      }
+    },
+    "platformProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "argv", "versionRegex", "constraint"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "argv": {"$ref": "#/$defs/nonEmptyStrings"},
+        "versionRegex": {"type": ["string", "null"]},
+        "constraint": {"oneOf": [{"$ref": "#/$defs/constraint"}, {"type": "null"}]}
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["command-version", "command-presence", "node-package", "rustup-target"]},
+        "argv": {"$ref": "#/$defs/nonEmptyStrings"},
+        "versionRegex": {"type": ["string", "null"]},
+        "packagePath": {"type": "string", "minLength": 1},
+        "versionField": {"type": "string", "minLength": 1},
+        "target": {"type": "string", "minLength": 1}
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "requires", "optional", "requireNativeSdk", "platformIds"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "description": {"type": "string", "minLength": 1},
+        "requires": {"$ref": "#/$defs/uniqueIds"},
+        "optional": {"$ref": "#/$defs/uniqueIds"},
+        "platformIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "requireNativeSdk": {"type": "boolean"}
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "purpose", "source", "probe", "constraint"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "purpose": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "probe": {"$ref": "#/$defs/probe"},
+        "constraint": {"oneOf": [{"$ref": "#/$defs/constraint"}, {"type": "null"}]}
+      }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "uniqueIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "version": {"type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+){0,2}$"}
+  }
+}

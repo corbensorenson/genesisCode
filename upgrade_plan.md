@@ -1,26 +1,35 @@
 # GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
-Last updated: 2026-02-26
+Last updated: 2026-07-14
 
 Scope:
 - Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and production runtime trust.
-- Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json`, `docs/status/REDTEAM_REPORT.md`, and `feature_matrix.md`.
-- Keep completed work out of this file (git history + perf artifacts are closure evidence).
+- This file is the canonical active P0/P1 defect-ID source. The capability ledger mirrors the exact IDs, and generated status views must match it.
+- Keep completed work out of this file. Durable source history and E1-E4 evidence establish closure; mutable `.genesis/perf/` observations do not.
 
-Open checklist items: 0
+Open checklist items: 4
 
 ## Critical Path
 
-- none
+- [ ] P0.1 Restore denied-effect replay parity across Rust and self-host engines on native and WASI. Denial must preserve the same sealed result/error boundary, exit contract, canonical log facts, and replay outcome; add shared allow/deny/unhandled/tamper regressions and close only after R0.2.f evidence passes.
+- [ ] P1.1 Make host-bridge hard-cancellation stress deterministic under supported parallel load. Replace PID-log races with explicit fixture readiness and ownership, prove complete descendant kill/reap for spawn and persistent transports, and close only after repeated loaded R0.2.g/R1.3.b evidence passes without retries or ignores.
+- [ ] P1.2 Restore default-suite hermeticity and load stability. Remove the recursively nested changed-fast pipeline from the default Rust suite, isolate stress/performance work, reproduce and fix the load-sensitive agent-plan case, and close only after default plus repeated parallel R0.2.g profiles pass.
+- [ ] P1.3 Bound generated-state growth. Enforce concurrency-safe cache ownership, leases, soft/hard quotas, admission failure, and automatic reclamation while preserving user data and retained evidence; close only after R0.4.g proves GB-5 steady state across repeated full profiles and low-disk recovery.
 
 ## Evidence Anchors
 
 - `upgrade_plan.md`
+- `ROADMAP.md`
+- `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json`
 - `feature_matrix.md`
 - `docs/status/REDTEAM_REPORT.md`
+- `docs/status/SELFHOST_AUTHORITY_v0.1.md`
 - `docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json`
 - `docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json`
 - `docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.md`
+
+## Local Observation Inputs (E0, Not Closure Authority)
+
 - `.genesis/perf/selfhost_readiness_report.json`
 - `.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
 - `.genesis/perf/agent_generative_workloads_report.json`

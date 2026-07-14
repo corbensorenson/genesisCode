@@ -133,7 +133,7 @@ pub(super) fn dispatch_resolution(
                     })
                     .unwrap_or(Term::Nil),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::lock" => {
@@ -316,7 +316,7 @@ pub(super) fn dispatch_resolution(
                     .collect(),
                 ),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::update" => {
@@ -569,7 +569,7 @@ pub(super) fn dispatch_resolution(
                     .collect(),
                 ),
             );
-            Ok(Value::Data(Term::Map(m)))
+            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::install" => install_verify::handle_pkg_install(
@@ -688,7 +688,7 @@ mod tests {
         match out {
             Value::Sealed { token, payload } => {
                 assert_eq!(token, SealId(777));
-                let Value::Data(Term::Map(mm)) = *payload else {
+                let Some(Term::Map(mm)) = payload.as_ref().as_data() else {
                     panic!("expected sealed error map payload");
                 };
                 let code = match mm.get(&TermOrdKey(Term::symbol(":error/code"))) {

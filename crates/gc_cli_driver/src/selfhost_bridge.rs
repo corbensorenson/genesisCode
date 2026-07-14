@@ -40,6 +40,41 @@ pub(super) fn extract_protocol_error(
     Some((code, msg, Some(gc_coreform::print_term(&payload_term))))
 }
 
+pub(super) fn ensure_no_protocol_error(
+    ctx: &EvalCtx,
+    value: &Value,
+    suppress: bool,
+    domain: &'static str,
+    operation: &'static str,
+    diagnostic_code: &'static str,
+) -> Result<(), CliError> {
+    if suppress {
+        return Ok(());
+    }
+    let Some((protocol_code, message, payload)) = extract_protocol_error(ctx, value) else {
+        return Ok(());
+    };
+    Err(cli_err_with_context(
+        EX_EVAL,
+        diagnostic_code,
+        message,
+        structured_failures::protocol_context(
+            domain,
+            operation,
+            &protocol_code,
+            payload.as_deref(),
+        ),
+    ))
+}
+
+pub(super) fn ensure_no_runner_protocol_error(
+    ctx: &EvalCtx,
+    value: &Value,
+    denied: bool,
+) -> Result<(), CliError> {
+    ensure_no_protocol_error(ctx, value, denied, "policy", "run/result", "effects/run")
+}
+
 pub(super) fn selfhost_parse_canonicalize_module(
     ctx: &mut EvalCtx,
     env: &gc_kernel::Env,
@@ -47,12 +82,13 @@ pub(super) fn selfhost_parse_canonicalize_module(
 ) -> Result<Vec<Term>, CliError> {
     if let Some(canon_src_fn) = env.get("core/cli::canonicalize-module-src") {
         let canon = canon_src_fn
-            .apply(ctx, Value::Data(Term::Str(src.to_string())))
+            .apply(ctx, Value::data(Term::Str(src.to_string())))
             .map_err(|e| {
-                cli_err(
+                cli_err_with_context(
                     EX_EVAL,
                     "eval/error",
                     format!("core/cli canonicalize-module-src failed: {e}"),
+                    structured_failures::evaluator_context("parser/canonicalize-module", &e),
                 )
             })?;
 
@@ -62,7 +98,12 @@ pub(super) fn selfhost_parse_canonicalize_module(
                 json: JsonError {
                     code: "selfhost/error",
                     message: format!("{code}: {message}"),
-                    context: payload.map(serde_json::Value::String),
+                    context: Some(structured_failures::protocol_context(
+                        "parser",
+                        "parser/canonicalize-module",
+                        &code,
+                        payload.as_deref(),
+                    )),
                 },
             });
         }
@@ -88,12 +129,13 @@ pub(super) fn selfhost_parse_canonicalize_module(
         )
     })?;
     let parsed = parse_fn
-        .apply(ctx, Value::Data(Term::Str(src.to_string())))
+        .apply(ctx, Value::data(Term::Str(src.to_string())))
         .map_err(|e| {
-            cli_err(
+            cli_err_with_context(
                 EX_EVAL,
                 "eval/error",
                 format!("selfhost parse-module failed: {e}"),
+                structured_failures::evaluator_context("parser/parse-module", &e),
             )
         })?;
 
@@ -103,7 +145,12 @@ pub(super) fn selfhost_parse_canonicalize_module(
             json: JsonError {
                 code: "selfhost/error",
                 message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
+                context: Some(structured_failures::protocol_context(
+                    "parser",
+                    "parser/parse-module",
+                    &code,
+                    payload.as_deref(),
+                )),
             },
         });
     }
@@ -129,12 +176,13 @@ pub(super) fn selfhost_parse_canonicalize_module(
             )
         })?;
     let canon = canon_fn
-        .apply(ctx, Value::Data(Term::Vector(parsed_forms.clone())))
+        .apply(ctx, Value::data(Term::Vector(parsed_forms.clone())))
         .map_err(|e| {
-            cli_err(
+            cli_err_with_context(
                 EX_EVAL,
                 "eval/error",
                 format!("selfhost canonicalize-module failed: {e}"),
+                structured_failures::evaluator_context("parser/canonicalize-module", &e),
             )
         })?;
 
@@ -144,7 +192,12 @@ pub(super) fn selfhost_parse_canonicalize_module(
             json: JsonError {
                 code: "selfhost/error",
                 message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
+                context: Some(structured_failures::protocol_context(
+                    "parser",
+                    "parser/canonicalize-module",
+                    &code,
+                    payload.as_deref(),
+                )),
             },
         });
     }
@@ -199,15 +252,27 @@ pub(super) fn selfhost_hash_module_forms(
 ) -> Result<[u8; 32], CliError> {
     if let Some(hash_forms_fn) = env.get("core/cli::hash-module-forms") {
         let out = hash_forms_fn
-            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
-            .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost hash failed: {e}")))?;
+            .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
+            .map_err(|e| {
+                cli_err_with_context(
+                    EX_EVAL,
+                    "eval/error",
+                    format!("selfhost hash failed: {e}"),
+                    structured_failures::evaluator_context("build/hash-module", &e),
+                )
+            })?;
         if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
             return Err(CliError {
                 exit_code: EX_PARSE,
                 json: JsonError {
                     code: "selfhost/error",
                     message: format!("{code}: {message}"),
-                    context: payload.map(serde_json::Value::String),
+                    context: Some(structured_failures::protocol_context(
+                        "build",
+                        "build/hash-module",
+                        &code,
+                        payload.as_deref(),
+                    )),
                 },
             });
         }
@@ -232,15 +297,27 @@ pub(super) fn selfhost_hash_module_forms(
         )
     })?;
     let out = hash_fn
-        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost hash failed: {e}")))?;
+        .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
+        .map_err(|e| {
+            cli_err_with_context(
+                EX_EVAL,
+                "eval/error",
+                format!("selfhost hash failed: {e}"),
+                structured_failures::evaluator_context("build/hash-module", &e),
+            )
+        })?;
     if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
         return Err(CliError {
             exit_code: EX_PARSE,
             json: JsonError {
                 code: "selfhost/error",
                 message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
+                context: Some(structured_failures::protocol_context(
+                    "build",
+                    "build/hash-module",
+                    &code,
+                    payload.as_deref(),
+                )),
             },
         });
     }
@@ -272,12 +349,13 @@ pub(super) fn selfhost_stage1_transform_module(
             )
         })?;
     let out = stage1_fn
-        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
         .map_err(|e| {
-            cli_err(
+            cli_err_with_context(
                 EX_EVAL,
                 "eval/error",
                 format!("selfhost stage1 failed: {e}"),
+                structured_failures::evaluator_context("build/stage1-transform", &e),
             )
         })?;
     if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
@@ -286,7 +364,12 @@ pub(super) fn selfhost_stage1_transform_module(
             json: JsonError {
                 code: "selfhost/error",
                 message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
+                context: Some(structured_failures::protocol_context(
+                    "build",
+                    "build/stage1-transform",
+                    &code,
+                    payload.as_deref(),
+                )),
             },
         });
     }
@@ -317,12 +400,13 @@ pub(super) fn selfhost_parse_term(
         )
     })?;
     let parsed = parse_fn
-        .apply(ctx, Value::Data(Term::Str(src.to_string())))
+        .apply(ctx, Value::data(Term::Str(src.to_string())))
         .map_err(|e| {
-            cli_err(
+            cli_err_with_context(
                 EX_EVAL,
                 "eval/error",
                 format!("selfhost parse-term failed for {arg_name}: {e}"),
+                structured_failures::evaluator_context("parser/parse-term", &e),
             )
         })?;
 
@@ -332,12 +416,17 @@ pub(super) fn selfhost_parse_term(
             json: JsonError {
                 code: "selfhost/error",
                 message: format!("{arg_name}: {code}: {message}"),
-                context: payload.map(serde_json::Value::String),
+                context: Some(structured_failures::protocol_context(
+                    "parser",
+                    "parser/parse-term",
+                    &code,
+                    payload.as_deref(),
+                )),
             },
         });
     }
 
-    let Some(term) = parsed.as_data() else {
+    let Some(term) = parsed.to_plain_term() else {
         return Err(cli_err(
             EX_INTERNAL,
             "selfhost/bad-return",
@@ -347,7 +436,7 @@ pub(super) fn selfhost_parse_term(
             ),
         ));
     };
-    Ok(term.clone())
+    Ok(term)
 }
 
 pub(super) fn selfhost_plan_request_map(
@@ -368,11 +457,12 @@ pub(super) fn selfhost_plan_request_map(
             format!("missing binding {binding}"),
         )
     })?;
-    let out = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
-        cli_err(
+    let out = f.apply(&mut ctx, Value::data(req)).map_err(|e| {
+        cli_err_with_context(
             EX_EVAL,
             "eval/error",
             format!("{binding} failed for {cmd_name}: {e}"),
+            structured_failures::evaluator_context("package/plan-command", &e),
         )
     })?;
 
@@ -382,7 +472,12 @@ pub(super) fn selfhost_plan_request_map(
             json: JsonError {
                 code: "selfhost/error",
                 message: format!("{cmd_name}: {code}: {message}"),
-                context: payload.map(serde_json::Value::String),
+                context: Some(structured_failures::protocol_context(
+                    "package",
+                    "package/plan-command",
+                    &code,
+                    payload.as_deref(),
+                )),
             },
         });
     }

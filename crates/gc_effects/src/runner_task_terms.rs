@@ -34,7 +34,10 @@ pub(super) fn map_field_int_u64(t: &Term, key: &str) -> Option<u64> {
 }
 
 pub(super) fn value_data_map_field(v: &Value, key: &str) -> Option<String> {
-    let Value::Data(Term::Map(m)) = v else {
+    let Value::Data(t) = v else {
+        return None;
+    };
+    let Term::Map(m) = t.as_ref() else {
         return None;
     };
     match m.get(&TermOrdKey(Term::symbol(key))) {

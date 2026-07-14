@@ -578,14 +578,17 @@ fn selfhost_artifact_includes_cli_core_module_with_passing_stage1_gate() {
 
 #[test]
 fn production_typecheck_accepts_workspace_pinned_selfhost_artifact() {
-    let td = tempdir().unwrap();
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("workspace root");
     let pkg = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/spec/pkg_basic/package.toml")
         .canonicalize()
         .unwrap();
 
     let out = cargo_bin_cmd!("genesis")
-        .current_dir(td.path())
+        .current_dir(repo_root)
         .env_remove("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
         .args(["--json", "typecheck", "--pkg"])
         .arg(&pkg)

@@ -1,6 +1,3 @@
-use std::collections::BTreeMap;
-use std::collections::BTreeSet;
-
 use bytes::{Bytes, BytesMut};
 
 use crate::env::Env;
@@ -9,6 +6,8 @@ use crate::value::{SealId, Value};
 use gc_coreform::{Term, TermOrdKey};
 use num_traits::ToPrimitive;
 
+#[path = "eval_coverage.rs"]
+mod eval_coverage;
 #[path = "eval_decimal_ops.rs"]
 mod eval_decimal_ops;
 #[path = "eval_forms.rs"]
@@ -20,10 +19,13 @@ mod eval_treewalk;
 #[path = "eval_value_ops.rs"]
 mod eval_value_ops;
 
+pub(crate) use eval_coverage::CoverageRunId;
+use eval_coverage::CoverageState;
+pub use eval_coverage::{DecisionCoverageCounters, DecisionSample};
 use eval_decimal_ops::{
     prim_dec_bin, prim_dec_cmp, prim_dec_from_int, prim_dec_parse, prim_dec_to_str,
 };
-pub(crate) use eval_prims::{prim, type_err};
+pub(crate) use eval_prims::{PrimOp, prim, prim_op, prim_op2, type_err};
 use eval_value_ops::{eq_value, escape_bytes, escape_str};
 
 /// Toolchain default evaluation step limit.
@@ -103,6 +105,7 @@ pub struct EvalCtx {
     pub mem_limits: MemLimits,
     mem_state: MemState,
     coverage: Option<CoverageState>,
+    panic_guard_depth: u32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -127,38 +130,6 @@ pub struct MemObservedCounters {
 pub struct EvalObservedCounters {
     pub steps: u64,
     pub mem: MemObservedCounters,
-}
-
-#[derive(Debug, Clone)]
-struct CoverageState {
-    tracked: BTreeSet<String>,
-    hits: BTreeMap<String, u64>,
-    decision_total: u64,
-    decision_true: u64,
-    decision_false: u64,
-    statement_site_hits: BTreeMap<String, u64>,
-    decision_site_hits: BTreeMap<String, DecisionCoverageCounters>,
-    decision_samples: BTreeMap<String, Vec<DecisionSample>>,
-    decision_stack: Vec<DecisionFrame>,
-}
-
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct DecisionCoverageCounters {
-    pub total: u64,
-    pub taken_true: u64,
-    pub taken_false: u64,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DecisionSample {
-    pub conditions: BTreeMap<String, bool>,
-    pub outcome: bool,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct DecisionFrame {
-    site_id: String,
-    conditions: BTreeMap<String, bool>,
 }
 
 impl EvalCtx {
@@ -193,6 +164,39 @@ impl EvalCtx {
             mem_limits: MemLimits::default(),
             mem_state: MemState::default(),
             coverage: None,
+            panic_guard_depth: 0,
+        }
+    }
+
+    pub(crate) fn panic_guard_active(&self) -> bool {
+        self.panic_guard_depth > 0
+    }
+
+    pub(crate) fn run_panic_guarded<T>(
+        &mut self,
+        boundary: &'static str,
+        f: impl FnOnce(&mut Self) -> Result<T, KernelError>,
+    ) -> Result<T, KernelError> {
+        if self.panic_guard_active() {
+            return f(self);
+        }
+        self.run_panic_guarded_always(boundary, f)
+    }
+
+    pub(crate) fn run_panic_guarded_always<T>(
+        &mut self,
+        boundary: &'static str,
+        f: impl FnOnce(&mut Self) -> Result<T, KernelError>,
+    ) -> Result<T, KernelError> {
+        self.panic_guard_depth = self.panic_guard_depth.saturating_add(1);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
+        self.panic_guard_depth = self.panic_guard_depth.saturating_sub(1);
+        match result {
+            Ok(result) => result,
+            Err(_) => Err(KernelError::new(
+                KernelErrorKind::Internal,
+                format!("{boundary} panicked"),
+            )),
         }
     }
 
@@ -243,20 +247,6 @@ impl EvalCtx {
         })
     }
 
-    pub fn enable_coverage(&mut self, tracked: BTreeSet<String>) {
-        self.coverage = Some(CoverageState {
-            tracked,
-            hits: BTreeMap::new(),
-            decision_total: 0,
-            decision_true: 0,
-            decision_false: 0,
-            statement_site_hits: BTreeMap::new(),
-            decision_site_hits: BTreeMap::new(),
-            decision_samples: BTreeMap::new(),
-            decision_stack: Vec::new(),
-        });
-    }
-
     /// Reset counters that are used for budgeting (steps + semantic memory observations).
     ///
     /// This is intended for trusted toolchain initialization paths (prelude/selfhost toolchain),
@@ -264,32 +254,6 @@ impl EvalCtx {
     pub fn reset_counters(&mut self) {
         self.steps = 0;
         self.mem_state = MemState::default();
-    }
-
-    pub fn coverage_hits(&self) -> Option<&BTreeMap<String, u64>> {
-        self.coverage.as_ref().map(|c| &c.hits)
-    }
-
-    pub fn coverage_decision_counts(&self) -> Option<DecisionCoverageCounters> {
-        self.coverage.as_ref().map(|c| DecisionCoverageCounters {
-            total: c.decision_total,
-            taken_true: c.decision_true,
-            taken_false: c.decision_false,
-        })
-    }
-
-    pub fn coverage_statement_site_hits(&self) -> Option<&BTreeMap<String, u64>> {
-        self.coverage.as_ref().map(|c| &c.statement_site_hits)
-    }
-
-    pub fn coverage_decision_site_hits(
-        &self,
-    ) -> Option<&BTreeMap<String, DecisionCoverageCounters>> {
-        self.coverage.as_ref().map(|c| &c.decision_site_hits)
-    }
-
-    pub fn coverage_decision_samples(&self) -> Option<&BTreeMap<String, Vec<DecisionSample>>> {
-        self.coverage.as_ref().map(|c| &c.decision_samples)
     }
 
     pub fn observed_counters(&self) -> EvalObservedCounters {
@@ -303,79 +267,6 @@ impl EvalCtx {
                 max_string_len: self.mem_state.max_string_len,
             },
         }
-    }
-
-    pub(crate) fn coverage_hit(&mut self, sym: &str, value: &Value) {
-        let Some(c) = &mut self.coverage else { return };
-        if !c.tracked.contains(sym) {
-            if let Some(frame) = c.decision_stack.last_mut()
-                && let Value::Data(Term::Bool(b)) = value
-            {
-                frame.conditions.entry(sym.to_string()).or_insert(*b);
-            }
-            return;
-        }
-        *c.hits.entry(sym.to_string()).or_insert(0) += 1;
-        if let Some(frame) = c.decision_stack.last_mut()
-            && let Value::Data(Term::Bool(b)) = value
-        {
-            frame.conditions.entry(sym.to_string()).or_insert(*b);
-        }
-    }
-
-    pub(crate) fn coverage_statement_site(&mut self, site_id: &str) {
-        let Some(c) = &mut self.coverage else { return };
-        *c.statement_site_hits
-            .entry(site_id.to_string())
-            .or_insert(0) += 1;
-    }
-
-    pub(crate) fn coverage_decision(&mut self, truthy: bool) {
-        let Some(c) = &mut self.coverage else { return };
-        c.decision_total = c.decision_total.saturating_add(1);
-        if truthy {
-            c.decision_true = c.decision_true.saturating_add(1);
-        } else {
-            c.decision_false = c.decision_false.saturating_add(1);
-        }
-    }
-
-    pub(crate) fn coverage_begin_decision_site(&mut self, site_id: &str) {
-        let Some(c) = &mut self.coverage else { return };
-        c.decision_stack.push(DecisionFrame {
-            site_id: site_id.to_string(),
-            conditions: BTreeMap::new(),
-        });
-    }
-
-    pub(crate) fn coverage_abort_decision_site(&mut self) {
-        let Some(c) = &mut self.coverage else { return };
-        let _ = c.decision_stack.pop();
-    }
-
-    pub(crate) fn coverage_finish_decision_site(&mut self, truthy: bool) {
-        self.coverage_decision(truthy);
-        let Some(c) = &mut self.coverage else { return };
-        let Some(frame) = c.decision_stack.pop() else {
-            return;
-        };
-        let site_counts = c
-            .decision_site_hits
-            .entry(frame.site_id.clone())
-            .or_default();
-        site_counts.total = site_counts.total.saturating_add(1);
-        if truthy {
-            site_counts.taken_true = site_counts.taken_true.saturating_add(1);
-        } else {
-            site_counts.taken_false = site_counts.taken_false.saturating_add(1);
-        }
-        c.decision_samples
-            .entry(frame.site_id)
-            .or_default()
-            .push(DecisionSample {
-                conditions: frame.conditions,
-                outcome: truthy,
-            });
     }
 
     fn mem_observe_max(
@@ -479,12 +370,16 @@ pub(super) enum EvalOutcome {
 }
 
 pub fn eval_module(ctx: &mut EvalCtx, env: &mut Env, forms: &[Term]) -> Result<Value, KernelError> {
-    eval_forms::eval_module(ctx, env, forms)
+    ctx.run_panic_guarded("eval_module", |ctx| {
+        eval_forms::eval_module(ctx, env, forms)
+    })
 }
 
 pub fn eval_term(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
-    // Evaluator is structurally recursive; grow stack as needed.
-    stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
-        eval_treewalk::eval_term_impl(ctx, env, term)
+    ctx.run_panic_guarded("eval_term", |ctx| {
+        // Evaluator is structurally recursive; grow stack as needed.
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+            eval_treewalk::eval_term_impl(ctx, env, term)
+        })
     })
 }

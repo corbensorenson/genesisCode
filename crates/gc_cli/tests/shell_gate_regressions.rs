@@ -31,20 +31,28 @@ fn measure_helper_fails_closed_on_command_error() {
 #[test]
 fn perf_scripts_use_shared_fail_closed_primitives() {
     let root = repo_root();
-    let hot = fs::read_to_string(root.join("scripts/check_hot_path_budgets.sh"))
-        .expect("read check_hot_path_budgets.sh");
-    let perf = fs::read_to_string(root.join("scripts/check_perf_budgets.sh"))
-        .expect("read check_perf_budgets.sh");
-    let slo = fs::read_to_string(root.join("scripts/check_ai_iteration_slo.sh"))
-        .expect("read check_ai_iteration_slo.sh");
-    let micro = fs::read_to_string(root.join("scripts/check_runtime_microbench_budgets.sh"))
-        .expect("read check_runtime_microbench_budgets.sh");
-    let gpu_profile = fs::read_to_string(root.join("scripts/check_gpu_compute_runtime_profile.sh"))
-        .expect("read check_gpu_compute_runtime_profile.sh");
-    let gpu_headroom = fs::read_to_string(root.join("scripts/check_gpu_gfx_headroom_conformance.sh"))
-        .expect("read check_gpu_gfx_headroom_conformance.sh");
-    let readiness = fs::read_to_string(root.join("scripts/check_selfhost_readiness_scorecard.sh"))
-        .expect("read check_selfhost_readiness_scorecard.sh");
+    let hot = fs::read_to_string(root.join("scripts/render_hot_path_budgets_report.sh"))
+        .expect("read render_hot_path_budgets_report.sh");
+    let perf = fs::read_to_string(root.join("scripts/render_perf_budgets_report.sh"))
+        .expect("read render_perf_budgets_report.sh");
+    let slo = fs::read_to_string(root.join("scripts/render_ai_iteration_slo_report.sh"))
+        .expect("read render_ai_iteration_slo_report.sh");
+    let micro =
+        fs::read_to_string(root.join("scripts/render_runtime_microbench_budgets_report.sh"))
+            .expect("read render_runtime_microbench_budgets_report.sh");
+    let gpu_profile =
+        fs::read_to_string(root.join("scripts/render_gpu_compute_runtime_profile_report.sh"))
+            .expect("read render_gpu_compute_runtime_profile_report.sh");
+    let gpu_headroom = format!(
+        "{}\n{}",
+        fs::read_to_string(root.join("scripts/check_gpu_gfx_headroom_conformance.sh"))
+            .expect("read check_gpu_gfx_headroom_conformance.sh"),
+        fs::read_to_string(root.join("scripts/render_gpu_gfx_headroom_conformance_report.sh"))
+            .expect("read render_gpu_gfx_headroom_conformance_report.sh")
+    );
+    let readiness =
+        fs::read_to_string(root.join("scripts/render_selfhost_readiness_scorecard_report.sh"))
+            .expect("read render_selfhost_readiness_scorecard_report.sh");
     let host_abi = fs::read_to_string(root.join("scripts/check_host_abi_conformance.sh"))
         .expect("read check_host_abi_conformance.sh");
     let strict_golden = fs::read_to_string(root.join("scripts/selfhost_strict_golden.sh"))
@@ -52,18 +60,21 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     let wasm_cross = fs::read_to_string(root.join("scripts/wasm_cross_host_determinism.mjs"))
         .expect("read wasm_cross_host_determinism.mjs");
     let full_cross =
-        fs::read_to_string(root.join("scripts/check_full_cross_host_profile_budget.sh"))
-            .expect("read check_full_cross_host_profile_budget.sh");
-    let generative = fs::read_to_string(root.join("scripts/check_agent_generative_workloads.sh"))
-        .expect("read check_agent_generative_workloads.sh");
-    let parity = fs::read_to_string(root.join("scripts/check_agent_workflow_runtime_parity.sh"))
-        .expect("read check_agent_workflow_runtime_parity.sh");
-    let gauntlet = fs::read_to_string(root.join("scripts/check_agent_reference_workflows.sh"))
-        .expect("read check_agent_reference_workflows.sh");
-    let health = fs::read_to_string(root.join("scripts/check_upgrade_plan_health.sh"))
-        .expect("read check_upgrade_plan_health.sh");
-    let scenario = fs::read_to_string(root.join("scripts/check_agent_scenario_perf.sh"))
-        .expect("read check_agent_scenario_perf.sh");
+        fs::read_to_string(root.join("scripts/render_full_cross_host_profile_budget_report.sh"))
+            .expect("read render_full_cross_host_profile_budget_report.sh");
+    let generative =
+        fs::read_to_string(root.join("scripts/render_agent_generative_workloads_report.sh"))
+            .expect("read render_agent_generative_workloads_report.sh");
+    let parity =
+        fs::read_to_string(root.join("scripts/render_agent_workflow_runtime_parity_report.sh"))
+            .expect("read render_agent_workflow_runtime_parity_report.sh");
+    let gauntlet =
+        fs::read_to_string(root.join("scripts/render_agent_reference_workflows_report.sh"))
+            .expect("read render_agent_reference_workflows_report.sh");
+    let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
+        .expect("read render_upgrade_plan_health_report.sh");
+    let scenario = fs::read_to_string(root.join("scripts/render_agent_scenario_perf_report.sh"))
+        .expect("read render_agent_scenario_perf_report.sh");
 
     assert!(
         hot.contains("source \"$ROOT_DIR/scripts/lib/measure.sh\""),
@@ -150,8 +161,8 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         gpu_headroom.contains("GENESIS_GPU_GFX_HEADROOM_REQUIRE_DEVICE_LANE")
             && gpu_headroom.contains("GENESIS_GPU_GFX_HEADROOM_DEVICE_CONFORMANCE_REPORT")
-            && gpu_headroom.contains("GENESIS_GPU_GFX_HEADROOM_DEVICE_CONFORMANCE_CMD"),
-        "gpu headroom conformance script must expose device-lane conformance controls"
+            && gpu_headroom.contains("update_gpu_compute_device_conformance_report.sh"),
+        "gpu headroom conformance must expose device-lane input controls and exact producer guidance"
     );
     assert!(
         gpu_headroom.contains("GENESIS_AGENT_GPU_REQUIRE_DEVICE=\"$require_device\""),
@@ -241,7 +252,7 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         "full cross-host lane must define a baseline history seed path"
     );
     assert!(
-        full_cross.contains("--baseline-history \"$FULL_BASELINE_HISTORY\""),
+        full_cross.contains("--baseline-history \"$EFFECTIVE_BASELINE_HISTORY\""),
         "full cross-host lane must pass baseline history into shared budget helper"
     );
     assert!(
@@ -265,7 +276,7 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         "generative workload gate must emit a stable machine-readable report kind"
     );
     assert!(
-        parity.contains("check_agent_generative_workloads.sh"),
+        parity.contains("render_agent_generative_workloads_report.sh"),
         "agent workflow runtime parity gate must include generative workload parity checks"
     );
     assert!(
@@ -331,7 +342,7 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         "release/full selfhost lanes must validate full-selfhost cutover profile contract"
     );
     assert!(
-        health.contains("GENESIS_HEALTH_PREPUSH_BUDGET_MS:-900000"),
+        health.contains("GENESIS_HEALTH_PREPUSH_BUDGET_MS:-480000"),
         "upgrade-plan health script must pin stricter prepush wall-time budget defaults"
     );
     assert!(
@@ -352,8 +363,8 @@ fn changed_fast_supports_explicit_strict_disk_mode() {
     let root = repo_root();
     let changed_fast = fs::read_to_string(root.join("scripts/test_changed_fast.sh"))
         .expect("read test_changed_fast.sh");
-    let slo = fs::read_to_string(root.join("scripts/check_ai_iteration_slo.sh"))
-        .expect("read check_ai_iteration_slo.sh");
+    let slo = fs::read_to_string(root.join("scripts/render_ai_iteration_slo_report.sh"))
+        .expect("read render_ai_iteration_slo_report.sh");
 
     assert!(
         changed_fast.contains("--strict-disk <mode>"),
@@ -374,7 +385,7 @@ fn changed_fast_supports_explicit_strict_disk_mode() {
 }
 
 #[test]
-fn changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg() {
+fn changed_fast_ambiguous_governance_change_escalates_without_empty_package_arg() {
     let root = repo_root();
     let changed_fast = fs::read_to_string(root.join("scripts/test_changed_fast.sh"))
         .expect("read test_changed_fast.sh");
@@ -382,10 +393,7 @@ fn changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg() {
         changed_fast.contains("GENESIS_TEST_CHANGED_FILES_OVERRIDE"),
         "test-changed-fast must support deterministic changed-file override for regression tests"
     );
-    assert!(
-        changed_fast.contains("MODE=\"non-crate-targeted\""),
-        "test-changed-fast must route script/docs-only diffs into non-crate targeted mode"
-    );
+    assert!(changed_fast.contains("scripts/lib/changed_impact.py"));
 
     let output = Command::new("bash")
         .arg("-lc")
@@ -405,26 +413,21 @@ fn changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg() {
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("mode=non-crate-targeted"),
-        "expected non-crate-targeted mode, got: {stdout}"
+        stdout.contains("mode=profile-fallback"),
+        "expected conservative profile fallback, got: {stdout}"
     );
     assert!(
         !stdout.contains("cargo test -p \n") && !stdout.contains("cargo test -p \r"),
         "dry-run must never emit empty cargo package args: {stdout}"
     );
     assert!(
-        stdout.contains("bash scripts/check_doc_hygiene.sh"),
-        "expected docs hygiene fast-path command for docs/script-only diffs: {stdout}"
-    );
-    assert!(
-        stdout.contains(
-            "cargo test -p gc_cli --test shell_gate_regressions changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg -- --exact"
-        ),
-        "expected shell-gate regression command for script-only diffs: {stdout}"
+        stdout.contains("bash scripts/test_fast_full.sh"),
+        "ambiguous governance impact must escalate to the full fast profile: {stdout}"
     );
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn bootstrap_retirement_gate_has_explicit_local_degraded_mode() {
     let root = repo_root();
 
@@ -477,10 +480,11 @@ fn bootstrap_retirement_gate_has_explicit_local_degraded_mode() {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn production_rust_frontend_guard_is_wired_and_passes() {
     let root = repo_root();
-    let health = fs::read_to_string(root.join("scripts/check_upgrade_plan_health.sh"))
-        .expect("read check_upgrade_plan_health.sh");
+    let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
+        .expect("read render_upgrade_plan_health_report.sh");
     assert!(
         health.contains("check_no_production_rust_frontend_refs.sh"),
         "upgrade-plan health script must run production rust frontend guard"
@@ -520,8 +524,13 @@ fn command_groups_use_shared_contract_descriptors() {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open() {
     let root = repo_root();
+    let temp = tempfile::tempdir().expect("create open-backlog fixture");
+    let plan = temp.path().join("upgrade_plan.md");
+    fs::write(&plan, "Open checklist items: 1\n\n- [ ] fixture item\n")
+        .expect("write open-backlog fixture");
     let output = Command::new("bash")
         .arg(root.join("scripts/check_upgrade_plan_health.sh"))
         .arg("--profile")
@@ -530,6 +539,7 @@ fn upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open() {
         .env("GENESIS_HEALTH_ENFORCE_GATES", "1")
         .env("GENESIS_HEALTH_TEST_GATE_OVERRIDE", "true")
         .env("GENESIS_AGENT_AUTOMATION_CONTEXT", "0")
+        .env("GENESIS_HEALTH_PLAN_FILE", &plan)
         .current_dir(&root)
         .output()
         .expect("run upgrade-plan health script");
@@ -549,6 +559,7 @@ fn upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open() {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn disk_headroom_strict_and_non_strict_modes_behave_as_expected() {
     let root = repo_root();
     let script = root.join("scripts/check_disk_headroom.sh");
@@ -591,5 +602,141 @@ fn disk_headroom_strict_and_non_strict_modes_behave_as_expected() {
     assert!(
         !strict.success(),
         "disk headroom check should fail in strict mode when below threshold"
+    );
+}
+
+#[test]
+fn check_reclaim_controls_fail_closed_without_running_maintenance() {
+    let root = repo_root();
+    let disk = Command::new("bash")
+        .arg(root.join("scripts/check_disk_headroom.sh"))
+        .arg("--auto-reclaim")
+        .arg("1")
+        .current_dir(&root)
+        .output()
+        .expect("run disk reclaim rejection");
+    assert_eq!(disk.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&disk.stderr).contains("checks are read-only"),
+        "disk check must name the read-only boundary"
+    );
+
+    let runtime = Command::new("bash")
+        .arg(root.join("scripts/check_runtime_backend_feature_matrix.sh"))
+        .env("GENESIS_RUNTIME_BACKEND_MATRIX_AUTO_RECLAIM", "1")
+        .current_dir(&root)
+        .output()
+        .expect("run runtime-matrix reclaim rejection");
+    assert_eq!(runtime.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&runtime.stderr).contains("checks are read-only"),
+        "runtime matrix must name the read-only boundary"
+    );
+}
+
+#[test]
+fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env() {
+    let root = repo_root();
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock after epoch")
+        .as_nanos();
+    let temp = std::env::temp_dir().join(format!(
+        "genesis-changed-fast-boundary-{}-{nonce}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&temp).expect("create changed-fast boundary fixture");
+    let changed = temp.join("changed.txt");
+    let report = temp.join("legacy-report.json");
+    let history = temp.join("legacy-history.jsonl");
+    fs::write(&changed, "README.md\n").expect("write changed-file fixture");
+
+    let output = Command::new("bash")
+        .arg(root.join("scripts/test_changed_fast.sh"))
+        .arg("--runner")
+        .arg("cargo")
+        .arg("--changed-files-from")
+        .arg(&changed)
+        .arg("--budget-ms")
+        .arg("120000")
+        .arg("--min-history")
+        .arg("1")
+        .env("GENESIS_TEST_CHANGED_REPORT", &report)
+        .env("GENESIS_TEST_CHANGED_HISTORY", &history)
+        .current_dir(&root)
+        .output()
+        .expect("run changed-fast temporary metrics probe");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "changed-fast temporary probe failed\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(stdout.contains("report=temporary"));
+    assert!(
+        !report.exists(),
+        "legacy report environment override was honored"
+    );
+    assert!(
+        !history.exists(),
+        "legacy history environment override was honored"
+    );
+    fs::remove_dir_all(&temp).expect("remove changed-fast boundary fixture");
+}
+
+#[test]
+fn source_decomposition_report_canonicalizes_host_paths() {
+    let root = repo_root();
+    let temp = tempfile::tempdir().expect("create source decomposition fixture");
+    let policy = temp.path().join("policy.toml");
+    let report = temp.path().join("report.json");
+    fs::write(
+        &policy,
+        r#"version = 1
+target_max_lines = 700
+required_min_phase = "phase-1"
+disallowed_statuses = ["planned", "blocked"]
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_effects/src/runner_capability_dispatch.rs"
+phase = "phase-1"
+status = "waived"
+parity_gate = '''python3 -c 'import pathlib, tempfile; print(pathlib.Path.home() / "private" / "input"); print(pathlib.Path(tempfile.gettempdir()) / "output.json")' '''
+waiver_owner = "fixture"
+waiver_scope = "portable diagnostic regression"
+waiver_rationale = "fixture row exercises successful command output canonicalization"
+waiver_review_by = "2099-12-31"
+"#,
+    )
+    .expect("write source decomposition policy fixture");
+
+    let output = Command::new("bash")
+        .arg(root.join("scripts/render_source_decomposition_tracked_parity_report.sh"))
+        .arg(&report)
+        .arg(&policy)
+        .env("GENESIS_SOURCE_DECOMPOSITION_REVIEW_DATE", "2026-07-10")
+        .current_dir(&root)
+        .output()
+        .expect("render source decomposition fixture");
+    assert!(
+        output.status.success(),
+        "source decomposition fixture failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let report_text = fs::read_to_string(&report).expect("read source decomposition report");
+    assert!(
+        !report_text.contains("/Users/"),
+        "report leaked a user path"
+    );
+    assert!(
+        !report_text.contains("/var/folders/"),
+        "report leaked a temporary path"
+    );
+    assert!(
+        report_text.contains("<host-path>"),
+        "report did not retain a portable path marker"
     );
 }

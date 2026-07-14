@@ -1,0 +1,82 @@
+{
+  "classes": [
+    {
+      "deletable": true,
+      "id": "dependency-mirror",
+      "roots": [
+        ".genesis/dependency-mirrors"
+      ]
+    },
+    {
+      "deletable": true,
+      "id": "rebuildable-output",
+      "roots": [
+        ".cargo-install-target",
+        ".genesis/build",
+        ".genesis/cache",
+        ".genesis/tmp",
+        ".tmp",
+        "node_modules",
+        "target"
+      ]
+    },
+    {
+      "deletable": true,
+      "id": "retained-evidence",
+      "roots": [
+        ".genesis/logs",
+        ".genesis/perf",
+        ".genesis/selfhost"
+      ]
+    },
+    {
+      "deletable": false,
+      "id": "user-authored",
+      "roots": [
+        ".genesis/pins.toml",
+        ".genesis/refs",
+        ".genesis/store"
+      ]
+    }
+  ],
+  "discoveryRoots": [
+    ".genesis"
+  ],
+  "kind": "genesis/deterministic-cleanup-policy-v0.1",
+  "limits": {
+    "maxDepth": 128,
+    "maxEntries": 2000000,
+    "maxPlanRoots": 128
+  },
+  "markerFile": ".genesis-clean-root-v0.1.json",
+  "profiles": [
+    {
+      "deleteClasses": [
+        "rebuildable-output"
+      ],
+      "id": "dev-clean"
+    },
+    {
+      "deleteClasses": [
+        "dependency-mirror",
+        "rebuildable-output",
+        "retained-evidence"
+      ],
+      "id": "generated-clean"
+    },
+    {
+      "deleteClasses": [
+        "dependency-mirror"
+      ],
+      "id": "mirror-clean"
+    },
+    {
+      "deleteClasses": [
+        "retained-evidence"
+      ],
+      "id": "observations-clean"
+    }
+  ],
+  "quarantineRoot": ".genesis/cleanup-quarantine",
+  "version": "0.1"
+}

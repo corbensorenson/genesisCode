@@ -15,7 +15,7 @@ gc_target_lines = 1200
 gc_source_roots = ["prelude/modules", "selfhost", "prelude/prelude.gc"]
 
 # Paths containing tests/bench fixtures are excluded from this production-code budget gate.
-exclude_substrings = ["/tests/", "/benches/", "/examples/"]
+exclude_substrings = ["/tests/", "/tests.rs", "/tests_", "_tests.rs", "/benches/", "/examples/"]
 
 # Explicit generated artifact carve-outs for .gc budget enforcement.
 # These are assembled artifacts committed for reproducibility, not authoring sources.

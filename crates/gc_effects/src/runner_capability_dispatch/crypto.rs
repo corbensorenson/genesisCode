@@ -145,7 +145,7 @@ fn crypto_bridge_call(
         ));
     }
     match call_host_bridge("crypto", op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }

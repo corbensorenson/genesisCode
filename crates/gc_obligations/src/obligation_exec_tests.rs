@@ -109,7 +109,7 @@ pub(super) fn obligation_property_tests(
 
         for (i, seed) in seeds.iter().copied().enumerate() {
             let mut ctx = mk_eval_ctx(limits);
-            let arg = Value::Data(Term::Int(BigInt::from(seed)));
+            let arg = Value::data(Term::Int(BigInt::from(seed)));
             let r = match p.body.clone().apply(&mut ctx, arg) {
                 Ok(v) => v,
                 Err(e) => {
@@ -167,7 +167,7 @@ pub(super) fn obligation_property_tests(
                 .protocol
                 .is_some_and(|pt| matches!(r, Value::Sealed { token, .. } if token == pt.error));
 
-            let pass = matches!(r, Value::Data(Term::Bool(true))) && !is_error;
+            let pass = matches!(r.as_data(), Some(Term::Bool(true))) && !is_error;
             if !pass {
                 t_ok = false;
                 let proto_err = ctx.protocol.map(|pt| pt.error);
@@ -324,9 +324,17 @@ pub(super) fn parse_property_entry(
     }
     let cases = match m.get(&TermOrdKey(Term::Symbol(":cases".to_string()))) {
         None => default_cases,
-        Some(Value::Data(Term::Int(i))) => i
-            .to_u64()
-            .ok_or_else(|| ObligationError::Test("property :cases must fit u64".to_string()))?,
+        Some(Value::Data(t)) => match t.as_ref() {
+            Term::Int(i) => i
+                .to_u64()
+                .ok_or_else(|| ObligationError::Test("property :cases must fit u64".to_string()))?,
+            _ => {
+                return Err(ObligationError::Test(format!(
+                    "property :cases must be int, got {}",
+                    Value::Data(t.clone()).debug_repr()
+                )));
+            }
+        },
         Some(other) => {
             return Err(ObligationError::Test(format!(
                 "property :cases must be int, got {}",
@@ -369,7 +377,7 @@ pub(super) fn parse_test_entry(v: &Value) -> Result<(Value, Option<Term>), Oblig
         }
         let expect = match m.get(&TermOrdKey(Term::Symbol(":expect".to_string()))) {
             None => None,
-            Some(Value::Data(t)) => Some(t.clone()),
+            Some(Value::Data(t)) => Some(t.as_ref().clone()),
             Some(other) => {
                 return Err(ObligationError::Test(format!(
                     "test :expect must be a datum, got {}",

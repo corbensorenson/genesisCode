@@ -6,9 +6,10 @@ allow = [
   "core/refs::list",
   "core/refs::set",
   "core/refs::delete",
-  "core/pkg::snapshot",
-  "core/gpk::export",
-  "core/gpk::import"
+  "core/pkg-low::load-package",
+  "core/pkg-low::snapshot",
+  "core/gpk-low::export",
+  "core/gpk-low::import"
 ]
 
 [store]
@@ -17,12 +18,14 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/pkg::snapshot"]
+[op."core/pkg-low::snapshot"]
 base_dir = "."
 
-[op."core/gpk::export"]
+[op."core/pkg-low::load-package"]
 base_dir = "."
 
-[op."core/gpk::import"]
+[op."core/gpk-low::export"]
 base_dir = "."
 
+[op."core/gpk-low::import"]
+base_dir = "."

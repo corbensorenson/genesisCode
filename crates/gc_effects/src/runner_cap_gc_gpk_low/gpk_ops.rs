@@ -215,8 +215,8 @@ pub(super) fn handle_gpk_export(
     };
 
     let mut refs_section: Vec<(String, String)> = Vec::new();
-    let bundle_version: u32 = if embed_refnames.is_empty() { 1 } else { 2 };
-    if bundle_version == 2 {
+    let bundle_version = gc_vcs::GPK_CURRENT_VERSION;
+    if !embed_refnames.is_empty() {
         let refs = match refs {
             Ok(r) => r,
             Err(e) => {
@@ -267,11 +267,7 @@ pub(super) fn handle_gpk_export(
     };
     let bundle_h = {
         let mut hw = HashingWriter::new(&mut file);
-        let refs_opt = if bundle_version == 2 {
-            Some(refs_section.as_slice())
-        } else {
-            None
-        };
+        let refs_opt = Some(refs_section.as_slice());
         if let Err(e) = gc_vcs::write_bundle(&mut hw, bundle_version, root_b, &entries, refs_opt) {
             return Ok(mk_error(
                 error_tok,
@@ -335,7 +331,7 @@ pub(super) fn handle_gpk_export(
             .collect();
         m.insert(TermOrdKey(Term::symbol(":refs")), Term::Vector(out_refs));
     }
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }
 
 pub(super) fn handle_gpk_import(
@@ -557,5 +553,5 @@ pub(super) fn handle_gpk_import(
             }
         }
     }
-    Ok(Value::Data(Term::Map(m)))
+    Ok(Value::data(Term::Map(m)))
 }

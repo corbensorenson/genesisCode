@@ -31,10 +31,52 @@ fn write_effect_caps(dir: &Path, allow: &[&str]) -> PathBuf {
         s.push('"');
     }
     s.push_str(
-        "]\n\n[store]\ndir = \"./.genesis/store\"\n\n[refs]\npath = \"./.genesis/refs.gc\"\n\n[op.\"core/pkg-low::save-lock\"]\nbase_dir = \".\"\ncreate_dirs = true\n\n[op.\"core/pkg-low::load-lock\"]\nbase_dir = \".\"\n",
+        r#"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/pkg-low::add"]
+base_dir = "."
+
+[op."core/pkg-low::lock"]
+base_dir = "."
+
+[op."core/pkg-low::update"]
+base_dir = "."
+
+[op."core/pkg-low::save-lock"]
+base_dir = "."
+create_dirs = true
+
+[op."core/pkg-low::load-lock"]
+base_dir = "."
+"#,
     );
     std::fs::write(&caps, s).unwrap();
     caps
+}
+
+fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
+    std::fs::write(dir.join(filename), term_src).unwrap();
+    String::from_utf8(
+        cargo_bin_cmd!("genesis_wasi")
+            .current_dir(dir)
+            .args(["--selfhost-only", "store", "--caps"])
+            .arg(caps)
+            .args(["put", "--input", filename])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone(),
+    )
+    .unwrap()
+    .trim()
+    .to_string()
 }
 
 fn write_vcs_caps(dir: &Path) -> PathBuf {
@@ -321,7 +363,11 @@ fn selfhost_only_pkg_update_uses_pkg_low_caps_only() {
     let td = tempdir().unwrap();
     let caps = write_effect_caps(
         td.path(),
-        &["core/pkg-low::save-lock", "core/pkg-low::load-lock"],
+        &[
+            "core/pkg-low::save-lock",
+            "core/pkg-low::load-lock",
+            "core/pkg-low::update",
+        ],
     );
 
     cargo_bin_cmd!("genesis_wasi")
@@ -346,7 +392,14 @@ fn selfhost_only_pkg_lock_non_strict_uses_pkg_low_caps_only() {
     let td = tempdir().unwrap();
     let caps = write_effect_caps(
         td.path(),
-        &["core/pkg-low::save-lock", "core/pkg-low::load-lock"],
+        &[
+            "core/store::put",
+            "core/store::get",
+            "core/pkg-low::save-lock",
+            "core/pkg-low::load-lock",
+            "core/pkg-low::add",
+            "core/pkg-low::lock",
+        ],
     );
 
     cargo_bin_cmd!("genesis_wasi")
@@ -357,14 +410,18 @@ fn selfhost_only_pkg_lock_non_strict_uses_pkg_low_caps_only() {
         .assert()
         .success();
 
+    let snapshot_h = store_put(
+        td.path(),
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "dep" :pkg/version "0" :modules [] :obligations []}"#,
+        "dep_snapshot.gc",
+    );
+
     cargo_bin_cmd!("genesis_wasi")
         .current_dir(td.path())
         .args(["--selfhost-only", "pkg", "--caps"])
         .arg(caps.to_str().unwrap())
-        .args([
-            "add",
-            "dep@snapshot:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-        ])
+        .args(["add", &format!("dep@snapshot:{snapshot_h}")])
         .assert()
         .success();
 
@@ -385,6 +442,8 @@ fn selfhost_only_pkg_lock_strict_uses_pkg_low_caps_only() {
         &[
             "core/pkg-low::save-lock",
             "core/pkg-low::load-lock",
+            "core/pkg-low::add",
+            "core/pkg-low::lock",
             "core/store::put",
             "core/store::get",
         ],
@@ -401,7 +460,7 @@ fn selfhost_only_pkg_lock_strict_uses_pkg_low_caps_only() {
     let snapshot_file = td.path().join("snapshot.gc");
     std::fs::write(
         &snapshot_file,
-        "{:type :vcs/snapshot :v 1 :kind :package :modules [] :obligations []}\n",
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "dep" :pkg/version "0" :modules [] :obligations []}"#,
     )
     .unwrap();
 

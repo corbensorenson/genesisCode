@@ -6,14 +6,19 @@ Deterministic multi-domain confidence gate for AI-first workflow readiness.
 
 Validate that selfhost agent reference workflows pass across required product domains with replay-aware signals and bounded runtime budgets.
 
-This gate is stricter than workflow smoke checks: it produces a scored report and fails closed on domain coverage regressions.
+This gate is stricter than workflow smoke checks: it renders a scored report and fails closed on domain coverage regressions.
 
 ## Runner
 
-- Script: `scripts/check_agent_reference_workflows.sh`
-- Primary report: `.genesis/perf/agent_capability_gauntlet_report.json`
-- History: `.genesis/perf/agent_capability_gauntlet_history.jsonl`
+- Read-only check: `scripts/check_agent_reference_workflows.sh`
+- Explicit producer: `scripts/update_agent_reference_workflows_report.sh`
+- Optional primary report: `.genesis/perf/agent_capability_gauntlet_report.json`
+- Optional history: `.genesis/perf/agent_capability_gauntlet_history.jsonl`
 - Baseline seed history: `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
+
+The check renders into private temporary outputs and reads retained history only as
+an input. Only the explicit producer replaces the optional report and appends a
+retained history sample.
 
 ## Report Contract
 

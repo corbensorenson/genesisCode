@@ -1,0 +1,10 @@
+{
+  "artifactSeed": "selfhost/toolchain.gc",
+  "kind": "genesis/pb10-bootstrap-inputs-v0.1",
+  "manifest": "selfhost/toolchain_manifest.gc",
+  "stageCommands": [
+    "genesis selfhost-artifact --out <stage2>",
+    "genesis --selfhost-artifact <stage2> selfhost-artifact --out <stage3>"
+  ],
+  "version": "0.1"
+}

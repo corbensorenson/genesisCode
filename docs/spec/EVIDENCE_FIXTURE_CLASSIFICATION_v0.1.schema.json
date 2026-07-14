@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/evidence-fixture-classification-v0.1.json",
+  "title": "GenesisCode Evidence Fixture Classification v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "root", "distributionClass", "authority", "coverage", "files"],
+  "properties": {
+    "kind": {"const": "genesis/evidence-fixture-classification-v0.1"},
+    "version": {"const": "0.1"},
+    "root": {"const": "docs/program/evidence/"},
+    "distributionClass": {"const": "E2"},
+    "authority": {"const": false},
+    "coverage": {"const": "exact-recursive-files"},
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "role", "claimedEvidenceClass", "testOnly"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^docs/program/evidence/"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "role": {"type": "string", "minLength": 1},
+          "claimedEvidenceClass": {"enum": ["none", "E0", "E1", "E2", "E3", "E4"]},
+          "testOnly": {"const": true}
+        }
+      }
+    }
+  }
+}
