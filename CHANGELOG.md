@@ -112,7 +112,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `a294c27317c52752cdb4834e44cad181db2ab5abf16f2d85870f271000c71f4e`.
+Machine-readable identity: `71865d6513a763490b41bfbb1b1c663e7f55ddbdf4dac7ba07c8759a417f0a57`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02
