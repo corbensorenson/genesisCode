@@ -233,6 +233,7 @@ base_dir = "{base_dir}"
 bridge_cmd = "persistent_bridge.sh"
 bridge_transport = "spawn-per-op"
 max_bytes = 4096
+timeout_ms = 5000
 "#
     ))
     .expect("spawn policy");
@@ -245,6 +246,7 @@ base_dir = "{base_dir}"
 bridge_cmd = "persistent_bridge.sh"
 bridge_transport = "persistent-stdio"
 max_bytes = 4096
+timeout_ms = 5000
 "#
     ))
     .expect("persistent policy");
@@ -262,6 +264,15 @@ max_bytes = 4096
         spawn_samples.push(t0.elapsed().as_millis());
     }
 
+    // Exclude connection establishment: this assertion measures the steady-state
+    // transport benefit while cold-start latency is covered by separate budgets.
+    let _ = call_host_bridge(
+        "gpu",
+        "gpu/compute::limits",
+        &Term::Nil,
+        persistent_policy.op_policy("gpu/compute::limits"),
+    )
+    .expect("persistent transport warmup");
     let mut persistent_samples = Vec::new();
     for _ in 0..12 {
         let t0 = Instant::now();

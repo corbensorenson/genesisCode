@@ -38,6 +38,8 @@ const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolcha
 const DEFAULT_SELFHOST_COMPILED_CACHE_REL: &str = ".genesis/cache/selfhost_compiled_v1";
 const SELFHOST_COMPILED_CACHE_FILE_MAGIC: &[u8] = b"GCSHC1\0";
 const SELFHOST_BOOTSTRAP_EVIDENCE_SYMBOL: &str = "core/selfhost::bootstrap-evidence";
+// Cache provenance is operational telemetry, not language-visible semantics.
+const ARTIFACT_BOOTSTRAP_STAGE: &str = "artifact";
 const PRODUCTION_BOOTSTRAP_STEP_LIMIT: u64 = 500_000_000;
 const PARITY_BOOTSTRAP_STEP_LIMIT: u64 = 1_000_000_000;
 
@@ -396,18 +398,24 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
             .get(&artifact_h)
             .cloned();
         if let Some(compiled) = cached {
-            return with_trusted_bootstrap_limits(ctx, env, "artifact-cache-hit", |ctx, env| {
-                for (name, m) in &compiled {
-                    eval_compiled_module(ctx, env, m).with_context(|| format!("eval {name}"))?;
-                }
-                Ok(())
-            });
+            return with_trusted_bootstrap_limits(
+                ctx,
+                env,
+                ARTIFACT_BOOTSTRAP_STAGE,
+                |ctx, env| {
+                    for (name, m) in &compiled {
+                        eval_compiled_module(ctx, env, m)
+                            .with_context(|| format!("eval {name}"))?;
+                    }
+                    Ok(())
+                },
+            );
         }
     }
 
     let manifest = toolchain_manifest()?;
     if let Some(compiled_in_order) = try_read_compiled_cache(artifact_h, manifest) {
-        let out = with_trusted_bootstrap_limits(ctx, env, "artifact-compiled-cache", |ctx, env| {
+        let out = with_trusted_bootstrap_limits(ctx, env, ARTIFACT_BOOTSTRAP_STAGE, |ctx, env| {
             for (path, module) in &compiled_in_order {
                 eval_compiled_module(ctx, env, module).with_context(|| format!("eval {path}"))?;
             }
@@ -586,7 +594,7 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         compiled_in_order.push((path.clone(), module));
     }
 
-    let out = with_trusted_bootstrap_limits(ctx, env, "artifact-modules", |ctx, env| {
+    let out = with_trusted_bootstrap_limits(ctx, env, ARTIFACT_BOOTSTRAP_STAGE, |ctx, env| {
         for (path, module) in &compiled_in_order {
             eval_compiled_module(ctx, env, module).with_context(|| format!("eval {path}"))?;
         }

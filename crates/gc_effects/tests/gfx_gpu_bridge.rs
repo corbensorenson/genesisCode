@@ -195,22 +195,27 @@ allow = ["gfx/window::create-surface", "gfx/input::poll-events", "gfx/audio::enq
 [op."gfx/window::create-surface"]
 base_dir = "{base}"
 bridge_cmd = "{bridge_name}"
+timeout_ms = 5000
 
 [op."gfx/input::poll-events"]
 base_dir = "{base}"
 bridge_cmd = "{bridge_name}"
+timeout_ms = 5000
 
 [op."gfx/audio::enqueue"]
 base_dir = "{base}"
 bridge_cmd = "{bridge_name}"
+timeout_ms = 5000
 
 [op."gfx/gpu::create-buffer"]
 base_dir = "{base}"
 bridge_cmd = "{bridge_name}"
+timeout_ms = 5000
 
 [op."gpu/compute::limits"]
 base_dir = "{base}"
 bridge_cmd = "{bridge_name}"
+timeout_ms = 5000
 "#
     ))
     .expect("caps");

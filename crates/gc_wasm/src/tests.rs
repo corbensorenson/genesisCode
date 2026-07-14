@@ -311,6 +311,7 @@ fn wasm_runtime_selfhost_hashes_match_native_effect_runner_entry() {
     let mut rt = Runtime::new(0);
     let step = eval_to_first_step_selfhost_with_artifact(&mut rt, src, &artifact);
     let StepResult::Effect {
+        module_h,
         op,
         payload_h,
         cont_h,
@@ -321,6 +322,22 @@ fn wasm_runtime_selfhost_hashes_match_native_effect_runner_entry() {
         panic!("expected effect");
     };
     assert_eq!(op, "sys/time::now");
+    let runtime_frontend_h = value_hash(
+        &rt.env
+            .get("selfhost/parse::parse-module")
+            .expect("runtime selfhost parser binding"),
+    );
+    let runtime_env_h = value_hash(&Value::closure(
+        "_probe".to_string(),
+        Term::Nil,
+        rt.env.clone(),
+    ));
+    let runtime_k = rt
+        .pending
+        .as_ref()
+        .expect("runtime pending continuation")
+        .k
+        .clone();
 
     // Native runner entry for the same selfhost frontend forms.
     let mut ctx = EvalCtx::with_step_limit(None);
@@ -331,9 +348,46 @@ fn wasm_runtime_selfhost_hashes_match_native_effect_runner_entry() {
     ctx.step_limit = None;
     let forms = selfhost_parse_and_canon_forms(&mut ctx, &env, src).unwrap();
     let program_hash = hash_module(&forms);
+    assert_eq!(module_h, hex::encode(program_hash));
+    assert_eq!(rt.ctx.state.next_seal_id, ctx.state.next_seal_id);
+    assert_eq!(
+        runtime_frontend_h,
+        value_hash(
+            &env.get("selfhost/parse::parse-module")
+                .expect("native selfhost parser binding")
+        ),
+        "selfhost bootstrap environments must hash identically across runtime entrypoints"
+    );
     ctx.steps = 0;
     ctx.step_limit = None;
     let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    assert_eq!(
+        runtime_env_h,
+        value_hash(&Value::closure(
+            "_probe".to_string(),
+            Term::Nil,
+            env.clone(),
+        )),
+        "complete selfhost environments must hash identically after module evaluation"
+    );
+    let Value::EffectProgram(native_program) = &v else {
+        panic!("native path must produce an effect program");
+    };
+    let EffectProgram::Perform { request } = native_program.as_ref() else {
+        panic!("native path must perform an effect");
+    };
+    let Value::Sealed { payload, .. } = request.as_ref() else {
+        panic!("native effect request must be sealed");
+    };
+    let Value::EffectRequest(native_req) = payload.as_ref() else {
+        panic!("native sealed payload must be an effect request");
+    };
+    assert_eq!(runtime_k.debug_repr(), native_req.k.debug_repr());
+    assert_eq!(
+        value_hash(&runtime_k),
+        value_hash(&native_req.k),
+        "equivalent selfhost continuations must hash identically before runner entry"
+    );
 
     let policy = CapsPolicy::empty(); // deny everything
     let r = gc_effects::run(&mut ctx, &policy, v, program_hash, "test".to_string()).unwrap();

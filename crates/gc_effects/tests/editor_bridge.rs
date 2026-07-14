@@ -79,10 +79,12 @@ allow = ["editor/watch::subscribe", "editor/watch::poll", "io/fs::write"]
 [op."editor/watch::subscribe"]
 base_dir = "{base}"
 bridge_cmd = "{bridge_name}"
+timeout_ms = 5000
 
 [op."editor/watch::poll"]
 base_dir = "{base}"
 bridge_cmd = "{bridge_name}"
+timeout_ms = 5000
 
 [op."io/fs::write"]
 base_dir = "{base}"
@@ -169,6 +171,7 @@ bridge_cmd = "bridge.sh"
 bridge_cmd_sha256 = "{bridge_sha256}"
 allow_plugins = ["demo"]
 allow_commands = ["run"]
+timeout_ms = 5000
 "#
     ))
     .expect("caps");

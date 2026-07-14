@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use gc_coreform::{Term, canonicalize_module, parse_module, print_module};
 use gc_kernel::{Apply, EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
@@ -13,7 +11,8 @@ fn value_to_term_vec(v: &Value) -> Vec<Term> {
 
 #[test]
 fn selfhost_canonicalize_module_matches_rust() {
-    let canon_path = Path::new("/Users/corbensorenson/Documents/genesisCode/selfhost/canon.gc");
+    let canon_path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/canon.gc");
     let src = std::fs::read_to_string(canon_path).expect("read selfhost/canon.gc");
     let canon_forms = canonicalize_module(parse_module(&src).unwrap()).unwrap();
 
