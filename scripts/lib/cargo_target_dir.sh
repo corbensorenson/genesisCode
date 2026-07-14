@@ -68,6 +68,10 @@ genesis_configure_cargo_target_dir() {
         --root "$root_dir" validate-lease \
         --token "$previous_lease_token" \
         --path "$previous_relative" >/dev/null; then
+        export GENESIS_CARGO_CACHE_HIT=1
+        if declare -F genesis_gate_telemetry_event >/dev/null; then
+          genesis_gate_telemetry_event cache-hit 1
+        fi
         echo "${context}: cargo-cache scope=${scope} key=${GENESIS_CARGO_CACHE_KEY_SHA256} target=${CARGO_TARGET_DIR} lease=reused"
         return 0
       fi

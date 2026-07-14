@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "87b89c3334b5b41925ae0eea182b9273f125d8cc9b65fd8c55f0f6a4d072bac3",
-    "roadmap_sha256": "128a7439eb3a43cd3c9cef57d0fc14722ee2d3a7c1296d2a27188c8328e40c46",
+    "roadmap_sha256": "82544588d4d765c7cbb5eb3161cecbe08af06106913b6d61bbd7f751549c6a97",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -1541,7 +1541,7 @@
             "scripts/check_cargo_target_dir_policy.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "cargo-cache-bundle-sha256:e83ed761e7f330554643540fa8296675fa7e14619709f7e42185881ab891c5fc"
+          "input_identity": "cargo-cache-bundle-sha256:8586364a0242f8eb883834b64a25b4d55cdbc540726100e7c06eb40bb0c9be4f"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1926,7 +1926,7 @@
             "scripts/check_default_iteration_workflow.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "generated-state-lifecycle-bundle-sha256:e78c6624e9ada9f4565246b60f41c371d1f7843ec84df543ac72472b21d321d7"
+          "input_identity": "generated-state-lifecycle-bundle-sha256:6396bc32c815aa22c78d6ebaa36c5126da69d7db73552b4c8180520eb3a0f603"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
