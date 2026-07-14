@@ -86,6 +86,7 @@ UPGRADE_PLAN_SYNC_SCRIPT="scripts/sync_upgrade_plan_state.sh"
 AGENT_GPU_PROFILE_CONTRACT_SCRIPT="scripts/check_agent_gpu_profile_contract.sh"
 AGENT_GPU_PROFILE_LIB="scripts/lib/agent_gpu_profile_contract.sh"
 DENY_CONFIG="deny.toml"
+LINT_SUPPRESSION_POLICY="scripts/lib/lint_suppression_policy.py"
 
 for path in \
   "$DOC" \
@@ -162,6 +163,7 @@ for path in \
   "$UPGRADE_PLAN_SYNC_SCRIPT" \
   "$AGENT_GPU_PROFILE_CONTRACT_SCRIPT" \
   "$AGENT_GPU_PROFILE_LIB" \
+  "$LINT_SUPPRESSION_POLICY" \
   "$DENY_CONFIG"; do
   [[ -f "$path" ]] || {
     echo "test-execution-profile-matrix: missing required file: $path" >&2
@@ -467,6 +469,36 @@ for perf_gate_test in \
   fi
 done
 
+if ! grep -B 2 -F 'fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env' \
+  crates/gc_cli/tests/shell_gate_regressions.rs | grep -Fq '#[ignore = "perf-gate"]'; then
+  echo "test-execution-profile-matrix: nested changed-fast probe must remain outside the default Rust suite" >&2
+  exit 1
+fi
+
+for stress_test in \
+  spawn_per_op_timeout_kills_bridge_processes_and_recovers \
+  persistent_stdio_timeout_kills_process_trees_and_workers; do
+  if ! grep -B 2 -F "fn ${stress_test}" crates/gc_effects/src/runner_host_bridge_tests.rs | \
+    grep -Fq '#[ignore = "stress-gate"]'; then
+    echo "test-execution-profile-matrix: ${stress_test} must remain in the dedicated stress lane" >&2
+    exit 1
+  fi
+  if ! grep -Fq "runner_host_bridge::tests::${stress_test} --quiet -- --ignored --exact" \
+    scripts/render_host_bridge_fault_injection_report.sh; then
+    echo "test-execution-profile-matrix: host-bridge renderer must execute ignored stress test ${stress_test}" >&2
+    exit 1
+  fi
+done
+
+if ! grep -B 2 -F 'fn task_cards_python_and_planner_selection_remain_stable_under_parallel_load' \
+  crates/gc_cli/tests/cli_agent_plan.rs | grep -Fq '#[ignore = "stress-gate"]' || \
+   ! grep -Fq 'task_cards_python_and_planner_selection_remain_stable_under_parallel_load' \
+  scripts/check_gc_agent_task_cards.sh || \
+   ! grep -Fq -- '--locked -- --ignored --exact' scripts/check_gc_agent_task_cards.sh; then
+  echo "test-execution-profile-matrix: agent-plan parallel parity must remain in the dedicated agent-card gate" >&2
+  exit 1
+fi
+
 if ! grep -Fq 'GENESIS_TEST_CHANGED_BUDGET_MS:-120000' "$CHANGED_FAST_SCRIPT"; then
   echo "test-execution-profile-matrix: changed-fast default budget must remain 120000ms (2m)" >&2
   exit 1
@@ -719,5 +751,7 @@ if ! grep -Fq '.genesis/perf/test_changed_fast_metrics.json' "$UPDATE_CHANGED_FA
   echo "test-execution-profile-matrix: explicit changed-fast updater must own canonical local E0 paths" >&2
   exit 1
 fi
+
+python3 "$LINT_SUPPRESSION_POLICY" --root "$ROOT_DIR"
 
 echo "test-execution-profile-matrix: ok"

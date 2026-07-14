@@ -100,9 +100,6 @@ Authorized unqualified claims:
 
 Known GenesisCode gaps
 
-- `P0.1`: Restore denied-effect replay parity across Rust and self-host engines on native and WASI. Affected claims: `CAP-EFFECT-REPLAY`
-- `P1.1`: Make host-bridge hard-cancellation stress deterministic under supported parallel load. Affected claims: `CAP-HOST-BRIDGE`
-- `P1.2`: Restore default-suite hermeticity and load stability without retries or ignored failures. Affected claims: `CAP-AGENT-JSON-CONTRACTS`, `CAP-ASSURANCE-PROFILES`
 - `P1.3`: Bound generated-state growth with safe automatic quota, lease, and reclamation enforcement. Affected claims: `CAP-AGENT-WORKSPACE-PERF`, `CAP-ASSURANCE-PROFILES`
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`

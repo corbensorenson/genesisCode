@@ -24,7 +24,7 @@ Levels: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode productio
 |---|---|---|---|---|---|---|
 | `CAP-COREFORM-IDENTITY` | Canonical CoreForm IR + stable content hash identity | **H0** | L1 | `crates/gc_coreform/src` | `coreform` | `R4.2.a`<br>`R7.2.f` |
 | `CAP-DENY-DEFAULT-POLICY` | Deny-by-default capability policy runtime | **H0** | L1 | `crates/gc_effects/src` | `effect-runtime` | `R4.2.d`<br>`R7.3.a` |
-| `CAP-EFFECT-REPLAY` | Deterministic effect logs + replay checker | **H0** | L1 | `crates/gc_effects/src` | `effect-runtime` | `P0.1`<br>`R7.2.c` |
+| `CAP-EFFECT-REPLAY` | Deterministic effect logs + replay checker | **H0** | L1 | `crates/gc_effects/src` | `effect-runtime` | `R7.2.c` |
 | `CAP-SEMANTIC-VCS` | Built-in semantic VCS (`commit`/`patch`/`refs`/`merge3`) | **H0** | L1 | `crates/gc_vcs/src`<br>`crates/gc_patches/src` | `vcs-patches` | `R4.2.c`<br>`R4.2.e` |
 | `CAP-PACKAGE-MANAGER` | Built-in package/project manager (`pkg`/`gcpm`) | **H0** | L1 | `crates/gc_pkg/src`<br>`crates/gc_cli_driver/src` | `package-registry` | `R4.2.e`<br>`R6.1.a` |
 | `CAP-ARTIFACT-GC` | Reachability-based artifact GC (`refs` + locks + pins) | **H0** | L1 | `crates/gc_pkg/src`<br>`crates/gc_vcs/src` | `package-registry` | `R4.2.e` |
@@ -33,10 +33,10 @@ Levels: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode productio
 | `CAP-SELFHOST-FRONTEND` | Selfhost frontend default in production CLIs | **H0** | L1 | `selfhost`<br>`crates/gc_cli_driver/src` | `selfhost-toolchain` | `R4.2.a`<br>`R4.2.g` |
 | `CAP-SELFHOST-CUTOVER` | Full selfhost cutover profile + readiness scorecard | **H0** | L1 | `selfhost`<br>`scripts` | `selfhost-toolchain` | `R4.4.c` |
 | `CAP-STRICT-NO-FALLBACK` | Strict no-production Rust semantic fallback guard | **H0** | L1 | `crates/gc_cli_driver/src`<br>`scripts` | `selfhost-toolchain` | `R4.1.c`<br>`R4.1.e` |
-| `CAP-AGENT-JSON-CONTRACTS` | CLI + GCPM JSON schema contracts for agent automation | **H0** | L1 | `crates/gc_cli_driver/src`<br>`docs/spec` | `agent-interface` | `P1.2`<br>`R1.3.c` |
+| `CAP-AGENT-JSON-CONTRACTS` | CLI + GCPM JSON schema contracts for agent automation | **H0** | L1 | `crates/gc_cli_driver/src`<br>`docs/spec` | `agent-interface` | `R1.3.c` |
 | `CAP-CONCURRENCY-REPLAY` | Concurrency/task replay stress lane | **H0** | L1 | `crates/gc_effects/src`<br>`prelude` | `effect-runtime` | `R5.2.a`<br>`R5.2.e` |
 | `CAP-PLUGIN-FFI` | Host plugin + FFI schemas/contracts | **H0** | L1 | `crates/gc_effects/src`<br>`docs/spec` | `effect-runtime` | `R5.5.a`<br>`R5.5.c` |
-| `CAP-HOST-BRIDGE` | First-party bridge for network/process/db/crypto/plugin/ffi | **H0** | L1 | `crates/gc_effects/src` | `effect-runtime` | `P1.1`<br>`R2.2.f`<br>`R7.3.b` |
+| `CAP-HOST-BRIDGE` | First-party bridge for network/process/db/crypto/plugin/ffi | **H0** | L1 | `crates/gc_effects/src` | `effect-runtime` | `R2.2.f`<br>`R7.3.b` |
 | `CAP-STAGE2-WASM-VALIDATION` | Stage2 CoreForm->WASM translation-validation | **H0** | L1 | `crates/gc_wasm/src`<br>`crates/gc_opt/src` | `wasm-optimizer` | `R3.2.a`<br>`R3.2.b` |
 | `CAP-DEPLOYMENT-PIPELINE` | Deployment target pipeline in core toolchain | **H0** | L1 | `crates/gc_cli_driver/src`<br>`examples/agent_deploy_bundle_workflow` | `package-registry` | `R6.3.b`<br>`R6.3.c` |
 | `CAP-TOOL-QUALIFICATION` | Tool qualification lineage + evidence closures | **H0** | L1 | `crates/gc_obligations/src`<br>`docs/program` | `assurance` | `R7.1.e`<br>`R9.2.c` |

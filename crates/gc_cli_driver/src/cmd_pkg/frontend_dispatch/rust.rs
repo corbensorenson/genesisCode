@@ -171,7 +171,7 @@ pub(super) fn build(
             dep_name,
             registry,
         } => (
-            mk_pkg_bridge_program(
+            mk_pkg_bridge_program(PkgBridgeProgram {
                 ecosystem,
                 name,
                 version,
@@ -179,10 +179,10 @@ pub(super) fn build(
                 source_hash,
                 key_id,
                 public_key,
-                lock.as_deref(),
-                dep_name.as_deref(),
-                registry.as_deref(),
-            ),
+                lock: lock.as_deref(),
+                dep_name: dep_name.as_deref(),
+                registry: registry.as_deref(),
+            }),
             "genesis/pkg-bridge-v0.1",
             "pkg-bridge",
         ),

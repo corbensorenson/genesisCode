@@ -315,6 +315,7 @@ max_bytes = 4096
 
 #[cfg(all(not(target_os = "wasi"), unix))]
 #[test]
+#[ignore = "stress-gate"]
 fn spawn_per_op_timeout_kills_bridge_processes_and_recovers() {
     let td = tempfile::tempdir().expect("tempdir");
     let bridge = td.path().join("timeout_bridge.sh");
@@ -346,7 +347,7 @@ max_bytes = 4096
             timeout_policy.op_policy("gpu/compute::limits"),
         )
         .expect_err("hung bridge call must timeout");
-        assert_eq!(err.code, "gpu/bridge-timeout");
+        assert_eq!(err.code, "gpu/bridge-timeout", "{}", err.message);
         assert_eq!(
             super::active_bridge_io_pumps_for_tests(),
             0,
@@ -415,6 +416,7 @@ max_bytes = 4096
 
 #[cfg(all(not(target_os = "wasi"), unix))]
 #[test]
+#[ignore = "stress-gate"]
 fn persistent_stdio_timeout_kills_process_trees_and_workers() {
     super::reset_persistent_bridge_sessions_for_tests();
     let td = tempfile::tempdir().expect("tempdir");

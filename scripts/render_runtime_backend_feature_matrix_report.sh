@@ -112,23 +112,16 @@ run_stage() {
 TOTAL_START_MS="$(now_ms)"
 
 echo "runtime-backend-feature-matrix: checking gc_effects feature combinations"
-run_stage "gc_effects default" cargo check -p gc_effects --quiet
-run_stage "gc_effects gpu-device-backend" cargo check -p gc_effects --no-default-features --features gpu-device-backend --quiet
-run_stage "gc_effects gfx-desktop-backend" cargo check -p gc_effects --no-default-features --features gfx-desktop-backend --quiet
-run_stage "gc_effects gpu+gfx" cargo check -p gc_effects --no-default-features --features gpu-device-backend,gfx-desktop-backend --quiet
+run_stage "gc_effects default" cargo clippy -p gc_effects --all-targets --locked --offline --quiet -- -D warnings
+run_stage "gc_effects gpu-device-backend" cargo clippy -p gc_effects --all-targets --locked --offline --no-default-features --features gpu-device-backend --quiet -- -D warnings
+run_stage "gc_effects gfx-desktop-backend" cargo clippy -p gc_effects --all-targets --locked --offline --no-default-features --features gfx-desktop-backend --quiet -- -D warnings
+run_stage "gc_effects gpu+gfx" cargo clippy -p gc_effects --all-targets --locked --offline --no-default-features --features gpu-device-backend,gfx-desktop-backend --quiet -- -D warnings
 
 echo "runtime-backend-feature-matrix: checking gc_cli build profiles"
-run_stage "gc_cli default" cargo check -p gc_cli --quiet
+run_stage "gc_cli default" cargo clippy -p gc_cli --all-targets --locked --offline --quiet -- -D warnings
 
 for profile in profile-headless profile-gpu profile-gfx profile-backend; do
-  run_stage "gc_cli ${profile}" cargo check -p gc_cli --no-default-features --features "${profile}" --quiet
-done
-
-echo "runtime-backend-feature-matrix: checking gc_cli_driver backend profile tests"
-for profile in profile-headless profile-gpu profile-gfx profile-backend; do
-  run_stage "gc_cli_driver ${profile}" \
-    cargo test -p gc_cli_driver --no-default-features --features "${profile}" \
-      backend_feature_flags_match_active_profile --quiet
+  run_stage "gc_cli ${profile}" cargo clippy -p gc_cli --all-targets --locked --offline --no-default-features --features "${profile}" --quiet -- -D warnings
 done
 
 echo "runtime-backend-feature-matrix: checking gcpm env runtime backend mapping end-to-end"

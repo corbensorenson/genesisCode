@@ -40,6 +40,7 @@ Release-hardening guard lanes:
 - E0-E4 storage authority, deterministic release archive, and create-new mirror contract: `scripts/check_evidence_storage_classes.sh`
 - explicit fixture/release generation: `scripts/update_evidence_fixture_classification.sh`, `scripts/update_evidence_release_asset.sh`
 - generated artifact source-control policy: `scripts/check_generated_artifact_policy.sh`
+- warning-denied Rust policy: CI runs workspace/all-target Clippy, the runtime-backend matrix runs every supported mutually exclusive CLI/effect profile with warnings denied, and `scripts/lib/lint_suppression_policy.py` rejects module/workspace suppression while requiring a reason on any narrow item-level expectation
 - version/changelog/selfhost metadata hygiene: `scripts/check_versioning_release_hygiene.sh`
 - supply-chain policy: `scripts/check_supply_chain.sh` using `cargo-deny` and `deny.toml`
 - release smoke contract: `scripts/check_release_smoke.sh`
@@ -350,6 +351,10 @@ Strict/full profile runtime reports:
     `scripts/check_host_bridge_fault_injection.sh` as read-only real-test gates; retain their
     E0 report/history sets only with `scripts/update_task_concurrency_stress_report.sh` and
     `scripts/update_host_bridge_fault_injection_report.sh`.
+    The spawn-per-op and persistent hard-cancellation loops are marked `stress-gate` and execute
+    only through this host-bridge gate, never through default workspace tests.
+  - `scripts/check_gc_agent_task_cards.sh` owns the ignored parallel Rust/Python agent-plan
+    selector parity stress case; the default suite retains only single-invocation contract tests.
   - runs `scripts/check_agent_reference_workflows.sh` as the scored
     agent-capability gauntlet (`genesis/agent-capability-gauntlet-v0.1`) with
     required domain thresholds for service, network/process, raw-network,

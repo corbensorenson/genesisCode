@@ -1051,6 +1051,16 @@ fn gcpm_env_runtime_backend_profile_contract_is_machine_readable() {
             _ => None,
         })
         .unwrap();
+    let expected_active = if cfg!(feature = "profile-backend") {
+        "backend"
+    } else if cfg!(feature = "profile-gpu") {
+        "gpu"
+    } else if cfg!(feature = "profile-gfx") {
+        "gfx"
+    } else {
+        "headless"
+    };
+    assert_eq!(active, expected_active);
     let selected_default = map_default
         .get(&TermOrdKey(Term::symbol(":runtime-backend-profile")))
         .and_then(|t| match t {

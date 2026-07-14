@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde_json::json;
@@ -14,6 +14,16 @@ pub(super) struct WarmConfig {
     pub(super) workspace_idle: Duration,
     pub(super) max_requests: u64,
     pub(super) workspace_root: PathBuf,
+}
+
+pub(super) struct WarmOptions<'a> {
+    pub(super) prime_selfhost: bool,
+    pub(super) max_queue: usize,
+    pub(super) max_frame_bytes: usize,
+    pub(super) max_workspaces: usize,
+    pub(super) workspace_idle_ms: u64,
+    pub(super) max_requests: u64,
+    pub(super) workspace_root: &'a Path,
 }
 
 pub(super) fn inherited_global_args(cli: &Cli) -> Vec<String> {

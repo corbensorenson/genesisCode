@@ -426,19 +426,32 @@ pub(crate) fn mk_pkg_publish_program(
     ]
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn mk_pkg_bridge_program(
-    ecosystem: &str,
-    name: &str,
-    version: &str,
-    source: &str,
-    source_hash: &str,
-    key_id: &str,
-    public_key: &str,
-    lock: Option<&Path>,
-    dep_name: Option<&str>,
-    registry: Option<&str>,
-) -> Vec<Term> {
+pub(crate) struct PkgBridgeProgram<'a> {
+    pub(crate) ecosystem: &'a str,
+    pub(crate) name: &'a str,
+    pub(crate) version: &'a str,
+    pub(crate) source: &'a str,
+    pub(crate) source_hash: &'a str,
+    pub(crate) key_id: &'a str,
+    pub(crate) public_key: &'a str,
+    pub(crate) lock: Option<&'a Path>,
+    pub(crate) dep_name: Option<&'a str>,
+    pub(crate) registry: Option<&'a str>,
+}
+
+pub(crate) fn mk_pkg_bridge_program(request: PkgBridgeProgram<'_>) -> Vec<Term> {
+    let PkgBridgeProgram {
+        ecosystem,
+        name,
+        version,
+        source,
+        source_hash,
+        key_id,
+        public_key,
+        lock,
+        dep_name,
+        registry,
+    } = request;
     let op = Term::list(vec![
         Term::symbol("quote"),
         Term::symbol("core/pkg-low::bridge"),

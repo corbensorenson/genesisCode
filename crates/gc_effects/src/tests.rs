@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 
 use gc_coreform::TermOrdKey;
 use gc_coreform::{Term, hash_module, parse_module};
-use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
+use gc_kernel::{EffectProgram, EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
 
 use super::*;
@@ -125,7 +125,7 @@ fn mk_bridge_policy(ops: &[&str]) -> HostBridgePolicyFixture {
 }
 
 #[test]
-fn deny_by_default_produces_sealed_error_and_logs() {
+fn deny_by_default_produces_sealed_error_logs_and_replays_exactly() {
     let (forms, h) = mk_prog();
 
     let mut ctx = EvalCtx::new();
@@ -137,9 +137,9 @@ fn deny_by_default_produces_sealed_error_and_logs() {
     let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
 
     // Expect final value is a sealed ERROR.
-    match r.value {
+    match &r.value {
         Value::Sealed { token, .. } => {
-            assert_eq!(token, ctx.protocol.unwrap().error);
+            assert_eq!(*token, ctx.protocol.unwrap().error);
         }
         _ => panic!("expected sealed error, got {}", r.value.debug_repr()),
     }
@@ -147,6 +147,97 @@ fn deny_by_default_produces_sealed_error_and_logs() {
     assert_eq!(r.log.entries.len(), 1);
     assert_eq!(r.log.entries[0].decision, Decision::Deny);
     assert!(matches!(r.log.entries[0].resp, LoggedResp::Error(_)));
+
+    let mut replay_ctx = EvalCtx::new();
+    let replay_prelude = build_prelude(&mut replay_ctx);
+    let mut replay_env = replay_prelude.env;
+    let replay_program =
+        eval_module(&mut replay_ctx, &mut replay_env, &forms).expect("eval replay program");
+    let replay_value = replay(&mut replay_ctx, replay_program, &r.log).expect("replay denial");
+    assert_eq!(value_hash(&r.value), value_hash(&replay_value));
+    assert!(
+        matches!(replay_value, Value::Sealed { token, .. } if token == replay_ctx.protocol.unwrap().error)
+    );
+}
+
+#[test]
+fn allowed_unhandled_operation_logs_and_replays_sealed_unknown_op_error() {
+    let (forms, h) = mk_prog_for("test/unknown::operation", "nil");
+    let policy =
+        CapsPolicy::from_toml_str(r#"allow = ["test/unknown::operation"]"#).expect("parse policy");
+
+    let mut run_ctx = EvalCtx::new();
+    let run_prelude = build_prelude(&mut run_ctx);
+    let mut run_env = run_prelude.env;
+    let run_program = eval_module(&mut run_ctx, &mut run_env, &forms).expect("eval run program");
+    let output = run(
+        &mut run_ctx,
+        &policy,
+        run_program,
+        h,
+        "gc_effects-test".to_string(),
+    )
+    .expect("run unknown operation");
+
+    assert_eq!(output.log.entries[0].decision, Decision::Allow);
+    assert_eq!(
+        sealed_error_payload_map(&output.value, &run_ctx)
+            .get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("core/caps/unknown-op".to_string()))
+    );
+
+    let mut replay_ctx = EvalCtx::new();
+    let replay_prelude = build_prelude(&mut replay_ctx);
+    let mut replay_env = replay_prelude.env;
+    let replay_program =
+        eval_module(&mut replay_ctx, &mut replay_env, &forms).expect("eval replay program");
+    let replay_value =
+        replay(&mut replay_ctx, replay_program, &output.log).expect("replay unknown operation");
+    assert_eq!(value_hash(&output.value), value_hash(&replay_value));
+}
+
+#[test]
+fn malformed_unsealed_effect_requests_fail_closed_in_run_and_replay() {
+    let (forms, h) = mk_prog();
+    let malformed = || {
+        Value::EffectProgram(Box::new(EffectProgram::Perform {
+            request: Box::new(Value::data(Term::Nil)),
+        }))
+    };
+
+    let mut run_ctx = EvalCtx::new();
+    let _ = build_prelude(&mut run_ctx);
+    let run_error = match run(
+        &mut run_ctx,
+        &CapsPolicy::empty(),
+        malformed(),
+        h,
+        "gc_effects-test".to_string(),
+    ) {
+        Ok(_) => panic!("run accepted an unsealed effect request"),
+        Err(error) => error,
+    };
+    assert!(matches!(run_error, EffectsError::BadEffectSeal));
+
+    let mut baseline_ctx = EvalCtx::new();
+    let baseline_prelude = build_prelude(&mut baseline_ctx);
+    let mut baseline_env = baseline_prelude.env;
+    let baseline_program =
+        eval_module(&mut baseline_ctx, &mut baseline_env, &forms).expect("eval baseline program");
+    let baseline = run(
+        &mut baseline_ctx,
+        &CapsPolicy::empty(),
+        baseline_program,
+        h,
+        "gc_effects-test".to_string(),
+    )
+    .expect("run baseline");
+
+    let mut replay_ctx = EvalCtx::new();
+    let _ = build_prelude(&mut replay_ctx);
+    let replay_error = replay(&mut replay_ctx, malformed(), &baseline.log)
+        .expect_err("replay accepted an unsealed effect request");
+    assert!(matches!(replay_error, EffectsError::BadEffectSeal));
 }
 
 #[test]

@@ -4,6 +4,7 @@ use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
 
 use super::super::*;
+use super::McpOptions;
 use super::catalog::{MCP_PROTOCOL_VERSION, ToolBinding, bindings, tool_argv};
 use super::resources::{read_resource, resource_definitions};
 use crate::warm_protocol::{InputEvent, spawn_bounded_reader};
@@ -91,14 +92,17 @@ impl State {
 pub(crate) fn cmd_mcp(
     cli: &Cli,
     flavor: Flavor,
-    prime_selfhost: bool,
-    max_queue: usize,
-    max_frame_bytes: usize,
-    max_output_bytes: usize,
-    max_requests: u64,
-    max_roots: usize,
-    workspace_root: &Path,
+    options: McpOptions<'_>,
 ) -> Result<CmdOut, CliError> {
+    let McpOptions {
+        prime_selfhost,
+        max_queue,
+        max_frame_bytes,
+        max_output_bytes,
+        max_requests,
+        max_roots,
+        workspace_root,
+    } = options;
     if !(1..=4096).contains(&max_queue)
         || !(256..=16_777_216).contains(&max_frame_bytes)
         || !(1024..=16_777_216).contains(&max_output_bytes)
@@ -583,17 +587,17 @@ fn start_next(
         let result = run_worker_inline(job);
         return finish_worker(result, state, config);
     }
-    if let Err(_) = spawn_worker(job, worker_tx.clone()) {
-        if let Some(running) = state.running.take() {
-            state.active_ids.remove(&running.key);
-            rpc_error(
-                running.id,
-                -32603,
-                "failed to start tool worker",
-                None,
-                config,
-            )?;
-        }
+    if spawn_worker(job, worker_tx.clone()).is_err()
+        && let Some(running) = state.running.take()
+    {
+        state.active_ids.remove(&running.key);
+        rpc_error(
+            running.id,
+            -32603,
+            "failed to start tool worker",
+            None,
+            config,
+        )?;
     }
     Ok(())
 }
@@ -618,10 +622,10 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
         | WorkerResult::WorkspaceError { request_id, .. }
         | WorkerResult::Crashed { request_id } => request_id,
     };
-    if !state
+    if state
         .running
         .as_ref()
-        .is_some_and(|running| running.key == *result_key)
+        .is_none_or(|running| running.key != *result_key)
     {
         return Ok(());
     }

@@ -702,7 +702,7 @@ pub(super) fn build(
             dep_name,
             registry,
         } => {
-            let forms = canonicalize_module(mk_pkg_bridge_program(
+            let forms = canonicalize_module(mk_pkg_bridge_program(PkgBridgeProgram {
                 ecosystem,
                 name,
                 version,
@@ -710,10 +710,10 @@ pub(super) fn build(
                 source_hash,
                 key_id,
                 public_key,
-                lock.as_deref(),
-                dep_name.as_deref(),
-                registry.as_deref(),
-            ))
+                lock: lock.as_deref(),
+                dep_name: dep_name.as_deref(),
+                registry: registry.as_deref(),
+            }))
             .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
             let prog = eval_module(ctx, env, &forms)
                 .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;

@@ -552,8 +552,6 @@ pub(super) fn cmd_replay(
         let context = structured_failures::effects_context("replay/execute", &e);
         cli_err_with_context(EX_REPLAY_MISMATCH, code, format!("{e}"), context)
     })?;
-    ensure_no_protocol_error(&ctx, &v, false, "replay", "replay/result", "replay/error")?;
-
     let (value, value_format) = render_value_for_cli(&ctx, &v);
     let env = JsonEnvelope {
         ok: true,

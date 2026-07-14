@@ -32,6 +32,32 @@ fn ci_has_pr_strict_equivalence_gate_job() {
 }
 
 #[test]
+fn ci_fetches_locked_evidence_dependencies_before_offline_baseline_guard() {
+    let root = repo_root();
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
+    let fetch = ci
+        .find("Fetch Standalone Evidence Dependencies")
+        .expect("ci must declare the network-enabled evidence dependency fetch boundary");
+    let baseline = ci
+        .find("Signed Roadmap Baseline Guard")
+        .expect("ci must run the signed roadmap baseline guard");
+    assert!(
+        fetch < baseline,
+        "evidence dependencies must be fetched before the locked offline baseline guard"
+    );
+    for manifest in [
+        "tools/genesis-evidence-producer/Cargo.toml",
+        "tools/genesis-evidence-verifier/Cargo.toml",
+    ] {
+        assert!(
+            ci.contains(&format!("cargo fetch --manifest-path {manifest} --locked")),
+            "ci must fetch the locked standalone workspace: {manifest}"
+        );
+    }
+}
+
+#[test]
 fn ci_has_gpu_device_microbench_lane() {
     let root = repo_root();
     let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))

@@ -7,13 +7,10 @@ Scope:
 - This file is the canonical active P0/P1 defect-ID source. The capability ledger mirrors the exact IDs, and generated status views must match it.
 - Keep completed work out of this file. Durable source history and E1-E4 evidence establish closure; mutable `.genesis/perf/` observations do not.
 
-Open checklist items: 4
+Open checklist items: 1
 
 ## Critical Path
 
-- [ ] P0.1 Restore denied-effect replay parity across Rust and self-host engines on native and WASI. Denial must preserve the same sealed result/error boundary, exit contract, canonical log facts, and replay outcome; add shared allow/deny/unhandled/tamper regressions and close only after R0.2.f evidence passes.
-- [ ] P1.1 Make host-bridge hard-cancellation stress deterministic under supported parallel load. Replace PID-log races with explicit fixture readiness and ownership, prove complete descendant kill/reap for spawn and persistent transports, and close only after repeated loaded R0.2.g/R1.3.b evidence passes without retries or ignores.
-- [ ] P1.2 Restore default-suite hermeticity and load stability. Remove the recursively nested changed-fast pipeline from the default Rust suite, isolate stress/performance work, reproduce and fix the load-sensitive agent-plan case, and close only after default plus repeated parallel R0.2.g profiles pass.
 - [ ] P1.3 Bound generated-state growth. Enforce concurrency-safe cache ownership, leases, soft/hard quotas, admission failure, and automatic reclamation while preserving user data and retained evidence; close only after R0.4.g proves GB-5 steady state across repeated full profiles and low-disk recovery.
 
 ## Evidence Anchors

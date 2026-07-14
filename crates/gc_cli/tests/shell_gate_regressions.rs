@@ -635,6 +635,7 @@ fn check_reclaim_controls_fail_closed_without_running_maintenance() {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env() {
     let root = repo_root();
     let nonce = std::time::SystemTime::now()

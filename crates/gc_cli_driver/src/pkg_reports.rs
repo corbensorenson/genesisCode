@@ -59,13 +59,15 @@ pub(crate) fn build_pkg_ai_report(
             commit,
         } => Some(build_publish_report(
             value,
-            caps,
-            remote,
-            refname,
-            policy,
-            expected_old.as_deref(),
-            *depth,
-            commit.as_deref(),
+            PublishReport {
+                caps,
+                remote,
+                refname,
+                policy,
+                expected_old: expected_old.as_deref(),
+                depth: *depth,
+                commit: commit.as_deref(),
+            },
         )),
         PkgCmd::Bridge {
             ecosystem,
@@ -79,15 +81,17 @@ pub(crate) fn build_pkg_ai_report(
             ..
         } => Some(build_bridge_report(
             value,
-            caps,
-            ecosystem,
-            name,
-            version,
-            source,
-            source_hash,
-            lock.as_deref(),
-            dep_name.as_deref(),
-            registry.as_deref(),
+            BridgeReport {
+                caps,
+                ecosystem,
+                name,
+                version,
+                source,
+                source_hash,
+                lock: lock.as_deref(),
+                dep_name: dep_name.as_deref(),
+                registry: registry.as_deref(),
+            },
         )),
         _ => None,
     }
@@ -447,17 +451,26 @@ fn build_env_report(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
-fn build_publish_report(
-    value: &Value,
-    caps: &Path,
-    remote: &str,
-    refname: &str,
-    policy: &str,
-    expected_old: Option<&str>,
+struct PublishReport<'a> {
+    caps: &'a Path,
+    remote: &'a str,
+    refname: &'a str,
+    policy: &'a str,
+    expected_old: Option<&'a str>,
     depth: u64,
-    commit: Option<&str>,
-) -> serde_json::Value {
+    commit: Option<&'a str>,
+}
+
+fn build_publish_report(value: &Value, report: PublishReport<'_>) -> serde_json::Value {
+    let PublishReport {
+        caps,
+        remote,
+        refname,
+        policy,
+        expected_old,
+        depth,
+        commit,
+    } = report;
     let published_commit = map_get_str(value, ":commit");
     let changed = published_commit.is_some();
 
@@ -488,19 +501,30 @@ fn build_publish_report(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
-fn build_bridge_report(
-    value: &Value,
-    caps: &Path,
-    ecosystem: &str,
-    name: &str,
-    version: &str,
-    source: &str,
-    source_hash: &str,
-    lock: Option<&Path>,
-    dep_name: Option<&str>,
-    registry: Option<&str>,
-) -> serde_json::Value {
+struct BridgeReport<'a> {
+    caps: &'a Path,
+    ecosystem: &'a str,
+    name: &'a str,
+    version: &'a str,
+    source: &'a str,
+    source_hash: &'a str,
+    lock: Option<&'a Path>,
+    dep_name: Option<&'a str>,
+    registry: Option<&'a str>,
+}
+
+fn build_bridge_report(value: &Value, report: BridgeReport<'_>) -> serde_json::Value {
+    let BridgeReport {
+        caps,
+        ecosystem,
+        name,
+        version,
+        source,
+        source_hash,
+        lock,
+        dep_name,
+        registry,
+    } = report;
     let commit = map_get_str(value, ":commit");
     let snapshot = map_get_str(value, ":snapshot");
     let provenance_root = map_get_str(value, ":provenance-root");

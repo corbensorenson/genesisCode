@@ -15,4 +15,7 @@ python3 scripts/lib/gc_agent_core_card.py --check
 python3 scripts/lib/gc_agent_task_cards.py --check
 python3 scripts/lib/gc_agent_task_cards.py --self-test
 cargo test -p gc_cli --test cli_agent_plan task_cards --locked
+cargo test -p gc_cli --test cli_agent_plan \
+  task_cards_python_and_planner_selection_remain_stable_under_parallel_load \
+  --locked -- --ignored --exact
 echo "gc-agent-task-cards-contract: ok (cards=7 intent=genesis/agent-intent-v0.1 check_mode=read_only)"

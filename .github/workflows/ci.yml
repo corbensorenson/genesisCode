@@ -88,6 +88,11 @@ jobs:
         with:
           tool: cargo-deny@0.19.0
 
+      - name: Fetch Standalone Evidence Dependencies
+        run: |
+          cargo fetch --manifest-path tools/genesis-evidence-producer/Cargo.toml --locked
+          cargo fetch --manifest-path tools/genesis-evidence-verifier/Cargo.toml --locked
+
       - name: Prerequisite Manifest Guard
         run: bash scripts/check_prerequisite_manifest.sh
 
@@ -271,7 +276,7 @@ jobs:
         run: bash scripts/check_test_size_budget.sh
 
       - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 
       - name: Runtime Backend Feature Matrix Guard
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}

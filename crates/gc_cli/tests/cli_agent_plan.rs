@@ -15,6 +15,43 @@ fn write_intent(path: &std::path::Path) {
     .expect("write intent");
 }
 
+fn planner_selection(intent: &std::path::Path, caps: &std::path::Path) -> Value {
+    let output = cargo_bin_cmd!("genesis")
+        .args([
+            "--json",
+            "agent-plan",
+            "--intent",
+            &intent.display().to_string(),
+            "--caps",
+            &caps.display().to_string(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    serde_json::from_slice(&output).expect("parse planner JSON")
+}
+
+fn reference_selection(intent: &std::path::Path) -> Value {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = std::process::Command::new("python3")
+        .current_dir(&root)
+        .args([
+            "scripts/lib/gc_agent_task_cards.py",
+            "--select-intent",
+            &intent.display().to_string(),
+        ])
+        .output()
+        .expect("run task-card reference selector");
+    assert!(
+        output.status.success(),
+        "reference selector failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_slice(&output.stdout).expect("parse reference selection")
+}
+
 #[test]
 fn agent_plan_emits_deterministic_plan_contract() {
     let td = tempfile::tempdir().expect("tempdir");
@@ -162,44 +199,40 @@ fn task_cards_python_and_planner_selection_match() {
     write_intent(&intent);
     std::fs::write(&caps, "allow = [\"sys/time::now\"]\n").expect("write caps");
 
-    let cli_out = cargo_bin_cmd!("genesis")
-        .args([
-            "--json",
-            "agent-plan",
-            "--intent",
-            &intent.display().to_string(),
-            "--caps",
-            &caps.display().to_string(),
-        ])
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let cli: Value = serde_json::from_slice(&cli_out).expect("parse planner JSON");
-
-    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let python_out = std::process::Command::new("python3")
-        .current_dir(&root)
-        .args([
-            "scripts/lib/gc_agent_task_cards.py",
-            "--select-intent",
-            &intent.display().to_string(),
-        ])
-        .output()
-        .expect("run task-card reference selector");
-    assert!(
-        python_out.status.success(),
-        "reference selector failed: {}",
-        String::from_utf8_lossy(&python_out.stderr)
-    );
-    let reference: Value =
-        serde_json::from_slice(&python_out.stdout).expect("parse reference selection");
+    let cli = planner_selection(&intent, &caps);
+    let reference = reference_selection(&intent);
     assert_eq!(
         cli.pointer("/data/plan/context_cards"),
         Some(&reference),
         "production and reference task-card selectors drifted"
     );
+}
+
+#[test]
+#[ignore = "stress-gate"]
+fn task_cards_python_and_planner_selection_remain_stable_under_parallel_load() {
+    let workers = (0..16)
+        .map(|_| {
+            std::thread::spawn(|| {
+                let td = tempfile::tempdir().expect("tempdir");
+                let intent = td.path().join("intent.json");
+                let caps = td.path().join("caps.toml");
+                write_intent(&intent);
+                std::fs::write(&caps, "allow = [\"sys/time::now\"]\n").expect("write caps");
+
+                let cli = planner_selection(&intent, &caps);
+                let reference = reference_selection(&intent);
+                assert_eq!(
+                    cli.pointer("/data/plan/context_cards"),
+                    Some(&reference),
+                    "parallel production/reference selector drift"
+                );
+            })
+        })
+        .collect::<Vec<_>>();
+    for worker in workers {
+        worker.join().expect("parallel planner worker panicked");
+    }
 }
 
 #[test]

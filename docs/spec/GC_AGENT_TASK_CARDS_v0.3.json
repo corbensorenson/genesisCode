@@ -155,8 +155,8 @@
     },
     {
       "byteCount": 787,
-      "cardSha256": "62d5b8f038ef018a3a10fe53e2f31bac9140d456deb74ad53426ef0d5e816fa1",
-      "content": "## Testing and obligations\n\nCard: testing | Profile: GC-AGENT-v0.3 | Source: sha256:a7f15307ffcac3371d9dc0d52ca6fb1b1c0ae124a1690e0c1578eb53cd00b676\n\n- Run focused parser/type/eval/obligation checks before broader deterministic profiles.\n- Checks are read-only; only explicit update commands may refresh retained artifacts.\n- Require unit, property, determinism, replay, capability, and resource coverage applicable to the change.\n- Report exact failures and preserve negative evidence; do not mark work complete from a narrow passing lane.\n\nCommands:\n- `genesis test --pkg package.toml`\n- `bash scripts/test_changed_fast.sh --budget-ms 120000`\n\nAuthorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md, crates/gc_obligations/src/obligations/types_api.rs\n",
+      "cardSha256": "4881a68d0e3ce02586abf1162208b910ca124928647736b43f4ca293f903d49a",
+      "content": "## Testing and obligations\n\nCard: testing | Profile: GC-AGENT-v0.3 | Source: sha256:c8257a15de6315c29103d3868d60e42e7b089f6280ddf3c9baacf274698a66e0\n\n- Run focused parser/type/eval/obligation checks before broader deterministic profiles.\n- Checks are read-only; only explicit update commands may refresh retained artifacts.\n- Require unit, property, determinism, replay, capability, and resource coverage applicable to the change.\n- Report exact failures and preserve negative evidence; do not mark work complete from a narrow passing lane.\n\nCommands:\n- `genesis test --pkg package.toml`\n- `bash scripts/test_changed_fast.sh --budget-ms 120000`\n\nAuthorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md, crates/gc_obligations/src/obligations/types_api.rs\n",
       "id": "testing",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -182,14 +182,14 @@
           "test"
         ]
       },
-      "sourceHashSha256": "a7f15307ffcac3371d9dc0d52ca6fb1b1c0ae124a1690e0c1578eb53cd00b676",
+      "sourceHashSha256": "c8257a15de6315c29103d3868d60e42e7b089f6280ddf3c9baacf274698a66e0",
       "title": "Testing and obligations",
       "tokenUpperBound": 787
     },
     {
       "byteCount": 738,
-      "cardSha256": "0fe06e2d4cc90dec4b7783c90be2cd786e76cf58fb052adeb5af7d2e81a8bedf",
-      "content": "## Build and deployment targets\n\nCard: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:154325379b05d2f42af895aeeb41223dee5c666b8eb80be2bb81627dbfdc0fbb\n\n- Select an explicit web, desktop, service, ios, android, edge, or service-runtime target.\n- Build deterministic bundles with manifest, provenance, policy, and replay identities.\n- Release/full evidence must be non-synthetic for every selected target.\n- Verify package closure and target boot/smoke contracts before promotion.\n\nCommands:\n- `genesis gcpm build --pkg package.toml --target <target> --out-dir dist`\n- `bash scripts/check_gcpm_target_runtime_pipelines.sh`\n\nAuthorities: docs/spec/CLI.md, docs/spec/GCPM_JSON_SCHEMAS_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md\n",
+      "cardSha256": "75c4a529555f1aef8b0138ee82eb6a3273a0173720f89eb395c6181abd0cc564",
+      "content": "## Build and deployment targets\n\nCard: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:31bbe52742fea7c9604d80bd958b8c959d118cb3bc436507a707265cc1f06fb4\n\n- Select an explicit web, desktop, service, ios, android, edge, or service-runtime target.\n- Build deterministic bundles with manifest, provenance, policy, and replay identities.\n- Release/full evidence must be non-synthetic for every selected target.\n- Verify package closure and target boot/smoke contracts before promotion.\n\nCommands:\n- `genesis gcpm build --pkg package.toml --target <target> --out-dir dist`\n- `bash scripts/check_gcpm_target_runtime_pipelines.sh`\n\nAuthorities: docs/spec/CLI.md, docs/spec/GCPM_JSON_SCHEMAS_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md\n",
       "id": "deployment",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -223,7 +223,7 @@
           "runtime"
         ]
       },
-      "sourceHashSha256": "154325379b05d2f42af895aeeb41223dee5c666b8eb80be2bb81627dbfdc0fbb",
+      "sourceHashSha256": "31bbe52742fea7c9604d80bd958b8c959d118cb3bc436507a707265cc1f06fb4",
       "title": "Build and deployment targets",
       "tokenUpperBound": 738
     },
@@ -260,13 +260,13 @@
       "tokenUpperBound": 834
     }
   ],
-  "compendiumSha256": "ac009b6d557f6871d80802be9347313faaca40c5131e9f46ced2eeb6e86dd9f6",
+  "compendiumSha256": "2d9eaca7c3896b8e56835aa41c3805572cb030f7d4ebd2d1f229fd4d896ce72a",
   "fallbackCard": "troubleshooting",
   "intentSchema": "genesis/agent-intent-v0.1",
   "kind": "genesis/gc-agent-task-cards-v0.3",
   "profileId": "GC-AGENT-v0.3",
   "profileIdentitySha256": "72b4d06f60482dd3d929f9d6a3357ab36cb0fcc3b749868e31ee2466cd2cd7cc",
-  "registryIdentitySha256": "77a0c9e4f9e6522c7b5c0542e0aa3a315822e709507609822c58a01ce3892493",
+  "registryIdentitySha256": "f09f592e78036076cd31c747d565ac548421c2e990d456fc50c23ac4164f9a3f",
   "sourceIdentities": {
     "docs/spec/GC_AGENT_PROFILE_v0.3.json": "c520466ee1c2095dec54ce9c5d590260b6da76eb9d446a629037fa1613995a12",
     "policies/gc_agent_task_cards_v0.3.json": "d852b55e8aa15dc6a4a7205d29fa06c7b966a26909bacd34a60768b1d962e732"

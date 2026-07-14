@@ -145,5 +145,8 @@ genesis_configure_cargo_target_dir \
 cargo test -p gc_effects --lib \
   replay_adversarial_matrix_rejects_reordered_and_altered_facts \
   --locked --offline
+cargo test -p gc_effects --lib replay --locked --offline
+cargo test -p gc_cli --test cli_run_replay_engine --locked --offline
+cargo test -p gc_wasi_cli --test cli_run_replay_engine --locked --offline
 
-echo "evidence-adversarial-matrix-contract: ok (requirements=8 controls=11 verifier_vectors=30 replay_mutations=16)"
+echo "evidence-adversarial-matrix-contract: ok (requirements=8 controls=11 verifier_vectors=30 replay_mutations=16 replay_engines=rust,selfhost replay_hosts=native,wasi)"

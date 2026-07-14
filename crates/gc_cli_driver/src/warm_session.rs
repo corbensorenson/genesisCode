@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io;
-use std::path::Path;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::{Duration, Instant};
 
@@ -13,7 +12,7 @@ use crate::warm_protocol::{
 };
 use crate::warm_request::{build_sub_cli, validate_workspace_argv};
 use crate::warm_session_config::{
-    WarmConfig, inherited_global_args, prime_runtime, warm_session_cache_key,
+    WarmConfig, WarmOptions, inherited_global_args, prime_runtime, warm_session_cache_key,
 };
 use crate::warm_state::{PendingRequest, RunningRequest, SessionState};
 use crate::warm_worker::{WorkerJob, WorkerResult, run_worker_inline, spawn_worker};
@@ -362,10 +361,10 @@ fn handle_worker_result(state: &mut SessionState, outcome: WorkerResult) -> Resu
         | WorkerResult::WorkspaceError { request_id, .. }
         | WorkerResult::Crashed { request_id } => request_id,
     };
-    if !state
+    if state
         .running
         .as_ref()
-        .is_some_and(|running| running.id == *outcome_id)
+        .is_none_or(|running| running.id != *outcome_id)
     {
         return Ok(());
     }
@@ -604,14 +603,17 @@ fn run_wasi_loop(
 pub(super) fn cmd_warm(
     cli: &Cli,
     flavor: Flavor,
-    prime_selfhost: bool,
-    max_queue: usize,
-    max_frame_bytes: usize,
-    max_workspaces: usize,
-    workspace_idle_ms: u64,
-    max_requests: u64,
-    workspace_root: &Path,
+    options: WarmOptions<'_>,
 ) -> Result<CmdOut, CliError> {
+    let WarmOptions {
+        prime_selfhost,
+        max_queue,
+        max_frame_bytes,
+        max_workspaces,
+        workspace_idle_ms,
+        max_requests,
+        workspace_root,
+    } = options;
     if !(1..=4096).contains(&max_queue) {
         return Err(cli_err(
             EX_PARSE,

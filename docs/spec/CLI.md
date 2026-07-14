@@ -134,6 +134,7 @@ Dedicated compatibility harness entrypoints:
 - `genesis replay <file> --log <log.gclog> [--store <dir>] [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize before replaying against the deterministic log.
+  - exits successfully when the complete log verifies, including when the reproduced terminal value is a sealed `ERROR`; only replay parsing, integrity, protocol, or execution mismatches fail the replay command.
   - JSON output includes `data.kernel_eval_backend` (`"compiled"`).
 - `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
   - emits a canonical self-host toolchain artifact used by `--engine selfhost` bootstrap.

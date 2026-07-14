@@ -60,8 +60,8 @@ print(time.time_ns())
 PY
 )"
   if cargo test -p gc_effects --test host_bridge_fault_injection --quiet && \
-     cargo test -p gc_effects --lib timeout_kills_process_trees --quiet && \
-     cargo test -p gc_effects --lib spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet; then
+     cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
+     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact; then
     run_ok=1
     passed_runs=$((passed_runs + 1))
   else

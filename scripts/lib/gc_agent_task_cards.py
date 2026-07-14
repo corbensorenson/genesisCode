@@ -325,7 +325,9 @@ def main(argv: Sequence[str]) -> int:
         elif args.self_test:
             self_test()
         else:
-            _, registry = render()
+            # Selector parity must compare implementations over one immutable
+            # registry snapshot. `--check` separately validates source freshness.
+            registry = load(REGISTRY)
             raw = load(args.select_intent)
             print(json.dumps(select(raw, registry), sort_keys=True, separators=(",", ":"), ensure_ascii=True))
     except TaskCardError as exc:

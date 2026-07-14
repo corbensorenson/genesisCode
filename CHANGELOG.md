@@ -35,9 +35,6 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 #### Known Gaps
 
-- `P0.1`: Restore denied-effect replay parity across Rust and self-host engines on native and WASI. Affected claims: `CAP-EFFECT-REPLAY`.
-- `P1.1`: Make host-bridge hard-cancellation stress deterministic under supported parallel load. Affected claims: `CAP-HOST-BRIDGE`.
-- `P1.2`: Restore default-suite hermeticity and load stability without retries or ignored failures. Affected claims: `CAP-AGENT-JSON-CONTRACTS`, `CAP-ASSURANCE-PROFILES`.
 - `P1.3`: Bound generated-state growth with safe automatic quota, lease, and reclamation enforcement. Affected claims: `CAP-AGENT-WORKSPACE-PERF`, `CAP-ASSURANCE-PROFILES`.
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`.
@@ -79,7 +76,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.h`: Prove the GPU or numeric agent archetype with deterministic backend evidence. Affected claims: `CAP-GPU-COMPUTE`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: `P0.1`, `P1.1`, `P1.2`, `P1.3`. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: `P1.3`. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -111,7 +108,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `c51747efaa3f432ac96b3daa63e3d748614735634bc3a548b1f1c6b557858fd3`.
+Machine-readable identity: `db20e16af9a2037d619813a7e3ed6f0ab93783f1a5a88cd9157c7b0b5a4e700f`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

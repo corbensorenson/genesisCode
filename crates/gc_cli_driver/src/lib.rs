@@ -142,6 +142,7 @@ use vcs_helpers::{
     parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
 };
 use warm_session::cmd_warm;
+use warm_session_config::WarmOptions;
 
 const EX_OK: u8 = 0;
 const EX_INTERNAL: u8 = 1;
@@ -404,13 +405,15 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         } => cmd_warm(
             cli,
             flavor,
-            *prime_selfhost,
-            *max_queue,
-            *max_frame_bytes,
-            *max_workspaces,
-            *workspace_idle_ms,
-            *max_requests,
-            workspace_root,
+            WarmOptions {
+                prime_selfhost: *prime_selfhost,
+                max_queue: *max_queue,
+                max_frame_bytes: *max_frame_bytes,
+                max_workspaces: *max_workspaces,
+                workspace_idle_ms: *workspace_idle_ms,
+                max_requests: *max_requests,
+                workspace_root,
+            },
         ),
         Cmd::Mcp {
             prime_selfhost,
@@ -423,13 +426,15 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         } => cmd_mcp(
             cli,
             flavor,
-            *prime_selfhost,
-            *max_queue,
-            *max_frame_bytes,
-            *max_output_bytes,
-            *max_requests,
-            *max_roots,
-            workspace_root,
+            mcp::McpOptions {
+                prime_selfhost: *prime_selfhost,
+                max_queue: *max_queue,
+                max_frame_bytes: *max_frame_bytes,
+                max_output_bytes: *max_output_bytes,
+                max_requests: *max_requests,
+                max_roots: *max_roots,
+                workspace_root,
+            },
         ),
         Cmd::CliSchema => cmd_cli_schema(cli),
         Cmd::AgentIndex {

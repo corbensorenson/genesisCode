@@ -1421,7 +1421,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh")
     ;;
   prepush-standard)
-    PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
+    PROFILE_GATES+=("cargo clippy --workspace --all-targets --locked --offline -- -D warnings")
     PROFILE_GATES+=("bash scripts/check_no_user_panics_compiler.sh")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
@@ -1437,7 +1437,7 @@ case "$PROFILE" in
     ;;
   release-full)
     PROFILE_GATES+=("bash scripts/check_domain_starter_registry_bootstrap.sh")
-    PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
+    PROFILE_GATES+=("cargo clippy --workspace --all-targets --locked --offline -- -D warnings")
     PROFILE_GATES+=("bash scripts/check_no_user_panics_compiler.sh")
     PROFILE_GATES+=("bash scripts/check_source_decomposition_tracked_parity.sh")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
