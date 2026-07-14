@@ -34,9 +34,10 @@ EXPECTED = {
     "GB-8": {"subject": "fresh-clone-prerequisites", "prerequisiteManifest": "genesis.prerequisites.json", "minimumPython": "3.9", "undeclaredPythonModules": 0},
 }
 STDLIB = {
-    "__future__", "argparse", "ast", "base64", "binascii", "collections", "copy", "dataclasses",
-    "datetime", "fnmatch", "fractions", "functools", "gzip", "hashlib", "io", "json", "math", "os",
-    "pathlib", "platform", "random", "re", "shlex", "shutil", "signal", "socket", "stat",
+    "__future__", "argparse", "ast", "base64", "binascii", "collections", "contextlib", "copy",
+    "dataclasses", "datetime", "errno", "fcntl", "fnmatch", "fractions", "functools", "gzip",
+    "hashlib", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "random", "re",
+    "shlex", "shutil", "signal", "socket", "stat",
     "secrets", "statistics", "string", "subprocess", "sys", "tarfile", "tempfile", "threading", "time", "tomllib",
     "types", "typing", "urllib",
 }
@@ -255,19 +256,31 @@ def check_source_concentration(policy: Mapping[str, Any]) -> Tuple[int, int]:
     return len(over_files), len(over_crates)
 
 
-def check_python_closure() -> int:
-    repo_modules = {path.stem for path in (ROOT / "scripts/lib").glob("*.py")} | {"vendor"}
+def undeclared_python_modules(
+    sources: Iterable[Tuple[str, str]], repo_modules: Set[str]
+) -> Dict[str, Set[str]]:
     import_re = re.compile(r"^\s*(?:import|from)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
     unknown: Dict[str, Set[str]] = {}
+    for source_name, source in sources:
+        for module in import_re.findall(source):
+            if module not in STDLIB and module not in repo_modules:
+                unknown.setdefault(module, set()).add(source_name)
+    return unknown
+
+
+def check_python_closure() -> int:
+    repo_modules = {path.stem for path in (ROOT / "scripts/lib").glob("*.py")} | {"vendor"}
+    sources: List[Tuple[str, str]] = []
     scanned = 0
     for base in (ROOT / "scripts", ROOT / "tools"):
         for path in sorted(base.rglob("*")):
             if not path.is_file() or path.suffix not in {".py", ".sh"}:
                 continue
             scanned += 1
-            for module in import_re.findall(path.read_text(encoding="utf-8")):
-                if module not in STDLIB and module not in repo_modules:
-                    unknown.setdefault(module, set()).add(path.relative_to(ROOT).as_posix())
+            sources.append(
+                (path.relative_to(ROOT).as_posix(), path.read_text(encoding="utf-8"))
+            )
+    unknown = undeclared_python_modules(sources, repo_modules)
     if unknown:
         detail = "; ".join(f"{name}:{','.join(sorted(paths))}" for name, paths in sorted(unknown.items()))
         raise BudgetError("GB-8 undeclared Python modules: " + detail)
@@ -370,6 +383,16 @@ def self_test() -> int:
         controls += 1
     else:
         raise BudgetError("release-profile leakage negative control was accepted")
+    platform_stdlib = "import contextlib\nimport errno\nimport fcntl\nimport msvcrt\n"
+    if undeclared_python_modules((("platform.py", platform_stdlib),), set()):
+        raise BudgetError("declared cross-platform Python standard-library modules were rejected")
+    controls += 1
+    unknown = undeclared_python_modules(
+        (("external.py", "import genesis_undeclared_dependency\n"),), set()
+    )
+    if unknown != {"genesis_undeclared_dependency": {"external.py"}}:
+        raise BudgetError("undeclared Python module negative control was accepted")
+    controls += 1
     print(f"engineering-gate-budgets: self-test ok (negative_controls={controls})")
     return controls
 
