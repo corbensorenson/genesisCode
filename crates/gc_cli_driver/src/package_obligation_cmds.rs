@@ -55,6 +55,40 @@ pub(crate) fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<Cmd
             })
         })
         .collect();
+    let failed_obligations: Vec<serde_json::Value> = r
+        .obligation_results
+        .iter()
+        .filter(|obligation| !obligation.ok)
+        .map(|obligation| {
+            serde_json::json!({
+                "name": obligation.name,
+                "artifact": obligation.artifact,
+                "errors": obligation.errors,
+            })
+        })
+        .collect();
+    let error = (!r.ok).then(|| JsonError {
+        code: "test/error",
+        message: format!(
+            "{} package obligation{} failed",
+            failed_obligations.len(),
+            if failed_obligations.len() == 1 {
+                ""
+            } else {
+                "s"
+            }
+        ),
+        context: Some(
+            structured_failures::FailureContext::new(
+                "evaluator",
+                "obligations-failed",
+                "obligation/run",
+            )
+            .fact("acceptance_artifact", r.acceptance_artifact.clone())
+            .fact("failed_obligations", failed_obligations)
+            .into_value(),
+        ),
+    });
 
     let env = JsonEnvelope {
         ok: r.ok,
@@ -67,7 +101,7 @@ pub(crate) fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<Cmd
             "acceptance_artifact": r.acceptance_artifact,
             "obligations": obligations,
         })),
-        error: None,
+        error,
     };
 
     Ok(CmdOut {

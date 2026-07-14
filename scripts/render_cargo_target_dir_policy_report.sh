@@ -321,6 +321,101 @@ with tempfile.TemporaryDirectory(prefix="genesis-cargo-cache-policy.") as temp_r
     require(proc.returncode == 0, f"declared environment transition failed: {proc.stderr}")
     passed("resolved-environment-transition")
 
+    # Keep the lease control independent from reservation entries created by
+    # earlier key-rotation controls in this synthetic repository.
+    shutil.rmtree(fixture / ".genesis/build", ignore_errors=True)
+    github_env_proc = subprocess.run(
+        [
+            sys.executable,
+            str(fixture / "scripts/lib/cargo_cache.py"),
+            "--root", str(fixture),
+            "--scope", "root-host",
+            "--format", "github-env",
+        ],
+        cwd=fixture,
+        env=fresh_env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    require(
+        github_env_proc.returncode == 0,
+        f"github-env fixture failed: {github_env_proc.stderr}",
+    )
+    github_env = dict(fresh_env)
+    for line in github_env_proc.stdout.splitlines():
+        name, value = line.split("=", 1)
+        github_env[name] = value
+    github_resolved = cache.resolve(fixture, "root-host", github_env)
+    require(
+        str(github_resolved["target_dir"]) == github_env["CARGO_TARGET_DIR"],
+        "GitHub environment provenance changed the resolved cache target",
+    )
+    lease_contract_script = r'''
+set -euo pipefail
+source "$1"
+genesis_configure_cargo_target_dir "$2" outer root-host >/dev/null
+outer_token="$GENESIS_GENERATED_STATE_LEASE_TOKEN"
+outer_target="$CARGO_TARGET_DIR"
+canonical_root="$(cd "$2" && pwd -P)"
+outer_relative="${outer_target#"$canonical_root"/}"
+python3 "$2/scripts/lib/generated_state.py" \
+  --root "$2" validate-lease \
+  --token "$outer_token" \
+  --path "$outer_relative" >/dev/null
+if python3 "$2/scripts/lib/generated_state.py" \
+  --root "$2" validate-lease \
+  --token "$outer_token" \
+  --path ".genesis/build/not-the-leased-cache" >/dev/null 2>&1; then
+  exit 41
+fi
+if [[ "${outer_token:0:1}" == "0" ]]; then
+  unknown_token="1${outer_token:1}"
+else
+  unknown_token="0${outer_token:1}"
+fi
+if python3 "$2/scripts/lib/generated_state.py" \
+  --root "$2" validate-lease \
+  --token "$unknown_token" \
+  --path "$outer_relative" >/dev/null 2>&1; then
+  exit 42
+fi
+bash -c '
+  set -euo pipefail
+  source "$1"
+  genesis_configure_cargo_target_dir "$2" nested root-host >/dev/null
+  test "$GENESIS_GENERATED_STATE_LEASE_TOKEN" = "$3"
+  test "$CARGO_TARGET_DIR" = "$4"
+' bash "$1" "$2" "$outer_token" "$outer_target"
+python3 "$2/scripts/lib/generated_state.py" \
+  --root "$2" status --format json >"$2/lease-status.json"
+genesis_clear_resolved_cargo_target_dir outer-exit
+'''
+    proc = subprocess.run(
+        ["bash", "-c", lease_contract_script, "bash", str(helper), str(fixture)],
+        env=github_env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    registry_path = fixture / ".genesis/build/.generated-state-v0.1/registry.json"
+    registry_debug = registry_path.read_text(encoding="utf-8") if registry_path.is_file() else "<absent>"
+    require(
+        proc.returncode == 0,
+        f"nested lease reuse failed: {proc.stderr}\nregistry:\n{registry_debug}",
+    )
+    lease_status = json.loads((fixture / "lease-status.json").read_text(encoding="utf-8"))
+    require(
+        lease_status["activeLeases"] == 1,
+        "nested resolver duplicated the active parent lease",
+    )
+    require(
+        state.status(fixture)["activeLeases"] == 0,
+        "owned test lease was not released",
+    )
+    passed("lease-validation-fail-closed")
+    passed("nested-live-lease-reuse")
+
 scripts_dir = root / "scripts"
 cargo_re = re.compile(r"(^|[ \t])cargo[ \t]+", re.MULTILINE)
 direct_target_re = re.compile(r"^[ \t]*(?:export[ \t]+)?CARGO_TARGET_DIR=", re.MULTILINE)
@@ -396,8 +491,10 @@ expected_controls = {
     "fresh-checkout-materialization",
     "host-path-exclusion",
     "legacy-override-rejection",
+    "lease-validation-fail-closed",
     "lockfile-sensitivity",
     "metadata-tamper-rejection",
+    "nested-live-lease-reuse",
     "nested-verifier-scope-reservation",
     "observed-toolchain-sensitivity",
     "root-relocation-key-stability",

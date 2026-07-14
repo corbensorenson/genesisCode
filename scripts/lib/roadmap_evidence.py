@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from hashlib import sha256
+import json
 from pathlib import Path
 import re
 import sys
@@ -1018,6 +1019,32 @@ BUNDLES: Mapping[str, Sequence[str]] = {
     ),
 }
 
+CARGO_CACHE_AUTHORITY_FILES = (
+    "policies/cargo_cache_v0.1.json",
+    "docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json",
+    "scripts/lib/cargo_cache.py",
+    "scripts/lib/cargo_target_dir.sh",
+    "scripts/lib/generated_state.py",
+    "scripts/check_cargo_target_dir_policy.sh",
+    "scripts/check_evidence_storage_classes.sh",
+    "scripts/render_cargo_target_dir_policy_report.sh",
+    "scripts/render_evidence_release_asset.sh",
+    ".github/workflows/ci.yml",
+    "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
+    "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
+)
+
+CHANGED_IMPACT_AUTHORITY_FILES = (
+    "policies/changed_impact_v0.1.json",
+    "docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json",
+    "scripts/lib/changed_impact.py",
+    "scripts/check_changed_impact.sh",
+    "scripts/test_changed_fast.sh",
+    "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
+    "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
+    ".github/workflows/ci.yml",
+)
+
 BUNDLE_OCCURRENCES = {
     "capability-ledger-bundle": 2,
     "status-authority-bundle": 2,
@@ -1032,6 +1059,8 @@ BUNDLE_OCCURRENCES = {
     "version-surface-bundle": 1,
     "v1-compatibility-registry-bundle": 1,
     "gate-manifest-bundle": 1,
+    "cargo-cache-bundle": 1,
+    "changed-impact-bundle": 1,
     "gate-resource-telemetry-bundle": 1,
     "deterministic-cleanup-bundle": 1,
     "generated-state-lifecycle-bundle": 1,
@@ -1080,15 +1109,45 @@ def bundle_digest(paths: Sequence[str]) -> str:
     return digest.hexdigest()
 
 
+def authority_bundle_digest(paths: Sequence[str]) -> str:
+    identity = [
+        {"path": rel, "sha256": sha256((ROOT / rel).read_bytes()).hexdigest()}
+        for rel in sorted(paths)
+    ]
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":")) + "\n"
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def cargo_cache_authority_files() -> Sequence[str]:
+    paths = set(CARGO_CACHE_AUTHORITY_FILES)
+    cargo_re = re.compile(r"(^|[ \t])cargo[ \t]+", re.MULTILINE)
+    excluded = {"check_test_execution_profile_matrix.sh", "render_cargo_target_dir_policy_report.sh"}
+    for path in sorted((ROOT / "scripts").glob("*.sh")):
+        text = path.read_text(encoding="utf-8")
+        if path.name not in excluded and (
+            "genesis_configure_cargo_target_dir" in text or cargo_re.search(text)
+        ):
+            paths.add(path.relative_to(ROOT).as_posix())
+    return tuple(sorted(paths))
+
+
 def identities() -> Mapping[str, str]:
-    return {name: bundle_digest(paths) for name, paths in BUNDLES.items()}
+    result = {name: bundle_digest(paths) for name, paths in BUNDLES.items()}
+    result["cargo-cache-bundle"] = authority_bundle_digest(cargo_cache_authority_files())
+    result["changed-impact-bundle"] = authority_bundle_digest(CHANGED_IMPACT_AUTHORITY_FILES)
+    return result
 
 
 def check_roadmap(path: Path) -> None:
     if not path.is_file():
         raise EvidenceError(f"missing roadmap: {path}")
     text = path.read_text(encoding="utf-8")
-    for name, digest in identities().items():
+    rendered = identities()
+    cited_names = set(re.findall(r"([a-z0-9-]+-bundle)-sha256:[0-9a-f]{64}", text))
+    unknown = sorted(cited_names - set(rendered))
+    if unknown:
+        raise EvidenceError(f"unregistered roadmap evidence bundle(s): {unknown}")
+    for name, digest in rendered.items():
         pattern = re.compile(rf"{re.escape(name)}-sha256:([0-9a-f]{{64}})")
         observed = pattern.findall(text)
         expected_occurrences = BUNDLE_OCCURRENCES[name]

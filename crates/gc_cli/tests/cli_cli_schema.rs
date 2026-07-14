@@ -74,7 +74,7 @@ fn cli_schema_production_profile_emits_selfhost_only_values() {
         json.pointer("/data/mcp_interface/tools")
             .and_then(Value::as_array)
             .map(Vec::len),
-        Some(14)
+        Some(20)
     );
     assert_eq!(
         json.pointer("/data/mcp_interface/identitySha256")

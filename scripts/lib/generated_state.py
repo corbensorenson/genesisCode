@@ -993,6 +993,39 @@ def release(
         }
 
 
+def validate_lease(
+    root: Path,
+    token: str,
+    path: str,
+    policy_path: Path | None = None,
+    identity_fn: Callable[[int], str | None] = process_identity,
+) -> dict[str, Any]:
+    """Validate that a live lease protects exactly the requested repository path."""
+    if not TOKEN_RE.fullmatch(token):
+        raise GeneratedStateError("generated-state lease token is invalid")
+    root = root.resolve()
+    expected_path = repo_path(path, "lease validation path")
+    policy, _, policy_sha = load_policy(root, policy_path)
+    with state_lock(root, policy, create=False) as state_root_value:
+        if state_root_value is None:
+            raise GeneratedStateError("generated-state registry is absent")
+        registry = _load_registry(state_root_value, policy, policy_sha)
+        _recover_transaction(root, state_root_value, policy, registry)
+        recovered = _recover_leases(root, registry, identity_fn)
+        if recovered:
+            _sort_registry(registry)
+            _write_registry(state_root_value, policy, registry)
+        lease = next((item for item in registry["leases"] if item["id"] == token), None)
+        if lease is None:
+            raise GeneratedStateError("generated-state lease is unknown or inactive")
+        entry = _entry_by_id(registry, lease["entryId"])
+        if entry is None:  # pragma: no cover - registry validation closes this
+            raise GeneratedStateError("generated-state lease entry is absent")
+        if entry["path"] != expected_path:
+            raise GeneratedStateError("generated-state lease protects a different path")
+        return {"entryId": entry["id"], "path": expected_path, "valid": True}
+
+
 def register_protected(
     root: Path,
     owner: str,
@@ -1142,6 +1175,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     acquire.add_argument("--format", choices=("token", "shell", "json"), default="token")
     release_cmd = commands.add_parser("release")
     release_cmd.add_argument("--token", required=True)
+    validate_cmd = commands.add_parser("validate-lease")
+    validate_cmd.add_argument("--token", required=True)
+    validate_cmd.add_argument("--path", required=True)
     status_cmd = commands.add_parser("status")
     status_cmd.add_argument("--format", choices=("human", "json"), default="human")
     protected = commands.add_parser("register-protected")
@@ -1163,6 +1199,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             _emit_acquire(result, args.format, args.root)
         elif args.command == "release":
             result = release(args.root, args.token, args.policy)
+            print(pretty_bytes(result).decode("ascii"), end="")
+        elif args.command == "validate-lease":
+            result = validate_lease(args.root, args.token, args.path, args.policy)
             print(pretty_bytes(result).decode("ascii"), end="")
         elif args.command == "register-protected":
             result = register_protected(

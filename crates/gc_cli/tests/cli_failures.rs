@@ -93,10 +93,15 @@ fn unit_tests_failure_is_recorded_in_acceptance_artifact() {
         .failure()
         .code(30)
         .get_output()
-        .stdout
         .clone();
 
-    let hex = parse_acceptance_hash(&out);
+    let hex = parse_acceptance_hash(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("error[test/error]"), "stderr: {stderr}");
+    assert!(
+        !stderr.contains("error/unknown"),
+        "producer diagnostic must not fall back to error/unknown: {stderr}"
+    );
     let acc = read_acceptance(&dst, &hex);
     assert!(!acceptance_ok(&acc));
     assert!(acceptance_has_obligation(

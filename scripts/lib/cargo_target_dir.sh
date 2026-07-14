@@ -44,11 +44,34 @@ genesis_configure_cargo_target_dir() {
   local previous_target="${CARGO_TARGET_DIR:-}"
   local previous_resolved="${GENESIS_CARGO_CACHE_RESOLVED:-0}"
   local previous_scope="${GENESIS_CARGO_CACHE_SCOPE:-}"
+  local previous_lease_token="${GENESIS_GENERATED_STATE_LEASE_TOKEN:-}"
+  local previous_lease_root="${GENESIS_GENERATED_STATE_ROOT:-}"
+  local canonical_root=""
+  local expected_target=""
+  local previous_relative=""
   local exports=""
 
   if [[ -n "${GENESIS_CARGO_TARGET_DIR:-}" ]]; then
     echo "${context}: GENESIS_CARGO_TARGET_DIR is retired; use GENESIS_CARGO_CACHE_ROOT" >&2
     return 2
+  fi
+  canonical_root="$(cd "$root_dir" && pwd -P)" || return
+  if [[ -n "$previous_target" && "$previous_resolved" == "1" && \
+        "$previous_scope" == "$scope" && -n "$previous_lease_token" && \
+        "$previous_lease_root" == "$canonical_root" ]]; then
+    expected_target="$(python3 "$root_dir/scripts/lib/cargo_cache.py" \
+      --root "$root_dir" --scope "$scope" --format path --no-materialize)" || return
+    if [[ "$previous_target" == "$expected_target" && \
+          "$previous_target" == "$canonical_root"/* ]]; then
+      previous_relative="${previous_target#"$canonical_root"/}"
+      if python3 "$root_dir/scripts/lib/generated_state.py" \
+        --root "$root_dir" validate-lease \
+        --token "$previous_lease_token" \
+        --path "$previous_relative" >/dev/null; then
+        echo "${context}: cargo-cache scope=${scope} key=${GENESIS_CARGO_CACHE_KEY_SHA256} target=${CARGO_TARGET_DIR} lease=reused"
+        return 0
+      fi
+    fi
   fi
   if [[ -n "${GENESIS_GENERATED_STATE_LEASE_TOKEN:-}" ]]; then
     genesis_clear_resolved_cargo_target_dir "${context}:lease-transition" || return

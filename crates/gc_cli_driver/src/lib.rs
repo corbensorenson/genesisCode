@@ -240,12 +240,13 @@ fn run_configured(flavor: Flavor) -> std::process::ExitCode {
             } else if cli.json {
                 println!("{}", json_canonical_string(&out.json));
             } else if out.exit_code != 0 {
+                if !out.stdout.is_empty() {
+                    print!("{}", out.stdout);
+                }
                 if let Some(rendered) =
                     diagnostics::render_human_envelope(&out.json, human_render_options())
                 {
                     eprintln!("{rendered}");
-                } else if !out.stdout.is_empty() {
-                    print!("{}", out.stdout);
                 }
             } else if !out.stdout.is_empty() {
                 print!("{}", out.stdout);

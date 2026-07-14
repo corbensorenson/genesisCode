@@ -347,6 +347,26 @@ fn manifest_memory_limit_causes_preflight_obligation_exit_code_30() {
         Some(30)
     );
     assert_eq!(
+        v.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("test/error")
+    );
+    assert_eq!(
+        v.pointer("/error/context/facts/acceptance_artifact"),
+        v.pointer("/data/acceptance_artifact")
+    );
+    assert_eq!(
+        v.pointer("/error/context/facts/failed_obligations/0/name")
+            .and_then(|name| name.as_str()),
+        Some("core/obligation::preflight")
+    );
+    assert_eq!(
+        v.pointer("/diagnostics/0/code")
+            .and_then(|code| code.as_str()),
+        Some("test/error")
+    );
+    assert_eq!(
         v.get("data")
             .and_then(|d| d.get("obligations"))
             .and_then(|x| x.as_array())

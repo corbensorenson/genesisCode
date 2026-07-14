@@ -287,6 +287,9 @@ jobs:
 
       - name: Test
         run: |
+          source scripts/lib/cargo_target_dir.sh
+          genesis_configure_cargo_target_dir "$PWD" "workspace-test" root-host
+          trap 'genesis_clear_resolved_cargo_target_dir "workspace-test-exit"' EXIT
           if [[ "${GENESIS_CI_PROFILE}" == "fast" ]]; then
             bash scripts/test_fast.sh
           elif [[ "${GENESIS_TEST_SHARDS_TOTAL}" -gt 1 ]]; then

@@ -32,12 +32,33 @@ fn ci_has_pr_strict_equivalence_gate_job() {
 }
 
 #[test]
+fn workspace_test_step_holds_a_live_cargo_cache_lease() {
+    let root = repo_root();
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
+    let test_step = ci.find("- name: Test\n").expect("workspace Test step");
+    let changed_offset = ci[test_step..]
+        .find("- name: Changed-File Fast Loop Budget")
+        .expect("step after workspace Test");
+    let body = &ci[test_step..test_step + changed_offset];
+    assert!(body.contains("source scripts/lib/cargo_target_dir.sh"));
+    assert!(
+        body.contains("genesis_configure_cargo_target_dir \"$PWD\" \"workspace-test\" root-host")
+    );
+    assert!(
+        body.contains(
+            "trap 'genesis_clear_resolved_cargo_target_dir \"workspace-test-exit\"' EXIT"
+        )
+    );
+}
+
+#[test]
 fn ci_fetches_locked_evidence_dependencies_before_offline_baseline_guard() {
     let root = repo_root();
     let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
         .expect("read .github/workflows/ci.yml");
     let fetch = ci
-        .find("Fetch Standalone Evidence Dependencies")
+        .find("Fetch Offline Gate Dependencies")
         .expect("ci must declare the network-enabled evidence dependency fetch boundary");
     let baseline = ci
         .find("Signed Roadmap Baseline Guard")
