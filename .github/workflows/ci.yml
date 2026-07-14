@@ -420,14 +420,14 @@ jobs:
       - name: WASM Bindings (Node) + Smoke Test
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: |
-          bash scripts/wasm_bindgen_node.sh >/dev/null
-          node scripts/wasm_node_smoke.mjs
+          wasm_js_path="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)"
+          node scripts/wasm_node_smoke.mjs "$wasm_js_path"
 
       - name: WASM Cross-Host Determinism (Native vs Node)
         if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
         run: |
-          bash scripts/wasm_bindgen_node.sh >/dev/null
-          node scripts/wasm_cross_host_determinism.mjs
+          wasm_js_path="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)"
+          node scripts/wasm_cross_host_determinism.mjs "$wasm_js_path"
 
       - name: Full Cross-Host Runtime Budget Gate
         if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
@@ -494,8 +494,8 @@ jobs:
 
       - name: WASM Cross-Host Determinism (PR Required)
         run: |
-          bash scripts/wasm_bindgen_node.sh >/dev/null
-          node scripts/wasm_cross_host_determinism.mjs
+          wasm_js_path="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)"
+          node scripts/wasm_cross_host_determinism.mjs "$wasm_js_path"
 
       - name: Full Cross-Host Runtime Budget Gate (PR Required)
         run: bash scripts/update_full_cross_host_profile_budget_report.sh

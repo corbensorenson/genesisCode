@@ -38,7 +38,7 @@ FULL_MIN_HISTORY="${GENESIS_FULL_CROSS_HOST_MIN_HISTORY:-5}"
 }
 [[ -f "$WASM_REPORT" ]] || {
   echo "full-cross-host-budget: wasm cross-host report missing: $WASM_REPORT" >&2
-  echo "full-cross-host-budget: produce it with: bash scripts/wasm_bindgen_node.sh >/dev/null && node scripts/wasm_cross_host_determinism.mjs" >&2
+  echo 'full-cross-host-budget: produce it with: wasm_js_path="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)" && node scripts/wasm_cross_host_determinism.mjs "$wasm_js_path"' >&2
   exit 1
 }
 

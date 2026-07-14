@@ -64,8 +64,10 @@ function runNodeWasm(modPath) {
   return out;
 }
 
+const cargoTargetDir = process.env.CARGO_TARGET_DIR ?? "target";
 const modPath = path.resolve(
-  process.argv[2] ?? "target/wasm-bindgen/gc_wasm/gc_wasm.js",
+  process.argv[2] ??
+    path.join(cargoTargetDir, "wasm-bindgen", "gc_wasm", "gc_wasm.js"),
 );
 const native = runNative();
 const wasm = runNodeWasm(modPath);

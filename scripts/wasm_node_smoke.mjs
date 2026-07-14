@@ -10,8 +10,10 @@ function isHex32(s) {
   return typeof s === "string" && /^[0-9a-f]{64}$/.test(s);
 }
 
+const cargoTargetDir = process.env.CARGO_TARGET_DIR ?? "target";
 const modPath = path.resolve(
-  process.argv[2] ?? "target/wasm-bindgen/gc_wasm/gc_wasm.js",
+  process.argv[2] ??
+    path.join(cargoTargetDir, "wasm-bindgen", "gc_wasm", "gc_wasm.js"),
 );
 // wasm-bindgen (--target nodejs) emits a CommonJS module.
 // eslint-disable-next-line @typescript-eslint/no-var-requires

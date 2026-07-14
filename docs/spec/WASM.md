@@ -105,8 +105,8 @@ To generate Node bindings and run a deterministic smoke test:
 
 ```bash
 cargo install wasm-bindgen-cli --version 0.2.108 --locked
-bash scripts/wasm_bindgen_node.sh
-node scripts/wasm_node_smoke.mjs
+wasm_js_path="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)"
+node scripts/wasm_node_smoke.mjs "$wasm_js_path"
 ```
 
 ## Browser (wasm-bindgen) Smoke

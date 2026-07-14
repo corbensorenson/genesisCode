@@ -59,6 +59,8 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         .expect("read selfhost_strict_golden.sh");
     let wasm_cross = fs::read_to_string(root.join("scripts/wasm_cross_host_determinism.mjs"))
         .expect("read wasm_cross_host_determinism.mjs");
+    let wasm_smoke = fs::read_to_string(root.join("scripts/wasm_node_smoke.mjs"))
+        .expect("read wasm_node_smoke.mjs");
     let full_cross =
         fs::read_to_string(root.join("scripts/render_full_cross_host_profile_budget_report.sh"))
             .expect("read render_full_cross_host_profile_budget_report.sh");
@@ -238,6 +240,11 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         wasm_cross.contains("\"wasm-cross-host\""),
         "wasm cross-host lane must stamp wasm-cross-host profile label"
+    );
+    assert!(
+        wasm_cross.contains("process.env.CARGO_TARGET_DIR ?? \"target\"")
+            && wasm_smoke.contains("process.env.CARGO_TARGET_DIR ?? \"target\""),
+        "Node WASM consumers must resolve bindings from the configured Cargo target directory"
     );
     assert!(
         full_cross.contains("profile_runtime_budget.py"),
