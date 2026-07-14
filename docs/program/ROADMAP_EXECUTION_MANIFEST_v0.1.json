@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "87b89c3334b5b41925ae0eea182b9273f125d8cc9b65fd8c55f0f6a4d072bac3",
-    "roadmap_sha256": "82e617b7241bfe5107b64c569c76b589651ab317dd4110cfd400d8f17469b375",
+    "roadmap_sha256": "be0e19eab648bac5b1e4e7754c7deeaa79555574b1729e06dc6a9b893227dbba",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -235,7 +235,7 @@
             "scripts/check_capability_evidence_ledger_contract.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "status-authority-bundle-sha256:4e2c05a7c593267fc7a33e246f10945c33787f99d99e99ac7586ab16fe05e966"
+          "input_identity": "status-authority-bundle-sha256:9d55722b76ade187924cd8962b3da83a911ac52e670936b18adcc51cd26e3776"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -304,7 +304,7 @@
             "scripts/check_redteam_report.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "status-authority-bundle-sha256:4e2c05a7c593267fc7a33e246f10945c33787f99d99e99ac7586ab16fe05e966"
+          "input_identity": "status-authority-bundle-sha256:9d55722b76ade187924cd8962b3da83a911ac52e670936b18adcc51cd26e3776"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,

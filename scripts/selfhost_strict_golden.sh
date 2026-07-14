@@ -79,7 +79,10 @@ install_fixture_gpu_bridge() {
       bridge_name="host_bridge.cmd"
       bridge_path="$fixture_dir/$bridge_name"
       cat >"$bridge_path" <<'CMD'
-@echo {:ok true :id "gpu-bridge-0" :data b"\x01\x02\x03\x04" :written 4}
+@echo off
+set /p request_len=
+set /p request_body=
+echo {:ok true :id "gpu-bridge-0" :data b"\x01\x02\x03\x04" :written 4}
 CMD
       ;;
     *)
@@ -87,6 +90,11 @@ CMD
       bridge_path="$fixture_dir/$bridge_name"
       cat >"$bridge_path" <<'SH'
 #!/bin/sh
+IFS= read -r request_len || exit 2
+case "$request_len" in
+  ''|*[!0-9]*) exit 2 ;;
+esac
+dd bs=1 count="$request_len" of=/dev/null 2>/dev/null || exit 2
 resp='{:ok true :id "gpu-bridge-0" :data b"\x01\x02\x03\x04" :written 4}'
 printf '%s\n%s' "${#resp}" "$resp"
 SH
@@ -112,6 +120,18 @@ bridge_cmd = "${bridge_name}"
 base_dir = "."
 bridge_cmd = "${bridge_name}"
 EOF
+}
+
+capture_fixture_output() {
+  local fixture_name="$1"
+  local stage="$2"
+  shift 2
+
+  local output
+  if ! output="$("$@" | tr -d '\n')"; then
+    fail "${stage} failed for fixture ${fixture_name}"
+  fi
+  printf '%s' "$output"
 }
 
 check_typecheck_parity() {
@@ -248,12 +268,12 @@ for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
         fail "expected strict selfhost test failure for fixture ${name}"
       fi
     else
-      rust_pack="$("$GEN_PARITY" --coreform-frontend rust pack --pkg "$pkg_toml" | tr -d '\n')"
-      self_pack="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$pkg_toml" | tr -d '\n')"
+      rust_pack="$(capture_fixture_output "$name" rust-pack "$GEN_PARITY" --coreform-frontend rust pack --pkg "$pkg_toml")"
+      self_pack="$(capture_fixture_output "$name" selfhost-pack "$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$pkg_toml")"
       [[ "$rust_pack" == "$self_pack" ]] || fail "native strict pack mismatch for fixture ${name}"
 
-      rust_test="$("$GEN_PARITY" --coreform-frontend rust test --pkg "$pkg_toml" | tr -d '\n')"
-      self_test="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml" | tr -d '\n')"
+      rust_test="$(capture_fixture_output "$name" rust-test "$GEN_PARITY" --coreform-frontend rust test --pkg "$pkg_toml")"
+      self_test="$(capture_fixture_output "$name" selfhost-test "$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml")"
       [[ "$rust_test" == "$self_test" ]] || fail "native strict test mismatch for fixture ${name}"
     fi
   ) &

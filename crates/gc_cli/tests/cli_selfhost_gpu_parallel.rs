@@ -41,6 +41,11 @@ fn install_gpu_bridge(dst: &Path) {
     fs::write(
         &bridge,
         r#"#!/bin/sh
+IFS= read -r request_len || exit 2
+case "$request_len" in
+  ''|*[!0-9]*) exit 2 ;;
+esac
+dd bs=1 count="$request_len" of=/dev/null 2>/dev/null || exit 2
 resp='{:ok true :id "gpu-bridge-0" :data b"\x01\x02\x03\x04" :written 4}'
 printf '%s\n%s' "${#resp}" "$resp"
 "#,
@@ -57,7 +62,12 @@ fn install_gpu_bridge(dst: &Path) {
     let bridge = dst.join("host_bridge.cmd");
     fs::write(
         &bridge,
-        "@echo {:ok true :id \"gpu-bridge-0\" :data b\"\\x01\\x02\\x03\\x04\" :written 4}\r\n",
+        concat!(
+            "@echo off\r\n",
+            "set /p request_len=\r\n",
+            "set /p request_body=\r\n",
+            "echo {:ok true :id \"gpu-bridge-0\" :data b\"\\x01\\x02\\x03\\x04\" :written 4}\r\n",
+        ),
     )
     .unwrap();
     append_gpu_bridge_policy(dst, "host_bridge.cmd");
