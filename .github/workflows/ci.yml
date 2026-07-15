@@ -39,6 +39,9 @@ jobs:
       GENESIS_TEST_SHARD_INDEX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_shard_index || '0' }}
     steps:
       - uses: actions/checkout@v4
+        # GenesisBench verifies frozen parent snapshots and must fail closed if history is absent.
+        with:
+          fetch-depth: 0
 
       - name: Resolve CI Profile
         run: |
