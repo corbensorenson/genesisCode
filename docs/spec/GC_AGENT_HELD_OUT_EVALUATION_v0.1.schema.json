@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-agent-held-out-evaluation-v0.1.json",
+  "title": "GenesisCode Agent Held-Out Evaluation Commitments v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "evaluationId", "commitmentProtocol", "storagePolicy", "lifecyclePolicy", "contaminationPolicy", "epochs", "disclosures", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/agent-held-out-evaluation-v0.1"},
+    "version": {"const": "0.1.0"},
+    "evaluationId": {"const": "GC-AGENT-HELD-OUT-v0.1"},
+    "commitmentProtocol": {"$ref": "#/$defs/protocol"},
+    "storagePolicy": {"$ref": "#/$defs/storage"},
+    "lifecyclePolicy": {"$ref": "#/$defs/lifecycle"},
+    "contaminationPolicy": {"$ref": "#/$defs/contamination"},
+    "epochs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/epoch"}},
+    "disclosures": {"type": "array", "items": {"$ref": "#/$defs/disclosure"}},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "protocol": {
+      "type": "object", "additionalProperties": false,
+      "required": ["algorithm", "canonicalization", "caseDomain", "formula", "saltBytes", "saltVisibility"],
+      "properties": {
+        "algorithm": {"const": "sha256"}, "canonicalization": {"const": "genesis/canonical-json-v0.1"},
+        "caseDomain": {"const": "genesis/agent-held-out-case/v0.1\\0"},
+        "formula": {"const": "sha256(domain || 32-byte-secret-salt || canonical-case-bytes)"},
+        "saltBytes": {"const": 32}, "saltVisibility": {"const": "withheld-until-disclosure"}
+      }
+    },
+    "storage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["privateRoot", "publicContent", "forbiddenDistribution", "trainingPackExclusionRequired"],
+      "properties": {
+        "privateRoot": {"const": ".genesis/private/agent-evaluation"},
+        "publicContent": {"const": ["commitments", "disclosure-records", "lifecycle-metadata"]},
+        "forbiddenDistribution": {"const": ["case-payloads", "oracles", "salts"]},
+        "trainingPackExclusionRequired": {"const": true}
+      }
+    },
+    "lifecycle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["appendOnlyEpochs", "compromiseRequiresReplacement", "minimumDisclosureDelayDays", "retiredCommitmentsRemainPublished", "rotationStates"],
+      "properties": {
+        "appendOnlyEpochs": {"const": true}, "compromiseRequiresReplacement": {"const": true},
+        "minimumDisclosureDelayDays": {"const": 30}, "retiredCommitmentsRemainPublished": {"const": true},
+        "rotationStates": {"const": ["active", "compromised", "retired"]}
+      }
+    },
+    "contamination": {
+      "type": "object", "additionalProperties": false,
+      "required": ["resultLabels", "defaultWhenTrainingProvenanceMissing", "disclosedCaseRequiresContaminatedLabel", "mixedEpochAggregationForbidden", "requiredResultBindings"],
+      "properties": {
+        "resultLabels": {"const": ["declared-contaminated", "unknown", "uncontaminated"]},
+        "defaultWhenTrainingProvenanceMissing": {"const": "unknown"},
+        "disclosedCaseRequiresContaminatedLabel": {"const": true},
+        "mixedEpochAggregationForbidden": {"const": true},
+        "requiredResultBindings": {"const": ["commitmentSnapshotIdentity", "epochId", "modelIdentity", "trainingCutoff"]}
+      }
+    },
+    "profile": {
+      "type": "object", "additionalProperties": false, "required": ["id", "path", "sha256"],
+      "properties": {"id": {"const": "GC-AGENT-v0.3"}, "path": {"const": "docs/spec/GC_AGENT_PROFILE_v0.3.json"}, "sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "case": {
+      "type": "object", "additionalProperties": false, "required": ["id", "taskClass", "commitmentSha256", "oracleExposure"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^ho-[a-z0-9-]+-[0-9]{2}$"},
+        "taskClass": {"enum": ["completion", "deployment", "generation", "package-migration", "performance-repair", "policy-minimization", "refactor", "repair", "replay-investigation"]},
+        "commitmentSha256": {"$ref": "#/$defs/sha256"}, "oracleExposure": {"const": "commitment-only"}
+      }
+    },
+    "epoch": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "status", "activatedOn", "retiredOn", "replacementEpochId", "profile", "cases", "commitmentSnapshotIdentity"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^epoch-20[0-9]{2}-[0-9]{2}-[a-z]$"},
+        "status": {"enum": ["active", "compromised", "retired"]}, "activatedOn": {"type": "string", "format": "date"},
+        "retiredOn": {"type": ["string", "null"]}, "replacementEpochId": {"type": ["string", "null"]},
+        "profile": {"$ref": "#/$defs/profile"}, "cases": {"type": "array", "minItems": 9, "maxItems": 9, "items": {"$ref": "#/$defs/case"}},
+        "commitmentSnapshotIdentity": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "disclosure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "epochId", "caseId", "disclosedOn", "reason", "payloadPath", "saltHex", "verifiedCommitmentSha256"],
+      "properties": {
+        "id": {"type": "string"}, "epochId": {"type": "string"}, "caseId": {"type": "string"}, "disclosedOn": {"type": "string", "format": "date"},
+        "reason": {"enum": ["scheduled-release", "compromise-forensics"]}, "payloadPath": {"type": "string"},
+        "saltHex": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "verifiedCommitmentSha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

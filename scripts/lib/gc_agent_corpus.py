@@ -180,6 +180,7 @@ def validate(document: Any, *, check_identity: bool = True) -> dict[str, Any]:
             require(exposure == "public", f"{entry_id}: public split must be inspectable")
 
     require({"train", "dev", "public-test"}.issubset(roles), "manifest lacks train/dev/public-test coverage")
+    require("held-out" not in roles, "held-out payloads must remain outside the distributed corpus")
     identity = canonical_identity(document)
     if check_identity:
         require(document["contentIdentitySha256"] == identity, "manifest content identity drift")

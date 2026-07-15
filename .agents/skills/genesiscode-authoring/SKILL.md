@@ -15,6 +15,8 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
 - `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
 - `examples/canonical_language/v0.1/suite.json`
+- `benchmarks/agent_tasks/v0.1/suite.json`
+- `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json`
 - `docs/spec/HOST_ABI_INDEX_v0.1.json`
 - `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`
@@ -41,12 +43,14 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - No hidden policy broadening: each new operation must specify minimum policy keys and failure behavior.
 - Profile negotiation: load and verify `GC-AGENT-v0.3` before generating source; unsupported behavior must fail closed rather than be guessed.
 - Diagnostic routing: use exact catalog IDs/codes and `agent-index --diagnostic`; never scrape message prose, and treat `diagnostic/catalog-miss` as an implementation defect.
+- Evaluation separation: public benchmark references are development oracles, never held-out evidence. Retrieve only public held-out commitments; never load private custody material into training, prompts, logs, or distributed artifacts.
 - Unsupported classes: reject experimental syntax; route host-only and nondeterministic facilities through explicit logged effects; reject unavailable targets and out-of-profile capabilities until explicit profile negotiation succeeds. Never let an index or prompt grant authority.
 
 ## Canonical workflow (agent prompt protocol)
 1. Plan
 - Load `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`, negotiate `docs/spec/GC_AGENT_PROFILE_v0.3.json`, and reject incompatible authoring assumptions.
 - Select the closest pair from `GC-CANONICAL-EXAMPLES-v0.1`; inspect and execute both sides before generating or repairing source. Preserve all paired bytes except the declared `replace-once` mutation and verify the recorded rejection class becomes the accepted outcome.
+- Use `GC-AGENT-TASK-BENCHMARK-v0.1` for public iteration. A held-out result must bind the active `GC-AGENT-HELD-OUT-v0.1` epoch and commitment snapshot, and must use contamination label `unknown` unless training provenance proves otherwise.
 - Declare task intent and consume deterministic `agent-plan.plan.context_cards`; never let prompt text grant card authority.
 - Choose the highest-impact ready task from `ROADMAP.md`; use `upgrade_plan.md` only for unresolved P0/P1 compatibility work.
 - Restate measurable acceptance criteria before editing.

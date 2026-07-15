@@ -1,0 +1,127 @@
+{
+  "kind": "genesis/agent-held-out-evaluation-v0.1",
+  "version": "0.1.0",
+  "evaluationId": "GC-AGENT-HELD-OUT-v0.1",
+  "commitmentProtocol": {
+    "algorithm": "sha256",
+    "canonicalization": "genesis/canonical-json-v0.1",
+    "caseDomain": "genesis/agent-held-out-case/v0.1\\0",
+    "formula": "sha256(domain || 32-byte-secret-salt || canonical-case-bytes)",
+    "saltBytes": 32,
+    "saltVisibility": "withheld-until-disclosure"
+  },
+  "storagePolicy": {
+    "privateRoot": ".genesis/private/agent-evaluation",
+    "publicContent": [
+      "commitments",
+      "disclosure-records",
+      "lifecycle-metadata"
+    ],
+    "forbiddenDistribution": [
+      "case-payloads",
+      "oracles",
+      "salts"
+    ],
+    "trainingPackExclusionRequired": true
+  },
+  "lifecyclePolicy": {
+    "appendOnlyEpochs": true,
+    "compromiseRequiresReplacement": true,
+    "minimumDisclosureDelayDays": 30,
+    "retiredCommitmentsRemainPublished": true,
+    "rotationStates": [
+      "active",
+      "compromised",
+      "retired"
+    ]
+  },
+  "contaminationPolicy": {
+    "resultLabels": [
+      "declared-contaminated",
+      "unknown",
+      "uncontaminated"
+    ],
+    "defaultWhenTrainingProvenanceMissing": "unknown",
+    "disclosedCaseRequiresContaminatedLabel": true,
+    "mixedEpochAggregationForbidden": true,
+    "requiredResultBindings": [
+      "commitmentSnapshotIdentity",
+      "epochId",
+      "modelIdentity",
+      "trainingCutoff"
+    ]
+  },
+  "epochs": [
+    {
+      "id": "epoch-2026-07-a",
+      "status": "active",
+      "activatedOn": "2026-07-15",
+      "retiredOn": null,
+      "replacementEpochId": null,
+      "profile": {
+        "id": "GC-AGENT-v0.3",
+        "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+        "sha256": "0cbef38bc4b98f747d6dbf470e0659eaecccc5ed10e05b9dc93e9ec9ed80d0cc"
+      },
+      "cases": [
+        {
+          "id": "ho-completion-01",
+          "taskClass": "completion",
+          "commitmentSha256": "f5810f540e96de8c54e9d21be853063fa7c97b07889f479eb32d24b7ab33ad69",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-deployment-01",
+          "taskClass": "deployment",
+          "commitmentSha256": "8816100584d7c34c7408a6281b03e9633751deb2a45f300d090a22888c531159",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-generation-01",
+          "taskClass": "generation",
+          "commitmentSha256": "98888375a495571768a506a4988f5eda5d6afba7f57a5d63c05566cca21b53d7",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-package-migration-01",
+          "taskClass": "package-migration",
+          "commitmentSha256": "790b4b45b1150734d5e65b4dc44cc257b84d1167d1df5f04b7b01c3d3cb4a1af",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-performance-repair-01",
+          "taskClass": "performance-repair",
+          "commitmentSha256": "046348844cdd1cd1f3f3d916327973247a8335addd57adae51a7afc374c885c2",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-policy-minimization-01",
+          "taskClass": "policy-minimization",
+          "commitmentSha256": "9c5fa63fe5b787425ac2569cee3264f509e0cdab3b10116f01f4452e23021703",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-refactor-01",
+          "taskClass": "refactor",
+          "commitmentSha256": "dba33dbc0053212356a2a9a696bc064f1974dcec9a526b13bc7e6611c0c6c6c6",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-repair-01",
+          "taskClass": "repair",
+          "commitmentSha256": "84c9b70ed3b0f2dc0854df4106c4f74117e6b9b28d9552f9b3a1690fc490cf54",
+          "oracleExposure": "commitment-only"
+        },
+        {
+          "id": "ho-replay-investigation-01",
+          "taskClass": "replay-investigation",
+          "commitmentSha256": "78da0cce9bcba79fd94fa24fa38150bd037d41d00367063236e07de7f88c17ae",
+          "oracleExposure": "commitment-only"
+        }
+      ],
+      "commitmentSnapshotIdentity": "77cfe60ca3959c06badfda1b8ae77b71c4bda2eecb776d4becbcf07cc55fe3cf"
+    }
+  ],
+  "disclosures": [],
+  "contentIdentitySha256": "45effecb5b50208217329cd62dc3adc237a92e126aa9a5c47de8520797145194"
+}

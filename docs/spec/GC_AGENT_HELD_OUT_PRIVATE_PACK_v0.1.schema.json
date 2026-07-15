@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-agent-held-out-private-pack-v0.1.json",
+  "title": "GenesisCode Private Held-Out Custody Pack v0.1",
+  "description": "Structure only. Instances, salts, prompts, inputs, and oracles must never be committed or distributed with training material.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "evaluationId", "epochId", "cases"],
+  "properties": {
+    "kind": {"const": "genesis/agent-held-out-private-pack-v0.1"},
+    "version": {"const": "0.1.0"},
+    "evaluationId": {"const": "GC-AGENT-HELD-OUT-v0.1"},
+    "epochId": {"type": "string", "pattern": "^epoch-20[0-9]{2}-[0-9]{2}-[a-z]$"},
+    "cases": {"type": "array", "minItems": 9, "items": {"$ref": "#/$defs/case"}}
+  },
+  "$defs": {
+    "case": {
+      "type": "object", "additionalProperties": false, "required": ["id", "taskClass", "saltHex", "payload"],
+      "properties": {
+        "id": {"type": "string"}, "taskClass": {"type": "string"},
+        "saltHex": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "payload": {"type": "object"}
+      }
+    }
+  }
+}

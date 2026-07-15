@@ -89,6 +89,9 @@ genesis --json agent-index --diagnostic <exact-code>
   - includes `gc_agent_task_benchmark = "benchmarks/agent_tasks/v0.1/suite.json"` as the
     content-addressed 27-case public benchmark crossing nine authoring tasks with three
     strictly increasing context tiers and production-CLI reference verification.
+  - includes `gc_agent_held_out_evaluation = "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json"`
+    as the public salted-commitment ledger. It exposes lifecycle and contamination facts,
+    never private cases, salts, prompts, inputs, or oracles.
   - includes `gc_agent_task_cards = "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"` as the
     embedded seven-card registry used by deterministic intent selection.
   - includes `gc_agent_symbol_index = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"` as the

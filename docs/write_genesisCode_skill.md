@@ -12,6 +12,8 @@ Canonical AI-first authoring handbook for GenesisCode.
   - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
   - `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
   - `examples/canonical_language/v0.1/suite.json`
+  - `benchmarks/agent_tasks/v0.1/suite.json`
+  - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - Source skill file:
   - `.agents/skills/genesiscode-authoring/SKILL.md`
 - Machine-readable contract:
@@ -43,6 +45,7 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 - Ground generation and repair in the closest signed canonical pair. Execute both the valid and invalid scenarios with their recorded production argv, preserve every undeclared byte, apply only the `replace-once` repair, and require the exact accepted envelope.
 - Resolve failures through exact versioned catalog IDs/codes and bounded `genesis --json agent-index --diagnostic <exact-code>` lookup; never scrape message prose.
 - Treat every unsupported profile entry as a fail-closed boundary, not an invitation to infer syntax or semantics.
+- Keep evaluation roles disjoint: public references support development only. Never retrieve private held-out packs for authoring or training; bind evaluator results to the active public commitment snapshot and default contamination to `unknown` when model training provenance is incomplete.
 - For the five required classes, reject experimental syntax, unavailable targets, and out-of-profile capabilities; route host-only and nondeterministic facilities only through explicit capability-scoped logged effects. Follow `safeAlternative` without silently broadening policy.
 - Every new capability or workflow must provide:
   - stable schema id/kind,

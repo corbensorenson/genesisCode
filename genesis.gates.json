@@ -6,10 +6,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_agent_authoring_bundle.sh",
-      "executionIdentitySha256": "f8494cbe97ed45ab53c7816c2bc62b3c681022a570beb66e41fb5bfd9f5cbcc8",
+      "executionIdentitySha256": "b5852f2b54518d2a50934a89599f5dd0bb02a310a6b48b3166ccb3d217f5a9bc",
       "expectedDurationSeconds": 15,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "20f4cad0a8239460b2359f19186ac095becec825ec2dde302f6fe1dac67e186d",
+      "inputIdentitySha256": "762a69eeb7861631b6245e1631c4b60c8b7bad7522b6359bb5d33fe398efa151",
       "inputs": {
         "paths": [
           "README.md",
@@ -27,6 +27,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
           "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
@@ -44,6 +47,7 @@
           "scripts/check_agent_authoring_bundle.sh",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_task_benchmarks.py"
         ],
         "sets": [
@@ -73,7 +77,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "4cfa3b5c159e253a0cd18dcdc13ae66be56aa5594e76669a355eef020e4a6db6",
+      "sourceSha256": "a61f2a55a5c1dae9fa5f4c455c616d8e40fb5a422d63597d87380122c9a8281d",
       "tools": [
         "bash",
         "git",
@@ -1041,10 +1045,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_capability_evidence_ledger_contract.sh",
-      "executionIdentitySha256": "a1b956b22361900acc55dcbfaf77db5161e56776ea1fdf63c5ee87f4fb095067",
+      "executionIdentitySha256": "4ae28c39a20e99cf1d48d9a034ec3f78b52f6d8b8030b70d85453423394e74ce",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1292,6 +1296,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -1606,6 +1613,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -1823,7 +1831,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "2ffe9b3597ba4e45306ac1aee1ba26baabe2a73dc2a76bea260e1ec9300b7fde",
+      "sourceSha256": "43d491e9838eac65a81856960b0f292f85b4c869d8f2253ec91fc2c067ea6e14",
       "tools": [
         "bash",
         "git",
@@ -2075,7 +2083,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2323,6 +2331,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -2637,6 +2648,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -3340,7 +3352,7 @@
       "executionIdentitySha256": "ff924202b8a8dde9faea2b0b2e927ee4a6fa81e42a60176174fe3f7788b47175",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "5abf426c0b05b2eb269917f7fb729fc1f77b401ab1e2f48035d55b131e47e466",
+      "inputIdentitySha256": "abce1aa89af4ea51182933af0783a633701c02b6f912f629be1502fa7003b28f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3358,6 +3370,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
@@ -3609,7 +3622,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3857,6 +3870,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -4171,6 +4187,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -4985,7 +5002,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "f70a34a46ecd0d46f6be1a3eb04fb0e4a32672800e6b519c68617f664cdb00ad",
+      "inputIdentitySha256": "84b4f796b5b6e7db8cbb1d25aac2501460317dbcae467a60072994e9f737f83d",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5797,7 +5814,7 @@
       "executionIdentitySha256": "f527e7ad04cab2c4e4f4a5e317e2d183b1368fedf2ccc84a03f6815721e0df25",
       "expectedDurationSeconds": 15,
       "id": "gate/genesiscode-authoring-skill",
-      "inputIdentitySha256": "b7ab1f7de60a719aceeaac8b3545bb2ab85c40aeb9852a24c20e77bc61380911",
+      "inputIdentitySha256": "bd71d3709684173639738a425c44dda2337f0cf6d7cb6d83f6f8bc7197d03416",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -6312,7 +6329,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6560,6 +6577,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -6874,6 +6894,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -7261,7 +7282,7 @@
       "executionIdentitySha256": "abdc70b5c30c694e08950d14f7bf6396a884a4b871ffe9dc6f4e7be505ac68c4",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7509,6 +7530,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -7823,6 +7847,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -8543,7 +8568,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8791,6 +8816,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -9105,6 +9133,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -9576,7 +9605,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "480678e8f135a34530765d516a45b3365e96b5576597b3b605770c7a3d004ba1",
+      "inputIdentitySha256": "640d73e3d54da55a01074225885e438ca03e4020c3a4e72230d029b6e63b53f4",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -11746,7 +11775,7 @@
       "executionIdentitySha256": "90e216718daf9f07073da4755f2613ab35bdfa08c80fee4019f3416c091421a3",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11994,6 +12023,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -12308,6 +12340,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -12655,7 +12688,7 @@
       "executionIdentitySha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "1d54c28bdf59a147f73af5cb62502bd1dc346a432f161f0fbef91366fd1ff5ad",
+      "inputIdentitySha256": "d8efa75bca74b6c3170d9a2522ff60e426145cd028564f70d5a5772c7ec264ef",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12903,6 +12936,9 @@
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
@@ -13217,6 +13253,7 @@
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_repair_utility.py",
           "scripts/lib/gc_repair_utility_runner.py",
           "scripts/lib/gc_task_benchmarks.py",
@@ -13643,7 +13680,7 @@
       "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "25d573f8c9f4de6f22e1b4be72ce0e9b28f87703ca925faba13233f1f9ec1221",
+      "inputIdentitySha256": "e457e8d9c592f351c47d489e1154ae9dd18896ffc02724dc9b8b3793ca2ab20e",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14245,7 +14282,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "f08ae6144136577a9f3747f22612c1ef08a1891466c66f458687e13bce3a0377",
+      "inputIdentitySha256": "2c6b1e2aea15c02d3f10b60a742738e6bed9e2a8225fb39d97252d3e98a6b5b7",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -14302,7 +14339,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "9b09dbb76579022e66e86dc69e6fd50e9c2fc8260cc1abf1d3d32a7bf564b55c",
+      "inputIdentitySha256": "d34977ff4cd9d5540b43c168937219c05728b16388ca9095aac73ef129f6f782",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -14393,7 +14430,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "82a8168955d15d8fe66f2b476104dd26cf36c02bd785a05904e0681cf80d95a4"
+        "sha256": "40933cb54c7bbf25c22eaa0788842c3d8296ceb865bb1988e8db9490e33f6bc0"
       },
       {
         "path": "genesis.prerequisites.json",

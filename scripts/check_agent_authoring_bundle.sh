@@ -10,6 +10,12 @@ cd "$ROOT_DIR"
 python3 scripts/lib/gc_agent_corpus.py --check --self-test
 python3 scripts/lib/gc_canonical_examples.py --check --self-test
 python3 scripts/lib/gc_task_benchmarks.py --check --self-test
+python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
+
+if git ls-files '.genesis/private/agent-evaluation/**' | grep -q .; then
+  echo "agent-authoring-bundle: private held-out custody material is tracked" >&2
+  exit 1
+fi
 
 BUNDLE="docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md"
 AGENT_INDEX_SPEC="docs/spec/AGENT_INDEX_v0.1.md"
@@ -67,6 +73,9 @@ required_included = [
     "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
     "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
     "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+    "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+    "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+    "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
     "docs/spec/GC_AGENT_PROFILE_v0.3.json",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
@@ -173,6 +182,12 @@ if benchmark_rel not in agent_index_spec or benchmark_rel not in agent_index_cmd
 if benchmark_rel not in task_benchmark_test or "cargo_bin_cmd!(\"genesis\")" not in task_benchmark_test:
     raise SystemExit(
         "agent-authoring-bundle: task benchmark needs a shipped genesis integration test"
+    )
+
+held_out_rel = "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json"
+if held_out_rel not in agent_index_spec or held_out_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index must expose held-out commitments"
     )
 
 print(
