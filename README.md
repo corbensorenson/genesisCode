@@ -19,6 +19,7 @@ roots.
 Render and validate the complete site locally with:
 
 ```sh
+# genesis-doc-skip: documentation maintainer workflow; Quarto and Playwright are installed by docs-site CI
 python3 scripts/render_quarto_reference.py --check
 rm -rf _site
 quarto render
