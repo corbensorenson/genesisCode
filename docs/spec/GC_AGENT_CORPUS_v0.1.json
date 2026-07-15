@@ -1,5 +1,5 @@
 {
-  "contentIdentitySha256": "aa4e494b780a5756fb1ec24763f46b4be9693c9a57affa5fc560e6ab7c6e0660",
+  "contentIdentitySha256": "eefcec474292812f7af66c8479aa5dde0289ea582419d75c5cce9ba27bc5075a",
   "corpusId": "GC-AGENT-CORPUS-v0.1",
   "entries": [
     {
@@ -994,7 +994,7 @@
         {
           "path": "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "00f28d656fa957568db1eed721f379ba80936a615afc1b2b7645d9dae1216ac4",
+          "sha256": "d7104fb62525c570590794d0e4e72dc1dd386fc050bb0877770ac5a974d645c2",
           "spdx": "Apache-2.0"
         },
         {
@@ -1102,7 +1102,7 @@
         {
           "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "0e8536653fff141495b4ee801c54556c4bab0b9716c30b3647874b46799e69f1",
+          "sha256": "60263fc2ec6316d3ba4ecdc312cadfa73561fc07351088e361b1cee4f8aba622",
           "spdx": "Apache-2.0"
         },
         {
@@ -1168,7 +1168,7 @@
         {
           "path": "scripts/lib/genesisbench_protocol.py",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "65e92ac2eea3c11804d84da7bc07649015eeb627c091a6df89c5d55319a29543",
+          "sha256": "599ef3f4aa3e36c9685b6ec6b461e0e0a0c4900dbbe798143ac8e139cf886c8c",
           "spdx": "Apache-2.0"
         },
         {
@@ -1209,7 +1209,7 @@
         "identity": "genesisbench-protocol-v0.1",
         "kind": "deterministic-generator",
         "path": "scripts/lib/genesisbench_protocol.py",
-        "sha256": "65e92ac2eea3c11804d84da7bc07649015eeb627c091a6df89c5d55319a29543"
+        "sha256": "599ef3f4aa3e36c9685b6ec6b461e0e0a0c4900dbbe798143ac8e139cf886c8c"
       },
       "id": "genesisbench-protocol",
       "oracleExposure": "public",

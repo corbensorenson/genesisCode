@@ -386,7 +386,7 @@
       "bytes": 36124,
       "id": "genesisbench-verifier",
       "path": "scripts/lib/genesisbench_protocol.py",
-      "sha256": "65e92ac2eea3c11804d84da7bc07649015eeb627c091a6df89c5d55319a29543"
+      "sha256": "599ef3f4aa3e36c9685b6ec6b461e0e0a0c4900dbbe798143ac8e139cf886c8c"
     },
     {
       "bytes": 78248,
@@ -464,7 +464,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "b57cf5aa213608b94b0fd4ced35d8abaf7300e3a1970349044b7d7674e77079b",
+  "contentIdentitySha256": "ac7655f807a76aef57e12e1d1ca6cc1de51410a4f0da9dc4bc6607763a9396b2",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
@@ -720,9 +720,9 @@
   },
   "sourceSnapshot": {
     "artifactCount": 1765,
-    "bytes": 17022003,
-    "commitSha1": "11f8b3c3ebf297bfe279ea3abe1f3c624c3576f7",
-    "committedAt": "2026-07-15T18:09:12-05:00",
+    "bytes": 17022229,
+    "commitSha1": "2c681f91d6284d01c9a9d6b01ba684298a824a4c",
+    "committedAt": "2026-07-15T18:32:35-05:00",
     "completeTree": true,
     "components": [
       {
@@ -771,12 +771,12 @@
       },
       {
         "artifactCount": 293,
-        "bytes": 3996206,
+        "bytes": 3996332,
         "excludePrefixes": [
           "docs/program/held-out-disclosures/"
         ],
         "id": "documentation",
-        "identitySha256": "7621729d1a1aabee20fa94342701ae5cdbbebad9c5f4659e00e66a2ed809212e",
+        "identitySha256": "027d7569a8c560f855f2c7f8291687c9711abc8d0a5694a048faadd05a61253d",
         "includeExact": [
           "README.md",
           "llms.txt"
@@ -808,10 +808,10 @@
       }
     ],
     "manifestAlgorithm": "sha256-canonical-json-path-mode-type-bytes-content-sha256-v0.1",
-    "manifestIdentitySha256": "6d616fb4ad8992eb145580e80d892050910d832f91fef92730e5ea2f9cb7eb70",
+    "manifestIdentitySha256": "27abe9a8c2caebda197ff44879e753494a08aee7d6a82fdb751613afff9980ce",
     "objectFormat": "git-sha1-plus-complete-content-sha256-manifest",
     "repositoryUrl": "https://github.com/corbensorenson/genesisCode.git",
-    "treeSha1": "3d71e5c63703fc26180bbbdeaba9966de49607e7"
+    "treeSha1": "18fa0b2818cc8519c618fb57b225bfc7a3a5d6e0"
   },
   "status": "active",
   "taskVisibilityPolicy": {
