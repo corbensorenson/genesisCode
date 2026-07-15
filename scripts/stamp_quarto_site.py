@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -14,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "_site"
 OUTPUT = SITE / "build-metadata.json"
 FORBIDDEN_DIRECTORIES = {".genesis", ".quarto", ".tmp", "__pycache__", "node_modules", "target"}
+SITE_URL = "https://corbensorenson.github.io/genesisCode/"
 
 
 def fail(message: str) -> None:
@@ -57,6 +59,33 @@ def git(*args: str) -> str:
     return result.stdout.strip()
 
 
+def stamp_canonical_urls() -> None:
+    canonical_re = re.compile(
+        r'<link\b(?=[^>]*\brel=["\']canonical["\'])[^>]*>', re.IGNORECASE,
+    )
+    skip_link = '<a class="gc-skip-link" href="#quarto-document-content">Skip to main content</a>'
+    body_re = re.compile(r"(<body\b[^>]*>)", re.IGNORECASE)
+    for page in sorted(SITE.rglob("*.html")):
+        relative = page.relative_to(SITE).as_posix()
+        canonical = SITE_URL if relative == "index.html" else SITE_URL + relative
+        tag = f'<link rel="canonical" href="{canonical}">'
+        text = page.read_text(encoding="utf-8")
+        if canonical_re.search(text):
+            updated = canonical_re.sub(tag, text, count=1)
+        elif "</head>" in text:
+            updated = text.replace("</head>", f"{tag}\n</head>", 1)
+        else:
+            fail(f"rendered page has no head element: {relative}")
+        if updated.count(skip_link) != 1:
+            fail(f"rendered page must contain exactly one skip link: {relative}")
+        updated = updated.replace(skip_link, "", 1)
+        if not body_re.search(updated):
+            fail(f"rendered page has no body element: {relative}")
+        updated = body_re.sub(rf"\1\n{skip_link}", updated, count=1)
+        if updated != text:
+            page.write_text(updated, encoding="utf-8")
+
+
 if not SITE.is_dir():
     fail("missing _site; run quarto render")
 
@@ -77,6 +106,8 @@ for garbage in SITE.rglob("*"):
     if garbage.is_file() and (garbage.name == ".DS_Store" or garbage.suffix == ".pyc"):
         garbage.unlink()
 
+stamp_canonical_urls()
+
 reference_path = SITE / "reference/generated/reference-index.json"
 if not reference_path.is_file():
     fail("missing rendered reference index")
@@ -85,7 +116,7 @@ files, total_bytes, artifact_sha256 = artifact_summary()
 
 metadata = {
     "schemaVersion": 1,
-    "site": "https://corbensorenson.github.io/genesisCode/",
+    "site": SITE_URL,
     "source": {"commit": commit, "treeState": tree_state},
     "referenceIndex": {
         "path": "reference/generated/reference-index.json",

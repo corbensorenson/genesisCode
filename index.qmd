@@ -1,5 +1,6 @@
 ---
 title: "GenesisCode"
+description: "Learn, build, and verify software with the deterministic, AI-first GenesisCode language."
 body-classes: gc-home
 page-layout: full
 toc: false
@@ -13,9 +14,45 @@ toc: false
 <div class="lede">GenesisCode is a deterministic, self-hosting programming system designed for software written, reviewed, and iterated by AI agents. This site is the learning path, exhaustive reference, and direct window into every normative authority.</div>
 
 <div class="hero-actions"><a href="learn/quickstart.html">Run your first program</a><a href="reference/index.html">Open the full reference</a><a href="docs/AGENT_ONBOARDING_v0.1.html">Load agent context</a></div>
+
+<div class="hero-proof"><span>v0.2 pre-1.0</span><span>deny-by-default effects</span><span>commit-stamped docs</span></div>
 :::
 
 {{< include reference/generated/home-stats.mdinc >}}
+
+## Start in fifteen minutes
+
+::: {.start-grid}
+::: {.start-copy}
+The shortest honest path is build, run one pure module, then inspect its canonical result. Nothing in this first program receives ambient filesystem, network, process, clock, or model access.
+
+1. Verify the pinned toolchain.
+2. Build the production CLI.
+3. Evaluate through the selfhost engine.
+4. Continue into effects only when the pure boundary is clear.
+
+[Follow the verified quickstart](learn/quickstart.qmd)
+:::
+
+::: {.code-stage}
+```bash
+cargo build -p gc_cli --locked
+./target/debug/genesis eval hello.gc --engine selfhost
+```
+
+```lisp
+(def greet
+  (fn (name)
+    (prim str/concat "hello, " name)))
+
+(greet "agent")
+```
+
+```text
+"hello, agent"
+```
+:::
+:::
 
 ## Choose your path
 
@@ -46,6 +83,21 @@ Search every symbol, host operation, diagnostic, CLI surface, format, example, s
 :::
 :::
 
+## One execution model, visible end to end
+
+```{mermaid}
+flowchart LR
+  A["Agent or human"] --> S["Source + package intent"]
+  S --> C["Canonical CoreForm"]
+  C --> K["Pure Gλ kernel"]
+  K -->|"sealed EFFECT"| R["Deny-by-default runner"]
+  R --> H["Explicit host operation"]
+  H --> L["Deterministic log + evidence"]
+  L -->|"replay / verify"| A
+```
+
+The same identities connect source, policy, diagnostics, logs, replay, and acceptance evidence. An agent can retrieve a compact task card first, then expand only the exact symbol or failure record it needs.
+
 ## What makes it different
 
 ::: {.truth-box}
@@ -60,8 +112,32 @@ Search every symbol, host operation, diagnostic, CLI surface, format, example, s
 | **Toolchain** | Format, typecheck, test, patch, package, optimize, build | Selfhost-first and evidence-gated |
 | **Agent layer** | Compact cards, exact lookup, plans, safe repair | Machine-readable and bounded |
 
+::: {.principle-grid}
+::: {.principle-card data-mark="01"}
+### No ambient authority
+Host access is an explicit request checked against a capability policy, not a library call hidden inside evaluation.
+:::
+::: {.principle-card data-mark="02"}
+### Replayable decisions
+Effect logs retain the facts needed to reject policy, schedule, input, or result drift during replay.
+:::
+::: {.principle-card data-mark="03"}
+### Agent-sized retrieval
+Core cards, task cards, symbol indexes, stable diagnostics, and JSON schemas prevent whole-manual context flooding.
+:::
+:::
+
+## Know what is ready
+
+GenesisCode is intentionally labeled **pre-1.0**. Capability maturity, compatibility, and evidence are published rather than implied. Use the [feature matrix](feature_matrix.md) to distinguish implemented, experimental, partial, and planned surfaces; use the [roadmap](ROADMAP.md) for work that is not yet complete.
+
+::: {.status-band}
+<strong>Use now</strong><span>Pure evaluation, canonical forms, explicit effects, capability policy, deterministic logs and replay, packages, structured diagnostics, and bounded agent workflows.</span>
+<strong>Evaluate carefully</strong><span>Selfhost closure, performance tiers, broad platform targets, registry GA, flagship applications, and the remaining v1 guarantees.</span>
+:::
+
 ## Documentation is part of the product
 
 This site does not replace the repository specifications. Curated pages teach; generated references enumerate; canonical Markdown and JSON remain authoritative. Every page links back to source, and CI rejects stale generated catalogs or a broken render.
 
-[Read the documentation topology](docs/spec/DOC_TOPOLOGY_v0.1.md) · [Inspect compatibility](feature_matrix.md) · [Follow the roadmap](ROADMAP.md)
+[Learn how to use this site](learn/documentation-map.qmd) · [Read the documentation topology](docs/spec/DOC_TOPOLOGY_v0.1.md) · [Inspect compatibility](feature_matrix.md) · [Follow the roadmap](ROADMAP.md)

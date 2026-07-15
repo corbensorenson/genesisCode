@@ -15,13 +15,16 @@ from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "_site"
+SITE_URL = "https://corbensorenson.github.io/genesisCode/"
 FORBIDDEN_DIRECTORIES = {".genesis", ".quarto", ".tmp", "__pycache__", "node_modules", "target"}
 REQUIRED = [
-    ".nojekyll", "404.html", "index.html", "learn/quickstart.html", "learn/agent-loop.html",
+    ".nojekyll", "404.html", "index.html", "learn/documentation-map.html",
+    "learn/quickstart.html", "learn/agent-loop.html",
     "guides/agent-authoring.html", "reference/index.html", "reference/symbols.html",
     "reference/capabilities.html", "reference/diagnostics.html", "reference/examples.html",
     "reference/source-catalog.html", "llms.txt", "robots.txt", "sitemap.xml",
     "build-metadata.json", "reference/generated/reference-index.json",
+    "site_assets/genesis-social-card.png",
 ]
 
 
@@ -135,6 +138,11 @@ for page in html_files:
     ]
     if any(needle not in text for needle in required_structure):
         fail(f"missing title/main/lang/skip-link structure: {page.relative_to(SITE)}")
+    relative = page.relative_to(SITE).as_posix()
+    canonical_url = SITE_URL if relative == "index.html" else SITE_URL + relative
+    canonical_tag = f'<link rel="canonical" href="{canonical_url}">'
+    if text.count(canonical_tag) != 1:
+        fail(f"missing or duplicate canonical URL: {relative}")
     for raw in href_re.findall(text):
         href = unescape(raw)
         parsed = urlsplit(href)
@@ -180,9 +188,8 @@ if missing_fragments:
 sitemap = ElementTree.parse(SITE / "sitemap.xml")
 namespace = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 sitemap_urls = {element.text for element in sitemap.findall(".//sm:loc", namespace)}
-site_url = "https://corbensorenson.github.io/genesisCode/"
 expected_sitemap_urls = {
-    site_url + page.relative_to(SITE).as_posix()
+    SITE_URL + page.relative_to(SITE).as_posix()
     for page in html_files if page.name != "404.html"
 }
 missing_sitemap_urls = sorted(expected_sitemap_urls - sitemap_urls)
@@ -190,13 +197,14 @@ if missing_sitemap_urls:
     fail(f"sitemap omits {len(missing_sitemap_urls)} rendered pages: {missing_sitemap_urls[0]}")
 
 robots = (SITE / "robots.txt").read_text(encoding="utf-8")
-if f"Sitemap: {site_url}sitemap.xml" not in robots:
+if f"Sitemap: {SITE_URL}sitemap.xml" not in robots:
     fail("robots.txt does not advertise the canonical sitemap")
 
 home = (SITE / "index.html").read_text(encoding="utf-8")
 for needle in [
     "A language agents can reason about", "frozen symbols", "host operations",
-    "Documentation is part of the product", 'property="og:title"', 'name="twitter:card"',
+    "Start in fifteen minutes", "Know what is ready", "Documentation is part of the product",
+    'property="og:title"', 'name="twitter:card"', "genesis-social-card.png",
 ]:
     if needle not in home:
         fail(f"home page missing required content: {needle!r}")

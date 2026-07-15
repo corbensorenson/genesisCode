@@ -35,10 +35,12 @@ Owner: Assurance + release maintainers.
 - Public site: `https://corbensorenson.github.io/genesisCode/`
 - Site manifest and navigation: `_quarto.yml`
 - Curated learning sources: `index.qmd`, `learn/`, and `guides/`
+- Reader and agent routing map: `learn/documentation-map.qmd`
 - Generated reference sources: `reference/` and `llms.txt`
 - Deterministic generator: `scripts/render_quarto_reference.py`
 - Generated-reference freshness gate: `scripts/check_doc_topology_drift.sh`
 - Rendered completeness, link, fragment, accessibility, sitemap, and provenance validator: `scripts/check_quarto_site.py`
+- Real-browser responsive, keyboard, reduced-motion, search, and console validator: `scripts/check_quarto_browser.mjs`
 - Commit-bound artifact stamper: `scripts/stamp_quarto_site.py`
 - Post-deploy public attestor: `scripts/check_quarto_deployment.py`
 - Pages workflow: `.github/workflows/docs-site.yml`

@@ -19,6 +19,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `CHANGELOG.md` - release notes, migration notes, and pre-1.0 compatibility record.
 - `README.md` - workspace build/test quickstart.
 - `learn/index.qmd` - ordered human and agent learning path rendered by Quarto.
+- `learn/documentation-map.qmd` - reader routing, authority order, agent retrieval spine, and publication pipeline.
 - `reference/index.qmd` - exhaustive generated-reference entrypoint.
 - `llms.txt` - bounded machine-readable site map for agent retrieval.
 - `build-metadata.json` - published commit, source-tree state, reference digest, and whole-site artifact identity.

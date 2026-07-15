@@ -1,0 +1,85 @@
+---
+title: "How to use the GenesisCode documentation"
+description: "A map of the human learning spine, agent retrieval spine, exhaustive indexes, and canonical authorities."
+---
+
+# Choose the smallest trustworthy path
+
+GenesisCode publishes one corpus through several views. The views are optimized for different jobs, but they do not have equal authority. Tutorials explain. Generated references enumerate. Specifications, schemas, policies, and executable checks define the contract.
+
+::: {.callout-important}
+## Authority rule
+When a curated explanation and a canonical source disagree, the canonical source wins. Treat the mismatch as a documentation defect and report it through the page's **Edit**, **Source**, or **Issue** action.
+:::
+
+## If you are learning the language
+
+Read the curated spine in dependency order:
+
+1. [Quickstart](quickstart.qmd) builds the pinned CLI and evaluates one pure module.
+2. [Language tour](language-tour.qmd) introduces data, functions, modules, contracts, and types.
+3. [Effects and replay](effects-replay.qmd) moves host interaction beyond the pure kernel.
+4. [Packages and testing](packages-testing.qmd) binds modules, policy, limits, obligations, and evidence.
+5. [Agent loop](agent-loop.qmd) explains bounded retrieval and safe automated repair.
+
+Use the task-oriented [guides](../guides/index.qmd) after the language model is clear. Use search or the [exhaustive reference](../reference/index.qmd) when you know the identity you need.
+
+## If you are an agent
+
+Do not load the complete site into context. Use the bounded retrieval spine:
+
+```text
+llms.txt
+  -> compact core card
+  -> exactly one task card
+  -> exact symbol or diagnostic lookup
+  -> canonical source anchor
+  -> executable validation
+```
+
+1. Start with [`llms.txt`](../llms.txt) or the [agent onboarding spine](../docs/AGENT_ONBOARDING_v0.1.md).
+2. Load [`GC_AGENT_CORE_CARD_v0.3`](../docs/spec/GC_AGENT_CORE_CARD_v0.3.md).
+3. Select exactly one [task card](../docs/spec/GC_AGENT_TASK_CARDS_v0.3.md).
+4. Resolve exact symbols and diagnostics through `genesis agent-index`.
+5. Expand into a canonical authority only when the compact record points there.
+6. Return validation commands, input identities, output hashes, diagnostics, and unresolved gaps.
+
+If no task card matches, fail closed. Retrieve the authoring bundle instead of inventing a workflow.
+
+## If you are verifying a claim
+
+Start from the claim surface and walk toward stronger evidence:
+
+| Question | First view | Contract authority |
+|---|---|---|
+| Is this feature usable? | [Feature matrix](../feature_matrix.md) | Capability evidence ledger and owning specification |
+| What does this symbol do? | [Symbol reference](../reference/symbols.qmd) | Frozen profile, source anchor, and conformance tests |
+| Why did a command fail? | [Diagnostic reference](../reference/diagnostics.qmd) | Diagnostic catalog, JSON schema, and producer tests |
+| Can this host operation run? | [Capability reference](../reference/capabilities.qmd) | Host ABI, capability policy, runner, and replay checks |
+| Is a release statement current? | [Changelog](../CHANGELOG.md) | Generated release notes and exact-revision CI evidence |
+| Is future work implemented? | [Roadmap](../ROADMAP.md) | Checked task state and cited acceptance evidence |
+
+## The publication pipeline
+
+```{mermaid}
+flowchart TD
+  A["Canonical Markdown, JSON, schemas, policies"] --> G["Deterministic reference generator"]
+  G --> C["Curated tutorials + exhaustive indexes"]
+  C --> Q["Quarto render"]
+  Q --> V["Offline completeness, links, metadata, accessibility"]
+  V --> B["Real-browser responsive and keyboard checks"]
+  B --> P["Commit-bound GitHub Pages artifact"]
+  P --> D["Post-deploy public attestation"]
+```
+
+The generated site records its source commit, source tree state, reference-index digest, and whole-artifact digest in `build-metadata.json`. Publication checks the live Pages deployment against that exact commit.
+
+## Site-wide navigation
+
+- **Navbar:** the four stable shelves: Learn, Guides, Reference, and Canonical specs.
+- **Sidebar:** the dependency-ordered curated spine and normative roots.
+- **Search:** symbols, operations, diagnostics, guide prose, and rendered authorities.
+- **Page actions:** edit, inspect source, or open an issue against the current page.
+- **Page footer:** jump to the canonical index, this map, the agent index, or the roadmap.
+
+The complete ownership and update contract is [Documentation Topology v0.1](../docs/spec/DOC_TOPOLOGY_v0.1.md).

@@ -28,6 +28,7 @@ def fetch(base_url: str, path: str, expected_status: int = 200) -> bytes:
 def attest(base_url: str, expected_commit: str) -> None:
     pages = {
         "index.html": "A language agents can reason about",
+        "learn/documentation-map.html": "Choose the smallest trustworthy path",
         "learn/quickstart.html": "From checkout to verified output",
         "reference/index.html": "Exhaustive reference",
         "llms.txt": "GenesisCode documentation index for language models",
@@ -37,6 +38,13 @@ def attest(base_url: str, expected_commit: str) -> None:
         body = fetch(base_url, path).decode("utf-8")
         if needle not in body:
             raise ValueError(f"{path} is missing {needle!r}")
+        canonical = base_url + ("" if path == "index.html" else path)
+        if f'<link rel="canonical" href="{canonical}">' not in body:
+            raise ValueError(f"{path} has no deployment-correct canonical URL")
+
+    social_card = fetch(base_url, "site_assets/genesis-social-card.png")
+    if not social_card.startswith(b"\x89PNG\r\n\x1a\n") or len(social_card) < 10_000:
+        raise ValueError("social card is missing or malformed")
 
     reference = json.loads(fetch(base_url, "reference/generated/reference-index.json"))
     if reference.get("counts", {}).get("symbols", 0) < 150:
@@ -48,6 +56,8 @@ def attest(base_url: str, expected_commit: str) -> None:
         raise ValueError(f"deployed commit {actual_commit!r} != expected {expected_commit!r}")
     if metadata.get("source", {}).get("treeState") != "clean":
         raise ValueError("deployed artifact was not produced from a clean source tree")
+    if metadata.get("artifact", {}).get("htmlFiles", 0) < 170:
+        raise ValueError("deployed documentation inventory is incomplete")
 
     missing = fetch(base_url, "__genesiscode_missing_page_attestation__", expected_status=404).decode("utf-8")
     if "This path is not part of the current language map" not in missing:

@@ -2,6 +2,7 @@
 $body-bg: #f5f0e6;
 $body-color: #17211d;
 $link-color: #006f5f;
+$link-hover-color: #004c42;
 $selection-bg: #ffcf5a;
 $selection-color: #17211d;
 $font-family-sans-serif: "Avenir Next", Avenir, "Segoe UI", sans-serif;
@@ -15,6 +16,7 @@ $code-bg: #ece4d4;
 $code-color: #173a31;
 $border-color: #cfc4b1;
 $border-radius: 0.25rem;
+$line-height-base: 1.62;
 
 /*-- scss:rules --*/
 :root {
@@ -24,5 +26,10 @@ $border-radius: 0.25rem;
   --gc-sun: #ffbd36;
   --gc-coral: #ef6b4a;
   --gc-paper: #f5f0e6;
+  --gc-paper-deep: #ede5d6;
+  --gc-cream: #fffaf0;
+  --gc-blue: #164e63;
   --gc-rule: #cfc4b1;
+  --gc-muted: #53605b;
+  --gc-shadow: 0 18px 50px rgba(17, 37, 31, .12);
 }

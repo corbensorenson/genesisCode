@@ -7,6 +7,7 @@
     "npm": ">=10.0.0 <11.0.0"
   },
   "scripts": {
+    "test:docs-browser": "node scripts/check_quarto_browser.mjs",
     "test:web-smoke": "node scripts/wasm_web_smoke.mjs",
     "test:webxr-conformance": "bash scripts/check_webxr_browser_conformance.sh"
   },

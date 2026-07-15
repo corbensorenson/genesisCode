@@ -23,6 +23,7 @@ python3 scripts/render_quarto_reference.py --check
 rm -rf _site
 quarto render
 python3 scripts/check_quarto_site.py
+npm run test:docs-browser
 ```
 
 The render writes `build-metadata.json` with the source commit, source-tree state,

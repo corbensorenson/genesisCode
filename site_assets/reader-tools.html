@@ -1,0 +1,38 @@
+<div class="gc-reading-progress" aria-hidden="true"><span></span></div>
+<button class="gc-to-top" type="button" aria-label="Back to top" hidden>Top</button>
+<script>
+(() => {
+  const root = document.documentElement;
+  const progress = document.querySelector(".gc-reading-progress span");
+  const toTop = document.querySelector(".gc-to-top");
+  const skipLink = document.querySelector(".gc-skip-link");
+  const main = document.querySelector("#quarto-document-content");
+  if (!progress || !toTop) return;
+
+  root.classList.add("gc-js");
+  const update = () => {
+    const available = root.scrollHeight - root.clientHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, root.scrollTop / available)) : 0;
+    progress.style.transform = `scaleX(${ratio})`;
+    toTop.hidden = root.scrollTop < root.clientHeight;
+  };
+
+  addEventListener("scroll", update, { passive: true });
+  addEventListener("resize", update, { passive: true });
+  if (skipLink && main) {
+    main.setAttribute("tabindex", "-1");
+    skipLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      main.focus({ preventScroll: true });
+      main.scrollIntoView({ block: "start" });
+      history.replaceState(null, "", "#quarto-document-content");
+    });
+  }
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  toTop.addEventListener("click", () => scrollTo({
+    top: 0,
+    behavior: reduceMotion.matches ? "auto" : "smooth",
+  }));
+  update();
+})();
+</script>

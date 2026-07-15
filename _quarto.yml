@@ -21,6 +21,7 @@ project:
   resources:
     - .nojekyll
     - llms.txt
+    - site_assets/genesis-social-card.png
     - reference/generated/reference-index.json
     - docs/**/*.json
     - docs/**/*.schema.json
@@ -46,6 +47,7 @@ website:
   favicon: site_assets/genesis-mark.svg
   open-graph: true
   twitter-card: true
+  image: site_assets/genesis-social-card.png
   page-navigation: true
   bread-crumbs: true
   reader-mode: true
@@ -87,6 +89,7 @@ website:
       - section: "Learn GenesisCode"
         href: learn/index.qmd
         contents:
+          - learn/documentation-map.qmd
           - learn/quickstart.qmd
           - learn/language-tour.qmd
           - learn/effects-replay.qmd
@@ -128,6 +131,8 @@ website:
     center:
       - text: Docs index
         href: docs/INDEX.md
+      - text: How to use these docs
+        href: learn/documentation-map.qmd
       - text: llms.txt
         href: llms.txt
       - text: Roadmap
@@ -144,6 +149,7 @@ format:
     css: site_assets/site.css
     include-in-header: site_assets/head.html
     include-before-body: site_assets/skip-link.html
+    include-after-body: site_assets/reader-tools.html
     toc: true
     toc-depth: 3
     toc-location: right
@@ -154,6 +160,7 @@ format:
     anchor-sections: true
     smooth-scroll: true
     link-external-newwindow: true
+    fig-responsive: true
     grid:
       sidebar-width: 285px
       body-width: 920px
