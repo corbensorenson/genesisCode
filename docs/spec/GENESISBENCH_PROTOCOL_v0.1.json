@@ -386,7 +386,7 @@
       "bytes": 36124,
       "id": "genesisbench-verifier",
       "path": "scripts/lib/genesisbench_protocol.py",
-      "sha256": "767e5130126f205ecc61a130d32b69d1070f00e3ec276c19165e5f65f947801e"
+      "sha256": "65e92ac2eea3c11804d84da7bc07649015eeb627c091a6df89c5d55319a29543"
     },
     {
       "bytes": 78248,
@@ -464,7 +464,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "c8554b7d7dda2bd39ca425ca312b4fb60b1db132e6119fded94a1d9eed3533d9",
+  "contentIdentitySha256": "b57cf5aa213608b94b0fd4ced35d8abaf7300e3a1970349044b7d7674e77079b",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
@@ -720,9 +720,9 @@
   },
   "sourceSnapshot": {
     "artifactCount": 1765,
-    "bytes": 17012413,
-    "commitSha1": "64ca0d7a6d053c8a602d93d11fe6522c3eb09249",
-    "committedAt": "2026-07-15T17:43:11-05:00",
+    "bytes": 17022003,
+    "commitSha1": "11f8b3c3ebf297bfe279ea3abe1f3c624c3576f7",
+    "committedAt": "2026-07-15T18:09:12-05:00",
     "completeTree": true,
     "components": [
       {
@@ -732,7 +732,7 @@
           "benchmarks/agent_tasks/v0.1/references/"
         ],
         "id": "benchmark",
-        "identitySha256": "d51a32a0ce5a88c66d6db883e61fd6dd79b586992f228812df192f1cdec4f857",
+        "identitySha256": "95ed4108efd7d09862dacabe3aad50eb92de35550cad692f7ff5aeddd44947e9",
         "includeExact": [
           "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
           "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
@@ -776,7 +776,7 @@
           "docs/program/held-out-disclosures/"
         ],
         "id": "documentation",
-        "identitySha256": "a2576c758c9d5643c40782ea96a57af50a89500d6e16078dfead59cbf1ef59bf",
+        "identitySha256": "7621729d1a1aabee20fa94342701ae5cdbbebad9c5f4659e00e66a2ed809212e",
         "includeExact": [
           "README.md",
           "llms.txt"
@@ -808,10 +808,10 @@
       }
     ],
     "manifestAlgorithm": "sha256-canonical-json-path-mode-type-bytes-content-sha256-v0.1",
-    "manifestIdentitySha256": "cea8412120a547ab5c9b505a3de077a2ac3490961bb209f01caa6577cc3ca40f",
+    "manifestIdentitySha256": "6d616fb4ad8992eb145580e80d892050910d832f91fef92730e5ea2f9cb7eb70",
     "objectFormat": "git-sha1-plus-complete-content-sha256-manifest",
     "repositoryUrl": "https://github.com/corbensorenson/genesisCode.git",
-    "treeSha1": "b5cf000bd1ce446e9182ea8227b79e38d9564256"
+    "treeSha1": "3d71e5c63703fc26180bbbdeaba9966de49607e7"
   },
   "status": "active",
   "taskVisibilityPolicy": {
