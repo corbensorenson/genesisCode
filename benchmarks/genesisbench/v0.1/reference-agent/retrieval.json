@@ -1,0 +1,34 @@
+{
+  "algorithm": "genesisbench-integer-lexical-retrieval-v0.1",
+  "candidateArtifacts": [
+    "docs/spec/CLI.md",
+    "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+    "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+    "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json"
+  ],
+  "completeTranscriptRequired": true,
+  "contentIdentitySha256": "7c51dac0513d3b1d45ff0dde13621f7ca78cf15a577a18b3a6d6503c821a5e3a",
+  "kind": "genesis/genesisbench-reference-retrieval-v0.1",
+  "limits": {
+    "maxArtifactBytes": 1048576,
+    "maxResults": 4,
+    "maxTotalBytes": 131072,
+    "maxUniqueQueryTokens": 256
+  },
+  "normalization": "ascii-lowercase-alnum-symbol-token-v0.1",
+  "promptMaySelectCandidates": false,
+  "ranking": {
+    "documentFrequencyPenalty": 1,
+    "exactSymbolWeight": 1000,
+    "pathTokenWeight": 100,
+    "termFrequencyWeight": 10
+  },
+  "tieBreak": [
+    "score-descending",
+    "path-ascending",
+    "sha256-ascending"
+  ],
+  "version": "0.1.0"
+}

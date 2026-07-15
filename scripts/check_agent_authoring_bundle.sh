@@ -14,6 +14,7 @@ python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
 python3 scripts/lib/gc_agent_scoring.py --check --self-test
 python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test
 python3 scripts/lib/genesisbench_protocol.py --check --self-test
+python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
 python3 scripts/lib/genesisbench_analysis.py --check --self-test
 protocol_report="$(mktemp)"
 trap 'rm -f "$protocol_report"' EXIT
@@ -110,6 +111,11 @@ required_included = [
     "docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json",
     "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
     "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
     "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
@@ -140,6 +146,10 @@ required_included = [
     "benchmarks/genesisbench/v0.1/README.md",
     "benchmarks/genesisbench/v0.1/contamination.fixture.json",
     "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+    "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+    "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+    "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+    "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
     "guides/genesisbench.qmd",
     "scripts/lib/gc_agent_scoring.py",
     "scripts/lib/gc_agent_scoring_contract.py",
@@ -150,6 +160,7 @@ required_included = [
     "scripts/lib/genesisbench_protocol_run.py",
     "scripts/lib/genesisbench_tracks.py",
     "scripts/lib/genesisbench_eligibility.py",
+    "scripts/lib/genesisbench_reference_agent.py",
     "scripts/lib/gc_held_out_evaluation.py",
     "scripts/lib/gc_capability_lease.py",
     "examples/agent_benchmark_reproducibility/run.json",
@@ -288,6 +299,17 @@ if protocol_rel not in agent_index_spec or protocol_rel not in agent_index_cmd:
     raise SystemExit(
         "agent-authoring-bundle: agent index must expose the GenesisBench profile"
     )
+
+reference_agent_paths = (
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+    "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+)
+for path in reference_agent_paths:
+    if path not in agent_index_spec or path not in agent_index_cmd:
+        raise SystemExit(
+            f"agent-authoring-bundle: agent index must expose fixed reference authority: {path}"
+        )
 
 analysis_paths = (
     "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",

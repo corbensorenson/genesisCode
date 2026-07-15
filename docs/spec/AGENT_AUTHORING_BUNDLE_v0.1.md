@@ -17,6 +17,11 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
 - `docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json`
+- `docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json`
+- `docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
 - `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
@@ -51,6 +56,10 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `benchmarks/genesisbench/v0.1/README.md`
 - `benchmarks/genesisbench/v0.1/contamination.fixture.json`
 - `benchmarks/genesisbench/v0.1/eligibility.fixture.json`
+- `benchmarks/genesisbench/v0.1/reference-agent/retrieval.json`
+- `benchmarks/genesisbench/v0.1/reference-agent/system.md`
+- `benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json`
+- `benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json`
 - `guides/genesisbench.qmd`
 - `scripts/lib/gc_agent_scoring.py`
 - `scripts/lib/gc_agent_scoring_contract.py`
@@ -61,6 +70,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `scripts/lib/genesisbench_protocol_run.py`
 - `scripts/lib/genesisbench_tracks.py`
 - `scripts/lib/genesisbench_eligibility.py`
+- `scripts/lib/genesisbench_reference_agent.py`
 - `scripts/lib/gc_held_out_evaluation.py`
 - `scripts/lib/gc_capability_lease.py`
 - `examples/agent_benchmark_reproducibility/run.json`
@@ -87,6 +97,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Score a candidate with `GC-AGENT-BENCHMARK-SCORING-v0.1`. Its closed 10,000-basis-point quality result covers semantics, obligations, effects, patch minimality, deterministic resource units, and policy scope. Wall time, API cost, energy, and provider queue time are model/run facts for `genesis/agent-benchmark-run-v0.1`; they never enter the quality score.
 - Record every benchmark invocation with `GC_AGENT_BENCHMARK_RUN_v0.1`: immutable model, weights, tokenizer, runtime, exact prompt/card/context hashes, integer decoding and retry controls, every attempt and candidate artifact, the canonical score, normalized host facts, and a complete inventory. Validate records read-only with `python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test`.
 - Apply `GenesisBench-v0.1` before comparing runs. Validate its frozen Git/SHA-256 snapshot and closed authorities with `python3 scripts/lib/genesisbench_protocol.py --check --self-test`; classify a run with `--run <path> --attestation <path> --json`. Public references are `declared-contaminated` and unranked, missing provenance is `unknown`, and only complete post-release precommitment and custody evidence can support `temporal-clean`. Never infer cleanliness from language newness or use judge preference in quality.
+- Use `genesisbench-reference-agent-v0.1` unchanged for Cold Acquisition. Its system prompt, typed assembly, integer-only retrieval, one-agent/no-provider-tool policy, semantic transaction loop, finite budgets, and complete trace contract are content-addressed. Compare its eight ablations only as predeclared within-lineage pairs across the same nine lineages; 72 condition cells are not 72 independent samples. Validate or compile a plan with `python3 scripts/lib/genesisbench_reference_agent.py --check --self-test` or `--plan --case <id> --ablation <id>`.
 - Declare exactly one content-addressed GenesisBench track. Use `cold-acquisition` only for an unadapted model under the fixed reference scaffold, `open-agent` for disclosed custom orchestration without claimed adaptation, `genesis-adapted` only with a public lineage-manifest identity, and `embedded-local` only with offline inference plus measured or hard-enforced combined model/runtime memory evidence. Never compare or aggregate across track, scaffold, profile, epoch, context/tool, attempt-policy, or hardware-class cohort keys.
 - Analyze results only through `GENESISBENCH_ANALYSIS_PLAN_v0.1` and `scripts/lib/genesisbench_analysis.py`. Use one primary condition per lineage, keep repeated-condition summaries clustered by lineage, publish solved/unsolved/invalid/abstained/missing denominators, Wilson uncertainty, paired exact effects, and Holm correction, and emit `indeterminate` rather than unsupported pairwise decimal ranks. Public conformance observations are always unranked and cannot trigger saturation.
 - A fully local benchmark model may run only through `genesis.agent-model-runner.v0.1` / `infer` on the pinned `host/plugin::command` bridge profile. Preserve its request, response, tool transcript, and `.gclog`; replay must not reinvoke the model. This benchmark integration does not preempt the future standard model API.

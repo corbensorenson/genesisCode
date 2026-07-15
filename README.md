@@ -78,6 +78,8 @@ scoring rules. Quality is determined by executable artifacts, never model-judge
 preference.
 
 - Active profile: `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
+- Fixed Cold Acquisition agent: `docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json`
+- Controlled ablations: eight predeclared conditions over the same nine lineages in `docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json`
 - Normative explanation and tutorial: `guides/genesisbench.qmd`
 - Contamination-attestation schema: `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
 - Public practice suite: nine independent lineages under 27 context conditions in `benchmarks/agent_tasks/v0.1/suite.json`
@@ -92,6 +94,7 @@ Validate the complete frozen profile and classify the conformance run:
 
 ```sh
 python3 scripts/lib/genesisbench_protocol.py --check --self-test
+python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
 python3 scripts/lib/genesisbench_analysis.py --check --self-test
 python3 scripts/lib/genesisbench_protocol.py --check \
   --run examples/agent_benchmark_reproducibility/run.json \

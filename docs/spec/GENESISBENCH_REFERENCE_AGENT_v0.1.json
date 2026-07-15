@@ -1,0 +1,294 @@
+{
+  "adapter": {
+    "contract": "genesisbench-reference-adapter-v0.1",
+    "hiddenRetriesAllowed": false,
+    "owner": "R1.4.l",
+    "providerToolsAllowed": false,
+    "requestMapping": "typed-lossless-no-authority-injection",
+    "responseMapping": "typed-lossless-no-semantic-rewrite",
+    "secretPolicy": "redact-values-record-presence-and-policy",
+    "semanticRewriteAllowed": false
+  },
+  "artifacts": [
+    {
+      "bytes": 3826,
+      "id": "agent-session-resources",
+      "path": "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
+      "role": "budget-contract",
+      "sha256": "f0158daa734506ed248df1cb34be2a7c0c3d655980724087c0f0979b078d7adf"
+    },
+    {
+      "bytes": 3243,
+      "id": "agent-transaction-schema",
+      "path": "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
+      "role": "transaction-contract",
+      "sha256": "07abf0b5118dcd5d5eef890d0fe37bbb84c5aed02fed78aaa40533617cce1edb"
+    },
+    {
+      "bytes": 19844,
+      "id": "benchmark-run-schema",
+      "path": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+      "role": "prompt-schema",
+      "sha256": "21908dfefecc0fed484d11a81adae889aaeb8e4641d17882bb4a78f9533ccc09"
+    },
+    {
+      "bytes": 3916,
+      "id": "gc-agent-core-card",
+      "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+      "role": "card",
+      "sha256": "133cc63595ae4f394f1b3a943337f4edac2181b4d806dba2410685fbee9e6e3f"
+    },
+    {
+      "bytes": 36175,
+      "id": "gc-agent-profile",
+      "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+      "role": "grammar",
+      "sha256": "3f83479d8b828c580a7a4f23e80255a6d51add19403095af5bd38a91fb52d369"
+    },
+    {
+      "bytes": 205567,
+      "id": "gc-agent-symbol-index",
+      "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+      "role": "profile",
+      "sha256": "dded030835aa10a09359ddd18b2bf8870e33fcb0526265c31f04e54c9fb9ae5a"
+    },
+    {
+      "bytes": 5886,
+      "id": "gc-agent-task-cards",
+      "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+      "role": "card",
+      "sha256": "d5d45cf5faf7367b20e4a140e2b3fd57821b850ff6d0c29a0860a1146bdc37d0"
+    },
+    {
+      "bytes": 333235,
+      "id": "gc-diagnostic-catalog",
+      "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+      "role": "diagnostics",
+      "sha256": "c1224cd0553a8f4e3fd79781d0176a041d86ac0dbcca72f63379af10726b1eda"
+    },
+    {
+      "bytes": 3618,
+      "id": "gc-diagnostic-repair-plan",
+      "path": "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
+      "role": "repair-contract",
+      "sha256": "30f034b294788c99691bdf2ddeff7afabbf9c9a4ab1cf7844f66eb544863d206"
+    },
+    {
+      "bytes": 20308,
+      "id": "mcp-catalog-source",
+      "path": "crates/gc_cli_driver/src/mcp/catalog.rs",
+      "role": "mcp-catalog",
+      "sha256": "5b010e5be4da7c69ca8fe867a5a5fa2aa4ee5c0240a0eea1488e0b5ec7b59fa8"
+    },
+    {
+      "bytes": 35196,
+      "id": "reference-agent-runtime",
+      "path": "scripts/lib/genesisbench_reference_agent.py",
+      "role": "retrieval-runtime",
+      "sha256": "74b8474a41824cc7fab35557ef83c11d0d73c9c9b8ad8f9092eaab835d1d1fff"
+    },
+    {
+      "bytes": 1032,
+      "id": "reference-retrieval-config",
+      "path": "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+      "role": "retrieval-config",
+      "sha256": "4ef01f285f6f8b968107f63988c79abad7096ce3c640269dcfea5e0d2704f628"
+    },
+    {
+      "bytes": 1181,
+      "id": "reference-system-prompt",
+      "path": "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+      "role": "prompt",
+      "sha256": "da637405bebc9bd518d2f0525b21a4e5d45dc883630cc1c1b35ffa18aed0af65"
+    },
+    {
+      "bytes": 2920,
+      "id": "scaffold-manifest-schema",
+      "path": "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
+      "role": "adapter-contract",
+      "sha256": "527c402107d7f72f309f451e581be1ec5a4dc81140b329d8e0490ccfb36c9c2e"
+    }
+  ],
+  "budgets": {
+    "cpuTimeMs": 300000,
+    "effects": 4096,
+    "heapBytes": 1073741824,
+    "maxContextBytes": 8388608,
+    "maxModelCalls": 2,
+    "maxOutputBytes": 1048576,
+    "maxRepairCalls": 1,
+    "maxRetrievalQueries": 1,
+    "maxToolCalls": 64,
+    "processes": 8,
+    "semanticSteps": 100000000,
+    "wallTimeMs": 600000,
+    "workspaceGrowthBytes": 268435456
+  },
+  "class": "fixed-reference",
+  "comparisonPolicy": {
+    "allowedRunVariable": "immutable-model-revision",
+    "fixedFacts": [
+      "adapter-contract",
+      "budgets",
+      "context-policy",
+      "diagnostics",
+      "grammar",
+      "orchestration",
+      "prompt-assembly",
+      "repair-policy",
+      "retrieval",
+      "system-prompt",
+      "tool-policy",
+      "transaction-policy"
+    ],
+    "modelSpecificPromptingAllowed": false,
+    "providerMutableFactsTreatment": "recorded-but-not-semantic-input",
+    "scaffoldChangePolicy": "new-profile-and-cohort-required"
+  },
+  "contentIdentitySha256": "6bd1d04056331fc541814f56bb0ea022a1d206f18aa637ef96758bc431c52f5d",
+  "grammar": {
+    "acceptanceAuthority": "production-parser-and-obligations",
+    "authorityArtifactId": "gc-agent-profile",
+    "id": "gc-agent-v0.3-coreform-grammar",
+    "semanticRewriteAllowed": false
+  },
+  "id": "genesisbench-reference-agent-v0.1",
+  "kind": "genesis/genesisbench-reference-agent-v0.1",
+  "loop": {
+    "diagnosticAuthority": "gc-diagnostic-catalog",
+    "phases": [
+      "assemble",
+      "retrieve",
+      "inspect",
+      "model-call",
+      "stage",
+      "verify",
+      "diagnose",
+      "repair",
+      "finalize"
+    ],
+    "repairAuthority": "gc-diagnostic-repair-plan",
+    "repairTrigger": "failed-deterministic-verification-with-safe-repair",
+    "stopConditions": [
+      "authority-violation",
+      "budget-exhausted",
+      "complete",
+      "integrity-failure",
+      "invalid-response",
+      "no-safe-repair",
+      "replay-mismatch"
+    ],
+    "stopPrecedence": [
+      "authority-violation",
+      "integrity-failure",
+      "replay-mismatch",
+      "budget-exhausted",
+      "invalid-response",
+      "no-safe-repair",
+      "complete"
+    ]
+  },
+  "orchestration": {
+    "agentCount": 1,
+    "planner": "deterministic-finite-state-v0.1",
+    "providerToolsAllowed": false,
+    "states": [
+      "abort",
+      "assemble",
+      "diagnose",
+      "finalize",
+      "inspect",
+      "model-call",
+      "repair",
+      "retrieve",
+      "stage",
+      "verify"
+    ],
+    "subagentsAllowed": false,
+    "terminalStates": [
+      "abort",
+      "finalize"
+    ]
+  },
+  "promptAssembly": {
+    "algorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
+    "completeCaptureRequired": true,
+    "domain": "genesis-reference-agent-prompt-v0.1\\u0000",
+    "kind": "genesis/reference-agent-prompt-assembly-v0.1",
+    "orderedRoles": [
+      "system-policy",
+      "agent-profile",
+      "task-card",
+      "context-pack-or-retrieval-transcript",
+      "task-prompt",
+      "task-inputs"
+    ],
+    "taskMaySelectAuthority": false,
+    "typedEnvelopeSchema": "genesis/reference-agent-request-v0.1"
+  },
+  "retrieval": {
+    "algorithm": "genesisbench-integer-lexical-retrieval-v0.1",
+    "configArtifactId": "reference-retrieval-config",
+    "integerOnly": true,
+    "networkAllowed": false,
+    "runtimeArtifactId": "reference-agent-runtime",
+    "transcriptRequired": true
+  },
+  "status": "frozen",
+  "tool": {
+    "ambientAuthorityAllowed": false,
+    "catalogArtifactId": "mcp-catalog-source",
+    "completeTranscriptRequired": true,
+    "interfaceId": "genesis/mcp-interface-v0.1",
+    "operations": [
+      "apply-patch",
+      "build",
+      "check",
+      "diff",
+      "explain",
+      "format",
+      "get-card",
+      "package",
+      "parse",
+      "replay",
+      "run",
+      "search-symbol",
+      "session-abort",
+      "session-apply",
+      "session-begin",
+      "session-stage",
+      "session-status",
+      "session-test",
+      "test",
+      "verify"
+    ],
+    "protocolVersion": "2025-11-25"
+  },
+  "tracePolicy": {
+    "allDecisionsRecorded": true,
+    "allDiagnosticsRecorded": true,
+    "allModelCallsRecorded": true,
+    "allOutcomesRecorded": true,
+    "allPatchesRecorded": true,
+    "allRetrievalsRecorded": true,
+    "allToolCallsRecorded": true,
+    "redactionRule": "typed-marker-preserves-field-and-content-hash",
+    "sequenceRule": "strictly-increasing-contiguous-events"
+  },
+  "transaction": {
+    "applyRequiresVerifiedSnapshot": true,
+    "directWritesAllowed": false,
+    "integrityFailurePolicy": "terminal-abort",
+    "mode": "content-addressed-semantic-session-v0.1",
+    "operations": [
+      "session-abort",
+      "session-apply",
+      "session-begin",
+      "session-stage",
+      "session-status",
+      "session-test"
+    ],
+    "textFallbackAllowed": false
+  },
+  "version": "0.1.0"
+}

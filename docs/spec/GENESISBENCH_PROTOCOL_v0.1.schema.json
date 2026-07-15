@@ -474,7 +474,7 @@
     "trackPolicy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "version", "crossTrackRankingAllowed", "comparisonRule", "cohortIdentityAlgorithm", "cohortKeys", "tracks", "hardwareClasses", "hardwareMembershipRule", "hardwareFootprintBasis", "hardwareEvidenceRequiredForRanking", "adaptationManifestSchemaAuthorityId", "hardwareEvidenceSchemaAuthorityId", "scaffoldManifestSchemaAuthorityId", "resourceCeilingsSharedAcrossTracks", "rawScaffoldedAdaptedAndLocalAggregatesMayMix"],
+      "required": ["kind", "version", "crossTrackRankingAllowed", "comparisonRule", "cohortIdentityAlgorithm", "cohortKeys", "tracks", "hardwareClasses", "hardwareMembershipRule", "hardwareFootprintBasis", "hardwareEvidenceRequiredForRanking", "adaptationManifestSchemaAuthorityId", "hardwareEvidenceSchemaAuthorityId", "scaffoldManifestSchemaAuthorityId", "fixedReferenceProfileAuthorityId", "fixedReferenceProfileSchemaAuthorityId", "fixedReferenceAblationAuthorityId", "fixedReferenceTraceSchemaAuthorityId", "resourceCeilingsSharedAcrossTracks", "rawScaffoldedAdaptedAndLocalAggregatesMayMix"],
       "properties": {
         "kind": {"const": "genesis/genesisbench-track-policy-v0.1"},
         "version": {"const": "0.1.0"},
@@ -490,6 +490,10 @@
         "adaptationManifestSchemaAuthorityId": {"const": "genesisbench-adaptation-manifest-schema"},
         "hardwareEvidenceSchemaAuthorityId": {"const": "genesisbench-hardware-evidence-schema"},
         "scaffoldManifestSchemaAuthorityId": {"const": "genesisbench-scaffold-manifest-schema"},
+        "fixedReferenceProfileAuthorityId": {"const": "genesisbench-reference-agent"},
+        "fixedReferenceProfileSchemaAuthorityId": {"const": "genesisbench-reference-agent-schema"},
+        "fixedReferenceAblationAuthorityId": {"const": "genesisbench-reference-agent-ablations"},
+        "fixedReferenceTraceSchemaAuthorityId": {"const": "genesisbench-reference-agent-trace-schema"},
         "resourceCeilingsSharedAcrossTracks": {"const": true},
         "rawScaffoldedAdaptedAndLocalAggregatesMayMix": {"const": false}
       }

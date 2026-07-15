@@ -1,0 +1,978 @@
+{
+  "ablations": [
+    {
+      "allowedTools": [
+        "session-abort",
+        "session-apply",
+        "session-begin",
+        "session-stage",
+        "session-status",
+        "session-test"
+      ],
+      "contentIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contrast": {
+        "baselineId": "one-attempt",
+        "dimension": "repair"
+      },
+      "features": {
+        "attempts": 2,
+        "context": "retrieval-seed",
+        "diagnostics": "structured-catalog-v0.1",
+        "editing": "semantic-transaction-v0.1",
+        "grammar": "gc-agent-v0.3-constraint",
+        "repairs": 1,
+        "retrieval": "integer-lexical-v0.1"
+      },
+      "id": "bounded-repair",
+      "ordinal": 8,
+      "purpose": "Full fixed agent with one deterministic, diagnostic-bound repair opportunity."
+    },
+    {
+      "allowedTools": [],
+      "contentIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contrast": {
+        "baselineId": null,
+        "dimension": "reference-control"
+      },
+      "features": {
+        "attempts": 1,
+        "context": "core-card-only",
+        "diagnostics": "terminal-code-only",
+        "editing": "artifact-response",
+        "grammar": "production-acceptance-only",
+        "repairs": 0,
+        "retrieval": "disabled"
+      },
+      "id": "core-card-only",
+      "ordinal": 1,
+      "purpose": "Minimal acquisition control exposing only the compact core language card."
+    },
+    {
+      "allowedTools": [],
+      "contentIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contrast": {
+        "baselineId": "retrieval",
+        "dimension": "diagnostics"
+      },
+      "features": {
+        "attempts": 1,
+        "context": "retrieval-seed",
+        "diagnostics": "structured-catalog-v0.1",
+        "editing": "artifact-response",
+        "grammar": "production-acceptance-only",
+        "repairs": 0,
+        "retrieval": "integer-lexical-v0.1"
+      },
+      "id": "diagnostics",
+      "ordinal": 4,
+      "purpose": "Retrieval control plus the structured diagnostic catalog and no other agent aid."
+    },
+    {
+      "allowedTools": [],
+      "contentIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contrast": {
+        "baselineId": "core-card-only",
+        "dimension": "context-breadth"
+      },
+      "features": {
+        "attempts": 1,
+        "context": "fixed-context",
+        "diagnostics": "terminal-code-only",
+        "editing": "artifact-response",
+        "grammar": "production-acceptance-only",
+        "repairs": 0,
+        "retrieval": "disabled"
+      },
+      "id": "fixed-context",
+      "ordinal": 2,
+      "purpose": "Deterministic full context pack without task-conditioned document retrieval."
+    },
+    {
+      "allowedTools": [],
+      "contentIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contrast": {
+        "baselineId": "retrieval",
+        "dimension": "grammar"
+      },
+      "features": {
+        "attempts": 1,
+        "context": "retrieval-seed",
+        "diagnostics": "terminal-code-only",
+        "editing": "artifact-response",
+        "grammar": "gc-agent-v0.3-constraint",
+        "repairs": 0,
+        "retrieval": "integer-lexical-v0.1"
+      },
+      "id": "grammar-constraint",
+      "ordinal": 6,
+      "purpose": "Retrieval control plus the generated GenesisCode grammar acceptance constraint."
+    },
+    {
+      "allowedTools": [
+        "session-abort",
+        "session-apply",
+        "session-begin",
+        "session-stage",
+        "session-status",
+        "session-test"
+      ],
+      "contentIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contrast": {
+        "baselineId": null,
+        "dimension": "reference-control"
+      },
+      "features": {
+        "attempts": 1,
+        "context": "retrieval-seed",
+        "diagnostics": "structured-catalog-v0.1",
+        "editing": "semantic-transaction-v0.1",
+        "grammar": "gc-agent-v0.3-constraint",
+        "repairs": 0,
+        "retrieval": "integer-lexical-v0.1"
+      },
+      "id": "one-attempt",
+      "ordinal": 7,
+      "purpose": "Full fixed agent with all aids enabled and exactly one model response attempt."
+    },
+    {
+      "allowedTools": [],
+      "contentIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contrast": {
+        "baselineId": "fixed-context",
+        "dimension": "retrieval"
+      },
+      "features": {
+        "attempts": 1,
+        "context": "retrieval-seed",
+        "diagnostics": "terminal-code-only",
+        "editing": "artifact-response",
+        "grammar": "production-acceptance-only",
+        "repairs": 0,
+        "retrieval": "integer-lexical-v0.1"
+      },
+      "id": "retrieval",
+      "ordinal": 3,
+      "purpose": "Fixed-context control replaced by deterministic task-conditioned integer retrieval."
+    },
+    {
+      "allowedTools": [
+        "session-abort",
+        "session-apply",
+        "session-begin",
+        "session-stage",
+        "session-status",
+        "session-test"
+      ],
+      "contentIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contrast": {
+        "baselineId": "retrieval",
+        "dimension": "editing"
+      },
+      "features": {
+        "attempts": 1,
+        "context": "retrieval-seed",
+        "diagnostics": "terminal-code-only",
+        "editing": "semantic-transaction-v0.1",
+        "grammar": "production-acceptance-only",
+        "repairs": 0,
+        "retrieval": "integer-lexical-v0.1"
+      },
+      "id": "semantic-patch",
+      "ordinal": 5,
+      "purpose": "Retrieval control plus content-addressed semantic transaction editing only."
+    }
+  ],
+  "analysis": {
+    "comparisonPolicy": "predeclared-within-lineage-paired-contrasts",
+    "conditionUnit": "conditionId",
+    "crossLineagePooling": "cluster-or-hierarchical-only",
+    "independentUnit": "lineageId",
+    "repeatedConditionsIndependent": false,
+    "requiredContrasts": [
+      "bounded-repair-vs-one-attempt",
+      "diagnostics-vs-retrieval",
+      "fixed-context-vs-core-card-only",
+      "grammar-constraint-vs-retrieval",
+      "retrieval-vs-fixed-context",
+      "semantic-patch-vs-retrieval"
+    ]
+  },
+  "conditions": [
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "61f30ccd4b0ae52a5d4ab95fcfca1208e53da21c7ccfc15797f6ebacfa57afc5",
+      "id": "condition-completion-001-bounded-repair",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "bca57f91672180a1a2c769f1d32723075e79c4a1f85e865b0e854e45bcc8dde0",
+      "id": "condition-completion-001-core-card-only",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "89cd6e4eac341a9b1adee34c84c02729e3eb4f9b111db3b7e3a90aca0a3daf4d",
+      "id": "condition-completion-001-diagnostics",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "bf5d85ad6efd54b6ee7e9cb7d8c3bf4775ac3b4565189e391f343d236f87b9e5",
+      "id": "condition-completion-001-fixed-context",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "5eb8ae1258b3654df768c778da8ab6c39a1d4ee376c54e12215dd6e4dbdf0187",
+      "id": "condition-completion-001-grammar-constraint",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "86e8663a476d4a84203b371a0b11c4870b6c64943d7d073d84ce992bfb04a9ff",
+      "id": "condition-completion-001-one-attempt",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "7f2f9a70e030bcb7577d6b0b6a62b4bd7938ca18fdb57103522ad9fd403902b2",
+      "id": "condition-completion-001-retrieval",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "a9f6f5eb3805c8484dafc0c1bb9993f212b758ab051fa013507d3d1f0743cd3c",
+      "id": "condition-completion-001-semantic-patch",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "bc4a3ac85df5adeba062ce954943688500e280049b2cfed79a953bf67f1f5907",
+      "id": "condition-deployment-001-bounded-repair",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "1038ff3f7ac6305bfb2e485cdc9b8460b3dc848a8044be8aaa062fd08019267e",
+      "id": "condition-deployment-001-core-card-only",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "d99a7fa5eeca575ed42c019788255768b988c67f7f90cfc389b90bfaaf88e1c7",
+      "id": "condition-deployment-001-diagnostics",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "5ce5a96a2ffb441eb016651ee60b17c99fcb0541a2ba06f36638ea66a16f4264",
+      "id": "condition-deployment-001-fixed-context",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "f0f6a980ff473367bacd89bc9564810aacb53ffce8808dba7077dfa949803ccc",
+      "id": "condition-deployment-001-grammar-constraint",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "b755f41790bbc96cc3d74235daac7fd1873fedeeadeeb309c54c617504499d2f",
+      "id": "condition-deployment-001-one-attempt",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "e7589d01ec859739ca797e128db9c605d022ba994e26f89d135daef05e456a77",
+      "id": "condition-deployment-001-retrieval",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "6313b4f6daf5621531d1332222099fbdee851aa5c9224990ae93c6c81c764d22",
+      "id": "condition-deployment-001-semantic-patch",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "0f681ecafb055e21f310931e9d89dc70f1a14d18189d6f04febd0e4fd43a6ad9",
+      "id": "condition-generation-001-bounded-repair",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "a64cfa305c818ddac1e35d63e54aad44979ab81bfafd1f6c0d0bc51f0b3369f9",
+      "id": "condition-generation-001-core-card-only",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "047c974be6f869a40d4d8f2a26277e906ae1de9ddaec17f7f9a921bcb5831901",
+      "id": "condition-generation-001-diagnostics",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "9dc98169890bf80cbc45072c1863d7f8999c8022dd68a302b91d1259497df87a",
+      "id": "condition-generation-001-fixed-context",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "de03aea90777e3666d0210cb8ce7513eb539a67ba1cf5858f54e04bdae9a6610",
+      "id": "condition-generation-001-grammar-constraint",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "d1fd4ade95f3da7224511bc6dae8624ebb5b0d1a1a6bab29301df5483b1958b2",
+      "id": "condition-generation-001-one-attempt",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "0ad67d25bdd20285c934c99c26cf45444de3da148e80e75433c70ba48f5a27aa",
+      "id": "condition-generation-001-retrieval",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "088b71ab92f0e7c48755aab8de372b250ade158c93f058d858b81b10282ee6ef",
+      "id": "condition-generation-001-semantic-patch",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "911db157343d5ecabcaf378ef44039b686a794646a1eaf4209a08097752695e4",
+      "id": "condition-package-migration-001-bounded-repair",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "3bd4ad84b520e15de8a740de11a08460a00ec9e6284ff0307b91a154c5b39854",
+      "id": "condition-package-migration-001-core-card-only",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "45d926d78605e69755d83be0d6a81712247f1400b772ddb1b70404a640024be4",
+      "id": "condition-package-migration-001-diagnostics",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "10f08cc4932681af3bc86c173d800fed1614052e4db17fa87d6adfa4cb306b6e",
+      "id": "condition-package-migration-001-fixed-context",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "09bab17cd81b44c3beb7296df26a3a3d72df277b94f1e20556322d707c470ebc",
+      "id": "condition-package-migration-001-grammar-constraint",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "ab8980291f03c5aa6ab4b5d964d1f76d2edaf938b1f2fb0289e71faff0e1214c",
+      "id": "condition-package-migration-001-one-attempt",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "7aeefe3e5c56c6a0d5050a5c24c35d160a8402c9d69713038dc00d7559922148",
+      "id": "condition-package-migration-001-retrieval",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "3048944b1191a49c0fb090d5bc046dcfcfaac5f1c265f99f4ff14c5da8719a32",
+      "id": "condition-package-migration-001-semantic-patch",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "d0dbd31e10d64f6e421107cd6abf597ede9ed7e24421090c53f515dea228953c",
+      "id": "condition-performance-repair-001-bounded-repair",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "3bd13c0bddddfd1820e7009a376d42565f8c1bb4e45cf81c639dc7dc56ad1c7c",
+      "id": "condition-performance-repair-001-core-card-only",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "02b0d096f83fb44f8e189eec983a1aaf07d632985fde5e8f72ae92fc36128d55",
+      "id": "condition-performance-repair-001-diagnostics",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "14140a762eb9334a4dc4335ff680c79f47e5404d048eccc320c2225a484c20c8",
+      "id": "condition-performance-repair-001-fixed-context",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "d2295dafb2509694dce99b0c96632cfddd4a0eaae85e632618e86179761a8ba8",
+      "id": "condition-performance-repair-001-grammar-constraint",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "9dc0d80e0c1398ed5d95e6e2607a2def67fbee9deef8d15cedad7432b77b60a4",
+      "id": "condition-performance-repair-001-one-attempt",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "b4ad562aedfe768281f6f55076f5d7931ea7bc278c6ad0571cb92816b1b2781f",
+      "id": "condition-performance-repair-001-retrieval",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "e0480ceba7ebab8185c47985ce495a3f91268c67773bab66cdf62cad8463c9e4",
+      "id": "condition-performance-repair-001-semantic-patch",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "6ae54af632f1d776d8b8a4d545f7881396a3097d8bcc78bdf03b91f96682f63a",
+      "id": "condition-policy-minimization-001-bounded-repair",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "ff8afb3e933687282ee6aa2363f9c5a6d49ed37e7cc17360aed4bb1956c53a03",
+      "id": "condition-policy-minimization-001-core-card-only",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "6f5a536c86f4395e408aa001eada2087b91b033e98693edbafdbed3844b89755",
+      "id": "condition-policy-minimization-001-diagnostics",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "9fcb9b5444f94e0c039495b6b2758de72894263c850f83a87c65fd5884f607e0",
+      "id": "condition-policy-minimization-001-fixed-context",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "e4d2122655a5146e42a891bd770b866e6e96f0f6063e175c81e5d112d216f067",
+      "id": "condition-policy-minimization-001-grammar-constraint",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "a0e794c60fdfd135704d9e47cc46a6d7bd7341fe049b01719823efc3cf88b97a",
+      "id": "condition-policy-minimization-001-one-attempt",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "ddbe5a2976411145b3d7a19b26d6691e6ba97d4afea12d57f9e94090fa87f45a",
+      "id": "condition-policy-minimization-001-retrieval",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "a803e3872a009463e16601db6900aa9f73c04dd5db9ea6b93b3b0608f236bc8d",
+      "id": "condition-policy-minimization-001-semantic-patch",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "fa50994e5d82a56c29858db4ae8ef178bb48bde11056931a2c1c2cd3fc78843c",
+      "id": "condition-refactor-001-bounded-repair",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "0b50853dbbc293e6424c5eaae428ed9202db904d7bea223b1b771052fd438972",
+      "id": "condition-refactor-001-core-card-only",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "2a221ad0447600ed61ff4fe703c5d6d089c16f607e20e686c2935a42e8cc2327",
+      "id": "condition-refactor-001-diagnostics",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "625b3fc2c1812b88b266178932ce0902780acb79743a044512355ce2051c8d09",
+      "id": "condition-refactor-001-fixed-context",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "cb11ef52289eb5445682536da29106aed29ad0a2eb7968b2d23cebaed8a647b8",
+      "id": "condition-refactor-001-grammar-constraint",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "7210a019a6b2403e88c7e5a2fa087d8b0ee1938f95597308edec6038e1d13d9f",
+      "id": "condition-refactor-001-one-attempt",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "b45ca30df6f892bc2d0d1250b1d21a063ba183769312a4f276c57ed5881c446a",
+      "id": "condition-refactor-001-retrieval",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "1f62459729f6206f80e562cc73d936a8754811a901eeebc242c1a5faa473d9b9",
+      "id": "condition-refactor-001-semantic-patch",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "025dd7689546a1c08515e926311c023f6223b73aceed269b66bd79a80c2f4031",
+      "id": "condition-repair-001-bounded-repair",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "2bf1e637c892bdffba8001590cd47b60269e6979367b97ab91c0c641675d16aa",
+      "id": "condition-repair-001-core-card-only",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "f47f6692ed0ed60c2a73c2e106bcb9e924f73eb46c1d324aaa5f3581657e729d",
+      "id": "condition-repair-001-diagnostics",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "e634a6c29b030588ac02321e5bf85ba4d48169e8a9d3b5bdfbf31dffedebcc61",
+      "id": "condition-repair-001-fixed-context",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "11adce99167ea4566b4a78d130800802cccbd7abdac3f1b82ddd8c8a56fa2d00",
+      "id": "condition-repair-001-grammar-constraint",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "e2953bfa82068dcbd0f9f8ffd9dee6ba47ca0690d0d4cf6d3f1d07533788cb4c",
+      "id": "condition-repair-001-one-attempt",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "2db9b5c71d9077d6a451214231d5daa1c0841b4052fce29624f444aaa73c0447",
+      "id": "condition-repair-001-retrieval",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "e78b5b6779c794fda7e7725ff9ad18120adaf874727239f61265fb4112131651",
+      "id": "condition-repair-001-semantic-patch",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "bounded-repair",
+      "ablationIdentitySha256": "8cf3bdaa691ccf29bf83e6016d3dd21cb2064b5b8be84e8c52a4afa8f7c46d9e",
+      "contentIdentitySha256": "4b05d71f7c39b57ea977a387736b67b6a46744c2dab7d2160b8bd29839ce68f1",
+      "id": "condition-replay-investigation-001-bounded-repair",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "core-card-only",
+      "ablationIdentitySha256": "e3a62167a35cc80e51b61249f4d6cd80e6b2b559b8cee784c3fa7e64b378308a",
+      "contentIdentitySha256": "2ef66ff6c5ee6b9fa6ed8f7b1c37f6f52ad8390c3c021db78b53142c3782faee",
+      "id": "condition-replay-investigation-001-core-card-only",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "diagnostics",
+      "ablationIdentitySha256": "f818a53de568310da607eeacb262d9319661684253b374936449974515d69af6",
+      "contentIdentitySha256": "3ebfa1dd5df60399e0ef88f3667f1200366dcce4e9a2d85a8fdfa39f16b067e6",
+      "id": "condition-replay-investigation-001-diagnostics",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "fixed-context",
+      "ablationIdentitySha256": "33d1b9134421a5deacde16aaafe18ca9f7b1e0097c054beb38b6281709557d2b",
+      "contentIdentitySha256": "7d9ace7f2061aca12c8ada36478badebe1a93a5fa83009f1861661e57b55e687",
+      "id": "condition-replay-investigation-001-fixed-context",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "grammar-constraint",
+      "ablationIdentitySha256": "e1addced3909379e3f076fe0769d746af07e647e0a4ba83c7c7f6ffe176813e6",
+      "contentIdentitySha256": "7212850475b8de653a3f0619b9bcbaf52fbfff8b81cf0a9297beb09960f04382",
+      "id": "condition-replay-investigation-001-grammar-constraint",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "one-attempt",
+      "ablationIdentitySha256": "e62356382bb2e4c1a9f85d8419dcdb040a24b21c0894a8e009e737698b35412f",
+      "contentIdentitySha256": "5b0e1bb491ce3c100d524658f670ff6dc896d04a81d2c0cf800a3a96f8475a57",
+      "id": "condition-replay-investigation-001-one-attempt",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "retrieval",
+      "ablationIdentitySha256": "0c9a0084e56ba83edabc914fff1ce609b5806ab30170b835e3499d2081365a37",
+      "contentIdentitySha256": "42aa2e72b270716e792c6a476039c88e942835def4224177b214b170c1e47ff7",
+      "id": "condition-replay-investigation-001-retrieval",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    },
+    {
+      "ablationId": "semantic-patch",
+      "ablationIdentitySha256": "ced0c185fc9d89431524754dd9c00285668fbb9eb342809af19732a39097e722",
+      "contentIdentitySha256": "e9860a506cbf04bd6a23eeb27b8fe4a7f4fa1f514800b70f804c10d3f958dba4",
+      "id": "condition-replay-investigation-001-semantic-patch",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "same-as-lineage",
+      "samplingUnit": "lineage-not-condition"
+    }
+  ],
+  "contentIdentitySha256": "b844f01479206bf86ac384da8d08dff03d0348f27db85f226de7eef395a8b40c",
+  "kind": "genesis/genesisbench-reference-agent-ablations-v0.1",
+  "lineages": [
+    {
+      "id": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "taskClass": "completion"
+    },
+    {
+      "id": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "taskClass": "deployment"
+    },
+    {
+      "id": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "taskClass": "generation"
+    },
+    {
+      "id": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "taskClass": "package-migration"
+    },
+    {
+      "id": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "taskClass": "performance-repair"
+    },
+    {
+      "id": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "taskClass": "policy-minimization"
+    },
+    {
+      "id": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "taskClass": "refactor"
+    },
+    {
+      "id": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "taskClass": "repair"
+    },
+    {
+      "id": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "taskClass": "replay-investigation"
+    }
+  ],
+  "profile": {
+    "contentIdentitySha256": "6bd1d04056331fc541814f56bb0ea022a1d206f18aa637ef96758bc431c52f5d",
+    "id": "genesisbench-reference-agent-v0.1",
+    "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+    "sha256": "aaa19d6a841ac57be00e29c01357b0d9bc702f08ac09f5956f639bc9f6a439c3"
+  },
+  "version": "0.1.0"
+}

@@ -35,6 +35,11 @@ from genesisbench_protocol_contract import (
 )
 from genesisbench_protocol_run import self_test as run_binding_self_test
 from genesisbench_protocol_run import validate_run_modes
+from genesisbench_reference_agent import (
+    render_all as render_reference_agent,
+    self_test as reference_agent_self_test,
+    validate_all as validate_reference_agent,
+)
 from genesisbench_tracks import (
     TRACK_POLICY, build_cohort, classify_track, cohort_id,
     self_test as track_self_test,
@@ -52,6 +57,9 @@ SCAFFOLD_SCHEMA = ROOT / "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.j
 ANALYSIS_PLAN_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json"
 OBSERVATIONS_SCHEMA = ROOT / "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json"
 ANALYSIS_REPORT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json"
+REFERENCE_AGENT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json"
+REFERENCE_ABLATIONS_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json"
+REFERENCE_TRACE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json"
 RUN_EXAMPLE = ROOT / "examples/agent_benchmark_reproducibility/run.json"
 ATTESTATION_FIXTURE = ROOT / "benchmarks/genesisbench/v0.1/contamination.fixture.json"
 TASK_BENCHMARK = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
@@ -674,6 +682,11 @@ def main() -> int:
     validate_schema(ANALYSIS_PLAN_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-analysis-plan-v0.1.json")
     validate_schema(OBSERVATIONS_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-observations-v0.1.json")
     validate_schema(ANALYSIS_REPORT_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-analysis-report-v0.1.json")
+    validate_schema(REFERENCE_AGENT_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-reference-agent-v0.1.json")
+    validate_schema(REFERENCE_ABLATIONS_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-reference-agent-ablations-v0.1.json")
+    validate_schema(REFERENCE_TRACE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-reference-agent-trace-v0.1.json")
+    reference_agent = render_reference_agent()
+    validate_reference_agent(reference_agent)
     if args.refresh_profile:
         require(args.run is None and args.attestation is None and not args.json and not args.self_test, "refresh accepts no check inputs")
         refresh_profile()
@@ -682,6 +695,7 @@ def main() -> int:
         return 0
     document = validate_profile(load_json(PROFILE))
     controls = self_test(document) if args.self_test else 0
+    controls += reference_agent_self_test(reference_agent) if args.self_test else 0
     if args.run is not None:
         report = evaluate_run(
             document,

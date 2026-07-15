@@ -1,0 +1,219 @@
+{
+  "budgets": {
+    "cpuTimeMs": 300000,
+    "effects": 4096,
+    "heapBytes": 1073741824,
+    "maxContextBytes": 8388608,
+    "maxModelCalls": 1,
+    "maxOutputBytes": 1048576,
+    "maxRepairCalls": 0,
+    "maxRetrievalQueries": 1,
+    "maxToolCalls": 64,
+    "processes": 8,
+    "semanticSteps": 100000000,
+    "wallTimeMs": 600000,
+    "workspaceGrowthBytes": 268435456
+  },
+  "caseId": "generation-small",
+  "conditionId": "condition-generation-001-retrieval",
+  "conditionIdentitySha256": "0ad67d25bdd20285c934c99c26cf45444de3da148e80e75433c70ba48f5a27aa",
+  "contentIdentitySha256": "8a3d9a4ecfaa6f65bf8ec060f4660e918aca65f72e60d17f1c822ff89a0761a9",
+  "context": {
+    "algorithm": "genesisbench-integer-lexical-retrieval-v0.1",
+    "configIdentitySha256": "7c51dac0513d3b1d45ff0dde13621f7ca78cf15a577a18b3a6d6503c821a5e3a",
+    "contentIdentitySha256": "c33a89eace27492aa8a0a260e5076d7a7ab0d9bbbb72035f28f70d5b397068c9",
+    "kind": "genesis/reference-agent-retrieval-transcript-v0.1",
+    "queryIdentitySha256": "c92d765f410f0cf9c6a4596e2bf0e75d8d8f914a051355789b95e9ec102c93ae",
+    "queryTokens": [
+      "42",
+      "a",
+      "an",
+      "as",
+      "capabilities",
+      "capability-free",
+      "create",
+      "do",
+      "effect",
+      "evaluates",
+      "exact",
+      "from",
+      "generate",
+      "genesiscode",
+      "integer",
+      "main.gc",
+      "not",
+      "or",
+      "program",
+      "pure",
+      "request",
+      "requirement",
+      "requirements.md",
+      "result",
+      "that",
+      "the",
+      "to",
+      "use",
+      "with"
+    ],
+    "results": [
+      {
+        "bytes": 36175,
+        "matchedTokens": [
+          "42",
+          "a",
+          "an",
+          "as",
+          "capabilities",
+          "effect",
+          "exact",
+          "from",
+          "integer",
+          "not",
+          "or",
+          "pure",
+          "result",
+          "that",
+          "the",
+          "to",
+          "use",
+          "with"
+        ],
+        "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+        "score": 1617,
+        "sha256": "3f83479d8b828c580a7a4f23e80255a6d51add19403095af5bd38a91fb52d369"
+      },
+      {
+        "bytes": 23838,
+        "matchedTokens": [
+          "a",
+          "an",
+          "as",
+          "capabilities",
+          "effect",
+          "from",
+          "generate",
+          "genesiscode",
+          "not",
+          "or",
+          "program",
+          "pure",
+          "request",
+          "requirement",
+          "that",
+          "the",
+          "to",
+          "use",
+          "with"
+        ],
+        "path": "docs/spec/CLI.md",
+        "score": 1242,
+        "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+      },
+      {
+        "bytes": 5886,
+        "matchedTokens": [
+          "a",
+          "an",
+          "as",
+          "capabilities",
+          "do",
+          "exact",
+          "from",
+          "not",
+          "or",
+          "that",
+          "the",
+          "to",
+          "use",
+          "with"
+        ],
+        "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+        "score": 282,
+        "sha256": "d5d45cf5faf7367b20e4a140e2b3fd57821b850ff6d0c29a0860a1146bdc37d0"
+      },
+      {
+        "bytes": 3916,
+        "matchedTokens": [
+          "42",
+          "do",
+          "effect",
+          "integer",
+          "not",
+          "or",
+          "pure",
+          "that",
+          "the",
+          "with"
+        ],
+        "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+        "score": 84,
+        "sha256": "133cc63595ae4f394f1b3a943337f4edac2181b4d806dba2410685fbee9e6e3f"
+      }
+    ],
+    "totalBytes": 69815
+  },
+  "features": {
+    "attempts": 1,
+    "context": "retrieval-seed",
+    "diagnostics": "terminal-code-only",
+    "editing": "artifact-response",
+    "grammar": "production-acceptance-only",
+    "repairs": 0,
+    "retrieval": "integer-lexical-v0.1"
+  },
+  "kind": "genesis/genesisbench-reference-agent-plan-v0.1",
+  "lineageId": "lineage-generation-001",
+  "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+  "oracleAccessed": false,
+  "profileIdentitySha256": "6bd1d04056331fc541814f56bb0ea022a1d206f18aa637ef96758bc431c52f5d",
+  "promptSegments": [
+    {
+      "identitySha256": "da637405bebc9bd518d2f0525b21a4e5d45dc883630cc1c1b35ffa18aed0af65",
+      "role": "system-policy"
+    },
+    {
+      "identitySha256": "6bd1d04056331fc541814f56bb0ea022a1d206f18aa637ef96758bc431c52f5d",
+      "role": "agent-profile"
+    },
+    {
+      "identitySha256": "d5d45cf5faf7367b20e4a140e2b3fd57821b850ff6d0c29a0860a1146bdc37d0",
+      "role": "task-card"
+    },
+    {
+      "identitySha256": "c33a89eace27492aa8a0a260e5076d7a7ab0d9bbbb72035f28f70d5b397068c9",
+      "role": "context-pack-or-retrieval-transcript"
+    },
+    {
+      "identitySha256": "0ef486a3ac0822f8848b5adb8ecd6df841dd818f2d1eb7ec3cef88f299a36f1e",
+      "role": "task-prompt"
+    },
+    {
+      "identitySha256": "16b5d0627e83f8fbd3f63d9119c29eea9b66cc14f8f91bba65c17d0dd2bb5c0a",
+      "role": "task-inputs"
+    }
+  ],
+  "task": {
+    "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+    "inputs": [
+      {
+        "bytes": 140,
+        "path": "requirements.md",
+        "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+      }
+    ],
+    "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42."
+  },
+  "toolAllowlist": [],
+  "version": "0.1.0",
+  "workflow": [
+    "assemble",
+    "retrieve",
+    "inspect",
+    "model-call",
+    "stage",
+    "verify",
+    "diagnose",
+    "repair",
+    "finalize"
+  ]
+}

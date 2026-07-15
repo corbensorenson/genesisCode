@@ -101,6 +101,11 @@ genesis --json agent-index --diagnostic <exact-code>
   - includes `genesisbench_protocol = "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"`
     as the active self-hostable benchmark profile binding the frozen repository/runtime/docs
     snapshot, context and tool authority, contamination evidence, and ranked eligibility.
+  - includes `genesisbench_reference_agent = "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json"`,
+    `genesisbench_reference_agent_ablations = "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json"`,
+    and `genesisbench_reference_agent_trace_schema = "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json"`
+    as the frozen Cold Acquisition scaffold, its eight paired ablations over nine shared
+    lineages, and the complete no-hidden-work trajectory contract.
   - includes `genesisbench_analysis_plan = "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json"`,
     `genesisbench_observations_schema = "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json"`,
     and `genesisbench_analysis_report_schema = "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json"`

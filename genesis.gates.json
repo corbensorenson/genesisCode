@@ -6,10 +6,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_agent_authoring_bundle.sh",
-      "executionIdentitySha256": "cab42b44759bfb432456f4f27aaa9b802ce87fc757db7353179fa785b26d36e8",
+      "executionIdentitySha256": "b921275e3cb7975d407bfc0f91cf83de1eb305de42eda9cdef6a468279f466b7",
       "expectedDurationSeconds": 15,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "304a83e0747a6ac43de6086e7c7ce3d1932ffc6120d856c73946d812049fcfde",
+      "inputIdentitySha256": "986db58b107da7c2cc1f0c18d8f97d9473a1d7dd1bf4fc86204bcf6aa85789d2",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21,6 +21,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
           "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
@@ -33,6 +37,8 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/CLI.md",
           "docs/spec/CLI_TOOLING_BUNDLE_v0.1.md",
           "docs/spec/GCPM_BUNDLE_v0.1.md",
@@ -56,6 +62,8 @@
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
           "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
           "docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
           "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -66,6 +74,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -94,6 +107,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py"
         ],
         "sets": [
@@ -123,7 +137,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "84c53bc58fcbe64ca52204c4f4eed8a12dc1e9537552bfaefed90fda67a4a765",
+      "sourceSha256": "83006dd3e1f528889aea8211ae7e9f772f9b66284f50de472c6775fcd25bbd08",
       "tools": [
         "bash",
         "git",
@@ -587,7 +601,7 @@
       "executionIdentitySha256": "7a8994fd70c67fc163413b205303c3ffc81882335d503684dca47385ffe5898c",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "7d707a254d3cadd2ce5b297fa6e5254a0964c294e4872198ec2b07cb9f989cf6",
+      "inputIdentitySha256": "4ab82e8ed77eb977da523fdf0eec0ebf33d733a0c39f9607ad926ed64ac8c728",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1094,7 +1108,7 @@
       "executionIdentitySha256": "b971b0450bb5ba10f3af9284a43284d7b8df03e6c0acefdb3aba00482f570842",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1110,6 +1124,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -1386,6 +1404,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -1721,6 +1744,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -2086,7 +2110,7 @@
       "executionIdentitySha256": "2b171eb0b91ebcc93bb6e3fe4d6edf45fda3280e4d1f44009e6e06dc96af7040",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "5ddc910d25a3a4f01b515c3af9be5a1a99c9d0814511d0d31477e3c7fe594b3e",
+      "inputIdentitySha256": "f98263d31493967fd9da527a76662c1c6c568c225213c97e575aaccd50ec7ccd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2184,7 +2208,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2200,6 +2224,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -2476,6 +2504,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -2811,6 +2844,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -3131,7 +3165,7 @@
       "executionIdentitySha256": "d8b333666af65270de1b68cfb31b8614b4651f73a01fdb224f7d30f430e167cc",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "9d4b95f45b9dc3f6ddbe0cd8d73333febd138214d6d15ef542875b076563b3c0",
+      "inputIdentitySha256": "4e1cc8a1b4e42254cb752ea3d6b3511627c2978b997ea94aaf35416707575d05",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3508,7 +3542,7 @@
       "executionIdentitySha256": "ff924202b8a8dde9faea2b0b2e927ee4a6fa81e42a60176174fe3f7788b47175",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "e36c000003edc5499f6253db4dc173ef5dfe3cf76a314e28602a90904930e155",
+      "inputIdentitySha256": "bb1596d5ca57fdc19e6ecc214ca58380e972f2989fb29e2152c6731d635a3190",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3589,7 +3623,7 @@
       "executionIdentitySha256": "ce4c6313be2f26d3addc15e5fbb0ce37605521bda7ec6d29252bebdd9e689a9c",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "c0fd9c3e2ce25de8a627beebe0d67028ee4aee94a9e32a671e6e63afae5fa74b",
+      "inputIdentitySha256": "d1fa877334f50653202c040a7ed552453f6d537181436cfad03d305842dd8c3c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3782,7 +3816,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3798,6 +3832,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -4074,6 +4112,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -4409,6 +4452,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -5217,7 +5261,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "4401a83f9bbca17d62ade26b3a268fe9fe184d31a46dd998af3568d4124fd987",
+      "inputIdentitySha256": "6128777c1562f7589dda25d4693ce2b679e91d983e452bbea24705e5adf84363",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5346,7 +5390,7 @@
       "executionIdentitySha256": "50eb4b58b61771fb7cb538c515679e4cc7bb4aa029bc7310c2ee3f0f878d49e4",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "4f2b1f67f2edb381362b04e61972d84d2cf944a3558b1e27734db0eadf28db65",
+      "inputIdentitySha256": "d2a34ea280485f250fd1c04fcde48323438d46675ad662d4c61a1f33ea7ed84e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5425,7 +5469,7 @@
       "executionIdentitySha256": "a812ebf8fa8cccd881ae7a086e32fba0ca92ab771e962981673c4e6b8dba9a57",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "9e0e8abff1c05118313aa10d83e22de9cb45ed28bbdb0f786d38d5524d100b76",
+      "inputIdentitySha256": "ef70b3530e8c27099e3cb5a286b02c4f14a80c30f7dda074e3746afbdc3635d3",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5498,7 +5542,7 @@
       "executionIdentitySha256": "c02349c3de13ce4d23a5055db6cf4733394985bc6b1a1e171097fb92ce380b6c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "f79362177a764ff21813ff47874e92a2b7b12b9b4d274b827944b0150421607e",
+      "inputIdentitySha256": "73042e044baa43e03db13f1d1aa0765428602887b5a858fae8aad74b4cfbfbeb",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5577,7 +5621,7 @@
       "executionIdentitySha256": "a91cd6f95c52b2419d89ce9ddaead7eb32afefb4fde12122f9111bc9f2027599",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "9b9e9faa50304f170e44c16f7c396f07469319dd14ff285dee82d09c29e27465",
+      "inputIdentitySha256": "445b19e36bfff7f74ca081e04ae91206c06f87a93af3688af95808671df8eabd",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -6029,7 +6073,7 @@
       "executionIdentitySha256": "f527e7ad04cab2c4e4f4a5e317e2d183b1368fedf2ccc84a03f6815721e0df25",
       "expectedDurationSeconds": 15,
       "id": "gate/genesiscode-authoring-skill",
-      "inputIdentitySha256": "900de640ec983e60a9df2bd8762cd5d2861724bb7c511f5b22b4763bf395c712",
+      "inputIdentitySha256": "39221de6c7f09f6c8cd8b37d131c33582100363641107d0a4deea3d69fad90a5",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -6544,7 +6588,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6560,6 +6604,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -6836,6 +6884,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -7171,6 +7224,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -7552,7 +7606,7 @@
       "executionIdentitySha256": "abdc70b5c30c694e08950d14f7bf6396a884a4b871ffe9dc6f4e7be505ac68c4",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7568,6 +7622,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -7844,6 +7902,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -8179,6 +8242,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -8893,7 +8957,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8909,6 +8973,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -9185,6 +9253,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -9520,6 +9593,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -9985,7 +10059,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "52f0999ee74a3fbafc63521316538b8a2202dc0acef7a68a674ae8ea13e349ae",
+      "inputIdentitySha256": "35846ead8964d72c6b588884f4c63ebae186e6e12d4ed8f36c39f99e70d22ad8",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -12155,7 +12229,7 @@
       "executionIdentitySha256": "90e216718daf9f07073da4755f2613ab35bdfa08c80fee4019f3416c091421a3",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12171,6 +12245,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -12447,6 +12525,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -12782,6 +12865,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -13123,7 +13207,7 @@
       "executionIdentitySha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
+      "inputIdentitySha256": "ecf2c5192cb1b21579e43e278e6d408945bb4d9f13360f6aee3db60d3ae4b8cf",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13139,6 +13223,10 @@
           "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "benchmarks/roadmap/v0.1/pb1_fib_25.gc",
           "benchmarks/roadmap/v0.1/pb4_vector_1000000.gc",
@@ -13415,6 +13503,11 @@
           "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
           "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
           "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
@@ -13750,6 +13843,7 @@
           "scripts/lib/genesisbench_protocol.py",
           "scripts/lib/genesisbench_protocol_contract.py",
           "scripts/lib/genesisbench_protocol_run.py",
+          "scripts/lib/genesisbench_reference_agent.py",
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/lint_suppression_policy.py",
@@ -14170,7 +14264,7 @@
       "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "d2be52165c19800fada17ad8b24007f3020281a8720f80493165fd45642d3fb6",
+      "inputIdentitySha256": "fe9758d9a35adc4872debd087fe41285f9163c64c2171eecb05f80aa8845c941",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14772,7 +14866,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "2623f990b034fa18ae9399851efec8ef361fa7f38719c83111f23ab81df0d746",
+      "inputIdentitySha256": "2951acb1171ab3aa20c7cede9b7d2bb5a54aa7ef88072c4bb09fc105f87661c9",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -14829,7 +14923,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "7af2bd8523157c5857dfc09851d01c75dc4f5ca0932d0dd14d99eef70a2564c8",
+      "inputIdentitySha256": "f53c2cf2524a56fb002c20bddeed188aac81c9d6910a1ab42536f46086aa64e3",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -14920,7 +15014,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "896677eb2f71637108ac050783a87f899a934d09ad06f0e02103c3589184c2fc"
+        "sha256": "3adf909b5ece240b6b4a62a2a5f5edf5b08d729adca266fb00295990c42a904e"
       },
       {
         "path": "genesis.prerequisites.json",

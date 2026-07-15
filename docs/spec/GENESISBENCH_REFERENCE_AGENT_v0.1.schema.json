@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-reference-agent-v0.1.json",
+  "title": "GenesisBench fixed reference agent profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind", "version", "id", "class", "status", "artifacts",
+    "comparisonPolicy", "promptAssembly", "retrieval", "orchestration",
+    "transaction", "loop", "grammar", "tool", "budgets", "adapter",
+    "tracePolicy", "contentIdentitySha256"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-reference-agent-v0.1"},
+    "version": {"const": "0.1.0"},
+    "id": {"const": "genesisbench-reference-agent-v0.1"},
+    "class": {"const": "fixed-reference"},
+    "status": {"const": "frozen"},
+    "artifacts": {"type": "array", "minItems": 12, "maxItems": 32, "items": {"$ref": "#/$defs/artifact"}},
+    "comparisonPolicy": {"$ref": "#/$defs/comparisonPolicy"},
+    "promptAssembly": {"$ref": "#/$defs/promptAssembly"},
+    "retrieval": {"$ref": "#/$defs/retrieval"},
+    "orchestration": {"$ref": "#/$defs/orchestration"},
+    "transaction": {"$ref": "#/$defs/transaction"},
+    "loop": {"$ref": "#/$defs/loop"},
+    "grammar": {"$ref": "#/$defs/grammar"},
+    "tool": {"$ref": "#/$defs/tool"},
+    "budgets": {"$ref": "#/$defs/budgets"},
+    "adapter": {"$ref": "#/$defs/adapter"},
+    "tracePolicy": {"$ref": "#/$defs/tracePolicy"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9._/-]{0,127}$"},
+    "stringSet": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 256}},
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "path", "role", "bytes", "sha256"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "path": {"type": "string", "pattern": "^[A-Za-z0-9._/-]+$"},
+        "role": {"enum": ["adapter-contract", "budget-contract", "card", "diagnostics", "grammar", "mcp-catalog", "profile", "prompt", "prompt-schema", "repair-contract", "retrieval-config", "retrieval-runtime", "transaction-contract"]},
+        "bytes": {"type": "integer", "minimum": 1, "maximum": 8388608},
+        "sha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "comparisonPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["allowedRunVariable", "fixedFacts", "modelSpecificPromptingAllowed", "scaffoldChangePolicy", "providerMutableFactsTreatment"],
+      "properties": {
+        "allowedRunVariable": {"const": "immutable-model-revision"},
+        "fixedFacts": {"$ref": "#/$defs/stringSet"},
+        "modelSpecificPromptingAllowed": {"const": false},
+        "scaffoldChangePolicy": {"const": "new-profile-and-cohort-required"},
+        "providerMutableFactsTreatment": {"const": "recorded-but-not-semantic-input"}
+      }
+    },
+    "promptAssembly": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "algorithm", "domain", "orderedRoles", "typedEnvelopeSchema", "taskMaySelectAuthority", "completeCaptureRequired"],
+      "properties": {
+        "kind": {"const": "genesis/reference-agent-prompt-assembly-v0.1"},
+        "algorithm": {"const": "sha256-domain-separated-ordered-artifacts-v0.1"},
+        "domain": {"const": "genesis-reference-agent-prompt-v0.1\\u0000"},
+        "orderedRoles": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"enum": ["system-policy", "agent-profile", "task-card", "context-pack-or-retrieval-transcript", "task-prompt", "task-inputs"]}},
+        "typedEnvelopeSchema": {"const": "genesis/reference-agent-request-v0.1"},
+        "taskMaySelectAuthority": {"const": false},
+        "completeCaptureRequired": {"const": true}
+      }
+    },
+    "retrieval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["algorithm", "configArtifactId", "runtimeArtifactId", "integerOnly", "networkAllowed", "transcriptRequired"],
+      "properties": {
+        "algorithm": {"const": "genesisbench-integer-lexical-retrieval-v0.1"},
+        "configArtifactId": {"const": "reference-retrieval-config"},
+        "runtimeArtifactId": {"const": "reference-agent-runtime"},
+        "integerOnly": {"const": true},
+        "networkAllowed": {"const": false},
+        "transcriptRequired": {"const": true}
+      }
+    },
+    "orchestration": {
+      "type": "object", "additionalProperties": false,
+      "required": ["agentCount", "subagentsAllowed", "providerToolsAllowed", "planner", "states", "terminalStates"],
+      "properties": {
+        "agentCount": {"const": 1},
+        "subagentsAllowed": {"const": false},
+        "providerToolsAllowed": {"const": false},
+        "planner": {"const": "deterministic-finite-state-v0.1"},
+        "states": {"$ref": "#/$defs/stringSet"},
+        "terminalStates": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "transaction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "operations", "directWritesAllowed", "textFallbackAllowed", "applyRequiresVerifiedSnapshot", "integrityFailurePolicy"],
+      "properties": {
+        "mode": {"const": "content-addressed-semantic-session-v0.1"},
+        "operations": {"$ref": "#/$defs/stringSet"},
+        "directWritesAllowed": {"const": false},
+        "textFallbackAllowed": {"const": false},
+        "applyRequiresVerifiedSnapshot": {"const": true},
+        "integrityFailurePolicy": {"const": "terminal-abort"}
+      }
+    },
+    "loop": {
+      "type": "object", "additionalProperties": false,
+      "required": ["phases", "diagnosticAuthority", "repairAuthority", "repairTrigger", "stopConditions", "stopPrecedence"],
+      "properties": {
+        "phases": {"$ref": "#/$defs/stringSet"},
+        "diagnosticAuthority": {"const": "gc-diagnostic-catalog"},
+        "repairAuthority": {"const": "gc-diagnostic-repair-plan"},
+        "repairTrigger": {"const": "failed-deterministic-verification-with-safe-repair"},
+        "stopConditions": {"$ref": "#/$defs/stringSet"},
+        "stopPrecedence": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "grammar": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "authorityArtifactId", "semanticRewriteAllowed", "acceptanceAuthority"],
+      "properties": {
+        "id": {"const": "gc-agent-v0.3-coreform-grammar"},
+        "authorityArtifactId": {"const": "gc-agent-profile"},
+        "semanticRewriteAllowed": {"const": false},
+        "acceptanceAuthority": {"const": "production-parser-and-obligations"}
+      }
+    },
+    "tool": {
+      "type": "object", "additionalProperties": false,
+      "required": ["interfaceId", "protocolVersion", "catalogArtifactId", "operations", "ambientAuthorityAllowed", "completeTranscriptRequired"],
+      "properties": {
+        "interfaceId": {"const": "genesis/mcp-interface-v0.1"},
+        "protocolVersion": {"const": "2025-11-25"},
+        "catalogArtifactId": {"const": "mcp-catalog-source"},
+        "operations": {"type": "array", "minItems": 20, "maxItems": 20, "uniqueItems": true, "items": {"type": "string"}},
+        "ambientAuthorityAllowed": {"const": false},
+        "completeTranscriptRequired": {"const": true}
+      }
+    },
+    "budgets": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maxModelCalls", "maxRepairCalls", "maxRetrievalQueries", "maxToolCalls", "maxOutputBytes", "maxContextBytes", "wallTimeMs", "cpuTimeMs", "heapBytes", "workspaceGrowthBytes", "processes", "effects", "semanticSteps"],
+      "properties": {
+        "maxModelCalls": {"const": 2}, "maxRepairCalls": {"const": 1}, "maxRetrievalQueries": {"const": 1},
+        "maxToolCalls": {"const": 64}, "maxOutputBytes": {"const": 1048576}, "maxContextBytes": {"const": 8388608},
+        "wallTimeMs": {"const": 600000}, "cpuTimeMs": {"const": 300000}, "heapBytes": {"const": 1073741824},
+        "workspaceGrowthBytes": {"const": 268435456}, "processes": {"const": 8}, "effects": {"const": 4096}, "semanticSteps": {"const": 100000000}
+      }
+    },
+    "adapter": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "requestMapping", "responseMapping", "semanticRewriteAllowed", "hiddenRetriesAllowed", "providerToolsAllowed", "secretPolicy", "owner"],
+      "properties": {
+        "contract": {"const": "genesisbench-reference-adapter-v0.1"},
+        "requestMapping": {"const": "typed-lossless-no-authority-injection"},
+        "responseMapping": {"const": "typed-lossless-no-semantic-rewrite"},
+        "semanticRewriteAllowed": {"const": false},
+        "hiddenRetriesAllowed": {"const": false},
+        "providerToolsAllowed": {"const": false},
+        "secretPolicy": {"const": "redact-values-record-presence-and-policy"},
+        "owner": {"const": "R1.4.l"}
+      }
+    },
+    "tracePolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["allModelCallsRecorded", "allToolCallsRecorded", "allRetrievalsRecorded", "allDiagnosticsRecorded", "allPatchesRecorded", "allDecisionsRecorded", "allOutcomesRecorded", "sequenceRule", "redactionRule"],
+      "properties": {
+        "allModelCallsRecorded": {"const": true}, "allToolCallsRecorded": {"const": true}, "allRetrievalsRecorded": {"const": true},
+        "allDiagnosticsRecorded": {"const": true}, "allPatchesRecorded": {"const": true}, "allDecisionsRecorded": {"const": true}, "allOutcomesRecorded": {"const": true},
+        "sequenceRule": {"const": "strictly-increasing-contiguous-events"},
+        "redactionRule": {"const": "typed-marker-preserves-field-and-content-hash"}
+      }
+    }
+  }
+}

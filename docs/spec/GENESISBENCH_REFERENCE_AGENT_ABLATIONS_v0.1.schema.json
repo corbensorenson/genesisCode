@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-reference-agent-ablations-v0.1.json",
+  "title": "GenesisBench fixed reference agent ablations v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "profile", "analysis", "ablations", "lineages", "conditions", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-reference-agent-ablations-v0.1"},
+    "version": {"const": "0.1.0"},
+    "profile": {"$ref": "#/$defs/binding"},
+    "analysis": {"$ref": "#/$defs/analysis"},
+    "ablations": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/ablation"}},
+    "lineages": {"type": "array", "minItems": 9, "items": {"$ref": "#/$defs/lineage"}},
+    "conditions": {"type": "array", "minItems": 72, "items": {"$ref": "#/$defs/condition"}},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,127}$"},
+    "binding": {
+      "type": "object", "additionalProperties": false, "required": ["id", "path", "sha256", "contentIdentitySha256"],
+      "properties": {"id": {"const": "genesisbench-reference-agent-v0.1"}, "path": {"const": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json"}, "sha256": {"$ref": "#/$defs/hash"}, "contentIdentitySha256": {"$ref": "#/$defs/hash"}}
+    },
+    "analysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["independentUnit", "conditionUnit", "repeatedConditionsIndependent", "comparisonPolicy", "requiredContrasts", "crossLineagePooling"],
+      "properties": {
+        "independentUnit": {"const": "lineageId"}, "conditionUnit": {"const": "conditionId"}, "repeatedConditionsIndependent": {"const": false},
+        "comparisonPolicy": {"const": "predeclared-within-lineage-paired-contrasts"},
+        "requiredContrasts": {"type": "array", "minItems": 6, "maxItems": 6, "uniqueItems": true, "items": {"type": "string"}},
+        "crossLineagePooling": {"const": "cluster-or-hierarchical-only"}
+      }
+    },
+    "features": {
+      "type": "object", "additionalProperties": false,
+      "required": ["context", "retrieval", "diagnostics", "editing", "grammar", "attempts", "repairs"],
+      "properties": {
+        "context": {"enum": ["core-card-only", "fixed-context", "retrieval-seed"]},
+        "retrieval": {"enum": ["disabled", "integer-lexical-v0.1"]},
+        "diagnostics": {"enum": ["terminal-code-only", "structured-catalog-v0.1"]},
+        "editing": {"enum": ["artifact-response", "semantic-transaction-v0.1"]},
+        "grammar": {"enum": ["production-acceptance-only", "gc-agent-v0.3-constraint"]},
+        "attempts": {"enum": [1, 2]},
+        "repairs": {"enum": [0, 1]}
+      }
+    },
+    "ablation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "ordinal", "purpose", "features", "allowedTools", "contrast", "contentIdentitySha256"],
+      "properties": {
+        "id": {"enum": ["bounded-repair", "core-card-only", "diagnostics", "fixed-context", "grammar-constraint", "one-attempt", "retrieval", "semantic-patch"]},
+        "ordinal": {"type": "integer", "minimum": 1, "maximum": 8},
+        "purpose": {"type": "string", "minLength": 20, "maxLength": 512},
+        "features": {"$ref": "#/$defs/features"},
+        "allowedTools": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "contrast": {"type": "object", "additionalProperties": false, "required": ["baselineId", "dimension"], "properties": {"baselineId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}, "dimension": {"enum": ["context-breadth", "diagnostics", "editing", "grammar", "reference-control", "repair", "retrieval"]}}},
+        "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "lineage": {
+      "type": "object", "additionalProperties": false, "required": ["id", "taskClass", "lineageIdentitySha256"],
+      "properties": {"id": {"$ref": "#/$defs/id"}, "taskClass": {"$ref": "#/$defs/id"}, "lineageIdentitySha256": {"$ref": "#/$defs/hash"}}
+    },
+    "condition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "lineageId", "lineageIdentitySha256", "ablationId", "ablationIdentitySha256", "samplingUnit", "oracleExposure", "contentIdentitySha256"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "lineageId": {"$ref": "#/$defs/id"}, "lineageIdentitySha256": {"$ref": "#/$defs/hash"},
+        "ablationId": {"$ref": "#/$defs/id"}, "ablationIdentitySha256": {"$ref": "#/$defs/hash"},
+        "samplingUnit": {"const": "lineage-not-condition"}, "oracleExposure": {"const": "same-as-lineage"}, "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+      }
+    }
+  }
+}

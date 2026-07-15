@@ -71,6 +71,26 @@ fn genesisbench_temporal_epoch_and_overlay_pass_public_controls() {
 }
 
 #[test]
+fn genesisbench_reference_agent_and_ablations_pass_public_controls() {
+    let output = Command::new("python3")
+        .current_dir(repo_root())
+        .args([
+            "scripts/lib/genesisbench_reference_agent.py",
+            "--check",
+            "--self-test",
+        ])
+        .output()
+        .expect("execute fixed reference agent verifier");
+    assert!(
+        output.status.success(),
+        "reference agent verifier failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ablations=8 lineages=9 conditions=72 controls=25"));
+}
+
+#[test]
 fn agent_card_and_symbol_search_are_bounded_canonical_authorities() {
     let card_out = cargo_bin_cmd!("genesis")
         .args(["--json", "agent-index", "--card", "core"])
@@ -206,6 +226,21 @@ fn agent_index_emits_expected_schema_and_sources() {
         json.pointer("/data/docs/genesisbench_protocol")
             .and_then(Value::as_str),
         Some("docs/spec/GENESISBENCH_PROTOCOL_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_reference_agent")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_reference_agent_ablations")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_reference_agent_trace_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json")
     );
     assert_eq!(
         json.pointer("/data/docs/genesisbench_analysis_plan")

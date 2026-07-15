@@ -20,6 +20,10 @@ The normative authorities are:
 - [Public adaptation-manifest schema](../docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json)
 - [Embedded-local hardware-evidence schema](../docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json)
 - [Disclosed scaffold-manifest schema](../docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json)
+- [Fixed reference agent](../docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json)
+- [Fixed reference-agent schema](../docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json)
+- [Controlled ablations](../docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json)
+- [Reference trace schema](../docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json)
 - [Task benchmark](../benchmarks/agent_tasks/v0.1/suite.json)
 - [Scoring authority](../docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json)
 - [Run schema](../docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json)
@@ -55,6 +59,27 @@ No update, model invocation, network request, or score execution occurs in check
 ## Understand the task surfaces
 
 The public suite contains nine immutable task lineages: generation, completion, repair, refactor, policy minimization, replay investigation, performance repair, package migration, and deployment. Each lineage has small, medium, and large child context conditions. Those 27 condition cells are useful for context ablation, but they remain nine independent challenges. Their references are intentionally inspectable development oracles. They are useful for learning, harness conformance, and longitudinal diagnostics, but they are not clean held-out evidence.
+
+## Use the fixed reference agent
+
+Cold Acquisition fixes everything except the immutable model revision. `genesisbench-reference-agent-v0.1` binds the system prompt, six-role typed prompt order, cards and grammar, deterministic integer-only retrieval, one agent with no subagents or provider tools, the exact 20-route MCP catalog, content-addressed semantic transactions, diagnostics and bounded repair, finite compute/resource budgets, and complete event capture. Adapters may transport the typed request and response, but may not rewrite semantics, inject authority, retry invisibly, or enable provider tools. Any scaffold change creates a new profile and cohort.
+
+The public ablation authority applies eight conditions to each of the same nine lineage IDs: core card only, fixed context, retrieval, structured diagnostics, semantic patching, grammar constraint, one attempt, and one bounded repair. The 72 cells are repeated observations, not independent tasks. Only six within-lineage contrasts are predeclared, and cross-lineage pooling must remain clustered or hierarchical.
+
+Validate the profile, all 72 condition bindings, a canonical trace, and 25 adversarial controls offline:
+
+```bash
+python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
+```
+
+Compile the exact public input/context plan for a condition without reading its reference oracle:
+
+```bash
+python3 scripts/lib/genesisbench_reference_agent.py \
+  --plan --case generation-small --ablation retrieval
+```
+
+The compiler is not a model adapter. Provider/local adapters, canonical run execution, and full run-bundle emission belong to R1.4.l and must preserve this plan and trace contract exactly.
 
 ## Analyze lineages, not repeated conditions
 
@@ -110,7 +135,7 @@ Every run belongs to exactly one track. Tracks answer different questions and ar
 
 | Track | Question | Admission boundary |
 |---|---|---|
-| `cold-acquisition` | How well does the unadapted model learn GenesisCode through one controlled reference agent? | No GenesisCode-specific training and only the fixed-reference scaffold. Ranked admission remains closed until R1.4.k freezes that scaffold and its ablations. |
+| `cold-acquisition` | How well does the unadapted model learn GenesisCode through one controlled reference agent? | No GenesisCode-specific training and exactly `genesisbench-reference-agent-v0.1`; its system prompt, retrieval, loop, budgets, tools, and trace policy are immutable within a cohort. Ranked admission is open for conforming run evidence. |
 | `open-agent` | How well does a disclosed agent system solve the work under the benchmark's authority and resource ceilings? | No declared GenesisCode adaptation. Custom retrieval and orchestration are allowed only when fully recorded and content-addressed. Unknown training provenance is unranked. |
 | `genesis-adapted` | How capable is a GenesisCode specialist built from public, auditable adaptation material? | `declared-public` training plus a lineage-manifest identity is mandatory. Raw and adapted results never share a cohort. |
 | `embedded-local` | What can a completely offline, self-hosted appliance do within a reproducible memory envelope? | Local model, denied network, and measured peak or enforced hard-ceiling evidence for combined model/runtime resident bytes. |
@@ -193,7 +218,7 @@ Never collapse these labels into one leaderboard. The closed cohort record binds
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, four non-combinable tracks, nine-lineage/27-condition public practice suite, predeclared statistical analysis, scorer, run bundle, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. The fixed reference agent and controlled ablations are R1.4.k; the canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, scorer, run bundle, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. The canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 

@@ -7,11 +7,14 @@ import copy
 import hashlib
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+ROOT = Path(__file__).resolve().parents[2]
+REFERENCE_AGENT = ROOT / "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json"
 
 
 TRACK_IDS = [
@@ -43,7 +46,7 @@ TRACK_POLICY = {
             "genesisSpecificTraining": ["none"],
             "scaffoldClasses": ["fixed-reference"],
             "inferenceModes": ["local-offline", "remote-disclosed"],
-            "rankedAdmissionOpen": False,
+            "rankedAdmissionOpen": True,
         },
         {
             "id": "embedded-local",
@@ -77,6 +80,10 @@ TRACK_POLICY = {
     "adaptationManifestSchemaAuthorityId": "genesisbench-adaptation-manifest-schema",
     "hardwareEvidenceSchemaAuthorityId": "genesisbench-hardware-evidence-schema",
     "scaffoldManifestSchemaAuthorityId": "genesisbench-scaffold-manifest-schema",
+    "fixedReferenceProfileAuthorityId": "genesisbench-reference-agent",
+    "fixedReferenceProfileSchemaAuthorityId": "genesisbench-reference-agent-schema",
+    "fixedReferenceAblationAuthorityId": "genesisbench-reference-agent-ablations",
+    "fixedReferenceTraceSchemaAuthorityId": "genesisbench-reference-agent-trace-schema",
     "resourceCeilingsSharedAcrossTracks": True,
     "rawScaffoldedAdaptedAndLocalAggregatesMayMix": False,
 }
@@ -194,6 +201,13 @@ def expected_scaffold_manifest(run: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate_scaffold_manifest(document: Any, run: dict[str, Any]) -> dict[str, Any]:
+    scaffold = run["track"]["scaffold"]
+    if scaffold["class"] == "fixed-reference":
+        require(scaffold["id"] == "genesisbench-reference-agent-v0.1", "fixed reference scaffold id drift")
+        expected = json.loads(REFERENCE_AGENT.read_text(encoding="utf-8"))
+        require(document == expected, "fixed reference profile binding drift")
+        require(document["contentIdentitySha256"] == object_identity(document), "fixed reference profile identity drift")
+        return document
     expected = expected_scaffold_manifest(run)
     expected["contentIdentitySha256"] = object_identity(expected)
     require(document == expected, "scaffold manifest binding drift")
@@ -266,6 +280,11 @@ def classify_track(track: dict[str, Any], run: dict[str, Any]) -> tuple[list[str
     hardware = track["hardware"]
     if track["scaffold"]["class"] not in policy["scaffoldClasses"]:
         invalid.append("track/scaffold-mismatch")
+    if track["trackId"] == "cold-acquisition" and (
+        track["scaffold"]["class"] != "fixed-reference"
+        or track["scaffold"]["id"] != "genesisbench-reference-agent-v0.1"
+    ):
+        invalid.append("track/scaffold-mismatch")
     if training["genesisSpecificTraining"] not in policy["genesisSpecificTraining"]:
         invalid.append("track/declaration-mismatch")
     if training["genesisSpecificTraining"] == "unknown":
@@ -334,9 +353,15 @@ def self_test(run: dict[str, Any]) -> int:
     cold = candidate("cold-acquisition")
     cold["training"]["genesisSpecificTraining"] = "none"
     cold_unranked, cold_invalid = classify_track(cold, run)
-    require("track/admission-not-open" in cold_unranked, "cold admission control failed")
+    require("track/admission-not-open" not in cold_unranked, "cold admission did not open")
     require("track/scaffold-mismatch" in cold_invalid, "cold scaffold control failed")
     controls += 2
+
+    fixed_cold = copy.deepcopy(cold)
+    fixed_cold["scaffold"]["class"] = "fixed-reference"
+    fixed_cold["scaffold"]["id"] = "genesisbench-reference-agent-v0.1"
+    require(classify_track(fixed_cold, run) == ([], []), "fixed cold-acquisition control failed")
+    controls += 1
 
     embedded = candidate("embedded-local")
     embedded_unranked, embedded_invalid = classify_track(embedded, run)

@@ -1,0 +1,117 @@
+{
+  "adapter": {
+    "conformanceIdentitySha256": "3dd40d651908a810790f6d77d364d6152f030bf6a09115a4a740b49619ba52fd",
+    "hiddenRetries": 0,
+    "id": "fixture-lossless-adapter-v0.1",
+    "providerToolsUsed": false,
+    "semanticRewrite": false
+  },
+  "agentCount": 1,
+  "conditionIdentitySha256": "0f681ecafb055e21f310931e9d89dc70f1a14d18189d6f04febd0e4fd43a6ad9",
+  "contentIdentitySha256": "1b62e328e39eb7c9ae8bc9ab05eaf5e2529126dced633d1867356209160860bb",
+  "events": [
+    {
+      "attempt": 0,
+      "decision": "captured",
+      "index": 0,
+      "inputIdentitySha256": "6c9eec1d8be0bf82eb0c831a8c98158f0d66aace7324a13cf67f67ae4898dc61",
+      "kind": "retrieval",
+      "operation": "integer-lexical-retrieval",
+      "outputIdentitySha256": "54037ba5fe2b6f56b1802e6793cb97499d8c55b940abcb8e08ecb66a017bf7ba"
+    },
+    {
+      "attempt": 0,
+      "decision": "recorded",
+      "index": 1,
+      "inputIdentitySha256": "1578ef86400428bedd1cb2c1740c172c28b1c1bf13fdd2cf0b699fd0017929a3",
+      "kind": "model-call",
+      "operation": "candidate-response",
+      "outputIdentitySha256": "4cd8e2d25c97511af2d5b7e47b37f6a431211dab39472ec06dac76212f1fe4b0"
+    },
+    {
+      "attempt": 0,
+      "decision": "allowed",
+      "index": 2,
+      "inputIdentitySha256": "034d3d52f29f7d4e8a23d15c966f2f0c1e26b6fe869f57991fe837366a3e6a16",
+      "kind": "tool-call",
+      "operation": "session-begin",
+      "outputIdentitySha256": "07852dc9bf06b3697c46d6d8b2a04934023dfc3fd0870d3450f8ba895bed0b7c"
+    },
+    {
+      "attempt": 0,
+      "decision": "allowed",
+      "index": 3,
+      "inputIdentitySha256": "913761c71218ee8f6f4be5c911ddd7b69823d47a4bb8d241bce22b50c752c87a",
+      "kind": "tool-call",
+      "operation": "session-stage",
+      "outputIdentitySha256": "48b6c79191e77ef5a269aab3c5425d7932e76a0cf7edb4caa90da439474068b4"
+    },
+    {
+      "attempt": 0,
+      "decision": "failed",
+      "index": 4,
+      "inputIdentitySha256": "f2cdf5a52cd1e59ffacb0bde8ee7f2ff4f6f8677128f6b4ce1f8fb5875eea780",
+      "kind": "tool-call",
+      "operation": "session-test",
+      "outputIdentitySha256": "8aa3e034b8cdfc1973c50c82183bb6d6c198d72577e75214d4eb013adbabf4c0"
+    },
+    {
+      "attempt": 0,
+      "decision": "safe-repair",
+      "index": 5,
+      "inputIdentitySha256": "435a367252ef817f0f73e6322b4b9e622406afec48d31b85a2227c75ec51614f",
+      "kind": "diagnostic",
+      "operation": "structured-catalog",
+      "outputIdentitySha256": "94111ab777cb315301c05508be085b5be6c94cdfac22a2d9389b85e3ed6c2e67"
+    },
+    {
+      "attempt": 1,
+      "decision": "recorded",
+      "index": 6,
+      "inputIdentitySha256": "b60994a6fea099d9dc8706a39b017144a803e4b5ecc32d243e5354b5d1354f3f",
+      "kind": "model-call",
+      "operation": "bounded-repair",
+      "outputIdentitySha256": "c448818d577d3ceda9b911c0e14f8e9ec21982ed4c92c75280db2cff2c49e7d2"
+    },
+    {
+      "attempt": 1,
+      "decision": "allowed",
+      "index": 7,
+      "inputIdentitySha256": "969726300ed428d15f8fd4e589a8beac4b8e27bf17d793de748c610bf05e16c6",
+      "kind": "tool-call",
+      "operation": "session-stage",
+      "outputIdentitySha256": "f82ad6c08a51087536bb55d136341f4ad05fabfd3b1a7b9442bf132152314179"
+    },
+    {
+      "attempt": 1,
+      "decision": "verified",
+      "index": 8,
+      "inputIdentitySha256": "d55419607f9a2fd80c802056b0f6df9400156c3f7ea4207d0255c23db95ff0e2",
+      "kind": "tool-call",
+      "operation": "session-test",
+      "outputIdentitySha256": "428010e9d9cbc52265b305a0078b38c601a71dd16e5f41a040c498289b7d6860"
+    },
+    {
+      "attempt": 1,
+      "decision": "verified-snapshot",
+      "index": 9,
+      "inputIdentitySha256": "05ccedbb5d77ab35288fcc68fd6eedd58de62cbb32c3f64f2d044d665f9d5849",
+      "kind": "tool-call",
+      "operation": "session-apply",
+      "outputIdentitySha256": "db8ea9e40fd7b6f95da72cad5e515ed4b8b942ee9381f3a8b38b6f65d4f7454f"
+    },
+    {
+      "attempt": 1,
+      "decision": "verified",
+      "index": 10,
+      "inputIdentitySha256": "f951aa3d6f8cb151735374c0dc6b45b6fed99d427a3577fe7088c1c0f6bc6a88",
+      "kind": "outcome",
+      "operation": "finalize",
+      "outputIdentitySha256": "0a1e5720ff14860daee709c5b2cad2c3f5e8706689c4d731e189401fbe7d6d46"
+    }
+  ],
+  "kind": "genesis/genesisbench-reference-agent-trace-v0.1",
+  "outcome": "verified",
+  "profileIdentitySha256": "6bd1d04056331fc541814f56bb0ea022a1d206f18aa637ef96758bc431c52f5d",
+  "version": "0.1.0"
+}
