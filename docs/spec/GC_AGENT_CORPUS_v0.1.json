@@ -134,26 +134,26 @@
           "provenance": "genesiscode-repository-authored"
         },
         {
+          "path": "examples/canonical_language/v0.1/pairs/packages/invalid/case.toml",
+          "sha256": "79bebc57c5fe7d756f3abbdd7941507f862a0ccf01e6fd21330d6079671bb817",
+          "spdx": "Apache-2.0",
+          "provenance": "genesiscode-repository-authored"
+        },
+        {
           "path": "examples/canonical_language/v0.1/pairs/packages/invalid/main.gc",
           "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         },
         {
-          "path": "examples/canonical_language/v0.1/pairs/packages/invalid/package.toml",
-          "sha256": "79bebc57c5fe7d756f3abbdd7941507f862a0ccf01e6fd21330d6079671bb817",
+          "path": "examples/canonical_language/v0.1/pairs/packages/valid/case.toml",
+          "sha256": "4051ace2fbe37efdcb9eaf792bd55d2ed01ade8fb645e0b6415f22bc7da6dfc8",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         },
         {
           "path": "examples/canonical_language/v0.1/pairs/packages/valid/main.gc",
           "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53",
-          "spdx": "Apache-2.0",
-          "provenance": "genesiscode-repository-authored"
-        },
-        {
-          "path": "examples/canonical_language/v0.1/pairs/packages/valid/package.toml",
-          "sha256": "4051ace2fbe37efdcb9eaf792bd55d2ed01ade8fb645e0b6415f22bc7da6dfc8",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         },
@@ -315,7 +315,7 @@
         },
         {
           "path": "examples/canonical_language/v0.1/suite.json",
-          "sha256": "c20117196d21745ec7d7cbd493b749ca939064c9117bf003000410f81f19fc2d",
+          "sha256": "fb820bd3beb593cb952eca109c0df936e121754befa1ddfc848e6b974de51456",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         }
@@ -341,7 +341,7 @@
       ],
       "difficulty": {
         "level": "advanced",
-        "contextBytes": 47028,
+        "contextBytes": 47013,
         "concepts": [
           "contracts",
           "effects",
@@ -596,5 +596,5 @@
       "oracleExposure": "public"
     }
   ],
-  "contentIdentitySha256": "a256dd40fb1d6946fc7015bc692b40bcea34a71db99d12a89bb41ed9d3de288a"
+  "contentIdentitySha256": "aa1d99b52fd1fd5d5bec51214b2293b53b4519cfaeedea312412307ae995ce52"
 }

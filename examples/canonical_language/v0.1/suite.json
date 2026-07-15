@@ -333,12 +333,12 @@
         "root": "examples/canonical_language/v0.1/pairs/packages/valid",
         "files": [
           {
-            "path": "main.gc",
-            "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53"
+            "path": "case.toml",
+            "sha256": "4051ace2fbe37efdcb9eaf792bd55d2ed01ade8fb645e0b6415f22bc7da6dfc8"
           },
           {
-            "path": "package.toml",
-            "sha256": "4051ace2fbe37efdcb9eaf792bd55d2ed01ade8fb645e0b6415f22bc7da6dfc8"
+            "path": "main.gc",
+            "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53"
           }
         ],
         "expectedOutcome": "accepted",
@@ -349,7 +349,7 @@
               "--json",
               "typecheck",
               "--pkg",
-              "package.toml"
+              "case.toml"
             ],
             "expect": {
               "exitCode": 0,
@@ -370,12 +370,12 @@
         "root": "examples/canonical_language/v0.1/pairs/packages/invalid",
         "files": [
           {
-            "path": "main.gc",
-            "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53"
+            "path": "case.toml",
+            "sha256": "79bebc57c5fe7d756f3abbdd7941507f862a0ccf01e6fd21330d6079671bb817"
           },
           {
-            "path": "package.toml",
-            "sha256": "79bebc57c5fe7d756f3abbdd7941507f862a0ccf01e6fd21330d6079671bb817"
+            "path": "main.gc",
+            "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53"
           }
         ],
         "expectedOutcome": "diagnostic-rejection",
@@ -386,7 +386,7 @@
               "--json",
               "typecheck",
               "--pkg",
-              "package.toml"
+              "case.toml"
             ],
             "expect": {
               "exitCode": 10,
@@ -410,7 +410,7 @@
       },
       "mutation": {
         "kind": "replace-once",
-        "path": "package.toml",
+        "path": "case.toml",
         "before": "schema = 1",
         "after": "schema = 2"
       },
@@ -1079,5 +1079,5 @@
       "repair": "Restore canonical/tests::suite in the manifest so the declared unit-test obligation resolves exactly."
     }
   ],
-  "contentIdentitySha256": "b69dc75a2cd0ed369aecbe1dfe71460f3ebb0b2ccbcc86a01ac7de93bb1e6747"
+  "contentIdentitySha256": "969fef51270e69b707f08ac45e3dd3d9971568468e26feb27ef1fb1777f6c24d"
 }
