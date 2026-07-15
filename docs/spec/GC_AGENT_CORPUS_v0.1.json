@@ -2,7 +2,7 @@
   "kind": "genesis/agent-corpus-manifest-v0.1",
   "version": "0.1.0",
   "corpusId": "GC-AGENT-CORPUS-v0.1",
-  "profile": {"id": "GC-AGENT-v0.3", "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json", "sha256": "f48be340764ea3bf7e017b934f7a02b614e46d0cc7ca5f0408c69c0d85ab3994"},
+  "profile": {"id": "GC-AGENT-v0.3", "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json", "sha256": "ff16a8544ffca207c209ab3ac81edcfbf3c4ce3d5a762f5dc7db513b7a75b1f9"},
   "sourcePolicy": {"repository": "https://github.com/corbensorenson/genesisCode", "revisionBinding": "artifact-sha256-plus-manifest-identity", "provenanceKinds": ["deterministically-generated", "genesiscode-repository-authored"]},
   "licensePolicy": {"allowedSpdx": ["Apache-2.0", "MIT"], "repositoryDefault": "Apache-2.0 OR MIT"},
   "splitPolicy": {"roles": ["train", "dev", "public-test", "held-out"], "heldOutContentMayBeDistributed": false, "oracleSeparationRequired": true},
@@ -65,5 +65,5 @@
       "oracleExposure": "public"
     }
   ],
-  "contentIdentitySha256": "654a7a5b2ea5b6f57eac0a2c9bdb2dbc896f9d73bb894b1c543ccec0a2896e30"
+  "contentIdentitySha256": "df659625a7b5e2ed7a90d1d9971db1aa662032f3c5b1073d53884e2d45c96209"
 }
