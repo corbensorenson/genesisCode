@@ -29,11 +29,13 @@
     "path": {"type": "string", "pattern": "^[A-Za-z0-9._/-]+$", "not": {"pattern": "(^/|(^|/)\\.\\.?(/|$))"}},
     "bindings": {
       "type": "object", "additionalProperties": false,
-      "required": ["scoringContentIdentitySha256", "benchmarkContentIdentitySha256", "profileSha256"],
+      "required": ["scoringContentIdentitySha256", "benchmarkContentIdentitySha256", "profileSha256", "scorerRuntimeSha256", "scorerContractSha256"],
       "properties": {
         "scoringContentIdentitySha256": {"$ref": "#/$defs/sha256"},
         "benchmarkContentIdentitySha256": {"$ref": "#/$defs/sha256"},
-        "profileSha256": {"$ref": "#/$defs/sha256"}
+        "profileSha256": {"$ref": "#/$defs/sha256"},
+        "scorerRuntimeSha256": {"$ref": "#/$defs/sha256"},
+        "scorerContractSha256": {"$ref": "#/$defs/sha256"}
       }
     },
     "candidate": {

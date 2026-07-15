@@ -70,6 +70,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json` - closed 27-case generation, completion, repair, refactor, policy-minimization, replay-investigation, performance-repair, package-migration, and deployment benchmark contract.
 - `benchmarks/agent_tasks/v0.1/suite.json` - content-addressed public development benchmark crossing all nine task classes with approximately 4 KB, 34 KB, and 276 KB context tiers.
 - `scripts/lib/gc_task_benchmarks.py` - read-only complete-tree, identity, matrix, context, editable-surface, and adversarial benchmark validator; references execute through `crates/gc_cli/tests/cli_agent_task_benchmarks.rs`.
+- `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json` - content-addressed six-dimension, 10,000-basis-point model-agnostic quality authority with hard validity gates and explicit model-metric separation.
+- `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json` - recursively closed scoring-policy contract; `docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json` closes canonical candidate score results.
+- `scripts/lib/gc_agent_scoring.py` - isolated deterministic candidate/reference executor and scorer with hard process-group cancellation, bounded artifacts, explicit output scope, and shipped-binary adversarial coverage in `crates/gc_cli/tests/cli_agent_benchmark_scoring.rs`.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` - generated capability, package, patch, replay, testing, deployment, and troubleshooting card compendium.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json` - embedded intent-selector registry with per-card content, budgets, source hashes, and selector contracts.
 - `scripts/check_gc_agent_task_cards.sh` - read-only registry/reference/production parity gate; `scripts/update_gc_agent_task_cards.sh` is its explicit generator.

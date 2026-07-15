@@ -11,6 +11,7 @@ python3 scripts/lib/gc_agent_corpus.py --check --self-test
 python3 scripts/lib/gc_canonical_examples.py --check --self-test
 python3 scripts/lib/gc_task_benchmarks.py --check --self-test
 python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
+python3 scripts/lib/gc_agent_scoring.py --check --self-test
 
 if git ls-files '.genesis/private/agent-evaluation/**' | grep -q .; then
   echo "agent-authoring-bundle: private held-out custody material is tracked" >&2
@@ -22,6 +23,7 @@ AGENT_INDEX_SPEC="docs/spec/AGENT_INDEX_v0.1.md"
 AGENT_INDEX_CMD="crates/gc_cli_driver/src/cmd_agent_index.rs"
 CANONICAL_TEST="crates/gc_cli/tests/cli_canonical_language_examples.rs"
 TASK_BENCHMARK_TEST="crates/gc_cli/tests/cli_agent_task_benchmarks.rs"
+SCORING_TEST="crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
 
 [[ -f "$BUNDLE" ]] || {
   echo "agent-authoring-bundle: missing bundle doc: $BUNDLE" >&2
@@ -43,8 +45,12 @@ TASK_BENCHMARK_TEST="crates/gc_cli/tests/cli_agent_task_benchmarks.rs"
   echo "agent-authoring-bundle: missing task benchmark production test: $TASK_BENCHMARK_TEST" >&2
   exit 1
 }
+[[ -f "$SCORING_TEST" ]] || {
+  echo "agent-authoring-bundle: missing scoring production test: $SCORING_TEST" >&2
+  exit 1
+}
 
-python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" <<'PY'
+python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" "$SCORING_TEST" <<'PY'
 import pathlib
 import re
 import sys
@@ -54,12 +60,14 @@ agent_index_spec_path = pathlib.Path(sys.argv[2])
 agent_index_cmd_path = pathlib.Path(sys.argv[3])
 canonical_test_path = pathlib.Path(sys.argv[4])
 task_benchmark_test_path = pathlib.Path(sys.argv[5])
+scoring_test_path = pathlib.Path(sys.argv[6])
 
 bundle = bundle_path.read_text(encoding="utf-8")
 agent_index_spec = agent_index_spec_path.read_text(encoding="utf-8")
 agent_index_cmd = agent_index_cmd_path.read_text(encoding="utf-8")
 canonical_test = canonical_test_path.read_text(encoding="utf-8")
 task_benchmark_test = task_benchmark_test_path.read_text(encoding="utf-8")
+scoring_test = scoring_test_path.read_text(encoding="utf-8")
 
 include_re = re.compile(r"^- `([^`]+)`\s*$", re.MULTILINE)
 included_paths = include_re.findall(bundle)
@@ -73,6 +81,9 @@ required_included = [
     "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
     "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
     "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+    "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+    "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
+    "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
     "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
@@ -93,6 +104,8 @@ required_included = [
     "examples/canonical_language/v0.1/README.md",
     "examples/canonical_language/v0.1/suite.json",
     "benchmarks/agent_tasks/v0.1/suite.json",
+    "scripts/lib/gc_agent_scoring.py",
+    "scripts/lib/gc_agent_scoring_contract.py",
 ]
 missing_required = [p for p in required_included if p not in included_paths]
 if missing_required:
@@ -188,6 +201,22 @@ held_out_rel = "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json"
 if held_out_rel not in agent_index_spec or held_out_rel not in agent_index_cmd:
     raise SystemExit(
         "agent-authoring-bundle: agent index must expose held-out commitments"
+    )
+
+scoring_rel = "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json"
+score_schema_rel = "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json"
+for path in (scoring_rel, score_schema_rel):
+    if path not in agent_index_spec or path not in agent_index_cmd:
+        raise SystemExit(
+            f"agent-authoring-bundle: agent index must expose scoring authority: {path}"
+        )
+if (
+    "scripts/lib/gc_agent_scoring.py" not in scoring_test
+    or 'env!("CARGO_BIN_EXE_genesis")' not in scoring_test
+    or "modelSpecificMetrics" not in scoring_test
+):
+    raise SystemExit(
+        "agent-authoring-bundle: scoring needs shipped-binary and model-separation integration coverage"
     )
 
 print(

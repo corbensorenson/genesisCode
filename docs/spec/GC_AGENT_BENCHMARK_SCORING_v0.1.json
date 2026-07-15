@@ -5,13 +5,21 @@
   "benchmark": {
     "id": "GC-AGENT-TASK-BENCHMARK-v0.1",
     "path": "benchmarks/agent_tasks/v0.1/suite.json",
-    "sha256": "922a597269dda63030c8ff4a8e2f39b843c08d9707181875de7034da8d73a1ff",
-    "contentIdentitySha256": "3c76759292295b489cf74d2e0f17561f57e8fb37fce6e9265d36de21cc6aad3d"
+    "sha256": "ce7bfac6ff9d240b4eb25a9eb4fd076d182ef6a000c99698b5f1ca3cd5338a58",
+    "contentIdentitySha256": "ba6b5cad361fff842df865871b755de027c7eec358a76495e110fc4281e7a37e"
   },
   "profile": {
     "id": "GC-AGENT-v0.3",
     "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "ff8fdbb34d104df0f100df4682d8e0f6953b877efc2086978561bdf46cc02432"
+    "sha256": "177748d2fb9964b1ea6a55427ef35c5af3c20d3b827c730506d621ad552cd9fc"
+  },
+  "implementation": {
+    "runtimePath": "scripts/lib/gc_agent_scoring.py",
+    "runtimeSha256": "72163715f98aa7c7f4b0485f30011c66971bd052e257a0cddef59fa6e6f60ff9",
+    "contractPath": "scripts/lib/gc_agent_scoring_contract.py",
+    "contractSha256": "06b643fecf6acc0928d08882b3226026ef2c2ecb030d6f189e06cd1ee389d852",
+    "integrationTestPath": "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
+    "integrationTestSha256": "8004ae2f4029b136475123df3d93b80aeac1c7425f8f242a5713add3d5ff7ac2"
   },
   "qualityScaleBasisPoints": 10000,
   "dimensions": [
@@ -176,5 +184,5 @@
       "provider-queue-time"
     ]
   },
-  "contentIdentitySha256": "c3a79cf6be40672910687d4dd84ea020644299cda27f64e8b384ebfee8f3ace9"
+  "contentIdentitySha256": "2194869db703d8921cf5974355e8d37409e4f46439784a7810111d68d10e2c68"
 }

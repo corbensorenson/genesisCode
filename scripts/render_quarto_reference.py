@@ -355,6 +355,8 @@ def render_llms(symbol_doc: dict[str, Any], cap_doc: dict[str, Any], diag_doc: d
         "- Agent corpus: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_CORPUS_v0.1.json",
         "- Canonical examples: https://corbensorenson.github.io/genesisCode/examples/canonical_language/v0.1/suite.json",
         "- Agent task benchmark: https://corbensorenson.github.io/genesisCode/benchmarks/agent_tasks/v0.1/suite.json",
+        "- Model-agnostic benchmark scoring: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+        "- Benchmark score schema: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
         "- Held-out commitments (public ledger only; never retrieve private custody): https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
         "- Reference index: https://corbensorenson.github.io/genesisCode/reference/generated/reference-index.json",
         "",

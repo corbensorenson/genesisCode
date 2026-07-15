@@ -6,14 +6,15 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_agent_authoring_bundle.sh",
-      "executionIdentitySha256": "b5852f2b54518d2a50934a89599f5dd0bb02a310a6b48b3166ccb3d217f5a9bc",
+      "executionIdentitySha256": "2022c3c995917b1603638b45fd571d98e831dfc8d7fda72f91a0a9d457b423d2",
       "expectedDurationSeconds": 15,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "fb6f417f16aab308bd831cd16c66db3fab923e057538ffe70a0af8a91ca095b8",
+      "inputIdentitySha256": "78926f1cfecf39ed80c03da88db04b2faadbea8490b148f5fbc5ed68fc39e69d",
       "inputs": {
         "paths": [
           "README.md",
           "benchmarks/agent_tasks/v0.1/suite.json",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_task_benchmarks.rs",
           "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -24,6 +25,9 @@
           "docs/spec/CLI.md",
           "docs/spec/CLI_TOOLING_BUNDLE_v0.1.md",
           "docs/spec/GCPM_BUNDLE_v0.1.md",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -46,6 +50,8 @@
           "examples/canonical_language/v0.1/suite.json",
           "scripts/check_agent_authoring_bundle.sh",
           "scripts/lib/gc_agent_corpus.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_task_benchmarks.py"
@@ -77,7 +83,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "a61f2a55a5c1dae9fa5f4c455c616d8e40fb5a422d63597d87380122c9a8281d",
+      "sourceSha256": "4d9755761110b83286467502484e3ee6cc722df05194c348c401933e29b1afef",
       "tools": [
         "bash",
         "git",
@@ -1045,10 +1051,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_capability_evidence_ledger_contract.sh",
-      "executionIdentitySha256": "4ae28c39a20e99cf1d48d9a034ec3f78b52f6d8b8030b70d85453423394e74ce",
+      "executionIdentitySha256": "fb4bee820cbb25fedfdafe230fd51f306d02ddd1227e467058711b7d9b47cbf6",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1071,6 +1077,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -1292,6 +1299,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -1608,6 +1618,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -1831,7 +1843,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "43d491e9838eac65a81856960b0f292f85b4c869d8f2253ec91fc2c067ea6e14",
+      "sourceSha256": "b80c6b4c71fde4eab986da68d3573be72c0a508fdc1216de711a6b4f204ff607",
       "tools": [
         "bash",
         "git",
@@ -2083,7 +2095,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2106,6 +2118,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -2327,6 +2340,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -2643,6 +2659,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -2886,7 +2904,7 @@
       "executionIdentitySha256": "b7c4cc1057320d73290779da0aa1751035b6e7ee67357f5d681d8ddd1c314b66",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "04862eafe5c6d4ab0fb34778b3acd0673190c53154592ce274ed55a360dceab4",
+      "inputIdentitySha256": "b61222d5b8b263c8830eaabc46438570ed6d9b08a57504417a7d5125f3c0dafa",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3352,7 +3370,7 @@
       "executionIdentitySha256": "ff924202b8a8dde9faea2b0b2e927ee4a6fa81e42a60176174fe3f7788b47175",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "ae5c9a759f02ad7770de2255f0a8f2195506f6a6bf3406343b409abdd477875e",
+      "inputIdentitySha256": "b365918edff23a946b62dee2866a30bec38fc5cca249398e20d5961465fd6385",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3369,6 +3387,8 @@
           "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md",
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
@@ -3622,7 +3642,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3645,6 +3665,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -3866,6 +3887,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -4182,6 +4206,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -5002,7 +5028,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "84b4f796b5b6e7db8cbb1d25aac2501460317dbcae467a60072994e9f737f83d",
+      "inputIdentitySha256": "1209775632a8d88226a01a108dde8e4ac75e320f89f9860309c5fd3f323b47ff",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5131,7 +5157,7 @@
       "executionIdentitySha256": "50eb4b58b61771fb7cb538c515679e4cc7bb4aa029bc7310c2ee3f0f878d49e4",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "ada8561720ecbc0a12267bec36296667af9d59e159d950371b7b05b7b960de24",
+      "inputIdentitySha256": "4c58167dd79849826d974880c759b2c431c1f9dd801410c009b66883ba5aedd8",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5210,7 +5236,7 @@
       "executionIdentitySha256": "a812ebf8fa8cccd881ae7a086e32fba0ca92ab771e962981673c4e6b8dba9a57",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "8a012c2755f31430518c7ff1e55d3c0654e9c042be1fa404123237992b89bd49",
+      "inputIdentitySha256": "51767bc288acf17185f43ae22fb4c9599273c7f6b4b6b88c513228bd6d387b61",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5283,7 +5309,7 @@
       "executionIdentitySha256": "c02349c3de13ce4d23a5055db6cf4733394985bc6b1a1e171097fb92ce380b6c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "eedf9fab6a5b06096c52964dc242908471608b811db9379cc4bab655df08d297",
+      "inputIdentitySha256": "4152f9f398e6f851a0d1fc808e98f366d118245f51c9abe7ff554ba094e3a6f7",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5362,7 +5388,7 @@
       "executionIdentitySha256": "a91cd6f95c52b2419d89ce9ddaead7eb32afefb4fde12122f9111bc9f2027599",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "e9f51310d313742046d748ed090ef5d320ad48a340d39c71afc7dcd9c6bf75da",
+      "inputIdentitySha256": "8f4ef7c600aa6ca282388651e9156530fd5c549d9fe05bf289a4b7d391f8d37d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5814,7 +5840,7 @@
       "executionIdentitySha256": "f527e7ad04cab2c4e4f4a5e317e2d183b1368fedf2ccc84a03f6815721e0df25",
       "expectedDurationSeconds": 15,
       "id": "gate/genesiscode-authoring-skill",
-      "inputIdentitySha256": "bd71d3709684173639738a425c44dda2337f0cf6d7cb6d83f6f8bc7197d03416",
+      "inputIdentitySha256": "61b80d848f94878f1c79633848b743f2914328456747000568d8c6e20f9426e1",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -6329,7 +6355,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6352,6 +6378,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -6573,6 +6600,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -6889,6 +6919,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -7282,7 +7314,7 @@
       "executionIdentitySha256": "abdc70b5c30c694e08950d14f7bf6396a884a4b871ffe9dc6f4e7be505ac68c4",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7305,6 +7337,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -7526,6 +7559,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -7842,6 +7878,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -8568,7 +8606,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8591,6 +8629,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -8812,6 +8851,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -9128,6 +9170,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -9605,7 +9649,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "640d73e3d54da55a01074225885e438ca03e4020c3a4e72230d029b6e63b53f4",
+      "inputIdentitySha256": "658ad33ddd25778c0b57ed5f0834302cb9092ae55e3461968ff104f6ce40ed88",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -11775,7 +11819,7 @@
       "executionIdentitySha256": "90e216718daf9f07073da4755f2613ab35bdfa08c80fee4019f3416c091421a3",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11798,6 +11842,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -12019,6 +12064,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -12335,6 +12383,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -12688,7 +12738,7 @@
       "executionIdentitySha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "757542ef696308e2b2a5acabf5766010ebc3e15feac7c7c11b9da78c6ad92b3c",
+      "inputIdentitySha256": "08a1ead8ffc1e171b7371f38b055e4cbf5ef9309234f2b34b6de90a5a756eecc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12711,6 +12761,7 @@
           "crates/gc_cli/tests/agent_authoring_bundle_guard.rs",
           "crates/gc_cli/tests/ai_iteration_slo_regression.rs",
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
+          "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
@@ -12932,6 +12983,9 @@
           "docs/spec/GCPM_BUNDLE_v0.1.md",
           "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
@@ -13248,6 +13302,8 @@
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
           "scripts/lib/gc_agent_profile.py",
+          "scripts/lib/gc_agent_scoring.py",
+          "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
@@ -13680,7 +13736,7 @@
       "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "e457e8d9c592f351c47d489e1154ae9dd18896ffc02724dc9b8b3793ca2ab20e",
+      "inputIdentitySha256": "f0fcfd993854d7b64168e12d0948180808c30aea3bb57df54d3b0d94ed36740f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14282,7 +14338,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "deb207517e4e1166bc23aae6fb7475fbec8477dcd2f5cea2aa98a890d7acd843",
+      "inputIdentitySha256": "7a1ad98e97cc14a4f21f79f91695c1d3bb5c04b19d7cb4b2272271d87720bcad",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -14339,7 +14395,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "d34977ff4cd9d5540b43c168937219c05728b16388ca9095aac73ef129f6f782",
+      "inputIdentitySha256": "c276e0512328c6831765c35377752429be7768c480f00852d5b7f09863c6736f",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -14430,7 +14486,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "40933cb54c7bbf25c22eaa0788842c3d8296ceb865bb1988e8db9490e33f6bc0"
+        "sha256": "6b747818886f1e2d7db4d57d0f7249e77da9e1427f97a509fa1165bdda529576"
       },
       {
         "path": "genesis.prerequisites.json",

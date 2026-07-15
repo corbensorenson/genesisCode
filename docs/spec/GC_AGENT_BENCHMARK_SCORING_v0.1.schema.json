@@ -4,13 +4,14 @@
   "title": "GenesisCode model-agnostic agent benchmark scoring v0.1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "version", "scoringId", "benchmark", "profile", "qualityScaleBasisPoints", "dimensions", "validityGate", "aggregation", "resourcePolicy", "taskPolicies", "modelSpecificMetrics", "contentIdentitySha256"],
+  "required": ["kind", "version", "scoringId", "benchmark", "profile", "implementation", "qualityScaleBasisPoints", "dimensions", "validityGate", "aggregation", "resourcePolicy", "taskPolicies", "modelSpecificMetrics", "contentIdentitySha256"],
   "properties": {
     "kind": {"const": "genesis/agent-benchmark-scoring-v0.1"},
     "version": {"const": "0.1.0"},
     "scoringId": {"const": "GC-AGENT-BENCHMARK-SCORING-v0.1"},
     "benchmark": {"$ref": "#/$defs/benchmark"},
     "profile": {"$ref": "#/$defs/profile"},
+    "implementation": {"$ref": "#/$defs/implementation"},
     "qualityScaleBasisPoints": {"const": 10000},
     "dimensions": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/dimension"}},
     "validityGate": {"$ref": "#/$defs/validityGate"},
@@ -40,6 +41,18 @@
         "id": {"const": "GC-AGENT-v0.3"},
         "path": {"const": "docs/spec/GC_AGENT_PROFILE_v0.3.json"},
         "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "implementation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runtimePath", "runtimeSha256", "contractPath", "contractSha256", "integrationTestPath", "integrationTestSha256"],
+      "properties": {
+        "runtimePath": {"const": "scripts/lib/gc_agent_scoring.py"},
+        "runtimeSha256": {"$ref": "#/$defs/sha256"},
+        "contractPath": {"const": "scripts/lib/gc_agent_scoring_contract.py"},
+        "contractSha256": {"$ref": "#/$defs/sha256"},
+        "integrationTestPath": {"const": "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"},
+        "integrationTestSha256": {"$ref": "#/$defs/sha256"}
       }
     },
     "dimension": {

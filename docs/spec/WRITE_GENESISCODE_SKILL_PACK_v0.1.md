@@ -125,6 +125,8 @@ Normative content:
 Required executable benchmark workloads for AI-authored GenesisCode quality:
 
 - Agent task matrix: `benchmarks/agent_tasks/v0.1/suite.json`
+- Model-agnostic scoring authority: `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json`
+- Closed score-result contract: `docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json`
 - Held-out commitment authority: `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json` (public commitments only; private custody material is forbidden from the skill distribution)
 - Service workflow: `examples/agent_service_workflow/workflow.sh`
 - Game-loop workflow: `examples/agent_long_running_gfx_loop_workflow/workflow.sh`
@@ -136,6 +138,10 @@ Required executable benchmark workloads for AI-authored GenesisCode quality:
 - Mutation workload suite: `scripts/check_agent_generative_workloads.sh`
 
 ## Scoring Rubric
+
+Candidate quality is scored by `scripts/lib/gc_agent_scoring.py` on a 10,000-basis-point scale across semantics, obligations, effects, patch minimality, deterministic resource use, and policy scope. Validity fails closed when required semantic, obligation, policy, or editable-scope facts fail. Wall time, API cost, energy, and provider queue time are separate `genesis/agent-benchmark-run-v0.1` facts and never alter quality.
+
+The skill-conformance score below measures whether this authoring pack covers its required workflows; it is not a candidate benchmark score.
 
 - Conformance gate: `scripts/check_write_genesiscode_skill_conformance.sh`
 - Report kind: `genesis/write-genesiscode-skill-conformance-v0.1`

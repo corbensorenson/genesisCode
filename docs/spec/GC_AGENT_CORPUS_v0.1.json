@@ -5,7 +5,7 @@
   "profile": {
     "id": "GC-AGENT-v0.3",
     "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "ff8fdbb34d104df0f100df4682d8e0f6953b877efc2086978561bdf46cc02432"
+    "sha256": "177748d2fb9964b1ea6a55427ef35c5af3c20d3b827c730506d621ad552cd9fc"
   },
   "sourcePolicy": {
     "repository": "https://github.com/corbensorenson/genesisCode",
@@ -33,6 +33,82 @@
     "oracleSeparationRequired": true
   },
   "entries": [
+    {
+      "id": "agent-benchmark-scoring",
+      "role": "public-test",
+      "artifacts": [
+        {
+          "path": "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
+          "sha256": "8004ae2f4029b136475123df3d93b80aeac1c7425f8f242a5713add3d5ff7ac2",
+          "spdx": "Apache-2.0",
+          "provenance": "genesiscode-repository-authored"
+        },
+        {
+          "path": "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "sha256": "3af427864e0449effea1b72aef9bdd0e35c8e643ce35048e66df40a0da7c76b4",
+          "spdx": "Apache-2.0",
+          "provenance": "genesiscode-repository-authored"
+        },
+        {
+          "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "sha256": "76f77aa7d64bf8f7e36f8fd60c613c4a1b11642e3306b5d06eee48516ed098a6",
+          "spdx": "Apache-2.0",
+          "provenance": "genesiscode-repository-authored"
+        },
+        {
+          "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
+          "sha256": "54fc999a4a039809bffe4e3404f8ffbfd909f2b66839b1a602ec4b09b96ad058",
+          "spdx": "Apache-2.0",
+          "provenance": "genesiscode-repository-authored"
+        },
+        {
+          "path": "scripts/lib/gc_agent_scoring.py",
+          "sha256": "72163715f98aa7c7f4b0485f30011c66971bd052e257a0cddef59fa6e6f60ff9",
+          "spdx": "Apache-2.0",
+          "provenance": "genesiscode-repository-authored"
+        },
+        {
+          "path": "scripts/lib/gc_agent_scoring_contract.py",
+          "sha256": "06b643fecf6acc0928d08882b3226026ef2c2ecb030d6f189e06cd1ee389d852",
+          "spdx": "Apache-2.0",
+          "provenance": "genesiscode-repository-authored"
+        }
+      ],
+      "generator": {
+        "kind": "repository-authored",
+        "identity": "reviewed-model-agnostic-benchmark-scoring-v0.1",
+        "path": null,
+        "sha256": null
+      },
+      "profileId": "GC-AGENT-v0.3",
+      "capabilities": [
+        "io/fs::read"
+      ],
+      "tests": [
+        {
+          "id": "agent-benchmark-scoring",
+          "argv": [
+            "bash",
+            "scripts/check_agent_authoring_bundle.sh"
+          ]
+        }
+      ],
+      "difficulty": {
+        "level": "adversarial",
+        "contextBytes": 75719,
+        "concepts": [
+          "deterministic-scoring",
+          "effects",
+          "model-metric-separation",
+          "obligations",
+          "patch-minimality",
+          "policy-scope",
+          "resource-use",
+          "semantics"
+        ]
+      },
+      "oracleExposure": "public"
+    },
     {
       "id": "agent-task-benchmark",
       "role": "public-test",
@@ -267,7 +343,7 @@
         },
         {
           "path": "benchmarks/agent_tasks/v0.1/suite.json",
-          "sha256": "922a597269dda63030c8ff4a8e2f39b843c08d9707181875de7034da8d73a1ff",
+          "sha256": "ce7bfac6ff9d240b4eb25a9eb4fd076d182ef6a000c99698b5f1ca3cd5338a58",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         },
@@ -596,7 +672,7 @@
         },
         {
           "path": "examples/canonical_language/v0.1/suite.json",
-          "sha256": "b6dda20743e7a71fa968a1dc04975fe1884c32e922a6f09069d05ca908502526",
+          "sha256": "4423de465b08eceef67ed8f889a65e32d6d7a9d37f26792b4272cc1c7f6ca219",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         }
@@ -877,5 +953,5 @@
       "oracleExposure": "public"
     }
   ],
-  "contentIdentitySha256": "e6cb45b65750f9d0e96c854ff7ba381d9849e3e92c2711dcbb57bee0f92cd2c8"
+  "contentIdentitySha256": "81525009ccf8823e4e0f1fb5c4463403319bc1af9f0fb3fd345d1241330e7aed"
 }

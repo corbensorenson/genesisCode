@@ -13,6 +13,7 @@ Canonical AI-first authoring handbook for GenesisCode.
   - `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
   - `examples/canonical_language/v0.1/suite.json`
   - `benchmarks/agent_tasks/v0.1/suite.json`
+  - `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json`
   - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - Source skill file:
   - `.agents/skills/genesiscode-authoring/SKILL.md`
@@ -46,6 +47,7 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 - Resolve failures through exact versioned catalog IDs/codes and bounded `genesis --json agent-index --diagnostic <exact-code>` lookup; never scrape message prose.
 - Treat every unsupported profile entry as a fail-closed boundary, not an invitation to infer syntax or semantics.
 - Keep evaluation roles disjoint: public references support development only. Never retrieve private held-out packs for authoring or training; bind evaluator results to the active public commitment snapshot and default contamination to `unknown` when model training provenance is incomplete.
+- Use the closed model-agnostic scorer for quality: semantics, obligations, effects, patch minimality, deterministic resource use, and policy scope produce the 10,000-basis-point result. Latency, API cost, energy, and provider queue time remain separate run metadata and cannot change candidate quality.
 - For the five required classes, reject experimental syntax, unavailable targets, and out-of-profile capabilities; route host-only and nondeterministic facilities only through explicit capability-scoped logged effects. Follow `safeAlternative` without silently broadening policy.
 - Every new capability or workflow must provide:
   - stable schema id/kind,
@@ -72,6 +74,7 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
   - `bash scripts/check_write_genesiscode_skill_pack.sh`
   - `bash scripts/check_write_genesiscode_skill_distribution.sh`
 - Treat failing deterministic replay or profile gate as release-blocking.
+- For benchmark candidates, run `python3 scripts/lib/gc_agent_scoring.py --score` with the exact case, candidate root, shipped `genesis` binary, and pinned selfhost artifact; retain the canonical score JSON.
 
 ## Debugging Pattern
 

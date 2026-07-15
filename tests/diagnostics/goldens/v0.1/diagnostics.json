@@ -5,7 +5,7 @@
       "class": "path-normalization",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -13,7 +13,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "manifest/error",
             "context": {
@@ -82,7 +82,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/manifest/error",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -144,7 +144,7 @@
       "class": "incompatible-profiles",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -152,7 +152,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "pkg/run",
             "context": {
@@ -220,7 +220,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/pkg/run",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -280,7 +280,7 @@
       "class": "exhausted-budgets",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -288,7 +288,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "eval/error",
             "context": {
@@ -359,7 +359,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/eval/error",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -421,7 +421,7 @@
       "class": "malformed-syntax",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -429,7 +429,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "parse/coreform",
             "context": {
@@ -514,7 +514,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/parse/coreform",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -584,7 +584,7 @@
       "class": "seal-misuse",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -592,7 +592,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "eval/error",
             "context": {
@@ -663,7 +663,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/eval/error",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -725,7 +725,7 @@
       "class": "stale-patches",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -733,7 +733,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "patch/invalid",
             "context": {
@@ -801,7 +801,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/patch/invalid",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -861,7 +861,7 @@
       "class": "replay-tampering",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -869,7 +869,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "replay/mismatch",
             "context": {
@@ -938,7 +938,7 @@
                 "requires_review": true,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/replay/mismatch",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -1000,7 +1000,7 @@
       "class": "type-effect-mismatch",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -1008,7 +1008,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "typecheck/error",
             "context": {
@@ -1099,7 +1099,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/typecheck/error",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -1172,7 +1172,7 @@
       "class": "unhandled-effects",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -1180,7 +1180,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "effects/run",
             "context": {
@@ -1251,7 +1251,7 @@
                 "requires_review": true,
                 "requires_separate_policy_diff": true
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/effects/run",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",
@@ -1313,7 +1313,7 @@
       "class": "invalid-packages",
       "envelope": {
         "diagnostic_catalog": {
-          "identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+          "identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
           "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "version": "0.1.0"
         },
@@ -1321,7 +1321,7 @@
           {
             "blocking_capability": null,
             "candidate_fix": "Repair the localized syntax or schema violation without changing capability policy, then parse or format again.",
-            "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+            "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
             "catalog_version": "0.1.0",
             "code": "manifest/error",
             "context": {
@@ -1390,7 +1390,7 @@
                 "requires_review": false,
                 "requires_separate_policy_diff": false
               },
-              "catalog_identity_sha256": "4e6c04294f00994adeb2077c8ff697ad4d5c845d2265f7593d1fbb436d6b6688",
+              "catalog_identity_sha256": "0633f603e6d079dbf35c194036eeb83e9d81e59623defe9665c212f06e6c4b99",
               "diagnostic_id": "genesis/diagnostic/v1/manifest/error",
               "guardrails": {
                 "automaticActionPolicy": "catalog-eligible-only",

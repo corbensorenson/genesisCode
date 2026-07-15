@@ -17,6 +17,7 @@ from typing import Any
 from gc_agent_scoring_contract import (
     BENCHMARK,
     DIMENSION_IDS,
+    ROOT,
     SCORING,
     ScoringError,
     canonical_bytes,
@@ -44,7 +45,8 @@ def inventory_tree(
             require(not path.is_symlink(), "candidate tree contains a symlink directory")
         for name in filenames:
             path = current / name
-            require(path.is_file() and not path.is_symlink(), "candidate tree contains a non-regular file")
+            require(not path.is_symlink(), "candidate tree contains a symlink file")
+            require(path.is_file(), "candidate tree contains a non-regular file")
             relative = path.relative_to(root).as_posix()
             safe_relative(relative, "candidate path")
             payload = path.read_bytes()
@@ -96,6 +98,15 @@ def changed_files(before: dict[str, bytes], after: dict[str, bytes]) -> dict[str
         for path in sorted(before.keys() | after.keys())
         if before.get(path) != after.get(path)
     }
+
+
+def generated_path_allowed(path: str, before: dict[str, bytes], prefixes: list[str]) -> bool:
+    if path in before or path == ".genesis" or path.startswith(".genesis/"):
+        return True
+    return any(
+        path.startswith(prefix) if prefix.endswith("/") else path == prefix
+        for prefix in prefixes
+    )
 
 
 def changed_span_units(left: bytes, right: bytes) -> int:
@@ -182,6 +193,7 @@ def run_step(
     resources: dict[str, Any],
     genesis_bin: Path,
     selfhost_artifact: Path,
+    generated_path_prefixes: list[str],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     before = inventory_tree(
         workspace,
@@ -242,9 +254,13 @@ def run_step(
     )
     generated = changed_files(before, after)
     generated_bytes = sum(len(payload) for payload in generated.values())
+    generated_scope_ok = all(
+        generated_path_allowed(path, before, generated_path_prefixes) for path in generated
+    )
     generated_limits = (
         len(generated) <= resources["maxGeneratedFiles"]
         and generated_bytes <= resources["maxGeneratedBytes"]
+        and generated_scope_ok
     )
     assertions_passed = 0
     if document is not None:
@@ -375,6 +391,7 @@ def run_submission(
     resources: dict[str, Any],
     genesis_bin: Path,
     selfhost_artifact: Path,
+    generated_path_prefixes: list[str],
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], int, int, bool]:
     require(
         len(case["verification"]) <= resources["maxVerificationSteps"],
@@ -398,6 +415,7 @@ def run_submission(
                 resources,
                 genesis_bin,
                 selfhost_artifact,
+                generated_path_prefixes,
             )
             reports.append(report)
             internal[step["id"]] = facts
@@ -483,6 +501,10 @@ def score_candidate(
     )
     genesis_bin = genesis_bin.resolve(strict=True)
     selfhost_artifact = selfhost_artifact.resolve(strict=True)
+    require(
+        candidate_root.is_dir() and not candidate_root.is_symlink(),
+        "candidate root must be a regular non-symlink directory",
+    )
     candidate_root = candidate_root.resolve(strict=True)
     suite = load_json(BENCHMARK)
     case = next((row for row in suite["cases"] if row["id"] == case_id), None)
@@ -504,10 +526,20 @@ def score_candidate(
     )
 
     candidate_reports, candidate_internal, candidate_generated, candidate_units, candidate_limits = run_submission(
-        candidate_files, case, resources, genesis_bin, selfhost_artifact
+        candidate_files,
+        case,
+        resources,
+        genesis_bin,
+        selfhost_artifact,
+        policy["generatedPathPrefixes"],
     )
     reference_reports, reference_internal, reference_generated, reference_units, reference_limits = run_submission(
-        reference_files, case, resources, genesis_bin, selfhost_artifact
+        reference_files,
+        case,
+        resources,
+        genesis_bin,
+        selfhost_artifact,
+        policy["generatedPathPrefixes"],
     )
     require(reference_limits and all(row["passed"] for row in reference_reports), "reference execution failed closed")
     candidate_by_id = {row["id"]: row for row in candidate_reports}
@@ -596,6 +628,8 @@ def score_candidate(
             "scoringContentIdentitySha256": scoring["contentIdentitySha256"],
             "benchmarkContentIdentitySha256": scoring["benchmark"]["contentIdentitySha256"],
             "profileSha256": scoring["profile"]["sha256"],
+            "scorerRuntimeSha256": scoring["implementation"]["runtimeSha256"],
+            "scorerContractSha256": scoring["implementation"]["contractSha256"],
         },
         "candidate": {
             "identitySha256": inventory_identity(candidate_files),
@@ -662,6 +696,26 @@ def main() -> int:
             "check mode does not accept execution inputs",
         )
         controls = self_test(scoring) if args.self_test else 0
+        if args.self_test:
+            require(ratio_score(100, 100) == 10000, "equal ratio score drift")
+            require(ratio_score(100, 125) == 8000, "bounded ratio score drift")
+            require(
+                changed_span_units(b"abc", b"axc") == 2,
+                "changed-span accounting drift",
+            )
+            require(
+                generated_path_allowed("effect.gclog", {}, ["effect.gclog"]),
+                "exact generated-file scope drift",
+            )
+            require(
+                not generated_path_allowed("effect.gclog.extra", {}, ["effect.gclog"]),
+                "generated-file prefix broadening",
+            )
+            require(
+                generated_path_allowed("dist/service/app", {}, ["dist/"]),
+                "generated-directory scope drift",
+            )
+            controls += 6
         print(
             "gc-agent-scoring: ok "
             f"(dimensions={len(scoring['dimensions'])} tasks={len(scoring['taskPolicies'])} "

@@ -16,6 +16,9 @@ SCORING_SCHEMA = ROOT / "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json"
 SCORE_SCHEMA = ROOT / "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json"
 BENCHMARK = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
 PROFILE = ROOT / "docs/spec/GC_AGENT_PROFILE_v0.3.json"
+SCORER_RUNTIME = ROOT / "scripts/lib/gc_agent_scoring.py"
+SCORER_CONTRACT = ROOT / "scripts/lib/gc_agent_scoring_contract.py"
+SCORER_TEST = ROOT / "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 DIMENSION_IDS = [
     "semantics",
@@ -103,6 +106,7 @@ def validate_schema_markers() -> None:
             [
                 "benchmark",
                 "profile",
+                "implementation",
                 "dimension",
                 "validityGate",
                 "aggregation",
@@ -150,6 +154,7 @@ def validate_scoring(document: Any, *, check_identity: bool = True) -> dict[str,
             "scoringId",
             "benchmark",
             "profile",
+            "implementation",
             "qualityScaleBasisPoints",
             "dimensions",
             "validityGate",
@@ -191,6 +196,30 @@ def validate_scoring(document: Any, *, check_identity: bool = True) -> dict[str,
             "sha256": file_sha256(PROFILE),
         },
         "profile authority drift",
+    )
+    implementation = closed(
+        doc["implementation"],
+        {
+            "runtimePath",
+            "runtimeSha256",
+            "contractPath",
+            "contractSha256",
+            "integrationTestPath",
+            "integrationTestSha256",
+        },
+        "scorer implementation binding",
+    )
+    require(
+        implementation
+        == {
+            "runtimePath": "scripts/lib/gc_agent_scoring.py",
+            "runtimeSha256": file_sha256(SCORER_RUNTIME),
+            "contractPath": "scripts/lib/gc_agent_scoring_contract.py",
+            "contractSha256": file_sha256(SCORER_CONTRACT),
+            "integrationTestPath": "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
+            "integrationTestSha256": file_sha256(SCORER_TEST),
+        },
+        "scorer implementation authority drift",
     )
     require(doc["qualityScaleBasisPoints"] == 10000, "quality scale drift")
 
@@ -300,6 +329,10 @@ def validate_scoring(document: Any, *, check_identity: bool = True) -> dict[str,
             safe_relative(path, "policy path")
         for path in policy["generatedPathPrefixes"]:
             safe_relative(path, "generated path prefix")
+            require(
+                not path.startswith(".genesis") and "*" not in path,
+                "generated path prefix claims scorer-owned or wildcard scope",
+            )
 
     require(
         doc["modelSpecificMetrics"]
@@ -358,7 +391,13 @@ def validate_score(document: Any) -> dict[str, Any]:
     )
     closed(
         doc["bindings"],
-        {"scoringContentIdentitySha256", "benchmarkContentIdentitySha256", "profileSha256"},
+        {
+            "scoringContentIdentitySha256",
+            "benchmarkContentIdentitySha256",
+            "profileSha256",
+            "scorerRuntimeSha256",
+            "scorerContractSha256",
+        },
         "score bindings",
     )
     closed(doc["candidate"], {"identitySha256", "fileCount", "bytes"}, "candidate facts")
@@ -434,6 +473,7 @@ def self_test(document: dict[str, Any]) -> int:
         ("unknown-field", lambda d: d.update({"model": "prompt-selected"})),
         ("benchmark-rebind", lambda d: d["benchmark"].__setitem__("sha256", "0" * 64)),
         ("profile-rebind", lambda d: d["profile"].__setitem__("sha256", "0" * 64)),
+        ("runtime-rebind", lambda d: d["implementation"].__setitem__("runtimeSha256", "0" * 64)),
         ("weight-drift", lambda d: d["dimensions"][0].__setitem__("weightBasisPoints", 3499)),
         ("dimension-omission", lambda d: d["dimensions"].pop()),
         ("validity-weakening", lambda d: d["validityGate"]["requiredPerfectDimensions"].remove("policy-scope")),
@@ -443,6 +483,7 @@ def self_test(document: dict[str, Any]) -> int:
         ("step-omission", lambda d: d["taskPolicies"][1]["obligationStepIds"].remove("build")),
         ("task-duplication", lambda d: d["taskPolicies"].__setitem__(1, copy.deepcopy(d["taskPolicies"][0]))),
         ("unsafe-policy-path", lambda d: d["taskPolicies"][1]["policyPaths"].__setitem__(0, "../caps.toml")),
+        ("unsafe-output-prefix", lambda d: d["taskPolicies"][1]["generatedPathPrefixes"].__setitem__(0, ".genesis/")),
         ("model-cost", lambda d: d["modelSpecificMetrics"].__setitem__("includedInQualityScore", True)),
         ("identity-drift", lambda d: d.__setitem__("contentIdentitySha256", "0" * 64)),
     ]
