@@ -1,0 +1,12 @@
+schema = 1
+name = "canonical_modules"
+version = "0.1.0"
+dependencies = []
+obligations = []
+tests = []
+
+[[modules]]
+path = "math.gc"
+
+[[modules]]
+path = "app.gc"

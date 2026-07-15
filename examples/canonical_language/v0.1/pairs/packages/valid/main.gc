@@ -1,0 +1,7 @@
+(def ::meta
+  (quote
+    {:caps []
+     :exports [canonical/package::answer]
+     :types {canonical/package::answer ?}}))
+(def canonical/package::answer 42)
+canonical/package::answer

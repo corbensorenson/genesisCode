@@ -1,0 +1,3 @@
+(let ((v (prim vec/push [1 2] 3)))
+  (let ((m (prim map/put {:a 1} (quote :b) (prim vec/get v 2))))
+    (prim map/get m (quote :b))))

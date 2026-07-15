@@ -45,6 +45,7 @@ provenance, and custom-404 surfaces against that commit.
 - `crates/`: Rust workspace crates (kernel, CLI, effects, obligations, patches, etc.)
 - `prelude/`: Prelude modules and language surface helpers
 - `selfhost/`: Selfhost artifact/toolchain material
+- `examples/canonical_language/v0.1/`: signed valid/invalid teaching pairs for every foundational language workflow
 - `docs/`: Specs, handoff, policy, and status docs
 - `learn/`, `guides/`, `reference/`: Quarto learning paths and generated reference views
 - `_quarto.yml`: exhaustive documentation-site render and navigation contract

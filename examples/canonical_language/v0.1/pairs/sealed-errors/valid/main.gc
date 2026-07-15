@@ -1,0 +1,8 @@
+(let ((error-value
+        (core/protocol::error
+          {:error/code "canonical/expected"
+           :error/context {:example "sealed-errors"}
+           :error/message "expected example error"})))
+  (if (core/protocol::is-error error-value)
+    ((core/map::get (core/protocol::unerror error-value)) (quote :error/code))
+    "not-sealed"))

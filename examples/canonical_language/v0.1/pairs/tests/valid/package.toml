@@ -1,0 +1,10 @@
+schema = 1
+name = "canonical_tests"
+version = "0.1.0"
+dependencies = []
+obligations = ["core/obligation::unit-tests"]
+tests = ["canonical/tests::suite"]
+
+[[modules]]
+path = "main.gc"
+hash = "c6193399419858f4e098d334b06678eebb38a23ca535d5bb793c62589b518a4b"

@@ -6,13 +6,14 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_agent_authoring_bundle.sh",
-      "executionIdentitySha256": "d50c3b921397bc7673ac15bf1c66c8f3e7c1f7035f142185179d2bcd3be8bc0a",
+      "executionIdentitySha256": "6f4aeea79a593760b34a6d55cce1f9285fce46f5d032495fa2b3d3e296971e74",
       "expectedDurationSeconds": 15,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "9bb2b5bee7d1d6fe693e2e2f6fd5b4bfd1790b830775c0878097d54d240f40ba",
+      "inputIdentitySha256": "8bce063a69477399bbc164e661f1c0a30f7aa6b3dc773af3f1e45c880b3e992f",
       "inputs": {
         "paths": [
           "README.md",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -27,14 +28,18 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
           "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
           "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json",
           "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
           "docs/write_genesisCode_skill.md",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "scripts/check_agent_authoring_bundle.sh",
-          "scripts/lib/gc_agent_corpus.py"
+          "scripts/lib/gc_agent_corpus.py",
+          "scripts/lib/gc_canonical_examples.py"
         ],
         "sets": [
           "governance"
@@ -63,7 +68,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "c3f20861c00fc482fc41ff250963f4fd78be00ca09253f06c5cfd7aa2421c63e",
+      "sourceSha256": "88a86b0fc91e34c984c572f0ca135aaca30ec47a362b1713917db8979f07b4b3",
       "tools": [
         "bash",
         "git",
@@ -527,7 +532,7 @@
       "executionIdentitySha256": "7a8994fd70c67fc163413b205303c3ffc81882335d503684dca47385ffe5898c",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "149fc65fd33addee63c0e04ec44fd0a30fa4c7ef7e16feee091582d2d3bfd0c7",
+      "inputIdentitySha256": "dd22adf492e88bea5e5824665450394f61e7b935eef9f316ce6103b07ec3d5bc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1031,10 +1036,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_capability_evidence_ledger_contract.sh",
-      "executionIdentitySha256": "f943f9f7ae4e7ced05dab7b5c3e6d27cdf6120498b3ea8966be7c566fe8fe90d",
+      "executionIdentitySha256": "a0e9687bd18da1ad925ab91a8db9a15be8c2f500c97cb024b879668ff2512c66",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1059,6 +1064,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -1285,6 +1291,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -1383,6 +1390,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -1586,6 +1595,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -1804,7 +1814,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "07fe31e6c55ccd7173e3e1ebb52d1f9ec8476ba6bbcef54fd8972030cb87daf7",
+      "sourceSha256": "35d9c95af9675573b2c18df36de9b519b8eb7079be8271bf325725d41c242d0c",
       "tools": [
         "bash",
         "git",
@@ -1958,7 +1968,7 @@
       "executionIdentitySha256": "2b171eb0b91ebcc93bb6e3fe4d6edf45fda3280e4d1f44009e6e06dc96af7040",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "fb28b6d61e7373ebe4235052b441871a06e5ebd49369d3b6a045aad73b5f6f23",
+      "inputIdentitySha256": "078ca744cff9ee3e7e66f5b9f70f4c90baf90193f3749c3b98ce25b5bda4136e",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2056,7 +2066,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2081,6 +2091,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -2307,6 +2318,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -2405,6 +2417,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -2608,6 +2622,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -2846,7 +2861,7 @@
       "executionIdentitySha256": "b7c4cc1057320d73290779da0aa1751035b6e7ee67357f5d681d8ddd1c314b66",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "165f44afb87acee551654a304d874f5e645f084c9ca30f451c1a71afd3ba8ee8",
+      "inputIdentitySha256": "bbca7853fe2ae17754d456eefa1ff24120d2b46d53953d644c13c54ec762d2e6",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2935,7 +2950,7 @@
       "executionIdentitySha256": "d8b333666af65270de1b68cfb31b8614b4651f73a01fdb224f7d30f430e167cc",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "3903900198a62e99c7ca7c5ea7a5ba8d5c8719e4b73eb9127055db876fbf7644",
+      "inputIdentitySha256": "e8737f18174c60f8a42532362c6af6a24caf136548732f9b3829f0ec55fbc89f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3312,7 +3327,7 @@
       "executionIdentitySha256": "ff924202b8a8dde9faea2b0b2e927ee4a6fa81e42a60176174fe3f7788b47175",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "000202b7ec32a2b55fa4d87b697968b0bfee3e0658317a60cab4af633d69e983",
+      "inputIdentitySha256": "386c8d79dd5edad8f8fe3de817a0a1c4d962440650a4d241de0efe4b5d5dae81",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3385,7 +3400,7 @@
       "executionIdentitySha256": "ce4c6313be2f26d3addc15e5fbb0ce37605521bda7ec6d29252bebdd9e689a9c",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "c8e8cb66a9b755c1618b9a86ceac4d4ab34f9b06f7a018da35e55fb103849260",
+      "inputIdentitySha256": "be10e95e64ab12a8c250c4481390b1a0003b01693a5471b2e0af8ac3cdebe170",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3578,7 +3593,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3603,6 +3618,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -3829,6 +3845,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -3927,6 +3944,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -4130,6 +4149,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -4945,7 +4965,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "596b85c1edac6c4af8cf91c77b1f40002913d8fd217be2c4cb40a7b3993f06c9",
+      "inputIdentitySha256": "635b87c9d0d7e460d6dd8f95e864a3ef3c106d5dc704f750e8c067ffd4fde3a6",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5074,7 +5094,7 @@
       "executionIdentitySha256": "50eb4b58b61771fb7cb538c515679e4cc7bb4aa029bc7310c2ee3f0f878d49e4",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "76f8ab60d644f6ad458df6aebfd94497e09265844abf68c0c76cc4ec84da7107",
+      "inputIdentitySha256": "9a60a0463947b0749a4d55482cadbe53be8aa674d353c2ca63e337407d4f2369",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5153,7 +5173,7 @@
       "executionIdentitySha256": "a812ebf8fa8cccd881ae7a086e32fba0ca92ab771e962981673c4e6b8dba9a57",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "07e4c4c203048bc60a7f23a14eaeaf4033f5b63c48f362e41177a1cee5fa0109",
+      "inputIdentitySha256": "be9b515707125c3de0b37e2f3f6a70c0a270cf50052567aa7a1ea2d920a4c2f6",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5226,7 +5246,7 @@
       "executionIdentitySha256": "c02349c3de13ce4d23a5055db6cf4733394985bc6b1a1e171097fb92ce380b6c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "2359a7f9e70c48cd8f1c1ff83ad895480c9997b88822d14254548ffc00e5ff5d",
+      "inputIdentitySha256": "e63edc369e26d2db1e1fdb6ea0deb2af4db6d90fe4aa4c32fea7564dfc06d223",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5305,7 +5325,7 @@
       "executionIdentitySha256": "a91cd6f95c52b2419d89ce9ddaead7eb32afefb4fde12122f9111bc9f2027599",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "aaefb7852b557d34a366ca72b4cb69b57d031432bcd635de08355e269990695b",
+      "inputIdentitySha256": "c4a1087e9694b20500eba4245f600eca10e9f2d1ad6cb298df461d33b6633ec0",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5757,7 +5777,7 @@
       "executionIdentitySha256": "f527e7ad04cab2c4e4f4a5e317e2d183b1368fedf2ccc84a03f6815721e0df25",
       "expectedDurationSeconds": 15,
       "id": "gate/genesiscode-authoring-skill",
-      "inputIdentitySha256": "5511b2efe99781f33796ab6304d74e09446effc562448b92fdb8a2c616ff278b",
+      "inputIdentitySha256": "19c712f3d97dc020ec66b014479d694404a50e926d3b78ae58cc54f6c6fff3e6",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -6272,7 +6292,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6297,6 +6317,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -6523,6 +6544,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -6621,6 +6643,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -6824,6 +6848,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -7212,7 +7237,7 @@
       "executionIdentitySha256": "abdc70b5c30c694e08950d14f7bf6396a884a4b871ffe9dc6f4e7be505ac68c4",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7237,6 +7262,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -7463,6 +7489,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -7561,6 +7588,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -7764,6 +7793,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -8485,7 +8515,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8510,6 +8540,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -8736,6 +8767,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -8834,6 +8866,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -9037,6 +9071,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -9509,7 +9544,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "558c9832c633fd009292177676a57bd28592d7256d5c82096f2bbfaa31f26eda",
+      "inputIdentitySha256": "9e1f5f28d24e98a185b6379ea1669cf8dd5792ba90eb059f7150e4b62ae7053f",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -11679,7 +11714,7 @@
       "executionIdentitySha256": "90e216718daf9f07073da4755f2613ab35bdfa08c80fee4019f3416c091421a3",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11704,6 +11739,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -11930,6 +11966,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -12028,6 +12065,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -12231,6 +12270,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -12579,7 +12619,7 @@
       "executionIdentitySha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "9712432194e55820d71206748f847bba8765569b9c72a9afea10b2c71affb280",
+      "inputIdentitySha256": "f42e52fc257365a4d00b8d4d375dac57017edfe2d623613d8681770f3e05b57b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12604,6 +12644,7 @@
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
           "crates/gc_cli/tests/cli_agent_session.rs",
+          "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -12830,6 +12871,7 @@
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -12928,6 +12970,8 @@
           "examples/agent_xr_runtime_workflow/caps.toml",
           "examples/agent_xr_runtime_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow_run.gc",
+          "examples/canonical_language/v0.1/README.md",
+          "examples/canonical_language/v0.1/suite.json",
           "examples/effects_demo/caps.toml",
           "examples/effects_demo/data.txt",
           "examples/effects_demo/read.gc",
@@ -13131,6 +13175,7 @@
           "scripts/lib/gc_agent_profile.py",
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
+          "scripts/lib/gc_canonical_examples.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -13558,7 +13603,7 @@
       "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "29eff7221d7d78b5b7b6819d00a8f03390ce190b01ff1135c86a8aa97ef17442",
+      "inputIdentitySha256": "05b50c92634fcc9c3d14421d40077cf5d5efaa720c40de9664cbc4fa53e5be9b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14160,7 +14205,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "5e7362459402f111920e3b983f9ca08b707e39164048103eda24e1ba982a2914",
+      "inputIdentitySha256": "0d27f44be6d97e64d0ca2002b878dad0ecafdf6ce84ade565e4b394e0bc4a0ef",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -14217,7 +14262,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "134c68ccc43105d54041589960a9e29c56c3b0e782cdadad0f53d4cb3d61107b",
+      "inputIdentitySha256": "e9c61ee79b6280fb6f87f9c47e7f129ddec1b7ed89d55ce5c3d30163b2291500",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -14308,7 +14353,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "6d04ebcb277bfe67883d15ef17dadf52e7c33e7943d7b3a1a726ebf9a9b100b1"
+        "sha256": "9eea59e626832fe91fde6cb43f95b2e4f34978898ddc206ce1a3465f7d0e0bd4"
       },
       {
         "path": "genesis.prerequisites.json",

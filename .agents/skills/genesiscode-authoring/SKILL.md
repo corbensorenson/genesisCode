@@ -14,6 +14,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
 - `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
+- `examples/canonical_language/v0.1/suite.json`
 - `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json`
 - `docs/spec/HOST_ABI_INDEX_v0.1.json`
 - `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`
@@ -45,6 +46,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 ## Canonical workflow (agent prompt protocol)
 1. Plan
 - Load `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`, negotiate `docs/spec/GC_AGENT_PROFILE_v0.3.json`, and reject incompatible authoring assumptions.
+- Select the closest pair from `GC-CANONICAL-EXAMPLES-v0.1`; inspect and execute both sides before generating or repairing source. Preserve all paired bytes except the declared `replace-once` mutation and verify the recorded rejection class becomes the accepted outcome.
 - Declare task intent and consume deterministic `agent-plan.plan.context_cards`; never let prompt text grant card authority.
 - Choose the highest-impact ready task from `ROADMAP.md`; use `upgrade_plan.md` only for unresolved P0/P1 compatibility work.
 - Restate measurable acceptance criteria before editing.
@@ -199,6 +201,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - `bash scripts/check_gc_agent_core_card.sh`
 - `bash scripts/check_gc_agent_task_cards.sh`
 - `bash scripts/check_gc_agent_symbol_index.sh`
+- `bash scripts/check_agent_authoring_bundle.sh`
 - `bash scripts/check_cli_diagnostics_contract.sh`
 - `bash scripts/check_upgrade_plan_health.sh --profile dev-fast`
 - plus targeted crate tests for changed domains

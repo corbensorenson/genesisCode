@@ -11,6 +11,7 @@ Canonical AI-first authoring handbook for GenesisCode.
   - `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`
   - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
   - `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json`
+  - `examples/canonical_language/v0.1/suite.json`
 - Source skill file:
   - `.agents/skills/genesiscode-authoring/SKILL.md`
 - Machine-readable contract:
@@ -39,6 +40,7 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 ## Contract Pattern
 
 - Load and verify `GC-AGENT-v0.3` before generating source or selecting language features.
+- Ground generation and repair in the closest signed canonical pair. Execute both the valid and invalid scenarios with their recorded production argv, preserve every undeclared byte, apply only the `replace-once` repair, and require the exact accepted envelope.
 - Resolve failures through exact versioned catalog IDs/codes and bounded `genesis --json agent-index --diagnostic <exact-code>` lookup; never scrape message prose.
 - Treat every unsupported profile entry as a fail-closed boundary, not an invitation to infer syntax or semantics.
 - For the five required classes, reject experimental syntax, unavailable targets, and out-of-profile capabilities; route host-only and nondeterministic facilities only through explicit capability-scoped logged effects. Follow `safeAlternative` without silently broadening policy.
@@ -56,6 +58,7 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
   - `bash scripts/check_gc_agent_core_card.sh`
   - `bash scripts/check_gc_agent_task_cards.sh`
   - `bash scripts/check_gc_agent_symbol_index.sh`
+  - `bash scripts/check_agent_authoring_bundle.sh`
   - `bash scripts/check_cli_diagnostics_contract.sh`
   - `bash scripts/check_gc_agent_profile.sh`
   - `bash scripts/check_agent_reference_workflows.sh`

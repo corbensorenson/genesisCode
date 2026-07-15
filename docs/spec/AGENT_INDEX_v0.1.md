@@ -12,6 +12,7 @@ Provide a single machine-oriented planning artifact for AI agents that combines:
 - Closed diagnostic-catalog metadata and exact bounded lookup
 - Default obligation set
 - Reference workflow pointers
+- Signed canonical valid/invalid language-example authority
 
 ## Command
 
@@ -82,6 +83,9 @@ genesis --json agent-index --diagnostic <exact-code>
   - includes `gc_agent_corpus = "docs/spec/GC_AGENT_CORPUS_v0.1.json"` as the closed,
     content-addressed train/dev/public-test corpus authority with explicit provenance,
     license, generator, profile, capability, test, difficulty, and oracle-exposure facts.
+  - includes `gc_canonical_examples = "examples/canonical_language/v0.1/suite.json"` as the
+    signed, recursively closed teaching authority for minimal valid/invalid language pairs,
+    exact production argv, rejection classes, and deterministic one-site repairs.
   - includes `gc_agent_task_cards = "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"` as the
     embedded seven-card registry used by deterministic intent selection.
   - includes `gc_agent_symbol_index = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"` as the

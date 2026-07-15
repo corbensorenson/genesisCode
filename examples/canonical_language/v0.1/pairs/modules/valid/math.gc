@@ -1,0 +1,7 @@
+(def ::meta
+  (quote
+    {:caps []
+     :exports [canonical/modules::answer]
+     :types {canonical/modules::answer ?}}))
+(def canonical/modules::answer 42)
+canonical/modules::answer

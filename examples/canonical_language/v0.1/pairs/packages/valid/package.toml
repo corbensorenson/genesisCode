@@ -1,0 +1,13 @@
+schema = 1
+name = "canonical_package"
+version = "0.1.0"
+dependencies = []
+obligations = []
+tests = []
+
+[limits]
+step_limit = 100000
+allow_unlimited = false
+
+[[modules]]
+path = "main.gc"

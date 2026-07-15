@@ -13,14 +13,15 @@ This file is the single agent-first onboarding spine.
 4. `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` selected through declared task intent
 5. `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json` through exact `agent-index --symbol` lookup
 6. `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json` through exact `agent-index --diagnostic` lookup
-7. `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
-8. `docs/spec/GCPM_BUNDLE_v0.1.md`
-9. `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
-10. `docs/spec/TESTING_BUNDLE_v0.1.md`
-11. `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
-12. `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
-13. `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
-14. `ROADMAP.md` for strategic work or `upgrade_plan.md` for active P0/P1 defects
+7. `examples/canonical_language/v0.1/suite.json` for signed valid/invalid executable pairs
+8. `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
+9. `docs/spec/GCPM_BUNDLE_v0.1.md`
+10. `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+11. `docs/spec/TESTING_BUNDLE_v0.1.md`
+12. `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+13. `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
+14. `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
+15. `ROADMAP.md` for strategic work or `upgrade_plan.md` for active P0/P1 defects
 
 ## Agent-First Onboarding Spine (Required)
 
@@ -59,3 +60,4 @@ This file is the single agent-first onboarding spine.
 - Do not use superseded top-level docs as normative sources; consult `docs/DEPRECATION_MAP_v0.1.md`.
 - Treat `experimental-syntax`, `host-only-operation`, `unavailable-target`, `nondeterministic-facility`, and `out-of-profile-capability` as mandatory fail-closed classes. Use each record's `safeAlternative`; profile/capability negotiation is explicit and cannot be inferred from availability.
 - Route failures on exact `genesis/diagnostic/v1/...` IDs or cataloged codes, never prose. Pin `catalogIdentitySha256` for training/evaluation and use `agent-index --diagnostic <exact-code>` rather than loading the full catalog.
+- For language generation and repair, retrieve the nearest `GC-CANONICAL-EXAMPLES-v0.1` pair, execute both recorded scenarios, and apply only its declared one-site repair. Invalid fixtures are counterexamples, never standalone templates.

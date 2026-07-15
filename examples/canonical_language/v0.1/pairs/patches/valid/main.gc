@@ -1,0 +1,3 @@
+(def ::meta (quote {:caps [] :exports [canonical/patch::value] :types {canonical/patch::value ?}}))
+(def canonical/patch::value 1)
+canonical/patch::value

@@ -1,0 +1,9 @@
+{
+  :version 1
+  :intent "Update the canonical value"
+  :provenance {:suite "GC-CANONICAL-EXAMPLES-v0.1"}
+  :ops
+    [{:op :replace-node
+      :module-path "main.gc"
+      :path [[:form 1] [:pair-cdr] [:pair-cdr] [:pair-car]]
+      :new 2}]}

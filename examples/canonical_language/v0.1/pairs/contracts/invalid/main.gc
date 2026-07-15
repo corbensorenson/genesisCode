@@ -1,0 +1,5 @@
+(let ((msg ((core/msg::make (quote canonical/contracts::missing)) nil)))
+  (let ((contract (((core/contract::extend core/contract::genesis)
+                    {canonical/contracts::ok (fn (_message) 42)})
+                   {})))
+    ((core/contract::dispatch contract) msg)))

@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-canonical-examples-v0.1.json",
+  "title": "GenesisCode canonical language example suite v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "suiteId",
+    "profile",
+    "requiredConcepts",
+    "pairs",
+    "contentIdentitySha256"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/canonical-example-suite-v0.1"},
+    "version": {"const": "0.1.0"},
+    "suiteId": {"const": "GC-CANONICAL-EXAMPLES-v0.1"},
+    "profile": {"$ref": "#/$defs/profile"},
+    "requiredConcepts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "pairs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/pair"}
+    },
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._/-]+$",
+      "not": {"pattern": "(^/|(^|/)\\.\\.?(/|$))"}
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "sha256"],
+      "properties": {
+        "id": {"const": "GC-AGENT-v0.3"},
+        "path": {"const": "docs/spec/GC_AGENT_PROFILE_v0.3.json"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pointer", "operator", "value"],
+      "properties": {
+        "pointer": {"type": "string", "pattern": "^/"},
+        "operator": {"enum": ["contains", "equals"]},
+        "value": {
+          "type": ["string", "integer", "boolean", "null"]
+        }
+      }
+    },
+    "expect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exitCode", "ok", "kind", "assertions"],
+      "properties": {
+        "exitCode": {"type": "integer", "minimum": 0, "maximum": 255},
+        "ok": {"type": "boolean"},
+        "kind": {"type": "string", "pattern": "^genesis/"},
+        "assertions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/assertion"}
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "argv", "expect"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "argv": {
+          "type": "array",
+          "minItems": 2,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "expect": {"$ref": "#/$defs/expect"}
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "files", "expectedOutcome", "steps"],
+      "properties": {
+        "root": {"$ref": "#/$defs/path"},
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/file"}
+        },
+        "expectedOutcome": {
+          "enum": [
+            "accepted",
+            "capability-denial",
+            "diagnostic-rejection",
+            "obligation-failure",
+            "replay-mismatch",
+            "resource-exhaustion",
+            "sealed-rejection"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/step"}
+        }
+      }
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "before", "after"],
+      "properties": {
+        "kind": {"const": "replace-once"},
+        "path": {"$ref": "#/$defs/path"},
+        "before": {"type": "string", "minLength": 1},
+        "after": {"type": "string", "minLength": 1}
+      }
+    },
+    "pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "concepts",
+        "lesson",
+        "capabilities",
+        "valid",
+        "invalid",
+        "mutation",
+        "repair"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "concepts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "lesson": {"type": "string", "minLength": 20},
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*/[a-z0-9_-]+::[a-z0-9_*-]+$"
+          }
+        },
+        "valid": {"$ref": "#/$defs/scenario"},
+        "invalid": {"$ref": "#/$defs/scenario"},
+        "mutation": {"$ref": "#/$defs/mutation"},
+        "repair": {"type": "string", "minLength": 20}
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+schema = 1
+name = "canonical_patch"
+version = "0.1.0"
+dependencies = []
+obligations = []
+tests = []
+
+[[modules]]
+path = "main.gc"

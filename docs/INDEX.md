@@ -62,6 +62,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/GC_AGENT_CORPUS_v0.1.schema.json` - recursively closed provenance, licensing, generator, profile, capability, executable-test, difficulty, split-role, and oracle-exposure contract.
 - `docs/spec/GC_AGENT_CORPUS_v0.1.json` - content-addressed `GC-AGENT-CORPUS-v0.1` manifest over the current train, development, and public-test artifacts; held-out content is explicitly non-distributable.
 - `scripts/lib/gc_agent_corpus.py` - read-only corpus verifier and adversarial suite, executed by the existing agent-authoring bundle gate.
+- `docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json` - closed schema for signed valid/invalid language pairs, production argv, exact envelope assertions, rejection classes, and one-site repairs.
+- `examples/canonical_language/v0.1/suite.json` - content-addressed canonical teaching authority covering pure functions, persistent collections, contracts, modules, sealed errors, effects, replay, packages, patches, tests, and resource failures.
+- `scripts/lib/gc_canonical_examples.py` - read-only tree/hash/profile/argv/mutation validator with permanent adversarial controls; production behavior is exercised by `crates/gc_cli/tests/cli_canonical_language_examples.rs`.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` - generated capability, package, patch, replay, testing, deployment, and troubleshooting card compendium.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json` - embedded intent-selector registry with per-card content, budgets, source hashes, and selector contracts.
 - `scripts/check_gc_agent_task_cards.sh` - read-only registry/reference/production parity gate; `scripts/update_gc_agent_task_cards.sh` is its explicit generator.

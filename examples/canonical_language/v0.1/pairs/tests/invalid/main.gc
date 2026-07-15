@@ -1,0 +1,10 @@
+(def ::meta
+  (quote
+    {:caps []
+     :exports [canonical/tests::suite]
+     :types {canonical/tests::suite ?}}))
+(def canonical/tests::suite
+  {"addition"
+    {:body (fn (_) (core/effect::pure (prim int/add 1 2)))
+     :expect 3}})
+canonical/tests::suite

@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Examples by workflow
 
-**33 workflows** · **125 files**. Examples demonstrate composition; normative behavior comes from linked specifications.
+**34 workflows** · **171 files**. Examples demonstrate composition; normative behavior comes from linked specifications.
 
 ## `agent_backend_topology_workflow`
 
@@ -321,6 +321,59 @@ Agent Xr Runtime Workflow
 | `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_xr_runtime_workflow/caps.toml) |
 | `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_xr_runtime_workflow/workflow.sh) |
 | `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_xr_runtime_workflow/workflow_run.gc) |
+
+## `canonical_language`
+
+GenesisCode Canonical Language Examples v0.1
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/README.md) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/contracts/invalid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/contracts/valid/main.gc) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/effects/invalid/caps.toml) |
+| `data.txt` | txt | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/effects/invalid/data.txt) |
+| `program.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/effects/invalid/program.gc) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/effects/valid/caps.toml) |
+| `data.txt` | txt | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/effects/valid/data.txt) |
+| `program.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/effects/valid/program.gc) |
+| `app.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/modules/invalid/app.gc) |
+| `math.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/modules/invalid/math.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/modules/invalid/package.toml) |
+| `app.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/modules/valid/app.gc) |
+| `math.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/modules/valid/math.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/modules/valid/package.toml) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/packages/invalid/main.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/packages/invalid/package.toml) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/packages/valid/main.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/packages/valid/package.toml) |
+| `change.gcpatch` | gcpatch | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/patches/invalid/change.gcpatch) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/patches/invalid/main.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/patches/invalid/package.toml) |
+| `change.gcpatch` | gcpatch | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/patches/valid/change.gcpatch) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/patches/valid/main.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/patches/valid/package.toml) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/persistent-collections/invalid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/persistent-collections/valid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/pure-functions/invalid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/pure-functions/valid/main.gc) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/invalid/caps.toml) |
+| `data.txt` | txt | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/invalid/data.txt) |
+| `program.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/invalid/program.gc) |
+| `run.gclog` | gclog | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/invalid/run.gclog) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/valid/caps.toml) |
+| `data.txt` | txt | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/valid/data.txt) |
+| `program.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/valid/program.gc) |
+| `run.gclog` | gclog | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/replay/valid/run.gclog) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/resource-failures/invalid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/resource-failures/valid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/sealed-errors/invalid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/sealed-errors/valid/main.gc) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/tests/invalid/main.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/tests/invalid/package.toml) |
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/tests/valid/main.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/pairs/tests/valid/package.toml) |
+| `suite.json` | json | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/canonical_language/v0.1/suite.json) |
 
 ## `effects_demo`
 

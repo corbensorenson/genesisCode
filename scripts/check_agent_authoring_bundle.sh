@@ -8,10 +8,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 python3 scripts/lib/gc_agent_corpus.py --check --self-test
+python3 scripts/lib/gc_canonical_examples.py --check --self-test
 
 BUNDLE="docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md"
 AGENT_INDEX_SPEC="docs/spec/AGENT_INDEX_v0.1.md"
 AGENT_INDEX_CMD="crates/gc_cli_driver/src/cmd_agent_index.rs"
+CANONICAL_TEST="crates/gc_cli/tests/cli_canonical_language_examples.rs"
 
 [[ -f "$BUNDLE" ]] || {
   echo "agent-authoring-bundle: missing bundle doc: $BUNDLE" >&2
@@ -25,8 +27,12 @@ AGENT_INDEX_CMD="crates/gc_cli_driver/src/cmd_agent_index.rs"
   echo "agent-authoring-bundle: missing agent index command source: $AGENT_INDEX_CMD" >&2
   exit 1
 }
+[[ -f "$CANONICAL_TEST" ]] || {
+  echo "agent-authoring-bundle: missing canonical production test: $CANONICAL_TEST" >&2
+  exit 1
+}
 
-python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" <<'PY'
+python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" <<'PY'
 import pathlib
 import re
 import sys
@@ -34,10 +40,12 @@ import sys
 bundle_path = pathlib.Path(sys.argv[1])
 agent_index_spec_path = pathlib.Path(sys.argv[2])
 agent_index_cmd_path = pathlib.Path(sys.argv[3])
+canonical_test_path = pathlib.Path(sys.argv[4])
 
 bundle = bundle_path.read_text(encoding="utf-8")
 agent_index_spec = agent_index_spec_path.read_text(encoding="utf-8")
 agent_index_cmd = agent_index_cmd_path.read_text(encoding="utf-8")
+canonical_test = canonical_test_path.read_text(encoding="utf-8")
 
 include_re = re.compile(r"^- `([^`]+)`\s*$", re.MULTILINE)
 included_paths = include_re.findall(bundle)
@@ -49,6 +57,7 @@ required_included = [
     "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
     "docs/spec/GC_AGENT_CORPUS_v0.1.json",
     "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+    "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
     "docs/spec/GC_AGENT_PROFILE_v0.3.json",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
@@ -63,6 +72,8 @@ required_included = [
     "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
     "docs/skill_pack/write_genesiscode_v1/manifest.json",
     "docs/write_genesisCode_skill.md",
+    "examples/canonical_language/v0.1/README.md",
+    "examples/canonical_language/v0.1/suite.json",
 ]
 missing_required = [p for p in required_included if p not in included_paths]
 if missing_required:
@@ -132,6 +143,16 @@ corpus_rel = "docs/spec/GC_AGENT_CORPUS_v0.1.json"
 if corpus_rel not in agent_index_spec or corpus_rel not in agent_index_cmd:
     raise SystemExit(
         "agent-authoring-bundle: agent index spec and command must expose the corpus manifest"
+    )
+
+examples_rel = "examples/canonical_language/v0.1/suite.json"
+if examples_rel not in agent_index_spec or examples_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index spec and command must expose canonical examples"
+    )
+if examples_rel not in canonical_test or "cargo_bin_cmd!(\"genesis\")" not in canonical_test:
+    raise SystemExit(
+        "agent-authoring-bundle: canonical examples need a shipped genesis integration test"
     )
 
 print(
