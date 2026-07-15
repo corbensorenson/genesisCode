@@ -44,7 +44,10 @@ fn write_module_package(root: &Path, name: &str, module_name: &str, source: &str
 
 fn run_json(root: &Path, args: &[String], expect_success: bool) -> Value {
     let mut command = cargo_bin_cmd!("genesis_parity");
-    command.current_dir(root).args(args);
+    command
+        .current_dir(root)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args(args);
     let output = if expect_success {
         command.assert().success().get_output().stdout.clone()
     } else {
