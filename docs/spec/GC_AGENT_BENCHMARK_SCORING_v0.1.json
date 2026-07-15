@@ -1,0 +1,180 @@
+{
+  "kind": "genesis/agent-benchmark-scoring-v0.1",
+  "version": "0.1.0",
+  "scoringId": "GC-AGENT-BENCHMARK-SCORING-v0.1",
+  "benchmark": {
+    "id": "GC-AGENT-TASK-BENCHMARK-v0.1",
+    "path": "benchmarks/agent_tasks/v0.1/suite.json",
+    "sha256": "922a597269dda63030c8ff4a8e2f39b843c08d9707181875de7034da8d73a1ff",
+    "contentIdentitySha256": "3c76759292295b489cf74d2e0f17561f57e8fb37fce6e9265d36de21cc6aad3d"
+  },
+  "profile": {
+    "id": "GC-AGENT-v0.3",
+    "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+    "sha256": "ff8fdbb34d104df0f100df4682d8e0f6953b877efc2086978561bdf46cc02432"
+  },
+  "qualityScaleBasisPoints": 10000,
+  "dimensions": [
+    {
+      "id": "semantics",
+      "weightBasisPoints": 3500,
+      "applicability": "all-cases",
+      "metric": "exact-verification-pass-rate"
+    },
+    {
+      "id": "obligations",
+      "weightBasisPoints": 1200,
+      "applicability": "task-policy-step-set",
+      "metric": "exact-obligation-step-pass-rate"
+    },
+    {
+      "id": "effects",
+      "weightBasisPoints": 1200,
+      "applicability": "task-policy-step-set",
+      "metric": "reference-equal-effect-transcript"
+    },
+    {
+      "id": "patch-minimality",
+      "weightBasisPoints": 1500,
+      "applicability": "all-cases",
+      "metric": "reference-normalized-changed-span-units"
+    },
+    {
+      "id": "resource-use",
+      "weightBasisPoints": 1300,
+      "applicability": "all-cases",
+      "metric": "reference-normalized-deterministic-resource-units"
+    },
+    {
+      "id": "policy-scope",
+      "weightBasisPoints": 1300,
+      "applicability": "all-cases",
+      "metric": "semantic-authority-subset"
+    }
+  ],
+  "validityGate": {
+    "failureScoreBasisPoints": 0,
+    "requiredPerfectDimensions": [
+      "semantics",
+      "obligations",
+      "policy-scope"
+    ],
+    "inapplicableDimensionPasses": true,
+    "editableScopeRequired": true
+  },
+  "aggregation": {
+    "algorithm": "weighted-applicable-floor-v0.1",
+    "formula": "floor(sum(weight * score) / sum(applicable weight))",
+    "mixedCaseAggregation": "arithmetic-mean-basis-points",
+    "missingCasePolicy": "fail-closed"
+  },
+  "resourcePolicy": {
+    "maxCandidateFiles": 128,
+    "maxCandidateBytes": 1048576,
+    "maxFileBytes": 262144,
+    "maxVerificationSteps": 8,
+    "defaultEvaluatorStepLimit": 200000,
+    "processTimeoutMs": 30000,
+    "maxStdoutBytes": 1048576,
+    "maxStderrBytes": 262144,
+    "maxGeneratedFiles": 128,
+    "maxGeneratedBytes": 16777216,
+    "resourceUnitFormula": "candidate-source-bytes + generated-artifact-bytes + stdout-bytes + stderr-bytes + verification-command-count",
+    "wallTimeInQualityScore": false
+  },
+  "taskPolicies": [
+    {
+      "taskClass": "completion",
+      "obligationStepIds": [],
+      "effectStepIds": [],
+      "policyPaths": [],
+      "generatedPathPrefixes": []
+    },
+    {
+      "taskClass": "deployment",
+      "obligationStepIds": [
+        "build",
+        "package"
+      ],
+      "effectStepIds": [],
+      "policyPaths": [
+        "caps.toml"
+      ],
+      "generatedPathPrefixes": [
+        "dist/"
+      ]
+    },
+    {
+      "taskClass": "generation",
+      "obligationStepIds": [],
+      "effectStepIds": [],
+      "policyPaths": [],
+      "generatedPathPrefixes": []
+    },
+    {
+      "taskClass": "package-migration",
+      "obligationStepIds": [
+        "typecheck"
+      ],
+      "effectStepIds": [],
+      "policyPaths": [],
+      "generatedPathPrefixes": []
+    },
+    {
+      "taskClass": "performance-repair",
+      "obligationStepIds": [],
+      "effectStepIds": [],
+      "policyPaths": [],
+      "generatedPathPrefixes": []
+    },
+    {
+      "taskClass": "policy-minimization",
+      "obligationStepIds": [],
+      "effectStepIds": [
+        "authorized-run"
+      ],
+      "policyPaths": [
+        "caps.toml"
+      ],
+      "generatedPathPrefixes": [
+        "effect.gclog"
+      ]
+    },
+    {
+      "taskClass": "refactor",
+      "obligationStepIds": [],
+      "effectStepIds": [],
+      "policyPaths": [],
+      "generatedPathPrefixes": []
+    },
+    {
+      "taskClass": "repair",
+      "obligationStepIds": [],
+      "effectStepIds": [],
+      "policyPaths": [],
+      "generatedPathPrefixes": []
+    },
+    {
+      "taskClass": "replay-investigation",
+      "obligationStepIds": [],
+      "effectStepIds": [
+        "confirm-mismatch"
+      ],
+      "policyPaths": [
+        "caps.toml"
+      ],
+      "generatedPathPrefixes": []
+    }
+  ],
+  "modelSpecificMetrics": {
+    "includedInQualityScore": false,
+    "recordedBy": "genesis/agent-benchmark-run-v0.1",
+    "separateFields": [
+      "api-cost",
+      "energy",
+      "model-latency",
+      "provider-queue-time"
+    ]
+  },
+  "contentIdentitySha256": "c3a79cf6be40672910687d4dd84ea020644299cda27f64e8b384ebfee8f3ace9"
+}

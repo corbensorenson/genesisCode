@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-agent-benchmark-scoring-v0.1.json",
+  "title": "GenesisCode model-agnostic agent benchmark scoring v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "scoringId", "benchmark", "profile", "qualityScaleBasisPoints", "dimensions", "validityGate", "aggregation", "resourcePolicy", "taskPolicies", "modelSpecificMetrics", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/agent-benchmark-scoring-v0.1"},
+    "version": {"const": "0.1.0"},
+    "scoringId": {"const": "GC-AGENT-BENCHMARK-SCORING-v0.1"},
+    "benchmark": {"$ref": "#/$defs/benchmark"},
+    "profile": {"$ref": "#/$defs/profile"},
+    "qualityScaleBasisPoints": {"const": 10000},
+    "dimensions": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/dimension"}},
+    "validityGate": {"$ref": "#/$defs/validityGate"},
+    "aggregation": {"$ref": "#/$defs/aggregation"},
+    "resourcePolicy": {"$ref": "#/$defs/resourcePolicy"},
+    "taskPolicies": {"type": "array", "minItems": 9, "maxItems": 9, "items": {"$ref": "#/$defs/taskPolicy"}},
+    "modelSpecificMetrics": {"$ref": "#/$defs/modelSpecificMetrics"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "path": {"type": "string", "pattern": "^[A-Za-z0-9._/-]+$", "not": {"pattern": "(^/|(^|/)\\.\\.?(/|$))"}},
+    "benchmark": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "path", "sha256", "contentIdentitySha256"],
+      "properties": {
+        "id": {"const": "GC-AGENT-TASK-BENCHMARK-v0.1"},
+        "path": {"const": "benchmarks/agent_tasks/v0.1/suite.json"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "contentIdentitySha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "profile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "path", "sha256"],
+      "properties": {
+        "id": {"const": "GC-AGENT-v0.3"},
+        "path": {"const": "docs/spec/GC_AGENT_PROFILE_v0.3.json"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "dimension": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "weightBasisPoints", "applicability", "metric"],
+      "properties": {
+        "id": {"enum": ["semantics", "obligations", "effects", "patch-minimality", "resource-use", "policy-scope"]},
+        "weightBasisPoints": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "applicability": {"enum": ["all-cases", "task-policy-step-set"]},
+        "metric": {"type": "string", "pattern": "^[a-z0-9-]+$"}
+      }
+    },
+    "validityGate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["failureScoreBasisPoints", "requiredPerfectDimensions", "inapplicableDimensionPasses", "editableScopeRequired"],
+      "properties": {
+        "failureScoreBasisPoints": {"const": 0},
+        "requiredPerfectDimensions": {"const": ["semantics", "obligations", "policy-scope"]},
+        "inapplicableDimensionPasses": {"const": true},
+        "editableScopeRequired": {"const": true}
+      }
+    },
+    "aggregation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["algorithm", "formula", "mixedCaseAggregation", "missingCasePolicy"],
+      "properties": {
+        "algorithm": {"const": "weighted-applicable-floor-v0.1"},
+        "formula": {"const": "floor(sum(weight * score) / sum(applicable weight))"},
+        "mixedCaseAggregation": {"const": "arithmetic-mean-basis-points"},
+        "missingCasePolicy": {"const": "fail-closed"}
+      }
+    },
+    "resourcePolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maxCandidateFiles", "maxCandidateBytes", "maxFileBytes", "maxVerificationSteps", "defaultEvaluatorStepLimit", "processTimeoutMs", "maxStdoutBytes", "maxStderrBytes", "maxGeneratedFiles", "maxGeneratedBytes", "resourceUnitFormula", "wallTimeInQualityScore"],
+      "properties": {
+        "maxCandidateFiles": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "maxCandidateBytes": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "maxFileBytes": {"type": "integer", "minimum": 1, "maximum": 67108864},
+        "maxVerificationSteps": {"type": "integer", "minimum": 1, "maximum": 64},
+        "defaultEvaluatorStepLimit": {"type": "integer", "minimum": 1, "maximum": 10000000},
+        "processTimeoutMs": {"type": "integer", "minimum": 100, "maximum": 300000},
+        "maxStdoutBytes": {"type": "integer", "minimum": 1024, "maximum": 67108864},
+        "maxStderrBytes": {"type": "integer", "minimum": 1024, "maximum": 67108864},
+        "maxGeneratedFiles": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "maxGeneratedBytes": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "resourceUnitFormula": {"const": "candidate-source-bytes + generated-artifact-bytes + stdout-bytes + stderr-bytes + verification-command-count"},
+        "wallTimeInQualityScore": {"const": false}
+      }
+    },
+    "taskPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["taskClass", "obligationStepIds", "effectStepIds", "policyPaths", "generatedPathPrefixes"],
+      "properties": {
+        "taskClass": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "obligationStepIds": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}},
+        "effectStepIds": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}},
+        "policyPaths": {"type": "array", "items": {"$ref": "#/$defs/path"}},
+        "generatedPathPrefixes": {"type": "array", "items": {"$ref": "#/$defs/path"}}
+      }
+    },
+    "modelSpecificMetrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["includedInQualityScore", "recordedBy", "separateFields"],
+      "properties": {
+        "includedInQualityScore": {"const": false},
+        "recordedBy": {"const": "genesis/agent-benchmark-run-v0.1"},
+        "separateFields": {"const": ["api-cost", "energy", "model-latency", "provider-queue-time"]}
+      }
+    }
+  }
+}

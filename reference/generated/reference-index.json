@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 238,
+    "canonicalSources": 241,
     "diagnostics": 185,
     "exampleFiles": 171,
     "hostOperations": 188,
-    "schemas": 49,
+    "schemas": 51,
     "symbols": 168
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -573,6 +573,18 @@
     {
       "path": "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md",
       "sha256": "dcf47308a16af2bb90eeacd6f3a9b140f3334ea0c4c089878717d1479783483b"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+      "sha256": "a626201ee46c52e14b3298359031ab79d56a6c5f760f384c79187ddb2281f735"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+      "sha256": "c738183c253259c82333eb8642fe31cca3e28a470d41a80d5a9723253c84b8eb"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
+      "sha256": "33bc4182aa7fa5c13605f73cdc1b00cffa5ffe93586b0f10d368b49d5cff5e09"
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
