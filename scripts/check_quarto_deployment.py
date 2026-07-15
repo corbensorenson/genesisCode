@@ -26,21 +26,30 @@ def fetch(base_url: str, path: str, expected_status: int = 200) -> bytes:
 
 
 def attest(base_url: str, expected_commit: str) -> None:
-    pages = {
+    html_pages = {
         "index.html": "A language agents can reason about",
         "learn/documentation-map.html": "Choose the smallest trustworthy path",
         "learn/quickstart.html": "From checkout to verified output",
         "reference/index.html": "Exhaustive reference",
-        "llms.txt": "GenesisCode documentation index for language models",
-        "sitemap.xml": "/genesisCode/reference/symbols.html",
     }
-    for path, needle in pages.items():
+    for path, needle in html_pages.items():
         body = fetch(base_url, path).decode("utf-8")
         if needle not in body:
             raise ValueError(f"{path} is missing {needle!r}")
         canonical = base_url + ("" if path == "index.html" else path)
         if f'<link rel="canonical" href="{canonical}">' not in body:
             raise ValueError(f"{path} has no deployment-correct canonical URL")
+
+    llms = fetch(base_url, "llms.txt").decode("utf-8")
+    if "GenesisCode documentation index for language models" not in llms:
+        raise ValueError("llms.txt is missing its machine-readable title")
+    if base_url not in llms:
+        raise ValueError("llms.txt does not advertise the canonical deployment base URL")
+
+    sitemap = fetch(base_url, "sitemap.xml").decode("utf-8")
+    canonical_symbol = f"<loc>{base_url}reference/symbols.html</loc>"
+    if canonical_symbol not in sitemap:
+        raise ValueError("sitemap.xml has no deployment-correct symbol URL")
 
     social_card = fetch(base_url, "site_assets/genesis-social-card.png")
     if not social_card.startswith(b"\x89PNG\r\n\x1a\n") or len(social_card) < 10_000:
