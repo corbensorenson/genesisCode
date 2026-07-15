@@ -3,8 +3,8 @@
 **Scope: command routing only.** This dashboard does not prove GenesisCode semantic implementation authority, strict Rust-authority retirement, or bootstrap fixpoint closure.
 Semantic authority source: `docs/status/SELFHOST_AUTHORITY_v0.1.md`.
 
-- Artifact hash: `c3af34dcb449d5386d36b60c62b3fbfe88179a934c5474c5dde6b13135381fd5`
-- Store artifact: `.genesis/store/c3af34dcb449d5386d36b60c62b3fbfe88179a934c5474c5dde6b13135381fd5`
+- Artifact hash: `2411aa23d75618ce418e439ffa65f3daf88dc85d16c91af3d2d1ab43ec7be7e8`
+- Store artifact: `.genesis/store/2411aa23d75618ce418e439ffa65f3daf88dc85d16c91af3d2d1ab43ec7be7e8`
 - Selfhost toolchain artifact configured: `selfhost/toolchain.gc`
 - Selfhost toolchain artifact exists: `true`
 
@@ -12,8 +12,8 @@ Semantic authority source: `docs/status/SELFHOST_AUTHORITY_v0.1.md`.
 
 | Metric | Value |
 | --- | --- |
-| Total command groups | 34 |
-| Selfhost-routed command groups | 34 |
+| Total command groups | 35 |
+| Selfhost-routed command groups | 35 |
 | Selfhost-routed coverage | 100.00% |
 | Default selfhost coverage | 100.00% |
 | Fast-path default OK | true |
@@ -25,6 +25,7 @@ Semantic authority source: `docs/status/SELFHOST_AUTHORITY_v0.1.md`.
 | `agent-index` | false | true | true |
 | `agent-plan` | false | true | true |
 | `apply-patch` | true | true | true |
+| `bench/*` | false | true | true |
 | `cli-schema` | false | true | true |
 | `commit/*` | true | true | true |
 | `debug/*` | true | true | true |

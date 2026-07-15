@@ -25,6 +25,7 @@ bash scripts/check_dependency_mirror_contract.sh
 
 echo "green-front-door: generated artifacts, versioning, supply chain, release smoke"
 bash scripts/check_capability_indices.sh
+bash scripts/check_selfhost_dashboard_fresh.sh
 bash scripts/check_check_update_boundary.sh
 bash scripts/check_deterministic_cleanup.sh
 bash scripts/check_gate_resource_telemetry.sh

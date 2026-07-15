@@ -3062,6 +3062,7 @@
         "check_roadmap_workloads.sh",
         "check_root_lock_policy.sh",
         "check_selfhost_boundary.sh",
+        "check_selfhost_dashboard_fresh.sh",
         "check_supply_chain.sh",
         "check_test_execution_profile_matrix.sh",
         "check_v1_compatibility.sh",
@@ -3106,6 +3107,7 @@
         "check_roadmap_workloads.sh",
         "check_root_lock_policy.sh",
         "check_selfhost_boundary.sh",
+        "check_selfhost_dashboard_fresh.sh",
         "check_supply_chain.sh",
         "check_test_execution_profile_matrix.sh",
         "check_v1_compatibility.sh",
@@ -3133,7 +3135,7 @@
       "execution_helper_invocations": [
         "scripts/test_changed_fast.sh"
       ],
-      "execution_identity_sha256": "abdc70b5c30c694e08950d14f7bf6396a884a4b871ffe9dc6f4e7be505ac68c4",
+      "execution_identity_sha256": "d4d3aeacdb08b59b6319f1eeb418f5073ae866091669ba47e7e4925e0d514df6",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3144,7 +3146,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "c283fb942efe1987647b343310afbab390f3f907ee098c2feaacf8a3ff4d9c68",
+      "sha256": "7c2c3acfdf3b6768eb05519e866764a88bbb7006828c3ca7d4c0db33673ca361",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
