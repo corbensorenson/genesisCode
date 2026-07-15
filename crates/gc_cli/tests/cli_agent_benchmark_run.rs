@@ -122,20 +122,15 @@ fn canonical_run_is_complete_content_addressed_and_scores_with_shipped_binary() 
     assert_eq!(report["qualityScoreBasisPoints"], 10_000);
     assert_eq!(report["modelSpecificMetrics"]["present"], false);
 
-    let run: Value = serde_json::from_slice(
-        &fs::read(root.join(BUNDLE).join("run.json")).unwrap(),
-    )
-    .unwrap();
+    let run: Value =
+        serde_json::from_slice(&fs::read(root.join(BUNDLE).join("run.json")).unwrap()).unwrap();
     assert_eq!(run["track"]["trackId"], "open-agent");
     assert_eq!(
         run["track"]["training"]["genesisSpecificTraining"],
         "unknown"
     );
     assert!(run["track"]["hardware"]["classId"].is_null());
-    assert_eq!(
-        run["track"]["hardware"]["measurementMethod"],
-        "not-claimed"
-    );
+    assert_eq!(run["track"]["hardware"]["measurementMethod"], "not-claimed");
 }
 
 #[test]

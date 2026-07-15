@@ -35,10 +35,10 @@
       "sha256": "ace05b8670a0f09455e215f669463fa9995e2c08df01ff83974e6c2f35d54762"
     },
     {
-      "bytes": 7284,
+      "bytes": 7250,
       "id": "benchmark-run-integration-test",
       "path": "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
-      "sha256": "9c2d4d53c2104c756eeb330166a606e254f8504bdeed2623b505b21f14996d10"
+      "sha256": "35b9069a67e280ef075e4d3e976b595a5a8c31a0d4104c9fdd50bc649fb9e501"
     },
     {
       "bytes": 19470,
@@ -113,10 +113,10 @@
       "sha256": "c32ef46008f9244c5c8b4ca8922f3dadf664909d9a696e0ac21e0ba2ce626b73"
     },
     {
-      "bytes": 13017,
+      "bytes": 13039,
       "id": "genesisbench-integration-test",
       "path": "crates/gc_cli/tests/cli_agent_index.rs",
-      "sha256": "27e9cb32eb3d8371fb20621baa945f690c02ecd69c4fbc5977286ff018d9a59e"
+      "sha256": "9f05568a73c2008c848257a5897588259893b848da4e92f277addc9dffda7f00"
     },
     {
       "bytes": 12091,
@@ -212,7 +212,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "8053749325687f9a5ddb6bfea8884828b6453a8ec0bf4405858de5183797e592",
+  "contentIdentitySha256": "0d5c02a33d39b0756ffa4e082f58431d69ff8a6ff690a84a84ed9fd8e5af61f2",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [

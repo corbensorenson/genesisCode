@@ -15,7 +15,10 @@ fn genesisbench_tracks_and_hardware_classes_are_closed() {
     .unwrap();
     let policy = &profile["trackPolicy"];
     assert_eq!(policy["crossTrackRankingAllowed"], false);
-    assert_eq!(policy["rawScaffoldedAdaptedAndLocalAggregatesMayMix"], false);
+    assert_eq!(
+        policy["rawScaffoldedAdaptedAndLocalAggregatesMayMix"],
+        false
+    );
     let tracks: Vec<_> = policy["tracks"]
         .as_array()
         .unwrap()
