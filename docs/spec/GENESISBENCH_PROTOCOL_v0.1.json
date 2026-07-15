@@ -35,22 +35,22 @@
       "sha256": "ace05b8670a0f09455e215f669463fa9995e2c08df01ff83974e6c2f35d54762"
     },
     {
-      "bytes": 6836,
+      "bytes": 7284,
       "id": "benchmark-run-integration-test",
       "path": "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
-      "sha256": "8c2b49c58a97e0b40551f09831e83059c5899ab9ad807e64fb5f206d4a08a4cd"
+      "sha256": "9c2d4d53c2104c756eeb330166a606e254f8504bdeed2623b505b21f14996d10"
     },
     {
-      "bytes": 16863,
+      "bytes": 19470,
       "id": "benchmark-run-schema",
       "path": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
-      "sha256": "c93b96535ecb69745df6c82d4648910004239629b59cab6419f485f3daa7fcdc"
+      "sha256": "b302f35741592431eef8b3bb2fe557b63c4a2741f19a393148b1168104a55f78"
     },
     {
-      "bytes": 42444,
+      "bytes": 45150,
       "id": "benchmark-run-verifier",
       "path": "scripts/lib/gc_agent_benchmark_run.py",
-      "sha256": "89065727dbf6c44e8944d18f00973504d7dcf09cfde6877927643134c6f7f13e"
+      "sha256": "0a4438fa7e7d4eb25820117d4e3b3cd75b80735687a8361c1b14b89f6cf6f500"
     },
     {
       "bytes": 6276,
@@ -77,6 +77,12 @@
       "sha256": "5b010e5be4da7c69ca8fe867a5a5fa2aa4ee5c0240a0eea1488e0b5ec7b59fa8"
     },
     {
+      "bytes": 1566,
+      "id": "genesisbench-adaptation-manifest-schema",
+      "path": "docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json",
+      "sha256": "e2fae2f8e040424bc28720c4da2876a9c58a849fd41742e9152b1505ab53166f"
+    },
+    {
       "bytes": 4137,
       "id": "genesisbench-contamination-attestation-schema",
       "path": "docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json",
@@ -89,40 +95,46 @@
       "sha256": "a49d284e84bebb382855ec65aa642c0d50c8d78d587ddd648aad25a16ead7716"
     },
     {
-      "bytes": 5062,
+      "bytes": 6735,
       "id": "genesisbench-eligibility-schema",
       "path": "docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json",
-      "sha256": "99474b3494497ea9613fd75de3801b07acbe83956139a0c5d31eb02e96d2a267"
+      "sha256": "a093d2b0bfef9effdf6dc8b09cc6dcc9de942550f2713f57da9bd9e061a8b4bd"
     },
     {
-      "bytes": 6594,
+      "bytes": 7371,
       "id": "genesisbench-eligibility-verifier",
       "path": "scripts/lib/genesisbench_eligibility.py",
-      "sha256": "5b00fb2649eece915eb02390d614c14108a66e30cd0f940419dfd019f376f3ca"
+      "sha256": "590189626f757699601f636ef77541daa2065738b4d3aa7d193fee26481b7285"
     },
     {
-      "bytes": 11875,
+      "bytes": 1471,
+      "id": "genesisbench-hardware-evidence-schema",
+      "path": "docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json",
+      "sha256": "c32ef46008f9244c5c8b4ca8922f3dadf664909d9a696e0ac21e0ba2ce626b73"
+    },
+    {
+      "bytes": 13017,
       "id": "genesisbench-integration-test",
       "path": "crates/gc_cli/tests/cli_agent_index.rs",
-      "sha256": "35491be229d9b6d6f14b9e4c13a28e63b1769d9eff7487e9f8a0134bd0509300"
+      "sha256": "27e9cb32eb3d8371fb20621baa945f690c02ecd69c4fbc5977286ff018d9a59e"
     },
     {
-      "bytes": 9186,
+      "bytes": 12091,
       "id": "genesisbench-normative-spec",
       "path": "guides/genesisbench.qmd",
-      "sha256": "ee2d23e427f1b49f5b83be82c012da9d9e628dbeb43a42f14296615dd0ed1e04"
+      "sha256": "a5baa94455f95f51dba2b6fe2c544d9d05fcb80c83910186c03b6dd55ea7adbc"
     },
     {
-      "bytes": 17472,
+      "bytes": 20499,
       "id": "genesisbench-profile-schema",
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
-      "sha256": "23288f8b6479407ea40c73d5a08590f1ff10d7dfdc050313507fe053d894201f"
+      "sha256": "0dae06cc496d52b69cff395e10f63629b779f4d07b1bb5cd6194a5b89c830162"
     },
     {
-      "bytes": 9971,
+      "bytes": 10777,
       "id": "genesisbench-protocol-contract",
       "path": "scripts/lib/genesisbench_protocol_contract.py",
-      "sha256": "2dc28c6683beb0cfb5106ec32dc38d0c53f71641288af572bb6f86a5ed03585b"
+      "sha256": "759ef299d78452fedbcd0e6101a545bfdb29ce97b8150f06c996f8bef8f1b6a9"
     },
     {
       "bytes": 4782,
@@ -131,10 +143,22 @@
       "sha256": "7d5293d1a28d2870adec279d1f693d496ec86c0bf61cbbc0bd4d22d2f018e3d5"
     },
     {
-      "bytes": 30764,
+      "bytes": 2920,
+      "id": "genesisbench-scaffold-manifest-schema",
+      "path": "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
+      "sha256": "527c402107d7f72f309f451e581be1ec5a4dc81140b329d8e0490ccfb36c9c2e"
+    },
+    {
+      "bytes": 22883,
+      "id": "genesisbench-track-contract",
+      "path": "scripts/lib/genesisbench_tracks.py",
+      "sha256": "e5122d9e7050fd388750f56d37518997481255827eda76be8ca7643310bdc7ab"
+    },
+    {
+      "bytes": 32648,
       "id": "genesisbench-verifier",
       "path": "scripts/lib/genesisbench_protocol.py",
-      "sha256": "5e3d9d3bdfa2a8a89a3ddf59bc22fb33d42a56b061a8cc9aaab93e50275cd900"
+      "sha256": "6931d13bcce3535a3b77f78ae000ed57489363686d3d33d278afcb5b8b99643d"
     },
     {
       "bytes": 4310,
@@ -188,7 +212,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "2bdd11fbae0492207f87a6027540b4772035285cab1bcce1ec94d7daf942bf79",
+  "contentIdentitySha256": "8053749325687f9a5ddb6bfea8884828b6453a8ec0bf4405858de5183797e592",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
@@ -270,12 +294,17 @@
   },
   "eligibilityPolicy": {
     "cohortKeys": [
-      "attempt-policy",
+      "attempt-policy-identity",
       "contamination-label",
       "context-mode",
+      "hardware-class",
+      "interaction-mode",
+      "language-profile-artifact",
       "protocol-identity",
+      "scaffold-identity",
+      "task-epoch",
       "task-visibility",
-      "tool-mode"
+      "track"
     ],
     "decisions": [
       "invalid",
@@ -291,7 +320,11 @@
       "profile/mismatch",
       "run/invalid",
       "score/mismatch",
-      "snapshot/mismatch"
+      "snapshot/mismatch",
+      "track/declaration-mismatch",
+      "track/hardware-class-mismatch",
+      "track/offline-violation",
+      "track/scaffold-mismatch"
     ],
     "missingEvidenceDecision": "unranked",
     "rankedRequirements": [
@@ -303,6 +336,7 @@
       "profile-and-snapshot-valid",
       "strongest-contamination-label",
       "tool-and-context-policy-exact",
+      "track-and-cohort-exact",
       "valid-closed-run-record"
     ],
     "silentSuppressionAllowed": false,
@@ -312,6 +346,9 @@
       "model/conformance-fixture",
       "score/not-independently-rescored",
       "task/public-reference",
+      "track/admission-not-open",
+      "track/hardware-evidence-incomplete",
+      "track/training-provenance-incomplete",
       "visibility/practice-only"
     ]
   },
@@ -570,6 +607,115 @@
     "providerControlChannel": "separate-from-candidate-tool-authority",
     "toolErrorsRecorded": true,
     "transport": "bounded-stdio-json-rpc"
+  },
+  "trackPolicy": {
+    "adaptationManifestSchemaAuthorityId": "genesisbench-adaptation-manifest-schema",
+    "cohortIdentityAlgorithm": "sha256-canonical-json-v0.1",
+    "cohortKeys": [
+      "attempt-policy-identity",
+      "contamination-label",
+      "context-mode",
+      "hardware-class",
+      "interaction-mode",
+      "language-profile-artifact",
+      "protocol-identity",
+      "scaffold-identity",
+      "task-epoch",
+      "task-visibility",
+      "track"
+    ],
+    "comparisonRule": "same-track-and-content-addressed-cohort-only",
+    "crossTrackRankingAllowed": false,
+    "hardwareClasses": [
+      {
+        "id": "embedded-s",
+        "maxCombinedResidentBytes": 4294967296
+      },
+      {
+        "id": "embedded-m",
+        "maxCombinedResidentBytes": 17179869184
+      },
+      {
+        "id": "embedded-l",
+        "maxCombinedResidentBytes": 68719476736
+      }
+    ],
+    "hardwareEvidenceRequiredForRanking": true,
+    "hardwareEvidenceSchemaAuthorityId": "genesisbench-hardware-evidence-schema",
+    "hardwareFootprintBasis": "peak-combined-model-and-runtime-resident-bytes",
+    "hardwareMembershipRule": "smallest-class-whose-bound-covers-combined-resident-bytes",
+    "kind": "genesis/genesisbench-track-policy-v0.1",
+    "rawScaffoldedAdaptedAndLocalAggregatesMayMix": false,
+    "resourceCeilingsSharedAcrossTracks": true,
+    "scaffoldManifestSchemaAuthorityId": "genesisbench-scaffold-manifest-schema",
+    "tracks": [
+      {
+        "genesisSpecificTraining": [
+          "none"
+        ],
+        "id": "cold-acquisition",
+        "inferenceModes": [
+          "local-offline",
+          "remote-disclosed"
+        ],
+        "purpose": "headline-model-comparison",
+        "rankedAdmissionOpen": false,
+        "scaffoldClasses": [
+          "fixed-reference"
+        ]
+      },
+      {
+        "genesisSpecificTraining": [
+          "declared-public",
+          "none",
+          "unknown"
+        ],
+        "id": "embedded-local",
+        "inferenceModes": [
+          "local-offline"
+        ],
+        "purpose": "self-hosted-local-appliance",
+        "rankedAdmissionOpen": true,
+        "scaffoldClasses": [
+          "disclosed-custom",
+          "fixed-reference"
+        ]
+      },
+      {
+        "genesisSpecificTraining": [
+          "declared-public"
+        ],
+        "id": "genesis-adapted",
+        "inferenceModes": [
+          "local-offline",
+          "remote-disclosed"
+        ],
+        "purpose": "lineage-audited-public-adaptation",
+        "rankedAdmissionOpen": true,
+        "scaffoldClasses": [
+          "disclosed-custom",
+          "fixed-reference"
+        ]
+      },
+      {
+        "genesisSpecificTraining": [
+          "none",
+          "unknown"
+        ],
+        "id": "open-agent",
+        "inferenceModes": [
+          "local-offline",
+          "remote-disclosed"
+        ],
+        "purpose": "disclosed-retrieval-and-orchestration",
+        "rankedAdmissionOpen": true,
+        "scaffoldClasses": [
+          "disclosed-custom",
+          "fixed-reference"
+        ]
+      }
+    ],
+    "version": "0.1.0"
   },
   "version": "0.1.0"
 }

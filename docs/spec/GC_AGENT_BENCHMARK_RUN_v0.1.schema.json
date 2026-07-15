@@ -10,6 +10,7 @@
     "runId",
     "status",
     "benchmark",
+    "track",
     "authorities",
     "model",
     "invocation",
@@ -27,6 +28,7 @@
     "runId": {"$ref": "#/$defs/id"},
     "status": {"enum": ["complete", "failed", "cancelled"]},
     "benchmark": {"$ref": "#/$defs/benchmark"},
+    "track": {"$ref": "#/$defs/track"},
     "authorities": {
       "type": "array",
       "minItems": 8,
@@ -74,6 +76,61 @@
         "split": {"enum": ["dev", "public-test", "held-out"]},
         "contamination": {"enum": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]},
         "heldOutEpochId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}
+      }
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trackId", "scaffold", "training", "inference", "hardware", "contentIdentitySha256"],
+      "properties": {
+        "trackId": {"enum": ["cold-acquisition", "embedded-local", "genesis-adapted", "open-agent"]},
+        "scaffold": {"$ref": "#/$defs/trackScaffold"},
+        "training": {"$ref": "#/$defs/trackTraining"},
+        "inference": {"$ref": "#/$defs/trackInference"},
+        "hardware": {"$ref": "#/$defs/trackHardware"},
+        "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "trackScaffold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "id", "manifestArtifact", "identitySha256"],
+      "properties": {
+        "class": {"enum": ["disclosed-custom", "fixed-reference"]},
+        "id": {"$ref": "#/$defs/id"},
+        "manifestArtifact": {"$ref": "#/$defs/artifactKey"},
+        "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "trackTraining": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["genesisSpecificTraining", "manifestArtifact", "manifestIdentitySha256"],
+      "properties": {
+        "genesisSpecificTraining": {"enum": ["declared-public", "none", "unknown"]},
+        "manifestArtifact": {"$ref": "#/$defs/nullableArtifactKey"},
+        "manifestIdentitySha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}
+      }
+    },
+    "trackInference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "networkMode"],
+      "properties": {
+        "mode": {"enum": ["local-offline", "remote-disclosed"]},
+        "networkMode": {"enum": ["deny", "provider-only"]}
+      }
+    },
+    "trackHardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classId", "combinedResidentBytes", "evidenceArtifact", "evidenceIdentitySha256", "measurementMethod"],
+      "properties": {
+        "classId": {"oneOf": [{"enum": ["embedded-s", "embedded-m", "embedded-l"]}, {"type": "null"}]},
+        "combinedResidentBytes": {"oneOf": [{"type": "integer", "minimum": 0, "maximum": 68719476736}, {"type": "null"}]},
+        "evidenceArtifact": {"$ref": "#/$defs/nullableArtifactKey"},
+        "evidenceIdentitySha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "measurementMethod": {"enum": ["measured-peak-rss", "enforced-hard-ceiling", "not-claimed"]}
       }
     },
     "authority": {
@@ -358,7 +415,7 @@
         "sha256": {"$ref": "#/$defs/hash"},
         "bytes": {"type": "integer", "minimum": 0, "maximum": 1073741824},
         "mediaType": {"type": "string", "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"},
-        "role": {"enum": ["authority", "prompt", "card", "context", "model", "runtime", "request", "response", "model-output", "tool-catalog", "tool-policy", "tool-transcript", "effect-log", "candidate", "score"]},
+        "role": {"enum": ["authority", "prompt", "card", "context", "model", "runtime", "request", "response", "model-output", "tool-catalog", "tool-policy", "tool-transcript", "effect-log", "candidate", "score", "training-manifest", "hardware-evidence", "scaffold-manifest"]},
         "mode": {"enum": ["0644", "0755"]}
       }
     }

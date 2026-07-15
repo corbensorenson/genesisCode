@@ -17,6 +17,12 @@ from typing import Any
 
 from gc_agent_scoring import parse_toml_subset
 from gc_agent_scoring_contract import validate_score
+from genesisbench_tracks import object_identity as track_object_identity
+from genesisbench_tracks import (
+    expected_scaffold_manifest, validate_adaptation_manifest,
+    validate_hardware_evidence, validate_scaffold_manifest,
+    validate_track_declaration,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,7 +37,7 @@ HOST_PATH_RE = re.compile(r"(?:/Users/|/home/|[A-Za-z]:\\\\Users\\\\)")
 
 TOP_KEYS = {
     "kind", "version", "runId", "status", "benchmark", "authorities", "model",
-    "invocation", "toolProtocol", "host", "candidate", "score",
+    "track", "invocation", "toolProtocol", "host", "candidate", "score",
     "modelSpecificMetrics", "artifactInventory", "contentIdentitySha256",
 }
 REQUIRED_AUTHORITIES = {
@@ -41,6 +47,9 @@ REQUIRED_AUTHORITIES = {
     "benchmark-run-integration-test": "repository:crates/gc_cli/tests/cli_agent_benchmark_run.rs",
     "benchmark-run-schema": "repository:docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
     "benchmark-run-verifier": "repository:scripts/lib/gc_agent_benchmark_run.py",
+    "genesisbench-adaptation-manifest-schema": "repository:docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json",
+    "genesisbench-hardware-evidence-schema": "repository:docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json",
+    "genesisbench-scaffold-manifest-schema": "repository:docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
     "model-runner-effect": "repository:docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
     "scoring-authority": "repository:docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
     "task-benchmark": "repository:benchmarks/agent_tasks/v0.1/suite.json",
@@ -48,7 +57,8 @@ REQUIRED_AUTHORITIES = {
 ARTIFACT_ROLES = {
     "authority", "prompt", "card", "context", "model", "runtime", "request",
     "response", "model-output", "tool-catalog", "tool-policy", "tool-transcript",
-    "effect-log", "candidate", "score",
+    "effect-log", "candidate", "score", "training-manifest", "hardware-evidence",
+    "scaffold-manifest",
 }
 MEDIA_TYPES = {
     ".gc": "text/plain",
@@ -404,6 +414,16 @@ def validate_document(document: Any, run_path: Path = EXAMPLE, *, check_files: b
     metrics = closed(doc["modelSpecificMetrics"], {"includedInQualityScore", "modelLatencyNs", "providerQueueNs", "apiCostMicrounits", "currency", "energyMicrojoules", "measurementCompleteness"}, "model metrics")
     require(metrics["includedInQualityScore"] is False, "model metrics entered quality score")
 
+    validate_track_declaration(doc["track"], doc)
+    if check_files:
+        validate_scaffold_manifest(load_json(paths[doc["track"]["scaffold"]["manifestArtifact"]]), doc)
+        training = doc["track"]["training"]
+        if training["manifestArtifact"] is not None:
+            validate_adaptation_manifest(load_json(paths[training["manifestArtifact"]]))
+        hardware = doc["track"]["hardware"]
+        if hardware["evidenceArtifact"] is not None:
+            validate_hardware_evidence(load_json(paths[hardware["evidenceArtifact"]]), hardware)
+
     if check_files:
         referenced = set(REQUIRED_AUTHORITIES.values()) | {
             model["weightsArtifact"], model["tokenizerArtifact"], runtime["executableArtifact"],
@@ -418,6 +438,11 @@ def validate_document(document: Any, run_path: Path = EXAMPLE, *, check_files: b
             if row["outputArtifact"] is not None:
                 referenced.add(row["outputArtifact"])
         referenced.update(candidate["artifacts"])
+        referenced.add(doc["track"]["scaffold"]["manifestArtifact"])
+        if doc["track"]["training"]["manifestArtifact"] is not None:
+            referenced.add(doc["track"]["training"]["manifestArtifact"])
+        if doc["track"]["hardware"]["evidenceArtifact"] is not None:
+            referenced.add(doc["track"]["hardware"]["evidenceArtifact"])
         require(
             referenced == set(paths),
             "artifact inventory contains unreferenced or missing material "
@@ -654,10 +679,23 @@ def refresh_example(genesis_bin: Path, selfhost_artifact: Path) -> None:
         "invocation/request.json": "request", "invocation/response.json": "response",
         "invocation/model-output.txt": "model-output", "tool-transcript.jsonl": "tool-transcript",
         "model-effect.gclog": "effect-log", "score.json": "score",
+        "scaffold-manifest.json": "scaffold-manifest",
     }
     for path, role in sorted(bundle_roles.items()):
         add_artifact(rows, "bundle", path, role, "0755" if path == "tools/local_model_bridge.py" else "0644")
     doc["artifactInventory"] = sorted(rows, key=lambda row: row["key"])
+    scaffold_manifest = expected_scaffold_manifest(doc)
+    scaffold_manifest["contentIdentitySha256"] = track_object_identity(scaffold_manifest)
+    (EXAMPLE.parent / "scaffold-manifest.json").write_text(
+        json.dumps(scaffold_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+    )
+    for row in doc["artifactInventory"]:
+        if row["key"] == "bundle:scaffold-manifest.json":
+            row["sha256"] = file_sha256(EXAMPLE.parent / "scaffold-manifest.json")
+            row["bytes"] = (EXAMPLE.parent / "scaffold-manifest.json").stat().st_size
+    track = doc["track"]
+    track["scaffold"]["identitySha256"] = file_sha256(EXAMPLE.parent / "scaffold-manifest.json")
+    track["contentIdentitySha256"] = track_object_identity(track)
     doc["contentIdentitySha256"] = object_identity(doc, "contentIdentitySha256")
     EXAMPLE.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     validate_document(load_json(EXAMPLE))
@@ -698,6 +736,9 @@ def self_test(document: dict[str, Any]) -> int:
     add("quality-model-metrics", lambda d: d["modelSpecificMetrics"].__setitem__("includedInQualityScore", True))
     add("heldout-leak", lambda d: d["benchmark"].__setitem__("split", "held-out"))
     add("contamination-erasure", lambda d: d["benchmark"].__setitem__("contamination", "temporal-clean"))
+    add("track-rebinding", lambda d: d["track"].__setitem__("trackId", "cold-acquisition"))
+    add("scaffold-rebinding", lambda d: d["track"]["scaffold"].__setitem__("identitySha256", "0" * 64))
+    add("track-identity", lambda d: d["track"].__setitem__("contentIdentitySha256", "0" * 64))
     add("identity-drift", lambda d: d.__setitem__("contentIdentitySha256", "0" * 64))
     rejected = 0
     for name, candidate in mutations:

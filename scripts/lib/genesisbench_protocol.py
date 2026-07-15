@@ -34,6 +34,10 @@ from genesisbench_protocol_contract import (
 )
 from genesisbench_protocol_run import self_test as run_binding_self_test
 from genesisbench_protocol_run import validate_run_modes
+from genesisbench_tracks import (
+    TRACK_POLICY, build_cohort, classify_track, cohort_id,
+    self_test as track_self_test,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -41,6 +45,9 @@ PROFILE = ROOT / "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"
 PROFILE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json"
 ELIGIBILITY_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json"
 ATTESTATION_SCHEMA = ROOT / "docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json"
+ADAPTATION_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json"
+HARDWARE_EVIDENCE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json"
+SCAFFOLD_SCHEMA = ROOT / "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json"
 RUN_EXAMPLE = ROOT / "examples/agent_benchmark_reproducibility/run.json"
 ATTESTATION_FIXTURE = ROOT / "benchmarks/genesisbench/v0.1/contamination.fixture.json"
 TASK_BENCHMARK = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
@@ -357,6 +364,7 @@ def validate_profile(document: Any, *, check_identity: bool = True) -> dict[str,
     require(doc["taskVisibilityPolicy"] == visibility_policy(), "task visibility policy drift")
     require(doc["scoringPolicy"] == SCORING_POLICY, "scoring policy drift")
     require(doc["contaminationPolicy"] == CONTAMINATION_POLICY, "contamination policy drift")
+    require(doc["trackPolicy"] == TRACK_POLICY, "track policy drift")
     require(doc["eligibilityPolicy"] == ELIGIBILITY_POLICY, "eligibility policy drift")
     require(doc["selfHosting"] == SELF_HOSTING, "self-hosting contract drift")
     source = MCP_CATALOG_SOURCE.read_text(encoding="utf-8")
@@ -414,17 +422,23 @@ def evaluate_run(
         reasons.append("model/conformance-fixture")
     if len(run["invocation"]["attempts"]) > profile["attemptPolicy"]["rankedMaxAttempts"]:
         reasons.append("attempt/multiple")
+    if supported_label == "unknown":
+        reasons.append("evidence/incomplete")
+    track_reasons, track_invalid_reasons = classify_track(run["track"], run)
+    reasons.extend(track_reasons)
     invalid_reasons: list[str] = []
     if claimed_label != supported_label or (
         attestation_claim is not None and attestation_claim != supported_label
     ):
         invalid_reasons.append("contamination/overclaim")
+    invalid_reasons.extend(track_invalid_reasons)
     reasons = sorted(set(reasons))
     invalid_reasons = sorted(set(invalid_reasons))
     decision = "invalid" if invalid_reasons else ("ranked" if not reasons else "unranked")
-    cohort = (
-        f"{profile['protocolId'].lower()}-{context_mode}-{interaction_mode}-"
-        f"{visibility}-{supported_label}"
+    cohort = build_cohort(
+        profile, run, context_mode=context_mode,
+        interaction_mode=interaction_mode, visibility=visibility,
+        contamination_label=supported_label,
     )
     report = {
         "kind": "genesis/genesisbench-eligibility-v0.1",
@@ -471,9 +485,10 @@ def evaluate_run(
             "strongestSupportedLabel": supported_label,
             "evidenceCodes": evidence_codes,
         },
+        "cohort": cohort,
         "eligibility": {
             "decision": decision,
-            "rankingCohort": cohort,
+            "rankingCohort": cohort_id(cohort),
             "reasonCodes": invalid_reasons if invalid_reasons else reasons,
         },
         "contentIdentitySha256": "",
@@ -537,6 +552,9 @@ def self_test(profile: dict[str, Any]) -> int:
     add("metric-score", lambda d: d["scoringPolicy"].__setitem__("modelMetricsIncluded", True))
     add("contamination-default", lambda d: d["contaminationPolicy"].__setitem__("defaultLabel", "temporal-clean"))
     add("newness-clean", lambda d: d["contaminationPolicy"].__setitem__("newLanguageImpliesClean", True))
+    add("cross-track-ranking", lambda d: d["trackPolicy"].__setitem__("crossTrackRankingAllowed", True))
+    add("track-removal", lambda d: d["trackPolicy"]["tracks"].pop())
+    add("hardware-bound", lambda d: d["trackPolicy"]["hardwareClasses"][0].__setitem__("maxCombinedResidentBytes", 5 * 1024**3))
     add("temporal-order", lambda d: d["contaminationPolicy"]["temporalCleanEvidence"].__setitem__("taskPrecommitAfterModelReleaseRequired", False))
     add("missing-evidence-ranked", lambda d: d["eligibilityPolicy"].__setitem__("missingEvidenceDecision", "ranked"))
     add("silent-suppression", lambda d: d["eligibilityPolicy"].__setitem__("silentSuppressionAllowed", True))
@@ -558,6 +576,7 @@ def self_test(profile: dict[str, Any]) -> int:
     suite = load_json(TASK_BENCHMARK)
     case = next(row for row in suite["cases"] if row["id"] == run["benchmark"]["caseId"])
     rejected += run_binding_self_test(profile, run, case, suite)
+    rejected += track_self_test(run)
     rejected += contamination_self_test(
         load_json(ATTESTATION_FIXTURE), run, held_out,
     )
@@ -578,6 +597,9 @@ def self_test(profile: dict[str, Any]) -> int:
     add_report("report-ranked", lambda d: (d["eligibility"].__setitem__("decision", "ranked"), d["eligibility"].__setitem__("reasonCodes", [])))
     add_report("report-reason-order", lambda d: d["eligibility"]["reasonCodes"].reverse())
     add_report("report-reason-class", lambda d: d["eligibility"]["reasonCodes"].append("run/invalid"))
+    add_report("report-track", lambda d: d["cohort"].__setitem__("trackId", "cold-acquisition"))
+    add_report("report-scaffold", lambda d: d["cohort"].__setitem__("scaffoldIdentitySha256", "0" * 64))
+    add_report("report-cohort-id", lambda d: d["eligibility"].__setitem__("rankingCohort", "genesisbench-cohort-v0.1/" + "0" * 64))
     for name, candidate in report_mutations:
         try:
             validate_report(candidate, profile, run)
@@ -611,6 +633,7 @@ def refresh_profile() -> None:
     document["taskVisibilityPolicy"] = visibility_policy()
     document["scoringPolicy"] = copy.deepcopy(SCORING_POLICY)
     document["contaminationPolicy"] = copy.deepcopy(CONTAMINATION_POLICY)
+    document["trackPolicy"] = copy.deepcopy(TRACK_POLICY)
     document["eligibilityPolicy"] = copy.deepcopy(ELIGIBILITY_POLICY)
     document["selfHosting"] = copy.deepcopy(SELF_HOSTING)
     resign(document)
@@ -630,6 +653,9 @@ def main() -> int:
     validate_schema(PROFILE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-protocol-v0.1.json")
     validate_schema(ELIGIBILITY_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-eligibility-v0.1.json")
     validate_schema(ATTESTATION_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-contamination-attestation-v0.1.json")
+    validate_schema(ADAPTATION_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-adaptation-manifest-v0.1.json")
+    validate_schema(HARDWARE_EVIDENCE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-hardware-evidence-v0.1.json")
+    validate_schema(SCAFFOLD_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-scaffold-manifest-v0.1.json")
     if args.refresh_profile:
         require(args.run is None and args.attestation is None and not args.json and not args.self_test, "refresh accepts no check inputs")
         refresh_profile()

@@ -19,6 +19,7 @@
     "taskVisibilityPolicy",
     "scoringPolicy",
     "contaminationPolicy",
+    "trackPolicy",
     "eligibilityPolicy",
     "selfHosting",
     "contentIdentitySha256"
@@ -43,6 +44,7 @@
     "taskVisibilityPolicy": {"$ref": "#/$defs/taskVisibilityPolicy"},
     "scoringPolicy": {"$ref": "#/$defs/scoringPolicy"},
     "contaminationPolicy": {"$ref": "#/$defs/contaminationPolicy"},
+    "trackPolicy": {"$ref": "#/$defs/trackPolicy"},
     "eligibilityPolicy": {"$ref": "#/$defs/eligibilityPolicy"},
     "selfHosting": {"$ref": "#/$defs/selfHosting"},
     "contentIdentitySha256": {"$ref": "#/$defs/hash"}
@@ -426,6 +428,51 @@
         "claimMustEqualStrongestSupportedLabel": {"const": true},
         "attestationSchemaAuthorityId": {"const": "genesisbench-contamination-attestation-schema"},
         "newLanguageImpliesClean": {"const": false}
+      }
+    },
+    "benchmarkTrack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "purpose", "genesisSpecificTraining", "scaffoldClasses", "inferenceModes", "rankedAdmissionOpen"],
+      "properties": {
+        "id": {"enum": ["cold-acquisition", "embedded-local", "genesis-adapted", "open-agent"]},
+        "purpose": {"enum": ["headline-model-comparison", "self-hosted-local-appliance", "lineage-audited-public-adaptation", "disclosed-retrieval-and-orchestration"]},
+        "genesisSpecificTraining": {"$ref": "#/$defs/stringSet"},
+        "scaffoldClasses": {"$ref": "#/$defs/stringSet"},
+        "inferenceModes": {"$ref": "#/$defs/stringSet"},
+        "rankedAdmissionOpen": {"type": "boolean"}
+      }
+    },
+    "hardwareClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "maxCombinedResidentBytes"],
+      "properties": {
+        "id": {"enum": ["embedded-s", "embedded-m", "embedded-l"]},
+        "maxCombinedResidentBytes": {"type": "integer", "minimum": 4294967296, "maximum": 68719476736}
+      }
+    },
+    "trackPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "version", "crossTrackRankingAllowed", "comparisonRule", "cohortIdentityAlgorithm", "cohortKeys", "tracks", "hardwareClasses", "hardwareMembershipRule", "hardwareFootprintBasis", "hardwareEvidenceRequiredForRanking", "adaptationManifestSchemaAuthorityId", "hardwareEvidenceSchemaAuthorityId", "scaffoldManifestSchemaAuthorityId", "resourceCeilingsSharedAcrossTracks", "rawScaffoldedAdaptedAndLocalAggregatesMayMix"],
+      "properties": {
+        "kind": {"const": "genesis/genesisbench-track-policy-v0.1"},
+        "version": {"const": "0.1.0"},
+        "crossTrackRankingAllowed": {"const": false},
+        "comparisonRule": {"const": "same-track-and-content-addressed-cohort-only"},
+        "cohortIdentityAlgorithm": {"const": "sha256-canonical-json-v0.1"},
+        "cohortKeys": {"$ref": "#/$defs/stringSet"},
+        "tracks": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"$ref": "#/$defs/benchmarkTrack"}},
+        "hardwareClasses": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/hardwareClass"}},
+        "hardwareMembershipRule": {"const": "smallest-class-whose-bound-covers-combined-resident-bytes"},
+        "hardwareFootprintBasis": {"const": "peak-combined-model-and-runtime-resident-bytes"},
+        "hardwareEvidenceRequiredForRanking": {"const": true},
+        "adaptationManifestSchemaAuthorityId": {"const": "genesisbench-adaptation-manifest-schema"},
+        "hardwareEvidenceSchemaAuthorityId": {"const": "genesisbench-hardware-evidence-schema"},
+        "scaffoldManifestSchemaAuthorityId": {"const": "genesisbench-scaffold-manifest-schema"},
+        "resourceCeilingsSharedAcrossTracks": {"const": true},
+        "rawScaffoldedAdaptedAndLocalAggregatesMayMix": {"const": false}
       }
     },
     "eligibilityPolicy": {

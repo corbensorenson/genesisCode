@@ -13,6 +13,7 @@
     "case",
     "validation",
     "contamination",
+    "cohort",
     "eligibility",
     "contentIdentitySha256"
   ],
@@ -25,6 +26,7 @@
     "case": {"$ref": "#/$defs/case"},
     "validation": {"$ref": "#/$defs/validation"},
     "contamination": {"$ref": "#/$defs/contamination"},
+    "cohort": {"$ref": "#/$defs/cohort"},
     "eligibility": {"$ref": "#/$defs/eligibility"},
     "contentIdentitySha256": {"$ref": "#/$defs/hash"}
   },
@@ -119,13 +121,34 @@
         "evidenceCodes": {"$ref": "#/$defs/stringSet"}
       }
     },
+    "cohort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "version", "trackId", "protocolIdentitySha256", "languageProfileArtifactSha256", "scaffoldIdentitySha256", "taskEpochId", "contextMode", "interactionMode", "attemptPolicyIdentitySha256", "hardwareClassId", "contaminationLabel", "taskVisibilityClass", "contentIdentitySha256"],
+      "properties": {
+        "kind": {"const": "genesis/genesisbench-cohort-v0.1"},
+        "version": {"const": "0.1.0"},
+        "trackId": {"enum": ["cold-acquisition", "embedded-local", "genesis-adapted", "open-agent"]},
+        "protocolIdentitySha256": {"$ref": "#/$defs/hash"},
+        "languageProfileArtifactSha256": {"$ref": "#/$defs/hash"},
+        "scaffoldIdentitySha256": {"$ref": "#/$defs/hash"},
+        "taskEpochId": {"$ref": "#/$defs/nullableId"},
+        "contextMode": {"enum": ["compact-small", "compact-medium", "compact-large", "repository-readonly"]},
+        "interactionMode": {"enum": ["artifact-response-v0.1", "genesis-mcp-2025-11-25"]},
+        "attemptPolicyIdentitySha256": {"$ref": "#/$defs/hash"},
+        "hardwareClassId": {"oneOf": [{"enum": ["embedded-s", "embedded-m", "embedded-l"]}, {"type": "null"}]},
+        "contaminationLabel": {"enum": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]},
+        "taskVisibilityClass": {"enum": ["held-out-commitment", "public-anchor-hidden-oracle", "public-development-reference", "temporal-held-out"]},
+        "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
     "eligibility": {
       "type": "object",
       "additionalProperties": false,
       "required": ["decision", "rankingCohort", "reasonCodes"],
       "properties": {
         "decision": {"enum": ["invalid", "ranked", "unranked"]},
-        "rankingCohort": {"$ref": "#/$defs/nullableId"},
+        "rankingCohort": {"type": "string", "pattern": "^genesisbench-cohort-v0[.]1/[0-9a-f]{64}$"},
         "reasonCodes": {"$ref": "#/$defs/stringSet"}
       }
     }

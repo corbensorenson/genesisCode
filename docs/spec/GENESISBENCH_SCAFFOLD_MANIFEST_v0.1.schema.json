@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-scaffold-manifest-v0.1.json",
+  "title": "GenesisBench disclosed agent scaffold manifest v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "class", "systemPromptArtifact", "promptAssemblyAlgorithm", "retrieval", "orchestration", "tool", "externalAuthorityPolicy", "resourceCeilingPolicy", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-scaffold-manifest-v0.1"},
+    "version": {"const": "0.1.0"},
+    "class": {"enum": ["disclosed-custom", "fixed-reference"]},
+    "systemPromptArtifact": {"$ref": "#/$defs/artifactKey"},
+    "promptAssemblyAlgorithm": {"const": "sha256-domain-separated-ordered-artifacts-v0.1"},
+    "retrieval": {"$ref": "#/$defs/retrieval"},
+    "orchestration": {"$ref": "#/$defs/orchestration"},
+    "tool": {"$ref": "#/$defs/tool"},
+    "externalAuthorityPolicy": {"const": "protocol-and-case-exact-no-broadening"},
+    "resourceCeilingPolicy": {"const": "protocol-and-case-exact-no-broadening"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "nullableId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+    "artifactKey": {"type": "string", "pattern": "^(?:repository|bundle):[A-Za-z0-9._/-]+$"},
+    "retrieval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "algorithmId", "configIdentitySha256", "completeTranscriptRequired"],
+      "properties": {
+        "mode": {"enum": ["none", "logged-exact-artifact"]},
+        "algorithmId": {"$ref": "#/$defs/nullableId"},
+        "configIdentitySha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "completeTranscriptRequired": {"const": true}
+      }
+    },
+    "orchestration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentCount", "subagentsAllowed", "plannerId", "repairLoopId", "stopPolicyId"],
+      "properties": {
+        "agentCount": {"type": "integer", "minimum": 1, "maximum": 1024},
+        "subagentsAllowed": {"type": "boolean"},
+        "plannerId": {"$ref": "#/$defs/nullableId"},
+        "repairLoopId": {"$ref": "#/$defs/nullableId"},
+        "stopPolicyId": {"$ref": "#/$defs/id"}
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalogArtifact", "protocolId", "operations"],
+      "properties": {
+        "catalogArtifact": {"$ref": "#/$defs/artifactKey"},
+        "protocolId": {"$ref": "#/$defs/id"},
+        "operations": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 256}}
+      }
+    }
+  }
+}

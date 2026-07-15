@@ -1,5 +1,44 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value;
+use std::fs;
+use std::path::PathBuf;
+
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+#[test]
+fn genesisbench_tracks_and_hardware_classes_are_closed() {
+    let profile: Value = serde_json::from_slice(
+        &fs::read(repo_root().join("docs/spec/GENESISBENCH_PROTOCOL_v0.1.json")).unwrap(),
+    )
+    .unwrap();
+    let policy = &profile["trackPolicy"];
+    assert_eq!(policy["crossTrackRankingAllowed"], false);
+    assert_eq!(policy["rawScaffoldedAdaptedAndLocalAggregatesMayMix"], false);
+    let tracks: Vec<_> = policy["tracks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        tracks,
+        [
+            "cold-acquisition",
+            "embedded-local",
+            "genesis-adapted",
+            "open-agent"
+        ]
+    );
+    let bounds: Vec<_> = policy["hardwareClasses"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["maxCombinedResidentBytes"].as_u64().unwrap())
+        .collect();
+    assert_eq!(bounds, [4_u64 << 30, 16_u64 << 30, 64_u64 << 30]);
+}
 
 #[test]
 fn agent_card_and_symbol_search_are_bounded_canonical_authorities() {

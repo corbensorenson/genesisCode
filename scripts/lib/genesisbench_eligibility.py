@@ -9,6 +9,8 @@ import json
 import re
 from typing import Any
 
+from genesisbench_tracks import build_cohort, cohort_id, object_identity
+
 
 HOST_PATH_RE = re.compile(r"(?:/Users/|/home/|[A-Za-z]:\\\\Users\\\\)")
 
@@ -60,7 +62,8 @@ def validate_report(
         report,
         {
             "kind", "version", "protocol", "snapshot", "run", "case",
-            "validation", "contamination", "eligibility", "contentIdentitySha256",
+            "validation", "contamination", "cohort", "eligibility",
+            "contentIdentitySha256",
         },
         "eligibility report",
     )
@@ -166,12 +169,27 @@ def validate_report(
         "eligibility contamination reason drift",
     )
     require(decision != "ranked" or validation["independentRescoreObserved"], "ranked report lacks independent rescore")
-    expected_cohort = (
-        f"{profile['protocolId'].lower()}-{expected_case['contextMode']}-"
-        f"{expected_case['interactionMode']}-{expected_case['visibilityClass']}-"
-        f"{contamination['strongestSupportedLabel']}"
+    cohort = closed(
+        doc["cohort"],
+        {
+            "kind", "version", "trackId", "protocolIdentitySha256",
+            "languageProfileArtifactSha256", "scaffoldIdentitySha256",
+            "taskEpochId", "contextMode", "interactionMode",
+            "attemptPolicyIdentitySha256", "hardwareClassId",
+            "contaminationLabel", "taskVisibilityClass",
+            "contentIdentitySha256",
+        },
+        "report cohort",
     )
-    require(eligibility["rankingCohort"] == expected_cohort, "eligibility cohort binding drift")
+    expected_cohort = build_cohort(
+        profile, run, context_mode=expected_case["contextMode"],
+        interaction_mode=expected_case["interactionMode"],
+        visibility=expected_case["visibilityClass"],
+        contamination_label=contamination["strongestSupportedLabel"],
+    )
+    require(cohort == expected_cohort, "eligibility cohort binding drift")
+    require(cohort["contentIdentitySha256"] == object_identity(cohort), "eligibility cohort identity drift")
+    require(eligibility["rankingCohort"] == cohort_id(cohort), "eligibility cohort id drift")
     require(HOST_PATH_RE.search(canonical_bytes(doc).decode("ascii")) is None, "eligibility report leaks a host path")
     require(doc["contentIdentitySha256"] == content_identity(doc), "eligibility report identity drift")
     return doc

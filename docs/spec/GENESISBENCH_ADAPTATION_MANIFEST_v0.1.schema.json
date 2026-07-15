@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-adaptation-manifest-v0.1.json",
+  "title": "GenesisBench public adaptation lineage manifest v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "publiclyRetrievable", "licenseAuditComplete", "lineageAuditComplete", "materials", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-adaptation-manifest-v0.1"},
+    "version": {"const": "0.1.0"},
+    "publiclyRetrievable": {"const": true},
+    "licenseAuditComplete": {"const": true},
+    "lineageAuditComplete": {"const": true},
+    "materials": {"type": "array", "minItems": 1, "maxItems": 65536, "items": {"$ref": "#/$defs/material"}},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "publicUri", "sha256", "license", "role"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "publicUri": {"type": "string", "pattern": "^https://\\S+$", "maxLength": 2048},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "license": {"type": "string", "pattern": "^[A-Za-z0-9.+-]{1,128}$"},
+        "role": {"enum": ["evaluation-exclusion", "instruction", "pretraining", "reinforcement", "synthetic-seed", "tool-trajectory"]}
+      }
+    }
+  }
+}

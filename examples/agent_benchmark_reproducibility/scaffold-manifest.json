@@ -1,0 +1,30 @@
+{
+  "class": "disclosed-custom",
+  "contentIdentitySha256": "3eafbbbdc5dc7245e3ba09b112ca44cd516eeab8e3d046e03e3a9b2da993d2f8",
+  "externalAuthorityPolicy": "protocol-and-case-exact-no-broadening",
+  "kind": "genesis/genesisbench-scaffold-manifest-v0.1",
+  "orchestration": {
+    "agentCount": 1,
+    "plannerId": null,
+    "repairLoopId": null,
+    "stopPolicyId": "first-complete-response",
+    "subagentsAllowed": false
+  },
+  "promptAssemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
+  "resourceCeilingPolicy": "protocol-and-case-exact-no-broadening",
+  "retrieval": {
+    "algorithmId": null,
+    "completeTranscriptRequired": true,
+    "configIdentitySha256": null,
+    "mode": "none"
+  },
+  "systemPromptArtifact": "bundle:prompts/system.md",
+  "tool": {
+    "catalogArtifact": "bundle:tools/catalog.json",
+    "operations": [
+      "host/plugin::command"
+    ],
+    "protocolId": "GC-AGENT-TOOL-PROTOCOL-v0.1"
+  },
+  "version": "0.1.0"
+}

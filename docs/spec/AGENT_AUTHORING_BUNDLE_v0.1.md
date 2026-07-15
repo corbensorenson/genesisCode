@@ -37,6 +37,9 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
 - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`
 - `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
+- `docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json`
 - `docs/skill_pack/write_genesiscode_v1/manifest.json`
 - `docs/write_genesisCode_skill.md`
 - `examples/canonical_language/v0.1/README.md`
@@ -53,6 +56,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `scripts/lib/genesisbench_protocol_contract.py`
 - `scripts/lib/genesisbench_contamination.py`
 - `scripts/lib/genesisbench_protocol_run.py`
+- `scripts/lib/genesisbench_tracks.py`
 - `scripts/lib/genesisbench_eligibility.py`
 - `examples/agent_benchmark_reproducibility/run.json`
 - `crates/gc_cli/tests/cli_agent_benchmark_run.rs`
@@ -78,6 +82,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Score a candidate with `GC-AGENT-BENCHMARK-SCORING-v0.1`. Its closed 10,000-basis-point quality result covers semantics, obligations, effects, patch minimality, deterministic resource units, and policy scope. Wall time, API cost, energy, and provider queue time are model/run facts for `genesis/agent-benchmark-run-v0.1`; they never enter the quality score.
 - Record every benchmark invocation with `GC_AGENT_BENCHMARK_RUN_v0.1`: immutable model, weights, tokenizer, runtime, exact prompt/card/context hashes, integer decoding and retry controls, every attempt and candidate artifact, the canonical score, normalized host facts, and a complete inventory. Validate records read-only with `python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test`.
 - Apply `GenesisBench-v0.1` before comparing runs. Validate its frozen Git/SHA-256 snapshot and closed authorities with `python3 scripts/lib/genesisbench_protocol.py --check --self-test`; classify a run with `--run <path> --attestation <path> --json`. Public references are `declared-contaminated` and unranked, missing provenance is `unknown`, and only complete post-release precommitment and custody evidence can support `temporal-clean`. Never infer cleanliness from language newness or use judge preference in quality.
+- Declare exactly one content-addressed GenesisBench track. Use `cold-acquisition` only for an unadapted model under the fixed reference scaffold, `open-agent` for disclosed custom orchestration without claimed adaptation, `genesis-adapted` only with a public lineage-manifest identity, and `embedded-local` only with offline inference plus measured or hard-enforced combined model/runtime memory evidence. Never compare or aggregate across track, scaffold, profile, epoch, context/tool, attempt-policy, or hardware-class cohort keys.
 - A fully local benchmark model may run only through `genesis.agent-model-runner.v0.1` / `infer` on the pinned `host/plugin::command` bridge profile. Preserve its request, response, tool transcript, and `.gclog`; replay must not reinvoke the model. This benchmark integration does not preempt the future standard model API.
 - Make a held-out claim only against the active epoch in `GC-AGENT-HELD-OUT-v0.1`. Keep case payloads, salts, and oracles under ignored `.genesis/private/agent-evaluation`; bind every result to the epoch and commitment snapshot; use `unknown` contamination whenever training provenance is incomplete; and rotate before reuse after compromise.
 - Keep authoring guidance synchronized with

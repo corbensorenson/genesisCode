@@ -17,6 +17,9 @@ The normative authorities are:
 - [Profile schema](../docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json)
 - [Eligibility schema](../docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json)
 - [Contamination-attestation schema](../docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json)
+- [Public adaptation-manifest schema](../docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json)
+- [Embedded-local hardware-evidence schema](../docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json)
+- [Disclosed scaffold-manifest schema](../docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json)
 - [Task benchmark](../benchmarks/agent_tasks/v0.1/suite.json)
 - [Scoring authority](../docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json)
 - [Run schema](../docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json)
@@ -37,7 +40,7 @@ The verifier checks:
 2. A complete SHA-256 manifest over all 1,709 frozen files.
 3. Independent runtime, documentation, and benchmark component identities.
 4. Every linked schema, card, task, scorer, run verifier, MCP catalog source, and integration test.
-5. Closed context, tool, capability, attempt, model-disclosure, visibility, scoring, contamination, and eligibility policies.
+5. Closed context, tool, capability, attempt, model-disclosure, visibility, scoring, contamination, track, cohort, and eligibility policies.
 6. Exact typed prompt order and context-artifact coverage for the selected cohort.
 7. Adversarial controls that are re-signed after mutation, so semantic rules rather than stale outer hashes cause rejection.
 
@@ -61,6 +64,21 @@ A ranked case has one predeclared attempt. Best-of-N selection, hidden retries, 
 
 Every run discloses model ID, immutable revision, provider, weights identity for local models, tokenizer, runtime, quantization, integer decoding controls, seed, stop policy, prompt retention, and secret policy. Mutable aliases such as `latest` are invalid. Missing training provenance defaults to `unknown`; it never becomes a clean claim.
 
+## Choose one benchmark track
+
+Every run belongs to exactly one track. Tracks answer different questions and are never merged into one rank, average, or headline number.
+
+| Track | Question | Admission boundary |
+|---|---|---|
+| `cold-acquisition` | How well does the unadapted model learn GenesisCode through one controlled reference agent? | No GenesisCode-specific training and only the fixed-reference scaffold. Ranked admission remains closed until R1.4.k freezes that scaffold and its ablations. |
+| `open-agent` | How well does a disclosed agent system solve the work under the benchmark's authority and resource ceilings? | No declared GenesisCode adaptation. Custom retrieval and orchestration are allowed only when fully recorded and content-addressed. Unknown training provenance is unranked. |
+| `genesis-adapted` | How capable is a GenesisCode specialist built from public, auditable adaptation material? | `declared-public` training plus a lineage-manifest identity is mandatory. Raw and adapted results never share a cohort. |
+| `embedded-local` | What can a completely offline, self-hosted appliance do within a reproducible memory envelope? | Local model, denied network, and measured peak or enforced hard-ceiling evidence for combined model/runtime resident bytes. |
+
+Embedded Local uses the smallest fitting hardware class: S is at most 4 GiB, M at most 16 GiB, and L at most 64 GiB. A host's installed RAM is not footprint evidence. Missing measurement is unranked; a false class or non-offline execution is invalid.
+
+The scaffold identity is the SHA-256 of an inventoried, closed manifest that records its system prompt, prompt algorithm, retrieval mode and algorithm/config identity, agent/subagent count, planner, repair loop, stop policy, tool catalog and operations, and exact authority/resource-ceiling policy. Task-specific prompt/input and retrieved context remain run evidence rather than silently changing the scaffold. Any legitimate scaffold change creates a new cohort.
+
 ## Produce a reproducible run
 
 A complete run records:
@@ -73,6 +91,7 @@ A complete run records:
 - normalized host facts without usernames, hostnames, serial numbers, or absolute paths;
 - canonical deterministic score and separate latency, cost, queue, and energy facts;
 - a complete content-addressed artifact inventory.
+- a closed, content-addressed track declaration with scaffold, training, inference, and hardware facts.
 
 Validate the record without executing it:
 
@@ -107,7 +126,7 @@ python3 scripts/lib/genesisbench_protocol.py --check \
   --json
 ```
 
-The deterministic result is `invalid`, `unranked`, or `ranked`. It binds the protocol, snapshot, run, case, observed context and interaction modes, validation facts, strongest evidence-supported contamination label, exact cohort, reason codes, and its own content identity. Structurally malformed or unbindable input exits nonzero and emits no eligibility record; this prevents rejected bytes from being mistaken for a signed result.
+The deterministic result is `invalid`, `unranked`, or `ranked`. It binds the protocol, snapshot, run, case, track, observed context and interaction modes, validation facts, strongest evidence-supported contamination label, exact cohort, reason codes, and its own content identity. Structurally malformed or unbindable input exits nonzero and emits no eligibility record; this prevents rejected bytes from being mistaken for a signed result.
 
 The canonical fixture is deliberately unranked:
 
@@ -130,14 +149,14 @@ It uses a public answer and a conformance model, and it has not been independent
 | `unknown` | Evidence is incomplete and no exposure is known. This is the default. |
 | `declared-contaminated` | Task, oracle, equivalent answer, or evaluation material is known to have been exposed. This overrides clean claims. |
 
-Never collapse these labels into one leaderboard. Context mode, tool mode, attempt policy, task visibility, protocol identity, and contamination are cohort keys.
+Never collapse these labels into one leaderboard. The closed cohort record binds track, scaffold, language-profile artifact, task epoch, context mode, interaction/tool mode, attempt-policy identity, hardware class, protocol identity, task visibility, and contamination label. `rankingCohort` is the cohort record's SHA-256 identity, not an editable display label.
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, public practice suite, scorer, run bundle, and deterministic eligibility fixture exist now. The append-only signed result registry and static leaderboard are R1.4.h. Rolling temporal challenge epochs are R1.4.i. Construct-validity and anti-gaming studies are R1.4.j. Reproducible multi-model baselines are R1.4.k.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, public practice suite, scorer, run bundle, and deterministic eligibility fixture exist now. Lineage-aware statistics are R1.4.i; scaled temporal epochs and maintained post-release overlays are R1.4.j; the fixed reference agent and controlled ablations are R1.4.k; the canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 
 ## Versioning
 
-Changes to snapshot identity, context order, tool routes, capability semantics, attempt rules, disclosure requirements, visibility classes, scoring authority, contamination classification, or eligibility rules require a new protocol version. A correction that changes a prior decision requires a new profile and explicit supersession record; historical evidence remains immutable.
+Changes to snapshot identity, track admission, scaffold identity rules, hardware-class bounds, cohort keys, context order, tool routes, capability semantics, attempt rules, disclosure requirements, visibility classes, scoring authority, contamination classification, or eligibility rules require a new protocol version. A correction that changes a prior decision requires a new profile and explicit supersession record; historical evidence remains immutable.
