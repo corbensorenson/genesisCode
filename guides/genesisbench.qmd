@@ -26,6 +26,9 @@ The normative authorities are:
 - [Predeclared analysis plan](../docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json)
 - [Observation matrix schema](../docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json)
 - [Analysis report schema](../docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json)
+- [Held-out epoch commitments](../docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json)
+- [Temporal epoch opening audit](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json)
+- [Capability lease overlay](../docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json)
 
 This guide explains those authorities; it cannot alter them.
 
@@ -65,7 +68,29 @@ Saturation requires at least three distinct model families above 90% verified so
 python3 scripts/lib/genesisbench_analysis.py --check --self-test
 ```
 
-Ranked evaluation uses a non-public oracle and the active held-out commitment authority. Temporal-clean evaluation additionally requires a task precommitment made after the target model's immutable release. Private tasks, salts, inputs, prompts, and oracles never belong in the repository, documentation site, training corpus, model retrieval root, or public run bundle.
+Ranked evaluation uses a non-public oracle and the active held-out commitment authority. The active `epoch-2026-07-b` contains 90 independently salted lineages, exactly ten per core class. Its public metadata is balanced across three difficulty bands, ten author/generator identities, five generator families, ten domains, and ten acceptance shapes; no generator family controls more than 20% of ranking weight. All ranking weight is fresh for this epoch.
+
+Temporal-clean evaluation additionally requires a task precommitment made after the target model's immutable release. The epoch records the precommit boundary and requires run-specific immutable release evidence; merely choosing a new model or a new-looking task is insufficient. Private tasks, salts, inputs, prompts, and oracles never belong in the repository, documentation site, training corpus, model retrieval root, or public run bundle.
+
+Verify public scale, balance, chronology, custody, lifecycle, and 30 adversarial controls offline:
+
+```bash
+python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
+```
+
+The tracked temporal audit is intentionally hash-only. It records that all 90 salted commitments, metadata bindings, and private quality contracts were opened under local mode-`0600` custody, but CI cannot independently inspect private payload quality without violating the evaluation firewall. Custodians can reproduce the opening check locally with `--verify-private`; they must never publish the pack or feed it to an authoring or training context.
+
+The epoch rotates within 90 days, or sooner on leakage or statistical saturation. Retired commitments remain immutable. Scheduled payload opening waits at least 30 days after retirement, and disclosed work permanently becomes contaminated public development material.
+
+## Maintain useful temporal overlays
+
+Every scaled epoch must introduce at least one post-release package, protocol, data structure, capability, or semantic-patch operation that remains useful after ranking weight retires. Arbitrary riddles and benchmark-only APIs are rejected.
+
+The current overlay is `GC-CAPABILITY-LEASE-v0.1`, a general deny-by-default lease protocol for finite, exact-scope authority. It uses an explicit logical step rather than host time, content-addressed scope, bounded uses, append-only issue/consume/revoke transitions, and replay-bound prior/next state identities. Validate its independent maintenance gate with:
+
+```bash
+python3 scripts/lib/gc_capability_lease.py --check --self-test
+```
 
 ## Control tools and capabilities
 
@@ -168,7 +193,7 @@ Never collapse these labels into one leaderboard. The closed cohort record binds
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, four non-combinable tracks, nine-lineage/27-condition public practice suite, predeclared statistical analysis, scorer, run bundle, and deterministic eligibility and analysis fixtures exist now. Scaled temporal epochs and maintained post-release overlays are R1.4.j; the fixed reference agent and controlled ablations are R1.4.k; the canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, nine-lineage/27-condition public practice suite, predeclared statistical analysis, scorer, run bundle, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. The fixed reference agent and controlled ablations are R1.4.k; the canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 

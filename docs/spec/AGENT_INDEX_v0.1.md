@@ -109,8 +109,15 @@ genesis --json agent-index --diagnostic <exact-code>
     as the explicit deny-by-default local benchmark integration over the pinned
     `host/plugin::command` effect and replayable `.gclog` transcript.
   - includes `gc_agent_held_out_evaluation = "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json"`
-    as the public salted-commitment ledger. It exposes lifecycle and contamination facts,
+    as the public salted-commitment ledger. Its active epoch carries 90 independently committed,
+    balanced lineages and exposes lifecycle, freshness, custody, chronology, and overlay facts,
     never private cases, salts, prompts, inputs, or oracles.
+  - includes `genesisbench_temporal_epoch_audit = "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json"`
+    as the hash-only record that all active private commitments and metadata bindings were opened
+    under local custody without publishing private material.
+  - includes `gc_capability_lease_protocol = "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json"`
+    as the maintained, general-purpose deny-by-default lease protocol introduced by the active
+    temporal overlay and retained after its benchmark ranking weight retires.
   - includes `gc_agent_task_cards = "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"` as the
     embedded seven-card registry used by deterministic intent selection.
   - includes `gc_agent_symbol_index = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"` as the

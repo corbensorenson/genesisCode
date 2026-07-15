@@ -1,0 +1,18 @@
+{
+  "$id": "https://genesiscode.dev/schemas/gc-capability-lease-protocol-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contentIdentitySha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "decisionContract": {"additionalProperties": false, "properties": {"denyReasons": {"items": {"type": "string"}, "type": "array"}, "permitReason": {"const": "lease-valid"}, "resultFields": {"items": {"type": "string"}, "type": "array"}}, "required": ["denyReasons", "permitReason", "resultFields"], "type": "object"},
+    "kind": {"const": "genesis/capability-lease-protocol-v0.1"},
+    "leaseContract": {"additionalProperties": false, "properties": {"fields": {"items": {"type": "string"}, "type": "array"}, "identityDomain": {"const": "genesis/capability-lease/v0.1\\0"}, "identityFormula": {"const": "sha256(domain || canonical-lease-without-leaseId)"}, "scopeBinding": {"const": "content-addressed-exact-scope"}, "stepClock": {"const": "explicit-monotonic-logical-step"}}, "required": ["fields", "identityDomain", "identityFormula", "scopeBinding", "stepClock"], "type": "object"},
+    "protocolId": {"const": "GC-CAPABILITY-LEASE-v0.1"},
+    "safetyInvariants": {"items": {"type": "string"}, "minItems": 7, "type": "array", "uniqueItems": true},
+    "stateContract": {"additionalProperties": false, "properties": {"acceptedTransitions": {"items": {"enum": ["consume", "issue", "revoke"]}, "type": "array", "uniqueItems": true}, "canonicalOrdering": {"const": "leaseId-ascending"}, "replayBindingFields": {"items": {"type": "string"}, "type": "array", "uniqueItems": true}, "unknownTransitionPolicy": {"const": "deny-and-preserve-state"}}, "required": ["acceptedTransitions", "canonicalOrdering", "replayBindingFields", "unknownTransitionPolicy"], "type": "object"},
+    "version": {"const": "0.1.0"}
+  },
+  "required": ["kind", "version", "protocolId", "leaseContract", "decisionContract", "stateContract", "safetyInvariants", "contentIdentitySha256"],
+  "title": "GenesisCode Capability Lease Protocol v0.1",
+  "type": "object"
+}

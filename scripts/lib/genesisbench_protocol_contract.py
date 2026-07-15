@@ -42,7 +42,14 @@ AUTHORITY_PATHS = {
     "genesisbench-run-binding": "scripts/lib/genesisbench_protocol_run.py",
     "genesisbench-track-contract": "scripts/lib/genesisbench_tracks.py",
     "genesisbench-verifier": "scripts/lib/genesisbench_protocol.py",
+    "capability-lease-protocol": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+    "capability-lease-protocol-schema": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+    "capability-lease-protocol-verifier": "scripts/lib/gc_capability_lease.py",
     "held-out-evaluation": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+    "held-out-evaluation-schema": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+    "held-out-evaluation-verifier": "scripts/lib/gc_held_out_evaluation.py",
+    "held-out-private-pack-schema": "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
+    "temporal-epoch-audit": "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
     "model-runner-effect": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
 }
 
@@ -53,6 +60,11 @@ COMPONENT_SELECTIONS = {
             "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
             "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
             "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+            "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+            "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
+            "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+            "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+            "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
             "docs/spec/GC_AGENT_PROFILE_v0.3.json",
         ],
         "includePrefixes": ["benchmarks/agent_tasks/v0.1/"],
@@ -248,6 +260,13 @@ SELF_HOSTING = {
         {
             "id": "check-profile",
             "argv": ["python3", "scripts/lib/genesisbench_protocol.py", "--check"],
+        },
+        {
+            "id": "check-temporal-epoch",
+            "argv": [
+                "python3", "scripts/lib/gc_held_out_evaluation.py",
+                "--check", "--self-test",
+            ],
         },
         {
             "id": "classify-run",

@@ -58,7 +58,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 1. Plan
 - Load `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`, negotiate `docs/spec/GC_AGENT_PROFILE_v0.3.json`, and reject incompatible authoring assumptions.
 - Select the closest pair from `GC-CANONICAL-EXAMPLES-v0.1`; inspect and execute both sides before generating or repairing source. Preserve all paired bytes except the declared `replace-once` mutation and verify the recorded rejection class becomes the accepted outcome.
-- Use `GC-AGENT-TASK-BENCHMARK-v0.1` for public iteration. A held-out result must bind the active `GC-AGENT-HELD-OUT-v0.1` epoch and commitment snapshot, and must use contamination label `unknown` unless training provenance proves otherwise.
+- Use `GC-AGENT-TASK-BENCHMARK-v0.1` for public iteration. A held-out result must bind the active 90-lineage `GC-AGENT-HELD-OUT-v0.1` epoch and commitment snapshot, and must use contamination label `unknown` unless release chronology and training provenance prove otherwise. Never retrieve the ignored private pack; the public temporal audit proves openings only by identity.
 - Run `scripts/lib/gc_agent_scoring.py` against the exact candidate tree and case ID; preserve its scoring, benchmark, profile, candidate, and result identities as evidence.
 - Build or verify `genesis/agent-benchmark-run-v0.1` with `scripts/lib/gc_agent_benchmark_run.py`; check mode is read-only and must not accept model, binary, network, or update inputs.
 - Run `scripts/lib/genesisbench_protocol.py --check`; classify candidate run evidence with `--run <path> --attestation <path> --json` before making any ranked, contamination, or cross-model claim.

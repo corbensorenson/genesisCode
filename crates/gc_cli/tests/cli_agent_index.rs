@@ -2,6 +2,7 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -41,6 +42,32 @@ fn genesisbench_tracks_and_hardware_classes_are_closed() {
         .map(|row| row["maxCombinedResidentBytes"].as_u64().unwrap())
         .collect();
     assert_eq!(bounds, [4_u64 << 30, 16_u64 << 30, 64_u64 << 30]);
+}
+
+#[test]
+fn genesisbench_temporal_epoch_and_overlay_pass_public_controls() {
+    for (script, expected) in [
+        (
+            "scripts/lib/gc_held_out_evaluation.py",
+            "lineages=90 controls=30",
+        ),
+        ("scripts/lib/gc_capability_lease.py", "controls=7"),
+    ] {
+        let output = Command::new("python3")
+            .current_dir(repo_root())
+            .args([script, "--check", "--self-test"])
+            .output()
+            .expect("execute temporal benchmark verifier");
+        assert!(
+            output.status.success(),
+            "{script} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stdout).contains(expected),
+            "{script} omitted expected evidence"
+        );
+    }
 }
 
 #[test]
@@ -204,6 +231,16 @@ fn agent_index_emits_expected_schema_and_sources() {
         json.pointer("/data/docs/gc_agent_held_out_evaluation")
             .and_then(Value::as_str),
         Some("docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_temporal_epoch_audit")
+            .and_then(Value::as_str),
+        Some("docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/gc_capability_lease_protocol")
+            .and_then(Value::as_str),
+        Some("docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json")
     );
     assert_eq!(
         json.pointer("/data/language_symbol_index/path")

@@ -114,6 +114,9 @@ required_included = [
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
     "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
+    "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+    "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+    "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
     "docs/spec/GC_AGENT_PROFILE_v0.3.json",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
@@ -147,6 +150,8 @@ required_included = [
     "scripts/lib/genesisbench_protocol_run.py",
     "scripts/lib/genesisbench_tracks.py",
     "scripts/lib/genesisbench_eligibility.py",
+    "scripts/lib/gc_held_out_evaluation.py",
+    "scripts/lib/gc_capability_lease.py",
     "examples/agent_benchmark_reproducibility/run.json",
     "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
 ]
@@ -293,6 +298,16 @@ for path in analysis_paths:
     if path not in agent_index_spec or path not in agent_index_cmd:
         raise SystemExit(
             f"agent-authoring-bundle: agent index must expose lineage analysis authority: {path}"
+        )
+
+temporal_paths = (
+    "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
+    "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+)
+for path in temporal_paths:
+    if path not in agent_index_spec or path not in agent_index_cmd:
+        raise SystemExit(
+            f"agent-authoring-bundle: agent index must expose temporal epoch authority: {path}"
         )
 
 print(

@@ -23,6 +23,9 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json`
 - `docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json`
+- `docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json`
+- `docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json`
+- `docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`
 - `docs/spec/GC_AGENT_PROFILE_v0.3.json`
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md`
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
@@ -58,6 +61,8 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `scripts/lib/genesisbench_protocol_run.py`
 - `scripts/lib/genesisbench_tracks.py`
 - `scripts/lib/genesisbench_eligibility.py`
+- `scripts/lib/gc_held_out_evaluation.py`
+- `scripts/lib/gc_capability_lease.py`
 - `examples/agent_benchmark_reproducibility/run.json`
 - `crates/gc_cli/tests/cli_agent_benchmark_run.rs`
 
@@ -85,7 +90,8 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Declare exactly one content-addressed GenesisBench track. Use `cold-acquisition` only for an unadapted model under the fixed reference scaffold, `open-agent` for disclosed custom orchestration without claimed adaptation, `genesis-adapted` only with a public lineage-manifest identity, and `embedded-local` only with offline inference plus measured or hard-enforced combined model/runtime memory evidence. Never compare or aggregate across track, scaffold, profile, epoch, context/tool, attempt-policy, or hardware-class cohort keys.
 - Analyze results only through `GENESISBENCH_ANALYSIS_PLAN_v0.1` and `scripts/lib/genesisbench_analysis.py`. Use one primary condition per lineage, keep repeated-condition summaries clustered by lineage, publish solved/unsolved/invalid/abstained/missing denominators, Wilson uncertainty, paired exact effects, and Holm correction, and emit `indeterminate` rather than unsupported pairwise decimal ranks. Public conformance observations are always unranked and cannot trigger saturation.
 - A fully local benchmark model may run only through `genesis.agent-model-runner.v0.1` / `infer` on the pinned `host/plugin::command` bridge profile. Preserve its request, response, tool transcript, and `.gclog`; replay must not reinvoke the model. This benchmark integration does not preempt the future standard model API.
-- Make a held-out claim only against the active epoch in `GC-AGENT-HELD-OUT-v0.1`. Keep case payloads, salts, and oracles under ignored `.genesis/private/agent-evaluation`; bind every result to the epoch and commitment snapshot; use `unknown` contamination whenever training provenance is incomplete; and rotate before reuse after compromise.
+- Make a held-out claim only against the active epoch in `GC-AGENT-HELD-OUT-v0.1`. Its active epoch contains 90 independently salted lineages, ten per core task class, with exact balance and custody attestations. Keep case payloads, salts, and oracles under ignored `.genesis/private/agent-evaluation`; bind every result to the epoch and commitment snapshot; use `unknown` contamination whenever training provenance is incomplete; and rotate within 90 days or earlier on leakage or saturation.
+- Treat `GC-CAPABILITY-LEASE-v0.1` as a general maintained capability protocol, not a benchmark-only oracle. It uses explicit logical steps, exact content-addressed scope, finite use budgets, deny-by-default decisions, append-only transitions, and replay-bound state identities.
 - Keep authoring guidance synchronized with
   `.agents/skills/genesiscode-authoring/SKILL.md`.
 
@@ -95,6 +101,6 @@ The public repository and documentation site may expose commitments and lifecycl
 
 Each case commitment is `sha256("genesis/agent-held-out-case/v0.1\\0" || 32-byte-secret-salt || canonical-case-bytes)`. Domain separation prevents cross-protocol reuse; secret random salts prevent dictionary testing against low-entropy task details. Every result binds the exact epoch commitment-snapshot identity, not a branch or bare label.
 
-Exactly one epoch is active and history is append-only. Provision and publish a fresh replacement before marking an epoch retired or compromised; retain old commitments, never silently rescore, and label affected results `declared-contaminated`. Scheduled disclosure requires retirement plus 30 days. A compromise-forensics disclosure requires an active replacement. Disclosure publishes payload, salt, reason, date, and the recomputable original commitment; disclosed cases become public development material permanently.
+Exactly one epoch is active and history is append-only. A scaled epoch must contain at least 45 independent Preview lineages or 90 mature lineages, meet the per-class minimum, keep every author/generator family below 25% of ranking weight, reserve at least 25% fresh weight, and carry a useful maintained post-release overlay. Provision and publish a fresh replacement before marking an epoch retired or compromised; rotate within 90 days or earlier on leakage or saturation; retain old commitments; never silently rescore; and label affected results `declared-contaminated`. Scheduled disclosure requires retirement plus 30 days. A compromise-forensics disclosure requires an active replacement. Disclosure publishes payload, salt, reason, date, and the recomputable original commitment; disclosed cases become public development material permanently.
 
 Use `declared-uncontaminated` only with complete non-exposure provenance and attestation; reserve `temporal-clean` for tasks precommitted after the immutable model release with commitment and custody evidence. Use `declared-contaminated` for known exposure and mandatory default `unknown` for missing or incomplete provenance. Never aggregate across epochs. The held-out protocol protects secrecy and precommitment; `GC-AGENT-BENCHMARK-SCORING-v0.1` defines model-agnostic quality, `GC_AGENT_BENCHMARK_RUN_v0.1` defines model/run reproducibility, and `GenesisBench-v0.1` decides eligibility.

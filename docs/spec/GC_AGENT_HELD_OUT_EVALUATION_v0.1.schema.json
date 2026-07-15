@@ -4,7 +4,7 @@
   "title": "GenesisCode Agent Held-Out Evaluation Commitments v0.1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "version", "evaluationId", "commitmentProtocol", "storagePolicy", "lifecyclePolicy", "contaminationPolicy", "epochs", "disclosures", "contentIdentitySha256"],
+  "required": ["kind", "version", "evaluationId", "commitmentProtocol", "storagePolicy", "lifecyclePolicy", "contaminationPolicy", "benchmarkQualityPolicy", "epochs", "disclosures", "contentIdentitySha256"],
   "properties": {
     "kind": {"const": "genesis/agent-held-out-evaluation-v0.1"},
     "version": {"const": "0.1.0"},
@@ -13,83 +13,31 @@
     "storagePolicy": {"$ref": "#/$defs/storage"},
     "lifecyclePolicy": {"$ref": "#/$defs/lifecycle"},
     "contaminationPolicy": {"$ref": "#/$defs/contamination"},
-    "epochs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/epoch"}},
+    "benchmarkQualityPolicy": {"$ref": "#/$defs/quality"},
+    "epochs": {"type": "array", "minItems": 2, "items": {"oneOf": [{"$ref": "#/$defs/pilotEpoch"}, {"$ref": "#/$defs/scaledEpoch"}]}},
     "disclosures": {"type": "array", "items": {"$ref": "#/$defs/disclosure"}},
-    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"}
   },
   "$defs": {
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "protocol": {
-      "type": "object", "additionalProperties": false,
-      "required": ["algorithm", "canonicalization", "caseDomain", "formula", "saltBytes", "saltVisibility"],
-      "properties": {
-        "algorithm": {"const": "sha256"}, "canonicalization": {"const": "genesis/canonical-json-v0.1"},
-        "caseDomain": {"const": "genesis/agent-held-out-case/v0.1\\0"},
-        "formula": {"const": "sha256(domain || 32-byte-secret-salt || canonical-case-bytes)"},
-        "saltBytes": {"const": 32}, "saltVisibility": {"const": "withheld-until-disclosure"}
-      }
-    },
-    "storage": {
-      "type": "object", "additionalProperties": false,
-      "required": ["privateRoot", "publicContent", "forbiddenDistribution", "trainingPackExclusionRequired"],
-      "properties": {
-        "privateRoot": {"const": ".genesis/private/agent-evaluation"},
-        "publicContent": {"const": ["commitments", "disclosure-records", "lifecycle-metadata"]},
-        "forbiddenDistribution": {"const": ["case-payloads", "oracles", "salts"]},
-        "trainingPackExclusionRequired": {"const": true}
-      }
-    },
-    "lifecycle": {
-      "type": "object", "additionalProperties": false,
-      "required": ["appendOnlyEpochs", "compromiseRequiresReplacement", "minimumDisclosureDelayDays", "retiredCommitmentsRemainPublished", "rotationStates"],
-      "properties": {
-        "appendOnlyEpochs": {"const": true}, "compromiseRequiresReplacement": {"const": true},
-        "minimumDisclosureDelayDays": {"const": 30}, "retiredCommitmentsRemainPublished": {"const": true},
-        "rotationStates": {"const": ["active", "compromised", "retired"]}
-      }
-    },
-    "contamination": {
-      "type": "object", "additionalProperties": false,
-      "required": ["resultLabels", "defaultWhenTrainingProvenanceMissing", "disclosedCaseRequiresContaminatedLabel", "mixedEpochAggregationForbidden", "requiredResultBindings"],
-      "properties": {
-        "resultLabels": {"const": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]},
-        "defaultWhenTrainingProvenanceMissing": {"const": "unknown"},
-        "disclosedCaseRequiresContaminatedLabel": {"const": true},
-        "mixedEpochAggregationForbidden": {"const": true},
-        "requiredResultBindings": {"const": ["commitmentSnapshotIdentity", "epochId", "modelIdentity", "trainingCutoff"]}
-      }
-    },
-    "profile": {
-      "type": "object", "additionalProperties": false, "required": ["id", "path", "sha256"],
-      "properties": {"id": {"const": "GC-AGENT-v0.3"}, "path": {"const": "docs/spec/GC_AGENT_PROFILE_v0.3.json"}, "sha256": {"$ref": "#/$defs/sha256"}}
-    },
-    "case": {
-      "type": "object", "additionalProperties": false, "required": ["id", "taskClass", "commitmentSha256", "oracleExposure"],
-      "properties": {
-        "id": {"type": "string", "pattern": "^ho-[a-z0-9-]+-[0-9]{2}$"},
-        "taskClass": {"enum": ["completion", "deployment", "generation", "package-migration", "performance-repair", "policy-minimization", "refactor", "repair", "replay-investigation"]},
-        "commitmentSha256": {"$ref": "#/$defs/sha256"}, "oracleExposure": {"const": "commitment-only"}
-      }
-    },
-    "epoch": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "status", "activatedOn", "retiredOn", "replacementEpochId", "profile", "cases", "commitmentSnapshotIdentity"],
-      "properties": {
-        "id": {"type": "string", "pattern": "^epoch-20[0-9]{2}-[0-9]{2}-[a-z]$"},
-        "status": {"enum": ["active", "compromised", "retired"]}, "activatedOn": {"type": "string", "format": "date"},
-        "retiredOn": {"type": ["string", "null"]}, "replacementEpochId": {"type": ["string", "null"]},
-        "profile": {"$ref": "#/$defs/profile"}, "cases": {"type": "array", "minItems": 9, "maxItems": 9, "items": {"$ref": "#/$defs/case"}},
-        "commitmentSnapshotIdentity": {"$ref": "#/$defs/sha256"}
-      }
-    },
-    "disclosure": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "epochId", "caseId", "disclosedOn", "reason", "payloadPath", "saltHex", "verifiedCommitmentSha256"],
-      "properties": {
-        "id": {"type": "string"}, "epochId": {"type": "string"}, "caseId": {"type": "string"}, "disclosedOn": {"type": "string", "format": "date"},
-        "reason": {"enum": ["scheduled-release", "compromise-forensics"]}, "payloadPath": {"type": "string"},
-        "saltHex": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "verifiedCommitmentSha256": {"$ref": "#/$defs/sha256"}
-      }
-    }
+    "date": {"type": "string", "format": "date"},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "protocol": {"type": "object", "additionalProperties": false, "required": ["algorithm", "canonicalization", "caseDomain", "formula", "saltBytes", "saltVisibility"], "properties": {"algorithm": {"const": "sha256"}, "canonicalization": {"const": "genesis/canonical-json-v0.1"}, "caseDomain": {"const": "genesis/agent-held-out-case/v0.1\\0"}, "formula": {"const": "sha256(domain || 32-byte-secret-salt || canonical-case-bytes)"}, "saltBytes": {"const": 32}, "saltVisibility": {"const": "withheld-until-disclosure"}}},
+    "storage": {"type": "object", "additionalProperties": false, "required": ["privateRoot", "publicContent", "forbiddenDistribution", "trainingPackExclusionRequired", "custodyRoles", "crossRoleTransferRequiresReviewedRecord"], "properties": {"privateRoot": {"const": ".genesis/private/agent-evaluation"}, "publicContent": {"const": ["commitments", "disclosure-records", "lifecycle-metadata"]}, "forbiddenDistribution": {"const": ["case-payloads", "oracles", "salts"]}, "trainingPackExclusionRequired": {"const": true}, "custodyRoles": {"const": ["author", "custodian", "evaluator", "training-builder"]}, "crossRoleTransferRequiresReviewedRecord": {"const": true}}},
+    "lifecycle": {"type": "object", "additionalProperties": false, "required": ["appendOnlyEpochs", "compromiseRequiresReplacement", "minimumDisclosureDelayDays", "retiredCommitmentsRemainPublished", "rotationStates", "maximumActiveDays", "rotationTriggers", "minimumFreshRankingWeightBp", "overlayMaintenanceAfterRankingRetirement"], "properties": {"appendOnlyEpochs": {"const": true}, "compromiseRequiresReplacement": {"const": true}, "minimumDisclosureDelayDays": {"const": 30}, "retiredCommitmentsRemainPublished": {"const": true}, "rotationStates": {"const": ["active", "compromised", "retired"]}, "maximumActiveDays": {"const": 90}, "rotationTriggers": {"const": ["leakage", "saturation", "schedule-90-days"]}, "minimumFreshRankingWeightBp": {"const": 2500}, "overlayMaintenanceAfterRankingRetirement": {"const": true}}},
+    "contamination": {"type": "object", "additionalProperties": false, "required": ["resultLabels", "defaultWhenTrainingProvenanceMissing", "disclosedCaseRequiresContaminatedLabel", "mixedEpochAggregationForbidden", "requiredResultBindings"], "properties": {"resultLabels": {"const": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]}, "defaultWhenTrainingProvenanceMissing": {"const": "unknown"}, "disclosedCaseRequiresContaminatedLabel": {"const": true}, "mixedEpochAggregationForbidden": {"const": true}, "requiredResultBindings": {"const": ["commitmentSnapshotIdentity", "epochId", "modelIdentity", "trainingCutoff"]}}},
+    "quality": {"type": "object", "additionalProperties": false, "required": ["previewMinimumLineages", "matureMinimumLineages", "previewMinimumPerTaskClass", "matureMinimumPerTaskClass", "difficultyBands", "minimumAuthorGeneratorIdentities", "maximumAuthorGeneratorFamilyWeightBp", "minimumFreshRankingWeightBp", "maximumActiveDays", "requiredBalanceDimensions", "eligibleOverlayKinds", "benchmarkOnlyOverlayForbidden", "maintainOverlayAfterRankingRetirement"], "properties": {"previewMinimumLineages": {"const": 45}, "matureMinimumLineages": {"const": 90}, "previewMinimumPerTaskClass": {"const": 5}, "matureMinimumPerTaskClass": {"const": 10}, "difficultyBands": {"const": ["foundation", "engineering", "frontier"]}, "minimumAuthorGeneratorIdentities": {"const": 2}, "maximumAuthorGeneratorFamilyWeightBp": {"const": 2500}, "minimumFreshRankingWeightBp": {"const": 2500}, "maximumActiveDays": {"const": 90}, "requiredBalanceDimensions": {"const": ["taskClass", "difficultyBand", "authorGenerator", "authorGeneratorFamily", "domain", "acceptanceShape"]}, "eligibleOverlayKinds": {"const": ["capability-protocol", "data-structure", "package", "semantic-patch-operation"]}, "benchmarkOnlyOverlayForbidden": {"const": true}, "maintainOverlayAfterRankingRetirement": {"const": true}}},
+    "profile": {"type": "object", "additionalProperties": false, "required": ["id", "path", "sha256"], "properties": {"id": {"const": "GC-AGENT-v0.3"}, "path": {"const": "docs/spec/GC_AGENT_PROFILE_v0.3.json"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "pilotCase": {"type": "object", "additionalProperties": false, "required": ["id", "taskClass", "commitmentSha256", "oracleExposure"], "properties": {"id": {"type": "string"}, "taskClass": {"$ref": "#/$defs/taskClass"}, "commitmentSha256": {"$ref": "#/$defs/sha256"}, "oracleExposure": {"const": "commitment-only"}}},
+    "scaledCase": {"type": "object", "additionalProperties": false, "required": ["id", "lineageId", "taskClass", "difficultyBand", "authorGeneratorId", "authorGeneratorFamily", "domain", "acceptanceShape", "rankingWeightUnits", "newlyPrecommitted", "overlayFamilyId", "oracleExposure", "metadataIdentitySha256", "commitmentSha256"], "properties": {"id": {"type": "string", "pattern": "^ho-[a-z0-9-]+-[0-9]{2}$"}, "lineageId": {"type": "string", "pattern": "^gb-[a-z0-9-]+$"}, "taskClass": {"$ref": "#/$defs/taskClass"}, "difficultyBand": {"enum": ["foundation", "engineering", "frontier"]}, "authorGeneratorId": {"type": "string"}, "authorGeneratorFamily": {"type": "string"}, "domain": {"type": "string"}, "acceptanceShape": {"type": "string"}, "rankingWeightUnits": {"type": "integer", "minimum": 1}, "newlyPrecommitted": {"type": "boolean"}, "overlayFamilyId": {"type": ["string", "null"]}, "oracleExposure": {"const": "commitment-only"}, "metadataIdentitySha256": {"$ref": "#/$defs/sha256"}, "commitmentSha256": {"$ref": "#/$defs/sha256"}}},
+    "taskClass": {"enum": ["completion", "deployment", "generation", "package-migration", "performance-repair", "policy-minimization", "refactor", "repair", "replay-investigation"]},
+    "pilotEpoch": {"type": "object", "additionalProperties": false, "required": ["id", "status", "activatedOn", "retiredOn", "replacementEpochId", "profile", "cases", "commitmentSnapshotIdentity"], "properties": {"id": {"const": "epoch-2026-07-a"}, "status": {"const": "retired"}, "activatedOn": {"$ref": "#/$defs/date"}, "retiredOn": {"$ref": "#/$defs/date"}, "replacementEpochId": {"type": "string"}, "profile": {"$ref": "#/$defs/profile"}, "cases": {"type": "array", "minItems": 9, "maxItems": 9, "items": {"$ref": "#/$defs/pilotCase"}}, "commitmentSnapshotIdentity": {"const": "77cfe60ca3959c06badfda1b8ae77b71c4bda2eecb776d4becbcf07cc55fe3cf"}}},
+    "custody": {"type": "object", "additionalProperties": false, "required": ["privateRoot", "privatePackMode", "separateCapabilityRoles", "trainingBuilderCanReadActivePack", "evaluatorCanWriteTrainingStore", "publicArtifactsContainPrivatePayloads", "crossRoleTransferPolicy", "attestationIdentitySha256"], "properties": {"privateRoot": {"type": "string"}, "privatePackMode": {"const": "0600"}, "separateCapabilityRoles": {"const": ["author", "custodian", "evaluator", "training-builder"]}, "trainingBuilderCanReadActivePack": {"const": false}, "evaluatorCanWriteTrainingStore": {"const": false}, "publicArtifactsContainPrivatePayloads": {"const": false}, "crossRoleTransferPolicy": {"const": "explicit-reviewed-content-addressed-record"}, "attestationIdentitySha256": {"$ref": "#/$defs/sha256"}}},
+    "precommitment": {"type": "object", "additionalProperties": false, "required": ["committedAt", "modelReleaseRule", "eligibleModelReleaseBefore", "chronologyEvidenceRequiredPerRun", "commitmentSnapshotIdentity", "attestationIdentitySha256"], "properties": {"committedAt": {"$ref": "#/$defs/timestamp"}, "modelReleaseRule": {"const": "immutable-model-release-must-precede-committedAt"}, "eligibleModelReleaseBefore": {"$ref": "#/$defs/timestamp"}, "chronologyEvidenceRequiredPerRun": {"const": true}, "commitmentSnapshotIdentity": {"$ref": "#/$defs/sha256"}, "attestationIdentitySha256": {"$ref": "#/$defs/sha256"}}},
+    "countMap": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}},
+    "balance": {"type": "object", "additionalProperties": false, "required": ["lineageCount", "rankingWeightUnits", "freshRankingWeightUnits", "freshRankingWeightBp", "perTaskClass", "perDifficultyBand", "perAuthorGenerator", "perAuthorGeneratorFamily", "perDomain", "perAcceptanceShape", "maxAuthorGeneratorFamilyWeightBp", "balanceIdentitySha256"], "properties": {"lineageCount": {"type": "integer"}, "rankingWeightUnits": {"type": "integer"}, "freshRankingWeightUnits": {"type": "integer"}, "freshRankingWeightBp": {"type": "integer"}, "perTaskClass": {"$ref": "#/$defs/countMap"}, "perDifficultyBand": {"$ref": "#/$defs/countMap"}, "perAuthorGenerator": {"$ref": "#/$defs/countMap"}, "perAuthorGeneratorFamily": {"$ref": "#/$defs/countMap"}, "perDomain": {"$ref": "#/$defs/countMap"}, "perAcceptanceShape": {"$ref": "#/$defs/countMap"}, "maxAuthorGeneratorFamilyWeightBp": {"type": "integer"}, "balanceIdentitySha256": {"$ref": "#/$defs/sha256"}}},
+    "overlay": {"type": "object", "additionalProperties": false, "required": ["id", "kind", "introducedOn", "authorityPath", "authoritySha256", "benchmarkOnly", "maintenanceStatus", "rankingRetirementPolicy", "maintenanceGate", "challengeLineageIds", "contentIdentitySha256"], "properties": {"id": {"type": "string"}, "kind": {"enum": ["capability-protocol", "data-structure", "package", "semantic-patch-operation"]}, "introducedOn": {"$ref": "#/$defs/date"}, "authorityPath": {"type": "string"}, "authoritySha256": {"$ref": "#/$defs/sha256"}, "benchmarkOnly": {"const": false}, "maintenanceStatus": {"const": "active"}, "rankingRetirementPolicy": {"const": "maintain-after-ranking-retirement"}, "maintenanceGate": {"type": "string"}, "challengeLineageIds": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true}, "contentIdentitySha256": {"$ref": "#/$defs/sha256"}}},
+    "scaledEpoch": {"type": "object", "additionalProperties": false, "required": ["id", "status", "scaleTarget", "activatedOn", "precommittedAt", "rotationDueOn", "retiredOn", "replacementEpochId", "rotationTriggers", "profile", "custody", "precommitment", "balanceSummary", "overlays", "cases", "commitmentSnapshotIdentity"], "properties": {"id": {"type": "string", "pattern": "^epoch-20[0-9]{2}-[0-9]{2}-[a-z]$"}, "status": {"enum": ["active", "compromised", "retired"]}, "scaleTarget": {"enum": ["preview", "mature"]}, "activatedOn": {"$ref": "#/$defs/date"}, "precommittedAt": {"$ref": "#/$defs/timestamp"}, "rotationDueOn": {"$ref": "#/$defs/date"}, "retiredOn": {"type": ["string", "null"]}, "replacementEpochId": {"type": ["string", "null"]}, "rotationTriggers": {"const": ["leakage", "saturation", "schedule-90-days"]}, "profile": {"$ref": "#/$defs/profile"}, "custody": {"$ref": "#/$defs/custody"}, "precommitment": {"$ref": "#/$defs/precommitment"}, "balanceSummary": {"$ref": "#/$defs/balance"}, "overlays": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/overlay"}}, "cases": {"type": "array", "minItems": 45, "items": {"$ref": "#/$defs/scaledCase"}}, "commitmentSnapshotIdentity": {"$ref": "#/$defs/sha256"}}},
+    "disclosure": {"type": "object", "additionalProperties": false, "required": ["id", "epochId", "caseId", "disclosedOn", "reason", "payloadPath", "saltHex", "verifiedCommitmentSha256"], "properties": {"id": {"type": "string"}, "epochId": {"type": "string"}, "caseId": {"type": "string"}, "disclosedOn": {"$ref": "#/$defs/date"}, "reason": {"enum": ["scheduled-release", "compromise-forensics"]}, "payloadPath": {"type": "string"}, "saltHex": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "verifiedCommitmentSha256": {"$ref": "#/$defs/sha256"}}}
   }
 }

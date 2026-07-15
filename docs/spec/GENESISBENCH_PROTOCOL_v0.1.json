@@ -26,19 +26,19 @@
       "bytes": 12088,
       "id": "agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "d6a2c89d9aab6736709958921816a9e7ade2e25f219dd37a2c986e9fe9c594ca"
+      "sha256": "4872b1465b4f0315579b51b8fdf86f4d3bf02264db745ad3f3f1e146c53b9890"
     },
     {
       "bytes": 36175,
       "id": "agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+      "sha256": "93e4335c833debb6d9cb6462fb2faad8681a38277eb7c53e52ae75d8982b43b1"
     },
     {
       "bytes": 110673,
       "id": "agent-task-benchmark",
       "path": "benchmarks/agent_tasks/v0.1/suite.json",
-      "sha256": "de4f87d2eaec0570668a73ffe1b09c218aa72c2e0f8be4a9f6da94c26175c541"
+      "sha256": "8c3033ec76f0ae925d007031d03f4cfd0df8e21b8c3e5a9e24bccd2acfde8be0"
     },
     {
       "bytes": 7487,
@@ -56,7 +56,7 @@
       "bytes": 12919,
       "id": "agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "c9cbdef67c4489bae58eea9c85f25eb4238216b549a956a599dd98ba62bce98a"
+      "sha256": "0fac16533c5c81bc3af061282e7d395b2618cbf5e2615811cc035d2b1125b156"
     },
     {
       "bytes": 8116,
@@ -86,13 +86,31 @@
       "bytes": 5323,
       "id": "benchmark-scoring",
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "1aa02ea72bfb31be935c57d227590226fff2fe42b1cde470899b7b2f73321e77"
+      "sha256": "9f2d4d990cf58b4af6105ed7eb9b71d1d9d96f43117152e182dfec2266bf6303"
     },
     {
       "bytes": 7019,
       "id": "benchmark-scoring-schema",
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
       "sha256": "54fc999a4a039809bffe4e3404f8ffbfd909f2b66839b1a602ec4b09b96ad058"
+    },
+    {
+      "bytes": 1863,
+      "id": "capability-lease-protocol",
+      "path": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+      "sha256": "98a0411761585a06d666dc1b80efc4ae799271d6e7571d066822c7315d832f21"
+    },
+    {
+      "bytes": 2114,
+      "id": "capability-lease-protocol-schema",
+      "path": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+      "sha256": "8a7f61031861be4e7fcc4ab09ab893d5df69cf76081f6d7f601f72c2b331a48e"
+    },
+    {
+      "bytes": 5822,
+      "id": "capability-lease-protocol-verifier",
+      "path": "scripts/lib/gc_capability_lease.py",
+      "sha256": "b8a3c5698b337d8df0ed682ccfac2e34025ae7cd86306a44a3b4d375e8d03c73"
     },
     {
       "bytes": 20308,
@@ -116,7 +134,7 @@
       "bytes": 2423,
       "id": "genesisbench-analysis-plan",
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "9bba223498c8ea07aef3bbd58421d75b2c7315fcd88eb4d79b389306dc6c82c9"
+      "sha256": "e710d0678ab35ed4d2ce510a1a946899bb1e700bcc66653b34ff2480b318a089"
     },
     {
       "bytes": 4614,
@@ -161,16 +179,16 @@
       "sha256": "c32ef46008f9244c5c8b4ca8922f3dadf664909d9a696e0ac21e0ba2ce626b73"
     },
     {
-      "bytes": 13627,
+      "bytes": 14867,
       "id": "genesisbench-integration-test",
       "path": "crates/gc_cli/tests/cli_agent_index.rs",
-      "sha256": "f45e108a50653573b81ffab86749a2814eeed88057be29730879274d051ffe76"
+      "sha256": "f0af591aa18fb178270f567b7088d03b48595599e571efd7a91739ea12cc8d7f"
     },
     {
-      "bytes": 13800,
+      "bytes": 16222,
       "id": "genesisbench-normative-spec",
       "path": "guides/genesisbench.qmd",
-      "sha256": "326cdeca33394bbbc9d9f900a4ea3139e781c34947bd47c22132db625aab8f82"
+      "sha256": "350cc8abec5cdca65920000f222f6fa6ca356f638f155686d66cd6bbcb7cc19f"
     },
     {
       "bytes": 2328,
@@ -185,10 +203,10 @@
       "sha256": "0d0f90b593a0f9fc93c856af990591dab2a1c69fc4f22708463438cd2e102623"
     },
     {
-      "bytes": 12113,
+      "bytes": 13293,
       "id": "genesisbench-protocol-contract",
       "path": "scripts/lib/genesisbench_protocol_contract.py",
-      "sha256": "629f43a3477f3f8589f9a261677df0166115852957a7cba66806893e816049a0"
+      "sha256": "ac21961b22d62fc3619a957179a5e7a6b817d79786e90f2e472efa8e568c27c0"
     },
     {
       "bytes": 4782,
@@ -215,16 +233,40 @@
       "sha256": "8d0090a144bdeceaf6e8ecc051d265f44a9ddfb804dbf0e33e4985c2dafa9f41"
     },
     {
-      "bytes": 4310,
+      "bytes": 78248,
       "id": "held-out-evaluation",
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "359981c3ec2b48cdaaaa817ae9634d9450e904cec2b3edbf8def52c6537001ba"
+      "sha256": "abcdd1117d3b55d2621258a04aae9a2230ae223aa49e501075f468321aa7fdbc"
+    },
+    {
+      "bytes": 13030,
+      "id": "held-out-evaluation-schema",
+      "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+      "sha256": "dbc25b471ac55ddd329844f47aacedf6b7c07fe8143b89daa128c3eae6b243ff"
+    },
+    {
+      "bytes": 40712,
+      "id": "held-out-evaluation-verifier",
+      "path": "scripts/lib/gc_held_out_evaluation.py",
+      "sha256": "2a2f12fee9d6c6ebb5a676d8dba498e398c48a2d987d3e46f899dee778018768"
+    },
+    {
+      "bytes": 1287,
+      "id": "held-out-private-pack-schema",
+      "path": "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
+      "sha256": "4fb802673b575ec0faf7c4e9587ef0ad6495ce667259a401646a1fba201a1a31"
     },
     {
       "bytes": 2325,
       "id": "model-runner-effect",
       "path": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
       "sha256": "4f85f364fe6faba12d8c837ca061811bfc828ac6d5574facafeceb4bef4a4ee3"
+    },
+    {
+      "bytes": 912,
+      "id": "temporal-epoch-audit",
+      "path": "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
+      "sha256": "4b77881260f7706abedf3148c60a8faed93c28488791b13c0ed1a1162fc47cfa"
     }
   ],
   "capabilityPolicy": {
@@ -266,7 +308,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "62c1372587a78a9089e8c9d0198367a6c6f1390151b0b8ea95b4b28eec1e6008",
+  "contentIdentitySha256": "fda99569717a597c9c416b06de9a487eac84a7705b973cb7531017ae5e385666",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
@@ -458,6 +500,15 @@
       {
         "argv": [
           "python3",
+          "scripts/lib/gc_held_out_evaluation.py",
+          "--check",
+          "--self-test"
+        ],
+        "id": "check-temporal-epoch"
+      },
+      {
+        "argv": [
+          "python3",
           "scripts/lib/genesisbench_protocol.py",
           "--check",
           "--run",
@@ -519,18 +570,23 @@
     "completeTree": true,
     "components": [
       {
-        "artifactCount": 24,
-        "bytes": 124368,
+        "artifactCount": 26,
+        "bytes": 131248,
         "excludePrefixes": [
           "benchmarks/agent_tasks/v0.1/references/"
         ],
         "id": "benchmark",
-        "identitySha256": "98d54d8af828a5a9b63b04cd71b88474086c22440b72614a2969138fb69bb4c6",
+        "identitySha256": "81690c887d0f775a36e0a8944926749a610bf63d2c905e54039aca01744cf7d2",
         "includeExact": [
           "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
           "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
           "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
           "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json"
         ],
         "includePrefixes": [
@@ -583,7 +639,7 @@
   },
   "status": "active",
   "taskVisibilityPolicy": {
-    "activeHeldOutEpochId": "epoch-2026-07-a",
+    "activeHeldOutEpochId": "epoch-2026-07-b",
     "classes": [
       {
         "allowedContaminationLabels": [

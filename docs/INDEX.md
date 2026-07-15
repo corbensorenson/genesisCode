@@ -1,6 +1,6 @@
 # GenesisCode Docs Index
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
 This is the canonical entrypoint for project documentation.
 
@@ -61,8 +61,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `scripts/check_gc_agent_core_card.sh` - read-only card freshness/adversarial/parser gate; `scripts/update_gc_agent_core_card.sh` is its explicit generator.
 - `docs/spec/GC_AGENT_CORPUS_v0.1.schema.json` - recursively closed provenance, licensing, generator, profile, capability, executable-test, difficulty, split-role, and oracle-exposure contract.
 - `docs/spec/GC_AGENT_CORPUS_v0.1.json` - content-addressed `GC-AGENT-CORPUS-v0.1` manifest over the current train, development, and public-test artifacts; held-out content is explicitly non-distributable.
-- `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json` - public salted commitments, append-only epoch lifecycle, delayed disclosure, rotation, and contamination-label authority for private agent evaluation; private custody remains ignored under `.genesis/private/agent-evaluation/`.
+- `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json` - public salted commitments for the immutable nine-lineage pilot and active balanced 90-lineage temporal epoch, with append-only lifecycle, BQ-4 freshness, 90-day/leakage/saturation rotation, delayed disclosure, custody separation, and contamination authority; private custody remains ignored under `.genesis/private/agent-evaluation/`.
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json` - closed public commitment-ledger schema; `docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json` publishes only the private pack shape, never an instance.
+- `docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json` - content-addressed, hash-only local-custody audit proving 90 commitment openings and metadata/quality bindings without publishing private task material.
+- `docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json` and `.schema.json` - maintained general-purpose temporal overlay for deterministic exact-scope, finite-use, deny-by-default authority leases with replay-bound transitions.
 - `scripts/lib/gc_agent_corpus.py` - read-only corpus verifier and adversarial suite, executed by the existing agent-authoring bundle gate.
 - `docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json` - closed schema for signed valid/invalid language pairs, production argv, exact envelope assertions, rejection classes, and one-site repairs.
 - `examples/canonical_language/v0.1/suite.json` - content-addressed canonical teaching authority covering pure functions, persistent collections, contracts, modules, sealed errors, effects, replay, packages, patches, tests, and resource failures.

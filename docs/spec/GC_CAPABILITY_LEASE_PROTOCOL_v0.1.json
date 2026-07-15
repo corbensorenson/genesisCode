@@ -1,0 +1,65 @@
+{
+  "contentIdentitySha256": "ddf3eb4b7235c5dc4ee60b95c52105a530e160ce0b2f02794a19563e1b0f3fd5",
+  "decisionContract": {
+    "denyReasons": [
+      "expired",
+      "not-yet-valid",
+      "operation-mismatch",
+      "scope-mismatch",
+      "subject-mismatch",
+      "unknown-lease",
+      "use-budget-exhausted"
+    ],
+    "permitReason": "lease-valid",
+    "resultFields": [
+      "decision",
+      "leaseId",
+      "reason",
+      "remainingUses"
+    ]
+  },
+  "kind": "genesis/capability-lease-protocol-v0.1",
+  "leaseContract": {
+    "fields": [
+      "leaseId",
+      "subject",
+      "operation",
+      "scopeIdentitySha256",
+      "notBeforeStep",
+      "expiresAfterStep",
+      "maxUses"
+    ],
+    "identityDomain": "genesis/capability-lease/v0.1\\0",
+    "identityFormula": "sha256(domain || canonical-lease-without-leaseId)",
+    "scopeBinding": "content-addressed-exact-scope",
+    "stepClock": "explicit-monotonic-logical-step"
+  },
+  "protocolId": "GC-CAPABILITY-LEASE-v0.1",
+  "safetyInvariants": [
+    "authority-is-never-broader-than-the-bound-operation-and-scope",
+    "decision-is-pure-for-lease-request-state-and-logical-step",
+    "expired-or-unknown-leases-deny",
+    "host-time-and-ambient-identity-are-forbidden",
+    "lease-use-is-recorded-before-authorized-effect-dispatch",
+    "replay-recomputes-the-same-decision-and-remaining-use-count",
+    "revocation-and-use-counts-are-append-only-state-transitions"
+  ],
+  "stateContract": {
+    "acceptedTransitions": [
+      "issue",
+      "consume",
+      "revoke"
+    ],
+    "canonicalOrdering": "leaseId-ascending",
+    "replayBindingFields": [
+      "leaseId",
+      "requestIdentitySha256",
+      "logicalStep",
+      "priorStateIdentitySha256",
+      "decision",
+      "nextStateIdentitySha256"
+    ],
+    "unknownTransitionPolicy": "deny-and-preserve-state"
+  },
+  "version": "0.1.0"
+}

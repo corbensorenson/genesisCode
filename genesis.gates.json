@@ -6,10 +6,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_agent_authoring_bundle.sh",
-      "executionIdentitySha256": "a42179a02081e04a41395e3fa830c8ce59716691c14324ad33d49cd23ff6c903",
+      "executionIdentitySha256": "cab42b44759bfb432456f4f27aaa9b802ce87fc757db7353179fa785b26d36e8",
       "expectedDurationSeconds": 15,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "cff561875d95a9952a9b3c7ffd8df8170b2b1e02f7da9fba8be8c6e5dbfc57f3",
+      "inputIdentitySha256": "304a83e0747a6ac43de6086e7c7ce3d1932ffc6120d856c73946d812049fcfde",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -28,6 +28,7 @@
           "crates/gc_cli/tests/cli_canonical_language_examples.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
           "crates/gc_cli_driver/src/mcp/catalog.rs",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -53,6 +54,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json",
           "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
           "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -82,6 +85,7 @@
           "scripts/lib/gc_agent_scoring.py",
           "scripts/lib/gc_agent_scoring_contract.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_held_out_evaluation.py",
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/genesisbench_analysis.py",
@@ -119,7 +123,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "814f7e67885f414427e7f0da0674cab75e9c1d4f6312f10d97da7a532e2e5924",
+      "sourceSha256": "84c53bc58fcbe64ca52204c4f4eed8a12dc1e9537552bfaefed90fda67a4a765",
       "tools": [
         "bash",
         "git",
@@ -583,7 +587,7 @@
       "executionIdentitySha256": "7a8994fd70c67fc163413b205303c3ffc81882335d503684dca47385ffe5898c",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "f98d1c018dd8913a74df6aad21dddc541f2db3b8c04469e6e38a4061cf39e7ec",
+      "inputIdentitySha256": "7d707a254d3cadd2ce5b297fa6e5254a0964c294e4872198ec2b07cb9f989cf6",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1090,7 +1094,7 @@
       "executionIdentitySha256": "b971b0450bb5ba10f3af9284a43284d7b8df03e6c0acefdb3aba00482f570842",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1283,6 +1287,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -1361,6 +1366,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -1697,6 +1704,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -2078,7 +2086,7 @@
       "executionIdentitySha256": "2b171eb0b91ebcc93bb6e3fe4d6edf45fda3280e4d1f44009e6e06dc96af7040",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "aa4e7912b5b3d01e78858a126a7a01c5ba4fce6384744ac765c9ac4fd90a5c20",
+      "inputIdentitySha256": "5ddc910d25a3a4f01b515c3af9be5a1a99c9d0814511d0d31477e3c7fe594b3e",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2176,7 +2184,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2369,6 +2377,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -2447,6 +2456,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -2783,6 +2794,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -3030,7 +3042,7 @@
       "executionIdentitySha256": "b7c4cc1057320d73290779da0aa1751035b6e7ee67357f5d681d8ddd1c314b66",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "42d7c50c64c9047efab68ccbc8d0ff7b0d1ef859eac1904089c3ee44c63260ee",
+      "inputIdentitySha256": "7232a7a3d97513da66be8018d7e15812cfb75d7b377ed60e80731f69d6bbe8af",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3119,7 +3131,7 @@
       "executionIdentitySha256": "d8b333666af65270de1b68cfb31b8614b4651f73a01fdb224f7d30f430e167cc",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "49ba0b6549fce522f3c8fbba156052325fedfd70671a8436a2a15bbf2b382ef3",
+      "inputIdentitySha256": "9d4b95f45b9dc3f6ddbe0cd8d73333febd138214d6d15ef542875b076563b3c0",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3496,7 +3508,7 @@
       "executionIdentitySha256": "ff924202b8a8dde9faea2b0b2e927ee4a6fa81e42a60176174fe3f7788b47175",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "e68f87090e698a856066a8ba19c786bbe9626a62f49ca0028aab2b3279b24ede",
+      "inputIdentitySha256": "e36c000003edc5499f6253db4dc173ef5dfe3cf76a314e28602a90904930e155",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3577,7 +3589,7 @@
       "executionIdentitySha256": "ce4c6313be2f26d3addc15e5fbb0ce37605521bda7ec6d29252bebdd9e689a9c",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "57a6074aeb56a90cd9c522847e7ad02bbe2b6bfbecf14ea87826892941fe3f41",
+      "inputIdentitySha256": "c0fd9c3e2ce25de8a627beebe0d67028ee4aee94a9e32a671e6e63afae5fa74b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3770,7 +3782,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3963,6 +3975,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -4041,6 +4054,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -4377,6 +4392,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -5201,7 +5217,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "cb5188665ab11a7b3508a396fed0cfef92f1b280ebd00ce6670dfb80c9b0b747",
+      "inputIdentitySha256": "4401a83f9bbca17d62ade26b3a268fe9fe184d31a46dd998af3568d4124fd987",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5330,7 +5346,7 @@
       "executionIdentitySha256": "50eb4b58b61771fb7cb538c515679e4cc7bb4aa029bc7310c2ee3f0f878d49e4",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "038c825a0908ce03a8a2b1c921a45f542456f0ca7f93e815beb6a88a84727a9a",
+      "inputIdentitySha256": "4f2b1f67f2edb381362b04e61972d84d2cf944a3558b1e27734db0eadf28db65",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5409,7 +5425,7 @@
       "executionIdentitySha256": "a812ebf8fa8cccd881ae7a086e32fba0ca92ab771e962981673c4e6b8dba9a57",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "84ed8c7c6d483ef297c9e83e970bf017d5f7ce8d01ec6a6cdaaec9b94eaf8dcb",
+      "inputIdentitySha256": "9e0e8abff1c05118313aa10d83e22de9cb45ed28bbdb0f786d38d5524d100b76",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5482,7 +5498,7 @@
       "executionIdentitySha256": "c02349c3de13ce4d23a5055db6cf4733394985bc6b1a1e171097fb92ce380b6c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "485a3a04a40d668e15e322ea428d642ab926c3bed214756f8011b93bb422e129",
+      "inputIdentitySha256": "f79362177a764ff21813ff47874e92a2b7b12b9b4d274b827944b0150421607e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5561,7 +5577,7 @@
       "executionIdentitySha256": "a91cd6f95c52b2419d89ce9ddaead7eb32afefb4fde12122f9111bc9f2027599",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "25d03c1161d5f694f6bd4f20c2a788e1b302bdef786c2bdd215cd86b47117456",
+      "inputIdentitySha256": "9b9e9faa50304f170e44c16f7c396f07469319dd14ff285dee82d09c29e27465",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -6013,7 +6029,7 @@
       "executionIdentitySha256": "f527e7ad04cab2c4e4f4a5e317e2d183b1368fedf2ccc84a03f6815721e0df25",
       "expectedDurationSeconds": 15,
       "id": "gate/genesiscode-authoring-skill",
-      "inputIdentitySha256": "e92f7d9ff2151ac0e40df20f04d4b195374abf945af4b0494d0b8f60aa76b80f",
+      "inputIdentitySha256": "900de640ec983e60a9df2bd8762cd5d2861724bb7c511f5b22b4763bf395c712",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -6528,7 +6544,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6721,6 +6737,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -6799,6 +6816,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -7135,6 +7154,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -7532,7 +7552,7 @@
       "executionIdentitySha256": "abdc70b5c30c694e08950d14f7bf6396a884a4b871ffe9dc6f4e7be505ac68c4",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7725,6 +7745,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -7803,6 +7824,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -8139,6 +8162,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -8869,7 +8893,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9062,6 +9086,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -9140,6 +9165,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -9476,6 +9503,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -9957,7 +9985,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "e6316adf151ce7e1e4fa1d49e90609a3e9b2e243a855fed25aa8b0a66c0c051d",
+      "inputIdentitySha256": "52f0999ee74a3fbafc63521316538b8a2202dc0acef7a68a674ae8ea13e349ae",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -12127,7 +12155,7 @@
       "executionIdentitySha256": "90e216718daf9f07073da4755f2613ab35bdfa08c80fee4019f3416c091421a3",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12320,6 +12348,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -12398,6 +12427,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -12734,6 +12765,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -13091,7 +13123,7 @@
       "executionIdentitySha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "34db992a7eb5a21ad5ffe02e6d0511b3b4418ef040f0aff95cce9df591f69cd3",
+      "inputIdentitySha256": "b8db17dc7c5f11bda905e563bf98443cd5c290e3cc9724e689aede9fdb1f02f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13284,6 +13316,7 @@
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
@@ -13362,6 +13395,8 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
           "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
@@ -13698,6 +13733,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_held_out_evaluation.py",
@@ -14134,7 +14170,7 @@
       "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "e1bd5eb1a75e5bf26beca47b49971bc0f6682ac501ee42cd45d84641764ee721",
+      "inputIdentitySha256": "d2be52165c19800fada17ad8b24007f3020281a8720f80493165fd45642d3fb6",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14736,7 +14772,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "81d385fe44a77261d09aa5954220f01045dfe775996fc1fa34141ccb1f132228",
+      "inputIdentitySha256": "2623f990b034fa18ae9399851efec8ef361fa7f38719c83111f23ab81df0d746",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -14793,7 +14829,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "62186d280cc8f9a8fb4d7ef48c5cf3fdeda4356754ecf0a982ccbd8211b3962e",
+      "inputIdentitySha256": "7af2bd8523157c5857dfc09851d01c75dc4f5ca0932d0dd14d99eef70a2564c8",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -14884,7 +14920,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "efafb661c1256ff25dd17e6dfda4d5a76a90c1f3ba55f62f928ca0b2bf149578"
+        "sha256": "896677eb2f71637108ac050783a87f899a934d09ad06f0e02103c3589184c2fc"
       },
       {
         "path": "genesis.prerequisites.json",

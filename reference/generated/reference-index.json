@@ -1,15 +1,15 @@
 {
   "authorities": {
-    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a",
-    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "db8f8b26e90bfa6a90180c86341869882ed84b27c001f443b247bfc4806e3670",
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "151e0f2d585dd8e78e0fca6232be5ecda955da49cfc764a50314f326c2be5021",
+    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "c1224cd0553a8f4e3fd79781d0176a041d86ac0dbcca72f63379af10726b1eda",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 254,
+    "canonicalSources": 257,
     "diagnostics": 185,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 61,
+    "schemas": 62,
     "symbols": 168
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -24,11 +24,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "2bc2413075979a9e07bfbf33bdd62966889967c0e0d5ddd1766fdebbe557f25d"
+      "sha256": "a6a9c876ee1d4c112f025ad38ecc6a00af89713326755ed650e6097d7c8b2e8a"
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "3777757aa775e04496edca9545df34aeb81adca0d17a5111aadcfdecb7e85598"
+      "sha256": "e55223f80cf0a979f49eb99728ed600a3efbc35d071319bed64e72a57cdf86a5"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "d7a7b53b65a67163848e942b9820f036a2b22fba86a2929f2336b84ffbb0ca31"
+      "sha256": "b4e6b2b0bee56308c430d602915db8783462c7e1e569d92b09d391fdb8d8269f"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -119,12 +119,16 @@
       "sha256": "4ce9bed19d3dac8926a06a15f2edceaaaa038c3a9a814265b7bd13858359a173"
     },
     {
+      "path": "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
+      "sha256": "4b77881260f7706abedf3148c60a8faed93c28488791b13c0ed1a1162fc47cfa"
+    },
+    {
       "path": "docs/program/RELEASE_NOTES_v0.2.0.json",
       "sha256": "a532f9b4e54f35414f6494cbbb7a37995d822daf80a74de2947fcddb7c473b7d"
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "920915468a0bc43fae715dc93bbffcc37bd5033c5d3e2554f72defaadae7a306"
+      "sha256": "297d249e9cff74abcd6ac032c62a31f54f187b485584d8b71c889b0572559d3a"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -332,7 +336,7 @@
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "ce58ceb4f4016b25499786a8651350d7d625abb9bf58d7c01352a2d89dea6805"
+      "sha256": "9fb64d9e543fdf7dc24ff6195eb1bd4a050b8448e882552d62dfb7205cc1f328"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -344,7 +348,7 @@
     },
     {
       "path": "docs/spec/AGENT_INDEX_v0.1.md",
-      "sha256": "82d3dcae9123565c00f702784168690258542a817d59b2c6c760082cd2ebc0e3"
+      "sha256": "e0ddc0d2bbad8a900b5ea3c9e987f69d45732fd6462f1a19de411b2513b49c73"
     },
     {
       "path": "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
@@ -420,7 +424,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "efafb661c1256ff25dd17e6dfda4d5a76a90c1f3ba55f62f928ca0b2bf149578"
+      "sha256": "896677eb2f71637108ac050783a87f899a934d09ad06f0e02103c3589184c2fc"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -584,7 +588,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "1aa02ea72bfb31be935c57d227590226fff2fe42b1cde470899b7b2f73321e77"
+      "sha256": "9f2d4d990cf58b4af6105ed7eb9b71d1d9d96f43117152e182dfec2266bf6303"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
@@ -592,15 +596,15 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "d6a2c89d9aab6736709958921816a9e7ade2e25f219dd37a2c986e9fe9c594ca"
+      "sha256": "4872b1465b4f0315579b51b8fdf86f4d3bf02264db745ad3f3f1e146c53b9890"
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-      "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+      "sha256": "523c89ab84e9df95a8c26cdffe4b1326bbcc2f300d9d5505479a0faa74cb083b"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "d159ae9b5f5e77be5c1e0d8f181bba4dfb2f77cf5c64c77e404575f3798eb6ac"
+      "sha256": "14d9f1ff4c45297c297c1dce36d27df87ea873c543991f730757231d5a68495d"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -608,15 +612,15 @@
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "359981c3ec2b48cdaaaa817ae9634d9450e904cec2b3edbf8def52c6537001ba"
+      "sha256": "abcdd1117d3b55d2621258a04aae9a2230ae223aa49e501075f468321aa7fdbc"
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
-      "sha256": "f1ce00fb0ff38104e53b2adb95ee514c1eb69f7dd2c9ad68574323e8ee1ff6ec"
+      "sha256": "dbc25b471ac55ddd329844f47aacedf6b7c07fe8143b89daa128c3eae6b243ff"
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
-      "sha256": "8dff919ae82af6eaa16220cb33298ea716822abb77978330924f3996e8b5859e"
+      "sha256": "4fb802673b575ec0faf7c4e9587ef0ad6495ce667259a401646a1fba201a1a31"
     },
     {
       "path": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
@@ -624,7 +628,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+      "sha256": "93e4335c833debb6d9cb6462fb2faad8681a38277eb7c53e52ae75d8982b43b1"
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
@@ -632,7 +636,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
-      "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+      "sha256": "151e0f2d585dd8e78e0fca6232be5ecda955da49cfc764a50314f326c2be5021"
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
@@ -644,19 +648,27 @@
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "c9cbdef67c4489bae58eea9c85f25eb4238216b549a956a599dd98ba62bce98a"
+      "sha256": "0fac16533c5c81bc3af061282e7d395b2618cbf5e2615811cc035d2b1125b156"
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-      "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+      "sha256": "066b7e37eb14a45a5d1f0ffd4ab7ad319c1c190631e61989730e6b206ec8d849"
     },
     {
       "path": "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
       "sha256": "805cdec3cc2e9ccf6e6884f27a673b62e805e6b30bcda7b59e8e54046dc100bb"
     },
     {
+      "path": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+      "sha256": "98a0411761585a06d666dc1b80efc4ae799271d6e7571d066822c7315d832f21"
+    },
+    {
+      "path": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+      "sha256": "8a7f61031861be4e7fcc4ab09ab893d5df69cf76081f6d7f601f72c2b331a48e"
+    },
+    {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
-      "sha256": "db8f8b26e90bfa6a90180c86341869882ed84b27c001f443b247bfc4806e3670"
+      "sha256": "c1224cd0553a8f4e3fd79781d0176a041d86ac0dbcca72f63379af10726b1eda"
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
@@ -692,7 +704,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "9bba223498c8ea07aef3bbd58421d75b2c7315fcd88eb4d79b389306dc6c82c9"
+      "sha256": "e710d0678ab35ed4d2ce510a1a946899bb1e700bcc66653b34ff2480b318a089"
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -720,7 +732,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "b6ff841d56e00d9b082981a93bcaba2d870831d7445a396b90dd20b3c6341916"
+      "sha256": "2bc1fb3e1ec130f7c80de51332f9776a2470a2136e4a1c2dae33ba93afefcbf4"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -1016,7 +1028,7 @@
     },
     {
       "path": "docs/write_genesisCode_skill.md",
-      "sha256": "1ebb388b6227d71fdcabdc20c31dad304bc968bf3dbd52d731e1967664c87c94"
+      "sha256": "56c21401f69cb9daf758b66ffbdec488224df28ab6b39f7d80949439fa9a80ca"
     },
     {
       "path": "feature_matrix.md",

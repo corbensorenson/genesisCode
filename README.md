@@ -82,6 +82,8 @@ preference.
 - Contamination-attestation schema: `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
 - Public practice suite: nine independent lineages under 27 context conditions in `benchmarks/agent_tasks/v0.1/suite.json`
 - Predeclared lineage analysis: `docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json`
+- Active temporal epoch: `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json` (90 private lineages; public commitments and balance metadata only)
+- Maintained temporal overlay: `docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json`
 - Deterministic analysis fixtures: `benchmarks/genesisbench/v0.1/analysis/`
 - Canonical contamination fixture: `benchmarks/genesisbench/v0.1/contamination.fixture.json`
 - Canonical eligibility fixture: `benchmarks/genesisbench/v0.1/eligibility.fixture.json`

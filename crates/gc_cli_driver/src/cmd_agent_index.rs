@@ -573,6 +573,8 @@ pub(super) fn cmd_agent_index(
                 "genesisbench_analysis_report_schema": "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json",
                 "gc_agent_model_runner_effect": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
                 "gc_agent_held_out_evaluation": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+                "genesisbench_temporal_epoch_audit": "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
+                "gc_capability_lease_protocol": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
                 "gc_agent_task_cards": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
                 "gc_agent_symbol_index": AGENT_SYMBOL_INDEX_PATH,
                 "diagnostic_catalog": diagnostics::DIAGNOSTIC_CATALOG_PATH,
