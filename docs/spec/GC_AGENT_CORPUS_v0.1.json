@@ -5,7 +5,7 @@
   "profile": {
     "id": "GC-AGENT-v0.3",
     "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "0cbef38bc4b98f747d6dbf470e0659eaecccc5ed10e05b9dc93e9ec9ed80d0cc"
+    "sha256": "ff8fdbb34d104df0f100df4682d8e0f6953b877efc2086978561bdf46cc02432"
   },
   "sourcePolicy": {
     "repository": "https://github.com/corbensorenson/genesisCode",
@@ -267,7 +267,7 @@
         },
         {
           "path": "benchmarks/agent_tasks/v0.1/suite.json",
-          "sha256": "5eae6c611dabd4098dca0cc88bb14a257a897143ceb58d322c53768a9fc6ee1d",
+          "sha256": "922a597269dda63030c8ff4a8e2f39b843c08d9707181875de7034da8d73a1ff",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         },
@@ -596,7 +596,7 @@
         },
         {
           "path": "examples/canonical_language/v0.1/suite.json",
-          "sha256": "65120282019afa50a63c1734541bcbf63df75f33aa44e5e9aab4d02430bc645d",
+          "sha256": "b6dda20743e7a71fa968a1dc04975fe1884c32e922a6f09069d05ca908502526",
           "spdx": "Apache-2.0",
           "provenance": "genesiscode-repository-authored"
         }
@@ -877,5 +877,5 @@
       "oracleExposure": "public"
     }
   ],
-  "contentIdentitySha256": "30fd040a391303d6c60660d1f9772970973012bf828d37d12c5bf8d0460c2e5d"
+  "contentIdentitySha256": "e6cb45b65750f9d0e96c854ff7ba381d9849e3e92c2711dcbb57bee0f92cd2c8"
 }
