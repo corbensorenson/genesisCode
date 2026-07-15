@@ -567,6 +567,7 @@ pub(super) fn cmd_agent_index(
                 "gc_agent_benchmark_scoring": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
                 "gc_agent_benchmark_score_schema": "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
                 "gc_agent_benchmark_run_schema": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+                "genesisbench_protocol": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
                 "gc_agent_model_runner_effect": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
                 "gc_agent_held_out_evaluation": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
                 "gc_agent_task_cards": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",

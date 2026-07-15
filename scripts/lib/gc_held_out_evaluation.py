@@ -106,7 +106,10 @@ def validate(document: Any, *, check_identity: bool = True) -> dict[str, Any]:
         "rotationStates": ["active", "compromised", "retired"],
     }, "lifecycle policy drift")
     require(doc["contaminationPolicy"] == {
-        "resultLabels": ["declared-contaminated", "unknown", "uncontaminated"],
+        "resultLabels": [
+            "declared-contaminated", "declared-uncontaminated",
+            "temporal-clean", "unknown",
+        ],
         "defaultWhenTrainingProvenanceMissing": "unknown",
         "disclosedCaseRequiresContaminatedLabel": True,
         "mixedEpochAggregationForbidden": True,
@@ -216,7 +219,7 @@ def self_test(document: dict[str, Any]) -> int:
         ("mutable-history", lambda d: d["lifecyclePolicy"].__setitem__("appendOnlyEpochs", False)),
         ("no-replacement", lambda d: d["lifecyclePolicy"].__setitem__("compromiseRequiresReplacement", False)),
         ("early-disclosure", lambda d: d["lifecyclePolicy"].__setitem__("minimumDisclosureDelayDays", 0)),
-        ("contamination-default", lambda d: d["contaminationPolicy"].__setitem__("defaultWhenTrainingProvenanceMissing", "uncontaminated")),
+        ("contamination-default", lambda d: d["contaminationPolicy"].__setitem__("defaultWhenTrainingProvenanceMissing", "temporal-clean")),
         ("mixed-epoch", lambda d: d["contaminationPolicy"].__setitem__("mixedEpochAggregationForbidden", False)),
         ("case-omission", lambda d: d["epochs"][0]["cases"].pop()),
         ("oracle-leak", lambda d: d["epochs"][0]["cases"][0].__setitem__("oracleExposure", "public")),

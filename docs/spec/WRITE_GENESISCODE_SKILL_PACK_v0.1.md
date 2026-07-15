@@ -128,6 +128,7 @@ Required executable benchmark workloads for AI-authored GenesisCode quality:
 - Model-agnostic scoring authority: `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json`
 - Closed score-result contract: `docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json`
 - Reproducible run contract: `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json`
+- Benchmark protocol: `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json` with `guides/genesisbench.qmd`
 - Local benchmark model effect: `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
 - Held-out commitment authority: `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json` (public commitments only; private custody material is forbidden from the skill distribution)
 - Service workflow: `examples/agent_service_workflow/workflow.sh`
@@ -144,6 +145,8 @@ Required executable benchmark workloads for AI-authored GenesisCode quality:
 Candidate quality is scored by `scripts/lib/gc_agent_scoring.py` on a 10,000-basis-point scale across semantics, obligations, effects, patch minimality, deterministic resource use, and policy scope. Validity fails closed when required semantic, obligation, policy, or editable-scope facts fail. Wall time, API cost, energy, and provider queue time are separate `genesis/agent-benchmark-run-v0.1` facts and never alter quality.
 
 Every reported benchmark invocation must also pass `python3 scripts/lib/gc_agent_benchmark_run.py --check`. The record binds immutable model, weights, tokenizer, runtime, exact prompt/card/context assembly, integer decoding and retry controls, all attempts and candidate artifacts, the canonical score, normalized host facts, and a complete artifact inventory. Local model execution is permitted only through the digest-pinned `genesis.agent-model-runner.v0.1` / `infer` effect; preserve request, response, transcript, and `.gclog`, and require replay without model reinvocation.
+
+Cross-model comparisons additionally pass `python3 scripts/lib/genesisbench_protocol.py --check` and deterministic run-plus-attestation classification. The profile freezes the repository/runtime/docs snapshot, context and tool surfaces, capabilities, attempts, disclosure, visibility, scoring, contamination, and eligibility. Treat public references as `declared-contaminated` unranked practice evidence, incomplete provenance as `unknown`, and new language status as no evidence. Judge-model preference is outside quality.
 
 The skill-conformance score below measures whether this authoring pack covers its required workflows; it is not a candidate benchmark score.
 

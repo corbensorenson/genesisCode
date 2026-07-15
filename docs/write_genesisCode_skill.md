@@ -15,6 +15,7 @@ Canonical AI-first authoring handbook for GenesisCode.
   - `benchmarks/agent_tasks/v0.1/suite.json`
   - `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json`
   - `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json`
+  - `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
   - `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
   - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - Source skill file:
@@ -80,6 +81,7 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 - Treat failing deterministic replay or profile gate as release-blocking.
 - For benchmark candidates, run `python3 scripts/lib/gc_agent_scoring.py --score` with the exact case, candidate root, shipped `genesis` binary, and pinned selfhost artifact; retain the canonical score JSON.
 - For benchmark runs, validate `examples/agent_benchmark_reproducibility/run.json` or the produced record with `python3 scripts/lib/gc_agent_benchmark_run.py --check --run <path>`; use `--self-test` on the canonical authority gate.
+- Before comparing benchmark runs, validate `GenesisBench-v0.1` with `python3 scripts/lib/genesisbench_protocol.py --check --self-test`, then classify each run with `--run <path> --attestation <path> --json`. Public references are contaminated practice evidence, missing provenance is unknown, and temporal-clean requires post-release task precommitment plus custody evidence.
 
 ## Debugging Pattern
 

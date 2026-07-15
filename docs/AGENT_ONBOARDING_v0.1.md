@@ -16,14 +16,15 @@ This file is the single agent-first onboarding spine.
 7. `examples/canonical_language/v0.1/suite.json` for signed valid/invalid executable pairs
 8. `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json` for model-agnostic evaluation
 9. `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json` and `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json` for reproducible model/run provenance
-10. `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
-11. `docs/spec/GCPM_BUNDLE_v0.1.md`
-12. `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
-13. `docs/spec/TESTING_BUNDLE_v0.1.md`
-14. `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
-15. `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
-16. `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
-17. `ROADMAP.md` for strategic work or `upgrade_plan.md` for active P0/P1 defects
+10. `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json` and `guides/genesisbench.qmd` for benchmark context, tools, contamination, and eligibility
+11. `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
+12. `docs/spec/GCPM_BUNDLE_v0.1.md`
+13. `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+14. `docs/spec/TESTING_BUNDLE_v0.1.md`
+15. `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+16. `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
+17. `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
+18. `ROADMAP.md` for strategic work or `upgrade_plan.md` for active P0/P1 defects
 
 ## Agent-First Onboarding Spine (Required)
 
@@ -52,6 +53,7 @@ This file is the single agent-first onboarding spine.
 - Public 27-case authoring benchmark: `benchmarks/agent_tasks/v0.1/suite.json`
 - Model-agnostic benchmark scoring: `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json`
 - Reproducible benchmark run contract: `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json`
+- GenesisBench profile and eligibility rules: `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json` and `guides/genesisbench.qmd`
 - Local benchmark model effect: `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
 - Versioned skill pack: `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
 - Executable skill distribution kit: `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
@@ -70,5 +72,6 @@ This file is the single agent-first onboarding spine.
 - For public development evaluation, select the exact task and context tier from `GC-AGENT-TASK-BENCHMARK-v0.1`; its references are public oracles and cannot support a held-out claim.
 - Score candidate quality only with `GC-AGENT-BENCHMARK-SCORING-v0.1`: semantics, obligations, effects, patch minimality, deterministic resource units, and policy scope share a closed 10,000-basis-point result. Keep latency, API cost, energy, and provider queue time in the separate model/run record.
 - Validate the separate `genesis/agent-benchmark-run-v0.1` record read-only. It must bind immutable model/runtime artifacts, exact prompt/card/context assembly, integer decoding and retry policy, every attempt and candidate artifact, the canonical score, normalized host facts, and a complete content-addressed inventory.
+- Validate `GenesisBench-v0.1` before comparing runs. Its frozen Git tree is additionally bound by a complete SHA-256 content manifest; context modes, MCP tools, capabilities, attempts, model disclosure, visibility, scoring, contamination, and eligibility are closed authorities. Public references are `declared-contaminated` and unranked. Newness never proves cleanliness, and judge-model preference never changes quality.
 - Fully local benchmark models use the pinned `genesis.agent-model-runner.v0.1` / `infer` effect only. Preserve request, response, tool transcript, and `.gclog`; replay must succeed without the model or weights and must never reinvoke either.
 - For held-out evaluation, retrieve only `GC-AGENT-HELD-OUT-v0.1` public commitments. Never load `.genesis/private/agent-evaluation` into training, retrieval, prompts, logs, or distributed artifacts; an evaluator with custody verifies the private pack separately and labels missing training provenance as `unknown` contamination.

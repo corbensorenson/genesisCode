@@ -33,6 +33,7 @@ project:
     - policies/**
     - examples/**
     - benchmarks/agent_tasks/**
+    - benchmarks/genesisbench/**
     - genesis.*
     - package.json
     - package-lock.json
@@ -100,6 +101,7 @@ website:
         href: guides/index.qmd
         contents:
           - guides/agent-authoring.qmd
+          - guides/genesisbench.qmd
           - guides/services-and-data.qmd
           - guides/gpu-graphics-xr.qmd
           - guides/security-assurance.qmd

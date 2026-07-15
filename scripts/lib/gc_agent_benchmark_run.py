@@ -242,7 +242,7 @@ def inventory_identity(files: dict[str, bytes]) -> str:
 
 def prompt_identity(document: dict[str, Any], artifacts: dict[str, Path]) -> str:
     assembly = document["invocation"]["promptAssembly"]
-    ordered = [row["artifact"] for row in assembly["messages"]] + assembly["cards"] + assembly["contextArtifacts"]
+    ordered = [row["artifact"] for row in assembly["assemblyOrder"]]
     digest = hashlib.sha256()
     digest.update(b"genesis-agent-prompt-assembly-v0.1\0")
     for key in ordered:
@@ -316,7 +316,7 @@ def validate_document(document: Any, run_path: Path = EXAMPLE, *, check_files: b
 
     benchmark = closed(doc["benchmark"], {"benchmarkId", "caseId", "caseIdentitySha256", "taskClass", "contextTier", "split", "contamination", "heldOutEpochId"}, "benchmark")
     require(benchmark["benchmarkId"] == "GC-AGENT-TASK-BENCHMARK-v0.1", "benchmark id drift")
-    require(benchmark["split"] == "public-test" and benchmark["contamination"] == "public-reference" and benchmark["heldOutEpochId"] is None, "public example contamination policy drift")
+    require(benchmark["split"] == "public-test" and benchmark["contamination"] == "declared-contaminated" and benchmark["heldOutEpochId"] is None, "public example contamination policy drift")
 
     authority_rows = doc["authorities"]
     authority_ids = [row.get("id") for row in authority_rows]
@@ -346,11 +346,20 @@ def validate_document(document: Any, run_path: Path = EXAMPLE, *, check_files: b
     require(model["secretPolicy"] == {"credentialsRecorded": False, "promptRetention": "complete", "secretsPresent": False}, "secret policy drift")
 
     invocation = closed(doc["invocation"], {"promptAssembly", "decoding", "retryPolicy", "attempts", "selectedAttempt"}, "invocation")
-    prompt = closed(invocation["promptAssembly"], {"algorithm", "messages", "cards", "contextArtifacts", "identitySha256"}, "prompt assembly")
+    prompt = closed(invocation["promptAssembly"], {"algorithm", "messages", "cards", "contextArtifacts", "assemblyOrder", "identitySha256"}, "prompt assembly")
     require(prompt["algorithm"] == "sha256-domain-separated-ordered-artifacts-v0.1", "prompt assembly algorithm drift")
     require(prompt["cards"] == ["repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json", "repository:docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"], "canonical card bindings drift")
     for row in prompt["messages"]:
         closed(row, {"role", "artifact"}, "prompt message")
+    segments = prompt["assemblyOrder"]
+    require(isinstance(segments, list) and 4 <= len(segments) <= 608, "invalid prompt assembly order")
+    for row in segments:
+        closed(row, {"role", "artifact"}, "prompt assembly segment")
+        require(row["role"] in {"system-policy", "agent-profile", "task-card", "context-pack", "retrieval-transcript", "task-prompt", "task-input"}, "invalid prompt assembly role")
+    ordered_artifacts = [row["artifact"] for row in segments]
+    supplied_artifacts = [row["artifact"] for row in prompt["messages"]] + prompt["cards"] + prompt["contextArtifacts"]
+    require(len(ordered_artifacts) == len(set(ordered_artifacts)), "prompt assembly repeats an artifact")
+    require(sorted(ordered_artifacts) == sorted(supplied_artifacts), "prompt assembly order does not cover supplied artifacts exactly")
     decoding = closed(invocation["decoding"], {"seed", "temperatureMicros", "topPMicros", "topK", "maxOutputTokens", "stop", "responseFormat", "identitySha256"}, "decoding")
     retry = closed(invocation["retryPolicy"], {"maxAttempts", "backoff", "retryableCodes", "identitySha256"}, "retry policy")
     identity_field(decoding, "identitySha256", "decoding")
@@ -521,6 +530,7 @@ def refresh_example(genesis_bin: Path, selfhost_artifact: Path) -> None:
         "bundle:prompts/user.md": EXAMPLE.parent / "prompts/user.md",
         "bundle:candidate/requirements.md": EXAMPLE.parent / "candidate/requirements.md",
         "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json": ROOT / "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+        "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.md": ROOT / "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
         "repository:docs/spec/GC_AGENT_TASK_CARDS_v0.3.json": ROOT / "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
     }
     doc["invocation"]["promptAssembly"]["identitySha256"] = prompt_identity(doc, provisional_paths)
@@ -634,6 +644,7 @@ def refresh_example(genesis_bin: Path, selfhost_artifact: Path) -> None:
         path = artifact.removeprefix("repository:")
         mode = "0755" if path == "scripts/lib/gc_agent_benchmark_run.py" else "0644"
         add_artifact(rows, "repository", path, authority_roles.get(path, "authority"), mode)
+    add_artifact(rows, "repository", "docs/spec/GC_AGENT_CORE_CARD_v0.3.md", "context")
     bundle_roles = {
         "candidate/main.gc": "candidate", "candidate/requirements.md": "candidate",
         "prompts/system.md": "prompt", "prompts/user.md": "prompt",
@@ -686,7 +697,7 @@ def self_test(document: dict[str, Any]) -> int:
     add("score-model-metrics", lambda d: d["score"].__setitem__("includedModelMetrics", True))
     add("quality-model-metrics", lambda d: d["modelSpecificMetrics"].__setitem__("includedInQualityScore", True))
     add("heldout-leak", lambda d: d["benchmark"].__setitem__("split", "held-out"))
-    add("contamination-erasure", lambda d: d["benchmark"].__setitem__("contamination", "verified-clean"))
+    add("contamination-erasure", lambda d: d["benchmark"].__setitem__("contamination", "temporal-clean"))
     add("identity-drift", lambda d: d.__setitem__("contentIdentitySha256", "0" * 64))
     rejected = 0
     for name, candidate in mutations:

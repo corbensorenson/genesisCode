@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-eligibility-v0.1.json",
+  "title": "GenesisBench deterministic run eligibility report v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "protocol",
+    "snapshot",
+    "run",
+    "case",
+    "validation",
+    "contamination",
+    "eligibility",
+    "contentIdentitySha256"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-eligibility-v0.1"},
+    "version": {"const": "0.1.0"},
+    "protocol": {"$ref": "#/$defs/protocol"},
+    "snapshot": {"$ref": "#/$defs/snapshot"},
+    "run": {"$ref": "#/$defs/run"},
+    "case": {"$ref": "#/$defs/case"},
+    "validation": {"$ref": "#/$defs/validation"},
+    "contamination": {"$ref": "#/$defs/contamination"},
+    "eligibility": {"$ref": "#/$defs/eligibility"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sha1": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "nullableId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+    "stringSet": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256}
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "identitySha256"],
+      "properties": {
+        "id": {"const": "GenesisBench-v0.1"},
+        "version": {"const": "0.1.0"},
+        "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commitSha1", "treeSha1", "manifestIdentitySha256"],
+      "properties": {
+        "commitSha1": {"$ref": "#/$defs/sha1"},
+        "treeSha1": {"$ref": "#/$defs/sha1"},
+        "manifestIdentitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "identitySha256", "modelId", "modelRevision", "attempts", "qualityScoreBasisPoints"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "identitySha256": {"$ref": "#/$defs/hash"},
+        "modelId": {"$ref": "#/$defs/id"},
+        "modelRevision": {"type": "string", "pattern": "^(?:sha256:)?[0-9a-f]{64}$"},
+        "attempts": {"type": "integer", "minimum": 1, "maximum": 16},
+        "qualityScoreBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "taskClass", "contextTier", "contextMode", "interactionMode", "split", "visibilityClass", "heldOutEpochId"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "taskClass": {"$ref": "#/$defs/id"},
+        "contextTier": {"$ref": "#/$defs/id"},
+        "contextMode": {"enum": ["compact-small", "compact-medium", "compact-large", "repository-readonly"]},
+        "interactionMode": {"enum": ["artifact-response-v0.1", "genesis-mcp-2025-11-25"]},
+        "split": {"enum": ["dev", "held-out", "public-test"]},
+        "visibilityClass": {"enum": ["held-out-commitment", "public-anchor-hidden-oracle", "public-development-reference", "temporal-held-out"]},
+        "heldOutEpochId": {"$ref": "#/$defs/nullableId"}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileValid",
+        "snapshotValid",
+        "runRecordValid",
+        "scoreRecordValid",
+        "independentRescoreRequired",
+        "independentRescoreObserved",
+        "judgeModelUsed"
+      ],
+      "properties": {
+        "profileValid": {"type": "boolean"},
+        "snapshotValid": {"type": "boolean"},
+        "runRecordValid": {"type": "boolean"},
+        "scoreRecordValid": {"type": "boolean"},
+        "independentRescoreRequired": {"type": "boolean"},
+        "independentRescoreObserved": {"type": "boolean"},
+        "judgeModelUsed": {"type": "boolean"}
+      }
+    },
+    "contamination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claimedLabel", "strongestSupportedLabel", "evidenceCodes"],
+      "properties": {
+        "claimedLabel": {"enum": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]},
+        "strongestSupportedLabel": {"enum": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]},
+        "evidenceCodes": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "rankingCohort", "reasonCodes"],
+      "properties": {
+        "decision": {"enum": ["invalid", "ranked", "unranked"]},
+        "rankingCohort": {"$ref": "#/$defs/nullableId"},
+        "reasonCodes": {"$ref": "#/$defs/stringSet"}
+      }
+    }
+  }
+}

@@ -69,6 +69,36 @@ provenance, and custom-404 surfaces against that commit.
 - `genesis.dependency-mirror.json`: closed fetch-once, content-addressed mirror, clean offline-build, and kernel network-denial policy
 - `policies/cargo_cache_v0.1.json`: closed, content-addressed Cargo cache scopes that prevent script- and profile-specific rebuild islands
 
+## GenesisBench
+
+GenesisBench is the project’s benchmark-first adoption surface. It tests whether an
+agent can learn GenesisCode from a frozen repository/runtime/documentation snapshot
+and complete real language tasks under exact context, tool, capability, attempt, and
+scoring rules. Quality is determined by executable artifacts, never model-judge
+preference.
+
+- Active profile: `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
+- Normative explanation and tutorial: `guides/genesisbench.qmd`
+- Contamination-attestation schema: `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
+- Public 27-case practice suite: `benchmarks/agent_tasks/v0.1/suite.json`
+- Canonical contamination fixture: `benchmarks/genesisbench/v0.1/contamination.fixture.json`
+- Canonical eligibility fixture: `benchmarks/genesisbench/v0.1/eligibility.fixture.json`
+
+Validate the complete frozen profile and classify the conformance run:
+
+```sh
+python3 scripts/lib/genesisbench_protocol.py --check --self-test
+python3 scripts/lib/genesisbench_protocol.py --check \
+  --run examples/agent_benchmark_reproducibility/run.json \
+  --attestation benchmarks/genesisbench/v0.1/contamination.fixture.json \
+  --json
+```
+
+Public references are explicitly `declared-contaminated` and unranked. Missing model
+training provenance is `unknown`; only release-relative task precommitment plus
+commitment and custody evidence can support `temporal-clean`. A new language is not,
+by itself, evidence that a model has never seen it.
+
 ## Quickstart
 
 Build everything:

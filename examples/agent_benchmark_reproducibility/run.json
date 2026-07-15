@@ -48,7 +48,7 @@
       "path": "invocation/request.json",
       "role": "request",
       "scope": "bundle",
-      "sha256": "73084d5897234bec2245b1d4e7a056acea567eb785407c1b049166c42de2f95c"
+      "sha256": "068ae088935d538e639383a5631a0708d3aede01f6541a07a0e24b6068c82eba"
     },
     {
       "bytes": 284,
@@ -61,14 +61,14 @@
       "sha256": "97495e4e06e5b4fa0083fb23e37255cce75a5bc3901b1f1575b87242916727fa"
     },
     {
-      "bytes": 1258,
+      "bytes": 1222,
       "key": "bundle:model-effect.gclog",
       "mediaType": "text/plain",
       "mode": "0644",
       "path": "model-effect.gclog",
       "role": "effect-log",
       "scope": "bundle",
-      "sha256": "9273fa71b00c7284517c2e6f76196060239e76cd3fb8811af1bc217b248ce89f"
+      "sha256": "12939416e75bd1e55d6ea7e492eedbca91e6a0a68fa9effab4a951b4cfc94146"
     },
     {
       "bytes": 686,
@@ -78,7 +78,7 @@
       "path": "model_effect.gc",
       "role": "context",
       "scope": "bundle",
-      "sha256": "a6773557112e8980fdc6c721fa0fe522e51da9996aed1dcb235ba3fa71bb7f10"
+      "sha256": "c9ca946a75ecebba8c811b542ea9b3aea2ff8e3b09def822a8b82c0a74e454f5"
     },
     {
       "bytes": 87,
@@ -128,7 +128,7 @@
       "path": "score.json",
       "role": "score",
       "scope": "bundle",
-      "sha256": "3a6b6516a84248f22c7edaec693a2ec8fca6fbd3bc1aff19dc1883c7ea0f4305"
+      "sha256": "2535cac83662df8c59611837d57d0991c613d7c3e8d7a3fecd83bb1dad51be7b"
     },
     {
       "bytes": 296,
@@ -138,7 +138,7 @@
       "path": "tool-transcript.jsonl",
       "role": "tool-transcript",
       "scope": "bundle",
-      "sha256": "6b9850f15c1b78938cdc6f47a80e626072d6959c23cd46b67b8d847a61196a3a"
+      "sha256": "f736f940f088123a0cf827e9dc1ac875cc445216e4cc8cff2baef3dcf31f57ba"
     },
     {
       "bytes": 156,
@@ -181,14 +181,14 @@
       "sha256": "8c2b49c58a97e0b40551f09831e83059c5899ab9ad807e64fb5f206d4a08a4cd"
     },
     {
-      "bytes": 16362,
+      "bytes": 16863,
       "key": "repository:docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
       "mediaType": "application/json",
       "mode": "0644",
       "path": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
       "role": "authority",
       "scope": "repository",
-      "sha256": "833098baa9fe77c71d0a4b48c6063da0cc91534c432a2aa3352ab71cd0ce532d"
+      "sha256": "c93b96535ecb69745df6c82d4648910004239629b59cab6419f485f3daa7fcdc"
     },
     {
       "bytes": 5323,
@@ -209,6 +209,16 @@
       "role": "card",
       "scope": "repository",
       "sha256": "e6617e3b2bf29666b3a84c2439b0772d035ebc1a297022210c0354b3aa805862"
+    },
+    {
+      "bytes": 3916,
+      "key": "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+      "mediaType": "text/markdown",
+      "mode": "0644",
+      "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+      "role": "context",
+      "scope": "repository",
+      "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
     },
     {
       "bytes": 2325,
@@ -241,14 +251,14 @@
       "sha256": "10cdb146ed40b20d554117b427dcb5fa1402dc703ba079b6d719c43c61ef7a82"
     },
     {
-      "bytes": 41433,
+      "bytes": 42444,
       "key": "repository:scripts/lib/gc_agent_benchmark_run.py",
       "mediaType": "text/x-python",
       "mode": "0755",
       "path": "scripts/lib/gc_agent_benchmark_run.py",
       "role": "authority",
       "scope": "repository",
-      "sha256": "16fda4e9d81ce53aa215fe808e21e8cae308f80e63287e8431027b5db7100c61"
+      "sha256": "89065727dbf6c44e8944d18f00973504d7dcf09cfde6877927643134c6f7f13e"
     }
   ],
   "authorities": [
@@ -293,7 +303,7 @@
     "benchmarkId": "GC-AGENT-TASK-BENCHMARK-v0.1",
     "caseId": "generation-small",
     "caseIdentitySha256": "d21a9f149fe62e8e4b7bb562a17cb5bd2afeb84447a4b5da1760f6eb0a9c31dd",
-    "contamination": "public-reference",
+    "contamination": "declared-contaminated",
     "contextTier": "small",
     "heldOutEpochId": null,
     "split": "public-test",
@@ -309,7 +319,7 @@
     "selectedAttempt": 0,
     "treeIdentitySha256": "a913bd3ea6c63d39ec0343edcfaecd66ff043e10d03c906a90551a3ca5f22aef"
   },
-  "contentIdentitySha256": "cbe38988b5088178fd25e16085e057da8870b984d424058c7bc28368428a92e9",
+  "contentIdentitySha256": "afa6df6c2d51c5b48d3a3a072724e3af15f367f90b6893fe40bf1a09f1552eab",
   "host": {
     "accelerator": {
       "driverVersion": "15.0",
@@ -373,14 +383,41 @@
     },
     "promptAssembly": {
       "algorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
+      "assemblyOrder": [
+        {
+          "artifact": "bundle:prompts/system.md",
+          "role": "system-policy"
+        },
+        {
+          "artifact": "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+          "role": "agent-profile"
+        },
+        {
+          "artifact": "repository:docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+          "role": "task-card"
+        },
+        {
+          "artifact": "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "role": "context-pack"
+        },
+        {
+          "artifact": "bundle:prompts/user.md",
+          "role": "task-prompt"
+        },
+        {
+          "artifact": "bundle:candidate/requirements.md",
+          "role": "task-input"
+        }
+      ],
       "cards": [
         "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
         "repository:docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"
       ],
       "contextArtifacts": [
+        "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
         "bundle:candidate/requirements.md"
       ],
-      "identitySha256": "bb893eeed69dc7dd3035db0714d862dcfaf82088400761ae723fee88cffcfed0",
+      "identitySha256": "fd98b08c1f2b3aa5891f5394d23e55f2f463eeb06ad01edd099757b4b9c8c01e",
       "messages": [
         {
           "artifact": "bundle:prompts/system.md",
@@ -437,7 +474,7 @@
     "artifact": "bundle:score.json",
     "includedModelMetrics": false,
     "qualityScoreBasisPoints": 10000,
-    "scoreIdentitySha256": "0acf9a844175333ba3f0facb81aa12ab744c63934e543e8fe97c200c101517f2"
+    "scoreIdentitySha256": "531c67ed8ba5e4f9eb3f9be96fb6c1ff5f928d96c62bf6569252aa8dfe08ac12"
   },
   "status": "complete",
   "toolProtocol": {

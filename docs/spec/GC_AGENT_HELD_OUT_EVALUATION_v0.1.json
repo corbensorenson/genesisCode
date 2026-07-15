@@ -38,8 +38,9 @@
   "contaminationPolicy": {
     "resultLabels": [
       "declared-contaminated",
-      "unknown",
-      "uncontaminated"
+      "declared-uncontaminated",
+      "temporal-clean",
+      "unknown"
     ],
     "defaultWhenTrainingProvenanceMissing": "unknown",
     "disclosedCaseRequiresContaminatedLabel": true,
@@ -123,5 +124,5 @@
     }
   ],
   "disclosures": [],
-  "contentIdentitySha256": "f7d9b17d0f48971600a6689f1f6235b0a98b5e21508b5c2d774e40ebe2a3050d"
+  "contentIdentitySha256": "b59695eb46cc0ef678b665581ffdb96c91b66f0094bf955b997faa9556c92651"
 }

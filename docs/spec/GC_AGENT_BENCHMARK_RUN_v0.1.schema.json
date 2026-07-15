@@ -72,7 +72,7 @@
         "taskClass": {"enum": ["generation", "completion", "repair", "refactor", "policy-minimization", "replay-investigation", "performance-repair", "package-migration", "deployment"]},
         "contextTier": {"enum": ["small", "medium", "large"]},
         "split": {"enum": ["dev", "public-test", "held-out"]},
-        "contamination": {"enum": ["public-reference", "unknown", "verified-clean", "declared-contaminated"]},
+        "contamination": {"enum": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]},
         "heldOutEpochId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}
       }
     },
@@ -139,13 +139,23 @@
     "promptAssembly": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["algorithm", "messages", "cards", "contextArtifacts", "identitySha256"],
+      "required": ["algorithm", "messages", "cards", "contextArtifacts", "assemblyOrder", "identitySha256"],
       "properties": {
         "algorithm": {"const": "sha256-domain-separated-ordered-artifacts-v0.1"},
         "messages": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"$ref": "#/$defs/message"}},
         "cards": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/artifactKey"}},
         "contextArtifacts": {"type": "array", "minItems": 1, "maxItems": 512, "items": {"$ref": "#/$defs/artifactKey"}},
+        "assemblyOrder": {"type": "array", "minItems": 4, "maxItems": 608, "items": {"$ref": "#/$defs/promptSegment"}},
         "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "promptSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "artifact"],
+      "properties": {
+        "role": {"enum": ["system-policy", "agent-profile", "task-card", "context-pack", "retrieval-transcript", "task-prompt", "task-input"]},
+        "artifact": {"$ref": "#/$defs/artifactKey"}
       }
     },
     "message": {

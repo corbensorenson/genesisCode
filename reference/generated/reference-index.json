@@ -1,15 +1,15 @@
 {
   "authorities": {
     "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "56f9345e8d085e83b1829ed43863d5488aa45917ff1a9f31f6828554cef7190c",
-    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "b0ee8f4a7841b04698fb90707515a7963ef34ffd02802722574e33df517a355c",
+    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "d6ffc2669f7a4f1d25564e0fd3a28a735697d9a0f1628a3244c526357fad7eb4",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 243,
+    "canonicalSources": 247,
     "diagnostics": 185,
     "exampleFiles": 188,
     "hostOperations": 188,
-    "schemas": 52,
+    "schemas": 55,
     "symbols": 168
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -24,15 +24,15 @@
     },
     {
       "path": "README.md",
-      "sha256": "cc981f80e38a9db86c02fcc1c8109dc5067fc24d31a98ee1d6822db6505d67ee"
+      "sha256": "531f967f1444e20a50f757d98aaf3822f9c5746cb0c2c2479ddd66db088905f5"
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "ae45ae01379efc3b238bd0879bc4e313ffc8daf3ca41b638315e24215c8d5e0f"
+      "sha256": "359bab893f58d7477c04d9b874c6631476f13f28197b3ac5c62f1737022b02b9"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
-      "sha256": "aa47b594e7ccce6e0443d558f2b5b879a954d8acad80a2d3284a88e2dd7e9164"
+      "sha256": "64a48088f6299d7ca69a9b0838879bc8f7c9f63ea60fd91eaee5ba8cbbfb3b9b"
     },
     {
       "path": "docs/DEPRECATION_MAP_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "f6946a79660742bd74e02cf2e77cd27fdf1a5eacbc67cd2c3fb97ed26808cc05"
+      "sha256": "c96f3adce6fa024d22a6fd092caddc3e540c5fe0664ad706e61eb06d6398b93d"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -124,7 +124,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "1219a9938140b77d993fd7ea5d4d5c508532050181c183777c7d59e2ee8497e4"
+      "sha256": "8d80504bf79513060321b1876c8a00c9d40c6bc83379c01f1e8d1a828efa28b5"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -332,7 +332,7 @@
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "80eb64bcc3f1416c8ebbc9d84ea7b99972959489dd542b269f54df83bb3ed5f2"
+      "sha256": "b73fb7fbcd07f3cdc34a48660e518cf82040b972d3e37057c840bd095f420890"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -344,7 +344,7 @@
     },
     {
       "path": "docs/spec/AGENT_INDEX_v0.1.md",
-      "sha256": "82bdecd6f8265ed09864f096dd1e25cc1de9255fd299c4d0136dc2e21a473d08"
+      "sha256": "6eb4c4e72f2e774686f7c571e610ab36b5caf7a7a4c855b5a8c5edaebd670ca8"
     },
     {
       "path": "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
@@ -420,7 +420,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "211c73930f0bb1bcd3682ef9df0a40e5411f8af86fd4b072fdfa5f54da35c0c5"
+      "sha256": "8e904d5850a87a90bab4dc424bf2ae8b753f21641de0f3d3c8a2689ddc705a48"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -576,7 +576,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
-      "sha256": "833098baa9fe77c71d0a4b48c6063da0cc91534c432a2aa3352ab71cd0ce532d"
+      "sha256": "c93b96535ecb69745df6c82d4648910004239629b59cab6419f485f3daa7fcdc"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
@@ -600,7 +600,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "d1578a890fa6d65ea5e764eba8cad461352540d520b6f65fee2b0e372ace3b11"
+      "sha256": "3ef22da212813231c89302c9b425ff9e3ce8d24b8e87bdf251cae47081fdc30b"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -608,11 +608,11 @@
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "ed78a422ddf9736ce37761852259d3a69fab52b13207c3462d01f06351d00d2a"
+      "sha256": "9dfe0d5007e4cc006543fb2f4a0b471d38881a5d7bf0d11d6335ee23da28540d"
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
-      "sha256": "a796b580a5112ea742db6b002f69bb66eb9b47d1c93ae991170cb2fc52caa404"
+      "sha256": "f1ce00fb0ff38104e53b2adb95ee514c1eb69f7dd2c9ad68574323e8ee1ff6ec"
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
@@ -656,7 +656,7 @@
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
-      "sha256": "b0ee8f4a7841b04698fb90707515a7963ef34ffd02802722574e33df517a355c"
+      "sha256": "d6ffc2669f7a4f1d25564e0fd3a28a735697d9a0f1628a3244c526357fad7eb4"
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
@@ -685,6 +685,22 @@
     {
       "path": "docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json",
       "sha256": "27b693eed1662ccc738a5dab74b2ec6973a734fd45847a1e4bd84fd6302b524a"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json",
+      "sha256": "d8f5360a8ebde7d8d7ca5df7225f916074df864dec7e8dd9c77b2a765be10dc5"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json",
+      "sha256": "99474b3494497ea9613fd75de3801b07acbe83956139a0c5d31eb02e96d2a267"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+      "sha256": "7a4f2df8de08bf15ebb47967f22e3d54157ddffd3070829c5eea2dca2e2d2e25"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+      "sha256": "23288f8b6479407ea40c73d5a08590f1ff10d7dfdc050313507fe053d894201f"
     },
     {
       "path": "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
@@ -944,7 +960,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
-      "sha256": "b1ee11c56e6c2d8859ff1abda8a81dbcc7779de38eada15e212c79b031fd0636"
+      "sha256": "edc2714d687991717de518cdf26e972902019b127c11915ad274f36b542ee26f"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
@@ -972,7 +988,7 @@
     },
     {
       "path": "docs/write_genesisCode_skill.md",
-      "sha256": "3a58df64633e0cda06f47586d021bc2dab76975706d89dfe590adea49dc25dc9"
+      "sha256": "1ebb388b6227d71fdcabdc20c31dad304bc968bf3dbd52d731e1967664c87c94"
     },
     {
       "path": "feature_matrix.md",

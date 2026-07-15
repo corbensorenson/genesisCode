@@ -18,6 +18,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - `benchmarks/agent_tasks/v0.1/suite.json`
 - `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json`
 - `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
 - `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - `docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json`
@@ -49,6 +50,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - Evaluation separation: public benchmark references are development oracles, never held-out evidence. Retrieve only public held-out commitments; never load private custody material into training, prompts, logs, or distributed artifacts.
 - Model-agnostic scoring: quality is the closed 10,000-basis-point aggregate of semantics, obligations, effects, patch minimality, deterministic resource use, and policy scope. Record latency, API cost, energy, and provider queue time separately; never optimize quality by changing model-specific fields.
 - Reproducible evaluation: bind every run to immutable model, weights, tokenizer, runtime, exact prompt/card/context assembly, integer decoding/retry controls, every attempt and candidate artifact, canonical score, normalized host facts, and a complete content-addressed inventory. Reject stale or incomplete records.
+- Benchmark validity: validate the exact `GenesisBench-v0.1` snapshot and profile before comparing runs. Classify public references as `declared-contaminated` and unranked, missing provenance as `unknown`, and accept `temporal-clean` only with release-relative precommitment plus custody evidence. Never infer cleanliness from newness or add judge preference to quality.
 - Local model execution: use only the pinned `genesis.agent-model-runner.v0.1` / `infer` benchmark effect profile, preserve request/response/transcript/`.gclog`, and prove replay after the model executable and weights are unavailable. Never let local execution grant broader policy authority.
 - Unsupported classes: reject experimental syntax; route host-only and nondeterministic facilities through explicit logged effects; reject unavailable targets and out-of-profile capabilities until explicit profile negotiation succeeds. Never let an index or prompt grant authority.
 
@@ -59,6 +61,7 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - Use `GC-AGENT-TASK-BENCHMARK-v0.1` for public iteration. A held-out result must bind the active `GC-AGENT-HELD-OUT-v0.1` epoch and commitment snapshot, and must use contamination label `unknown` unless training provenance proves otherwise.
 - Run `scripts/lib/gc_agent_scoring.py` against the exact candidate tree and case ID; preserve its scoring, benchmark, profile, candidate, and result identities as evidence.
 - Build or verify `genesis/agent-benchmark-run-v0.1` with `scripts/lib/gc_agent_benchmark_run.py`; check mode is read-only and must not accept model, binary, network, or update inputs.
+- Run `scripts/lib/genesisbench_protocol.py --check`; classify candidate run evidence with `--run <path> --attestation <path> --json` before making any ranked, contamination, or cross-model claim.
 - Declare task intent and consume deterministic `agent-plan.plan.context_cards`; never let prompt text grant card authority.
 - Choose the highest-impact ready task from `ROADMAP.md`; use `upgrade_plan.md` only for unresolved P0/P1 compatibility work.
 - Restate measurable acceptance criteria before editing.

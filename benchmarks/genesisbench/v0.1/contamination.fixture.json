@@ -1,0 +1,37 @@
+{
+  "claim": "declared-contaminated",
+  "contentIdentitySha256": "d9882459052dd72817202a414300debf3255e51f9c8b692ca68d13e42fc4f9f7",
+  "custody": {
+    "attestationIdentitySha256": null,
+    "separated": false
+  },
+  "kind": "genesis/genesisbench-contamination-attestation-v0.1",
+  "knownExposure": {
+    "evidenceIdentitySha256": "d21a9f149fe62e8e4b7bb562a17cb5bd2afeb84447a4b5da1760f6eb0a9c31dd",
+    "exposed": true,
+    "reasonCodes": [
+      "public-reference"
+    ]
+  },
+  "modelRelease": {
+    "immutableEvidenceIdentitySha256": null,
+    "modelId": "genesis-agent-fixture",
+    "modelRevision": "sha256:ea5ae5d06096510cc7eb945a16687f2dfce0e2f1edbc4001ab1c4c07b24be5dd",
+    "releasedAt": null
+  },
+  "runIdentitySha256": "afa6df6c2d51c5b48d3a3a072724e3af15f367f90b6893fe40bf1a09f1552eab",
+  "task": {
+    "commitmentSnapshotIdentitySha256": null,
+    "disclosedAt": null,
+    "epochId": null,
+    "precommittedAt": null,
+    "visibilityClass": "public-development-reference"
+  },
+  "training": {
+    "attestationIdentitySha256": null,
+    "cutoffAt": null,
+    "nonExposureAttested": false,
+    "provenanceComplete": false
+  },
+  "version": "0.1.0"
+}

@@ -98,6 +98,9 @@ genesis --json agent-index --diagnostic <exact-code>
     as the recursively closed reproducibility record for immutable model/runtime identities,
     exact prompt assembly, integer decoding/retry controls, attempts, candidates, scores,
     normalized hosts, separate model metrics, and a complete content-addressed inventory.
+  - includes `genesisbench_protocol = "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"`
+    as the active self-hostable benchmark profile binding the frozen repository/runtime/docs
+    snapshot, context and tool authority, contamination evidence, and ranked eligibility.
   - includes `gc_agent_model_runner_effect = "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json"`
     as the explicit deny-by-default local benchmark integration over the pinned
     `host/plugin::command` effect and replayable `.gclog` transcript.

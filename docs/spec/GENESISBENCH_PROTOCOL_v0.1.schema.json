@@ -1,0 +1,497 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-protocol-v0.1.json",
+  "title": "GenesisBench self-hostable benchmark protocol v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "protocolId",
+    "status",
+    "sourceSnapshot",
+    "authorities",
+    "contextPolicy",
+    "toolPolicy",
+    "capabilityPolicy",
+    "attemptPolicy",
+    "modelDisclosurePolicy",
+    "taskVisibilityPolicy",
+    "scoringPolicy",
+    "contaminationPolicy",
+    "eligibilityPolicy",
+    "selfHosting",
+    "contentIdentitySha256"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-protocol-v0.1"},
+    "version": {"const": "0.1.0"},
+    "protocolId": {"const": "GenesisBench-v0.1"},
+    "status": {"enum": ["active", "retired"]},
+    "sourceSnapshot": {"$ref": "#/$defs/sourceSnapshot"},
+    "authorities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/authority"}
+    },
+    "contextPolicy": {"$ref": "#/$defs/contextPolicy"},
+    "toolPolicy": {"$ref": "#/$defs/toolPolicy"},
+    "capabilityPolicy": {"$ref": "#/$defs/capabilityPolicy"},
+    "attemptPolicy": {"$ref": "#/$defs/attemptPolicy"},
+    "modelDisclosurePolicy": {"$ref": "#/$defs/modelDisclosurePolicy"},
+    "taskVisibilityPolicy": {"$ref": "#/$defs/taskVisibilityPolicy"},
+    "scoringPolicy": {"$ref": "#/$defs/scoringPolicy"},
+    "contaminationPolicy": {"$ref": "#/$defs/contaminationPolicy"},
+    "eligibilityPolicy": {"$ref": "#/$defs/eligibilityPolicy"},
+    "selfHosting": {"$ref": "#/$defs/selfHosting"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sha1": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "nullableId": {
+      "oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]
+    },
+    "stringSet": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256}
+    },
+    "pathSet": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/path"}
+    },
+    "snapshotComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "includeExact",
+        "includePrefixes",
+        "excludePrefixes",
+        "artifactCount",
+        "bytes",
+        "identitySha256"
+      ],
+      "properties": {
+        "id": {"enum": ["benchmark", "documentation", "runtime"]},
+        "includeExact": {"$ref": "#/$defs/pathSet"},
+        "includePrefixes": {"$ref": "#/$defs/pathSet"},
+        "excludePrefixes": {"$ref": "#/$defs/pathSet"},
+        "artifactCount": {"type": "integer", "minimum": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "sourceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repositoryUrl",
+        "commitSha1",
+        "treeSha1",
+        "committedAt",
+        "objectFormat",
+        "completeTree",
+        "artifactCount",
+        "bytes",
+        "manifestAlgorithm",
+        "manifestIdentitySha256",
+        "components"
+      ],
+      "properties": {
+        "repositoryUrl": {"const": "https://github.com/corbensorenson/genesisCode.git"},
+        "commitSha1": {"$ref": "#/$defs/sha1"},
+        "treeSha1": {"$ref": "#/$defs/sha1"},
+        "committedAt": {"type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"},
+        "objectFormat": {"const": "git-sha1-plus-complete-content-sha256-manifest"},
+        "completeTree": {"const": true},
+        "artifactCount": {"type": "integer", "minimum": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "manifestAlgorithm": {"const": "sha256-canonical-json-path-mode-type-bytes-content-sha256-v0.1"},
+        "manifestIdentitySha256": {"$ref": "#/$defs/hash"},
+        "components": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"$ref": "#/$defs/snapshotComponent"}
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "sha256", "bytes"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "contextMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "contextTier",
+        "sourceComponent",
+        "exposure",
+        "retrieval",
+        "rankingCohort",
+        "artifacts",
+        "contextBytes"
+      ],
+      "properties": {
+        "id": {"enum": ["compact-large", "compact-medium", "compact-small", "repository-readonly"]},
+        "contextTier": {
+          "oneOf": [
+            {"enum": ["large", "medium", "small"]},
+            {"type": "null"}
+          ]
+        },
+        "sourceComponent": {"enum": ["documentation", "repository"]},
+        "exposure": {"enum": ["closed-artifact-pack", "read-only-content-addressed-retrieval"]},
+        "retrieval": {"enum": ["none", "logged-exact-artifact"]},
+        "rankingCohort": {"$ref": "#/$defs/id"},
+        "artifacts": {"$ref": "#/$defs/pathSet"},
+        "contextBytes": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "contextPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assemblyAlgorithm",
+        "authorityOrder",
+        "modes",
+        "forbiddenPaths",
+        "maxArtifactBytes",
+        "maxAssembledBytes",
+        "completeCaptureRequired",
+        "retrievalTranscriptRequired",
+        "promptMaySelectAuthority",
+        "cohortSeparationRequired"
+      ],
+      "properties": {
+        "assemblyAlgorithm": {"const": "sha256-domain-separated-ordered-artifacts-v0.1"},
+        "authorityOrder": {"$ref": "#/$defs/stringSet"},
+        "modes": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"$ref": "#/$defs/contextMode"}
+        },
+        "forbiddenPaths": {"$ref": "#/$defs/pathSet"},
+        "maxArtifactBytes": {"type": "integer", "minimum": 1},
+        "maxAssembledBytes": {"type": "integer", "minimum": 1},
+        "completeCaptureRequired": {"const": true},
+        "retrievalTranscriptRequired": {"const": true},
+        "promptMaySelectAuthority": {"const": false},
+        "cohortSeparationRequired": {"const": true}
+      }
+    },
+    "toolPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "interfaceId",
+        "mcpProtocolVersion",
+        "catalogAuthorityId",
+        "allowedTools",
+        "allowedInteractionModes",
+        "transport",
+        "providerControlChannel",
+        "arbitraryShellAllowed",
+        "ambientFilesystemAllowed",
+        "ambientNetworkAllowed",
+        "completeTranscriptRequired",
+        "toolErrorsRecorded"
+      ],
+      "properties": {
+        "interfaceId": {"const": "genesis/mcp-interface-v0.1"},
+        "mcpProtocolVersion": {"const": "2025-11-25"},
+        "catalogAuthorityId": {"const": "genesis-mcp-catalog-source"},
+        "allowedTools": {"$ref": "#/$defs/stringSet"},
+        "allowedInteractionModes": {"$ref": "#/$defs/stringSet"},
+        "transport": {"const": "bounded-stdio-json-rpc"},
+        "providerControlChannel": {"const": "separate-from-candidate-tool-authority"},
+        "arbitraryShellAllowed": {"const": false},
+        "ambientFilesystemAllowed": {"const": false},
+        "ambientNetworkAllowed": {"const": false},
+        "completeTranscriptRequired": {"const": true},
+        "toolErrorsRecorded": {"const": true}
+      }
+    },
+    "capabilityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "defaultDecision",
+        "authoritySource",
+        "wildcardsAllowed",
+        "agentMayBroaden",
+        "caseMinimumIsCeiling",
+        "effectLogRequired",
+        "replayRequired",
+        "hardResourceBoundsRequired",
+        "policyMinimizationScored"
+      ],
+      "properties": {
+        "defaultDecision": {"const": "deny"},
+        "authoritySource": {"const": "protocol-plus-case-owned-capability-policy"},
+        "wildcardsAllowed": {"const": false},
+        "agentMayBroaden": {"const": false},
+        "caseMinimumIsCeiling": {"const": true},
+        "effectLogRequired": {"const": true},
+        "replayRequired": {"const": true},
+        "hardResourceBoundsRequired": {"const": true},
+        "policyMinimizationScored": {"const": true}
+      }
+    },
+    "attemptPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rankedMaxAttempts",
+        "unrankedMaxAttempts",
+        "attemptCountPredeclared",
+        "selectionRule",
+        "allAttemptsRecorded",
+        "failedAttemptsPublished",
+        "bestOfNRankedAllowed",
+        "retryBackoff"
+      ],
+      "properties": {
+        "rankedMaxAttempts": {"const": 1},
+        "unrankedMaxAttempts": {"type": "integer", "minimum": 1, "maximum": 16},
+        "attemptCountPredeclared": {"const": true},
+        "selectionRule": {"const": "first-and-only-ranked-attempt"},
+        "allAttemptsRecorded": {"const": true},
+        "failedAttemptsPublished": {"const": true},
+        "bestOfNRankedAllowed": {"const": false},
+        "retryBackoff": {"const": "none"}
+      }
+    },
+    "modelDisclosurePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredFields",
+        "immutableRevisionRequired",
+        "weightsRequiredForLocal",
+        "tokenizerRequired",
+        "runtimeRequired",
+        "decodingIntegerEncoded",
+        "trainingCutoffRequiredForCleanClaims",
+        "unknownProvenanceDefault",
+        "secretsForbidden",
+        "promptRetention"
+      ],
+      "properties": {
+        "requiredFields": {"$ref": "#/$defs/stringSet"},
+        "immutableRevisionRequired": {"const": true},
+        "weightsRequiredForLocal": {"const": true},
+        "tokenizerRequired": {"const": true},
+        "runtimeRequired": {"const": true},
+        "decodingIntegerEncoded": {"const": true},
+        "trainingCutoffRequiredForCleanClaims": {"const": true},
+        "unknownProvenanceDefault": {"const": "unknown"},
+        "secretsForbidden": {"const": true},
+        "promptRetention": {"const": "complete-or-cryptographic-commitment-with-custody"}
+      }
+    },
+    "visibilityClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "split", "oracleExposure", "rankedAllowed", "allowedContaminationLabels"],
+      "properties": {
+        "id": {"enum": ["held-out-commitment", "public-anchor-hidden-oracle", "public-development-reference", "temporal-held-out"]},
+        "split": {"enum": ["held-out", "public-test"]},
+        "oracleExposure": {"enum": ["commitment-only", "hidden", "public-development-reference"]},
+        "rankedAllowed": {"type": "boolean"},
+        "allowedContaminationLabels": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "taskVisibilityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classes",
+        "publicBenchmarkAuthorityId",
+        "heldOutAuthorityId",
+        "activeHeldOutEpochId",
+        "mixedEpochAggregationAllowed",
+        "oracleAccessByModelAllowed",
+        "visibilityRecordedBeforeInvocation"
+      ],
+      "properties": {
+        "classes": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"$ref": "#/$defs/visibilityClass"}
+        },
+        "publicBenchmarkAuthorityId": {"const": "agent-task-benchmark"},
+        "heldOutAuthorityId": {"const": "held-out-evaluation"},
+        "activeHeldOutEpochId": {"$ref": "#/$defs/id"},
+        "mixedEpochAggregationAllowed": {"const": false},
+        "oracleAccessByModelAllowed": {"const": false},
+        "visibilityRecordedBeforeInvocation": {"const": true}
+      }
+    },
+    "scoringPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorityId",
+        "qualityScaleBasisPoints",
+        "deterministicArtifactScoringRequired",
+        "independentRescoreRequiredForRanking",
+        "judgeModelPreferenceIncluded",
+        "modelMetricsIncluded",
+        "invalidScoreBasisPoints",
+        "scoreIdentityRequired",
+        "dimensionBreakdownPublished"
+      ],
+      "properties": {
+        "authorityId": {"const": "benchmark-scoring"},
+        "qualityScaleBasisPoints": {"const": 10000},
+        "deterministicArtifactScoringRequired": {"const": true},
+        "independentRescoreRequiredForRanking": {"const": true},
+        "judgeModelPreferenceIncluded": {"const": false},
+        "modelMetricsIncluded": {"const": false},
+        "invalidScoreBasisPoints": {"const": 0},
+        "scoreIdentityRequired": {"const": true},
+        "dimensionBreakdownPublished": {"const": true}
+      }
+    },
+    "temporalEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modelImmutableReleaseRequired",
+        "taskPrecommitAfterModelReleaseRequired",
+        "activeUndisclosedEpochRequired",
+        "commitmentAndCustodyRequired",
+        "trainingCutoffRequired"
+      ],
+      "properties": {
+        "modelImmutableReleaseRequired": {"const": true},
+        "taskPrecommitAfterModelReleaseRequired": {"const": true},
+        "activeUndisclosedEpochRequired": {"const": true},
+        "commitmentAndCustodyRequired": {"const": true},
+        "trainingCutoffRequired": {"const": true}
+      }
+    },
+    "contaminationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "labels",
+        "evidenceOrder",
+        "defaultLabel",
+        "knownExposureOverridesAll",
+        "publicReferenceLabel",
+        "declaredUncontaminatedRequiresAttestation",
+        "temporalCleanEvidence",
+        "claimMustEqualStrongestSupportedLabel",
+        "attestationSchemaAuthorityId",
+        "newLanguageImpliesClean"
+      ],
+      "properties": {
+        "labels": {"$ref": "#/$defs/stringSet"},
+        "evidenceOrder": {"$ref": "#/$defs/stringSet"},
+        "defaultLabel": {"const": "unknown"},
+        "knownExposureOverridesAll": {"const": "declared-contaminated"},
+        "publicReferenceLabel": {"const": "declared-contaminated"},
+        "declaredUncontaminatedRequiresAttestation": {"const": true},
+        "temporalCleanEvidence": {"$ref": "#/$defs/temporalEvidence"},
+        "claimMustEqualStrongestSupportedLabel": {"const": true},
+        "attestationSchemaAuthorityId": {"const": "genesisbench-contamination-attestation-schema"},
+        "newLanguageImpliesClean": {"const": false}
+      }
+    },
+    "eligibilityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decisions",
+        "rankedRequirements",
+        "unrankedReasonCodes",
+        "invalidReasonCodes",
+        "cohortKeys",
+        "missingEvidenceDecision",
+        "historicalResultsMutable",
+        "silentSuppressionAllowed"
+      ],
+      "properties": {
+        "decisions": {"$ref": "#/$defs/stringSet"},
+        "rankedRequirements": {"$ref": "#/$defs/stringSet"},
+        "unrankedReasonCodes": {"$ref": "#/$defs/stringSet"},
+        "invalidReasonCodes": {"$ref": "#/$defs/stringSet"},
+        "cohortKeys": {"$ref": "#/$defs/stringSet"},
+        "missingEvidenceDecision": {"const": "unranked"},
+        "historicalResultsMutable": {"const": false},
+        "silentSuppressionAllowed": {"const": false}
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "argv"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "argv": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 16,
+          "items": {"type": "string", "minLength": 1, "maxLength": 256}
+        }
+      }
+    },
+    "selfHosting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "networkRequired",
+        "mandatoryDependencies",
+        "commands",
+        "eligibilitySchemaAuthorityId",
+        "canonicalOutput",
+        "absolutePathsAllowed",
+        "updateDuringCheckAllowed"
+      ],
+      "properties": {
+        "networkRequired": {"const": false},
+        "mandatoryDependencies": {"$ref": "#/$defs/stringSet"},
+        "commands": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"$ref": "#/$defs/command"}
+        },
+        "eligibilitySchemaAuthorityId": {"const": "genesisbench-eligibility-schema"},
+        "canonicalOutput": {"const": "ascii-json-sorted-keys-newline"},
+        "absolutePathsAllowed": {"const": false},
+        "updateDuringCheckAllowed": {"const": false}
+      }
+    }
+  }
+}

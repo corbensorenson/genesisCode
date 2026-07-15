@@ -14,10 +14,12 @@
       "direct_read_only_persistent_inputs": [],
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
-      "direct_write_candidates": [],
+      "direct_write_candidates": [
+        "trap 'rm -f \"$protocol_report\"' EXIT"
+      ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "fa67604a34447b95b3da64e64120ce44203f7c71c612d063dc27d3c4aa33de6b",
+      "execution_identity_sha256": "d6e662952d3f40ed824ffe95ad34362ebe88eff3f515b857ba18b22aa6426dcc",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -28,10 +30,12 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "12819d6f695028afa27b3a3b0c1497ec376f643f61657e05a7c4e41c93ba85e9",
+      "sha256": "3deb124be2d9efc6715f62f13eba055cff08d46450f3a9b1acb4ebc242959635",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
-      "write_candidates": []
+      "write_candidates": [
+        "trap 'rm -f \"$protocol_report\"' EXIT"
+      ]
     },
     {
       "check_invocations": [],

@@ -52,7 +52,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["resultLabels", "defaultWhenTrainingProvenanceMissing", "disclosedCaseRequiresContaminatedLabel", "mixedEpochAggregationForbidden", "requiredResultBindings"],
       "properties": {
-        "resultLabels": {"const": ["declared-contaminated", "unknown", "uncontaminated"]},
+        "resultLabels": {"const": ["declared-contaminated", "declared-uncontaminated", "temporal-clean", "unknown"]},
         "defaultWhenTrainingProvenanceMissing": {"const": "unknown"},
         "disclosedCaseRequiresContaminatedLabel": {"const": true},
         "mixedEpochAggregationForbidden": {"const": true},

@@ -134,6 +134,11 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json")
     );
     assert_eq!(
+        json.pointer("/data/docs/genesisbench_protocol")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_PROTOCOL_v0.1.json")
+    );
+    assert_eq!(
         json.pointer("/data/docs/gc_agent_model_runner_effect")
             .and_then(Value::as_str),
         Some("docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json")

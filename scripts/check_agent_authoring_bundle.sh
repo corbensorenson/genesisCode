@@ -13,6 +13,18 @@ python3 scripts/lib/gc_task_benchmarks.py --check --self-test
 python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
 python3 scripts/lib/gc_agent_scoring.py --check --self-test
 python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test
+python3 scripts/lib/genesisbench_protocol.py --check --self-test
+protocol_report="$(mktemp)"
+trap 'rm -f "$protocol_report"' EXIT
+python3 scripts/lib/genesisbench_protocol.py \
+  --check \
+  --run examples/agent_benchmark_reproducibility/run.json \
+  --attestation benchmarks/genesisbench/v0.1/contamination.fixture.json \
+  --json >"$protocol_report"
+cmp -s "$protocol_report" benchmarks/genesisbench/v0.1/eligibility.fixture.json || {
+  echo "agent-authoring-bundle: stale GenesisBench eligibility fixture" >&2
+  exit 1
+}
 
 if git ls-files '.genesis/private/agent-evaluation/**' | grep -q .; then
   echo "agent-authoring-bundle: private held-out custody material is tracked" >&2
@@ -93,6 +105,10 @@ required_included = [
     "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
     "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
     "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+    "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
     "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
@@ -114,9 +130,18 @@ required_included = [
     "examples/canonical_language/v0.1/README.md",
     "examples/canonical_language/v0.1/suite.json",
     "benchmarks/agent_tasks/v0.1/suite.json",
+    "benchmarks/genesisbench/v0.1/README.md",
+    "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+    "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+    "guides/genesisbench.qmd",
     "scripts/lib/gc_agent_scoring.py",
     "scripts/lib/gc_agent_scoring_contract.py",
     "scripts/lib/gc_agent_benchmark_run.py",
+    "scripts/lib/genesisbench_protocol.py",
+    "scripts/lib/genesisbench_protocol_contract.py",
+    "scripts/lib/genesisbench_contamination.py",
+    "scripts/lib/genesisbench_protocol_run.py",
+    "scripts/lib/genesisbench_eligibility.py",
     "examples/agent_benchmark_reproducibility/run.json",
     "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
 ]
@@ -246,6 +271,12 @@ if (
 ):
     raise SystemExit(
         "agent-authoring-bundle: benchmark run needs validator, shipped-binary, and replay coverage"
+    )
+
+protocol_rel = "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"
+if protocol_rel not in agent_index_spec or protocol_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index must expose the GenesisBench profile"
     )
 
 print(

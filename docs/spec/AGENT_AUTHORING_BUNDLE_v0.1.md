@@ -15,6 +15,10 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json`
 - `docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json`
 - `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
+- `docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
 - `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json`
@@ -38,9 +42,18 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `examples/canonical_language/v0.1/README.md`
 - `examples/canonical_language/v0.1/suite.json`
 - `benchmarks/agent_tasks/v0.1/suite.json`
+- `benchmarks/genesisbench/v0.1/README.md`
+- `benchmarks/genesisbench/v0.1/contamination.fixture.json`
+- `benchmarks/genesisbench/v0.1/eligibility.fixture.json`
+- `guides/genesisbench.qmd`
 - `scripts/lib/gc_agent_scoring.py`
 - `scripts/lib/gc_agent_scoring_contract.py`
 - `scripts/lib/gc_agent_benchmark_run.py`
+- `scripts/lib/genesisbench_protocol.py`
+- `scripts/lib/genesisbench_protocol_contract.py`
+- `scripts/lib/genesisbench_contamination.py`
+- `scripts/lib/genesisbench_protocol_run.py`
+- `scripts/lib/genesisbench_eligibility.py`
 - `examples/agent_benchmark_reproducibility/run.json`
 - `crates/gc_cli/tests/cli_agent_benchmark_run.rs`
 
@@ -64,6 +77,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Evaluate generation, completion, repair, refactor, policy minimization, replay investigation, performance repair, package migration, and deployment against `GC-AGENT-TASK-BENCHMARK-v0.1`. Treat its references as public development oracles, never as held-out evidence.
 - Score a candidate with `GC-AGENT-BENCHMARK-SCORING-v0.1`. Its closed 10,000-basis-point quality result covers semantics, obligations, effects, patch minimality, deterministic resource units, and policy scope. Wall time, API cost, energy, and provider queue time are model/run facts for `genesis/agent-benchmark-run-v0.1`; they never enter the quality score.
 - Record every benchmark invocation with `GC_AGENT_BENCHMARK_RUN_v0.1`: immutable model, weights, tokenizer, runtime, exact prompt/card/context hashes, integer decoding and retry controls, every attempt and candidate artifact, the canonical score, normalized host facts, and a complete inventory. Validate records read-only with `python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test`.
+- Apply `GenesisBench-v0.1` before comparing runs. Validate its frozen Git/SHA-256 snapshot and closed authorities with `python3 scripts/lib/genesisbench_protocol.py --check --self-test`; classify a run with `--run <path> --attestation <path> --json`. Public references are `declared-contaminated` and unranked, missing provenance is `unknown`, and only complete post-release precommitment and custody evidence can support `temporal-clean`. Never infer cleanliness from language newness or use judge preference in quality.
 - A fully local benchmark model may run only through `genesis.agent-model-runner.v0.1` / `infer` on the pinned `host/plugin::command` bridge profile. Preserve its request, response, tool transcript, and `.gclog`; replay must not reinvoke the model. This benchmark integration does not preempt the future standard model API.
 - Make a held-out claim only against the active epoch in `GC-AGENT-HELD-OUT-v0.1`. Keep case payloads, salts, and oracles under ignored `.genesis/private/agent-evaluation`; bind every result to the epoch and commitment snapshot; use `unknown` contamination whenever training provenance is incomplete; and rotate before reuse after compromise.
 - Keep authoring guidance synchronized with
@@ -77,4 +91,4 @@ Each case commitment is `sha256("genesis/agent-held-out-case/v0.1\\0" || 32-byte
 
 Exactly one epoch is active and history is append-only. Provision and publish a fresh replacement before marking an epoch retired or compromised; retain old commitments, never silently rescore, and label affected results `declared-contaminated`. Scheduled disclosure requires retirement plus 30 days. A compromise-forensics disclosure requires an active replacement. Disclosure publishes payload, salt, reason, date, and the recomputable original commitment; disclosed cases become public development material permanently.
 
-Use contamination label `uncontaminated` only when training provenance excludes every private fact and prior disclosure. Use `declared-contaminated` for known exposure and mandatory default `unknown` for missing or incomplete provenance. Never aggregate across epochs. This protocol protects secrecy and precommitment only; `GC-AGENT-BENCHMARK-SCORING-v0.1` defines model-agnostic quality, while R1.4.f defines model/run reproducibility.
+Use `declared-uncontaminated` only with complete non-exposure provenance and attestation; reserve `temporal-clean` for tasks precommitted after the immutable model release with commitment and custody evidence. Use `declared-contaminated` for known exposure and mandatory default `unknown` for missing or incomplete provenance. Never aggregate across epochs. The held-out protocol protects secrecy and precommitment; `GC-AGENT-BENCHMARK-SCORING-v0.1` defines model-agnostic quality, `GC_AGENT_BENCHMARK_RUN_v0.1` defines model/run reproducibility, and `GenesisBench-v0.1` decides eligibility.

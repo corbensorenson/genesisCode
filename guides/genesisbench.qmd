@@ -1,0 +1,143 @@
+---
+title: "Run GenesisBench"
+description: "Evaluate unfamiliar-language reasoning with frozen context, deterministic scoring, reproducible runs, and evidence-backed contamination labels."
+---
+
+# What GenesisBench measures
+
+Status: normative explanation and tutorial. The machine authority is `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`; this guide cannot broaden it.
+
+GenesisBench asks an agent to learn GenesisCode from an immutable repository/runtime/documentation snapshot and complete real language-engineering tasks. It measures repository learning, semantic reasoning, capability minimization, tool use, debugging, and artifact construction without relying on mature-language answer memorization.
+
+The benchmark does **not** claim that GenesisCode is absent from a model's training data merely because the language is new. Contamination claims follow evidence, and incomplete provenance is `unknown`.
+
+The normative authorities are:
+
+- [Machine profile](../docs/spec/GENESISBENCH_PROTOCOL_v0.1.json)
+- [Profile schema](../docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json)
+- [Eligibility schema](../docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json)
+- [Contamination-attestation schema](../docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json)
+- [Task benchmark](../benchmarks/agent_tasks/v0.1/suite.json)
+- [Scoring authority](../docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json)
+- [Run schema](../docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json)
+
+This guide explains those authorities; it cannot alter them.
+
+## Verify the profile
+
+Use a full local clone so the frozen Git commit is available. Validation is offline and read-only:
+
+```bash
+python3 scripts/lib/genesisbench_protocol.py --check --self-test
+```
+
+The verifier checks:
+
+1. The immutable commit and Git tree.
+2. A complete SHA-256 manifest over all 1,709 frozen files.
+3. Independent runtime, documentation, and benchmark component identities.
+4. Every linked schema, card, task, scorer, run verifier, MCP catalog source, and integration test.
+5. Closed context, tool, capability, attempt, model-disclosure, visibility, scoring, contamination, and eligibility policies.
+6. Exact typed prompt order and context-artifact coverage for the selected cohort.
+7. Adversarial controls that are re-signed after mutation, so semantic rules rather than stale outer hashes cause rejection.
+
+No update, model invocation, network request, or score execution occurs in check mode.
+
+## Understand the task surfaces
+
+The public suite contains generation, completion, repair, refactor, policy minimization, replay investigation, performance repair, package migration, and deployment cases at small, medium, and large context tiers. Their references are intentionally inspectable development oracles. They are useful for learning, harness conformance, and longitudinal diagnostics, but they are not clean held-out evidence.
+
+Ranked evaluation uses a non-public oracle and the active held-out commitment authority. Temporal-clean evaluation additionally requires a task precommitment made after the target model's immutable release. Private tasks, salts, inputs, prompts, and oracles never belong in the repository, documentation site, training corpus, model retrieval root, or public run bundle.
+
+## Control tools and capabilities
+
+The Genesis MCP `2025-11-25` interface is the canonical interactive surface. Its exact 20 routes are generated from the production CLI and frozen by the catalog authority. Artifact-only response mode is retained for minimal and local baselines, but it is a separate cohort.
+
+Arbitrary shell, ambient filesystem access, ambient network access, wildcard capabilities, and agent-authored policy broadening are forbidden. Effectful commands use only task-owned exact capabilities, finite hard resource limits, complete deterministic logs, and replay. Provider transport is separate from candidate tool authority and cannot become a hidden tool or context channel.
+
+## Fix attempts and model disclosure
+
+A ranked case has one predeclared attempt. Best-of-N selection, hidden retries, cherry-picking, and post-result prompt changes are forbidden. Unranked experiments may use up to 16 attempts, but every success, failure, abstention, retry, request, response, candidate, token fact, and selection is retained.
+
+Every run discloses model ID, immutable revision, provider, weights identity for local models, tokenizer, runtime, quantization, integer decoding controls, seed, stop policy, prompt retention, and secret policy. Mutable aliases such as `latest` are invalid. Missing training provenance defaults to `unknown`; it never becomes a clean claim.
+
+## Produce a reproducible run
+
+A complete run records:
+
+- immutable model, weights, tokenizer, and runtime identity;
+- exact ordered prompts, cards, context, and retrieved artifacts;
+- integer decoding and retry policy;
+- every attempt, failure, abstention, request, response, and candidate;
+- exact tool catalog, capabilities, transcript, and effect log;
+- normalized host facts without usernames, hostnames, serial numbers, or absolute paths;
+- canonical deterministic score and separate latency, cost, queue, and energy facts;
+- a complete content-addressed artifact inventory.
+
+Validate the record without executing it:
+
+```bash
+python3 scripts/lib/gc_agent_benchmark_run.py --check --run RUN.json
+```
+
+A fully local model may use the pinned `genesis.agent-model-runner.v0.1` effect. Replay must still succeed after the model bridge and weights are unavailable, proving transcript reproducibility rather than model regeneration.
+
+## Score the candidate
+
+The scorer uses only deterministic artifacts and production GenesisCode execution:
+
+```bash
+python3 scripts/lib/gc_agent_scoring.py --score \
+  --case CASE_ID \
+  --candidate CANDIDATE_DIR \
+  --genesis-bin ./target/debug/genesis \
+  --selfhost-artifact selfhost/toolchain.gc
+```
+
+Quality is 10,000 basis points across semantics, obligations, effects, patch minimality, deterministic resource use, and policy scope. Required semantic, obligation, policy, or editable-scope failure makes the result invalid. Wall time, provider latency, API cost, and energy never buy quality points. A ranked result requires an independent byte-identical rescore; submitting a score hash is not independent verification.
+
+## Classify eligibility
+
+Classify a validated run and its run-bound contamination evidence under the active profile:
+
+```bash
+python3 scripts/lib/genesisbench_protocol.py --check \
+  --run RUN.json \
+  --attestation ATTESTATION.json \
+  --json
+```
+
+The deterministic result is `invalid`, `unranked`, or `ranked`. It binds the protocol, snapshot, run, case, observed context and interaction modes, validation facts, strongest evidence-supported contamination label, exact cohort, reason codes, and its own content identity. Structurally malformed or unbindable input exits nonzero and emits no eligibility record; this prevents rejected bytes from being mistaken for a signed result.
+
+The canonical fixture is deliberately unranked:
+
+```bash
+python3 scripts/lib/genesisbench_protocol.py --check \
+  --run examples/agent_benchmark_reproducibility/run.json \
+  --attestation benchmarks/genesisbench/v0.1/contamination.fixture.json \
+  --json \
+  | cmp - benchmarks/genesisbench/v0.1/eligibility.fixture.json
+```
+
+It uses a public answer and a conformance model, and it has not been independently rescored by a registry admission worker. A perfect score does not erase those facts.
+
+## Interpret contamination labels
+
+| Label | Required evidence |
+|---|---|
+| `temporal-clean` | Immutable model release; later task precommitment; active undisclosed epoch; commitment and custody proof; training cutoff; no known exposure. |
+| `declared-uncontaminated` | Complete provenance and explicit non-exposure attestation, but no independently proven temporal ordering. |
+| `unknown` | Evidence is incomplete and no exposure is known. This is the default. |
+| `declared-contaminated` | Task, oracle, equivalent answer, or evaluation material is known to have been exposed. This overrides clean claims. |
+
+Never collapse these labels into one leaderboard. Context mode, tool mode, attempt policy, task visibility, protocol identity, and contamination are cohort keys.
+
+## Current boundary
+
+The v0.1 protocol, schemas, verifier, public practice suite, scorer, run bundle, and deterministic eligibility fixture exist now. The append-only signed result registry and static leaderboard are R1.4.h. Rolling temporal challenge epochs are R1.4.i. Construct-validity and anti-gaming studies are R1.4.j. Reproducible multi-model baselines are R1.4.k.
+
+Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
+
+## Versioning
+
+Changes to snapshot identity, context order, tool routes, capability semantics, attempt rules, disclosure requirements, visibility classes, scoring authority, contamination classification, or eligibility rules require a new protocol version. A correction that changes a prior decision requires a new profile and explicit supersession record; historical evidence remains immutable.
