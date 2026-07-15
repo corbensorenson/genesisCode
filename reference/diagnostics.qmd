@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Structured failures
 
-**185 diagnostics** · catalog identity `09c3edc7f2b577bb201c4867b9470e8f8fc11e9020d69785e5e58e0c41332f62`
+**194 diagnostics** · catalog identity `0b64616055c1ea14cba05f68efc976a09fe2fcac4b4bd89c2ec19c7723b4dfe8`
 
 Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
 
@@ -289,6 +289,15 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 | [`agent-index/symbol-invalid`](#agent-index-symbol-invalid-47b0ac2e) | error | `inspect-invocation-contract` |
 | [`agent-index/symbol-not-found`](#agent-index-symbol-not-found-37eac89c) | error | `inspect-invocation-contract` |
 | [`agent-plan/task-cards`](#agent-plan-task-cards-3ffeb48d) | error | `inspect-invocation-contract` |
+| [`bench/authority-root-missing`](#bench-authority-root-missing-b71d8f28) | error | `inspect-invocation-contract` |
+| [`bench/current-directory`](#bench-current-directory-254ae86c) | error | `inspect-invocation-contract` |
+| [`bench/driver-invalid`](#bench-driver-invalid-f5e8c5bf) | error | `inspect-invocation-contract` |
+| [`bench/driver-spawn`](#bench-driver-spawn-0c50a076) | error | `inspect-invocation-contract` |
+| [`bench/executable-unavailable`](#bench-executable-unavailable-5d5cc66d) | error | `inspect-invocation-contract` |
+| [`bench/front-door-failed`](#bench-front-door-failed-b0a89808) | error | `inspect-invocation-contract` |
+| [`bench/output-invalid`](#bench-output-invalid-2b7912ca) | error | `inspect-invocation-contract` |
+| [`bench/output-limit`](#bench-output-limit-8b1eb026) | error | `inspect-invocation-contract` |
+| [`bench/selfhost-artifact-required`](#bench-selfhost-artifact-required-676d727d) | error | `inspect-invocation-contract` |
 | [`compat/rust-engine-disabled`](#compat-rust-engine-disabled-47d8b10a) | error | `inspect-invocation-contract` |
 | [`engine/rust-disabled`](#engine-rust-disabled-5bcb9ffb) | error | `inspect-invocation-contract` |
 | [`mcp/input`](#mcp-input-f537d05c) | error | `inspect-invocation-contract` |
@@ -437,6 +446,141 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `agent-plan/task-cards` {#agent-plan-task-cards-3ffeb48d}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/agent-plan/task-cards`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/authority-root-missing` {#bench-authority-root-missing-b71d8f28}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/authority-root-missing`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/current-directory` {#bench-current-directory-254ae86c}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/current-directory`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/driver-invalid` {#bench-driver-invalid-f5e8c5bf}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/driver-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/driver-spawn` {#bench-driver-spawn-0c50a076}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/driver-spawn`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/executable-unavailable` {#bench-executable-unavailable-5d5cc66d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/executable-unavailable`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/front-door-failed` {#bench-front-door-failed-b0a89808}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/front-door-failed`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/output-invalid` {#bench-output-invalid-2b7912ca}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/output-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/output-limit` {#bench-output-limit-8b1eb026}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/output-limit`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/selfhost-artifact-required` {#bench-selfhost-artifact-required-676d727d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/selfhost-artifact-required`
 
 **Likely causes**
 

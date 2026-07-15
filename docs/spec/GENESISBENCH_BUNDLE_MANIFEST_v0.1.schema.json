@@ -1,0 +1,76 @@
+{
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "maximum": 67108864,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-bundle-manifest-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifactInventoryIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/artifact"
+      },
+      "maxItems": 4096,
+      "minItems": 1,
+      "type": "array"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-bundle-manifest-v0.1"
+    },
+    "runIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "runIdentitySha256",
+    "artifacts",
+    "artifactInventoryIdentitySha256",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench deterministic run bundle manifest v0.1",
+  "type": "object"
+}

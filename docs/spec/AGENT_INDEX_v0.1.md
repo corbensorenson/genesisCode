@@ -106,6 +106,14 @@ genesis --json agent-index --diagnostic <exact-code>
     and `genesisbench_reference_agent_trace_schema = "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json"`
     as the frozen Cold Acquisition scaffold, its eight paired ablations over nine shared
     lineages, and the complete no-hidden-work trajectory contract.
+  - includes `genesisbench_front_door = "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md"`,
+    `genesisbench_adapters = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json"`,
+    `genesisbench_adapters_schema = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json"`,
+    `genesisbench_adapter_schema = "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json"`,
+    `genesisbench_execution_run_schema = "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json"`,
+    and `genesisbench_bundle_manifest_schema = "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json"`
+    as the canonical seven-command benchmark surface, closed five-class transport contract,
+    strict run/replay record, and deterministic submission bundle.
   - includes `genesisbench_analysis_plan = "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json"`,
     `genesisbench_observations_schema = "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json"`,
     and `genesisbench_analysis_report_schema = "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json"`

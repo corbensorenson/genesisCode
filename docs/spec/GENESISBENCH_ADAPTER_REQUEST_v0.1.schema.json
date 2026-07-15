@@ -1,0 +1,194 @@
+{
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "maximum": 67108864,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-adapter-request-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "caseId": {
+      "$ref": "#/$defs/id"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-adapter-request-v0.1"
+    },
+    "messages": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 8388608,
+            "type": "string"
+          },
+          "contentSha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "role": {
+            "enum": [
+              "system-policy",
+              "agent-profile",
+              "task-card",
+              "context-pack-or-retrieval-transcript",
+              "task-prompt",
+              "task-inputs"
+            ]
+          }
+        },
+        "required": [
+          "role",
+          "content",
+          "contentSha256"
+        ],
+        "type": "object"
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "type": "array"
+    },
+    "model": {
+      "additionalProperties": false,
+      "properties": {
+        "artifactSha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "immutable": {
+          "const": true
+        },
+        "revision": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "immutable",
+        "artifactSha256"
+      ],
+      "type": "object"
+    },
+    "outputContract": {
+      "additionalProperties": false,
+      "properties": {
+        "candidateFiles": {
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "maxItems": 128,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "encoding": {
+          "const": "base64-bytes"
+        },
+        "kind": {
+          "const": "genesis/genesisbench-adapter-response-v0.1"
+        },
+        "semanticRewriteAllowed": {
+          "const": false
+        }
+      },
+      "required": [
+        "kind",
+        "candidateFiles",
+        "encoding",
+        "semanticRewriteAllowed"
+      ],
+      "type": "object"
+    },
+    "planIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "requestId": {
+      "$ref": "#/$defs/id"
+    },
+    "sampling": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hiddenRetries": {
+          "const": 0
+        },
+        "providerTools": {
+          "const": false
+        }
+      },
+      "required": [
+        "attempt",
+        "providerTools",
+        "hiddenRetries"
+      ],
+      "type": "object"
+    },
+    "tools": {
+      "const": []
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "requestId",
+    "caseId",
+    "planIdentitySha256",
+    "model",
+    "messages",
+    "outputContract",
+    "tools",
+    "sampling",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench normalized adapter request v0.1",
+  "type": "object"
+}

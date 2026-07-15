@@ -1,0 +1,378 @@
+{
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "maximum": 67108864,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-adapter-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "environment": {
+          "enum": [
+            "one-declared-secret-name",
+            "none-or-one-declared-secret-name",
+            "closed-runtime-locator-names",
+            "closed-empty",
+            "none"
+          ]
+        },
+        "filesystem": {
+          "enum": [
+            "none",
+            "digest-bound-executable-and-model-artifact-read-only",
+            "digest-bound-executable-read-only-plus-empty-temporary-cwd"
+          ]
+        },
+        "hiddenRetriesAllowed": {
+          "const": false
+        },
+        "network": {
+          "enum": [
+            "one-exact-https-origin-and-path",
+            "one-exact-loopback-origin-and-path",
+            "none",
+            "none-by-contract"
+          ]
+        },
+        "providerToolsAllowed": {
+          "const": false
+        },
+        "requestMapping": {
+          "const": "typed-lossless-no-authority-injection"
+        },
+        "responseMapping": {
+          "const": "typed-lossless-no-semantic-rewrite"
+        },
+        "secretPolicy": {
+          "const": "redact-values-record-name-presence-and-policy"
+        },
+        "subprocess": {
+          "enum": [
+            "none",
+            "one-process-group"
+          ]
+        }
+      },
+      "required": [
+        "network",
+        "filesystem",
+        "environment",
+        "subprocess",
+        "requestMapping",
+        "responseMapping",
+        "providerToolsAllowed",
+        "hiddenRetriesAllowed",
+        "secretPolicy"
+      ],
+      "type": "object"
+    },
+    "class": {
+      "enum": [
+        "hosted-api",
+        "local-openai-compatible",
+        "direct-local-runtime",
+        "command-plugin",
+        "deterministic-mock"
+      ]
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "hiddenRetriesAllowed": {
+      "const": false
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-adapter-v0.1"
+    },
+    "model": {
+      "additionalProperties": false,
+      "properties": {
+        "artifactSha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "immutable": {
+          "const": true
+        },
+        "revision": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "immutable",
+        "artifactSha256"
+      ],
+      "type": "object"
+    },
+    "providerToolsAllowed": {
+      "const": false
+    },
+    "rankEligible": {
+      "const": false
+    },
+    "requestMapping": {
+      "const": "typed-lossless-no-authority-injection"
+    },
+    "responseMapping": {
+      "const": "typed-lossless-no-semantic-rewrite"
+    },
+    "secretPolicy": {
+      "const": "redact-values-record-name-presence-and-policy"
+    },
+    "transport": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "maxOutputBytes": {
+              "maximum": 16777216,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "mutableFacts": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 32,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "origin": {
+              "maxLength": 2048,
+              "type": "string"
+            },
+            "path": {
+              "maxLength": 1024,
+              "pattern": "^/",
+              "type": "string"
+            },
+            "protocol": {
+              "const": "openai-chat-completions-v1"
+            },
+            "redirects": {
+              "const": "deny"
+            },
+            "secretEnvName": {
+              "oneOf": [
+                {
+                  "pattern": "^[A-Z][A-Z0-9_]{0,127}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "timeoutMs": {
+              "maximum": 3600000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "protocol",
+            "origin",
+            "path",
+            "redirects",
+            "secretEnvName",
+            "timeoutMs",
+            "maxOutputBytes",
+            "mutableFacts"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "argv": {
+              "items": {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              "maxItems": 32,
+              "type": "array"
+            },
+            "executableSha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "maxOutputBytes": {
+              "maximum": 16777216,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "modelArtifactSha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "mutableFacts": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 32,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "protocol": {
+              "const": "json-stdio-v0.1"
+            },
+            "timeoutMs": {
+              "maximum": 3600000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "protocol",
+            "executableSha256",
+            "argv",
+            "timeoutMs",
+            "maxOutputBytes",
+            "mutableFacts",
+            "modelArtifactSha256"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "argv": {
+              "items": {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              "maxItems": 32,
+              "type": "array"
+            },
+            "executableSha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "maxOutputBytes": {
+              "maximum": 16777216,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "mutableFacts": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 32,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "protocol": {
+              "const": "json-stdio-v0.1"
+            },
+            "timeoutMs": {
+              "maximum": 3600000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "protocol",
+            "executableSha256",
+            "argv",
+            "timeoutMs",
+            "maxOutputBytes",
+            "mutableFacts"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "fixtureId": {
+              "$ref": "#/$defs/id"
+            },
+            "mutableFacts": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 32,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "protocol": {
+              "const": "request-hash-fixture-v0.1"
+            }
+          },
+          "required": [
+            "protocol",
+            "fixtureId",
+            "mutableFacts"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "class",
+    "model",
+    "transport",
+    "authority",
+    "requestMapping",
+    "responseMapping",
+    "providerToolsAllowed",
+    "hiddenRetriesAllowed",
+    "secretPolicy",
+    "rankEligible",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench capability-minimal adapter v0.1",
+  "type": "object"
+}

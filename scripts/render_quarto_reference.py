@@ -306,7 +306,7 @@ def cli_commands() -> str:
     stable = [
         "fmt", "eval", "explain", "debug/*", "run", "replay", "optimize", "typecheck",
         "test", "apply-patch", "semantic-edit", "pack", "verify", "selfhost-artifact",
-        "selfhost-dashboard", "cli-schema", "agent-index", "agent-plan", "keygen", "sign",
+        "selfhost-dashboard", "cli-schema", "agent-index", "agent-plan", "bench", "keygen", "sign",
         "transparency-verify", "store/*", "refs/*", "commit/*", "pkg/* (gcpm/* alias)",
         "policy/*", "sync/*", "gc/*", "vcs/*",
     ]

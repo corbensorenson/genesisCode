@@ -705,6 +705,17 @@ fn diagnostics_contract_covers_all_cli_command_families() {
             ],
         },
         Case {
+            family: "bench",
+            expect: Expect::Failure,
+            argv: vec![
+                "--json".into(),
+                "bench".into(),
+                "inspect".into(),
+                "--adapter".into(),
+                td.path().join("missing-adapter.json").display().to_string(),
+            ],
+        },
+        Case {
             family: "selfhost-dashboard",
             expect: Expect::Success,
             argv: vec![

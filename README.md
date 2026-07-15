@@ -80,6 +80,7 @@ preference.
 - Active profile: `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
 - Fixed Cold Acquisition agent: `docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json`
 - Controlled ablations: eight predeclared conditions over the same nine lineages in `docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json`
+- Canonical execution and adapter contract: `docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md`
 - Normative explanation and tutorial: `guides/genesisbench.qmd`
 - Contamination-attestation schema: `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
 - Public practice suite: nine independent lineages under 27 context conditions in `benchmarks/agent_tasks/v0.1/suite.json`
@@ -95,11 +96,24 @@ Validate the complete frozen profile and classify the conformance run:
 ```sh
 python3 scripts/lib/genesisbench_protocol.py --check --self-test
 python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
+python3 scripts/lib/genesisbench_front_door.py check --self-test
 python3 scripts/lib/genesisbench_analysis.py --check --self-test
 python3 scripts/lib/genesisbench_protocol.py --check \
   --run examples/agent_benchmark_reproducibility/run.json \
   --attestation benchmarks/genesisbench/v0.1/contamination.fixture.json \
   --json
+```
+
+Run the permanently unranked deterministic conformance adapter through the same public front door used by real providers and local runtimes:
+
+```sh
+cargo build -p gc_cli --bin genesis
+target/debug/genesis --json --selfhost-artifact selfhost/toolchain.gc bench run \
+  --case generation-small \
+  --adapter benchmarks/genesisbench/v0.1/adapters/deterministic-mock.json \
+  --out .genesis/bench/example-run
+target/debug/genesis --json --selfhost-artifact selfhost/toolchain.gc bench replay \
+  --run .genesis/bench/example-run/run.json
 ```
 
 Public references are explicitly `declared-contaminated` and unranked. Missing model

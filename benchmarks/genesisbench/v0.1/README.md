@@ -6,6 +6,8 @@ Normative profile: `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`.
 
 The four tracks and content-addressed cohort contract are R1.4.h. The active temporal epoch has 90 independent private lineages, ten per core class, and the public repository contains commitments, exact balance metadata, a hash-only opening audit, and a maintained capability-lease overlay but no private task material. The fixed Cold Acquisition scaffold and its eight controlled ablations are frozen under `reference-agent/` and `docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json`; validate them with `python3 scripts/lib/genesisbench_reference_agent.py --check --self-test`. The signed append-only registry is R1.4.m. None is implied by this public conformance fixture beyond its own track/cohort contract.
 
+`adapters/` contains one permanently unranked conformance manifest for each closed adapter class plus a digest-bound JSON-stdio fixture. The canonical seven-command execution surface is `genesis bench`; its normative contract is `docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md`. These fixtures test transport equivalence, hard timeout/cancellation, retained failures, replay, and deterministic bundles. They are not model baselines and cannot enter a leaderboard.
+
 The public task matrix is nine independent task lineages under three context conditions, not 27 independent challenges. `analysis/observations.fixture.json` is a complete synthetic conformance matrix and `analysis/report.fixture.json` is its deterministic, unranked analysis. Validate both against the predeclared plan with:
 
 ```sh

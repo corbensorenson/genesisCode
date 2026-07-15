@@ -1,0 +1,44 @@
+{
+  "authority": {
+    "environment": "one-declared-secret-name",
+    "filesystem": "none",
+    "hiddenRetriesAllowed": false,
+    "network": "one-exact-https-origin-and-path",
+    "providerToolsAllowed": false,
+    "requestMapping": "typed-lossless-no-authority-injection",
+    "responseMapping": "typed-lossless-no-semantic-rewrite",
+    "secretPolicy": "redact-values-record-name-presence-and-policy",
+    "subprocess": "none"
+  },
+  "class": "hosted-api",
+  "contentIdentitySha256": "2bbc0bec72a7bcf24de3f953b75db92e7b9cf4e45cb905efbc93f50c0dd8ea21",
+  "hiddenRetriesAllowed": false,
+  "id": "fixture-hosted-api-v0.1",
+  "kind": "genesis/genesisbench-adapter-v0.1",
+  "model": {
+    "artifactSha256": null,
+    "id": "genesisbench-fixture-model",
+    "immutable": true,
+    "revision": "v0.1"
+  },
+  "providerToolsAllowed": false,
+  "rankEligible": false,
+  "requestMapping": "typed-lossless-no-authority-injection",
+  "responseMapping": "typed-lossless-no-semantic-rewrite",
+  "secretPolicy": "redact-values-record-name-presence-and-policy",
+  "transport": {
+    "maxOutputBytes": 1048576,
+    "mutableFacts": [
+      "provider-request-id",
+      "service-tier",
+      "system-fingerprint"
+    ],
+    "origin": "https://provider.invalid",
+    "path": "/v1/chat/completions",
+    "protocol": "openai-chat-completions-v1",
+    "redirects": "deny",
+    "secretEnvName": "GENESISBENCH_FIXTURE_API_KEY",
+    "timeoutMs": 600000
+  },
+  "version": "0.1.0"
+}

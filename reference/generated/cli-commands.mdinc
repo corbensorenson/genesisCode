@@ -1,12 +1,13 @@
 **Stable routed families**
 
-`fmt`, `eval`, `explain`, `debug/*`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `cli-schema`, `agent-index`, `agent-plan`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/* (gcpm/* alias)`, `policy/*`, `sync/*`, `gc/*`, `vcs/*`
+`fmt`, `eval`, `explain`, `debug/*`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `cli-schema`, `agent-index`, `agent-plan`, `bench`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/* (gcpm/* alias)`, `policy/*`, `sync/*`, `gc/*`, `vcs/*`
 
 **Command forms explicitly frozen in the CLI specification**
 
 - `genesis`
 - `genesis agent-index`
 - `genesis agent-plan --intent <agent-intent.json|-> --caps <caps.toml> [--max-workflows <n>]`
+- `genesis bench <inspect|run|validate-run|score|replay|bundle|submit> `
 - `genesis cli-schema`
 - `genesis commit show <commit-hash>`
 - `genesis debug bisect --baseline <timeline.gc> --candidate <timeline.gc>`

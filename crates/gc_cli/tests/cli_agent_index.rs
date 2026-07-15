@@ -243,6 +243,31 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json")
     );
     assert_eq!(
+        json.pointer("/data/docs/genesisbench_front_door")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_adapters")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_ADAPTERS_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_adapters_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_execution_run_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_bundle_manifest_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json")
+    );
+    assert_eq!(
         json.pointer("/data/docs/genesisbench_analysis_plan")
             .and_then(Value::as_str),
         Some("docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json")

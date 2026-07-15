@@ -1,0 +1,43 @@
+{
+  "authority": {
+    "environment": "closed-runtime-locator-names",
+    "filesystem": "digest-bound-executable-and-model-artifact-read-only",
+    "hiddenRetriesAllowed": false,
+    "network": "none",
+    "providerToolsAllowed": false,
+    "requestMapping": "typed-lossless-no-authority-injection",
+    "responseMapping": "typed-lossless-no-semantic-rewrite",
+    "secretPolicy": "redact-values-record-name-presence-and-policy",
+    "subprocess": "one-process-group"
+  },
+  "class": "direct-local-runtime",
+  "contentIdentitySha256": "bd64b2bdbcb80ce6a976c7d36f2e27f1165e82baef9cf7b0562f5c0894edb68d",
+  "hiddenRetriesAllowed": false,
+  "id": "fixture-direct-local-runtime-v0.1",
+  "kind": "genesis/genesisbench-adapter-v0.1",
+  "model": {
+    "artifactSha256": "ba821aea6c426bf17d88bb36cf01f984af5b61a2baa5f8f5b0f10d261a5f40fd",
+    "id": "genesisbench-fixture-model",
+    "immutable": true,
+    "revision": "v0.1"
+  },
+  "providerToolsAllowed": false,
+  "rankEligible": false,
+  "requestMapping": "typed-lossless-no-authority-injection",
+  "responseMapping": "typed-lossless-no-semantic-rewrite",
+  "secretPolicy": "redact-values-record-name-presence-and-policy",
+  "transport": {
+    "argv": [
+      "--respond"
+    ],
+    "executableSha256": "b8ebc1756088abbc1e394db72bdee0acdd380a2a584d05820b9b8365a35f242e",
+    "maxOutputBytes": 1048576,
+    "modelArtifactSha256": "ba821aea6c426bf17d88bb36cf01f984af5b61a2baa5f8f5b0f10d261a5f40fd",
+    "mutableFacts": [
+      "runtime-build"
+    ],
+    "protocol": "json-stdio-v0.1",
+    "timeoutMs": 5000
+  },
+  "version": "0.1.0"
+}

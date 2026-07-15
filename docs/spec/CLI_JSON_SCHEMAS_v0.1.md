@@ -160,6 +160,7 @@ verify it read-only. Intentional corpus, agent, or diagnostic changes require
 - `agent-index --search-symbol` -> `genesis/agent-symbol-search-v0.3`
 - `agent-index --card` -> `genesis/agent-card-v0.3`
 - `agent-plan` -> `genesis/agent-plan-v0.1`
+- `bench *` -> `genesis/bench-v0.1` (subcommand result in `data.kind`)
 - `warm` -> `genesis/warm-session-v0.2`
 
 ### Security / optimization / semantic tooling

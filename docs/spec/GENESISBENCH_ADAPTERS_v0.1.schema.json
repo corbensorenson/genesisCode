@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "maximum": 67108864,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-adapters-profile-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapters": {
+      "items": {
+        "$ref": "https://genesiscode.dev/schemas/genesisbench-adapter-v0.1.json"
+      },
+      "maxItems": 5,
+      "minItems": 5,
+      "type": "array"
+    },
+    "capabilityPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "ambientAuthorityAllowed": {
+          "const": false
+        },
+        "exactDeclaredAuthorityOnly": {
+          "const": true
+        },
+        "hiddenRetriesAllowed": {
+          "const": false
+        },
+        "providerToolsAllowed": {
+          "const": false
+        }
+      },
+      "required": [
+        "ambientAuthorityAllowed",
+        "providerToolsAllowed",
+        "hiddenRetriesAllowed",
+        "exactDeclaredAuthorityOnly"
+      ],
+      "type": "object"
+    },
+    "classes": {
+      "const": [
+        "hosted-api",
+        "local-openai-compatible",
+        "direct-local-runtime",
+        "command-plugin",
+        "deterministic-mock"
+      ]
+    },
+    "conformance": {
+      "additionalProperties": false,
+      "properties": {
+        "cancellationHardKillAndReap": {
+          "const": true
+        },
+        "replayReinvocationAllowed": {
+          "const": false
+        },
+        "sameRequestResponseVectors": {
+          "const": true
+        },
+        "timeoutHardKillAndReap": {
+          "const": true
+        }
+      },
+      "required": [
+        "sameRequestResponseVectors",
+        "timeoutHardKillAndReap",
+        "cancellationHardKillAndReap",
+        "replayReinvocationAllowed"
+      ],
+      "type": "object"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-adapters-profile-v0.1"
+    },
+    "normalization": {
+      "additionalProperties": false,
+      "properties": {
+        "allAttemptsRetained": {
+          "const": true
+        },
+        "request": {
+          "const": "genesis/genesisbench-adapter-request-v0.1"
+        },
+        "response": {
+          "const": "genesis/genesisbench-adapter-response-v0.1"
+        },
+        "semanticRewriteAllowed": {
+          "const": false
+        }
+      },
+      "required": [
+        "request",
+        "response",
+        "semanticRewriteAllowed",
+        "allAttemptsRetained"
+      ],
+      "type": "object"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "classes",
+    "adapters",
+    "normalization",
+    "capabilityPolicy",
+    "conformance",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench closed adapter profile v0.1",
+  "type": "object"
+}

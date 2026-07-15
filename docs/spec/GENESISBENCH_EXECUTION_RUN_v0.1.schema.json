@@ -1,0 +1,299 @@
+{
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "maximum": 67108864,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-execution-run-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "const": "adapter.json"
+        },
+        "class": {
+          "enum": [
+            "hosted-api",
+            "local-openai-compatible",
+            "direct-local-runtime",
+            "command-plugin",
+            "deterministic-mock"
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "identitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "rankEligible": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact",
+        "id",
+        "class",
+        "identitySha256",
+        "rankEligible"
+      ],
+      "type": "object"
+    },
+    "artifactInventory": {
+      "items": {
+        "$ref": "#/$defs/artifact"
+      },
+      "maxItems": 4096,
+      "type": "array"
+    },
+    "artifactInventoryIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "attempts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "elapsedMs": {
+            "maximum": 86400000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "index": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "requestArtifact": {
+            "$ref": "#/$defs/path"
+          },
+          "requestIdentitySha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "responseArtifact": {
+            "$ref": "#/$defs/path"
+          },
+          "responseIdentitySha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "secretDisclosure": {
+            "additionalProperties": false,
+            "properties": {
+              "declaredNames": {
+                "items": {
+                  "$ref": "#/$defs/id"
+                },
+                "maxItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "presenceRecorded": {
+                "const": true
+              },
+              "presentNames": {
+                "items": {
+                  "$ref": "#/$defs/id"
+                },
+                "maxItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "valuesRecorded": {
+                "const": false
+              }
+            },
+            "required": [
+              "valuesRecorded",
+              "declaredNames",
+              "presentNames",
+              "presenceRecorded"
+            ],
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "cancelled",
+              "timed-out"
+            ]
+          }
+        },
+        "required": [
+          "index",
+          "requestArtifact",
+          "requestIdentitySha256",
+          "responseArtifact",
+          "responseIdentitySha256",
+          "status",
+          "elapsedMs",
+          "secretDisclosure"
+        ],
+        "type": "object"
+      },
+      "maxItems": 2,
+      "minItems": 1,
+      "type": "array"
+    },
+    "candidateInventory": {
+      "items": {
+        "$ref": "#/$defs/artifact"
+      },
+      "maxItems": 4096,
+      "type": "array"
+    },
+    "candidateInventoryIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "case": {
+      "additionalProperties": false,
+      "properties": {
+        "conditionId": {
+          "$ref": "#/$defs/id"
+        },
+        "conditionIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "lineageId": {
+          "$ref": "#/$defs/id"
+        },
+        "lineageIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "id",
+        "lineageId",
+        "lineageIdentitySha256",
+        "conditionId",
+        "conditionIdentitySha256"
+      ],
+      "type": "object"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-execution-run-v0.1"
+    },
+    "outcome": {
+      "enum": [
+        "verified",
+        "failed",
+        "invalid",
+        "abstained"
+      ]
+    },
+    "referenceAgent": {
+      "additionalProperties": false,
+      "properties": {
+        "planArtifact": {
+          "const": "plan.json"
+        },
+        "planIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "profileIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "planArtifact",
+        "planIdentitySha256",
+        "profileIdentitySha256"
+      ],
+      "type": "object"
+    },
+    "replay": {
+      "additionalProperties": false,
+      "properties": {
+        "adapterReinvocationAllowed": {
+          "const": false
+        },
+        "independentRescoreRequired": {
+          "type": "boolean"
+        },
+        "modelAccessAllowed": {
+          "const": false
+        },
+        "requestResponseValidation": {
+          "const": "strict-all-fields"
+        }
+      },
+      "required": [
+        "adapterReinvocationAllowed",
+        "modelAccessAllowed",
+        "requestResponseValidation",
+        "independentRescoreRequired"
+      ],
+      "type": "object"
+    },
+    "scoreIdentitySha256": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "case",
+    "referenceAgent",
+    "adapter",
+    "attempts",
+    "outcome",
+    "candidateInventory",
+    "candidateInventoryIdentitySha256",
+    "scoreIdentitySha256",
+    "artifactInventory",
+    "artifactInventoryIdentitySha256",
+    "replay",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench canonical execution run v0.1",
+  "type": "object"
+}

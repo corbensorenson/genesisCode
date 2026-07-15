@@ -52,6 +52,7 @@ mod cmd_agent_index;
 mod cmd_agent_lookup;
 mod cmd_agent_plan;
 mod cmd_agent_task_cards;
+mod cmd_bench;
 mod cmd_commit;
 mod cmd_core;
 mod cmd_debug;
@@ -114,6 +115,7 @@ use cli_json::*;
 use cli_schema::cmd_cli_schema;
 use cmd_agent_index::cmd_agent_index;
 use cmd_agent_plan::cmd_agent_plan;
+use cmd_bench::cmd_bench;
 use cmd_commit::cmd_commit;
 use cmd_core::*;
 use cmd_debug::cmd_debug;
@@ -485,6 +487,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             caps,
             max_workflows,
         } => cmd_agent_plan(cli, intent, caps, *max_workflows),
+        Cmd::Bench { cmd } => cmd_bench(cli, cmd),
         Cmd::Keygen { out } => cmd_keygen(cli, out),
         Cmd::Sign {
             pkg,

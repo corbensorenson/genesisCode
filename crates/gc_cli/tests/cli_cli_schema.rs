@@ -65,6 +65,25 @@ fn cli_schema_production_profile_emits_selfhost_only_values() {
     assert_eq!(engine_opt["action"], "set");
     assert_eq!(engine_opt["value_type"], "string");
     assert_eq!(engine_opt["multiple"], false);
+    let bench = find_subcommand_by_name(command, "bench").expect("bench subcommand");
+    let bench_commands = bench["subcommands"]
+        .as_array()
+        .expect("bench command schema")
+        .iter()
+        .filter_map(|row| row["name"].as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        bench_commands,
+        vec![
+            "bundle",
+            "inspect",
+            "replay",
+            "run",
+            "score",
+            "submit",
+            "validate-run"
+        ]
+    );
     assert_eq!(
         json.pointer("/data/mcp_interface/protocolVersion")
             .and_then(Value::as_str),

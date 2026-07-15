@@ -1,0 +1,42 @@
+{
+  "authority": {
+    "environment": "closed-empty",
+    "filesystem": "digest-bound-executable-read-only-plus-empty-temporary-cwd",
+    "hiddenRetriesAllowed": false,
+    "network": "none-by-contract",
+    "providerToolsAllowed": false,
+    "requestMapping": "typed-lossless-no-authority-injection",
+    "responseMapping": "typed-lossless-no-semantic-rewrite",
+    "secretPolicy": "redact-values-record-name-presence-and-policy",
+    "subprocess": "one-process-group"
+  },
+  "class": "command-plugin",
+  "contentIdentitySha256": "7845ceb672a2099223bcd96f15b33e25d5610671cae842297d7194094422a66e",
+  "hiddenRetriesAllowed": false,
+  "id": "fixture-command-plugin-v0.1",
+  "kind": "genesis/genesisbench-adapter-v0.1",
+  "model": {
+    "artifactSha256": "ba821aea6c426bf17d88bb36cf01f984af5b61a2baa5f8f5b0f10d261a5f40fd",
+    "id": "genesisbench-fixture-model",
+    "immutable": true,
+    "revision": "v0.1"
+  },
+  "providerToolsAllowed": false,
+  "rankEligible": false,
+  "requestMapping": "typed-lossless-no-authority-injection",
+  "responseMapping": "typed-lossless-no-semantic-rewrite",
+  "secretPolicy": "redact-values-record-name-presence-and-policy",
+  "transport": {
+    "argv": [
+      "--respond"
+    ],
+    "executableSha256": "b8ebc1756088abbc1e394db72bdee0acdd380a2a584d05820b9b8365a35f242e",
+    "maxOutputBytes": 1048576,
+    "mutableFacts": [
+      "runtime-build"
+    ],
+    "protocol": "json-stdio-v0.1",
+    "timeoutMs": 5000
+  },
+  "version": "0.1.0"
+}

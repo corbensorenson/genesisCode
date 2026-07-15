@@ -115,6 +115,11 @@ const SELFHOST_CUTOVER_METADATA: &[SelfhostCutoverMetadata] = &[
         fast_path_required: false,
     },
     SelfhostCutoverMetadata {
+        cli_name: "bench",
+        dashboard_cmd: "bench/*",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
         cli_name: "keygen",
         dashboard_cmd: "keygen",
         fast_path_required: false,

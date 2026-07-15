@@ -17,11 +17,11 @@
   "caseId": "generation-small",
   "conditionId": "condition-generation-001-retrieval",
   "conditionIdentitySha256": "0ad67d25bdd20285c934c99c26cf45444de3da148e80e75433c70ba48f5a27aa",
-  "contentIdentitySha256": "86cee3bcf972751e3a24739dbf106968476e7d95e0a19955f1f0284948dabf5e",
+  "contentIdentitySha256": "7b4613d9da11286865f5d75d2f80789fac6121677bdcf95a49f4aa1667f9de74",
   "context": {
     "algorithm": "genesisbench-integer-lexical-retrieval-v0.1",
     "configIdentitySha256": "7c51dac0513d3b1d45ff0dde13621f7ca78cf15a577a18b3a6d6503c821a5e3a",
-    "contentIdentitySha256": "c33a89eace27492aa8a0a260e5076d7a7ab0d9bbbb72035f28f70d5b397068c9",
+    "contentIdentitySha256": "933ba69adf0e51805cfcf2590bf4db0d51d990f251bbb3e9fc1545314ace85ba",
     "kind": "genesis/reference-agent-retrieval-transcript-v0.1",
     "queryIdentitySha256": "c92d765f410f0cf9c6a4596e2bf0e75d8d8f914a051355789b95e9ec102c93ae",
     "queryTokens": [
@@ -79,17 +79,18 @@
           "with"
         ],
         "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-        "score": 1617,
+        "score": 1615,
         "sha256": "3f83479d8b828c580a7a4f23e80255a6d51add19403095af5bd38a91fb52d369"
       },
       {
-        "bytes": 23838,
+        "bytes": 24491,
         "matchedTokens": [
           "a",
           "an",
           "as",
           "capabilities",
           "effect",
+          "exact",
           "from",
           "generate",
           "genesiscode",
@@ -99,6 +100,7 @@
           "pure",
           "request",
           "requirement",
+          "result",
           "that",
           "the",
           "to",
@@ -106,8 +108,8 @@
           "with"
         ],
         "path": "docs/spec/CLI.md",
-        "score": 1242,
-        "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        "score": 1303,
+        "sha256": "a37c7bfc8ee0bea4801784fc9c8878c0829742fc9100f84e1f83b4e7a209f289"
       },
       {
         "bytes": 5886,
@@ -128,7 +130,7 @@
           "with"
         ],
         "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-        "score": 282,
+        "score": 281,
         "sha256": "d5d45cf5faf7367b20e4a140e2b3fd57821b850ff6d0c29a0860a1146bdc37d0"
       },
       {
@@ -150,7 +152,7 @@
         "sha256": "133cc63595ae4f394f1b3a943337f4edac2181b4d806dba2410685fbee9e6e3f"
       }
     ],
-    "totalBytes": 69815
+    "totalBytes": 70468
   },
   "features": {
     "attempts": 1,
@@ -165,14 +167,14 @@
   "lineageId": "lineage-generation-001",
   "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
   "oracleAccessed": false,
-  "profileIdentitySha256": "5222f4f984fd37477b4273101ea1e84ca45efafe742f47f663e426932ea8dceb",
+  "profileIdentitySha256": "1b59438f070c73da002228b13a8ad3e7e3ea7defa7b1f1e2bdac77a3d4c70800",
   "promptSegments": [
     {
       "identitySha256": "da637405bebc9bd518d2f0525b21a4e5d45dc883630cc1c1b35ffa18aed0af65",
       "role": "system-policy"
     },
     {
-      "identitySha256": "5222f4f984fd37477b4273101ea1e84ca45efafe742f47f663e426932ea8dceb",
+      "identitySha256": "1b59438f070c73da002228b13a8ad3e7e3ea7defa7b1f1e2bdac77a3d4c70800",
       "role": "agent-profile"
     },
     {
@@ -180,7 +182,7 @@
       "role": "task-card"
     },
     {
-      "identitySha256": "c33a89eace27492aa8a0a260e5076d7a7ab0d9bbbb72035f28f70d5b397068c9",
+      "identitySha256": "933ba69adf0e51805cfcf2590bf4db0d51d990f251bbb3e9fc1545314ace85ba",
       "role": "context-pack-or-retrieval-transcript"
     },
     {

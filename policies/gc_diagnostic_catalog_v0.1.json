@@ -46,7 +46,7 @@
   "phases": [
     {
       "id": "invocation",
-      "families": ["agent-index", "agent-plan", "compat", "engine", "mcp", "prelude", "warm"],
+      "families": ["agent-index", "agent-plan", "bench", "compat", "engine", "mcp", "prelude", "warm"],
       "likelyCauses": ["The requested command, profile, or embedded agent authority is unavailable or inconsistent.", "An exact lookup or invocation precondition was not satisfied."],
       "safeRepairActions": [{"id": "inspect-invocation-contract", "description": "Inspect the exact command schema or agent index record, correct only the rejected input, and retry.", "policyEffect": "none"}],
       "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]

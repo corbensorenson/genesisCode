@@ -1,0 +1,243 @@
+{
+  "adapters": [
+    {
+      "authority": {
+        "environment": "one-declared-secret-name",
+        "filesystem": "none",
+        "hiddenRetriesAllowed": false,
+        "network": "one-exact-https-origin-and-path",
+        "providerToolsAllowed": false,
+        "requestMapping": "typed-lossless-no-authority-injection",
+        "responseMapping": "typed-lossless-no-semantic-rewrite",
+        "secretPolicy": "redact-values-record-name-presence-and-policy",
+        "subprocess": "none"
+      },
+      "class": "hosted-api",
+      "contentIdentitySha256": "2bbc0bec72a7bcf24de3f953b75db92e7b9cf4e45cb905efbc93f50c0dd8ea21",
+      "hiddenRetriesAllowed": false,
+      "id": "fixture-hosted-api-v0.1",
+      "kind": "genesis/genesisbench-adapter-v0.1",
+      "model": {
+        "artifactSha256": null,
+        "id": "genesisbench-fixture-model",
+        "immutable": true,
+        "revision": "v0.1"
+      },
+      "providerToolsAllowed": false,
+      "rankEligible": false,
+      "requestMapping": "typed-lossless-no-authority-injection",
+      "responseMapping": "typed-lossless-no-semantic-rewrite",
+      "secretPolicy": "redact-values-record-name-presence-and-policy",
+      "transport": {
+        "maxOutputBytes": 1048576,
+        "mutableFacts": [
+          "provider-request-id",
+          "service-tier",
+          "system-fingerprint"
+        ],
+        "origin": "https://provider.invalid",
+        "path": "/v1/chat/completions",
+        "protocol": "openai-chat-completions-v1",
+        "redirects": "deny",
+        "secretEnvName": "GENESISBENCH_FIXTURE_API_KEY",
+        "timeoutMs": 600000
+      },
+      "version": "0.1.0"
+    },
+    {
+      "authority": {
+        "environment": "none-or-one-declared-secret-name",
+        "filesystem": "none",
+        "hiddenRetriesAllowed": false,
+        "network": "one-exact-loopback-origin-and-path",
+        "providerToolsAllowed": false,
+        "requestMapping": "typed-lossless-no-authority-injection",
+        "responseMapping": "typed-lossless-no-semantic-rewrite",
+        "secretPolicy": "redact-values-record-name-presence-and-policy",
+        "subprocess": "none"
+      },
+      "class": "local-openai-compatible",
+      "contentIdentitySha256": "17386084e26412d6920caf1df4f4a2add86dc0301adb8ddce42ff7c5c3cc9678",
+      "hiddenRetriesAllowed": false,
+      "id": "fixture-local-openai-compatible-v0.1",
+      "kind": "genesis/genesisbench-adapter-v0.1",
+      "model": {
+        "artifactSha256": null,
+        "id": "genesisbench-fixture-model",
+        "immutable": true,
+        "revision": "v0.1"
+      },
+      "providerToolsAllowed": false,
+      "rankEligible": false,
+      "requestMapping": "typed-lossless-no-authority-injection",
+      "responseMapping": "typed-lossless-no-semantic-rewrite",
+      "secretPolicy": "redact-values-record-name-presence-and-policy",
+      "transport": {
+        "maxOutputBytes": 1048576,
+        "mutableFacts": [
+          "provider-request-id",
+          "service-tier",
+          "server-build",
+          "system-fingerprint"
+        ],
+        "origin": "http://127.0.0.1:65535",
+        "path": "/v1/chat/completions",
+        "protocol": "openai-chat-completions-v1",
+        "redirects": "deny",
+        "secretEnvName": null,
+        "timeoutMs": 600000
+      },
+      "version": "0.1.0"
+    },
+    {
+      "authority": {
+        "environment": "closed-runtime-locator-names",
+        "filesystem": "digest-bound-executable-and-model-artifact-read-only",
+        "hiddenRetriesAllowed": false,
+        "network": "none",
+        "providerToolsAllowed": false,
+        "requestMapping": "typed-lossless-no-authority-injection",
+        "responseMapping": "typed-lossless-no-semantic-rewrite",
+        "secretPolicy": "redact-values-record-name-presence-and-policy",
+        "subprocess": "one-process-group"
+      },
+      "class": "direct-local-runtime",
+      "contentIdentitySha256": "bd64b2bdbcb80ce6a976c7d36f2e27f1165e82baef9cf7b0562f5c0894edb68d",
+      "hiddenRetriesAllowed": false,
+      "id": "fixture-direct-local-runtime-v0.1",
+      "kind": "genesis/genesisbench-adapter-v0.1",
+      "model": {
+        "artifactSha256": "ba821aea6c426bf17d88bb36cf01f984af5b61a2baa5f8f5b0f10d261a5f40fd",
+        "id": "genesisbench-fixture-model",
+        "immutable": true,
+        "revision": "v0.1"
+      },
+      "providerToolsAllowed": false,
+      "rankEligible": false,
+      "requestMapping": "typed-lossless-no-authority-injection",
+      "responseMapping": "typed-lossless-no-semantic-rewrite",
+      "secretPolicy": "redact-values-record-name-presence-and-policy",
+      "transport": {
+        "argv": [
+          "--respond"
+        ],
+        "executableSha256": "b8ebc1756088abbc1e394db72bdee0acdd380a2a584d05820b9b8365a35f242e",
+        "maxOutputBytes": 1048576,
+        "modelArtifactSha256": "ba821aea6c426bf17d88bb36cf01f984af5b61a2baa5f8f5b0f10d261a5f40fd",
+        "mutableFacts": [
+          "runtime-build"
+        ],
+        "protocol": "json-stdio-v0.1",
+        "timeoutMs": 5000
+      },
+      "version": "0.1.0"
+    },
+    {
+      "authority": {
+        "environment": "closed-empty",
+        "filesystem": "digest-bound-executable-read-only-plus-empty-temporary-cwd",
+        "hiddenRetriesAllowed": false,
+        "network": "none-by-contract",
+        "providerToolsAllowed": false,
+        "requestMapping": "typed-lossless-no-authority-injection",
+        "responseMapping": "typed-lossless-no-semantic-rewrite",
+        "secretPolicy": "redact-values-record-name-presence-and-policy",
+        "subprocess": "one-process-group"
+      },
+      "class": "command-plugin",
+      "contentIdentitySha256": "7845ceb672a2099223bcd96f15b33e25d5610671cae842297d7194094422a66e",
+      "hiddenRetriesAllowed": false,
+      "id": "fixture-command-plugin-v0.1",
+      "kind": "genesis/genesisbench-adapter-v0.1",
+      "model": {
+        "artifactSha256": "ba821aea6c426bf17d88bb36cf01f984af5b61a2baa5f8f5b0f10d261a5f40fd",
+        "id": "genesisbench-fixture-model",
+        "immutable": true,
+        "revision": "v0.1"
+      },
+      "providerToolsAllowed": false,
+      "rankEligible": false,
+      "requestMapping": "typed-lossless-no-authority-injection",
+      "responseMapping": "typed-lossless-no-semantic-rewrite",
+      "secretPolicy": "redact-values-record-name-presence-and-policy",
+      "transport": {
+        "argv": [
+          "--respond"
+        ],
+        "executableSha256": "b8ebc1756088abbc1e394db72bdee0acdd380a2a584d05820b9b8365a35f242e",
+        "maxOutputBytes": 1048576,
+        "mutableFacts": [
+          "runtime-build"
+        ],
+        "protocol": "json-stdio-v0.1",
+        "timeoutMs": 5000
+      },
+      "version": "0.1.0"
+    },
+    {
+      "authority": {
+        "environment": "none",
+        "filesystem": "none",
+        "hiddenRetriesAllowed": false,
+        "network": "none",
+        "providerToolsAllowed": false,
+        "requestMapping": "typed-lossless-no-authority-injection",
+        "responseMapping": "typed-lossless-no-semantic-rewrite",
+        "secretPolicy": "redact-values-record-name-presence-and-policy",
+        "subprocess": "none"
+      },
+      "class": "deterministic-mock",
+      "contentIdentitySha256": "e304da341504518857ed375645db682c21e4a2472c202f40a5bf303574837a77",
+      "hiddenRetriesAllowed": false,
+      "id": "fixture-deterministic-mock-v0.1",
+      "kind": "genesis/genesisbench-adapter-v0.1",
+      "model": {
+        "artifactSha256": null,
+        "id": "genesisbench-fixture-model",
+        "immutable": true,
+        "revision": "v0.1"
+      },
+      "providerToolsAllowed": false,
+      "rankEligible": false,
+      "requestMapping": "typed-lossless-no-authority-injection",
+      "responseMapping": "typed-lossless-no-semantic-rewrite",
+      "secretPolicy": "redact-values-record-name-presence-and-policy",
+      "transport": {
+        "fixtureId": "generation-42-v0.1",
+        "mutableFacts": [
+          "fixture-id"
+        ],
+        "protocol": "request-hash-fixture-v0.1"
+      },
+      "version": "0.1.0"
+    }
+  ],
+  "capabilityPolicy": {
+    "ambientAuthorityAllowed": false,
+    "exactDeclaredAuthorityOnly": true,
+    "hiddenRetriesAllowed": false,
+    "providerToolsAllowed": false
+  },
+  "classes": [
+    "hosted-api",
+    "local-openai-compatible",
+    "direct-local-runtime",
+    "command-plugin",
+    "deterministic-mock"
+  ],
+  "conformance": {
+    "cancellationHardKillAndReap": true,
+    "replayReinvocationAllowed": false,
+    "sameRequestResponseVectors": true,
+    "timeoutHardKillAndReap": true
+  },
+  "contentIdentitySha256": "df18ea902400c39c6d145efe6f9886f40baade8950ff89b47131adb2eb5481c6",
+  "kind": "genesis/genesisbench-adapters-profile-v0.1",
+  "normalization": {
+    "allAttemptsRetained": true,
+    "request": "genesis/genesisbench-adapter-request-v0.1",
+    "response": "genesis/genesisbench-adapter-response-v0.1",
+    "semanticRewriteAllowed": false
+  },
+  "version": "0.1.0"
+}

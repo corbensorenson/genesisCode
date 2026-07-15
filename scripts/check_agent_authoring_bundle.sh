@@ -15,6 +15,7 @@ python3 scripts/lib/gc_agent_scoring.py --check --self-test
 python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test
 python3 scripts/lib/genesisbench_protocol.py --check --self-test
 python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
+python3 scripts/lib/genesisbench_front_door.py check --self-test
 python3 scripts/lib/genesisbench_analysis.py --check --self-test
 protocol_report="$(mktemp)"
 trap 'rm -f "$protocol_report"' EXIT
@@ -40,6 +41,7 @@ CANONICAL_TEST="crates/gc_cli/tests/cli_canonical_language_examples.rs"
 TASK_BENCHMARK_TEST="crates/gc_cli/tests/cli_agent_task_benchmarks.rs"
 SCORING_TEST="crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
 RUN_TEST="crates/gc_cli/tests/cli_agent_benchmark_run.rs"
+FRONT_DOOR_TEST="crates/gc_cli/tests/cli_genesisbench_front_door.rs"
 
 [[ -f "$BUNDLE" ]] || {
   echo "agent-authoring-bundle: missing bundle doc: $BUNDLE" >&2
@@ -69,8 +71,12 @@ RUN_TEST="crates/gc_cli/tests/cli_agent_benchmark_run.rs"
   echo "agent-authoring-bundle: missing benchmark-run production test: $RUN_TEST" >&2
   exit 1
 }
+[[ -f "$FRONT_DOOR_TEST" ]] || {
+  echo "agent-authoring-bundle: missing benchmark front-door production test: $FRONT_DOOR_TEST" >&2
+  exit 1
+}
 
-python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" "$SCORING_TEST" "$RUN_TEST" <<'PY'
+python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" "$SCORING_TEST" "$RUN_TEST" "$FRONT_DOOR_TEST" <<'PY'
 import pathlib
 import re
 import sys
@@ -82,6 +88,7 @@ canonical_test_path = pathlib.Path(sys.argv[4])
 task_benchmark_test_path = pathlib.Path(sys.argv[5])
 scoring_test_path = pathlib.Path(sys.argv[6])
 run_test_path = pathlib.Path(sys.argv[7])
+front_door_test_path = pathlib.Path(sys.argv[8])
 
 bundle = bundle_path.read_text(encoding="utf-8")
 agent_index_spec = agent_index_spec_path.read_text(encoding="utf-8")
@@ -90,6 +97,7 @@ canonical_test = canonical_test_path.read_text(encoding="utf-8")
 task_benchmark_test = task_benchmark_test_path.read_text(encoding="utf-8")
 scoring_test = scoring_test_path.read_text(encoding="utf-8")
 run_test = run_test_path.read_text(encoding="utf-8")
+front_door_test = front_door_test_path.read_text(encoding="utf-8")
 
 include_re = re.compile(r"^- `([^`]+)`\s*$", re.MULTILINE)
 included_paths = include_re.findall(bundle)
@@ -116,6 +124,14 @@ required_included = [
     "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
     "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
     "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
+    "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json",
+    "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_ADAPTER_REQUEST_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_ADAPTER_RESPONSE_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
     "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
@@ -150,6 +166,12 @@ required_included = [
     "benchmarks/genesisbench/v0.1/reference-agent/system.md",
     "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
     "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+    "benchmarks/genesisbench/v0.1/adapters/command-plugin.json",
+    "benchmarks/genesisbench/v0.1/adapters/command_fixture.py",
+    "benchmarks/genesisbench/v0.1/adapters/deterministic-mock.json",
+    "benchmarks/genesisbench/v0.1/adapters/direct-local-runtime.json",
+    "benchmarks/genesisbench/v0.1/adapters/hosted-api.json",
+    "benchmarks/genesisbench/v0.1/adapters/local-openai-compatible.json",
     "guides/genesisbench.qmd",
     "scripts/lib/gc_agent_scoring.py",
     "scripts/lib/gc_agent_scoring_contract.py",
@@ -161,10 +183,12 @@ required_included = [
     "scripts/lib/genesisbench_tracks.py",
     "scripts/lib/genesisbench_eligibility.py",
     "scripts/lib/genesisbench_reference_agent.py",
+    "scripts/lib/genesisbench_front_door.py",
     "scripts/lib/gc_held_out_evaluation.py",
     "scripts/lib/gc_capability_lease.py",
     "examples/agent_benchmark_reproducibility/run.json",
     "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
+    "crates/gc_cli/tests/cli_genesisbench_front_door.rs",
 ]
 missing_required = [p for p in required_included if p not in included_paths]
 if missing_required:
@@ -310,6 +334,29 @@ for path in reference_agent_paths:
         raise SystemExit(
             f"agent-authoring-bundle: agent index must expose fixed reference authority: {path}"
         )
+
+front_door_paths = (
+    "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
+    "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json",
+    "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
+)
+for path in front_door_paths:
+    if path not in agent_index_spec or path not in agent_index_cmd:
+        raise SystemExit(
+            f"agent-authoring-bundle: agent index must expose benchmark front-door authority: {path}"
+        )
+if (
+    'cargo_bin_cmd!("genesis")' not in front_door_test
+    or "adapterInvoked" not in front_door_test
+    or "a.gcbundle" not in front_door_test
+    or "failed_provider_attempt_is_retained" not in front_door_test
+):
+    raise SystemExit(
+        "agent-authoring-bundle: benchmark front door needs shipped CLI, no-reinvoke, deterministic-bundle, and retained-failure coverage"
+    )
 
 analysis_paths = (
     "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",

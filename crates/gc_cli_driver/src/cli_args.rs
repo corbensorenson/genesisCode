@@ -481,6 +481,12 @@ enum Cmd {
         max_workflows: usize,
     },
 
+    /// Inspect, execute, validate, score, replay, bundle, and submit GenesisBench runs.
+    Bench {
+        #[command(subcommand)]
+        cmd: BenchCmd,
+    },
+
     /// Generate a new Ed25519 signing key.
     Keygen {
         /// Output key TOML path.

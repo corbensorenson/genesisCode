@@ -618,6 +618,7 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::CliSchema => Ok(()),
         Cmd::AgentIndex { .. } => Ok(()),
         Cmd::AgentPlan { .. } => Ok(()),
+        Cmd::Bench { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
             ..

@@ -42,6 +42,7 @@ fn non_gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         "genesis/agent-symbol-search-v0.3",
         "genesis/agent-card-v0.3",
         "genesis/agent-plan-v0.1",
+        "genesis/bench-v0.1",
         "genesis/warm-session-v0.2",
         "genesis/keygen-v0.2",
         "genesis/sign-v0.2",

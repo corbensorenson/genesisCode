@@ -60,6 +60,12 @@ ANALYSIS_REPORT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.sch
 REFERENCE_AGENT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json"
 REFERENCE_ABLATIONS_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json"
 REFERENCE_TRACE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json"
+ADAPTER_PROFILE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json"
+ADAPTER_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json"
+ADAPTER_REQUEST_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTER_REQUEST_v0.1.schema.json"
+ADAPTER_RESPONSE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTER_RESPONSE_v0.1.schema.json"
+EXECUTION_RUN_SCHEMA = ROOT / "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json"
+BUNDLE_MANIFEST_SCHEMA = ROOT / "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json"
 RUN_EXAMPLE = ROOT / "examples/agent_benchmark_reproducibility/run.json"
 ATTESTATION_FIXTURE = ROOT / "benchmarks/genesisbench/v0.1/contamination.fixture.json"
 TASK_BENCHMARK = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
@@ -685,6 +691,12 @@ def main() -> int:
     validate_schema(REFERENCE_AGENT_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-reference-agent-v0.1.json")
     validate_schema(REFERENCE_ABLATIONS_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-reference-agent-ablations-v0.1.json")
     validate_schema(REFERENCE_TRACE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-reference-agent-trace-v0.1.json")
+    validate_schema(ADAPTER_PROFILE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-adapters-profile-v0.1.json")
+    validate_schema(ADAPTER_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-adapter-v0.1.json")
+    validate_schema(ADAPTER_REQUEST_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-adapter-request-v0.1.json")
+    validate_schema(ADAPTER_RESPONSE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-adapter-response-v0.1.json")
+    validate_schema(EXECUTION_RUN_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-execution-run-v0.1.json")
+    validate_schema(BUNDLE_MANIFEST_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-bundle-manifest-v0.1.json")
     reference_agent = render_reference_agent()
     validate_reference_agent(reference_agent)
     if args.refresh_profile:

@@ -24,6 +24,11 @@ The normative authorities are:
 - [Fixed reference-agent schema](../docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json)
 - [Controlled ablations](../docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json)
 - [Reference trace schema](../docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json)
+- [Canonical front door](../docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md)
+- [Closed adapter profile](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.json)
+- [Closed adapter-profile schema](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json)
+- [Execution-run schema](../docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json)
+- [Deterministic bundle schema](../docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json)
 - [Task benchmark](../benchmarks/agent_tasks/v0.1/suite.json)
 - [Scoring authority](../docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json)
 - [Run schema](../docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json)
@@ -79,7 +84,47 @@ python3 scripts/lib/genesisbench_reference_agent.py \
   --plan --case generation-small --ablation retrieval
 ```
 
-The compiler is not a model adapter. Provider/local adapters, canonical run execution, and full run-bundle emission belong to R1.4.l and must preserve this plan and trace contract exactly.
+The compiler is not a model adapter. `genesis bench` preserves this plan while supplying the canonical provider/local transport, execution, replay, and bundle layer.
+
+## Execute through one front door
+
+Inspect the public suite and closed adapter classes without model execution:
+
+```bash
+genesis --json bench inspect --case generation-small
+python3 scripts/lib/genesisbench_front_door.py check --self-test
+```
+
+Run the deterministic mock only for harness conformance; it is permanently unranked:
+
+```bash
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench run \
+  --case generation-small \
+  --adapter benchmarks/genesisbench/v0.1/adapters/deterministic-mock.json \
+  --out .genesis/bench/conformance
+genesis --json bench validate-run \
+  --run .genesis/bench/conformance/run.json
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench replay \
+  --run .genesis/bench/conformance/run.json
+```
+
+The five adapter classes are hosted API, loopback OpenAI-compatible server, direct local runtime, command plugin, and deterministic mock. They share one strict request/response contract. Adapters may frame bytes for transport, but cannot alter candidate semantics, add provider tools, broaden context, hide retries, or emit undeclared provider facts. Hosted adapters receive one exact HTTPS endpoint and one named credential; local HTTP is loopback-only; process adapters are executable-digest-bound, use finite output and wall limits, and kill and reap their process group on timeout or cancellation. A direct local runtime additionally verifies the model artifact digest.
+
+Every attempt is retained. A provider failure, timeout, or cancellation becomes an immutable invalid run rather than disappearing. Secret values never enter evidence; only the declared variable name and presence are recorded. Replay validates all fields and bytes without adapter, endpoint, credential, executable, or model access, then independently rescores successful candidates.
+
+Bundle and stage the evidence locally:
+
+```bash
+genesis --json bench bundle \
+  --run .genesis/bench/conformance/run.json \
+  --out .genesis/bench/conformance.gcbundle
+genesis --json bench submit \
+  --bundle .genesis/bench/conformance.gcbundle \
+  --outbox .genesis/bench/outbox \
+  --submitter example-lab
+```
+
+The bundle is byte-reproducible gzip/USTAR with fixed metadata and a closed artifact manifest. `submit` performs no network operation and writes a content-addressed immutable outbox envelope. This transport-neutral execution evidence is not yet a ranked result: registry admission must independently validate and rescore it and bind signed submitter, track, contamination, cohort, and hardware evidence.
 
 ## Analyze lineages, not repeated conditions
 
@@ -218,7 +263,7 @@ Never collapse these labels into one leaderboard. The closed cohort record binds
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, scorer, run bundle, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. The canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, scorer, canonical seven-command CLI, five closed adapter classes, strict replay, deterministic run bundles, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. The signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 

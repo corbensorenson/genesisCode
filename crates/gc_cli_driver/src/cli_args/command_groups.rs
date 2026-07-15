@@ -1,4 +1,89 @@
 #[derive(Subcommand)]
+enum BenchCmd {
+    /// List the closed benchmark profile, cases, adapter classes, or one exact binding.
+    Inspect {
+        /// Optional public case identifier to inspect.
+        #[arg(long)]
+        case: Option<String>,
+        /// Optional adapter manifest to validate and inspect.
+        #[arg(long)]
+        adapter: Option<PathBuf>,
+    },
+
+    /// Execute one case through one declared adapter and emit an immutable run directory.
+    Run {
+        /// Public benchmark case identifier.
+        #[arg(long)]
+        case: String,
+        /// Closed GenesisBench adapter manifest.
+        #[arg(long)]
+        adapter: PathBuf,
+        /// New run directory. Existing paths are never overwritten.
+        #[arg(long)]
+        out: PathBuf,
+        /// Digest-bound executable for direct-local-runtime or command-plugin adapters.
+        #[arg(long)]
+        adapter_executable: Option<PathBuf>,
+        /// Digest-bound model artifact required by direct-local-runtime adapters.
+        #[arg(long)]
+        model_artifact: Option<PathBuf>,
+        /// Fixed reference-agent ablation condition.
+        #[arg(long, default_value = "retrieval", value_parser = ["retrieval"])]
+        ablation: String,
+    },
+
+    /// Validate every field, identity, binding, and artifact byte in a canonical run.
+    ValidateRun {
+        /// Canonical `run.json` path.
+        #[arg(long)]
+        run: PathBuf,
+    },
+
+    /// Score one candidate with the existing GenesisBench scoring authority.
+    Score {
+        /// Public benchmark case identifier.
+        #[arg(long)]
+        case: String,
+        /// Candidate directory to score.
+        #[arg(long)]
+        candidate: PathBuf,
+        /// Optional new score artifact path. Existing paths are never overwritten.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+
+    /// Replay a run without model or adapter access and independently rescore it.
+    Replay {
+        /// Canonical `run.json` path.
+        #[arg(long)]
+        run: PathBuf,
+    },
+
+    /// Package a validated run as a byte-reproducible immutable bundle.
+    Bundle {
+        /// Canonical `run.json` path.
+        #[arg(long)]
+        run: PathBuf,
+        /// New `.gcbundle` output path.
+        #[arg(long)]
+        out: PathBuf,
+    },
+
+    /// Validate and place a bundle in a local immutable submission outbox.
+    Submit {
+        /// Deterministic `.gcbundle` path.
+        #[arg(long)]
+        bundle: PathBuf,
+        /// Local immutable outbox directory.
+        #[arg(long)]
+        outbox: PathBuf,
+        /// Stable submitter identifier; signing is added by the result registry milestone.
+        #[arg(long)]
+        submitter: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum AgentSessionCmd {
     /// Capture an immutable package snapshot and create an isolated transaction workspace.
     Begin {

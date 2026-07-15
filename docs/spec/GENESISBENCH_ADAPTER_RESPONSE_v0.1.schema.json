@@ -1,0 +1,281 @@
+{
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "maximum": 67108864,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-adapter-response-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidateFiles": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "contentBase64": {
+            "contentEncoding": "base64",
+            "maxLength": 11184812,
+            "type": "string"
+          },
+          "path": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "required": [
+          "path",
+          "contentBase64"
+        ],
+        "type": "object"
+      },
+      "maxItems": 128,
+      "type": "array"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "error": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$",
+              "type": "string"
+            },
+            "message": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "finishReason": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-adapter-response-v0.1"
+    },
+    "providerFacts": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "fixture-id": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "fixture-id"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "runtime-build": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "runtime-build"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "provider-request-id": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "service-tier": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "system-fingerprint": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "provider-request-id",
+            "service-tier",
+            "system-fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "provider-request-id": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "server-build": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "service-tier": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "system-fingerprint": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "provider-request-id",
+            "service-tier",
+            "server-build",
+            "system-fingerprint"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "requestIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "status": {
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed-out"
+      ]
+    },
+    "usage": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "inputTokens": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "outputTokens": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "inputTokens",
+            "outputTokens"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {},
+          "required": [],
+          "type": "object"
+        }
+      ]
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "requestIdentitySha256",
+    "status",
+    "finishReason",
+    "candidateFiles",
+    "usage",
+    "providerFacts",
+    "error",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench normalized adapter response v0.1",
+  "type": "object"
+}

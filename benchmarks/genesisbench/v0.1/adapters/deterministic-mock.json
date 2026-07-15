@@ -1,0 +1,37 @@
+{
+  "authority": {
+    "environment": "none",
+    "filesystem": "none",
+    "hiddenRetriesAllowed": false,
+    "network": "none",
+    "providerToolsAllowed": false,
+    "requestMapping": "typed-lossless-no-authority-injection",
+    "responseMapping": "typed-lossless-no-semantic-rewrite",
+    "secretPolicy": "redact-values-record-name-presence-and-policy",
+    "subprocess": "none"
+  },
+  "class": "deterministic-mock",
+  "contentIdentitySha256": "e304da341504518857ed375645db682c21e4a2472c202f40a5bf303574837a77",
+  "hiddenRetriesAllowed": false,
+  "id": "fixture-deterministic-mock-v0.1",
+  "kind": "genesis/genesisbench-adapter-v0.1",
+  "model": {
+    "artifactSha256": null,
+    "id": "genesisbench-fixture-model",
+    "immutable": true,
+    "revision": "v0.1"
+  },
+  "providerToolsAllowed": false,
+  "rankEligible": false,
+  "requestMapping": "typed-lossless-no-authority-injection",
+  "responseMapping": "typed-lossless-no-semantic-rewrite",
+  "secretPolicy": "redact-values-record-name-presence-and-policy",
+  "transport": {
+    "fixtureId": "generation-42-v0.1",
+    "mutableFacts": [
+      "fixture-id"
+    ],
+    "protocol": "request-hash-fixture-v0.1"
+  },
+  "version": "0.1.0"
+}
