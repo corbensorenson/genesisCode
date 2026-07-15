@@ -14,25 +14,25 @@
       "bytes": 12088,
       "id": "agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "e6617e3b2bf29666b3a84c2439b0772d035ebc1a297022210c0354b3aa805862"
+      "sha256": "b75147d25cdb21c5f650e54a617ed5097ef85240a1d3948514f7ea0c80e9a29d"
     },
     {
       "bytes": 36175,
       "id": "agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
+      "sha256": "ee5746009d99b4d0c14d00b6f2e5995bda4b50b59d87c9a08102fa5dcc22ff17"
     },
     {
       "bytes": 52979,
       "id": "agent-task-benchmark",
       "path": "benchmarks/agent_tasks/v0.1/suite.json",
-      "sha256": "bba9152a2ae96e7bec14c017c5dab2b77db77d14deb80da019287efd021db0d4"
+      "sha256": "683710054ad60b476031fb1f41d618ff859f9f49acec4a70da0347abbfc60104"
     },
     {
       "bytes": 12919,
       "id": "agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "10cdb146ed40b20d554117b427dcb5fa1402dc703ba079b6d719c43c61ef7a82"
+      "sha256": "ace05b8670a0f09455e215f669463fa9995e2c08df01ff83974e6c2f35d54762"
     },
     {
       "bytes": 6836,
@@ -62,7 +62,7 @@
       "bytes": 5323,
       "id": "benchmark-scoring",
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "7d13f6a7247b275705c765a387c84c6b5602f7d1245764ff36d519367b563b45"
+      "sha256": "22d7994759fcba83002d2c2cbef3174bce76480ddf1c856dfb4a223c4bf39466"
     },
     {
       "bytes": 7019,
@@ -140,7 +140,7 @@
       "bytes": 4310,
       "id": "held-out-evaluation",
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "9dfe0d5007e4cc006543fb2f4a0b471d38881a5d7bf0d11d6335ee23da28540d"
+      "sha256": "2efd05114f365ce33b98c7acd217f316cce198deeb581170bc08ea92eb94fd7b"
     },
     {
       "bytes": 2325,
@@ -188,7 +188,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "9c1a85c2f291b9bf1efb5ef3e1ecc9a10ecec735c3af1f6459f40827043e9e8d",
+  "contentIdentitySha256": "2bdd11fbae0492207f87a6027540b4772035285cab1bcce1ec94d7daf942bf79",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [

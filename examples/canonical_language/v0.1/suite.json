@@ -1,165 +1,96 @@
 {
+  "contentIdentitySha256": "9173fd64f2d83768b64df40c062a9b38362c29d175f1b4e340d8c8e1964ff8c3",
   "kind": "genesis/canonical-example-suite-v0.1",
-  "version": "0.1.0",
-  "suiteId": "GC-CANONICAL-EXAMPLES-v0.1",
-  "profile": {
-    "id": "GC-AGENT-v0.3",
-    "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
-  },
-  "requiredConcepts": [
-    "contracts",
-    "effects",
-    "modules",
-    "packages",
-    "patches",
-    "persistent-collections",
-    "pure-functions",
-    "replay",
-    "resource-failures",
-    "sealed-errors",
-    "tests"
-  ],
   "pairs": [
     {
-      "id": "contracts",
+      "capabilities": [],
       "concepts": [
         "contracts"
       ],
-      "lesson": "Contract dispatch accepts declared operations and returns an unforgeable UNHANDLED value for unknown messages.",
-      "capabilities": [],
-      "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/contracts/valid",
-        "files": [
-          {
-            "path": "main.gc",
-            "sha256": "5f27ebca04407bc97d3dd3f29bafcb5e3aeb00fb80cc387f9e4eb65166eb2b4f"
-          }
-        ],
-        "expectedOutcome": "accepted",
-        "steps": [
-          {
-            "id": "execute",
-            "argv": [
-              "--json",
-              "eval",
-              "main.gc"
-            ],
-            "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/eval-v0.2",
-              "assertions": [
-                {
-                  "pointer": "/data/value",
-                  "operator": "equals",
-                  "value": "42"
-                }
-              ]
-            }
-          }
-        ]
-      },
+      "id": "contracts",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/contracts/invalid",
+        "expectedOutcome": "sealed-rejection",
         "files": [
           {
             "path": "main.gc",
             "sha256": "d1bbcacb8d7b8b866ed0c11ccfc13b5f0fc1707fc455fd1cccf7f535559a2eb9"
           }
         ],
-        "expectedOutcome": "sealed-rejection",
+        "root": "examples/canonical_language/v0.1/pairs/contracts/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "eval",
               "main.gc"
             ],
             "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/eval-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/value",
                   "operator": "contains",
+                  "pointer": "/data/value",
                   "value": "unhandled (msg canonical/contracts::missing nil)"
                 }
-              ]
-            }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/eval-v0.2",
+              "ok": true
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Contract dispatch accepts declared operations and returns an unforgeable UNHANDLED value for unknown messages.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "main.gc",
+        "after": "canonical/contracts::missing)) nil",
         "before": "canonical/contracts::ok)) nil",
-        "after": "canonical/contracts::missing)) nil"
+        "kind": "replace-once",
+        "path": "main.gc"
       },
-      "repair": "Restore the message operation to canonical/contracts::ok; do not add a catch-all contract branch."
+      "repair": "Restore the message operation to canonical/contracts::ok; do not add a catch-all contract branch.",
+      "valid": {
+        "expectedOutcome": "accepted",
+        "files": [
+          {
+            "path": "main.gc",
+            "sha256": "5f27ebca04407bc97d3dd3f29bafcb5e3aeb00fb80cc387f9e4eb65166eb2b4f"
+          }
+        ],
+        "root": "examples/canonical_language/v0.1/pairs/contracts/valid",
+        "steps": [
+          {
+            "argv": [
+              "--json",
+              "eval",
+              "main.gc"
+            ],
+            "expect": {
+              "assertions": [
+                {
+                  "operator": "equals",
+                  "pointer": "/data/value",
+                  "value": "42"
+                }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/eval-v0.2",
+              "ok": true
+            },
+            "id": "execute"
+          }
+        ]
+      }
     },
     {
-      "id": "effects",
-      "concepts": [
-        "effects"
-      ],
-      "lesson": "Filesystem effects require an explicit least-authority capability and emit a deterministic effect log.",
       "capabilities": [
         "io/fs::read"
       ],
-      "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/effects/valid",
-        "files": [
-          {
-            "path": "caps.toml",
-            "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-          },
-          {
-            "path": "data.txt",
-            "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
-          },
-          {
-            "path": "program.gc",
-            "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-          }
-        ],
-        "expectedOutcome": "accepted",
-        "steps": [
-          {
-            "id": "execute",
-            "argv": [
-              "--json",
-              "run",
-              "program.gc",
-              "--caps",
-              "caps.toml",
-              "--log",
-              "effect.gclog"
-            ],
-            "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/run-v0.2",
-              "assertions": [
-                {
-                  "pointer": "/data/denied",
-                  "operator": "equals",
-                  "value": false
-                },
-                {
-                  "pointer": "/data/value",
-                  "operator": "equals",
-                  "value": "22"
-                }
-              ]
-            }
-          }
-        ]
-      },
+      "concepts": [
+        "effects"
+      ],
+      "id": "effects",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/effects/invalid",
+        "expectedOutcome": "capability-denial",
         "files": [
           {
             "path": "caps.toml",
@@ -174,10 +105,9 @@
             "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
           }
         ],
-        "expectedOutcome": "capability-denial",
+        "root": "examples/canonical_language/v0.1/pairs/effects/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "run",
@@ -188,88 +118,97 @@
               "effect.gclog"
             ],
             "expect": {
-              "exitCode": 41,
-              "ok": false,
-              "kind": "genesis/run-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/denied",
                   "operator": "equals",
+                  "pointer": "/data/denied",
                   "value": true
                 },
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/caps/denied"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "caps/denied"
                 }
-              ]
-            }
+              ],
+              "exitCode": 41,
+              "kind": "genesis/run-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Filesystem effects require an explicit least-authority capability and emit a deterministic effect log.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "caps.toml",
+        "after": "allow = []\n",
         "before": "allow = [\"io/fs::read\"]\n\n[op.\"io/fs::read\"]\nbase_dir = \".\"\n",
-        "after": "allow = []\n"
+        "kind": "replace-once",
+        "path": "caps.toml"
       },
-      "repair": "Restore the reviewed io/fs::read capability entry rather than broadening the policy beyond this operation."
+      "repair": "Restore the reviewed io/fs::read capability entry rather than broadening the policy beyond this operation.",
+      "valid": {
+        "expectedOutcome": "accepted",
+        "files": [
+          {
+            "path": "caps.toml",
+            "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+          },
+          {
+            "path": "data.txt",
+            "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+          },
+          {
+            "path": "program.gc",
+            "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+          }
+        ],
+        "root": "examples/canonical_language/v0.1/pairs/effects/valid",
+        "steps": [
+          {
+            "argv": [
+              "--json",
+              "run",
+              "program.gc",
+              "--caps",
+              "caps.toml",
+              "--log",
+              "effect.gclog"
+            ],
+            "expect": {
+              "assertions": [
+                {
+                  "operator": "equals",
+                  "pointer": "/data/denied",
+                  "value": false
+                },
+                {
+                  "operator": "equals",
+                  "pointer": "/data/value",
+                  "value": "22"
+                }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/run-v0.2",
+              "ok": true
+            },
+            "id": "execute"
+          }
+        ]
+      }
     },
     {
-      "id": "modules",
+      "capabilities": [],
       "concepts": [
         "modules"
       ],
-      "lesson": "Every package module path is base-relative, content declared, and checked as part of one module graph.",
-      "capabilities": [],
-      "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/modules/valid",
-        "files": [
-          {
-            "path": "app.gc",
-            "sha256": "12923c265baf037543195f3bf62183933287566edbf53e13c0336e7ee09b1cd9"
-          },
-          {
-            "path": "math.gc",
-            "sha256": "6109160345c108cd0185e07baa94c3fc294f3afa831d8c0d22a4d7dcd477d7c9"
-          },
-          {
-            "path": "package.toml",
-            "sha256": "8b88d89fc7c934a1ca41e0fb0280a4ba83b301cfa911639bd59c84a3e7a36e00"
-          }
-        ],
-        "expectedOutcome": "accepted",
-        "steps": [
-          {
-            "id": "execute",
-            "argv": [
-              "--json",
-              "typecheck",
-              "--pkg",
-              "package.toml"
-            ],
-            "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/typecheck-v0.2",
-              "assertions": [
-                {
-                  "pointer": "/data/strict_sound",
-                  "operator": "equals",
-                  "value": false
-                }
-              ]
-            }
-          }
-        ]
-      },
+      "id": "modules",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/modules/invalid",
+        "expectedOutcome": "diagnostic-rejection",
         "files": [
           {
             "path": "app.gc",
@@ -284,10 +223,9 @@
             "sha256": "8210cdab380f2b2910a8220a941c67177c9b7eb1b6397807d483ffd8ce5ca3c0"
           }
         ],
-        "expectedOutcome": "diagnostic-rejection",
+        "root": "examples/canonical_language/v0.1/pairs/modules/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "typecheck",
@@ -295,79 +233,84 @@
               "package.toml"
             ],
             "expect": {
-              "exitCode": 70,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/io/error"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "io/error"
                 }
-              ]
-            }
+              ],
+              "exitCode": 70,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Every package module path is base-relative, content declared, and checked as part of one module graph.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "package.toml",
+        "after": "path = \"missing.gc\"",
         "before": "path = \"app.gc\"",
-        "after": "path = \"missing.gc\""
+        "kind": "replace-once",
+        "path": "package.toml"
       },
-      "repair": "Restore the declared app.gc module path; do not use an absolute or host-dependent replacement path."
-    },
-    {
-      "id": "packages",
-      "concepts": [
-        "packages"
-      ],
-      "lesson": "Package manifests use the frozen schema and bind modules, dependencies, limits, and obligations explicitly.",
-      "capabilities": [],
+      "repair": "Restore the declared app.gc module path; do not use an absolute or host-dependent replacement path.",
       "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/packages/valid",
+        "expectedOutcome": "accepted",
         "files": [
           {
-            "path": "case.toml",
-            "sha256": "4051ace2fbe37efdcb9eaf792bd55d2ed01ade8fb645e0b6415f22bc7da6dfc8"
+            "path": "app.gc",
+            "sha256": "12923c265baf037543195f3bf62183933287566edbf53e13c0336e7ee09b1cd9"
           },
           {
-            "path": "main.gc",
-            "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53"
+            "path": "math.gc",
+            "sha256": "6109160345c108cd0185e07baa94c3fc294f3afa831d8c0d22a4d7dcd477d7c9"
+          },
+          {
+            "path": "package.toml",
+            "sha256": "8b88d89fc7c934a1ca41e0fb0280a4ba83b301cfa911639bd59c84a3e7a36e00"
           }
         ],
-        "expectedOutcome": "accepted",
+        "root": "examples/canonical_language/v0.1/pairs/modules/valid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "typecheck",
               "--pkg",
-              "case.toml"
+              "package.toml"
             ],
             "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/typecheck-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/strict_sound",
                   "operator": "equals",
+                  "pointer": "/data/strict_sound",
                   "value": false
                 }
-              ]
-            }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/typecheck-v0.2",
+              "ok": true
+            },
+            "id": "execute"
           }
         ]
-      },
+      }
+    },
+    {
+      "capabilities": [],
+      "concepts": [
+        "packages"
+      ],
+      "id": "packages",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/packages/invalid",
+        "expectedOutcome": "diagnostic-rejection",
         "files": [
           {
             "path": "case.toml",
@@ -378,10 +321,9 @@
             "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53"
           }
         ],
-        "expectedOutcome": "diagnostic-rejection",
+        "root": "examples/canonical_language/v0.1/pairs/packages/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "typecheck",
@@ -389,84 +331,80 @@
               "case.toml"
             ],
             "expect": {
-              "exitCode": 10,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/manifest/error"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "manifest/error"
                 }
-              ]
-            }
+              ],
+              "exitCode": 10,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Package manifests use the frozen schema and bind modules, dependencies, limits, and obligations explicitly.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "case.toml",
+        "after": "schema = 2",
         "before": "schema = 1",
-        "after": "schema = 2"
+        "kind": "replace-once",
+        "path": "case.toml"
       },
-      "repair": "Restore schema 1, the only package manifest schema accepted by this frozen language profile."
-    },
-    {
-      "id": "patches",
-      "concepts": [
-        "patches"
-      ],
-      "lesson": "Semantic patches target canonical AST paths rather than performing ambiguous textual replacement.",
-      "capabilities": [],
+      "repair": "Restore schema 1, the only package manifest schema accepted by this frozen language profile.",
       "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/patches/valid",
+        "expectedOutcome": "accepted",
         "files": [
           {
-            "path": "change.gcpatch",
-            "sha256": "ca18760f13dd8e7573c37a803c143167771877761250ac7a44edc469a4d1e9a4"
+            "path": "case.toml",
+            "sha256": "4051ace2fbe37efdcb9eaf792bd55d2ed01ade8fb645e0b6415f22bc7da6dfc8"
           },
           {
             "path": "main.gc",
-            "sha256": "9d6b66b1842751a6ebb5a680b8e4fc84711812c5fcf42e827be01dd7ca470be7"
-          },
-          {
-            "path": "package.toml",
-            "sha256": "8973f4bad487e56ff6f701a5e27df1eec4f7691ffa7e02e31896f94642f2fe99"
+            "sha256": "87c7b7858d255114ab6bc4dbe85cb7e9b47a5f0ae086c62dda04479a8086ea53"
           }
         ],
-        "expectedOutcome": "accepted",
+        "root": "examples/canonical_language/v0.1/pairs/packages/valid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
-              "apply-patch",
-              "change.gcpatch",
+              "typecheck",
               "--pkg",
-              "package.toml"
+              "case.toml"
             ],
             "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/apply-patch-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/patch",
                   "operator": "equals",
-                  "value": "change.gcpatch"
+                  "pointer": "/data/strict_sound",
+                  "value": false
                 }
-              ]
-            }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/typecheck-v0.2",
+              "ok": true
+            },
+            "id": "execute"
           }
         ]
-      },
+      }
+    },
+    {
+      "capabilities": [],
+      "concepts": [
+        "patches"
+      ],
+      "id": "patches",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/patches/invalid",
+        "expectedOutcome": "diagnostic-rejection",
         "files": [
           {
             "path": "change.gcpatch",
@@ -481,10 +419,9 @@
             "sha256": "8973f4bad487e56ff6f701a5e27df1eec4f7691ffa7e02e31896f94642f2fe99"
           }
         ],
-        "expectedOutcome": "diagnostic-rejection",
+        "root": "examples/canonical_language/v0.1/pairs/patches/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "apply-patch",
@@ -493,263 +430,260 @@
               "package.toml"
             ],
             "expect": {
-              "exitCode": 10,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/patch/invalid"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "patch/invalid"
                 }
-              ]
-            }
+              ],
+              "exitCode": 10,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Semantic patches target canonical AST paths rather than performing ambiguous textual replacement.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "change.gcpatch",
+        "after": "[:form 99]",
         "before": "[:form 1]",
-        "after": "[:form 99]"
+        "kind": "replace-once",
+        "path": "change.gcpatch"
       },
-      "repair": "Restore the existing AST target [:form 1]; do not weaken patch preconditions or target validation."
+      "repair": "Restore the existing AST target [:form 1]; do not weaken patch preconditions or target validation.",
+      "valid": {
+        "expectedOutcome": "accepted",
+        "files": [
+          {
+            "path": "change.gcpatch",
+            "sha256": "ca18760f13dd8e7573c37a803c143167771877761250ac7a44edc469a4d1e9a4"
+          },
+          {
+            "path": "main.gc",
+            "sha256": "9d6b66b1842751a6ebb5a680b8e4fc84711812c5fcf42e827be01dd7ca470be7"
+          },
+          {
+            "path": "package.toml",
+            "sha256": "8973f4bad487e56ff6f701a5e27df1eec4f7691ffa7e02e31896f94642f2fe99"
+          }
+        ],
+        "root": "examples/canonical_language/v0.1/pairs/patches/valid",
+        "steps": [
+          {
+            "argv": [
+              "--json",
+              "apply-patch",
+              "change.gcpatch",
+              "--pkg",
+              "package.toml"
+            ],
+            "expect": {
+              "assertions": [
+                {
+                  "operator": "equals",
+                  "pointer": "/data/patch",
+                  "value": "change.gcpatch"
+                }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/apply-patch-v0.2",
+              "ok": true
+            },
+            "id": "execute"
+          }
+        ]
+      }
     },
     {
-      "id": "persistent-collections",
+      "capabilities": [],
       "concepts": [
         "persistent-collections"
       ],
-      "lesson": "Persistent vector and map primitives compose without mutation and enforce exact operand types.",
-      "capabilities": [],
-      "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/persistent-collections/valid",
-        "files": [
-          {
-            "path": "main.gc",
-            "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
-          }
-        ],
-        "expectedOutcome": "accepted",
-        "steps": [
-          {
-            "id": "execute",
-            "argv": [
-              "--json",
-              "eval",
-              "main.gc"
-            ],
-            "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/eval-v0.2",
-              "assertions": [
-                {
-                  "pointer": "/data/value",
-                  "operator": "equals",
-                  "value": "3"
-                }
-              ]
-            }
-          }
-        ]
-      },
+      "id": "persistent-collections",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/persistent-collections/invalid",
+        "expectedOutcome": "diagnostic-rejection",
         "files": [
           {
             "path": "main.gc",
             "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
           }
         ],
-        "expectedOutcome": "diagnostic-rejection",
+        "root": "examples/canonical_language/v0.1/pairs/persistent-collections/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "eval",
               "main.gc"
             ],
             "expect": {
-              "exitCode": 20,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/eval/error"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "eval/error"
                 }
-              ]
-            }
+              ],
+              "exitCode": 20,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Persistent vector and map primitives compose without mutation and enforce exact operand types.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "main.gc",
+        "after": "vec/get v \"2\"",
         "before": "vec/get v 2",
-        "after": "vec/get v \"2\""
+        "kind": "replace-once",
+        "path": "main.gc"
       },
-      "repair": "Restore the integer vector index 2; do not coerce strings or change the collection contract."
-    },
-    {
-      "id": "pure-functions",
-      "concepts": [
-        "pure-functions"
-      ],
-      "lesson": "Lexically scoped functions evaluate deterministically and cannot resolve an undeclared binding.",
-      "capabilities": [],
+      "repair": "Restore the integer vector index 2; do not coerce strings or change the collection contract.",
       "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/pure-functions/valid",
+        "expectedOutcome": "accepted",
         "files": [
           {
             "path": "main.gc",
-            "sha256": "2ef0b271e70e241978b5a64466f537d7c751e679f044f93049f50277707d3694"
+            "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
           }
         ],
-        "expectedOutcome": "accepted",
+        "root": "examples/canonical_language/v0.1/pairs/persistent-collections/valid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "eval",
               "main.gc"
             ],
             "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/eval-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/value",
                   "operator": "equals",
-                  "value": "42"
+                  "pointer": "/data/value",
+                  "value": "3"
                 }
-              ]
-            }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/eval-v0.2",
+              "ok": true
+            },
+            "id": "execute"
           }
         ]
-      },
+      }
+    },
+    {
+      "capabilities": [],
+      "concepts": [
+        "pure-functions"
+      ],
+      "id": "pure-functions",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/pure-functions/invalid",
+        "expectedOutcome": "diagnostic-rejection",
         "files": [
           {
             "path": "main.gc",
             "sha256": "8c136d066184f6f4ae013c5bf411dc2f11191c04af1dad0e852ff19513993428"
           }
         ],
-        "expectedOutcome": "diagnostic-rejection",
+        "root": "examples/canonical_language/v0.1/pairs/pure-functions/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "eval",
               "main.gc"
             ],
             "expect": {
-              "exitCode": 20,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/eval/error"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "eval/error"
                 },
                 {
-                  "pointer": "/error/context/facts/kernel_kind",
                   "operator": "equals",
+                  "pointer": "/error/context/facts/kernel_kind",
                   "value": "Unbound"
                 }
-              ]
-            }
+              ],
+              "exitCode": 20,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Lexically scoped functions evaluate deterministically and cannot resolve an undeclared binding.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "main.gc",
+        "after": "(missing 21)",
         "before": "(double 21)",
-        "after": "(missing 21)"
+        "kind": "replace-once",
+        "path": "main.gc"
       },
-      "repair": "Restore the local call target double; do not introduce a global fallback for an unbound symbol."
+      "repair": "Restore the local call target double; do not introduce a global fallback for an unbound symbol.",
+      "valid": {
+        "expectedOutcome": "accepted",
+        "files": [
+          {
+            "path": "main.gc",
+            "sha256": "2ef0b271e70e241978b5a64466f537d7c751e679f044f93049f50277707d3694"
+          }
+        ],
+        "root": "examples/canonical_language/v0.1/pairs/pure-functions/valid",
+        "steps": [
+          {
+            "argv": [
+              "--json",
+              "eval",
+              "main.gc"
+            ],
+            "expect": {
+              "assertions": [
+                {
+                  "operator": "equals",
+                  "pointer": "/data/value",
+                  "value": "42"
+                }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/eval-v0.2",
+              "ok": true
+            },
+            "id": "execute"
+          }
+        ]
+      }
     },
     {
-      "id": "replay",
-      "concepts": [
-        "replay"
-      ],
-      "lesson": "Replay validates every committed effect fact and rejects even a one-field policy-decision mutation.",
       "capabilities": [
         "io/fs::read"
       ],
-      "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/replay/valid",
-        "files": [
-          {
-            "path": "caps.toml",
-            "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-          },
-          {
-            "path": "data.txt",
-            "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
-          },
-          {
-            "path": "program.gc",
-            "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-          },
-          {
-            "path": "run.gclog",
-            "sha256": "125db3e5701a6fe950d1355f424d85123d2a4c85fdccedfdaba50a50dd4d76a2"
-          }
-        ],
-        "expectedOutcome": "accepted",
-        "steps": [
-          {
-            "id": "execute",
-            "argv": [
-              "--json",
-              "replay",
-              "program.gc",
-              "--log",
-              "run.gclog"
-            ],
-            "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/replay-v0.2",
-              "assertions": [
-                {
-                  "pointer": "/data/value",
-                  "operator": "equals",
-                  "value": "22"
-                }
-              ]
-            }
-          }
-        ]
-      },
+      "concepts": [
+        "replay"
+      ],
+      "id": "replay",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/replay/invalid",
+        "expectedOutcome": "replay-mismatch",
         "files": [
           {
             "path": "caps.toml",
@@ -768,10 +702,9 @@
             "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
           }
         ],
-        "expectedOutcome": "replay-mismatch",
+        "root": "examples/canonical_language/v0.1/pairs/replay/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "replay",
@@ -780,86 +713,98 @@
               "run.gclog"
             ],
             "expect": {
-              "exitCode": 40,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/replay/mismatch"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "replay/mismatch"
                 }
-              ]
-            }
+              ],
+              "exitCode": 40,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Replay validates every committed effect fact and rejects even a one-field policy-decision mutation.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "run.gclog",
+        "after": ":decision :deny",
         "before": ":decision :allow",
-        "after": ":decision :deny"
+        "kind": "replace-once",
+        "path": "run.gclog"
       },
-      "repair": "Restore the logged allow decision; never edit a log to make replay pass against changed effect facts."
+      "repair": "Restore the logged allow decision; never edit a log to make replay pass against changed effect facts.",
+      "valid": {
+        "expectedOutcome": "accepted",
+        "files": [
+          {
+            "path": "caps.toml",
+            "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+          },
+          {
+            "path": "data.txt",
+            "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+          },
+          {
+            "path": "program.gc",
+            "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+          },
+          {
+            "path": "run.gclog",
+            "sha256": "125db3e5701a6fe950d1355f424d85123d2a4c85fdccedfdaba50a50dd4d76a2"
+          }
+        ],
+        "root": "examples/canonical_language/v0.1/pairs/replay/valid",
+        "steps": [
+          {
+            "argv": [
+              "--json",
+              "replay",
+              "program.gc",
+              "--log",
+              "run.gclog"
+            ],
+            "expect": {
+              "assertions": [
+                {
+                  "operator": "equals",
+                  "pointer": "/data/value",
+                  "value": "22"
+                }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/replay-v0.2",
+              "ok": true
+            },
+            "id": "execute"
+          }
+        ]
+      }
     },
     {
-      "id": "resource-failures",
+      "capabilities": [],
       "concepts": [
         "resource-failures"
       ],
-      "lesson": "Finite evaluation budgets deterministically seal resource exhaustion instead of panicking or hanging.",
-      "capabilities": [],
-      "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/resource-failures/valid",
-        "files": [
-          {
-            "path": "main.gc",
-            "sha256": "b3552bb3e98157040d3684b2ae86b7338ad43100f5e5ceab508c37aae2220f0d"
-          }
-        ],
-        "expectedOutcome": "accepted",
-        "steps": [
-          {
-            "id": "execute",
-            "argv": [
-              "--json",
-              "--step-limit",
-              "2",
-              "eval",
-              "main.gc"
-            ],
-            "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/eval-v0.2",
-              "assertions": [
-                {
-                  "pointer": "/data/value",
-                  "operator": "equals",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        ]
-      },
+      "id": "resource-failures",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/resource-failures/invalid",
+        "expectedOutcome": "resource-exhaustion",
         "files": [
           {
             "path": "main.gc",
             "sha256": "8481e6ee7f2d8402e1d81ffdb2504babba61faee3c7f5381ea88c3400d3acc34"
           }
         ],
-        "expectedOutcome": "resource-exhaustion",
+        "root": "examples/canonical_language/v0.1/pairs/resource-failures/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "--step-limit",
@@ -868,168 +813,161 @@
               "main.gc"
             ],
             "expect": {
-              "exitCode": 20,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/eval/error"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "eval/error"
                 },
                 {
-                  "pointer": "/error/context/facts/kernel_kind",
                   "operator": "equals",
+                  "pointer": "/error/context/facts/kernel_kind",
                   "value": "StepLimit"
                 }
-              ]
-            }
+              ],
+              "exitCode": 20,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Finite evaluation budgets deterministically seal resource exhaustion instead of panicking or hanging.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "main.gc",
+        "after": "(begin 1 2 3 4)",
         "before": "(begin 1)",
-        "after": "(begin 1 2 3 4)"
+        "kind": "replace-once",
+        "path": "main.gc"
       },
-      "repair": "Restore the expression that fits the declared step limit, or explicitly review and raise the budget."
-    },
-    {
-      "id": "sealed-errors",
-      "concepts": [
-        "sealed-errors"
-      ],
-      "lesson": "Only Prelude-owned constructors can create recognized ERROR values; guessed seal tokens remain ordinary errors.",
-      "capabilities": [],
+      "repair": "Restore the expression that fits the declared step limit, or explicitly review and raise the budget.",
       "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/sealed-errors/valid",
+        "expectedOutcome": "accepted",
         "files": [
           {
             "path": "main.gc",
-            "sha256": "793b057dc56af2782c0cfb4a2ed12105a289a4f005809a514661ed82e6890675"
+            "sha256": "b3552bb3e98157040d3684b2ae86b7338ad43100f5e5ceab508c37aae2220f0d"
           }
         ],
-        "expectedOutcome": "accepted",
+        "root": "examples/canonical_language/v0.1/pairs/resource-failures/valid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
+              "--step-limit",
+              "2",
               "eval",
               "main.gc"
             ],
             "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/eval-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/value",
                   "operator": "equals",
-                  "value": "\"canonical/expected\""
+                  "pointer": "/data/value",
+                  "value": "1"
                 }
-              ]
-            }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/eval-v0.2",
+              "ok": true
+            },
+            "id": "execute"
           }
         ]
-      },
+      }
+    },
+    {
+      "capabilities": [],
+      "concepts": [
+        "sealed-errors"
+      ],
+      "id": "sealed-errors",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/sealed-errors/invalid",
+        "expectedOutcome": "sealed-rejection",
         "files": [
           {
             "path": "main.gc",
             "sha256": "4a91f4318cf83289549d1a67a39c716deb323d7a0ea75d610fb752dee81df5a7"
           }
         ],
-        "expectedOutcome": "sealed-rejection",
+        "root": "examples/canonical_language/v0.1/pairs/sealed-errors/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "eval",
               "main.gc"
             ],
             "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/eval-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/value",
                   "operator": "equals",
+                  "pointer": "/data/value",
                   "value": "\"core/type-error\""
                 }
-              ]
-            }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/eval-v0.2",
+              "ok": true
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Only Prelude-owned constructors can create recognized ERROR values; guessed seal tokens remain ordinary errors.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "main.gc",
+        "after": "        (seal\n          {:error/code \"canonical/expected\"\n           :error/context {:example \"sealed-errors\"}\n           :error/message \"expected example error\"}\n          0))",
         "before": "        (core/protocol::error\n          {:error/code \"canonical/expected\"\n           :error/context {:example \"sealed-errors\"}\n           :error/message \"expected example error\"}))",
-        "after": "        (seal\n          {:error/code \"canonical/expected\"\n           :error/context {:example \"sealed-errors\"}\n           :error/message \"expected example error\"}\n          0))"
+        "kind": "replace-once",
+        "path": "main.gc"
       },
-      "repair": "Restore core/protocol::error; never guess, expose, or synthesize a Prelude seal token."
-    },
-    {
-      "id": "tests",
-      "concepts": [
-        "tests"
-      ],
-      "lesson": "Package test obligations resolve declared suites and fail closed when the requested suite is absent.",
-      "capabilities": [],
+      "repair": "Restore core/protocol::error; never guess, expose, or synthesize a Prelude seal token.",
       "valid": {
-        "root": "examples/canonical_language/v0.1/pairs/tests/valid",
+        "expectedOutcome": "accepted",
         "files": [
           {
             "path": "main.gc",
-            "sha256": "0a69f94d1e268a184a87cff21cbd7f325f671a543802521ead514070a874e7a7"
-          },
-          {
-            "path": "package.toml",
-            "sha256": "426b06d72dd8916a89162b7402633ef64117a7d22fc3478c8617358610e863dc"
+            "sha256": "793b057dc56af2782c0cfb4a2ed12105a289a4f005809a514661ed82e6890675"
           }
         ],
-        "expectedOutcome": "accepted",
+        "root": "examples/canonical_language/v0.1/pairs/sealed-errors/valid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
-              "test",
-              "--pkg",
-              "package.toml"
+              "eval",
+              "main.gc"
             ],
             "expect": {
-              "exitCode": 0,
-              "ok": true,
-              "kind": "genesis/test-v0.2",
               "assertions": [
                 {
-                  "pointer": "/data/obligations/0/name",
                   "operator": "equals",
-                  "value": "core/obligation::unit-tests"
-                },
-                {
-                  "pointer": "/data/obligations/0/ok",
-                  "operator": "equals",
-                  "value": true
+                  "pointer": "/data/value",
+                  "value": "\"canonical/expected\""
                 }
-              ]
-            }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/eval-v0.2",
+              "ok": true
+            },
+            "id": "execute"
           }
         ]
-      },
+      }
+    },
+    {
+      "capabilities": [],
+      "concepts": [
+        "tests"
+      ],
+      "id": "tests",
       "invalid": {
-        "root": "examples/canonical_language/v0.1/pairs/tests/invalid",
+        "expectedOutcome": "obligation-failure",
         "files": [
           {
             "path": "main.gc",
@@ -1040,10 +978,9 @@
             "sha256": "574f4a14087b1087294d09ca1f46e44ed02468adee5cf2974e874d828fb85f74"
           }
         ],
-        "expectedOutcome": "obligation-failure",
+        "root": "examples/canonical_language/v0.1/pairs/tests/invalid",
         "steps": [
           {
-            "id": "execute",
             "argv": [
               "--json",
               "test",
@@ -1051,33 +988,96 @@
               "package.toml"
             ],
             "expect": {
-              "exitCode": 20,
-              "ok": false,
-              "kind": "genesis/error-v0.2",
               "assertions": [
                 {
-                  "pointer": "/diagnostics/0/id",
                   "operator": "equals",
+                  "pointer": "/diagnostics/0/id",
                   "value": "genesis/diagnostic/v1/test/error"
                 },
                 {
-                  "pointer": "/error/code",
                   "operator": "equals",
+                  "pointer": "/error/code",
                   "value": "test/error"
                 }
-              ]
-            }
+              ],
+              "exitCode": 20,
+              "kind": "genesis/error-v0.2",
+              "ok": false
+            },
+            "id": "execute"
           }
         ]
       },
+      "lesson": "Package test obligations resolve declared suites and fail closed when the requested suite is absent.",
       "mutation": {
-        "kind": "replace-once",
-        "path": "package.toml",
+        "after": "tests = [\"canonical/tests::missing\"]",
         "before": "tests = [\"canonical/tests::suite\"]",
-        "after": "tests = [\"canonical/tests::missing\"]"
+        "kind": "replace-once",
+        "path": "package.toml"
       },
-      "repair": "Restore canonical/tests::suite in the manifest so the declared unit-test obligation resolves exactly."
+      "repair": "Restore canonical/tests::suite in the manifest so the declared unit-test obligation resolves exactly.",
+      "valid": {
+        "expectedOutcome": "accepted",
+        "files": [
+          {
+            "path": "main.gc",
+            "sha256": "0a69f94d1e268a184a87cff21cbd7f325f671a543802521ead514070a874e7a7"
+          },
+          {
+            "path": "package.toml",
+            "sha256": "426b06d72dd8916a89162b7402633ef64117a7d22fc3478c8617358610e863dc"
+          }
+        ],
+        "root": "examples/canonical_language/v0.1/pairs/tests/valid",
+        "steps": [
+          {
+            "argv": [
+              "--json",
+              "test",
+              "--pkg",
+              "package.toml"
+            ],
+            "expect": {
+              "assertions": [
+                {
+                  "operator": "equals",
+                  "pointer": "/data/obligations/0/name",
+                  "value": "core/obligation::unit-tests"
+                },
+                {
+                  "operator": "equals",
+                  "pointer": "/data/obligations/0/ok",
+                  "value": true
+                }
+              ],
+              "exitCode": 0,
+              "kind": "genesis/test-v0.2",
+              "ok": true
+            },
+            "id": "execute"
+          }
+        ]
+      }
     }
   ],
-  "contentIdentitySha256": "ee379f68656a40b245ea838392f628d13ea486ba4c9b09115011e2091a5f446d"
+  "profile": {
+    "id": "GC-AGENT-v0.3",
+    "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+    "sha256": "ee5746009d99b4d0c14d00b6f2e5995bda4b50b59d87c9a08102fa5dcc22ff17"
+  },
+  "requiredConcepts": [
+    "contracts",
+    "effects",
+    "modules",
+    "packages",
+    "patches",
+    "persistent-collections",
+    "pure-functions",
+    "replay",
+    "resource-failures",
+    "sealed-errors",
+    "tests"
+  ],
+  "suiteId": "GC-CANONICAL-EXAMPLES-v0.1",
+  "version": "0.1.0"
 }

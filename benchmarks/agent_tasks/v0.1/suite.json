@@ -1,11 +1,1821 @@
 {
-  "kind": "genesis/agent-task-benchmark-v0.1",
-  "version": "0.1.0",
   "benchmarkId": "GC-AGENT-TASK-BENCHMARK-v0.1",
+  "cases": [
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 4045,
+      "contextTier": "small",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "completion-small",
+      "inputFiles": [
+        {
+          "bytes": 27,
+          "path": "main.gc",
+          "sha256": "3244de58132ff137e7b1a03238de53ad94ed84c34632367806d7b363ac501508"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/completion",
+      "taskClass": "completion",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 33769,
+      "contextTier": "medium",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "completion-medium",
+      "inputFiles": [
+        {
+          "bytes": 27,
+          "path": "main.gc",
+          "sha256": "3244de58132ff137e7b1a03238de53ad94ed84c34632367806d7b363ac501508"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/completion",
+      "taskClass": "completion",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 275511,
+      "contextTier": "large",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "completion-large",
+      "inputFiles": [
+        {
+          "bytes": 27,
+          "path": "main.gc",
+          "sha256": "3244de58132ff137e7b1a03238de53ad94ed84c34632367806d7b363ac501508"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/completion",
+      "taskClass": "completion",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "deployment.json"
+      ],
+      "contextBytes": 4226,
+      "contextTier": "small",
+      "editablePaths": [
+        "deployment.json"
+      ],
+      "id": "deployment-small",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
+      "referenceFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 80,
+          "path": "deployment.json",
+          "sha256": "9c826b7fdf13d8933f58f83c12473cd77c977c9e0442ca754dff6bddc6d9b89a"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/deployment",
+      "taskClass": "deployment",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "pack",
+            "--pkg",
+            "package.toml"
+          ],
+          "assertions": [],
+          "exitCode": 0,
+          "id": "package",
+          "kind": "genesis/pack-v0.2",
+          "ok": true
+        },
+        {
+          "argv": [
+            "--json",
+            "gcpm",
+            "--caps",
+            "caps.toml",
+            "build",
+            "--pkg",
+            "package.toml",
+            "--target",
+            "service",
+            "--out-dir",
+            "dist"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/report/target",
+              "value": "service"
+            }
+          ],
+          "exitCode": 0,
+          "id": "build",
+          "kind": "genesis/pkg-build-v0.1",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "deployment.json"
+      ],
+      "contextBytes": 33950,
+      "contextTier": "medium",
+      "editablePaths": [
+        "deployment.json"
+      ],
+      "id": "deployment-medium",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
+      "referenceFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 80,
+          "path": "deployment.json",
+          "sha256": "9c826b7fdf13d8933f58f83c12473cd77c977c9e0442ca754dff6bddc6d9b89a"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/deployment",
+      "taskClass": "deployment",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "pack",
+            "--pkg",
+            "package.toml"
+          ],
+          "assertions": [],
+          "exitCode": 0,
+          "id": "package",
+          "kind": "genesis/pack-v0.2",
+          "ok": true
+        },
+        {
+          "argv": [
+            "--json",
+            "gcpm",
+            "--caps",
+            "caps.toml",
+            "build",
+            "--pkg",
+            "package.toml",
+            "--target",
+            "service",
+            "--out-dir",
+            "dist"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/report/target",
+              "value": "service"
+            }
+          ],
+          "exitCode": 0,
+          "id": "build",
+          "kind": "genesis/pkg-build-v0.1",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "deployment.json"
+      ],
+      "contextBytes": 275692,
+      "contextTier": "large",
+      "editablePaths": [
+        "deployment.json"
+      ],
+      "id": "deployment-large",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
+      "referenceFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 80,
+          "path": "deployment.json",
+          "sha256": "9c826b7fdf13d8933f58f83c12473cd77c977c9e0442ca754dff6bddc6d9b89a"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/deployment",
+      "taskClass": "deployment",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "pack",
+            "--pkg",
+            "package.toml"
+          ],
+          "assertions": [],
+          "exitCode": 0,
+          "id": "package",
+          "kind": "genesis/pack-v0.2",
+          "ok": true
+        },
+        {
+          "argv": [
+            "--json",
+            "gcpm",
+            "--caps",
+            "caps.toml",
+            "build",
+            "--pkg",
+            "package.toml",
+            "--target",
+            "service",
+            "--out-dir",
+            "dist"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/report/target",
+              "value": "service"
+            }
+          ],
+          "exitCode": 0,
+          "id": "build",
+          "kind": "genesis/pkg-build-v0.1",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 4162,
+      "contextTier": "small",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "generation-small",
+      "inputFiles": [
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        },
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/generation",
+      "taskClass": "generation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 33886,
+      "contextTier": "medium",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "generation-medium",
+      "inputFiles": [
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        },
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/generation",
+      "taskClass": "generation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 275628,
+      "contextTier": "large",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "generation-large",
+      "inputFiles": [
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        },
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/generation",
+      "taskClass": "generation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "case.toml"
+      ],
+      "contextBytes": 4357,
+      "contextTier": "small",
+      "editablePaths": [
+        "case.toml"
+      ],
+      "id": "package-migration-small",
+      "inputFiles": [
+        {
+          "bytes": 132,
+          "path": "case.toml",
+          "sha256": "5a1042e9f67c70ebed2516d69d32e4507ae1d7f5f5ce9c7323bfdc6f5f9a8bcd"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
+      "referenceFiles": [
+        {
+          "bytes": 186,
+          "path": "case.toml",
+          "sha256": "e691e630f429fcbaf2c5e6d9afc7a3a1309dd330d828a69912bc55f088cc0809"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/package-migration",
+      "taskClass": "package-migration",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "typecheck",
+            "--pkg",
+            "case.toml"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/strict_sound",
+              "value": false
+            }
+          ],
+          "exitCode": 0,
+          "id": "typecheck",
+          "kind": "genesis/typecheck-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "case.toml"
+      ],
+      "contextBytes": 34081,
+      "contextTier": "medium",
+      "editablePaths": [
+        "case.toml"
+      ],
+      "id": "package-migration-medium",
+      "inputFiles": [
+        {
+          "bytes": 132,
+          "path": "case.toml",
+          "sha256": "5a1042e9f67c70ebed2516d69d32e4507ae1d7f5f5ce9c7323bfdc6f5f9a8bcd"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
+      "referenceFiles": [
+        {
+          "bytes": 186,
+          "path": "case.toml",
+          "sha256": "e691e630f429fcbaf2c5e6d9afc7a3a1309dd330d828a69912bc55f088cc0809"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/package-migration",
+      "taskClass": "package-migration",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "typecheck",
+            "--pkg",
+            "case.toml"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/strict_sound",
+              "value": false
+            }
+          ],
+          "exitCode": 0,
+          "id": "typecheck",
+          "kind": "genesis/typecheck-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "case.toml"
+      ],
+      "contextBytes": 275823,
+      "contextTier": "large",
+      "editablePaths": [
+        "case.toml"
+      ],
+      "id": "package-migration-large",
+      "inputFiles": [
+        {
+          "bytes": 132,
+          "path": "case.toml",
+          "sha256": "5a1042e9f67c70ebed2516d69d32e4507ae1d7f5f5ce9c7323bfdc6f5f9a8bcd"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
+      "referenceFiles": [
+        {
+          "bytes": 186,
+          "path": "case.toml",
+          "sha256": "e691e630f429fcbaf2c5e6d9afc7a3a1309dd330d828a69912bc55f088cc0809"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/package-migration",
+      "taskClass": "package-migration",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "typecheck",
+            "--pkg",
+            "case.toml"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/strict_sound",
+              "value": false
+            }
+          ],
+          "exitCode": 0,
+          "id": "typecheck",
+          "kind": "genesis/typecheck-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 4335,
+      "contextTier": "small",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "performance-repair-small",
+      "inputFiles": [
+        {
+          "bytes": 293,
+          "path": "main.gc",
+          "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
+      "referenceFiles": [
+        {
+          "bytes": 5,
+          "path": "main.gc",
+          "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/performance-repair",
+      "taskClass": "performance-repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "--step-limit",
+            "10",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "6765"
+            }
+          ],
+          "exitCode": 0,
+          "id": "budgeted-execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 34059,
+      "contextTier": "medium",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "performance-repair-medium",
+      "inputFiles": [
+        {
+          "bytes": 293,
+          "path": "main.gc",
+          "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
+      "referenceFiles": [
+        {
+          "bytes": 5,
+          "path": "main.gc",
+          "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/performance-repair",
+      "taskClass": "performance-repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "--step-limit",
+            "10",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "6765"
+            }
+          ],
+          "exitCode": 0,
+          "id": "budgeted-execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 275801,
+      "contextTier": "large",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "performance-repair-large",
+      "inputFiles": [
+        {
+          "bytes": 293,
+          "path": "main.gc",
+          "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
+      "referenceFiles": [
+        {
+          "bytes": 5,
+          "path": "main.gc",
+          "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/performance-repair",
+      "taskClass": "performance-repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "--step-limit",
+            "10",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "6765"
+            }
+          ],
+          "exitCode": 0,
+          "id": "budgeted-execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "caps.toml"
+      ],
+      "contextBytes": 4194,
+      "contextTier": "small",
+      "editablePaths": [
+        "caps.toml"
+      ],
+      "id": "policy-minimization-small",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/policy-minimization",
+      "taskClass": "policy-minimization",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "run",
+            "program.gc",
+            "--caps",
+            "caps.toml",
+            "--log",
+            "effect.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/denied",
+              "value": false
+            },
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "22"
+            }
+          ],
+          "exitCode": 0,
+          "id": "authorized-run",
+          "kind": "genesis/run-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "caps.toml"
+      ],
+      "contextBytes": 33918,
+      "contextTier": "medium",
+      "editablePaths": [
+        "caps.toml"
+      ],
+      "id": "policy-minimization-medium",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/policy-minimization",
+      "taskClass": "policy-minimization",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "run",
+            "program.gc",
+            "--caps",
+            "caps.toml",
+            "--log",
+            "effect.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/denied",
+              "value": false
+            },
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "22"
+            }
+          ],
+          "exitCode": 0,
+          "id": "authorized-run",
+          "kind": "genesis/run-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "caps.toml"
+      ],
+      "contextBytes": 275660,
+      "contextTier": "large",
+      "editablePaths": [
+        "caps.toml"
+      ],
+      "id": "policy-minimization-large",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/policy-minimization",
+      "taskClass": "policy-minimization",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "run",
+            "program.gc",
+            "--caps",
+            "caps.toml",
+            "--log",
+            "effect.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/denied",
+              "value": false
+            },
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "22"
+            }
+          ],
+          "exitCode": 0,
+          "id": "authorized-run",
+          "kind": "genesis/run-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 4090,
+      "contextTier": "small",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "refactor-small",
+      "inputFiles": [
+        {
+          "bytes": 54,
+          "path": "main.gc",
+          "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/refactor",
+      "taskClass": "refactor",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 33814,
+      "contextTier": "medium",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "refactor-medium",
+      "inputFiles": [
+        {
+          "bytes": 54,
+          "path": "main.gc",
+          "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/refactor",
+      "taskClass": "refactor",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 275556,
+      "contextTier": "large",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "refactor-large",
+      "inputFiles": [
+        {
+          "bytes": 54,
+          "path": "main.gc",
+          "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/refactor",
+      "taskClass": "refactor",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 4176,
+      "contextTier": "small",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "repair-small",
+      "inputFiles": [
+        {
+          "bytes": 136,
+          "path": "main.gc",
+          "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
+      "referenceFiles": [
+        {
+          "bytes": 134,
+          "path": "main.gc",
+          "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/repair",
+      "taskClass": "repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "3"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 33900,
+      "contextTier": "medium",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "repair-medium",
+      "inputFiles": [
+        {
+          "bytes": 136,
+          "path": "main.gc",
+          "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
+      "referenceFiles": [
+        {
+          "bytes": 134,
+          "path": "main.gc",
+          "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/repair",
+      "taskClass": "repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "3"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contextBytes": 275642,
+      "contextTier": "large",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "repair-large",
+      "inputFiles": [
+        {
+          "bytes": 136,
+          "path": "main.gc",
+          "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
+      "referenceFiles": [
+        {
+          "bytes": 134,
+          "path": "main.gc",
+          "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/repair",
+      "taskClass": "repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "3"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "finding.json"
+      ],
+      "contextBytes": 5141,
+      "contextTier": "small",
+      "editablePaths": [
+        "finding.json"
+      ],
+      "id": "replay-investigation-small",
+      "inputFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 154,
+          "path": "finding.json",
+          "sha256": "275d68d9afbf3a576842fd96ff657932efc2a882c2fc4effb1b6cc446051d30e"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/replay-investigation",
+      "taskClass": "replay-investigation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "replay",
+            "program.gc",
+            "--log",
+            "run.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/error/code",
+              "value": "replay/mismatch"
+            }
+          ],
+          "exitCode": 40,
+          "id": "confirm-mismatch",
+          "kind": "genesis/error-v0.2",
+          "ok": false
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "finding.json"
+      ],
+      "contextBytes": 34865,
+      "contextTier": "medium",
+      "editablePaths": [
+        "finding.json"
+      ],
+      "id": "replay-investigation-medium",
+      "inputFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 154,
+          "path": "finding.json",
+          "sha256": "275d68d9afbf3a576842fd96ff657932efc2a882c2fc4effb1b6cc446051d30e"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/replay-investigation",
+      "taskClass": "replay-investigation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "replay",
+            "program.gc",
+            "--log",
+            "run.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/error/code",
+              "value": "replay/mismatch"
+            }
+          ],
+          "exitCode": 40,
+          "id": "confirm-mismatch",
+          "kind": "genesis/error-v0.2",
+          "ok": false
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "finding.json"
+      ],
+      "contextBytes": 276607,
+      "contextTier": "large",
+      "editablePaths": [
+        "finding.json"
+      ],
+      "id": "replay-investigation-large",
+      "inputFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 154,
+          "path": "finding.json",
+          "sha256": "275d68d9afbf3a576842fd96ff657932efc2a882c2fc4effb1b6cc446051d30e"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/replay-investigation",
+      "taskClass": "replay-investigation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "replay",
+            "program.gc",
+            "--log",
+            "run.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/error/code",
+              "value": "replay/mismatch"
+            }
+          ],
+          "exitCode": 40,
+          "id": "confirm-mismatch",
+          "kind": "genesis/error-v0.2",
+          "ok": false
+        }
+      ]
+    }
+  ],
+  "contentIdentitySha256": "9cbbe3b5b6bfff54f563598bf8dc35bed36ce8c61264e5848604d87795ff0ebc",
+  "contextTiers": [
+    {
+      "artifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "0891bba0dc32f49bf92fa9f0908d8c2cf1f4fe237c1c012d80e73882b2bfb4f4"
+        }
+      ],
+      "contextBytes": 3916,
+      "id": "small",
+      "ordinal": 1
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "0891bba0dc32f49bf92fa9f0908d8c2cf1f4fe237c1c012d80e73882b2bfb4f4"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "b1c2f7e35e989efa037e111a30923b15a13ccbd342b3aa69c151ddc53972ebb9"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33640,
+      "id": "medium",
+      "ordinal": 2
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "0891bba0dc32f49bf92fa9f0908d8c2cf1f4fe237c1c012d80e73882b2bfb4f4"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "b1c2f7e35e989efa037e111a30923b15a13ccbd342b3aa69c151ddc53972ebb9"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "ee5746009d99b4d0c14d00b6f2e5995bda4b50b59d87c9a08102fa5dcc22ff17"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "9fb730afe51d4a5df095057c0914d7845d8338e3a170188d1e4977b9109b7c27"
+        }
+      ],
+      "contextBytes": 275382,
+      "id": "large",
+      "ordinal": 3
+    }
+  ],
+  "kind": "genesis/agent-task-benchmark-v0.1",
   "profile": {
     "id": "GC-AGENT-v0.3",
     "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
+    "sha256": "ee5746009d99b4d0c14d00b6f2e5995bda4b50b59d87c9a08102fa5dcc22ff17"
   },
   "taskClasses": [
     "completion",
@@ -18,1815 +1828,5 @@
     "repair",
     "replay-investigation"
   ],
-  "contextTiers": [
-    {
-      "id": "small",
-      "ordinal": 1,
-      "artifacts": [
-        {
-          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-          "bytes": 3916,
-          "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
-        }
-      ],
-      "contextBytes": 3916
-    },
-    {
-      "id": "medium",
-      "ordinal": 2,
-      "artifacts": [
-        {
-          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-          "bytes": 3916,
-          "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
-        },
-        {
-          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-          "bytes": 5886,
-          "sha256": "158f3fec3472dc0b1af924411fc6f9dd4a0f15e7255cea23211bf73c5e499ebd"
-        },
-        {
-          "path": "docs/spec/CLI.md",
-          "bytes": 23838,
-          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
-        }
-      ],
-      "contextBytes": 33640
-    },
-    {
-      "id": "large",
-      "ordinal": 3,
-      "artifacts": [
-        {
-          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-          "bytes": 3916,
-          "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
-        },
-        {
-          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-          "bytes": 5886,
-          "sha256": "158f3fec3472dc0b1af924411fc6f9dd4a0f15e7255cea23211bf73c5e499ebd"
-        },
-        {
-          "path": "docs/spec/CLI.md",
-          "bytes": 23838,
-          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
-        },
-        {
-          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-          "bytes": 36175,
-          "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
-        },
-        {
-          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
-          "bytes": 205567,
-          "sha256": "56f9345e8d085e83b1829ed43863d5488aa45917ff1a9f31f6828554cef7190c"
-        }
-      ],
-      "contextBytes": 275382
-    }
-  ],
-  "cases": [
-    {
-      "id": "completion-small",
-      "taskClass": "completion",
-      "contextTier": "small",
-      "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/completion",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 27,
-          "sha256": "3244de58132ff137e7b1a03238de53ad94ed84c34632367806d7b363ac501508"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 4045,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "completion-medium",
-      "taskClass": "completion",
-      "contextTier": "medium",
-      "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/completion",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 27,
-          "sha256": "3244de58132ff137e7b1a03238de53ad94ed84c34632367806d7b363ac501508"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 33769,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "completion-large",
-      "taskClass": "completion",
-      "contextTier": "large",
-      "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/completion",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 27,
-          "sha256": "3244de58132ff137e7b1a03238de53ad94ed84c34632367806d7b363ac501508"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 275511,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "deployment-small",
-      "taskClass": "deployment",
-      "contextTier": "small",
-      "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/deployment",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "lib.gc",
-          "bytes": 59,
-          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
-        },
-        {
-          "path": "package.toml",
-          "bytes": 119,
-          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "deployment.json",
-          "bytes": 80,
-          "sha256": "9c826b7fdf13d8933f58f83c12473cd77c977c9e0442ca754dff6bddc6d9b89a"
-        },
-        {
-          "path": "lib.gc",
-          "bytes": 59,
-          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
-        },
-        {
-          "path": "package.toml",
-          "bytes": 119,
-          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
-        }
-      ],
-      "editablePaths": [
-        "deployment.json"
-      ],
-      "changedPaths": [
-        "deployment.json"
-      ],
-      "contextBytes": 4226,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "package",
-          "argv": [
-            "--json",
-            "pack",
-            "--pkg",
-            "package.toml"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/pack-v0.2",
-          "assertions": []
-        },
-        {
-          "id": "build",
-          "argv": [
-            "--json",
-            "gcpm",
-            "--caps",
-            "caps.toml",
-            "build",
-            "--pkg",
-            "package.toml",
-            "--target",
-            "service",
-            "--out-dir",
-            "dist"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/pkg-build-v0.1",
-          "assertions": [
-            {
-              "pointer": "/data/report/target",
-              "operator": "equals",
-              "value": "service"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "deployment-medium",
-      "taskClass": "deployment",
-      "contextTier": "medium",
-      "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/deployment",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "lib.gc",
-          "bytes": 59,
-          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
-        },
-        {
-          "path": "package.toml",
-          "bytes": 119,
-          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "deployment.json",
-          "bytes": 80,
-          "sha256": "9c826b7fdf13d8933f58f83c12473cd77c977c9e0442ca754dff6bddc6d9b89a"
-        },
-        {
-          "path": "lib.gc",
-          "bytes": 59,
-          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
-        },
-        {
-          "path": "package.toml",
-          "bytes": 119,
-          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
-        }
-      ],
-      "editablePaths": [
-        "deployment.json"
-      ],
-      "changedPaths": [
-        "deployment.json"
-      ],
-      "contextBytes": 33950,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "package",
-          "argv": [
-            "--json",
-            "pack",
-            "--pkg",
-            "package.toml"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/pack-v0.2",
-          "assertions": []
-        },
-        {
-          "id": "build",
-          "argv": [
-            "--json",
-            "gcpm",
-            "--caps",
-            "caps.toml",
-            "build",
-            "--pkg",
-            "package.toml",
-            "--target",
-            "service",
-            "--out-dir",
-            "dist"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/pkg-build-v0.1",
-          "assertions": [
-            {
-              "pointer": "/data/report/target",
-              "operator": "equals",
-              "value": "service"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "deployment-large",
-      "taskClass": "deployment",
-      "contextTier": "large",
-      "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/deployment",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "lib.gc",
-          "bytes": 59,
-          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
-        },
-        {
-          "path": "package.toml",
-          "bytes": 119,
-          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "deployment.json",
-          "bytes": 80,
-          "sha256": "9c826b7fdf13d8933f58f83c12473cd77c977c9e0442ca754dff6bddc6d9b89a"
-        },
-        {
-          "path": "lib.gc",
-          "bytes": 59,
-          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
-        },
-        {
-          "path": "package.toml",
-          "bytes": 119,
-          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
-        }
-      ],
-      "editablePaths": [
-        "deployment.json"
-      ],
-      "changedPaths": [
-        "deployment.json"
-      ],
-      "contextBytes": 275692,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "package",
-          "argv": [
-            "--json",
-            "pack",
-            "--pkg",
-            "package.toml"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/pack-v0.2",
-          "assertions": []
-        },
-        {
-          "id": "build",
-          "argv": [
-            "--json",
-            "gcpm",
-            "--caps",
-            "caps.toml",
-            "build",
-            "--pkg",
-            "package.toml",
-            "--target",
-            "service",
-            "--out-dir",
-            "dist"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/pkg-build-v0.1",
-          "assertions": [
-            {
-              "pointer": "/data/report/target",
-              "operator": "equals",
-              "value": "service"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "generation-small",
-      "taskClass": "generation",
-      "contextTier": "small",
-      "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/generation",
-      "inputFiles": [
-        {
-          "path": "requirements.md",
-          "bytes": 140,
-          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        },
-        {
-          "path": "requirements.md",
-          "bytes": 140,
-          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 4162,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "generation-medium",
-      "taskClass": "generation",
-      "contextTier": "medium",
-      "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/generation",
-      "inputFiles": [
-        {
-          "path": "requirements.md",
-          "bytes": 140,
-          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        },
-        {
-          "path": "requirements.md",
-          "bytes": 140,
-          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 33886,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "generation-large",
-      "taskClass": "generation",
-      "contextTier": "large",
-      "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/generation",
-      "inputFiles": [
-        {
-          "path": "requirements.md",
-          "bytes": 140,
-          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        },
-        {
-          "path": "requirements.md",
-          "bytes": 140,
-          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 275628,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "package-migration-small",
-      "taskClass": "package-migration",
-      "contextTier": "small",
-      "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/package-migration",
-      "inputFiles": [
-        {
-          "path": "case.toml",
-          "bytes": 132,
-          "sha256": "5a1042e9f67c70ebed2516d69d32e4507ae1d7f5f5ce9c7323bfdc6f5f9a8bcd"
-        },
-        {
-          "path": "main.gc",
-          "bytes": 183,
-          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "case.toml",
-          "bytes": 186,
-          "sha256": "e691e630f429fcbaf2c5e6d9afc7a3a1309dd330d828a69912bc55f088cc0809"
-        },
-        {
-          "path": "main.gc",
-          "bytes": 183,
-          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
-        }
-      ],
-      "editablePaths": [
-        "case.toml"
-      ],
-      "changedPaths": [
-        "case.toml"
-      ],
-      "contextBytes": 4357,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "typecheck",
-          "argv": [
-            "--json",
-            "typecheck",
-            "--pkg",
-            "case.toml"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/typecheck-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/strict_sound",
-              "operator": "equals",
-              "value": false
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "package-migration-medium",
-      "taskClass": "package-migration",
-      "contextTier": "medium",
-      "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/package-migration",
-      "inputFiles": [
-        {
-          "path": "case.toml",
-          "bytes": 132,
-          "sha256": "5a1042e9f67c70ebed2516d69d32e4507ae1d7f5f5ce9c7323bfdc6f5f9a8bcd"
-        },
-        {
-          "path": "main.gc",
-          "bytes": 183,
-          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "case.toml",
-          "bytes": 186,
-          "sha256": "e691e630f429fcbaf2c5e6d9afc7a3a1309dd330d828a69912bc55f088cc0809"
-        },
-        {
-          "path": "main.gc",
-          "bytes": 183,
-          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
-        }
-      ],
-      "editablePaths": [
-        "case.toml"
-      ],
-      "changedPaths": [
-        "case.toml"
-      ],
-      "contextBytes": 34081,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "typecheck",
-          "argv": [
-            "--json",
-            "typecheck",
-            "--pkg",
-            "case.toml"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/typecheck-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/strict_sound",
-              "operator": "equals",
-              "value": false
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "package-migration-large",
-      "taskClass": "package-migration",
-      "contextTier": "large",
-      "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/package-migration",
-      "inputFiles": [
-        {
-          "path": "case.toml",
-          "bytes": 132,
-          "sha256": "5a1042e9f67c70ebed2516d69d32e4507ae1d7f5f5ce9c7323bfdc6f5f9a8bcd"
-        },
-        {
-          "path": "main.gc",
-          "bytes": 183,
-          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "case.toml",
-          "bytes": 186,
-          "sha256": "e691e630f429fcbaf2c5e6d9afc7a3a1309dd330d828a69912bc55f088cc0809"
-        },
-        {
-          "path": "main.gc",
-          "bytes": 183,
-          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
-        }
-      ],
-      "editablePaths": [
-        "case.toml"
-      ],
-      "changedPaths": [
-        "case.toml"
-      ],
-      "contextBytes": 275823,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "typecheck",
-          "argv": [
-            "--json",
-            "typecheck",
-            "--pkg",
-            "case.toml"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/typecheck-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/strict_sound",
-              "operator": "equals",
-              "value": false
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "performance-repair-small",
-      "taskClass": "performance-repair",
-      "contextTier": "small",
-      "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/performance-repair",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 293,
-          "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 5,
-          "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 4335,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "budgeted-execute",
-          "argv": [
-            "--json",
-            "--step-limit",
-            "10",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "6765"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "performance-repair-medium",
-      "taskClass": "performance-repair",
-      "contextTier": "medium",
-      "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/performance-repair",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 293,
-          "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 5,
-          "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 34059,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "budgeted-execute",
-          "argv": [
-            "--json",
-            "--step-limit",
-            "10",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "6765"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "performance-repair-large",
-      "taskClass": "performance-repair",
-      "contextTier": "large",
-      "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/performance-repair",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 293,
-          "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 5,
-          "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 275801,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "budgeted-execute",
-          "argv": [
-            "--json",
-            "--step-limit",
-            "10",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "6765"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "policy-minimization-small",
-      "taskClass": "policy-minimization",
-      "contextTier": "small",
-      "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/policy-minimization",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        }
-      ],
-      "editablePaths": [
-        "caps.toml"
-      ],
-      "changedPaths": [
-        "caps.toml"
-      ],
-      "contextBytes": 4194,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "authorized-run",
-          "argv": [
-            "--json",
-            "run",
-            "program.gc",
-            "--caps",
-            "caps.toml",
-            "--log",
-            "effect.gclog"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/run-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/denied",
-              "operator": "equals",
-              "value": false
-            },
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "22"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "policy-minimization-medium",
-      "taskClass": "policy-minimization",
-      "contextTier": "medium",
-      "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/policy-minimization",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        }
-      ],
-      "editablePaths": [
-        "caps.toml"
-      ],
-      "changedPaths": [
-        "caps.toml"
-      ],
-      "contextBytes": 33918,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "authorized-run",
-          "argv": [
-            "--json",
-            "run",
-            "program.gc",
-            "--caps",
-            "caps.toml",
-            "--log",
-            "effect.gclog"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/run-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/denied",
-              "operator": "equals",
-              "value": false
-            },
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "22"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "policy-minimization-large",
-      "taskClass": "policy-minimization",
-      "contextTier": "large",
-      "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/policy-minimization",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 11,
-          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        }
-      ],
-      "editablePaths": [
-        "caps.toml"
-      ],
-      "changedPaths": [
-        "caps.toml"
-      ],
-      "contextBytes": 275660,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "authorized-run",
-          "argv": [
-            "--json",
-            "run",
-            "program.gc",
-            "--caps",
-            "caps.toml",
-            "--log",
-            "effect.gclog"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/run-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/denied",
-              "operator": "equals",
-              "value": false
-            },
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "22"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "refactor-small",
-      "taskClass": "refactor",
-      "contextTier": "small",
-      "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/refactor",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 54,
-          "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 4090,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "refactor-medium",
-      "taskClass": "refactor",
-      "contextTier": "medium",
-      "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/refactor",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 54,
-          "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 33814,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "refactor-large",
-      "taskClass": "refactor",
-      "contextTier": "large",
-      "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/refactor",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 54,
-          "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 20,
-          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 275556,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "42"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "repair-small",
-      "taskClass": "repair",
-      "contextTier": "small",
-      "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/repair",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 136,
-          "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 134,
-          "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 4176,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "3"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "repair-medium",
-      "taskClass": "repair",
-      "contextTier": "medium",
-      "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/repair",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 136,
-          "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 134,
-          "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 33900,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "3"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "repair-large",
-      "taskClass": "repair",
-      "contextTier": "large",
-      "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/repair",
-      "inputFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 136,
-          "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "main.gc",
-          "bytes": 134,
-          "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
-        }
-      ],
-      "editablePaths": [
-        "main.gc"
-      ],
-      "changedPaths": [
-        "main.gc"
-      ],
-      "contextBytes": 275642,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "execute",
-          "argv": [
-            "--json",
-            "eval",
-            "main.gc"
-          ],
-          "exitCode": 0,
-          "ok": true,
-          "kind": "genesis/eval-v0.2",
-          "assertions": [
-            {
-              "pointer": "/data/value",
-              "operator": "equals",
-              "value": "3"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "replay-investigation-small",
-      "taskClass": "replay-investigation",
-      "contextTier": "small",
-      "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/replay-investigation",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        },
-        {
-          "path": "run.gclog",
-          "bytes": 864,
-          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
-        },
-        {
-          "path": "finding.json",
-          "bytes": 154,
-          "sha256": "275d68d9afbf3a576842fd96ff657932efc2a882c2fc4effb1b6cc446051d30e"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        },
-        {
-          "path": "run.gclog",
-          "bytes": 864,
-          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
-        }
-      ],
-      "editablePaths": [
-        "finding.json"
-      ],
-      "changedPaths": [
-        "finding.json"
-      ],
-      "contextBytes": 5141,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "confirm-mismatch",
-          "argv": [
-            "--json",
-            "replay",
-            "program.gc",
-            "--log",
-            "run.gclog"
-          ],
-          "exitCode": 40,
-          "ok": false,
-          "kind": "genesis/error-v0.2",
-          "assertions": [
-            {
-              "pointer": "/error/code",
-              "operator": "equals",
-              "value": "replay/mismatch"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "replay-investigation-medium",
-      "taskClass": "replay-investigation",
-      "contextTier": "medium",
-      "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/replay-investigation",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        },
-        {
-          "path": "run.gclog",
-          "bytes": 864,
-          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
-        },
-        {
-          "path": "finding.json",
-          "bytes": 154,
-          "sha256": "275d68d9afbf3a576842fd96ff657932efc2a882c2fc4effb1b6cc446051d30e"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        },
-        {
-          "path": "run.gclog",
-          "bytes": 864,
-          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
-        }
-      ],
-      "editablePaths": [
-        "finding.json"
-      ],
-      "changedPaths": [
-        "finding.json"
-      ],
-      "contextBytes": 34865,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "confirm-mismatch",
-          "argv": [
-            "--json",
-            "replay",
-            "program.gc",
-            "--log",
-            "run.gclog"
-          ],
-          "exitCode": 40,
-          "ok": false,
-          "kind": "genesis/error-v0.2",
-          "assertions": [
-            {
-              "pointer": "/error/code",
-              "operator": "equals",
-              "value": "replay/mismatch"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "replay-investigation-large",
-      "taskClass": "replay-investigation",
-      "contextTier": "large",
-      "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
-      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
-      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/replay-investigation",
-      "inputFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        },
-        {
-          "path": "run.gclog",
-          "bytes": 864,
-          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
-        }
-      ],
-      "referenceFiles": [
-        {
-          "path": "caps.toml",
-          "bytes": 59,
-          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
-        },
-        {
-          "path": "data.txt",
-          "bytes": 22,
-          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
-        },
-        {
-          "path": "finding.json",
-          "bytes": 154,
-          "sha256": "275d68d9afbf3a576842fd96ff657932efc2a882c2fc4effb1b6cc446051d30e"
-        },
-        {
-          "path": "program.gc",
-          "bytes": 124,
-          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
-        },
-        {
-          "path": "run.gclog",
-          "bytes": 864,
-          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
-        }
-      ],
-      "editablePaths": [
-        "finding.json"
-      ],
-      "changedPaths": [
-        "finding.json"
-      ],
-      "contextBytes": 276607,
-      "oracleExposure": "public-development-reference",
-      "verification": [
-        {
-          "id": "confirm-mismatch",
-          "argv": [
-            "--json",
-            "replay",
-            "program.gc",
-            "--log",
-            "run.gclog"
-          ],
-          "exitCode": 40,
-          "ok": false,
-          "kind": "genesis/error-v0.2",
-          "assertions": [
-            {
-              "pointer": "/error/code",
-              "operator": "equals",
-              "value": "replay/mismatch"
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "contentIdentitySha256": "71a677aec6ead88735093a83868175cfb125715f4bc44099198920448b703667"
+  "version": "0.1.0"
 }

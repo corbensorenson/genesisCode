@@ -303,6 +303,7 @@
     "R1.4": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2"], "sequential": true},
     "R1.5": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2", "R1.4"], "sequential": true},
     "R1.6": {"profile": "agent-contract", "start_after": ["R0.2", "R1.3"], "sequential": true},
+    "R1.7": {"profile": "agent-contract", "start_after": ["R1.3", "R1.6"], "sequential": true},
     "R2.1": {"profile": "runtime-core", "start_after": ["R0.5"], "sequential": true},
     "R2.2": {"profile": "runtime-core", "start_after": ["R0.2"], "sequential": true},
     "R2.3": {"profile": "runtime-core", "start_after": ["R2.1", "R2.2"], "sequential": true},
@@ -353,14 +354,17 @@
     "R1.3.f": [
       "R2.2"
     ],
+    "R1.7.b": [
+      "R1.4.l"
+    ],
     "R8.4.e": [
       "R8.3"
     ],
-    "R8.5.i": [
+    "R8.5.p": [
       "R5.4.e",
       "R7.3"
     ],
-    "R8.5.j": [
+    "R8.5.r": [
       "R8.3"
     ]
   }
