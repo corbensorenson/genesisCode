@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "87b89c3334b5b41925ae0eea182b9273f125d8cc9b65fd8c55f0f6a4d072bac3",
-    "roadmap_sha256": "44aa503920ca5aed69e697f8a1407af8e9cd171e581ff2d9a38849dcc6750980",
+    "roadmap_sha256": "b7ba105fdccadc8ff1aebe10c1d3cad05831503cd901c976a40f41d1d4bc6e58",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -2783,7 +2783,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-diagnostic-catalog-bundle-sha256:99c12dbdca6e93e2752cd85a83007ee5ced08f98efecf7f798d222898e442263"
+          "input_identity": "gc-diagnostic-catalog-bundle-sha256:2f57b8b4e3c236d8cbc3ef87773a21e805e8513614546b542ec416c3b7045b62"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2929,7 +2929,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "guarded-repair-hints-bundle-sha256:0eedc4872a9d6b1355ee5e222e5acbf46fef07ddccf8dccb368a2dca940df253"
+          "input_identity": "guarded-repair-hints-bundle-sha256:d73f6a427bba145ed9b448c4b619e7b0811c7fdb98c7416a81987bc15c2244c5"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3003,7 +3003,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "diagnostic-goldens-bundle-sha256:92a6b7444a3a7d8c1bc024243c2ee0396689bcc08d62adf260e2bedb8c03943d"
+          "input_identity": "diagnostic-goldens-bundle-sha256:34ea4ad3054c825f49b297a21991f0ace20fd0e35284ca890091abe2fa7ae62f"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3077,7 +3077,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "diagnostic-repair-utility-bundle-sha256:bd675f83844637550c134b3f3189a455d939367bcf18a893a4e0d49b29c6a904"
+          "input_identity": "diagnostic-repair-utility-bundle-sha256:927dfa5c32c8e8f3cfa5c7e19e046fe7d256a4e0dbc8ce41091bbdac62fa76ab"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3372,7 +3372,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "mcp-interface-bundle-sha256:a5d356567503da3de62b9cdd8ac5bc4638fab13ab00ed78aef09dd5c204c1c0b"
+          "input_identity": "mcp-interface-bundle-sha256:64676110baa65e35a6ddda7ce5cb168cac684842471b3fb57fc36e812695fb2b"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3449,7 +3449,7 @@
             "scripts/check_write_genesiscode_skill_conformance.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "transactional-agent-session-bundle-sha256:5023234934ecb48d3a9fc443b4c7c7ffd9d58db74f8c48820d9cbb0d675bb645"
+          "input_identity": "transactional-agent-session-bundle-sha256:ab54c4572a0b8b72a1b90fe1325bd2bb30ea8bca06e6040baaef4ed1016cf53c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3525,7 +3525,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "agent-session-resources-bundle-sha256:b621bb593ba36a40d6a2168a8453311c97e0f56f658c05043d979ae70e11b727"
+          "input_identity": "agent-session-resources-bundle-sha256:f6e5f10a8b9583a4ba181b5ada26b26b778961f03e7d26d99eef9a19468b70dc"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
