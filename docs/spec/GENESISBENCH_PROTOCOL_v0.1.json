@@ -386,7 +386,7 @@
       "bytes": 36124,
       "id": "genesisbench-verifier",
       "path": "scripts/lib/genesisbench_protocol.py",
-      "sha256": "599ef3f4aa3e36c9685b6ec6b461e0e0a0c4900dbbe798143ac8e139cf886c8c"
+      "sha256": "1242ad75beac47481929ee93ad21587db8fbf9752fa71ac45d80bb6ebb091c66"
     },
     {
       "bytes": 78248,
@@ -464,7 +464,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "ac7655f807a76aef57e12e1d1ca6cc1de51410a4f0da9dc4bc6607763a9396b2",
+  "contentIdentitySha256": "f56ef099fdf576672a8efbb297e51458ed28844c77385708a835e96d38e653d7",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
@@ -720,9 +720,9 @@
   },
   "sourceSnapshot": {
     "artifactCount": 1765,
-    "bytes": 17022229,
-    "commitSha1": "2c681f91d6284d01c9a9d6b01ba684298a824a4c",
-    "committedAt": "2026-07-15T18:32:35-05:00",
+    "bytes": 17022294,
+    "commitSha1": "55bc54581e19efb0ad011004edc1d7fc73fa2b8c",
+    "committedAt": "2026-07-15T18:52:57-05:00",
     "completeTree": true,
     "components": [
       {
@@ -776,7 +776,7 @@
           "docs/program/held-out-disclosures/"
         ],
         "id": "documentation",
-        "identitySha256": "027d7569a8c560f855f2c7f8291687c9711abc8d0a5694a048faadd05a61253d",
+        "identitySha256": "310750a03e1c4ccd0a1ed3382c563069c5e6ecc9e1e0e2f7b5ec0805c2721ea8",
         "includeExact": [
           "README.md",
           "llms.txt"
@@ -790,10 +790,10 @@
       },
       {
         "artifactCount": 692,
-        "bytes": 7799285,
+        "bytes": 7799350,
         "excludePrefixes": [],
         "id": "runtime",
-        "identitySha256": "0698c75967a126c4c57dfe5dd624911cbcfe7a26a3f40373c4454e5769517767",
+        "identitySha256": "557104c8af84a4a11e5fca32457fb27b0a38e11ef7596535f27c76a5750bb60d",
         "includeExact": [
           "Cargo.lock",
           "Cargo.toml",
@@ -808,10 +808,10 @@
       }
     ],
     "manifestAlgorithm": "sha256-canonical-json-path-mode-type-bytes-content-sha256-v0.1",
-    "manifestIdentitySha256": "27abe9a8c2caebda197ff44879e753494a08aee7d6a82fdb751613afff9980ce",
+    "manifestIdentitySha256": "f5ad4944e44f156317e853dc6cb97661ad39c7accd1d76e444f6b14a46b045f0",
     "objectFormat": "git-sha1-plus-complete-content-sha256-manifest",
     "repositoryUrl": "https://github.com/corbensorenson/genesisCode.git",
-    "treeSha1": "18fa0b2818cc8519c618fb57b225bfc7a3a5d6e0"
+    "treeSha1": "5b1b3b3ba6c1a9973cf289adbffb97e520447ed0"
   },
   "status": "active",
   "taskVisibilityPolicy": {
