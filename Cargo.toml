@@ -53,6 +53,10 @@ semver = "1"
 rpds = "1.2.1"
 url = "2"
 
+[profile.test]
+# Line tables retain actionable test backtraces without the multi-gigabyte full-debug cache.
+debug = 1
+
 [profile.selfhost-strict]
 inherits = "test"
 incremental = false

@@ -324,7 +324,11 @@ def validate_document(document: Any, run_path: Path = EXAMPLE, *, check_files: b
     require(HOST_PATH_RE.search(serialized) is None, "run record leaks a host path")
     require(".genesis/private/agent-evaluation" not in serialized, "run record leaks held-out custody material")
 
-    benchmark = closed(doc["benchmark"], {"benchmarkId", "caseId", "caseIdentitySha256", "taskClass", "contextTier", "split", "contamination", "heldOutEpochId"}, "benchmark")
+    benchmark = closed(doc["benchmark"], {
+        "benchmarkId", "caseId", "caseIdentitySha256", "lineageId",
+        "lineageIdentitySha256", "conditionId", "conditionIdentitySha256",
+        "taskClass", "contextTier", "split", "contamination", "heldOutEpochId",
+    }, "benchmark")
     require(benchmark["benchmarkId"] == "GC-AGENT-TASK-BENCHMARK-v0.1", "benchmark id drift")
     require(benchmark["split"] == "public-test" and benchmark["contamination"] == "declared-contaminated" and benchmark["heldOutEpochId"] is None, "public example contamination policy drift")
 
@@ -347,6 +351,8 @@ def validate_document(document: Any, run_path: Path = EXAMPLE, *, check_files: b
         require(case is not None, "benchmark case is absent")
         require(case["taskClass"] == benchmark["taskClass"] and case["contextTier"] == benchmark["contextTier"], "benchmark case metadata drift")
         require(case_identity(case) == benchmark["caseIdentitySha256"], "benchmark case identity drift")
+        for field in ("lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256"):
+            require(case[field] == benchmark[field], f"benchmark {field} drift")
 
     model = closed(doc["model"], {"providerKind", "providerId", "modelId", "modelRevision", "weightsArtifact", "tokenizerArtifact", "runtime", "secretPolicy"}, "model")
     require(model["providerKind"] == "local" and model["providerId"] == "genesis.fixture.local", "example must exercise a fully local model")
@@ -565,6 +571,8 @@ def refresh_example(genesis_bin: Path, selfhost_artifact: Path) -> None:
     suite = load_json(BENCHMARK)
     case = next(row for row in suite["cases"] if row["id"] == doc["benchmark"]["caseId"])
     doc["benchmark"]["caseIdentitySha256"] = case_identity(case)
+    for field in ("lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256"):
+        doc["benchmark"][field] = case[field]
     request = {
         "cardsSha256": sha256_bytes(canonical_bytes(doc["invocation"]["promptAssembly"]["cards"])),
         "decodingSha256": decoding["identitySha256"],
@@ -736,6 +744,8 @@ def self_test(document: dict[str, Any]) -> int:
     add("quality-model-metrics", lambda d: d["modelSpecificMetrics"].__setitem__("includedInQualityScore", True))
     add("heldout-leak", lambda d: d["benchmark"].__setitem__("split", "held-out"))
     add("contamination-erasure", lambda d: d["benchmark"].__setitem__("contamination", "temporal-clean"))
+    add("lineage-rebinding", lambda d: d["benchmark"].__setitem__("lineageId", "lineage-generation-999"))
+    add("condition-rebinding", lambda d: d["benchmark"].__setitem__("conditionId", "condition-generation-context-large-001"))
     add("track-rebinding", lambda d: d["track"].__setitem__("trackId", "cold-acquisition"))
     add("scaffold-rebinding", lambda d: d["track"]["scaffold"].__setitem__("identitySha256", "0" * 64))
     add("track-identity", lambda d: d["track"].__setitem__("contentIdentitySha256", "0" * 64))

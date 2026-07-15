@@ -111,7 +111,11 @@ def validate_report(
     )
     closed(
         doc["case"],
-        {"id", "taskClass", "contextTier", "contextMode", "interactionMode", "split", "visibilityClass", "heldOutEpochId"},
+        {
+            "id", "lineageId", "lineageIdentitySha256", "conditionId",
+            "conditionIdentitySha256", "taskClass", "contextTier", "contextMode",
+            "interactionMode", "split", "visibilityClass", "heldOutEpochId",
+        },
         "report case",
     )
     require(doc["case"] == expected_case, "eligibility case binding drift")

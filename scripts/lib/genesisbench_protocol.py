@@ -19,6 +19,7 @@ from genesisbench_contamination import classify_attestation
 from genesisbench_contamination import self_test as contamination_self_test
 from genesisbench_protocol_contract import (
     ALLOWED_TOOLS,
+    ANALYSIS_POLICY,
     ATTEMPT_POLICY,
     AUTHORITY_PATHS,
     CAPABILITY_POLICY,
@@ -48,6 +49,9 @@ ATTESTATION_SCHEMA = ROOT / "docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0
 ADAPTATION_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json"
 HARDWARE_EVIDENCE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json"
 SCAFFOLD_SCHEMA = ROOT / "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json"
+ANALYSIS_PLAN_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json"
+OBSERVATIONS_SCHEMA = ROOT / "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json"
+ANALYSIS_REPORT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json"
 RUN_EXAMPLE = ROOT / "examples/agent_benchmark_reproducibility/run.json"
 ATTESTATION_FIXTURE = ROOT / "benchmarks/genesisbench/v0.1/contamination.fixture.json"
 TASK_BENCHMARK = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
@@ -363,6 +367,7 @@ def validate_profile(document: Any, *, check_identity: bool = True) -> dict[str,
     require(doc["modelDisclosurePolicy"] == MODEL_DISCLOSURE_POLICY, "model disclosure policy drift")
     require(doc["taskVisibilityPolicy"] == visibility_policy(), "task visibility policy drift")
     require(doc["scoringPolicy"] == SCORING_POLICY, "scoring policy drift")
+    require(doc["analysisPolicy"] == ANALYSIS_POLICY, "analysis policy drift")
     require(doc["contaminationPolicy"] == CONTAMINATION_POLICY, "contamination policy drift")
     require(doc["trackPolicy"] == TRACK_POLICY, "track policy drift")
     require(doc["eligibilityPolicy"] == ELIGIBILITY_POLICY, "eligibility policy drift")
@@ -463,6 +468,10 @@ def evaluate_run(
         },
         "case": {
             "id": case["id"],
+            "lineageId": case["lineageId"],
+            "lineageIdentitySha256": case["lineageIdentitySha256"],
+            "conditionId": case["conditionId"],
+            "conditionIdentitySha256": case["conditionIdentitySha256"],
             "taskClass": case["taskClass"],
             "contextTier": case["contextTier"],
             "contextMode": context_mode,
@@ -504,7 +513,12 @@ def validate_report(report: Any, profile: dict[str, Any], run: dict[str, Any]) -
     require(source_case is not None, "eligibility case authority drift")
     context_mode, interaction_mode = validate_run_modes(profile, run, source_case, suite)
     expected_case = {
-        "id": source_case["id"], "taskClass": source_case["taskClass"],
+        "id": source_case["id"],
+        "lineageId": source_case["lineageId"],
+        "lineageIdentitySha256": source_case["lineageIdentitySha256"],
+        "conditionId": source_case["conditionId"],
+        "conditionIdentitySha256": source_case["conditionIdentitySha256"],
+        "taskClass": source_case["taskClass"],
         "contextTier": source_case["contextTier"], "contextMode": context_mode,
         "interactionMode": interaction_mode, "split": run["benchmark"]["split"],
         "visibilityClass": visibility_for_run(run, source_case),
@@ -632,6 +646,7 @@ def refresh_profile() -> None:
     document["modelDisclosurePolicy"] = copy.deepcopy(MODEL_DISCLOSURE_POLICY)
     document["taskVisibilityPolicy"] = visibility_policy()
     document["scoringPolicy"] = copy.deepcopy(SCORING_POLICY)
+    document["analysisPolicy"] = copy.deepcopy(ANALYSIS_POLICY)
     document["contaminationPolicy"] = copy.deepcopy(CONTAMINATION_POLICY)
     document["trackPolicy"] = copy.deepcopy(TRACK_POLICY)
     document["eligibilityPolicy"] = copy.deepcopy(ELIGIBILITY_POLICY)
@@ -656,6 +671,9 @@ def main() -> int:
     validate_schema(ADAPTATION_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-adaptation-manifest-v0.1.json")
     validate_schema(HARDWARE_EVIDENCE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-hardware-evidence-v0.1.json")
     validate_schema(SCAFFOLD_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-scaffold-manifest-v0.1.json")
+    validate_schema(ANALYSIS_PLAN_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-analysis-plan-v0.1.json")
+    validate_schema(OBSERVATIONS_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-observations-v0.1.json")
+    validate_schema(ANALYSIS_REPORT_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-analysis-report-v0.1.json")
     if args.refresh_profile:
         require(args.run is None and args.attestation is None and not args.json and not args.self_test, "refresh accepts no check inputs")
         refresh_profile()

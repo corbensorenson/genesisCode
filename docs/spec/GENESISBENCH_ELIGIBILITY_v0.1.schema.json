@@ -77,9 +77,13 @@
     "case": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "taskClass", "contextTier", "contextMode", "interactionMode", "split", "visibilityClass", "heldOutEpochId"],
+      "required": ["id", "lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256", "taskClass", "contextTier", "contextMode", "interactionMode", "split", "visibilityClass", "heldOutEpochId"],
       "properties": {
         "id": {"$ref": "#/$defs/id"},
+        "lineageId": {"$ref": "#/$defs/id"},
+        "lineageIdentitySha256": {"$ref": "#/$defs/hash"},
+        "conditionId": {"$ref": "#/$defs/id"},
+        "conditionIdentitySha256": {"$ref": "#/$defs/hash"},
         "taskClass": {"$ref": "#/$defs/id"},
         "contextTier": {"$ref": "#/$defs/id"},
         "contextMode": {"enum": ["compact-small", "compact-medium", "compact-large", "repository-readonly"]},

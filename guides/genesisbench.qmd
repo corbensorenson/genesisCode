@@ -23,6 +23,9 @@ The normative authorities are:
 - [Task benchmark](../benchmarks/agent_tasks/v0.1/suite.json)
 - [Scoring authority](../docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json)
 - [Run schema](../docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json)
+- [Predeclared analysis plan](../docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json)
+- [Observation matrix schema](../docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json)
+- [Analysis report schema](../docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json)
 
 This guide explains those authorities; it cannot alter them.
 
@@ -48,7 +51,19 @@ No update, model invocation, network request, or score execution occurs in check
 
 ## Understand the task surfaces
 
-The public suite contains generation, completion, repair, refactor, policy minimization, replay investigation, performance repair, package migration, and deployment cases at small, medium, and large context tiers. Their references are intentionally inspectable development oracles. They are useful for learning, harness conformance, and longitudinal diagnostics, but they are not clean held-out evidence.
+The public suite contains nine immutable task lineages: generation, completion, repair, refactor, policy minimization, replay investigation, performance repair, package migration, and deployment. Each lineage has small, medium, and large child context conditions. Those 27 condition cells are useful for context ablation, but they remain nine independent challenges. Their references are intentionally inspectable development oracles. They are useful for learning, harness conformance, and longitudinal diagnostics, but they are not clean held-out evidence.
+
+## Analyze lineages, not repeated conditions
+
+The predeclared v0.1 analysis chooses the small-context child as the primary condition and calculates headline verified solve rate over the nine lineage IDs. Every expected system, epoch, and case cell must be present; `missing`, `invalid`, and `abstained` are published separately and all remain in the solve denominator. Conditional quality includes solved lineages only and publishes its own denominator.
+
+Solve uncertainty uses a 95% Wilson interval over lineages. System comparisons require the same cohort and paired primary lineage set, publish a risk-difference effect and uncertainty, use an exact two-sided McNemar/binomial test, and apply Holm-Bonferroni correction across the predeclared pair family. A comparison that does not clear the corrected threshold is `indeterminate`; decimal score order alone cannot become a rank claim. Context-condition summaries remain clustered by parent lineage.
+
+Saturation requires at least three distinct model families above 90% verified solve rate for two consecutive ranked epochs. Public conformance evidence cannot trigger it. Validate the canonical complete matrix and report offline:
+
+```bash
+python3 scripts/lib/genesisbench_analysis.py --check --self-test
+```
 
 Ranked evaluation uses a non-public oracle and the active held-out commitment authority. Temporal-clean evaluation additionally requires a task precommitment made after the target model's immutable release. Private tasks, salts, inputs, prompts, and oracles never belong in the repository, documentation site, training corpus, model retrieval root, or public run bundle.
 
@@ -153,7 +168,7 @@ Never collapse these labels into one leaderboard. The closed cohort record binds
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, four non-combinable tracks, public practice suite, scorer, run bundle, and deterministic eligibility fixture exist now. Lineage-aware statistics are R1.4.i; scaled temporal epochs and maintained post-release overlays are R1.4.j; the fixed reference agent and controlled ablations are R1.4.k; the canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, nine-lineage/27-condition public practice suite, predeclared statistical analysis, scorer, run bundle, and deterministic eligibility and analysis fixtures exist now. Scaled temporal epochs and maintained post-release overlays are R1.4.j; the fixed reference agent and controlled ablations are R1.4.k; the canonical CLI and adapters are R1.4.l; the signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 

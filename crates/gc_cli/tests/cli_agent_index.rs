@@ -181,6 +181,21 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("docs/spec/GENESISBENCH_PROTOCOL_v0.1.json")
     );
     assert_eq!(
+        json.pointer("/data/docs/genesisbench_analysis_plan")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_observations_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_analysis_report_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json")
+    );
+    assert_eq!(
         json.pointer("/data/docs/gc_agent_model_runner_effect")
             .and_then(Value::as_str),
         Some("docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json")

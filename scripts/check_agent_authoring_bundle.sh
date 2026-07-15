@@ -14,6 +14,7 @@ python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
 python3 scripts/lib/gc_agent_scoring.py --check --self-test
 python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test
 python3 scripts/lib/genesisbench_protocol.py --check --self-test
+python3 scripts/lib/genesisbench_analysis.py --check --self-test
 protocol_report="$(mktemp)"
 trap 'rm -f "$protocol_report"' EXIT
 python3 scripts/lib/genesisbench_protocol.py \
@@ -282,6 +283,17 @@ if protocol_rel not in agent_index_spec or protocol_rel not in agent_index_cmd:
     raise SystemExit(
         "agent-authoring-bundle: agent index must expose the GenesisBench profile"
     )
+
+analysis_paths = (
+    "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+    "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json",
+)
+for path in analysis_paths:
+    if path not in agent_index_spec or path not in agent_index_cmd:
+        raise SystemExit(
+            f"agent-authoring-bundle: agent index must expose lineage analysis authority: {path}"
+        )
 
 print(
     "agent-authoring-bundle: ok "

@@ -5,7 +5,7 @@ TOP_KEYS = {
     "kind", "version", "protocolId", "status", "sourceSnapshot",
     "authorities", "contextPolicy", "toolPolicy", "capabilityPolicy",
     "attemptPolicy", "modelDisclosurePolicy", "taskVisibilityPolicy",
-    "scoringPolicy", "contaminationPolicy", "trackPolicy", "eligibilityPolicy",
+    "scoringPolicy", "analysisPolicy", "contaminationPolicy", "trackPolicy", "eligibilityPolicy",
     "selfHosting", "contentIdentitySha256",
 }
 
@@ -14,12 +14,19 @@ AUTHORITY_PATHS = {
     "agent-profile": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
     "agent-task-cards": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
     "agent-task-benchmark": "benchmarks/agent_tasks/v0.1/suite.json",
+    "agent-task-benchmark-schema": "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+    "agent-task-benchmark-validator": "scripts/lib/gc_task_benchmarks.py",
     "benchmark-run-integration-test": "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
     "benchmark-run-schema": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
     "benchmark-run-verifier": "scripts/lib/gc_agent_benchmark_run.py",
     "benchmark-score-schema": "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
     "benchmark-scoring": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
     "benchmark-scoring-schema": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
+    "genesisbench-analysis-engine": "scripts/lib/genesisbench_analysis.py",
+    "genesisbench-analysis-plan": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+    "genesisbench-analysis-plan-schema": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
+    "genesisbench-analysis-report-schema": "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json",
+    "genesisbench-observations-schema": "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
     "genesis-mcp-catalog-source": "crates/gc_cli_driver/src/mcp/catalog.rs",
     "genesisbench-eligibility-schema": "docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json",
     "genesisbench-eligibility-verifier": "scripts/lib/genesisbench_eligibility.py",
@@ -163,6 +170,19 @@ SCORING_POLICY = {
     "dimensionBreakdownPublished": True,
 }
 
+ANALYSIS_POLICY = {
+    "authorityId": "genesisbench-analysis-plan",
+    "engineAuthorityId": "genesisbench-analysis-engine",
+    "observationsSchemaAuthorityId": "genesisbench-observations-schema",
+    "reportSchemaAuthorityId": "genesisbench-analysis-report-schema",
+    "independentUnit": "lineageId",
+    "clusterKey": "lineageIdentitySha256",
+    "conditionUnit": "conditionId",
+    "repeatedConditionsCountAsIndependent": False,
+    "crossCohortAggregationAllowed": False,
+    "predeclaredAnalysisRequiredForRanking": True,
+}
+
 CONTAMINATION_POLICY = {
     "labels": [
         "declared-contaminated", "declared-uncontaminated",
@@ -250,6 +270,12 @@ SELF_HOSTING = {
                 "python3", "scripts/lib/gc_agent_scoring.py", "--score", "--case",
                 "CASE", "--candidate", "CANDIDATE", "--genesis-bin", "GENESIS",
                 "--selfhost-artifact", "ARTIFACT",
+            ],
+        },
+        {
+            "id": "analyze",
+            "argv": [
+                "python3", "scripts/lib/genesisbench_analysis.py", "--check",
             ],
         },
     ],

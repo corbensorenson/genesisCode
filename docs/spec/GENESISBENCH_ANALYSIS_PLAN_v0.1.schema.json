@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-analysis-plan-v0.1.json",
+  "title": "GenesisBench lineage analysis plan v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "analysisId", "status", "taskBenchmark", "sampling", "outcomes", "intervals", "comparisons", "saturation", "publication", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-analysis-plan-v0.1"},
+    "version": {"const": "0.1.0"},
+    "analysisId": {"const": "GenesisBench-Lineage-Analysis-v0.1"},
+    "status": {"const": "predeclared"},
+    "taskBenchmark": {"type": "object", "additionalProperties": false, "required": ["id", "identitySha256", "independentLineages", "repeatedConditions"], "properties": {"id": {"const": "GC-AGENT-TASK-BENCHMARK-v0.1"}, "identitySha256": {"$ref": "#/$defs/hash"}, "independentLineages": {"const": 9}, "repeatedConditions": {"const": 27}}},
+    "sampling": {"type": "object", "additionalProperties": false, "required": ["independentUnit", "clusterKey", "conditionUnit", "primaryConditionSelector", "repeatedConditionsCountAsIndependent", "hierarchicalModel"], "properties": {"independentUnit": {"const": "lineageId"}, "clusterKey": {"const": "lineageIdentitySha256"}, "conditionUnit": {"const": "conditionId"}, "primaryConditionSelector": {"$ref": "#/$defs/selector"}, "repeatedConditionsCountAsIndependent": {"const": false}, "hierarchicalModel": {"type": "null"}}},
+    "outcomes": {"type": "object", "additionalProperties": false, "required": ["closedStates", "verifiedSolveNumerator", "verifiedSolveDenominator", "conditionalQualityStates", "missingness", "invalids", "abstentions"], "properties": {"closedStates": {"const": ["abstained", "invalid", "missing", "solved", "unsolved"]}, "verifiedSolveNumerator": {"const": ["solved"]}, "verifiedSolveDenominator": {"const": ["abstained", "invalid", "missing", "solved", "unsolved"]}, "conditionalQualityStates": {"const": ["solved"]}, "missingness": {"const": "explicit-cell-counted-unsolved"}, "invalids": {"const": "reported-separately-counted-unsolved"}, "abstentions": {"const": "reported-separately-counted-unsolved"}}},
+    "intervals": {"type": "object", "additionalProperties": false, "required": ["confidenceBasisPoints", "solveRate", "pairedEffect", "rounding"], "properties": {"confidenceBasisPoints": {"const": 9500}, "solveRate": {"const": "wilson-score-lineage-binomial-v0.1"}, "pairedEffect": {"const": "newcombe-wilson-risk-difference-v0.1"}, "rounding": {"const": "nearest-basis-point-half-even"}}},
+    "comparisons": {"type": "object", "additionalProperties": false, "required": ["family", "test", "multipleComparison", "alphaPartsPerBillion", "unsupportedPairwiseDecimalRanksAllowed", "orderingRule"], "properties": {"family": {"const": "all-system-pairs-within-identical-cohort-and-primary-lineage-set"}, "test": {"const": "exact-two-sided-mcnemar-binomial-v0.1"}, "multipleComparison": {"const": "holm-bonferroni-familywise-v0.1"}, "alphaPartsPerBillion": {"const": 50000000}, "unsupportedPairwiseDecimalRanksAllowed": {"const": false}, "orderingRule": {"const": "only-significant-paired-effect-otherwise-indeterminate"}}},
+    "saturation": {"type": "object", "additionalProperties": false, "required": ["thresholdSolveRateBasisPoints", "minimumDistinctModelFamilies", "consecutiveEpochs", "unit", "publicConformanceMayTrigger"], "properties": {"thresholdSolveRateBasisPoints": {"const": 9000}, "minimumDistinctModelFamilies": {"const": 3}, "consecutiveEpochs": {"const": 2}, "unit": {"const": "primary-condition-lineage"}, "publicConformanceMayTrigger": {"const": false}}},
+    "publication": {"type": "object", "additionalProperties": false, "required": ["exactDenominatorsRequired", "allOutcomeCountsRequired", "lineageClusterDisclosureRequired", "effectSizesAndUncertaintyRequired", "crossCohortAggregationAllowed", "rawObservationsRetained"], "properties": {"exactDenominatorsRequired": {"const": true}, "allOutcomeCountsRequired": {"const": true}, "lineageClusterDisclosureRequired": {"const": true}, "effectSizesAndUncertaintyRequired": {"const": true}, "crossCohortAggregationAllowed": {"const": false}, "rawObservationsRetained": {"const": true}}},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "selector": {"type": "object", "additionalProperties": false, "required": ["dimension", "value"], "properties": {"dimension": {"const": "contextTier"}, "value": {"const": "small"}}}
+  }
+}

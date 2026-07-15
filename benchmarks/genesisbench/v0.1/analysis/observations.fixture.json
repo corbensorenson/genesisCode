@@ -1,0 +1,1060 @@
+{
+  "analysisPlanIdentitySha256": "0aceb8504551a3357ef6d0a2ba727f7d0b6fe1be690e60d2afd6796d54c33757",
+  "cohortIdentitySha256": "f9fec6a4ecf409f42cb41ff1c640f2df150270548846022772c39dbdc3afe212",
+  "contentIdentitySha256": "88c29e0b1a56fa0462407ba85122e0032b02c30e620bc9c5d97efa893b1bf2a0",
+  "epochs": [
+    "public-anchor-epoch-001"
+  ],
+  "kind": "genesis/genesisbench-observations-v0.1",
+  "observations": [
+    {
+      "caseId": "completion-large",
+      "conditionId": "condition-completion-context-large-001",
+      "conditionIdentitySha256": "c35c13b6caa87aa4b864934c64765072d3687c366040daf147fb6db96823e437",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9200,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "completion-medium",
+      "conditionId": "condition-completion-context-medium-001",
+      "conditionIdentitySha256": "c490191273c58e5ef22ac624e3a05788d124c5ba1bd04ab4d93bb55eccfbfb30",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9200,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "completion-small",
+      "conditionId": "condition-completion-context-small-001",
+      "conditionIdentitySha256": "2f308f8f850d9e22bd673e6ac434f2509ec5bd23d6df816824a01a840acc36e7",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9200,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "deployment-large",
+      "conditionId": "condition-deployment-context-large-001",
+      "conditionIdentitySha256": "f182715495e965c26a00226449dd945c1c9084515f47ddc3fd2af96fbb8ec4ad",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9163,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "deployment-medium",
+      "conditionId": "condition-deployment-context-medium-001",
+      "conditionIdentitySha256": "aa2c7737a07aa40b996cf24d2065ad15daefdc205d4fe0f52dfb97aeccafb0b0",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9163,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "deployment-small",
+      "conditionId": "condition-deployment-context-small-001",
+      "conditionIdentitySha256": "9f6d3f4b8c46174a46c5c027c16e701d7c6cdd64ce83c1ffa7a53820908b2c0d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9163,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "generation-large",
+      "conditionId": "condition-generation-context-large-001",
+      "conditionIdentitySha256": "63a70085b7b54dbca408c89d3363f984c304826d1fe1931bb07a5b4d9f7f9829",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9126,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "generation-medium",
+      "conditionId": "condition-generation-context-medium-001",
+      "conditionIdentitySha256": "3c299eca0a299ab376d0d12bcbbbe6510fd46faa6ba781b8a5e7dcf87b185fac",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9126,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "generation-small",
+      "conditionId": "condition-generation-context-small-001",
+      "conditionIdentitySha256": "94a4e75f1aff3e52cb853af8d6e01483052ee38598f131c94575c83bd9f98bb0",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9126,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "package-migration-large",
+      "conditionId": "condition-package-migration-context-large-001",
+      "conditionIdentitySha256": "911e0625fbf612243cd5676c591707246944195dd154d1c721cbcefe235db7cb",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9089,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "package-migration-medium",
+      "conditionId": "condition-package-migration-context-medium-001",
+      "conditionIdentitySha256": "8f9a1c1f4afa30dae03a4d9b7a5a1764d12ec7ec90d86cc1290b647adeb05c26",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9089,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "package-migration-small",
+      "conditionId": "condition-package-migration-context-small-001",
+      "conditionIdentitySha256": "ea355cc5cb03b77e7a27bd8cdb55cac0837a385c9e00f106bf473b57b8a3742d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9089,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "performance-repair-large",
+      "conditionId": "condition-performance-repair-context-large-001",
+      "conditionIdentitySha256": "3d5dec22c9b3d7161274c96908ed26b8a3a160d2ec5117f378ea435ffdaba90e",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9052,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "performance-repair-medium",
+      "conditionId": "condition-performance-repair-context-medium-001",
+      "conditionIdentitySha256": "c9e10e8affc81084208a4767bbb0fa5a0ee671d0e7040096946f0cd74e725321",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9052,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "performance-repair-small",
+      "conditionId": "condition-performance-repair-context-small-001",
+      "conditionIdentitySha256": "5408ea653b9442c1e728144148f1cbb6b68cce69abc47aa56c75e20bee5718f5",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9052,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "policy-minimization-large",
+      "conditionId": "condition-policy-minimization-context-large-001",
+      "conditionIdentitySha256": "33a14fa9f2c6e8f44442032a6845e692ddd397b6a5c9271090b37f7313763021",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9015,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "policy-minimization-medium",
+      "conditionId": "condition-policy-minimization-context-medium-001",
+      "conditionIdentitySha256": "6b97f2a26da6269e3436bceed4eb88aa83add44c8a4401544f59c8b2134fba75",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9015,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "policy-minimization-small",
+      "conditionId": "condition-policy-minimization-context-small-001",
+      "conditionIdentitySha256": "eb7fd20ad01fb9097a3dd1b68ed9ae585f2458132a210523108a6482ca703410",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 9015,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "refactor-large",
+      "conditionId": "condition-refactor-context-large-001",
+      "conditionIdentitySha256": "89c2f52e17ac93260d54af2e4d962bce23afb2b73b164dd15e0431886a8c7f8d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8978,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "refactor-medium",
+      "conditionId": "condition-refactor-context-medium-001",
+      "conditionIdentitySha256": "0f1c58ce4569419f4a0726244473a51185cc5f3a2a69efcfae1f98a6f9a8d284",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8978,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "refactor-small",
+      "conditionId": "condition-refactor-context-small-001",
+      "conditionIdentitySha256": "ea2cb0f9a2fab23e858ddbd44cc3dd87050b530e793917222316c978c6c904fa",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8978,
+      "reasonCodes": [],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "repair-large",
+      "conditionId": "condition-repair-context-large-001",
+      "conditionIdentitySha256": "e5a51238dcd39576e86048d329438e635a001f156476ca50a4299a0ac7535d9a",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "invalid",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/invalid"
+      ],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "repair-medium",
+      "conditionId": "condition-repair-context-medium-001",
+      "conditionIdentitySha256": "56ae04ba528e2bb19b3c983869962805ba4e7a5532e861aa6d7ad65117abf32b",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "invalid",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/invalid"
+      ],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "repair-small",
+      "conditionId": "condition-repair-context-small-001",
+      "conditionIdentitySha256": "1d6556d7867710147e990136c3e065ec6ca36172413a8b1beef4dbed7653cb07",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "invalid",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/invalid"
+      ],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "replay-investigation-large",
+      "conditionId": "condition-replay-investigation-context-large-001",
+      "conditionIdentitySha256": "551600214c386b81ed859890a398e0cfddcbd0b8ef23e4a9ab9d2c20270397c8",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "abstained",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/abstained"
+      ],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "replay-investigation-medium",
+      "conditionId": "condition-replay-investigation-context-medium-001",
+      "conditionIdentitySha256": "abcfc6f1e33f721ac6d824523abfd8454cecab9cc1d200064197eab0cb94e129",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "abstained",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/abstained"
+      ],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "replay-investigation-small",
+      "conditionId": "condition-replay-investigation-context-small-001",
+      "conditionIdentitySha256": "753609dcc595aa5687c2d85b13b29d88a0600427c59f57c6b8f55a1a3de1bd08",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "abstained",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/abstained"
+      ],
+      "systemId": "reference-alpha"
+    },
+    {
+      "caseId": "completion-large",
+      "conditionId": "condition-completion-context-large-001",
+      "conditionIdentitySha256": "c35c13b6caa87aa4b864934c64765072d3687c366040daf147fb6db96823e437",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8989,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "completion-medium",
+      "conditionId": "condition-completion-context-medium-001",
+      "conditionIdentitySha256": "c490191273c58e5ef22ac624e3a05788d124c5ba1bd04ab4d93bb55eccfbfb30",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8989,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "completion-small",
+      "conditionId": "condition-completion-context-small-001",
+      "conditionIdentitySha256": "2f308f8f850d9e22bd673e6ac434f2509ec5bd23d6df816824a01a840acc36e7",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8989,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "deployment-large",
+      "conditionId": "condition-deployment-context-large-001",
+      "conditionIdentitySha256": "f182715495e965c26a00226449dd945c1c9084515f47ddc3fd2af96fbb8ec4ad",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8952,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "deployment-medium",
+      "conditionId": "condition-deployment-context-medium-001",
+      "conditionIdentitySha256": "aa2c7737a07aa40b996cf24d2065ad15daefdc205d4fe0f52dfb97aeccafb0b0",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8952,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "deployment-small",
+      "conditionId": "condition-deployment-context-small-001",
+      "conditionIdentitySha256": "9f6d3f4b8c46174a46c5c027c16e701d7c6cdd64ce83c1ffa7a53820908b2c0d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8952,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "generation-large",
+      "conditionId": "condition-generation-context-large-001",
+      "conditionIdentitySha256": "63a70085b7b54dbca408c89d3363f984c304826d1fe1931bb07a5b4d9f7f9829",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "generation-medium",
+      "conditionId": "condition-generation-context-medium-001",
+      "conditionIdentitySha256": "3c299eca0a299ab376d0d12bcbbbe6510fd46faa6ba781b8a5e7dcf87b185fac",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8915,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "generation-small",
+      "conditionId": "condition-generation-context-small-001",
+      "conditionIdentitySha256": "94a4e75f1aff3e52cb853af8d6e01483052ee38598f131c94575c83bd9f98bb0",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "package-migration-large",
+      "conditionId": "condition-package-migration-context-large-001",
+      "conditionIdentitySha256": "911e0625fbf612243cd5676c591707246944195dd154d1c721cbcefe235db7cb",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8878,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "package-migration-medium",
+      "conditionId": "condition-package-migration-context-medium-001",
+      "conditionIdentitySha256": "8f9a1c1f4afa30dae03a4d9b7a5a1764d12ec7ec90d86cc1290b647adeb05c26",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8878,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "package-migration-small",
+      "conditionId": "condition-package-migration-context-small-001",
+      "conditionIdentitySha256": "ea355cc5cb03b77e7a27bd8cdb55cac0837a385c9e00f106bf473b57b8a3742d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8878,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "performance-repair-large",
+      "conditionId": "condition-performance-repair-context-large-001",
+      "conditionIdentitySha256": "3d5dec22c9b3d7161274c96908ed26b8a3a160d2ec5117f378ea435ffdaba90e",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "performance-repair-medium",
+      "conditionId": "condition-performance-repair-context-medium-001",
+      "conditionIdentitySha256": "c9e10e8affc81084208a4767bbb0fa5a0ee671d0e7040096946f0cd74e725321",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8841,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "performance-repair-small",
+      "conditionId": "condition-performance-repair-context-small-001",
+      "conditionIdentitySha256": "5408ea653b9442c1e728144148f1cbb6b68cce69abc47aa56c75e20bee5718f5",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "policy-minimization-large",
+      "conditionId": "condition-policy-minimization-context-large-001",
+      "conditionIdentitySha256": "33a14fa9f2c6e8f44442032a6845e692ddd397b6a5c9271090b37f7313763021",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8804,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "policy-minimization-medium",
+      "conditionId": "condition-policy-minimization-context-medium-001",
+      "conditionIdentitySha256": "6b97f2a26da6269e3436bceed4eb88aa83add44c8a4401544f59c8b2134fba75",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8804,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "policy-minimization-small",
+      "conditionId": "condition-policy-minimization-context-small-001",
+      "conditionIdentitySha256": "eb7fd20ad01fb9097a3dd1b68ed9ae585f2458132a210523108a6482ca703410",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8804,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "refactor-large",
+      "conditionId": "condition-refactor-context-large-001",
+      "conditionIdentitySha256": "89c2f52e17ac93260d54af2e4d962bce23afb2b73b164dd15e0431886a8c7f8d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8767,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "refactor-medium",
+      "conditionId": "condition-refactor-context-medium-001",
+      "conditionIdentitySha256": "0f1c58ce4569419f4a0726244473a51185cc5f3a2a69efcfae1f98a6f9a8d284",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8767,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "refactor-small",
+      "conditionId": "condition-refactor-context-small-001",
+      "conditionIdentitySha256": "ea2cb0f9a2fab23e858ddbd44cc3dd87050b530e793917222316c978c6c904fa",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8767,
+      "reasonCodes": [],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "repair-large",
+      "conditionId": "condition-repair-context-large-001",
+      "conditionIdentitySha256": "e5a51238dcd39576e86048d329438e635a001f156476ca50a4299a0ac7535d9a",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "invalid",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/invalid"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "repair-medium",
+      "conditionId": "condition-repair-context-medium-001",
+      "conditionIdentitySha256": "56ae04ba528e2bb19b3c983869962805ba4e7a5532e861aa6d7ad65117abf32b",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "invalid",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/invalid"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "repair-small",
+      "conditionId": "condition-repair-context-small-001",
+      "conditionIdentitySha256": "1d6556d7867710147e990136c3e065ec6ca36172413a8b1beef4dbed7653cb07",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "invalid",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/invalid"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "replay-investigation-large",
+      "conditionId": "condition-replay-investigation-context-large-001",
+      "conditionIdentitySha256": "551600214c386b81ed859890a398e0cfddcbd0b8ef23e4a9ab9d2c20270397c8",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "replay-investigation-medium",
+      "conditionId": "condition-replay-investigation-context-medium-001",
+      "conditionIdentitySha256": "abcfc6f1e33f721ac6d824523abfd8454cecab9cc1d200064197eab0cb94e129",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "missing",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/missing"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "replay-investigation-small",
+      "conditionId": "condition-replay-investigation-context-small-001",
+      "conditionIdentitySha256": "753609dcc595aa5687c2d85b13b29d88a0600427c59f57c6b8f55a1a3de1bd08",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "missing",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/missing"
+      ],
+      "systemId": "reference-beta"
+    },
+    {
+      "caseId": "completion-large",
+      "conditionId": "condition-completion-context-large-001",
+      "conditionIdentitySha256": "c35c13b6caa87aa4b864934c64765072d3687c366040daf147fb6db96823e437",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8778,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "completion-medium",
+      "conditionId": "condition-completion-context-medium-001",
+      "conditionIdentitySha256": "c490191273c58e5ef22ac624e3a05788d124c5ba1bd04ab4d93bb55eccfbfb30",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8778,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "completion-small",
+      "conditionId": "condition-completion-context-small-001",
+      "conditionIdentitySha256": "2f308f8f850d9e22bd673e6ac434f2509ec5bd23d6df816824a01a840acc36e7",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8778,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "deployment-large",
+      "conditionId": "condition-deployment-context-large-001",
+      "conditionIdentitySha256": "f182715495e965c26a00226449dd945c1c9084515f47ddc3fd2af96fbb8ec4ad",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "deployment-medium",
+      "conditionId": "condition-deployment-context-medium-001",
+      "conditionIdentitySha256": "aa2c7737a07aa40b996cf24d2065ad15daefdc205d4fe0f52dfb97aeccafb0b0",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8741,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "deployment-small",
+      "conditionId": "condition-deployment-context-small-001",
+      "conditionIdentitySha256": "9f6d3f4b8c46174a46c5c027c16e701d7c6cdd64ce83c1ffa7a53820908b2c0d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "generation-large",
+      "conditionId": "condition-generation-context-large-001",
+      "conditionIdentitySha256": "63a70085b7b54dbca408c89d3363f984c304826d1fe1931bb07a5b4d9f7f9829",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "generation-medium",
+      "conditionId": "condition-generation-context-medium-001",
+      "conditionIdentitySha256": "3c299eca0a299ab376d0d12bcbbbe6510fd46faa6ba781b8a5e7dcf87b185fac",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8704,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "generation-small",
+      "conditionId": "condition-generation-context-small-001",
+      "conditionIdentitySha256": "94a4e75f1aff3e52cb853af8d6e01483052ee38598f131c94575c83bd9f98bb0",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "package-migration-large",
+      "conditionId": "condition-package-migration-context-large-001",
+      "conditionIdentitySha256": "911e0625fbf612243cd5676c591707246944195dd154d1c721cbcefe235db7cb",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8667,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "package-migration-medium",
+      "conditionId": "condition-package-migration-context-medium-001",
+      "conditionIdentitySha256": "8f9a1c1f4afa30dae03a4d9b7a5a1764d12ec7ec90d86cc1290b647adeb05c26",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8667,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "package-migration-small",
+      "conditionId": "condition-package-migration-context-small-001",
+      "conditionIdentitySha256": "ea355cc5cb03b77e7a27bd8cdb55cac0837a385c9e00f106bf473b57b8a3742d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8667,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "performance-repair-large",
+      "conditionId": "condition-performance-repair-context-large-001",
+      "conditionIdentitySha256": "3d5dec22c9b3d7161274c96908ed26b8a3a160d2ec5117f378ea435ffdaba90e",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "performance-repair-medium",
+      "conditionId": "condition-performance-repair-context-medium-001",
+      "conditionIdentitySha256": "c9e10e8affc81084208a4767bbb0fa5a0ee671d0e7040096946f0cd74e725321",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8630,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "performance-repair-small",
+      "conditionId": "condition-performance-repair-context-small-001",
+      "conditionIdentitySha256": "5408ea653b9442c1e728144148f1cbb6b68cce69abc47aa56c75e20bee5718f5",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "policy-minimization-large",
+      "conditionId": "condition-policy-minimization-context-large-001",
+      "conditionIdentitySha256": "33a14fa9f2c6e8f44442032a6845e692ddd397b6a5c9271090b37f7313763021",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8593,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "policy-minimization-medium",
+      "conditionId": "condition-policy-minimization-context-medium-001",
+      "conditionIdentitySha256": "6b97f2a26da6269e3436bceed4eb88aa83add44c8a4401544f59c8b2134fba75",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8593,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "policy-minimization-small",
+      "conditionId": "condition-policy-minimization-context-small-001",
+      "conditionIdentitySha256": "eb7fd20ad01fb9097a3dd1b68ed9ae585f2458132a210523108a6482ca703410",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8593,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "refactor-large",
+      "conditionId": "condition-refactor-context-large-001",
+      "conditionIdentitySha256": "89c2f52e17ac93260d54af2e4d962bce23afb2b73b164dd15e0431886a8c7f8d",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "refactor-medium",
+      "conditionId": "condition-refactor-context-medium-001",
+      "conditionIdentitySha256": "0f1c58ce4569419f4a0726244473a51185cc5f3a2a69efcfae1f98a6f9a8d284",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "solved",
+      "qualityScoreBasisPoints": 8556,
+      "reasonCodes": [],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "refactor-small",
+      "conditionId": "condition-refactor-context-small-001",
+      "conditionIdentitySha256": "ea2cb0f9a2fab23e858ddbd44cc3dd87050b530e793917222316c978c6c904fa",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "repair-large",
+      "conditionId": "condition-repair-context-large-001",
+      "conditionIdentitySha256": "e5a51238dcd39576e86048d329438e635a001f156476ca50a4299a0ac7535d9a",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "abstained",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/abstained"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "repair-medium",
+      "conditionId": "condition-repair-context-medium-001",
+      "conditionIdentitySha256": "56ae04ba528e2bb19b3c983869962805ba4e7a5532e861aa6d7ad65117abf32b",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "abstained",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/abstained"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "repair-small",
+      "conditionId": "condition-repair-context-small-001",
+      "conditionIdentitySha256": "1d6556d7867710147e990136c3e065ec6ca36172413a8b1beef4dbed7653cb07",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "outcome": "abstained",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/abstained"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "replay-investigation-large",
+      "conditionId": "condition-replay-investigation-context-large-001",
+      "conditionIdentitySha256": "551600214c386b81ed859890a398e0cfddcbd0b8ef23e4a9ab9d2c20270397c8",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "unsolved",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/unsolved"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "replay-investigation-medium",
+      "conditionId": "condition-replay-investigation-context-medium-001",
+      "conditionIdentitySha256": "abcfc6f1e33f721ac6d824523abfd8454cecab9cc1d200064197eab0cb94e129",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "missing",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/missing"
+      ],
+      "systemId": "reference-gamma"
+    },
+    {
+      "caseId": "replay-investigation-small",
+      "conditionId": "condition-replay-investigation-context-small-001",
+      "conditionIdentitySha256": "753609dcc595aa5687c2d85b13b29d88a0600427c59f57c6b8f55a1a3de1bd08",
+      "epochId": "public-anchor-epoch-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "outcome": "missing",
+      "qualityScoreBasisPoints": null,
+      "reasonCodes": [
+        "fixture/missing"
+      ],
+      "systemId": "reference-gamma"
+    }
+  ],
+  "publicationMode": "unranked-reference-conformance",
+  "systems": [
+    {
+      "id": "reference-alpha",
+      "modelFamilyId": "fixture-family-alpha"
+    },
+    {
+      "id": "reference-beta",
+      "modelFamilyId": "fixture-family-beta"
+    },
+    {
+      "id": "reference-gamma",
+      "modelFamilyId": "fixture-family-gamma"
+    }
+  ],
+  "taskBenchmarkIdentitySha256": "af11afc068e9de77d5752b9e4e4c6be164fd350e7adb6b62d9449681b71260a5",
+  "version": "0.1.0"
+}

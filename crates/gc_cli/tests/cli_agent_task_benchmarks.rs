@@ -85,6 +85,47 @@ fn task_benchmark_matrix_executes_public_references_through_production_cli() {
     .expect("task benchmark JSON");
     let cases = suite["cases"].as_array().expect("benchmark cases");
     assert_eq!(cases.len(), 27);
+    let lineages = suite["lineages"].as_array().expect("benchmark lineages");
+    let conditions = suite["conditions"]
+        .as_array()
+        .expect("benchmark conditions");
+    assert_eq!(lineages.len(), 9);
+    assert_eq!(conditions.len(), 27);
+    let lineage_ids: BTreeSet<_> = lineages
+        .iter()
+        .map(|row| row["id"].as_str().expect("lineage id"))
+        .collect();
+    assert_eq!(lineage_ids.len(), 9);
+    for lineage in lineages {
+        let children: Vec<_> = conditions
+            .iter()
+            .filter(|row| row["lineageId"] == lineage["id"])
+            .collect();
+        assert_eq!(children.len(), 3);
+        assert!(
+            children
+                .iter()
+                .all(|row| row["lineageIdentitySha256"] == lineage["contentIdentitySha256"])
+        );
+    }
+    for case in cases {
+        let lineage = lineages
+            .iter()
+            .find(|row| row["id"] == case["lineageId"])
+            .expect("case lineage");
+        let condition = conditions
+            .iter()
+            .find(|row| row["id"] == case["conditionId"])
+            .expect("case condition");
+        assert_eq!(
+            case["lineageIdentitySha256"],
+            lineage["contentIdentitySha256"]
+        );
+        assert_eq!(
+            case["conditionIdentitySha256"],
+            condition["contentIdentitySha256"]
+        );
+    }
 
     let mut matrix: BTreeMap<String, Vec<(String, u64)>> = BTreeMap::new();
     for case in cases {

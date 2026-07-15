@@ -5,6 +5,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-completion-context-small-001",
+      "conditionIdentitySha256": "2f308f8f850d9e22bd673e6ac434f2509ec5bd23d6df816824a01a840acc36e7",
       "contextBytes": 4045,
       "contextTier": "small",
       "editablePaths": [
@@ -19,6 +21,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
       "oracleExposure": "public-development-reference",
       "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
       "referenceFiles": [
@@ -55,6 +59,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-completion-context-medium-001",
+      "conditionIdentitySha256": "c490191273c58e5ef22ac624e3a05788d124c5ba1bd04ab4d93bb55eccfbfb30",
       "contextBytes": 33769,
       "contextTier": "medium",
       "editablePaths": [
@@ -69,6 +75,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
       "oracleExposure": "public-development-reference",
       "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
       "referenceFiles": [
@@ -105,6 +113,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-completion-context-large-001",
+      "conditionIdentitySha256": "c35c13b6caa87aa4b864934c64765072d3687c366040daf147fb6db96823e437",
       "contextBytes": 275511,
       "contextTier": "large",
       "editablePaths": [
@@ -119,6 +129,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
       "oracleExposure": "public-development-reference",
       "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
       "referenceFiles": [
@@ -155,6 +167,8 @@
       "changedPaths": [
         "deployment.json"
       ],
+      "conditionId": "condition-deployment-context-small-001",
+      "conditionIdentitySha256": "9f6d3f4b8c46174a46c5c027c16e701d7c6cdd64ce83c1ffa7a53820908b2c0d",
       "contextBytes": 4226,
       "contextTier": "small",
       "editablePaths": [
@@ -179,6 +193,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
       "oracleExposure": "public-development-reference",
       "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
       "referenceFiles": [
@@ -251,6 +267,8 @@
       "changedPaths": [
         "deployment.json"
       ],
+      "conditionId": "condition-deployment-context-medium-001",
+      "conditionIdentitySha256": "aa2c7737a07aa40b996cf24d2065ad15daefdc205d4fe0f52dfb97aeccafb0b0",
       "contextBytes": 33950,
       "contextTier": "medium",
       "editablePaths": [
@@ -275,6 +293,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
       "oracleExposure": "public-development-reference",
       "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
       "referenceFiles": [
@@ -347,6 +367,8 @@
       "changedPaths": [
         "deployment.json"
       ],
+      "conditionId": "condition-deployment-context-large-001",
+      "conditionIdentitySha256": "f182715495e965c26a00226449dd945c1c9084515f47ddc3fd2af96fbb8ec4ad",
       "contextBytes": 275692,
       "contextTier": "large",
       "editablePaths": [
@@ -371,6 +393,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
       "oracleExposure": "public-development-reference",
       "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
       "referenceFiles": [
@@ -443,6 +467,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-generation-context-small-001",
+      "conditionIdentitySha256": "94a4e75f1aff3e52cb853af8d6e01483052ee38598f131c94575c83bd9f98bb0",
       "contextBytes": 4162,
       "contextTier": "small",
       "editablePaths": [
@@ -457,6 +483,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
       "oracleExposure": "public-development-reference",
       "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
       "referenceFiles": [
@@ -498,6 +526,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-generation-context-medium-001",
+      "conditionIdentitySha256": "3c299eca0a299ab376d0d12bcbbbe6510fd46faa6ba781b8a5e7dcf87b185fac",
       "contextBytes": 33886,
       "contextTier": "medium",
       "editablePaths": [
@@ -512,6 +542,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
       "oracleExposure": "public-development-reference",
       "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
       "referenceFiles": [
@@ -553,6 +585,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-generation-context-large-001",
+      "conditionIdentitySha256": "63a70085b7b54dbca408c89d3363f984c304826d1fe1931bb07a5b4d9f7f9829",
       "contextBytes": 275628,
       "contextTier": "large",
       "editablePaths": [
@@ -567,6 +601,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
       "oracleExposure": "public-development-reference",
       "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
       "referenceFiles": [
@@ -608,6 +644,8 @@
       "changedPaths": [
         "case.toml"
       ],
+      "conditionId": "condition-package-migration-context-small-001",
+      "conditionIdentitySha256": "ea355cc5cb03b77e7a27bd8cdb55cac0837a385c9e00f106bf473b57b8a3742d",
       "contextBytes": 4357,
       "contextTier": "small",
       "editablePaths": [
@@ -627,6 +665,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
       "oracleExposure": "public-development-reference",
       "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
       "referenceFiles": [
@@ -669,6 +709,8 @@
       "changedPaths": [
         "case.toml"
       ],
+      "conditionId": "condition-package-migration-context-medium-001",
+      "conditionIdentitySha256": "8f9a1c1f4afa30dae03a4d9b7a5a1764d12ec7ec90d86cc1290b647adeb05c26",
       "contextBytes": 34081,
       "contextTier": "medium",
       "editablePaths": [
@@ -688,6 +730,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
       "oracleExposure": "public-development-reference",
       "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
       "referenceFiles": [
@@ -730,6 +774,8 @@
       "changedPaths": [
         "case.toml"
       ],
+      "conditionId": "condition-package-migration-context-large-001",
+      "conditionIdentitySha256": "911e0625fbf612243cd5676c591707246944195dd154d1c721cbcefe235db7cb",
       "contextBytes": 275823,
       "contextTier": "large",
       "editablePaths": [
@@ -749,6 +795,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
       "oracleExposure": "public-development-reference",
       "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
       "referenceFiles": [
@@ -791,6 +839,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-performance-repair-context-small-001",
+      "conditionIdentitySha256": "5408ea653b9442c1e728144148f1cbb6b68cce69abc47aa56c75e20bee5718f5",
       "contextBytes": 4335,
       "contextTier": "small",
       "editablePaths": [
@@ -805,6 +855,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
       "oracleExposure": "public-development-reference",
       "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
       "referenceFiles": [
@@ -843,6 +895,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-performance-repair-context-medium-001",
+      "conditionIdentitySha256": "c9e10e8affc81084208a4767bbb0fa5a0ee671d0e7040096946f0cd74e725321",
       "contextBytes": 34059,
       "contextTier": "medium",
       "editablePaths": [
@@ -857,6 +911,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
       "oracleExposure": "public-development-reference",
       "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
       "referenceFiles": [
@@ -895,6 +951,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-performance-repair-context-large-001",
+      "conditionIdentitySha256": "3d5dec22c9b3d7161274c96908ed26b8a3a160d2ec5117f378ea435ffdaba90e",
       "contextBytes": 275801,
       "contextTier": "large",
       "editablePaths": [
@@ -909,6 +967,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
       "oracleExposure": "public-development-reference",
       "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
       "referenceFiles": [
@@ -947,6 +1007,8 @@
       "changedPaths": [
         "caps.toml"
       ],
+      "conditionId": "condition-policy-minimization-context-small-001",
+      "conditionIdentitySha256": "eb7fd20ad01fb9097a3dd1b68ed9ae585f2458132a210523108a6482ca703410",
       "contextBytes": 4194,
       "contextTier": "small",
       "editablePaths": [
@@ -971,6 +1033,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
       "oracleExposure": "public-development-reference",
       "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
       "referenceFiles": [
@@ -1026,6 +1090,8 @@
       "changedPaths": [
         "caps.toml"
       ],
+      "conditionId": "condition-policy-minimization-context-medium-001",
+      "conditionIdentitySha256": "6b97f2a26da6269e3436bceed4eb88aa83add44c8a4401544f59c8b2134fba75",
       "contextBytes": 33918,
       "contextTier": "medium",
       "editablePaths": [
@@ -1050,6 +1116,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
       "oracleExposure": "public-development-reference",
       "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
       "referenceFiles": [
@@ -1105,6 +1173,8 @@
       "changedPaths": [
         "caps.toml"
       ],
+      "conditionId": "condition-policy-minimization-context-large-001",
+      "conditionIdentitySha256": "33a14fa9f2c6e8f44442032a6845e692ddd397b6a5c9271090b37f7313763021",
       "contextBytes": 275660,
       "contextTier": "large",
       "editablePaths": [
@@ -1129,6 +1199,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
       "oracleExposure": "public-development-reference",
       "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
       "referenceFiles": [
@@ -1184,6 +1256,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-refactor-context-small-001",
+      "conditionIdentitySha256": "ea2cb0f9a2fab23e858ddbd44cc3dd87050b530e793917222316c978c6c904fa",
       "contextBytes": 4090,
       "contextTier": "small",
       "editablePaths": [
@@ -1198,6 +1272,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
       "oracleExposure": "public-development-reference",
       "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
       "referenceFiles": [
@@ -1234,6 +1310,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-refactor-context-medium-001",
+      "conditionIdentitySha256": "0f1c58ce4569419f4a0726244473a51185cc5f3a2a69efcfae1f98a6f9a8d284",
       "contextBytes": 33814,
       "contextTier": "medium",
       "editablePaths": [
@@ -1248,6 +1326,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
       "oracleExposure": "public-development-reference",
       "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
       "referenceFiles": [
@@ -1284,6 +1364,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-refactor-context-large-001",
+      "conditionIdentitySha256": "89c2f52e17ac93260d54af2e4d962bce23afb2b73b164dd15e0431886a8c7f8d",
       "contextBytes": 275556,
       "contextTier": "large",
       "editablePaths": [
@@ -1298,6 +1380,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
       "oracleExposure": "public-development-reference",
       "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
       "referenceFiles": [
@@ -1334,6 +1418,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-repair-context-small-001",
+      "conditionIdentitySha256": "1d6556d7867710147e990136c3e065ec6ca36172413a8b1beef4dbed7653cb07",
       "contextBytes": 4176,
       "contextTier": "small",
       "editablePaths": [
@@ -1348,6 +1434,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
       "oracleExposure": "public-development-reference",
       "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
       "referenceFiles": [
@@ -1384,6 +1472,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-repair-context-medium-001",
+      "conditionIdentitySha256": "56ae04ba528e2bb19b3c983869962805ba4e7a5532e861aa6d7ad65117abf32b",
       "contextBytes": 33900,
       "contextTier": "medium",
       "editablePaths": [
@@ -1398,6 +1488,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
       "oracleExposure": "public-development-reference",
       "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
       "referenceFiles": [
@@ -1434,6 +1526,8 @@
       "changedPaths": [
         "main.gc"
       ],
+      "conditionId": "condition-repair-context-large-001",
+      "conditionIdentitySha256": "e5a51238dcd39576e86048d329438e635a001f156476ca50a4299a0ac7535d9a",
       "contextBytes": 275642,
       "contextTier": "large",
       "editablePaths": [
@@ -1448,6 +1542,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
       "oracleExposure": "public-development-reference",
       "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
       "referenceFiles": [
@@ -1484,6 +1580,8 @@
       "changedPaths": [
         "finding.json"
       ],
+      "conditionId": "condition-replay-investigation-context-small-001",
+      "conditionIdentitySha256": "753609dcc595aa5687c2d85b13b29d88a0600427c59f57c6b8f55a1a3de1bd08",
       "contextBytes": 5141,
       "contextTier": "small",
       "editablePaths": [
@@ -1513,6 +1611,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
       "oracleExposure": "public-development-reference",
       "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
       "referenceFiles": [
@@ -1571,6 +1671,8 @@
       "changedPaths": [
         "finding.json"
       ],
+      "conditionId": "condition-replay-investigation-context-medium-001",
+      "conditionIdentitySha256": "abcfc6f1e33f721ac6d824523abfd8454cecab9cc1d200064197eab0cb94e129",
       "contextBytes": 34865,
       "contextTier": "medium",
       "editablePaths": [
@@ -1600,6 +1702,8 @@
         }
       ],
       "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
       "oracleExposure": "public-development-reference",
       "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
       "referenceFiles": [
@@ -1658,12 +1762,1498 @@
       "changedPaths": [
         "finding.json"
       ],
+      "conditionId": "condition-replay-investigation-context-large-001",
+      "conditionIdentitySha256": "551600214c386b81ed859890a398e0cfddcbd0b8ef23e4a9ab9d2c20270397c8",
       "contextBytes": 276607,
       "contextTier": "large",
       "editablePaths": [
         "finding.json"
       ],
       "id": "replay-investigation-large",
+      "inputFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/replay-investigation",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+        },
+        {
+          "bytes": 154,
+          "path": "finding.json",
+          "sha256": "275d68d9afbf3a576842fd96ff657932efc2a882c2fc4effb1b6cc446051d30e"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        },
+        {
+          "bytes": 864,
+          "path": "run.gclog",
+          "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/replay-investigation",
+      "taskClass": "replay-investigation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "replay",
+            "program.gc",
+            "--log",
+            "run.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/error/code",
+              "value": "replay/mismatch"
+            }
+          ],
+          "exitCode": 40,
+          "id": "confirm-mismatch",
+          "kind": "genesis/error-v0.2",
+          "ok": false
+        }
+      ]
+    }
+  ],
+  "conditions": [
+    {
+      "contentIdentitySha256": "2f308f8f850d9e22bd673e6ac434f2509ec5bd23d6df816824a01a840acc36e7",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4045,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-completion-context-small-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148"
+    },
+    {
+      "contentIdentitySha256": "c490191273c58e5ef22ac624e3a05788d124c5ba1bd04ab4d93bb55eccfbfb30",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33769,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-completion-context-medium-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148"
+    },
+    {
+      "contentIdentitySha256": "c35c13b6caa87aa4b864934c64765072d3687c366040daf147fb6db96823e437",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275511,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-completion-context-large-001",
+      "lineageId": "lineage-completion-001",
+      "lineageIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148"
+    },
+    {
+      "contentIdentitySha256": "9f6d3f4b8c46174a46c5c027c16e701d7c6cdd64ce83c1ffa7a53820908b2c0d",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4226,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-deployment-context-small-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28"
+    },
+    {
+      "contentIdentitySha256": "aa2c7737a07aa40b996cf24d2065ad15daefdc205d4fe0f52dfb97aeccafb0b0",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33950,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-deployment-context-medium-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28"
+    },
+    {
+      "contentIdentitySha256": "f182715495e965c26a00226449dd945c1c9084515f47ddc3fd2af96fbb8ec4ad",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275692,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-deployment-context-large-001",
+      "lineageId": "lineage-deployment-001",
+      "lineageIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28"
+    },
+    {
+      "contentIdentitySha256": "94a4e75f1aff3e52cb853af8d6e01483052ee38598f131c94575c83bd9f98bb0",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4162,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-generation-context-small-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a"
+    },
+    {
+      "contentIdentitySha256": "3c299eca0a299ab376d0d12bcbbbe6510fd46faa6ba781b8a5e7dcf87b185fac",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33886,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-generation-context-medium-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a"
+    },
+    {
+      "contentIdentitySha256": "63a70085b7b54dbca408c89d3363f984c304826d1fe1931bb07a5b4d9f7f9829",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275628,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-generation-context-large-001",
+      "lineageId": "lineage-generation-001",
+      "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a"
+    },
+    {
+      "contentIdentitySha256": "ea355cc5cb03b77e7a27bd8cdb55cac0837a385c9e00f106bf473b57b8a3742d",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4357,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-package-migration-context-small-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe"
+    },
+    {
+      "contentIdentitySha256": "8f9a1c1f4afa30dae03a4d9b7a5a1764d12ec7ec90d86cc1290b647adeb05c26",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 34081,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-package-migration-context-medium-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe"
+    },
+    {
+      "contentIdentitySha256": "911e0625fbf612243cd5676c591707246944195dd154d1c721cbcefe235db7cb",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275823,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-package-migration-context-large-001",
+      "lineageId": "lineage-package-migration-001",
+      "lineageIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe"
+    },
+    {
+      "contentIdentitySha256": "5408ea653b9442c1e728144148f1cbb6b68cce69abc47aa56c75e20bee5718f5",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4335,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-performance-repair-context-small-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913"
+    },
+    {
+      "contentIdentitySha256": "c9e10e8affc81084208a4767bbb0fa5a0ee671d0e7040096946f0cd74e725321",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 34059,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-performance-repair-context-medium-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913"
+    },
+    {
+      "contentIdentitySha256": "3d5dec22c9b3d7161274c96908ed26b8a3a160d2ec5117f378ea435ffdaba90e",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275801,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-performance-repair-context-large-001",
+      "lineageId": "lineage-performance-repair-001",
+      "lineageIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913"
+    },
+    {
+      "contentIdentitySha256": "eb7fd20ad01fb9097a3dd1b68ed9ae585f2458132a210523108a6482ca703410",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4194,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-policy-minimization-context-small-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570"
+    },
+    {
+      "contentIdentitySha256": "6b97f2a26da6269e3436bceed4eb88aa83add44c8a4401544f59c8b2134fba75",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33918,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-policy-minimization-context-medium-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570"
+    },
+    {
+      "contentIdentitySha256": "33a14fa9f2c6e8f44442032a6845e692ddd397b6a5c9271090b37f7313763021",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275660,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-policy-minimization-context-large-001",
+      "lineageId": "lineage-policy-minimization-001",
+      "lineageIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570"
+    },
+    {
+      "contentIdentitySha256": "ea2cb0f9a2fab23e858ddbd44cc3dd87050b530e793917222316c978c6c904fa",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4090,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-refactor-context-small-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16"
+    },
+    {
+      "contentIdentitySha256": "0f1c58ce4569419f4a0726244473a51185cc5f3a2a69efcfae1f98a6f9a8d284",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33814,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-refactor-context-medium-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16"
+    },
+    {
+      "contentIdentitySha256": "89c2f52e17ac93260d54af2e4d962bce23afb2b73b164dd15e0431886a8c7f8d",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275556,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-refactor-context-large-001",
+      "lineageId": "lineage-refactor-001",
+      "lineageIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16"
+    },
+    {
+      "contentIdentitySha256": "1d6556d7867710147e990136c3e065ec6ca36172413a8b1beef4dbed7653cb07",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 4176,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-repair-context-small-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac"
+    },
+    {
+      "contentIdentitySha256": "56ae04ba528e2bb19b3c983869962805ba4e7a5532e861aa6d7ad65117abf32b",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33900,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-repair-context-medium-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac"
+    },
+    {
+      "contentIdentitySha256": "e5a51238dcd39576e86048d329438e635a001f156476ca50a4299a0ac7535d9a",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275642,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-repair-context-large-001",
+      "lineageId": "lineage-repair-001",
+      "lineageIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac"
+    },
+    {
+      "contentIdentitySha256": "753609dcc595aa5687c2d85b13b29d88a0600427c59f57c6b8f55a1a3de1bd08",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 5141,
+      "dimensions": {
+        "contextTier": "small",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-replay-investigation-context-small-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa"
+    },
+    {
+      "contentIdentitySha256": "abcfc6f1e33f721ac6d824523abfd8454cecab9cc1d200064197eab0cb94e129",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 34865,
+      "dimensions": {
+        "contextTier": "medium",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-replay-investigation-context-medium-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa"
+    },
+    {
+      "contentIdentitySha256": "551600214c386b81ed859890a398e0cfddcbd0b8ef23e4a9ab9d2c20270397c8",
+      "contextArtifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 276607,
+      "dimensions": {
+        "contextTier": "large",
+        "mutation": "none",
+        "repairPolicy": "no-agent-repair-v0.1",
+        "scaffold": "public-reference-executor-v0.1",
+        "toolMode": "production-json-cli-v0.1"
+      },
+      "id": "condition-replay-investigation-context-large-001",
+      "lineageId": "lineage-replay-investigation-001",
+      "lineageIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa"
+    }
+  ],
+  "contentIdentitySha256": "af11afc068e9de77d5752b9e4e4c6be164fd350e7adb6b62d9449681b71260a5",
+  "contextTiers": [
+    {
+      "artifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        }
+      ],
+      "contextBytes": 3916,
+      "id": "small",
+      "ordinal": 1
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        }
+      ],
+      "contextBytes": 33640,
+      "id": "medium",
+      "ordinal": 2
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 3916,
+          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "sha256": "aef00c598160bf6cc0aa1e82aa685bb486b783dd6c7042edf6ad2ccae8e8ef60"
+        },
+        {
+          "bytes": 5886,
+          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "sha256": "14827458cc6c9d50afd3e720bcfbcd956e297fd4287d54094b57888d0b2a7d37"
+        },
+        {
+          "bytes": 23838,
+          "path": "docs/spec/CLI.md",
+          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+        },
+        {
+          "bytes": 36175,
+          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
+        },
+        {
+          "bytes": 205567,
+          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "sha256": "bfe7582861ec6e9447eef8fcb5a9bd585ef358cb19eb9a28dd6640aece81ba1a"
+        }
+      ],
+      "contextBytes": 275382,
+      "id": "large",
+      "ordinal": 3
+    }
+  ],
+  "kind": "genesis/agent-task-benchmark-v0.1",
+  "lineages": [
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contentIdentitySha256": "36f2fd8242f463cbc054a1a4504a08288c5e5ec70b7152a4a9d248657271c148",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "lineage-completion-001",
+      "inputFiles": [
+        {
+          "bytes": 27,
+          "path": "main.gc",
+          "sha256": "3244de58132ff137e7b1a03238de53ad94ed84c34632367806d7b363ac501508"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/completion",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/completion",
+      "taskClass": "completion",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "deployment.json"
+      ],
+      "contentIdentitySha256": "cb8a9679bb75243c9f2493bd8412ce026cc0d7a1f4889ee9350ab8e3a8553a28",
+      "editablePaths": [
+        "deployment.json"
+      ],
+      "id": "lineage-deployment-001",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/deployment",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
+      "referenceFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 80,
+          "path": "deployment.json",
+          "sha256": "9c826b7fdf13d8933f58f83c12473cd77c977c9e0442ca754dff6bddc6d9b89a"
+        },
+        {
+          "bytes": 59,
+          "path": "lib.gc",
+          "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+        },
+        {
+          "bytes": 119,
+          "path": "package.toml",
+          "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/deployment",
+      "taskClass": "deployment",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "pack",
+            "--pkg",
+            "package.toml"
+          ],
+          "assertions": [],
+          "exitCode": 0,
+          "id": "package",
+          "kind": "genesis/pack-v0.2",
+          "ok": true
+        },
+        {
+          "argv": [
+            "--json",
+            "gcpm",
+            "--caps",
+            "caps.toml",
+            "build",
+            "--pkg",
+            "package.toml",
+            "--target",
+            "service",
+            "--out-dir",
+            "dist"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/report/target",
+              "value": "service"
+            }
+          ],
+          "exitCode": 0,
+          "id": "build",
+          "kind": "genesis/pkg-build-v0.1",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contentIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "lineage-generation-001",
+      "inputFiles": [
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/generation",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        },
+        {
+          "bytes": 140,
+          "path": "requirements.md",
+          "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/generation",
+      "taskClass": "generation",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "case.toml"
+      ],
+      "contentIdentitySha256": "282274195d4244d399a9ac599f74e52e4e25de2301c88846cbbfbde595c1e9fe",
+      "editablePaths": [
+        "case.toml"
+      ],
+      "id": "lineage-package-migration-001",
+      "inputFiles": [
+        {
+          "bytes": 132,
+          "path": "case.toml",
+          "sha256": "5a1042e9f67c70ebed2516d69d32e4507ae1d7f5f5ce9c7323bfdc6f5f9a8bcd"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/package-migration",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
+      "referenceFiles": [
+        {
+          "bytes": 186,
+          "path": "case.toml",
+          "sha256": "e691e630f429fcbaf2c5e6d9afc7a3a1309dd330d828a69912bc55f088cc0809"
+        },
+        {
+          "bytes": 183,
+          "path": "main.gc",
+          "sha256": "cbd188e88a292f5c7a0931d18a581e036d06fc4b3e3920b67dfef74be9869b54"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/package-migration",
+      "taskClass": "package-migration",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "typecheck",
+            "--pkg",
+            "case.toml"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/strict_sound",
+              "value": false
+            }
+          ],
+          "exitCode": 0,
+          "id": "typecheck",
+          "kind": "genesis/typecheck-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contentIdentitySha256": "841f3e905d1c4b407962d90fa2f56013606e2f92d410ff92e5034080a67e2913",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "lineage-performance-repair-001",
+      "inputFiles": [
+        {
+          "bytes": 293,
+          "path": "main.gc",
+          "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/performance-repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
+      "referenceFiles": [
+        {
+          "bytes": 5,
+          "path": "main.gc",
+          "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/performance-repair",
+      "taskClass": "performance-repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "--step-limit",
+            "10",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "6765"
+            }
+          ],
+          "exitCode": 0,
+          "id": "budgeted-execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "caps.toml"
+      ],
+      "contentIdentitySha256": "ee140a29a4a6c6e021d465cdeaf214e677f0946a73f9e03a5b64947ef51e7570",
+      "editablePaths": [
+        "caps.toml"
+      ],
+      "id": "lineage-policy-minimization-001",
+      "inputFiles": [
+        {
+          "bytes": 11,
+          "path": "caps.toml",
+          "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/policy-minimization",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
+      "referenceFiles": [
+        {
+          "bytes": 59,
+          "path": "caps.toml",
+          "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+        },
+        {
+          "bytes": 22,
+          "path": "data.txt",
+          "sha256": "e7045a66512bec1e9f535a51ba79bcad828d87ce668de9c8f86aa7e02de29318"
+        },
+        {
+          "bytes": 124,
+          "path": "program.gc",
+          "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/policy-minimization",
+      "taskClass": "policy-minimization",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "run",
+            "program.gc",
+            "--caps",
+            "caps.toml",
+            "--log",
+            "effect.gclog"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/denied",
+              "value": false
+            },
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "22"
+            }
+          ],
+          "exitCode": 0,
+          "id": "authorized-run",
+          "kind": "genesis/run-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contentIdentitySha256": "2f6a3cbc296501c496bdf127645034b1a24746340e824d8d2a8bf9a8472d3c16",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "lineage-refactor-001",
+      "inputFiles": [
+        {
+          "bytes": 54,
+          "path": "main.gc",
+          "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/refactor",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
+      "referenceFiles": [
+        {
+          "bytes": 20,
+          "path": "main.gc",
+          "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/refactor",
+      "taskClass": "refactor",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "42"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "main.gc"
+      ],
+      "contentIdentitySha256": "b7dda844b51e750ae9024e51db27a1f547c78f96885c103d70dc0a5c0d9933ac",
+      "editablePaths": [
+        "main.gc"
+      ],
+      "id": "lineage-repair-001",
+      "inputFiles": [
+        {
+          "bytes": 136,
+          "path": "main.gc",
+          "sha256": "802712f795aba5edf0c9aab6ec3d6e2c1e759e9f3571bdf0a84ab4e0c96316c6"
+        }
+      ],
+      "inputRoot": "benchmarks/agent_tasks/v0.1/inputs/repair",
+      "oracleExposure": "public-development-reference",
+      "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
+      "referenceFiles": [
+        {
+          "bytes": 134,
+          "path": "main.gc",
+          "sha256": "fc7fa70355fca63a7b1f3d616b2594381044e08c14d5178821715c5be1314347"
+        }
+      ],
+      "referenceRoot": "benchmarks/agent_tasks/v0.1/references/repair",
+      "taskClass": "repair",
+      "verification": [
+        {
+          "argv": [
+            "--json",
+            "eval",
+            "main.gc"
+          ],
+          "assertions": [
+            {
+              "operator": "equals",
+              "pointer": "/data/value",
+              "value": "3"
+            }
+          ],
+          "exitCode": 0,
+          "id": "execute",
+          "kind": "genesis/eval-v0.2",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "changedPaths": [
+        "finding.json"
+      ],
+      "contentIdentitySha256": "eaeddc138d8983e425c04669a82a553f2f5dd49b7203124dc9fb51093e890caa",
+      "editablePaths": [
+        "finding.json"
+      ],
+      "id": "lineage-replay-investigation-001",
       "inputFiles": [
         {
           "bytes": 59,
@@ -1742,80 +3332,10 @@
       ]
     }
   ],
-  "contentIdentitySha256": "de339bb57a225081b51ea0d43332202f2a03a94c22504c0d9f8e580a4768698d",
-  "contextTiers": [
-    {
-      "artifacts": [
-        {
-          "bytes": 3916,
-          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-          "sha256": "57cb38d08a7c58b0298c80714cab360d6c6b2134d2f3a3f7532582f9dd2d335e"
-        }
-      ],
-      "contextBytes": 3916,
-      "id": "small",
-      "ordinal": 1
-    },
-    {
-      "artifacts": [
-        {
-          "bytes": 3916,
-          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-          "sha256": "57cb38d08a7c58b0298c80714cab360d6c6b2134d2f3a3f7532582f9dd2d335e"
-        },
-        {
-          "bytes": 5886,
-          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-          "sha256": "40790e48ae0203e0dc4c3d249a9df87aa3e3d68eb46b0d067bcb09b797d15b2d"
-        },
-        {
-          "bytes": 23838,
-          "path": "docs/spec/CLI.md",
-          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
-        }
-      ],
-      "contextBytes": 33640,
-      "id": "medium",
-      "ordinal": 2
-    },
-    {
-      "artifacts": [
-        {
-          "bytes": 3916,
-          "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-          "sha256": "57cb38d08a7c58b0298c80714cab360d6c6b2134d2f3a3f7532582f9dd2d335e"
-        },
-        {
-          "bytes": 5886,
-          "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-          "sha256": "40790e48ae0203e0dc4c3d249a9df87aa3e3d68eb46b0d067bcb09b797d15b2d"
-        },
-        {
-          "bytes": 23838,
-          "path": "docs/spec/CLI.md",
-          "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
-        },
-        {
-          "bytes": 36175,
-          "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-          "sha256": "ec4048082084035383bdb456cb3d96b94cda3c1ffcebe82ecdc0e51118219d83"
-        },
-        {
-          "bytes": 205567,
-          "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
-          "sha256": "1f732a4123ebc2d60188ba291c7ba36766875c1abe3bc0b5eb587668995619fa"
-        }
-      ],
-      "contextBytes": 275382,
-      "id": "large",
-      "ordinal": 3
-    }
-  ],
-  "kind": "genesis/agent-task-benchmark-v0.1",
   "profile": {
     "id": "GC-AGENT-v0.3",
     "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "ec4048082084035383bdb456cb3d96b94cda3c1ffcebe82ecdc0e51118219d83"
+    "sha256": "7fa0a0d257886df93272370dda81ca2d30324806d4bb7623ab74f886b4cb4196"
   },
   "taskClasses": [
     "completion",

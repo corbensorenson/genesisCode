@@ -1,0 +1,339 @@
+{
+  "analysisPlanIdentitySha256": "0aceb8504551a3357ef6d0a2ba727f7d0b6fe1be690e60d2afd6796d54c33757",
+  "cohortIdentitySha256": "f9fec6a4ecf409f42cb41ff1c640f2df150270548846022772c39dbdc3afe212",
+  "comparisons": [
+    {
+      "effectWilson95BasisPoints": [
+        -3586,
+        6701
+      ],
+      "exactPValue": {
+        "denominator": 2,
+        "numerator": 1
+      },
+      "holmAdjustedPValuePartsPerBillion": 1000000000,
+      "leftOnlySolved": 2,
+      "leftSystemId": "reference-alpha",
+      "ordering": "indeterminate",
+      "pairedLineages": 9,
+      "rightOnlySolved": 0,
+      "rightSystemId": "reference-beta",
+      "significant": false,
+      "solveRateDifferenceBasisPoints": 2222
+    },
+    {
+      "effectWilson95BasisPoints": [
+        -1932,
+        8162
+      ],
+      "exactPValue": {
+        "denominator": 8,
+        "numerator": 1
+      },
+      "holmAdjustedPValuePartsPerBillion": 375000000,
+      "leftOnlySolved": 4,
+      "leftSystemId": "reference-alpha",
+      "ordering": "indeterminate",
+      "pairedLineages": 9,
+      "rightOnlySolved": 0,
+      "rightSystemId": "reference-gamma",
+      "significant": false,
+      "solveRateDifferenceBasisPoints": 4444
+    },
+    {
+      "effectWilson95BasisPoints": [
+        -3791,
+        6906
+      ],
+      "exactPValue": {
+        "denominator": 2,
+        "numerator": 1
+      },
+      "holmAdjustedPValuePartsPerBillion": 1000000000,
+      "leftOnlySolved": 2,
+      "leftSystemId": "reference-beta",
+      "ordering": "indeterminate",
+      "pairedLineages": 9,
+      "rightOnlySolved": 0,
+      "rightSystemId": "reference-gamma",
+      "significant": false,
+      "solveRateDifferenceBasisPoints": 2222
+    }
+  ],
+  "conditionSummaries": [
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 7,
+      "conditionalQualityMeanBasisPoints": 9089,
+      "contextTier": "small",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 1,
+        "missing": 0,
+        "solved": 7,
+        "unsolved": 0
+      },
+      "solveRateBasisPoints": 7778,
+      "solveRateWilson95BasisPoints": [
+        4526,
+        9368
+      ],
+      "systemId": "reference-alpha",
+      "verifiedSolvedLineages": 7
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 7,
+      "conditionalQualityMeanBasisPoints": 9089,
+      "contextTier": "medium",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 1,
+        "missing": 0,
+        "solved": 7,
+        "unsolved": 0
+      },
+      "solveRateBasisPoints": 7778,
+      "solveRateWilson95BasisPoints": [
+        4526,
+        9368
+      ],
+      "systemId": "reference-alpha",
+      "verifiedSolvedLineages": 7
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 7,
+      "conditionalQualityMeanBasisPoints": 9089,
+      "contextTier": "large",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 1,
+        "missing": 0,
+        "solved": 7,
+        "unsolved": 0
+      },
+      "solveRateBasisPoints": 7778,
+      "solveRateWilson95BasisPoints": [
+        4526,
+        9368
+      ],
+      "systemId": "reference-alpha",
+      "verifiedSolvedLineages": 7
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 5,
+      "conditionalQualityMeanBasisPoints": 8878,
+      "contextTier": "small",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 0,
+        "invalid": 1,
+        "missing": 1,
+        "solved": 5,
+        "unsolved": 2
+      },
+      "solveRateBasisPoints": 5556,
+      "solveRateWilson95BasisPoints": [
+        2667,
+        8112
+      ],
+      "systemId": "reference-beta",
+      "verifiedSolvedLineages": 5
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 7,
+      "conditionalQualityMeanBasisPoints": 8878,
+      "contextTier": "medium",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 0,
+        "invalid": 1,
+        "missing": 1,
+        "solved": 7,
+        "unsolved": 0
+      },
+      "solveRateBasisPoints": 7778,
+      "solveRateWilson95BasisPoints": [
+        4526,
+        9368
+      ],
+      "systemId": "reference-beta",
+      "verifiedSolvedLineages": 7
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 5,
+      "conditionalQualityMeanBasisPoints": 8878,
+      "contextTier": "large",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 0,
+        "invalid": 1,
+        "missing": 0,
+        "solved": 5,
+        "unsolved": 3
+      },
+      "solveRateBasisPoints": 5556,
+      "solveRateWilson95BasisPoints": [
+        2667,
+        8112
+      ],
+      "systemId": "reference-beta",
+      "verifiedSolvedLineages": 5
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 3,
+      "conditionalQualityMeanBasisPoints": 8679,
+      "contextTier": "small",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 0,
+        "missing": 1,
+        "solved": 3,
+        "unsolved": 4
+      },
+      "solveRateBasisPoints": 3333,
+      "solveRateWilson95BasisPoints": [
+        1206,
+        6458
+      ],
+      "systemId": "reference-gamma",
+      "verifiedSolvedLineages": 3
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 7,
+      "conditionalQualityMeanBasisPoints": 8667,
+      "contextTier": "medium",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 0,
+        "missing": 1,
+        "solved": 7,
+        "unsolved": 0
+      },
+      "solveRateBasisPoints": 7778,
+      "solveRateWilson95BasisPoints": [
+        4526,
+        9368
+      ],
+      "systemId": "reference-gamma",
+      "verifiedSolvedLineages": 7
+    },
+    {
+      "clusteredBy": "lineageId",
+      "conditionalQualityDenominator": 3,
+      "conditionalQualityMeanBasisPoints": 8679,
+      "contextTier": "large",
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 0,
+        "missing": 0,
+        "solved": 3,
+        "unsolved": 5
+      },
+      "solveRateBasisPoints": 3333,
+      "solveRateWilson95BasisPoints": [
+        1206,
+        6458
+      ],
+      "systemId": "reference-gamma",
+      "verifiedSolvedLineages": 3
+    }
+  ],
+  "contentIdentitySha256": "3be4623ab42cd9ce2f5c7d47086b9444ca196a9ab03fa5d0513515e62982dd3f",
+  "independentLineages": 9,
+  "kind": "genesis/genesisbench-analysis-report-v0.1",
+  "latestEpochId": "public-anchor-epoch-001",
+  "multipleComparison": {
+    "alphaPartsPerBillion": 50000000,
+    "familySize": 3,
+    "method": "holm-bonferroni-familywise-v0.1"
+  },
+  "observationsIdentitySha256": "88c29e0b1a56fa0462407ba85122e0032b02c30e620bc9c5d97efa893b1bf2a0",
+  "primaryCondition": {
+    "dimension": "contextTier",
+    "value": "small"
+  },
+  "publicationMode": "unranked-reference-conformance",
+  "rankClaimsAllowed": false,
+  "repeatedConditions": 27,
+  "saturation": {
+    "distinctModelFamilies": 3,
+    "eligibleEpochs": 0,
+    "reason": "insufficient-ranked-consecutive-epoch-evidence",
+    "requiredConsecutiveEpochs": 2,
+    "saturated": false
+  },
+  "systemSummaries": [
+    {
+      "conditionalQualityDenominator": 7,
+      "conditionalQualityMeanBasisPoints": 9089,
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 1,
+        "missing": 0,
+        "solved": 7,
+        "unsolved": 0
+      },
+      "solveRateBasisPoints": 7778,
+      "solveRateWilson95BasisPoints": [
+        4526,
+        9368
+      ],
+      "systemId": "reference-alpha",
+      "verifiedSolvedLineages": 7
+    },
+    {
+      "conditionalQualityDenominator": 5,
+      "conditionalQualityMeanBasisPoints": 8878,
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 0,
+        "invalid": 1,
+        "missing": 1,
+        "solved": 5,
+        "unsolved": 2
+      },
+      "solveRateBasisPoints": 5556,
+      "solveRateWilson95BasisPoints": [
+        2667,
+        8112
+      ],
+      "systemId": "reference-beta",
+      "verifiedSolvedLineages": 5
+    },
+    {
+      "conditionalQualityDenominator": 3,
+      "conditionalQualityMeanBasisPoints": 8679,
+      "independentLineageDenominator": 9,
+      "outcomes": {
+        "abstained": 1,
+        "invalid": 0,
+        "missing": 1,
+        "solved": 3,
+        "unsolved": 4
+      },
+      "solveRateBasisPoints": 3333,
+      "solveRateWilson95BasisPoints": [
+        1206,
+        6458
+      ],
+      "systemId": "reference-gamma",
+      "verifiedSolvedLineages": 3
+    }
+  ],
+  "taskBenchmarkIdentitySha256": "af11afc068e9de77d5752b9e4e4c6be164fd350e7adb6b62d9449681b71260a5",
+  "version": "0.1.0"
+}

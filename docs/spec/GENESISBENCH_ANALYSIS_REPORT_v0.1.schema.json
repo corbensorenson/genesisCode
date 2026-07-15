@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-analysis-report-v0.1.json",
+  "title": "GenesisBench deterministic lineage analysis report v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "analysisPlanIdentitySha256", "observationsIdentitySha256", "taskBenchmarkIdentitySha256", "publicationMode", "cohortIdentitySha256", "latestEpochId", "independentLineages", "repeatedConditions", "primaryCondition", "systemSummaries", "conditionSummaries", "comparisons", "multipleComparison", "saturation", "rankClaimsAllowed", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-analysis-report-v0.1"},
+    "version": {"const": "0.1.0"},
+    "analysisPlanIdentitySha256": {"$ref": "#/$defs/hash"},
+    "observationsIdentitySha256": {"$ref": "#/$defs/hash"},
+    "taskBenchmarkIdentitySha256": {"$ref": "#/$defs/hash"},
+    "publicationMode": {"enum": ["ranked", "unranked-reference-conformance", "unranked-research"]},
+    "cohortIdentitySha256": {"$ref": "#/$defs/hash"},
+    "latestEpochId": {"$ref": "#/$defs/id"},
+    "independentLineages": {"type": "integer", "minimum": 1},
+    "repeatedConditions": {"type": "integer", "minimum": 1},
+    "primaryCondition": {"$ref": "#/$defs/selector"},
+    "systemSummaries": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/summary"}},
+    "conditionSummaries": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/conditionSummary"}},
+    "comparisons": {"type": "array", "items": {"$ref": "#/$defs/comparison"}},
+    "multipleComparison": {"$ref": "#/$defs/multipleComparison"},
+    "saturation": {"$ref": "#/$defs/saturation"},
+    "rankClaimsAllowed": {"type": "boolean"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "selector": {"type": "object", "additionalProperties": false, "required": ["dimension", "value"], "properties": {"dimension": {"const": "contextTier"}, "value": {"const": "small"}}},
+    "outcomes": {"type": "object", "additionalProperties": false, "required": ["abstained", "invalid", "missing", "solved", "unsolved"], "properties": {"abstained": {"type": "integer", "minimum": 0}, "invalid": {"type": "integer", "minimum": 0}, "missing": {"type": "integer", "minimum": 0}, "solved": {"type": "integer", "minimum": 0}, "unsolved": {"type": "integer", "minimum": 0}}},
+    "interval": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": -10000, "maximum": 10000}},
+    "summary": {"type": "object", "additionalProperties": false, "required": ["systemId", "independentLineageDenominator", "verifiedSolvedLineages", "solveRateBasisPoints", "solveRateWilson95BasisPoints", "outcomes", "conditionalQualityDenominator", "conditionalQualityMeanBasisPoints"], "properties": {"systemId": {"$ref": "#/$defs/id"}, "independentLineageDenominator": {"type": "integer", "minimum": 1}, "verifiedSolvedLineages": {"type": "integer", "minimum": 0}, "solveRateBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}, "solveRateWilson95BasisPoints": {"$ref": "#/$defs/interval"}, "outcomes": {"$ref": "#/$defs/outcomes"}, "conditionalQualityDenominator": {"type": "integer", "minimum": 0}, "conditionalQualityMeanBasisPoints": {"oneOf": [{"type": "integer", "minimum": 0, "maximum": 10000}, {"type": "null"}]}}},
+    "conditionSummary": {"type": "object", "additionalProperties": false, "required": ["systemId", "independentLineageDenominator", "verifiedSolvedLineages", "solveRateBasisPoints", "solveRateWilson95BasisPoints", "outcomes", "conditionalQualityDenominator", "conditionalQualityMeanBasisPoints", "contextTier", "clusteredBy"], "properties": {"systemId": {"$ref": "#/$defs/id"}, "independentLineageDenominator": {"type": "integer", "minimum": 1}, "verifiedSolvedLineages": {"type": "integer", "minimum": 0}, "solveRateBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}, "solveRateWilson95BasisPoints": {"$ref": "#/$defs/interval"}, "outcomes": {"$ref": "#/$defs/outcomes"}, "conditionalQualityDenominator": {"type": "integer", "minimum": 0}, "conditionalQualityMeanBasisPoints": {"oneOf": [{"type": "integer", "minimum": 0, "maximum": 10000}, {"type": "null"}]}, "contextTier": {"enum": ["small", "medium", "large"]}, "clusteredBy": {"const": "lineageId"}}},
+    "rational": {"type": "object", "additionalProperties": false, "required": ["numerator", "denominator"], "properties": {"numerator": {"type": "integer", "minimum": 0}, "denominator": {"type": "integer", "minimum": 1}}},
+    "comparison": {"type": "object", "additionalProperties": false, "required": ["leftSystemId", "rightSystemId", "pairedLineages", "leftOnlySolved", "rightOnlySolved", "solveRateDifferenceBasisPoints", "effectWilson95BasisPoints", "exactPValue", "holmAdjustedPValuePartsPerBillion", "significant", "ordering"], "properties": {"leftSystemId": {"$ref": "#/$defs/id"}, "rightSystemId": {"$ref": "#/$defs/id"}, "pairedLineages": {"type": "integer", "minimum": 1}, "leftOnlySolved": {"type": "integer", "minimum": 0}, "rightOnlySolved": {"type": "integer", "minimum": 0}, "solveRateDifferenceBasisPoints": {"type": "integer", "minimum": -10000, "maximum": 10000}, "effectWilson95BasisPoints": {"$ref": "#/$defs/interval"}, "exactPValue": {"$ref": "#/$defs/rational"}, "holmAdjustedPValuePartsPerBillion": {"type": "integer", "minimum": 0, "maximum": 1000000000}, "significant": {"type": "boolean"}, "ordering": {"$ref": "#/$defs/id"}}},
+    "multipleComparison": {"type": "object", "additionalProperties": false, "required": ["method", "familySize", "alphaPartsPerBillion"], "properties": {"method": {"const": "holm-bonferroni-familywise-v0.1"}, "familySize": {"type": "integer", "minimum": 0}, "alphaPartsPerBillion": {"const": 50000000}}},
+    "saturation": {"type": "object", "additionalProperties": false, "required": ["saturated", "eligibleEpochs", "requiredConsecutiveEpochs", "distinctModelFamilies", "reason"], "properties": {"saturated": {"type": "boolean"}, "eligibleEpochs": {"type": "integer", "minimum": 0}, "requiredConsecutiveEpochs": {"const": 2}, "distinctModelFamilies": {"type": "integer", "minimum": 1}, "reason": {"enum": ["threshold-met", "insufficient-ranked-consecutive-epoch-evidence"]}}}
+  }
+}

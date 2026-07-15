@@ -66,11 +66,15 @@
     "benchmark": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["benchmarkId", "caseId", "caseIdentitySha256", "taskClass", "contextTier", "split", "contamination", "heldOutEpochId"],
+      "required": ["benchmarkId", "caseId", "caseIdentitySha256", "lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256", "taskClass", "contextTier", "split", "contamination", "heldOutEpochId"],
       "properties": {
         "benchmarkId": {"const": "GC-AGENT-TASK-BENCHMARK-v0.1"},
         "caseId": {"$ref": "#/$defs/id"},
         "caseIdentitySha256": {"$ref": "#/$defs/hash"},
+        "lineageId": {"type": "string", "pattern": "^lineage-[a-z0-9-]+-[0-9]{3}$"},
+        "lineageIdentitySha256": {"$ref": "#/$defs/hash"},
+        "conditionId": {"type": "string", "pattern": "^condition-[a-z0-9-]+-[0-9]{3}$"},
+        "conditionIdentitySha256": {"$ref": "#/$defs/hash"},
         "taskClass": {"enum": ["generation", "completion", "repair", "refactor", "policy-minimization", "replay-investigation", "performance-repair", "package-migration", "deployment"]},
         "contextTier": {"enum": ["small", "medium", "large"]},
         "split": {"enum": ["dev", "public-test", "held-out"]},

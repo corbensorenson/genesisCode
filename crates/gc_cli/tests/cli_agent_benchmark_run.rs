@@ -125,12 +125,39 @@ fn canonical_run_is_complete_content_addressed_and_scores_with_shipped_binary() 
     let run: Value =
         serde_json::from_slice(&fs::read(root.join(BUNDLE).join("run.json")).unwrap()).unwrap();
     assert_eq!(run["track"]["trackId"], "open-agent");
+    assert_eq!(run["benchmark"]["lineageId"], "lineage-generation-001");
+    assert_eq!(
+        run["benchmark"]["conditionId"],
+        "condition-generation-context-small-001"
+    );
+    assert_eq!(
+        run["benchmark"]["lineageIdentitySha256"],
+        suite_binding(&root, "generation-small", "lineageIdentitySha256")
+    );
+    assert_eq!(
+        run["benchmark"]["conditionIdentitySha256"],
+        suite_binding(&root, "generation-small", "conditionIdentitySha256")
+    );
     assert_eq!(
         run["track"]["training"]["genesisSpecificTraining"],
         "unknown"
     );
     assert!(run["track"]["hardware"]["classId"].is_null());
     assert_eq!(run["track"]["hardware"]["measurementMethod"], "not-claimed");
+}
+
+fn suite_binding(root: &Path, case_id: &str, field: &str) -> Value {
+    let suite: Value = serde_json::from_slice(
+        &fs::read(root.join("benchmarks/agent_tasks/v0.1/suite.json")).unwrap(),
+    )
+    .unwrap();
+    suite["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["id"] == case_id)
+        .unwrap()[field]
+        .clone()
 }
 
 #[test]

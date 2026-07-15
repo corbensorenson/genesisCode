@@ -35,7 +35,7 @@ EXPECTED = {
 }
 STDLIB = {
     "__future__", "argparse", "ast", "base64", "binascii", "collections", "contextlib", "copy",
-    "dataclasses", "datetime", "errno", "fcntl", "fnmatch", "fractions", "functools", "gzip",
+    "dataclasses", "datetime", "decimal", "errno", "fcntl", "fnmatch", "fractions", "functools", "gzip",
     "hashlib", "html", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "random", "re",
     "shlex", "shutil", "signal", "socket", "stat",
     "secrets", "statistics", "string", "subprocess", "sys", "tarfile", "tempfile", "threading", "time", "tomllib",

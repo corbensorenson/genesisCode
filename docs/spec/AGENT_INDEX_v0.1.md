@@ -87,8 +87,8 @@ genesis --json agent-index --diagnostic <exact-code>
     signed, recursively closed teaching authority for minimal valid/invalid language pairs,
     exact production argv, rejection classes, and deterministic one-site repairs.
   - includes `gc_agent_task_benchmark = "benchmarks/agent_tasks/v0.1/suite.json"` as the
-    content-addressed 27-case public benchmark crossing nine authoring tasks with three
-    strictly increasing context tiers and production-CLI reference verification.
+    content-addressed public benchmark with nine immutable independent lineages, 27 child
+    context conditions, and production-CLI reference verification.
   - includes `gc_agent_benchmark_scoring = "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json"`
     as the closed six-dimension, 10,000-basis-point model-agnostic quality authority.
   - includes `gc_agent_benchmark_score_schema = "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json"`
@@ -101,6 +101,10 @@ genesis --json agent-index --diagnostic <exact-code>
   - includes `genesisbench_protocol = "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"`
     as the active self-hostable benchmark profile binding the frozen repository/runtime/docs
     snapshot, context and tool authority, contamination evidence, and ranked eligibility.
+  - includes `genesisbench_analysis_plan = "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json"`,
+    `genesisbench_observations_schema = "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json"`,
+    and `genesisbench_analysis_report_schema = "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json"`
+    as the predeclared lineage-clustered statistical contract and its closed evidence surfaces.
   - includes `gc_agent_model_runner_effect = "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json"`
     as the explicit deny-by-default local benchmark integration over the pinned
     `host/plugin::command` effect and replayable `.gclog` transcript.
