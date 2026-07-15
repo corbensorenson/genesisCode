@@ -59,6 +59,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/GC_AGENT_CORE_CARD_v0.3.md` - generated 4,000-byte ASCII-bounded core language card for low-context agent retrieval.
 - `docs/spec/GC_AGENT_CORE_CARD_v0.3.json` - content-addressed card manifest with complete symbols, examples, unsupported classes/records, source identities, and tokenizer-independent budget evidence.
 - `scripts/check_gc_agent_core_card.sh` - read-only card freshness/adversarial/parser gate; `scripts/update_gc_agent_core_card.sh` is its explicit generator.
+- `docs/spec/GC_AGENT_CORPUS_v0.1.schema.json` - recursively closed provenance, licensing, generator, profile, capability, executable-test, difficulty, split-role, and oracle-exposure contract.
+- `docs/spec/GC_AGENT_CORPUS_v0.1.json` - content-addressed `GC-AGENT-CORPUS-v0.1` manifest over the current train, development, and public-test artifacts; held-out content is explicitly non-distributable.
+- `scripts/lib/gc_agent_corpus.py` - read-only corpus verifier and adversarial suite, executed by the existing agent-authoring bundle gate.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` - generated capability, package, patch, replay, testing, deployment, and troubleshooting card compendium.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json` - embedded intent-selector registry with per-card content, budgets, source hashes, and selector contracts.
 - `scripts/check_gc_agent_task_cards.sh` - read-only registry/reference/production parity gate; `scripts/update_gc_agent_task_cards.sh` is its explicit generator.

@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 231,
+    "canonicalSources": 233,
     "diagnostics": 185,
     "exampleFiles": 125,
     "hostOperations": 188,
-    "schemas": 44,
+    "schemas": 45,
     "symbols": 168
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "020f96db308059787e9d4fb39b936dc6004cb4ef7b0f41807701980872a4563e"
+      "sha256": "11d0e220812908f9814fc1c39cd21a5f4c8eb52b31bfc2d83b76844e123cff57"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "a975466c1ddad6061cb5a22f795dbd9bf91a83b40987005a6da808ccb616f8fb"
+      "sha256": "b24fa8752e5453a10976f9cdee94a6fbc5a6f74b05839166acd52943012dd26b"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -124,7 +124,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "a542665a83b2393dbb18cfbc248fc9e6bef0119325f48ecfd3d645fe3e125b67"
+      "sha256": "3cd89cb408353632f6bde61d654cbbc6f60e25cbabfb512ab12848785ffdd214"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -332,7 +332,7 @@
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "8e288990afd14a48479d2e50e6af7f8de48edd15b7f67c5f50549270f9c88955"
+      "sha256": "f802beeddd038df768b8ce53e0767a6b63fadcdc705feb297a10526c39c8b9fc"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -344,7 +344,7 @@
     },
     {
       "path": "docs/spec/AGENT_INDEX_v0.1.md",
-      "sha256": "115add9a6b8323c248ffab216322e700a02918b0ca8a5bbc67e9850e68237c08"
+      "sha256": "9d60a30b0584dbd19165069a061de23155ab336ef11b2b959de24bf3bfd0dd29"
     },
     {
       "path": "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
@@ -420,7 +420,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "969228a3c70cac4924e9909429b53ea288d16489ff5cf00e900c93acec0b00e2"
+      "sha256": "6d04ebcb277bfe67883d15ef17dadf52e7c33e7943d7b3a1a726ebf9a9b100b1"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -581,6 +581,14 @@
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
       "sha256": "6b830c25702439781a9bf6630065cbbda7191988f547f03c196ab461b6889a87"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+      "sha256": "af46d91bac4a22f552b15f54c67ffc9b4c0da46b2418062ce7c070b410a48c04"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+      "sha256": "a9eb1799be5947b0a546bc1fbd8d4ee804c82fd5f2783d28448e3aa4e73f781b"
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",

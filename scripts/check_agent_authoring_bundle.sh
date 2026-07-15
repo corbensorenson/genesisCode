@@ -7,6 +7,8 @@ genesis_gate_telemetry_reexec "$0" "$@"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+python3 scripts/lib/gc_agent_corpus.py --check --self-test
+
 BUNDLE="docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md"
 AGENT_INDEX_SPEC="docs/spec/AGENT_INDEX_v0.1.md"
 AGENT_INDEX_CMD="crates/gc_cli_driver/src/cmd_agent_index.rs"
@@ -45,6 +47,8 @@ if not included_paths:
 required_included = [
     "docs/spec/CLI_TOOLING_BUNDLE_v0.1.md",
     "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+    "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+    "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
     "docs/spec/GC_AGENT_PROFILE_v0.3.json",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
@@ -122,6 +126,12 @@ symbol_index_rel = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"
 if symbol_index_rel not in agent_index_spec or symbol_index_rel not in agent_index_cmd:
     raise SystemExit(
         "agent-authoring-bundle: agent index spec and command must expose exact symbol lookup"
+    )
+
+corpus_rel = "docs/spec/GC_AGENT_CORPUS_v0.1.json"
+if corpus_rel not in agent_index_spec or corpus_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index spec and command must expose the corpus manifest"
     )
 
 print(

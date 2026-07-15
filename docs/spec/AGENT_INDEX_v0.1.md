@@ -79,6 +79,9 @@ genesis --json agent-index --diagnostic <exact-code>
     profile that an authoring agent must negotiate before emitting source.
   - includes `gc_agent_core_card = "docs/spec/GC_AGENT_CORE_CARD_v0.3.md"` as the generated
     <=4,000-byte retrieval card whose symbols and examples are parser-checked against the profile.
+  - includes `gc_agent_corpus = "docs/spec/GC_AGENT_CORPUS_v0.1.json"` as the closed,
+    content-addressed train/dev/public-test corpus authority with explicit provenance,
+    license, generator, profile, capability, test, difficulty, and oracle-exposure facts.
   - includes `gc_agent_task_cards = "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"` as the
     embedded seven-card registry used by deterministic intent selection.
   - includes `gc_agent_symbol_index = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"` as the

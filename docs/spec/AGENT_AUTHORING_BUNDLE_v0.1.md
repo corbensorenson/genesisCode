@@ -7,6 +7,8 @@ Use this bundle first; open split specs only when a task requires field-level de
 ## Included Specs
 
 - `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`
+- `docs/spec/GC_AGENT_CORPUS_v0.1.json`
+- `docs/spec/GC_AGENT_CORPUS_v0.1.schema.json`
 - `docs/spec/GC_AGENT_PROFILE_v0.3.json`
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md`
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`

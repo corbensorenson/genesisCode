@@ -1,0 +1,69 @@
+{
+  "kind": "genesis/agent-corpus-manifest-v0.1",
+  "version": "0.1.0",
+  "corpusId": "GC-AGENT-CORPUS-v0.1",
+  "profile": {"id": "GC-AGENT-v0.3", "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json", "sha256": "f48be340764ea3bf7e017b934f7a02b614e46d0cc7ca5f0408c69c0d85ab3994"},
+  "sourcePolicy": {"repository": "https://github.com/corbensorenson/genesisCode", "revisionBinding": "artifact-sha256-plus-manifest-identity", "provenanceKinds": ["deterministically-generated", "genesiscode-repository-authored"]},
+  "licensePolicy": {"allowedSpdx": ["Apache-2.0", "MIT"], "repositoryDefault": "Apache-2.0 OR MIT"},
+  "splitPolicy": {"roles": ["train", "dev", "public-test", "held-out"], "heldOutContentMayBeDistributed": false, "oracleSeparationRequired": true},
+  "entries": [
+    {
+      "id": "diagnostic-repair-utility", "role": "public-test",
+      "artifacts": [{"path": "benchmarks/diagnostics/repair_utility/v0.1/workloads.json", "sha256": "9023dbf85179d8a4b5729bbba642bd002c3f5c70bd3efbd6b4d6457173510ddf", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"}],
+      "generator": {"kind": "repository-authored", "identity": "reviewed-diagnostic-workloads-v0.1", "path": null, "sha256": null},
+      "profileId": "GC-AGENT-v0.3", "capabilities": [],
+      "tests": [{"id": "diagnostic-contract", "argv": ["bash", "scripts/check_cli_diagnostics_contract.sh"]}],
+      "difficulty": {"level": "adversarial", "contextBytes": 11206, "concepts": ["diagnostics", "policy-minimization", "repair", "safe-abstention"]},
+      "oracleExposure": "public"
+    },
+    {
+      "id": "effects-read-replay", "role": "train",
+      "artifacts": [
+        {"path": "examples/effects_demo/caps.toml", "sha256": "add917df5507662a981c2ffc4bbccce69e813ca1635dca337f47f034839b123c", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"},
+        {"path": "examples/effects_demo/data.txt", "sha256": "b3720a2e51068d0ffadd63b8bcff16beaed08c6f2618544433ccf877ccea4a5a", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"},
+        {"path": "examples/effects_demo/read.gc", "sha256": "f764339b5e391a1da6a884714d98d44a189f88486e72a48d786ad6662e60c4cf", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"}
+      ],
+      "generator": {"kind": "repository-authored", "identity": "reviewed-effects-example-v0.1", "path": null, "sha256": null},
+      "profileId": "GC-AGENT-v0.3", "capabilities": ["io/fs::read"],
+      "tests": [{"id": "run-replay", "argv": ["bash", "scripts/check_docs_quickstart.sh"]}],
+      "difficulty": {"level": "intermediate", "contextBytes": 196, "concepts": ["capabilities", "effects", "replay"]},
+      "oracleExposure": "public"
+    },
+    {
+      "id": "graphics-frame-graphs", "role": "dev",
+      "artifacts": [
+        {"path": "examples/gfx_demos/hybrid_web.gc", "sha256": "2ee1b2b8b6bfcda9438fb93d2253090bf57c7cd9bc432fe1e09627c42a82d28c", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"},
+        {"path": "examples/gfx_demos/scene3d.gc", "sha256": "0c18ca914b933e5c29fb524db1b7702388b4cf6df3a311e671fac57efec8416a", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"},
+        {"path": "examples/gfx_demos/ui_app.gc", "sha256": "cb37579b82768e7fbba9c7cede36430fe3b477a455d2ba3d589fa9b9d772e753", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"}
+      ],
+      "generator": {"kind": "repository-authored", "identity": "reviewed-gfx-examples-v0.1", "path": null, "sha256": null},
+      "profileId": "GC-AGENT-v0.3", "capabilities": [],
+      "tests": [{"id": "pure-evaluation", "argv": ["bash", "scripts/check_docs_quickstart.sh"]}],
+      "difficulty": {"level": "advanced", "contextBytes": 6009, "concepts": ["frame-graphs", "graphics", "persistent-data"]},
+      "oracleExposure": "public"
+    },
+    {
+      "id": "hello-package", "role": "train",
+      "artifacts": [
+        {"path": "examples/hello_pkg/caps.toml", "sha256": "dc0a556453832685232bb21fea33a30b7bbad6a6f83ab06232ba7265a18231dd", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"},
+        {"path": "examples/hello_pkg/hello.gc", "sha256": "a2e0f38973287842731b840f84cc1b56594b4128c7bc34cb03692df412191a4e", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"},
+        {"path": "examples/hello_pkg/package.toml", "sha256": "ac6cf728bf346eff7127084b2c656f71d6f60d2d1f7012203dafff7a8d465f1b", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"}
+      ],
+      "generator": {"kind": "repository-authored", "identity": "reviewed-package-example-v0.1", "path": null, "sha256": null},
+      "profileId": "GC-AGENT-v0.3", "capabilities": [],
+      "tests": [{"id": "package-obligations", "argv": ["bash", "scripts/check_docs_quickstart.sh"]}],
+      "difficulty": {"level": "introductory", "contextBytes": 1401, "concepts": ["contracts", "packages", "pure-functions", "tests"]},
+      "oracleExposure": "public"
+    },
+    {
+      "id": "semantic-parity-pb9", "role": "public-test",
+      "artifacts": [{"path": "benchmarks/roadmap/v0.1/pb9_semantic_parity_corpus.json", "sha256": "3f36c9cdc729288557d92e42d5a50ba1439f5239f62965b1d3b621fdad763540", "spdx": "Apache-2.0", "provenance": "genesiscode-repository-authored"}],
+      "generator": {"kind": "repository-authored", "identity": "reviewed-semantic-parity-corpus-v0.1", "path": null, "sha256": null},
+      "profileId": "GC-AGENT-v0.3", "capabilities": [],
+      "tests": [{"id": "roadmap-workloads", "argv": ["bash", "scripts/check_roadmap_workloads.sh"]}],
+      "difficulty": {"level": "adversarial", "contextBytes": 1003, "concepts": ["canonical-hash", "effects", "resource-errors", "scheduling", "sealed-errors"]},
+      "oracleExposure": "public"
+    }
+  ],
+  "contentIdentitySha256": "654a7a5b2ea5b6f57eac0a2c9bdb2dbc896f9d73bb894b1c543ccec0a2896e30"
+}

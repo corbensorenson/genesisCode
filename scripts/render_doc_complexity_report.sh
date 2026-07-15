@@ -26,6 +26,7 @@ python3 - "$ROOT_DIR" "$POLICY_FILE" "$FEATURE_MATRIX_FILE" "$DEPRECATION_MAP_FI
 import json
 import pathlib
 import re
+import subprocess
 import sys
 root = pathlib.Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(root / "scripts/lib"))
@@ -57,8 +58,38 @@ max_active_docs_md = require_positive_int("max_active_docs_md")
 max_active_top_level_docs_md = require_positive_int("max_active_top_level_docs_md")
 max_capability_retrieval_fanout = require_positive_float("max_capability_retrieval_fanout")
 
-docs_md_files = sorted((root / "docs").rglob("*.md"))
-all_md_files = sorted(root.rglob("*.md"))
+inventory = subprocess.run(
+    [
+        "git",
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "--",
+        "*.md",
+    ],
+    cwd=root,
+    check=True,
+    stdout=subprocess.PIPE,
+).stdout
+relative_md_files = [
+    pathlib.Path(raw.decode("utf-8"))
+    for raw in inventory.split(b"\0")
+    if raw
+]
+all_md_files = sorted(
+    root / relative
+    for relative in relative_md_files
+    if not relative.is_absolute()
+    and ".." not in relative.parts
+    and (root / relative).is_file()
+)
+docs_md_files = [
+    path
+    for path in all_md_files
+    if path.relative_to(root).parts[0] == "docs"
+]
 
 def is_deprecated_stub(path: pathlib.Path) -> bool:
     return "Deprecated Top-Level Doc:" in path.read_text(encoding="utf-8")
