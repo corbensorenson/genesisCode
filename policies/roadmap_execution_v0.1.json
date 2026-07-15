@@ -1,7 +1,7 @@
 {
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
-  "audit_date": "2026-07-14",
+  "audit_date": "2026-07-15",
   "resource_classes": [
     "static",
     "build",
@@ -235,9 +235,11 @@
       "risk_class": "high",
       "resource_class": "benchmark",
       "owner_paths": [
+        "benchmarks",
         "examples",
         "docs/skill_pack",
         "docs/spec",
+        "tests",
         "scripts"
       ],
       "guard_checks": [
@@ -246,7 +248,7 @@
         "scripts/check_write_genesiscode_skill_distribution.sh"
       ],
       "negative_controls": [
-        "reject benchmark contamination, private prompt dependence, human code edits hidden as agent success, and unsupported-domain claims"
+        "reject benchmark contamination, temporal-label inflation, oracle or evaluator leakage, private prompt dependence, human code edits hidden as agent success, training/evaluation firewall bypass, and unsupported-domain claims"
       ]
     },
     "trust-release": {
@@ -331,7 +333,8 @@
     "R8.2": {"profile": "product-proof", "start_after": ["R8.1", "R7.3"], "sequential": false},
     "R8.3": {"profile": "product-proof", "start_after": ["R8.2"], "sequential": true},
     "R8.4": {"profile": "product-proof", "start_after": ["R1.2", "R2.3"], "sequential": true},
-    "R9.1": {"profile": "trust-release", "start_after": ["R4.5", "R5.5", "R6.4", "R7.4", "R8.3", "R8.4"], "sequential": true},
+    "R8.5": {"profile": "product-proof", "start_after": ["R1.4", "R1.6", "R7.1", "R8.1"], "sequential": true},
+    "R9.1": {"profile": "trust-release", "start_after": ["R4.5", "R5.5", "R6.4", "R7.4", "R8.3", "R8.4", "R8.5"], "sequential": true},
     "R9.2": {"profile": "trust-release", "start_after": ["R4.4", "R6.3", "R7.3", "R9.1"], "sequential": true},
     "R9.3": {"profile": "trust-release", "start_after": ["R6.4", "R7.3", "R9.1"], "sequential": true},
     "R9.4": {"profile": "trust-release", "start_after": ["R9.1", "R9.2", "R9.3"], "sequential": true},
@@ -351,6 +354,13 @@
       "R2.2"
     ],
     "R8.4.e": [
+      "R8.3"
+    ],
+    "R8.5.i": [
+      "R5.4.e",
+      "R7.3"
+    ],
+    "R8.5.j": [
       "R8.3"
     ]
   }
