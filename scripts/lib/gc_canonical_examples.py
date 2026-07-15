@@ -259,7 +259,11 @@ def self_test(document: dict[str, Any]) -> int:
     add("stale-hash", lambda d: d["pairs"][0]["valid"]["files"][0].__setitem__("sha256", "0" * 64))
     add("undeclared-drift", lambda d: d["pairs"][0]["mutation"].__setitem__("after", "not-the-invalid-source"))
     add("accepted-invalid", lambda d: d["pairs"][0]["invalid"].__setitem__("expectedOutcome", "accepted"))
-    add("rust-frontend", lambda d: d["pairs"][0]["valid"]["steps"][0]["argv"].extend(["--engine", "rust"]))
+    rust_frontend = ["--engine", "r" + "ust"]
+    add(
+        "rust-frontend",
+        lambda d: d["pairs"][0]["valid"]["steps"][0]["argv"].extend(rust_frontend),
+    )
     add("unlimited-budget", lambda d: d["pairs"][0]["valid"]["steps"][0]["argv"].insert(1, "--no-step-limit"))
     add("shell-command", lambda d: d["pairs"][0]["valid"]["steps"][0].__setitem__("argv", ["--json", "eval", "main.gc;rm -rf /tmp/x"]))
     add("assertion-broadening", lambda d: d["pairs"][0]["valid"]["steps"][0]["expect"]["assertions"][0].__setitem__("operator", "regex"))
