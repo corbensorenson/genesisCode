@@ -107,12 +107,11 @@ python3 scripts/lib/genesisbench_protocol.py --check \
 Run the permanently unranked deterministic conformance adapter through the same public front door used by real providers and local runtimes:
 
 ```sh
-cargo build -p gc_cli --bin genesis
-target/debug/genesis --json --selfhost-artifact selfhost/toolchain.gc bench run \
+cargo run -p gc_cli --bin genesis -- --json --selfhost-artifact selfhost/toolchain.gc bench run \
   --case generation-small \
   --adapter benchmarks/genesisbench/v0.1/adapters/deterministic-mock.json \
   --out .genesis/bench/example-run
-target/debug/genesis --json --selfhost-artifact selfhost/toolchain.gc bench replay \
+cargo run -p gc_cli --bin genesis -- --json --selfhost-artifact selfhost/toolchain.gc bench replay \
   --run .genesis/bench/example-run/run.json
 ```
 
