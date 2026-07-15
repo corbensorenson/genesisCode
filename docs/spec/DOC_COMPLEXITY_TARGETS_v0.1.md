@@ -1,6 +1,6 @@
 # Documentation Complexity Targets v0.1
 
-Last updated: 2026-07-10
+Last updated: 2026-07-15
 
 Purpose: set fail-closed measurable complexity budgets for AI retrieval quality.
 
@@ -15,7 +15,7 @@ Purpose: set fail-closed measurable complexity budgets for AI retrieval quality.
 
 ## Targets (v0.1)
 
-- `active_docs_md <= 134`
+- `active_docs_md <= 135`
 - `active_top_level_leaf_docs <= 6`
 - `capability_retrieval_fanout <= 0.46`
 

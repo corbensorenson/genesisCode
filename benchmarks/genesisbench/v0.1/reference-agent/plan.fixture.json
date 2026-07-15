@@ -17,7 +17,7 @@
   "caseId": "generation-small",
   "conditionId": "condition-generation-001-retrieval",
   "conditionIdentitySha256": "0ad67d25bdd20285c934c99c26cf45444de3da148e80e75433c70ba48f5a27aa",
-  "contentIdentitySha256": "7b4613d9da11286865f5d75d2f80789fac6121677bdcf95a49f4aa1667f9de74",
+  "contentIdentitySha256": "0d93e9c03a7bc785bce1041c31c21c720050cb85e4e1f7ba5fa08dd1f1818caa",
   "context": {
     "algorithm": "genesisbench-integer-lexical-retrieval-v0.1",
     "configIdentitySha256": "7c51dac0513d3b1d45ff0dde13621f7ca78cf15a577a18b3a6d6503c821a5e3a",
@@ -167,14 +167,14 @@
   "lineageId": "lineage-generation-001",
   "lineageIdentitySha256": "0af1aba2f513deea238da3ce543ce45af9b7a960737d11445d87209d48ae733a",
   "oracleAccessed": false,
-  "profileIdentitySha256": "1b59438f070c73da002228b13a8ad3e7e3ea7defa7b1f1e2bdac77a3d4c70800",
+  "profileIdentitySha256": "1782629b3497aaef8058aaa0e10540cf1b2ea2fe0be38140e8a36964e25a8273",
   "promptSegments": [
     {
       "identitySha256": "da637405bebc9bd518d2f0525b21a4e5d45dc883630cc1c1b35ffa18aed0af65",
       "role": "system-policy"
     },
     {
-      "identitySha256": "1b59438f070c73da002228b13a8ad3e7e3ea7defa7b1f1e2bdac77a3d4c70800",
+      "identitySha256": "1782629b3497aaef8058aaa0e10540cf1b2ea2fe0be38140e8a36964e25a8273",
       "role": "agent-profile"
     },
     {
