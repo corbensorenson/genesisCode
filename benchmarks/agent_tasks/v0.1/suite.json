@@ -5,7 +5,7 @@
   "profile": {
     "id": "GC-AGENT-v0.3",
     "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "177748d2fb9964b1ea6a55427ef35c5af3c20d3b827c730506d621ad552cd9fc"
+    "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
   },
   "taskClasses": [
     "completion",
@@ -26,7 +26,7 @@
         {
           "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "bytes": 3916,
-          "sha256": "caafddbe83f21e9ef9ebbb901096f1e17096157598120e680dfa8c8ca76b0788"
+          "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
         }
       ],
       "contextBytes": 3916
@@ -38,12 +38,12 @@
         {
           "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "bytes": 3916,
-          "sha256": "caafddbe83f21e9ef9ebbb901096f1e17096157598120e680dfa8c8ca76b0788"
+          "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
         },
         {
           "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "bytes": 5886,
-          "sha256": "33fc74e6a8ac6d7c4ac26384354f13c57593ab87d4805bf49d3237570f541139"
+          "sha256": "158f3fec3472dc0b1af924411fc6f9dd4a0f15e7255cea23211bf73c5e499ebd"
         },
         {
           "path": "docs/spec/CLI.md",
@@ -60,12 +60,12 @@
         {
           "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "bytes": 3916,
-          "sha256": "caafddbe83f21e9ef9ebbb901096f1e17096157598120e680dfa8c8ca76b0788"
+          "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
         },
         {
           "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "bytes": 5886,
-          "sha256": "33fc74e6a8ac6d7c4ac26384354f13c57593ab87d4805bf49d3237570f541139"
+          "sha256": "158f3fec3472dc0b1af924411fc6f9dd4a0f15e7255cea23211bf73c5e499ebd"
         },
         {
           "path": "docs/spec/CLI.md",
@@ -75,12 +75,12 @@
         {
           "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "bytes": 36175,
-          "sha256": "177748d2fb9964b1ea6a55427ef35c5af3c20d3b827c730506d621ad552cd9fc"
+          "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
         },
         {
           "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
           "bytes": 205567,
-          "sha256": "bc81746c33f415b235becdfd976978bf620483c9b53672288321a5ba020d2231"
+          "sha256": "56f9345e8d085e83b1829ed43863d5488aa45917ff1a9f31f6828554cef7190c"
         }
       ],
       "contextBytes": 275382
@@ -1828,5 +1828,5 @@
       ]
     }
   ],
-  "contentIdentitySha256": "ba6b5cad361fff842df865871b755de027c7eec358a76495e110fc4281e7a37e"
+  "contentIdentitySha256": "71a677aec6ead88735093a83868175cfb125715f4bc44099198920448b703667"
 }

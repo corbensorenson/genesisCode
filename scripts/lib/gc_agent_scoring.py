@@ -161,6 +161,20 @@ def assertion_matches(document: Any, assertion: dict[str, Any]) -> bool:
     return isinstance(actual, str) and isinstance(assertion["value"], str) and assertion["value"] in actual
 
 
+def normalize_execution_document(value: Any, selfhost_artifact: Path) -> Any:
+    """Remove the scorer-selected host path without changing language results."""
+    if isinstance(value, dict):
+        return {
+            key: normalize_execution_document(item, selfhost_artifact)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [normalize_execution_document(item, selfhost_artifact) for item in value]
+    if isinstance(value, str) and value == str(selfhost_artifact):
+        return "$SELFHOST_ARTIFACT"
+    return value
+
+
 def execution_environment(home: Path) -> dict[str, str]:
     temporary = home / "tmp"
     temporary.mkdir(parents=True, exist_ok=True)
@@ -172,6 +186,7 @@ def execution_environment(home: Path) -> dict[str, str]:
         "LC_ALL": "C",
         "NO_COLOR": "1",
         "GENESIS_ALLOW_RUST_ENGINE": "0",
+        "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE": "1",
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
     }
 
@@ -278,11 +293,19 @@ def run_step(
         and kind_value == step["kind"]
         and assertions_passed == len(step["assertions"])
     )
-    output_identity = sha256_bytes(
-        canonical_bytes(document) if document is not None else stdout[: resources["maxStdoutBytes"]]
+    normalized_document = (
+        normalize_execution_document(document, selfhost_artifact)
+        if document is not None
+        else None
     )
+    accounted_output = (
+        canonical_bytes(normalized_document)
+        if document is not None
+        else stdout[: resources["maxStdoutBytes"]]
+    )
+    output_identity = sha256_bytes(accounted_output)
     generated_identity = inventory_identity(generated)
-    units = generated_bytes + stdout_size + stderr_size + 1
+    units = generated_bytes + len(accounted_output) + stderr_size + 1
     report = {
         "id": step["id"],
         "passed": passed,
@@ -715,7 +738,20 @@ def main() -> int:
                 generated_path_allowed("dist/service/app", {}, ["dist/"]),
                 "generated-directory scope drift",
             )
-            controls += 6
+            require(
+                canonical_bytes({"ok": True, "value": 1})
+                == canonical_bytes(json.loads(b'{\n  "value": 1, "ok": true\n}')),
+                "canonical output resource accounting drift",
+            )
+            require(
+                normalize_execution_document(
+                    {"artifact": "/host/a/toolchain.gc", "value": "42"},
+                    Path("/host/a/toolchain.gc"),
+                )
+                == {"artifact": "$SELFHOST_ARTIFACT", "value": "42"},
+                "selfhost authority path normalization drift",
+            )
+            controls += 8
         print(
             "gc-agent-scoring: ok "
             f"(dimensions={len(scoring['dimensions'])} tasks={len(scoring['taskPolicies'])} "

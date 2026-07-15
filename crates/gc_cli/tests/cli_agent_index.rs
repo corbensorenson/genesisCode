@@ -129,6 +129,16 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json")
     );
     assert_eq!(
+        json.pointer("/data/docs/gc_agent_benchmark_run_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/gc_agent_model_runner_effect")
+            .and_then(Value::as_str),
+        Some("docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json")
+    );
+    assert_eq!(
         json.pointer("/data/docs/gc_agent_held_out_evaluation")
             .and_then(Value::as_str),
         Some("docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json")

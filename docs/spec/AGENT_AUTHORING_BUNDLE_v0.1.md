@@ -14,6 +14,8 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json`
 - `docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json`
 - `docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json`
+- `docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json`
+- `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`
 - `docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json`
 - `docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json`
@@ -38,6 +40,9 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `benchmarks/agent_tasks/v0.1/suite.json`
 - `scripts/lib/gc_agent_scoring.py`
 - `scripts/lib/gc_agent_scoring_contract.py`
+- `scripts/lib/gc_agent_benchmark_run.py`
+- `examples/agent_benchmark_reproducibility/run.json`
+- `crates/gc_cli/tests/cli_agent_benchmark_run.rs`
 
 ## Legacy Split Docs (must stay marked)
 
@@ -58,6 +63,8 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Learn or repair a language construct by selecting its signed pair in `GC-CANONICAL-EXAMPLES-v0.1`, executing both sides through the recorded production argv, and changing only the declared `replace-once` mutation. Never train on an invalid example without its rejection class and valid repair partner.
 - Evaluate generation, completion, repair, refactor, policy minimization, replay investigation, performance repair, package migration, and deployment against `GC-AGENT-TASK-BENCHMARK-v0.1`. Treat its references as public development oracles, never as held-out evidence.
 - Score a candidate with `GC-AGENT-BENCHMARK-SCORING-v0.1`. Its closed 10,000-basis-point quality result covers semantics, obligations, effects, patch minimality, deterministic resource units, and policy scope. Wall time, API cost, energy, and provider queue time are model/run facts for `genesis/agent-benchmark-run-v0.1`; they never enter the quality score.
+- Record every benchmark invocation with `GC_AGENT_BENCHMARK_RUN_v0.1`: immutable model, weights, tokenizer, runtime, exact prompt/card/context hashes, integer decoding and retry controls, every attempt and candidate artifact, the canonical score, normalized host facts, and a complete inventory. Validate records read-only with `python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test`.
+- A fully local benchmark model may run only through `genesis.agent-model-runner.v0.1` / `infer` on the pinned `host/plugin::command` bridge profile. Preserve its request, response, tool transcript, and `.gclog`; replay must not reinvoke the model. This benchmark integration does not preempt the future standard model API.
 - Make a held-out claim only against the active epoch in `GC-AGENT-HELD-OUT-v0.1`. Keep case payloads, salts, and oracles under ignored `.genesis/private/agent-evaluation`; bind every result to the epoch and commitment snapshot; use `unknown` contamination whenever training provenance is incomplete; and rotate before reuse after compromise.
 - Keep authoring guidance synchronized with
   `.agents/skills/genesiscode-authoring/SKILL.md`.

@@ -94,6 +94,13 @@ genesis --json agent-index --diagnostic <exact-code>
   - includes `gc_agent_benchmark_score_schema = "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json"`
     as the closed deterministic result contract; model latency, API cost, energy, and provider
     queue time are deliberately absent from quality and belong to the separate run record.
+  - includes `gc_agent_benchmark_run_schema = "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json"`
+    as the recursively closed reproducibility record for immutable model/runtime identities,
+    exact prompt assembly, integer decoding/retry controls, attempts, candidates, scores,
+    normalized hosts, separate model metrics, and a complete content-addressed inventory.
+  - includes `gc_agent_model_runner_effect = "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json"`
+    as the explicit deny-by-default local benchmark integration over the pinned
+    `host/plugin::command` effect and replayable `.gclog` transcript.
   - includes `gc_agent_held_out_evaluation = "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json"`
     as the public salted-commitment ledger. It exposes lifecycle and contamination facts,
     never private cases, salts, prompts, inputs, or oracles.

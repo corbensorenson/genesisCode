@@ -1,0 +1,356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/gc-agent-benchmark-run-v0.1.json",
+  "title": "GenesisCode reproducible agent benchmark run v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "runId",
+    "status",
+    "benchmark",
+    "authorities",
+    "model",
+    "invocation",
+    "toolProtocol",
+    "host",
+    "candidate",
+    "score",
+    "modelSpecificMetrics",
+    "artifactInventory",
+    "contentIdentitySha256"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/agent-benchmark-run-v0.1"},
+    "version": {"const": "0.1.0"},
+    "runId": {"$ref": "#/$defs/id"},
+    "status": {"enum": ["complete", "failed", "cancelled"]},
+    "benchmark": {"$ref": "#/$defs/benchmark"},
+    "authorities": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/authority"}
+    },
+    "model": {"$ref": "#/$defs/model"},
+    "invocation": {"$ref": "#/$defs/invocation"},
+    "toolProtocol": {"$ref": "#/$defs/toolProtocol"},
+    "host": {"$ref": "#/$defs/host"},
+    "candidate": {"$ref": "#/$defs/candidate"},
+    "score": {"$ref": "#/$defs/score"},
+    "modelSpecificMetrics": {"$ref": "#/$defs/modelMetrics"},
+    "artifactInventory": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {"$ref": "#/$defs/artifact"}
+    },
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "artifactKey": {"type": "string", "pattern": "^(?:repository|bundle):[A-Za-z0-9._/-]+$"},
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)\\.\\.?(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "nullableArtifactKey": {
+      "oneOf": [{"$ref": "#/$defs/artifactKey"}, {"type": "null"}]
+    },
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["benchmarkId", "caseId", "caseIdentitySha256", "taskClass", "contextTier", "split", "contamination", "heldOutEpochId"],
+      "properties": {
+        "benchmarkId": {"const": "GC-AGENT-TASK-BENCHMARK-v0.1"},
+        "caseId": {"$ref": "#/$defs/id"},
+        "caseIdentitySha256": {"$ref": "#/$defs/hash"},
+        "taskClass": {"enum": ["generation", "completion", "repair", "refactor", "policy-minimization", "replay-investigation", "performance-repair", "package-migration", "deployment"]},
+        "contextTier": {"enum": ["small", "medium", "large"]},
+        "split": {"enum": ["dev", "public-test", "held-out"]},
+        "contamination": {"enum": ["public-reference", "unknown", "verified-clean", "declared-contaminated"]},
+        "heldOutEpochId": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "artifact"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "artifact": {"$ref": "#/$defs/artifactKey"}
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerKind", "providerId", "modelId", "modelRevision", "weightsArtifact", "tokenizerArtifact", "runtime", "secretPolicy"],
+      "properties": {
+        "providerKind": {"enum": ["local", "remote"]},
+        "providerId": {"$ref": "#/$defs/id"},
+        "modelId": {"$ref": "#/$defs/id"},
+        "modelRevision": {"type": "string", "pattern": "^(?:sha256:)?[0-9a-f]{64}$"},
+        "weightsArtifact": {"$ref": "#/$defs/artifactKey"},
+        "tokenizerArtifact": {"$ref": "#/$defs/artifactKey"},
+        "runtime": {"$ref": "#/$defs/modelRuntime"},
+        "secretPolicy": {"$ref": "#/$defs/secretPolicy"}
+      }
+    },
+    "modelRuntime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runnerId", "version", "executableArtifact", "containerImageDigest", "backend", "quantization", "deterministicRegeneration"],
+      "properties": {
+        "runnerId": {"$ref": "#/$defs/id"},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "executableArtifact": {"$ref": "#/$defs/artifactKey"},
+        "containerImageDigest": {"oneOf": [{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, {"type": "null"}]},
+        "backend": {"enum": ["cpu", "metal", "cuda", "rocm", "remote"]},
+        "quantization": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "deterministicRegeneration": {"type": "boolean"}
+      }
+    },
+    "secretPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["credentialsRecorded", "promptRetention", "secretsPresent"],
+      "properties": {
+        "credentialsRecorded": {"const": false},
+        "promptRetention": {"enum": ["complete", "hash-only"]},
+        "secretsPresent": {"const": false}
+      }
+    },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["promptAssembly", "decoding", "retryPolicy", "attempts", "selectedAttempt"],
+      "properties": {
+        "promptAssembly": {"$ref": "#/$defs/promptAssembly"},
+        "decoding": {"$ref": "#/$defs/decoding"},
+        "retryPolicy": {"$ref": "#/$defs/retryPolicy"},
+        "attempts": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/attempt"}},
+        "selectedAttempt": {"type": "integer", "minimum": 0, "maximum": 15}
+      }
+    },
+    "promptAssembly": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "messages", "cards", "contextArtifacts", "identitySha256"],
+      "properties": {
+        "algorithm": {"const": "sha256-domain-separated-ordered-artifacts-v0.1"},
+        "messages": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"$ref": "#/$defs/message"}},
+        "cards": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/artifactKey"}},
+        "contextArtifacts": {"type": "array", "minItems": 1, "maxItems": 512, "items": {"$ref": "#/$defs/artifactKey"}},
+        "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "artifact"],
+      "properties": {
+        "role": {"enum": ["system", "developer", "user", "assistant", "tool"]},
+        "artifact": {"$ref": "#/$defs/artifactKey"}
+      }
+    },
+    "decoding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed", "temperatureMicros", "topPMicros", "topK", "maxOutputTokens", "stop", "responseFormat", "identitySha256"],
+      "properties": {
+        "seed": {"type": "integer", "minimum": 0},
+        "temperatureMicros": {"type": "integer", "minimum": 0, "maximum": 2000000},
+        "topPMicros": {"type": "integer", "minimum": 1, "maximum": 1000000},
+        "topK": {"type": "integer", "minimum": 0, "maximum": 1000000},
+        "maxOutputTokens": {"type": "integer", "minimum": 1, "maximum": 1048576},
+        "stop": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 256}},
+        "responseFormat": {"enum": ["text", "json", "tool-calls"]},
+        "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "retryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxAttempts", "backoff", "retryableCodes", "identitySha256"],
+      "properties": {
+        "maxAttempts": {"type": "integer", "minimum": 1, "maximum": 16},
+        "backoff": {"const": "none"},
+        "retryableCodes": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9./-]+$"}},
+        "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "status", "requestArtifact", "responseArtifact", "outputArtifact", "errorCode", "inputTokens", "outputTokens"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0, "maximum": 15},
+        "status": {"enum": ["succeeded", "failed", "cancelled"]},
+        "requestArtifact": {"$ref": "#/$defs/artifactKey"},
+        "responseArtifact": {"$ref": "#/$defs/artifactKey"},
+        "outputArtifact": {"$ref": "#/$defs/nullableArtifactKey"},
+        "errorCode": {"oneOf": [{"type": "string", "pattern": "^[a-z][a-z0-9./-]+$"}, {"type": "null"}]},
+        "inputTokens": {"type": "integer", "minimum": 0},
+        "outputTokens": {"type": "integer", "minimum": 0}
+      }
+    },
+    "toolProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolId", "transport", "catalogArtifact", "programArtifact", "policyArtifact", "transcriptArtifact", "effectLogArtifact", "operations", "localModelEffect"],
+      "properties": {
+        "protocolId": {"const": "GC-AGENT-TOOL-PROTOCOL-v0.1"},
+        "transport": {"const": "genesis-effect-log-v3"},
+        "catalogArtifact": {"$ref": "#/$defs/artifactKey"},
+        "programArtifact": {"$ref": "#/$defs/artifactKey"},
+        "policyArtifact": {"$ref": "#/$defs/artifactKey"},
+        "transcriptArtifact": {"$ref": "#/$defs/artifactKey"},
+        "effectLogArtifact": {"$ref": "#/$defs/artifactKey"},
+        "operations": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9/-]*::[a-z][a-z0-9-]*$"}},
+        "localModelEffect": {"$ref": "#/$defs/localModelEffect"}
+      }
+    },
+    "localModelEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "plugin", "command", "bridgeArtifact", "transport", "timeoutMs", "maxBytes", "networkMode", "replayMode"],
+      "properties": {
+        "operation": {"const": "host/plugin::command"},
+        "plugin": {"const": "genesis.agent-model-runner.v0.1"},
+        "command": {"const": "infer"},
+        "bridgeArtifact": {"$ref": "#/$defs/artifactKey"},
+        "transport": {"enum": ["spawn-per-op", "persistent-stdio"]},
+        "timeoutMs": {"type": "integer", "minimum": 1, "maximum": 3600000},
+        "maxBytes": {"type": "integer", "minimum": 1024, "maximum": 67108864},
+        "networkMode": {"const": "deny"},
+        "replayMode": {"const": "effect-log-no-reinvoke"}
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platformId", "operatingSystem", "cpu", "memoryBytes", "accelerator", "isolation", "environment", "privacy", "identitySha256"],
+      "properties": {
+        "platformId": {"enum": ["darwin-arm64", "linux-arm64", "linux-x86-64", "windows-x86-64"]},
+        "operatingSystem": {"$ref": "#/$defs/os"},
+        "cpu": {"$ref": "#/$defs/cpu"},
+        "memoryBytes": {"type": "integer", "minimum": 1},
+        "accelerator": {"$ref": "#/$defs/accelerator"},
+        "isolation": {"enum": ["bare-metal", "container", "virtual-machine"]},
+        "environment": {"$ref": "#/$defs/environment"},
+        "privacy": {"$ref": "#/$defs/privacy"},
+        "identitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "version", "kernelRelease"],
+      "properties": {
+        "family": {"enum": ["darwin", "linux", "windows"]},
+        "version": {"type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+){0,3}$"},
+        "kernelRelease": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"}
+      }
+    },
+    "cpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["architecture", "model", "physicalCores", "logicalCores"],
+      "properties": {
+        "architecture": {"enum": ["arm64", "x86_64"]},
+        "model": {"type": "string", "pattern": "^[A-Za-z0-9 ._+-]+$"},
+        "physicalCores": {"type": "integer", "minimum": 1},
+        "logicalCores": {"type": "integer", "minimum": 1}
+      }
+    },
+    "accelerator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "model", "memoryBytes", "driverVersion"],
+      "properties": {
+        "kind": {"enum": ["none", "metal", "cuda", "rocm"]},
+        "model": {"oneOf": [{"type": "string", "pattern": "^[A-Za-z0-9 ._+-]+$"}, {"type": "null"}]},
+        "memoryBytes": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+        "driverVersion": {"oneOf": [{"type": "string", "pattern": "^[A-Za-z0-9._+-]+$"}, {"type": "null"}]}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locale", "timezone", "networkMode", "declaredVariables"],
+      "properties": {
+        "locale": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "timezone": {"type": "string", "pattern": "^[A-Za-z0-9_+/-]+$"},
+        "networkMode": {"enum": ["deny", "allowlisted"]},
+        "declaredVariables": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"}}
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["absolutePathsRecorded", "hostnameRecorded", "serialNumbersRecorded", "userNameRecorded"],
+      "properties": {
+        "absolutePathsRecorded": {"const": false},
+        "hostnameRecorded": {"const": false},
+        "serialNumbersRecorded": {"const": false},
+        "userNameRecorded": {"const": false}
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "completeTree", "selectedAttempt", "artifacts", "treeIdentitySha256"],
+      "properties": {
+        "root": {"$ref": "#/$defs/relativePath"},
+        "completeTree": {"const": true},
+        "selectedAttempt": {"type": "integer", "minimum": 0, "maximum": 15},
+        "artifacts": {"type": "array", "minItems": 1, "maxItems": 4096, "items": {"$ref": "#/$defs/artifactKey"}},
+        "treeIdentitySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact", "scoreIdentitySha256", "qualityScoreBasisPoints", "includedModelMetrics"],
+      "properties": {
+        "artifact": {"$ref": "#/$defs/artifactKey"},
+        "scoreIdentitySha256": {"$ref": "#/$defs/hash"},
+        "qualityScoreBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "includedModelMetrics": {"const": false}
+      }
+    },
+    "modelMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["includedInQualityScore", "modelLatencyNs", "providerQueueNs", "apiCostMicrounits", "currency", "energyMicrojoules", "measurementCompleteness"],
+      "properties": {
+        "includedInQualityScore": {"const": false},
+        "modelLatencyNs": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "providerQueueNs": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "apiCostMicrounits": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "currency": {"oneOf": [{"type": "string", "pattern": "^[A-Z]{3}$"}, {"type": "null"}]},
+        "energyMicrojoules": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "measurementCompleteness": {"enum": ["exact", "estimated", "unavailable"]}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "scope", "path", "sha256", "bytes", "mediaType", "role", "mode"],
+      "properties": {
+        "key": {"$ref": "#/$defs/artifactKey"},
+        "scope": {"enum": ["repository", "bundle"]},
+        "path": {"$ref": "#/$defs/relativePath"},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "bytes": {"type": "integer", "minimum": 0, "maximum": 1073741824},
+        "mediaType": {"type": "string", "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"},
+        "role": {"enum": ["authority", "prompt", "card", "context", "model", "runtime", "request", "response", "model-output", "tool-catalog", "tool-policy", "tool-transcript", "effect-log", "candidate", "score"]},
+        "mode": {"enum": ["0644", "0755"]}
+      }
+    }
+  }
+}

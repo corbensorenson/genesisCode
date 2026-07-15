@@ -1,0 +1,467 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 20,
+      "key": "bundle:candidate/main.gc",
+      "mediaType": "text/plain",
+      "mode": "0644",
+      "path": "candidate/main.gc",
+      "role": "candidate",
+      "scope": "bundle",
+      "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+    },
+    {
+      "bytes": 140,
+      "key": "bundle:candidate/requirements.md",
+      "mediaType": "text/markdown",
+      "mode": "0644",
+      "path": "candidate/requirements.md",
+      "role": "candidate",
+      "scope": "bundle",
+      "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+    },
+    {
+      "bytes": 363,
+      "key": "bundle:caps.toml",
+      "mediaType": "application/toml",
+      "mode": "0644",
+      "path": "caps.toml",
+      "role": "tool-policy",
+      "scope": "bundle",
+      "sha256": "e8873041bada0c3bc484b5063ffd1986bc1217f3fe1291bafd46c7e78831aaa7"
+    },
+    {
+      "bytes": 20,
+      "key": "bundle:invocation/model-output.txt",
+      "mediaType": "text/plain",
+      "mode": "0644",
+      "path": "invocation/model-output.txt",
+      "role": "model-output",
+      "scope": "bundle",
+      "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+    },
+    {
+      "bytes": 549,
+      "key": "bundle:invocation/request.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "invocation/request.json",
+      "role": "request",
+      "scope": "bundle",
+      "sha256": "73084d5897234bec2245b1d4e7a056acea567eb785407c1b049166c42de2f95c"
+    },
+    {
+      "bytes": 284,
+      "key": "bundle:invocation/response.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "invocation/response.json",
+      "role": "response",
+      "scope": "bundle",
+      "sha256": "97495e4e06e5b4fa0083fb23e37255cce75a5bc3901b1f1575b87242916727fa"
+    },
+    {
+      "bytes": 1258,
+      "key": "bundle:model-effect.gclog",
+      "mediaType": "text/plain",
+      "mode": "0644",
+      "path": "model-effect.gclog",
+      "role": "effect-log",
+      "scope": "bundle",
+      "sha256": "9273fa71b00c7284517c2e6f76196060239e76cd3fb8811af1bc217b248ce89f"
+    },
+    {
+      "bytes": 686,
+      "key": "bundle:model_effect.gc",
+      "mediaType": "text/plain",
+      "mode": "0644",
+      "path": "model_effect.gc",
+      "role": "context",
+      "scope": "bundle",
+      "sha256": "a6773557112e8980fdc6c721fa0fe522e51da9996aed1dcb235ba3fa71bb7f10"
+    },
+    {
+      "bytes": 87,
+      "key": "bundle:models/tokenizer.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "models/tokenizer.json",
+      "role": "model",
+      "scope": "bundle",
+      "sha256": "98a4cbce097bb0ad07673d8b3447b4990f13d4c15308785f255bf34d5b497911"
+    },
+    {
+      "bytes": 128,
+      "key": "bundle:models/weights.fixture",
+      "mediaType": "application/octet-stream",
+      "mode": "0644",
+      "path": "models/weights.fixture",
+      "role": "model",
+      "scope": "bundle",
+      "sha256": "ea5ae5d06096510cc7eb945a16687f2dfce0e2f1edbc4001ab1c4c07b24be5dd"
+    },
+    {
+      "bytes": 233,
+      "key": "bundle:prompts/system.md",
+      "mediaType": "text/markdown",
+      "mode": "0644",
+      "path": "prompts/system.md",
+      "role": "prompt",
+      "scope": "bundle",
+      "sha256": "eb437b6c7082f687a03f9959373bbb4b25841c276e67adcf9f38c2a5a57be4c6"
+    },
+    {
+      "bytes": 125,
+      "key": "bundle:prompts/user.md",
+      "mediaType": "text/markdown",
+      "mode": "0644",
+      "path": "prompts/user.md",
+      "role": "prompt",
+      "scope": "bundle",
+      "sha256": "9b663fbddfd983886030dbb2ea62ad97f0e8b2e39ddef6d3a056a5091ca19cf3"
+    },
+    {
+      "bytes": 2476,
+      "key": "bundle:score.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "score.json",
+      "role": "score",
+      "scope": "bundle",
+      "sha256": "3a6b6516a84248f22c7edaec693a2ec8fca6fbd3bc1aff19dc1883c7ea0f4305"
+    },
+    {
+      "bytes": 296,
+      "key": "bundle:tool-transcript.jsonl",
+      "mediaType": "application/x-ndjson",
+      "mode": "0644",
+      "path": "tool-transcript.jsonl",
+      "role": "tool-transcript",
+      "scope": "bundle",
+      "sha256": "6b9850f15c1b78938cdc6f47a80e626072d6959c23cd46b67b8d847a61196a3a"
+    },
+    {
+      "bytes": 156,
+      "key": "bundle:tools/catalog.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "tools/catalog.json",
+      "role": "tool-catalog",
+      "scope": "bundle",
+      "sha256": "f6dd3695d9f4df03f29d8eb1fa7dbb02062c0b90ad383511c02511eadcacd566"
+    },
+    {
+      "bytes": 1200,
+      "key": "bundle:tools/local_model_bridge.py",
+      "mediaType": "text/x-python",
+      "mode": "0755",
+      "path": "tools/local_model_bridge.py",
+      "role": "runtime",
+      "scope": "bundle",
+      "sha256": "68dcdfaa90a5e36bd96f786df33b2d45b2c77e80cc83e1ee1e7274a4bc411359"
+    },
+    {
+      "bytes": 52979,
+      "key": "repository:benchmarks/agent_tasks/v0.1/suite.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "benchmarks/agent_tasks/v0.1/suite.json",
+      "role": "authority",
+      "scope": "repository",
+      "sha256": "bba9152a2ae96e7bec14c017c5dab2b77db77d14deb80da019287efd021db0d4"
+    },
+    {
+      "bytes": 6836,
+      "key": "repository:crates/gc_cli/tests/cli_agent_benchmark_run.rs",
+      "mediaType": "application/octet-stream",
+      "mode": "0644",
+      "path": "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
+      "role": "authority",
+      "scope": "repository",
+      "sha256": "8c2b49c58a97e0b40551f09831e83059c5899ab9ad807e64fb5f206d4a08a4cd"
+    },
+    {
+      "bytes": 16362,
+      "key": "repository:docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+      "role": "authority",
+      "scope": "repository",
+      "sha256": "833098baa9fe77c71d0a4b48c6063da0cc91534c432a2aa3352ab71cd0ce532d"
+    },
+    {
+      "bytes": 5323,
+      "key": "repository:docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+      "role": "authority",
+      "scope": "repository",
+      "sha256": "7d13f6a7247b275705c765a387c84c6b5602f7d1245764ff36d519367b563b45"
+    },
+    {
+      "bytes": 12088,
+      "key": "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+      "role": "card",
+      "scope": "repository",
+      "sha256": "e6617e3b2bf29666b3a84c2439b0772d035ebc1a297022210c0354b3aa805862"
+    },
+    {
+      "bytes": 2325,
+      "key": "repository:docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
+      "role": "authority",
+      "scope": "repository",
+      "sha256": "4f85f364fe6faba12d8c837ca061811bfc828ac6d5574facafeceb4bef4a4ee3"
+    },
+    {
+      "bytes": 36175,
+      "key": "repository:docs/spec/GC_AGENT_PROFILE_v0.3.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+      "role": "authority",
+      "scope": "repository",
+      "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
+    },
+    {
+      "bytes": 12919,
+      "key": "repository:docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+      "mediaType": "application/json",
+      "mode": "0644",
+      "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+      "role": "card",
+      "scope": "repository",
+      "sha256": "10cdb146ed40b20d554117b427dcb5fa1402dc703ba079b6d719c43c61ef7a82"
+    },
+    {
+      "bytes": 41433,
+      "key": "repository:scripts/lib/gc_agent_benchmark_run.py",
+      "mediaType": "text/x-python",
+      "mode": "0755",
+      "path": "scripts/lib/gc_agent_benchmark_run.py",
+      "role": "authority",
+      "scope": "repository",
+      "sha256": "16fda4e9d81ce53aa215fe808e21e8cae308f80e63287e8431027b5db7100c61"
+    }
+  ],
+  "authorities": [
+    {
+      "artifact": "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+      "id": "agent-core-card"
+    },
+    {
+      "artifact": "repository:docs/spec/GC_AGENT_PROFILE_v0.3.json",
+      "id": "agent-profile"
+    },
+    {
+      "artifact": "repository:docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+      "id": "agent-task-cards"
+    },
+    {
+      "artifact": "repository:crates/gc_cli/tests/cli_agent_benchmark_run.rs",
+      "id": "benchmark-run-integration-test"
+    },
+    {
+      "artifact": "repository:docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+      "id": "benchmark-run-schema"
+    },
+    {
+      "artifact": "repository:scripts/lib/gc_agent_benchmark_run.py",
+      "id": "benchmark-run-verifier"
+    },
+    {
+      "artifact": "repository:docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
+      "id": "model-runner-effect"
+    },
+    {
+      "artifact": "repository:docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+      "id": "scoring-authority"
+    },
+    {
+      "artifact": "repository:benchmarks/agent_tasks/v0.1/suite.json",
+      "id": "task-benchmark"
+    }
+  ],
+  "benchmark": {
+    "benchmarkId": "GC-AGENT-TASK-BENCHMARK-v0.1",
+    "caseId": "generation-small",
+    "caseIdentitySha256": "d21a9f149fe62e8e4b7bb562a17cb5bd2afeb84447a4b5da1760f6eb0a9c31dd",
+    "contamination": "public-reference",
+    "contextTier": "small",
+    "heldOutEpochId": null,
+    "split": "public-test",
+    "taskClass": "generation"
+  },
+  "candidate": {
+    "artifacts": [
+      "bundle:candidate/main.gc",
+      "bundle:candidate/requirements.md"
+    ],
+    "completeTree": true,
+    "root": "candidate",
+    "selectedAttempt": 0,
+    "treeIdentitySha256": "a913bd3ea6c63d39ec0343edcfaecd66ff043e10d03c906a90551a3ca5f22aef"
+  },
+  "contentIdentitySha256": "cbe38988b5088178fd25e16085e057da8870b984d424058c7bc28368428a92e9",
+  "host": {
+    "accelerator": {
+      "driverVersion": "15.0",
+      "kind": "metal",
+      "memoryBytes": 17179869184,
+      "model": "Apple M1"
+    },
+    "cpu": {
+      "architecture": "arm64",
+      "logicalCores": 8,
+      "model": "Apple M1",
+      "physicalCores": 8
+    },
+    "environment": {
+      "declaredVariables": [
+        "LANG",
+        "TZ"
+      ],
+      "locale": "C.UTF-8",
+      "networkMode": "deny",
+      "timezone": "UTC"
+    },
+    "identitySha256": "6e1acf74502a954faab155955741e9cdfe35de04d07ce61c7c4c2e2037e45f22",
+    "isolation": "bare-metal",
+    "memoryBytes": 17179869184,
+    "operatingSystem": {
+      "family": "darwin",
+      "kernelRelease": "24.0.0",
+      "version": "15.0"
+    },
+    "platformId": "darwin-arm64",
+    "privacy": {
+      "absolutePathsRecorded": false,
+      "hostnameRecorded": false,
+      "serialNumbersRecorded": false,
+      "userNameRecorded": false
+    }
+  },
+  "invocation": {
+    "attempts": [
+      {
+        "errorCode": null,
+        "index": 0,
+        "inputTokens": 96,
+        "outputArtifact": "bundle:invocation/model-output.txt",
+        "outputTokens": 7,
+        "requestArtifact": "bundle:invocation/request.json",
+        "responseArtifact": "bundle:invocation/response.json",
+        "status": "succeeded"
+      }
+    ],
+    "decoding": {
+      "identitySha256": "31e1458348b89be1d5fb8e20a4dec2c424e9d1daa9409d7bacfbc60bfa26aa23",
+      "maxOutputTokens": 128,
+      "responseFormat": "text",
+      "seed": 424242,
+      "stop": [],
+      "temperatureMicros": 0,
+      "topK": 1,
+      "topPMicros": 1000000
+    },
+    "promptAssembly": {
+      "algorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
+      "cards": [
+        "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+        "repository:docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"
+      ],
+      "contextArtifacts": [
+        "bundle:candidate/requirements.md"
+      ],
+      "identitySha256": "bb893eeed69dc7dd3035db0714d862dcfaf82088400761ae723fee88cffcfed0",
+      "messages": [
+        {
+          "artifact": "bundle:prompts/system.md",
+          "role": "system"
+        },
+        {
+          "artifact": "bundle:prompts/user.md",
+          "role": "user"
+        }
+      ]
+    },
+    "retryPolicy": {
+      "backoff": "none",
+      "identitySha256": "b8a0747c590770d79dce7561cd6c93944a1de88caf20b9c9a874fa0c85dda95f",
+      "maxAttempts": 1,
+      "retryableCodes": []
+    },
+    "selectedAttempt": 0
+  },
+  "kind": "genesis/agent-benchmark-run-v0.1",
+  "model": {
+    "modelId": "genesis-agent-fixture",
+    "modelRevision": "sha256:ea5ae5d06096510cc7eb945a16687f2dfce0e2f1edbc4001ab1c4c07b24be5dd",
+    "providerId": "genesis.fixture.local",
+    "providerKind": "local",
+    "runtime": {
+      "backend": "cpu",
+      "containerImageDigest": null,
+      "deterministicRegeneration": true,
+      "executableArtifact": "bundle:tools/local_model_bridge.py",
+      "quantization": "fixture-exact",
+      "runnerId": "genesis.fixture.bridge",
+      "version": "0.1.0"
+    },
+    "secretPolicy": {
+      "credentialsRecorded": false,
+      "promptRetention": "complete",
+      "secretsPresent": false
+    },
+    "tokenizerArtifact": "bundle:models/tokenizer.json",
+    "weightsArtifact": "bundle:models/weights.fixture"
+  },
+  "modelSpecificMetrics": {
+    "apiCostMicrounits": 0,
+    "currency": "USD",
+    "energyMicrojoules": null,
+    "includedInQualityScore": false,
+    "measurementCompleteness": "estimated",
+    "modelLatencyNs": 1250000,
+    "providerQueueNs": 0
+  },
+  "runId": "generation-small-local-fixture-001",
+  "score": {
+    "artifact": "bundle:score.json",
+    "includedModelMetrics": false,
+    "qualityScoreBasisPoints": 10000,
+    "scoreIdentitySha256": "0acf9a844175333ba3f0facb81aa12ab744c63934e543e8fe97c200c101517f2"
+  },
+  "status": "complete",
+  "toolProtocol": {
+    "catalogArtifact": "bundle:tools/catalog.json",
+    "effectLogArtifact": "bundle:model-effect.gclog",
+    "localModelEffect": {
+      "bridgeArtifact": "bundle:tools/local_model_bridge.py",
+      "command": "infer",
+      "maxBytes": 65536,
+      "networkMode": "deny",
+      "operation": "host/plugin::command",
+      "plugin": "genesis.agent-model-runner.v0.1",
+      "replayMode": "effect-log-no-reinvoke",
+      "timeoutMs": 5000,
+      "transport": "spawn-per-op"
+    },
+    "operations": [
+      "host/plugin::command"
+    ],
+    "policyArtifact": "bundle:caps.toml",
+    "programArtifact": "bundle:model_effect.gc",
+    "protocolId": "GC-AGENT-TOOL-PROTOCOL-v0.1",
+    "transcriptArtifact": "bundle:tool-transcript.jsonl",
+    "transport": "genesis-effect-log-v3"
+  },
+  "version": "0.1.0"
+}

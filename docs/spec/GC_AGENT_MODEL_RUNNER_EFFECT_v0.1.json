@@ -1,0 +1,99 @@
+{
+  "capabilityPolicy": {
+    "allowCommands": [
+      "infer"
+    ],
+    "allowOperations": [
+      "host/plugin::command"
+    ],
+    "allowPlugins": [
+      "genesis.agent-model-runner.v0.1"
+    ],
+    "bridgeCommandPath": "base-relative",
+    "bridgeExecutableDigest": "sha256-required",
+    "maxBytes": "finite-positive",
+    "networkMode": "denied",
+    "timeoutMs": "finite-positive-hard-kill-and-reap",
+    "wildcardsAllowed": false
+  },
+  "contentIdentitySha256": "3b628f073edb0c8d5e58b4204b995b2ace9718ec315748ad50cb10248424fc18",
+  "effect": {
+    "command": "infer",
+    "operation": "host/plugin::command",
+    "plugin": "genesis.agent-model-runner.v0.1",
+    "transports": [
+      "persistent-stdio",
+      "spawn-per-op"
+    ]
+  },
+  "inventoryRequirements": [
+    "bridge-executable",
+    "effect-log",
+    "model-output",
+    "policy",
+    "request",
+    "response",
+    "tool-transcript"
+  ],
+  "kind": "genesis/agent-model-runner-effect-profile-v0.1",
+  "privacy": {
+    "forbidden": [
+      "absolute-paths",
+      "credentials",
+      "held-out-oracles",
+      "hostnames",
+      "serial-numbers",
+      "usernames"
+    ],
+    "hostFacts": "normalized-run-schema-dimensions",
+    "modelMetricsIncludedInQuality": false
+  },
+  "replay": {
+    "bridgeInvocation": "forbidden",
+    "claim": "effect-transcript-reproducibility",
+    "modelWeightsAccess": "forbidden",
+    "regenerationRequiresDeterministicRuntime": true
+  },
+  "request": {
+    "ambientChannelsForbidden": [
+      "credentials",
+      "environment",
+      "paths",
+      "prompt-text",
+      "sampling-authority"
+    ],
+    "encoding": "closed-coreform-map",
+    "fields": [
+      "decoding-sha256",
+      "model-id",
+      "model-revision",
+      "prompt-assembly-sha256",
+      "request-sha256",
+      "tokenizer-sha256",
+      "weights-sha256"
+    ],
+    "hashAlgorithm": "sha256-lowercase"
+  },
+  "response": {
+    "encoding": "closed-coreform-map",
+    "failureFields": [
+      "code",
+      "message",
+      "ok"
+    ],
+    "successFields": [
+      "finish-reason",
+      "model-id",
+      "model-revision",
+      "ok",
+      "output",
+      "usage"
+    ],
+    "tokenUsage": "nonnegative-integers"
+  },
+  "scope": {
+    "purpose": "r1.4-benchmark-reproducibility-only",
+    "standardModelApiOwner": "R5.4.e"
+  },
+  "version": "0.1.0"
+}

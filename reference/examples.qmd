@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Examples by workflow
 
-**34 workflows** · **171 files**. Examples demonstrate composition; normative behavior comes from linked specifications.
+**35 workflows** · **188 files**. Examples demonstrate composition; normative behavior comes from linked specifications.
 
 ## `agent_backend_topology_workflow`
 
@@ -18,6 +18,30 @@ Agent Backend Topology Workflow
 | `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_backend_topology_workflow/caps.toml) |
 | `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_backend_topology_workflow/workflow.sh) |
 | `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_backend_topology_workflow/workflow_run.gc) |
+
+## `agent_benchmark_reproducibility`
+
+Agent Benchmark Reproducibility
+
+| File | Kind | Source |
+|---|---|---|
+| `main.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/candidate/main.gc) |
+| `requirements.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/candidate/requirements.md) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/caps.toml) |
+| `model-output.txt` | txt | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/invocation/model-output.txt) |
+| `request.json` | json | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/invocation/request.json) |
+| `response.json` | json | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/invocation/response.json) |
+| `model-effect.gclog` | gclog | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/model-effect.gclog) |
+| `model_effect.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/model_effect.gc) |
+| `tokenizer.json` | json | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/models/tokenizer.json) |
+| `weights.fixture` | fixture | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/models/weights.fixture) |
+| `system.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/prompts/system.md) |
+| `user.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/prompts/user.md) |
+| `run.json` | json | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/run.json) |
+| `score.json` | json | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/score.json) |
+| `tool-transcript.jsonl` | jsonl | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/tool-transcript.jsonl) |
+| `catalog.json` | json | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/tools/catalog.json) |
+| `local_model_bridge.py` | py | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_benchmark_reproducibility/tools/local_model_bridge.py) |
 
 ## `agent_browser_runtime_workflow`
 

@@ -1,0 +1,11 @@
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_commands = ["infer"]
+allow_plugins = ["genesis.agent-model-runner.v0.1"]
+base_dir = "."
+bridge_cmd = "tools/local_model_bridge.py"
+bridge_cmd_sha256 = "sha256:68dcdfaa90a5e36bd96f786df33b2d45b2c77e80cc83e1ee1e7274a4bc411359"
+bridge_transport = "spawn-per-op"
+max_bytes = 65536
+timeout_ms = 5000

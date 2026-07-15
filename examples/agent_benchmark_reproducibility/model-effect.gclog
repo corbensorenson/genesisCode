@@ -1,0 +1,32 @@
+{
+  :entries
+    [
+      {
+        :cap {:op host/plugin::command :timeout-ms 5000}
+        :cont-h
+          b"\x10\xC3@J\x06\x13#.-;\x9E\xEA\xA0\xFC\xA0\x9Fu\x9F\x85\xB2S\xD6\xF3:\xEFI\xF9\xAD\xB3d\xACk"
+        :decision :allow
+        :i 0
+        :op host/plugin::command
+        :payload-h
+          b"\x1Fo\x0B\x9EU\x01\xF5\xE3J\xEA~\xF2\x1F\xF4\xD9{\x1F\x0B9\xBA\xC8\x14\x17\x06(HNH\xB6\xD9\xE7\xF0"
+        :req-h
+          b"\xB0@\xEC\x97\x1F\xE5^\x11\x02s3\xADH\x15\xD3\x08\xD0\xF2i\xC8$N\xCF\xFC$/'\xEA\xD9a\x1D\xF9"
+        :resp
+          {
+            :kind :ok
+            :value
+              {
+                :finish-reason "stop"
+                :model-id "genesis-agent-fixture"
+                :model-revision
+                  "sha256:ea5ae5d06096510cc7eb945a16687f2dfce0e2f1edbc4001ab1c4c07b24be5dd"
+                :ok true
+                :output "(prim int/add 40 2)\n"
+                :usage {:input-tokens 96 :output-tokens 7}}}
+        :resp-h
+          b"m\x1B\t\xD6NH\xB9\\\x08\xF7/\xAF_e\x95\xC3^\x04<M\xEC&E\xA9a\x1F\x95\xC1\xDD%^\x9D"}]
+  :program-hash
+    b"\x87\xAD\xCF`b\x99\x9E\x0F\x8A\x07\xBEF\x1C\xF9$\xD5\x1C\x11\xCD\xBE#\x12\xC1\x80~\xA6\xC4\xF3\xA3\xFA\xE3\xD8"
+  :toolchain "genesis/0.2.0 (native)"
+  :version 3}

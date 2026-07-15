@@ -1,15 +1,15 @@
 {
   "authorities": {
-    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "bc81746c33f415b235becdfd976978bf620483c9b53672288321a5ba020d2231",
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "56f9345e8d085e83b1829ed43863d5488aa45917ff1a9f31f6828554cef7190c",
     "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "11493f8d40fd3623c22a4c3c788a62e6c979868f90af0d55069f50d5618cc994",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 241,
+    "canonicalSources": 243,
     "diagnostics": 185,
-    "exampleFiles": 171,
+    "exampleFiles": 188,
     "hostOperations": 188,
-    "schemas": 51,
+    "schemas": 52,
     "symbols": 168
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,11 +28,11 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "c66e428c49773740d47aaa5154040ba4f385e8525e4fb90aac7ed4066a672106"
+      "sha256": "316cf202217d6a6abca6c7e7424a5e9d9a5be37425f706ee79e3039b44402d45"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
-      "sha256": "b7b38ef1f67aaf51f43dd82dbb02c78ed242a3a7bc55d8639e0471273fdf6fa8"
+      "sha256": "aa47b594e7ccce6e0443d558f2b5b879a954d8acad80a2d3284a88e2dd7e9164"
     },
     {
       "path": "docs/DEPRECATION_MAP_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "71ddad69f25311446bc9137ce37cd290a7d6a731ecdf14a5b7b0d46b0151e4e8"
+      "sha256": "f6946a79660742bd74e02cf2e77cd27fdf1a5eacbc67cd2c3fb97ed26808cc05"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -124,7 +124,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "fe47cb4ab470b0b38df4d2f92bab8c06ccfc3bd07699b3bc626d3f49d464f535"
+      "sha256": "844550841369c298a26af328b258a375cef58b4f24bc9d450a48747317506f29"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -332,7 +332,7 @@
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "8c75839b3cd3b1e110539c803829d2f86dbd64853e4fd9037f7a843586e26e2f"
+      "sha256": "80eb64bcc3f1416c8ebbc9d84ea7b99972959489dd542b269f54df83bb3ed5f2"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -344,7 +344,7 @@
     },
     {
       "path": "docs/spec/AGENT_INDEX_v0.1.md",
-      "sha256": "3414b25fa5ed302910a30fc06eb2ac40183193faae68bcda2ee75ce27bd86d77"
+      "sha256": "82bdecd6f8265ed09864f096dd1e25cc1de9255fd299c4d0136dc2e21a473d08"
     },
     {
       "path": "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
@@ -575,12 +575,16 @@
       "sha256": "dcf47308a16af2bb90eeacd6f3a9b140f3334ea0c4c089878717d1479783483b"
     },
     {
+      "path": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+      "sha256": "833098baa9fe77c71d0a4b48c6063da0cc91534c432a2aa3352ab71cd0ce532d"
+    },
+    {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
       "sha256": "3af427864e0449effea1b72aef9bdd0e35c8e643ce35048e66df40a0da7c76b4"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "76f77aa7d64bf8f7e36f8fd60c613c4a1b11642e3306b5d06eee48516ed098a6"
+      "sha256": "7d13f6a7247b275705c765a387c84c6b5602f7d1245764ff36d519367b563b45"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
@@ -588,15 +592,15 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "cb99e22e845169d7661aa44a9be15810548f0d783b4b962705ddcd56e64bc98e"
+      "sha256": "e6617e3b2bf29666b3a84c2439b0772d035ebc1a297022210c0354b3aa805862"
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-      "sha256": "caafddbe83f21e9ef9ebbb901096f1e17096157598120e680dfa8c8ca76b0788"
+      "sha256": "74fc80125f633f28a51fc40798f77753c21fbf84d8a825d428cbe0a654a81148"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "7b1918e4554b9eba9c7359aec0b3f207fd28758118805830c22b7ba6cf233faa"
+      "sha256": "d1578a890fa6d65ea5e764eba8cad461352540d520b6f65fee2b0e372ace3b11"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -604,7 +608,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "107ca9f29cd4493523960f5f648a8c12e731002eab0ab915b8c1a0d5dbe285da"
+      "sha256": "ed78a422ddf9736ce37761852259d3a69fab52b13207c3462d01f06351d00d2a"
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
@@ -615,8 +619,12 @@
       "sha256": "8dff919ae82af6eaa16220cb33298ea716822abb77978330924f3996e8b5859e"
     },
     {
+      "path": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
+      "sha256": "4f85f364fe6faba12d8c837ca061811bfc828ac6d5574facafeceb4bef4a4ee3"
+    },
+    {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "177748d2fb9964b1ea6a55427ef35c5af3c20d3b827c730506d621ad552cd9fc"
+      "sha256": "36c98e2fea332dd86ae5abac5a02721876c0ccc93bed8345661d694c3db503a9"
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
@@ -624,7 +632,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
-      "sha256": "bc81746c33f415b235becdfd976978bf620483c9b53672288321a5ba020d2231"
+      "sha256": "56f9345e8d085e83b1829ed43863d5488aa45917ff1a9f31f6828554cef7190c"
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
@@ -636,11 +644,11 @@
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "a38e770d496313ee2bf92090984e368a22f8dbdbc4439ce93e07b0b81de2453d"
+      "sha256": "10cdb146ed40b20d554117b427dcb5fa1402dc703ba079b6d719c43c61ef7a82"
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-      "sha256": "33fc74e6a8ac6d7c4ac26384354f13c57593ab87d4805bf49d3237570f541139"
+      "sha256": "158f3fec3472dc0b1af924411fc6f9dd4a0f15e7255cea23211bf73c5e499ebd"
     },
     {
       "path": "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
@@ -936,7 +944,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
-      "sha256": "f9b13210b65e051cd44ff9bcd3ae911d41db204c8db216494a49dccccf2e2ddd"
+      "sha256": "b1ee11c56e6c2d8859ff1abda8a81dbcc7779de38eada15e212c79b031fd0636"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
@@ -964,7 +972,7 @@
     },
     {
       "path": "docs/write_genesisCode_skill.md",
-      "sha256": "990da2f724eacaa5ae55f2f3ee4cb48390d5192651f2d44e81fa44741cc724e3"
+      "sha256": "3a58df64633e0cda06f47586d021bc2dab76975706d89dfe590adea49dc25dc9"
     },
     {
       "path": "feature_matrix.md",
