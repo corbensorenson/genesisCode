@@ -1,0 +1,4 @@
+(core/effect::perform
+  (quote io/fs::read)
+  {:path "data.txt"}
+  (fn (bytes) (core/effect::pure (prim bytes/len bytes))))

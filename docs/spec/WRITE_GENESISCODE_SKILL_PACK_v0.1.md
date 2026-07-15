@@ -124,6 +124,7 @@ Normative content:
 
 Required executable benchmark workloads for AI-authored GenesisCode quality:
 
+- Agent task matrix: `benchmarks/agent_tasks/v0.1/suite.json`
 - Service workflow: `examples/agent_service_workflow/workflow.sh`
 - Game-loop workflow: `examples/agent_long_running_gfx_loop_workflow/workflow.sh`
 - GPU compute workflow: `examples/agent_gpu_compute_workflow/workflow.sh`

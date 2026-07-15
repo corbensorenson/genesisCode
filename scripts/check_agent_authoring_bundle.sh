@@ -9,11 +9,13 @@ cd "$ROOT_DIR"
 
 python3 scripts/lib/gc_agent_corpus.py --check --self-test
 python3 scripts/lib/gc_canonical_examples.py --check --self-test
+python3 scripts/lib/gc_task_benchmarks.py --check --self-test
 
 BUNDLE="docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md"
 AGENT_INDEX_SPEC="docs/spec/AGENT_INDEX_v0.1.md"
 AGENT_INDEX_CMD="crates/gc_cli_driver/src/cmd_agent_index.rs"
 CANONICAL_TEST="crates/gc_cli/tests/cli_canonical_language_examples.rs"
+TASK_BENCHMARK_TEST="crates/gc_cli/tests/cli_agent_task_benchmarks.rs"
 
 [[ -f "$BUNDLE" ]] || {
   echo "agent-authoring-bundle: missing bundle doc: $BUNDLE" >&2
@@ -31,8 +33,12 @@ CANONICAL_TEST="crates/gc_cli/tests/cli_canonical_language_examples.rs"
   echo "agent-authoring-bundle: missing canonical production test: $CANONICAL_TEST" >&2
   exit 1
 }
+[[ -f "$TASK_BENCHMARK_TEST" ]] || {
+  echo "agent-authoring-bundle: missing task benchmark production test: $TASK_BENCHMARK_TEST" >&2
+  exit 1
+}
 
-python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" <<'PY'
+python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" <<'PY'
 import pathlib
 import re
 import sys
@@ -41,11 +47,13 @@ bundle_path = pathlib.Path(sys.argv[1])
 agent_index_spec_path = pathlib.Path(sys.argv[2])
 agent_index_cmd_path = pathlib.Path(sys.argv[3])
 canonical_test_path = pathlib.Path(sys.argv[4])
+task_benchmark_test_path = pathlib.Path(sys.argv[5])
 
 bundle = bundle_path.read_text(encoding="utf-8")
 agent_index_spec = agent_index_spec_path.read_text(encoding="utf-8")
 agent_index_cmd = agent_index_cmd_path.read_text(encoding="utf-8")
 canonical_test = canonical_test_path.read_text(encoding="utf-8")
+task_benchmark_test = task_benchmark_test_path.read_text(encoding="utf-8")
 
 include_re = re.compile(r"^- `([^`]+)`\s*$", re.MULTILINE)
 included_paths = include_re.findall(bundle)
@@ -58,6 +66,7 @@ required_included = [
     "docs/spec/GC_AGENT_CORPUS_v0.1.json",
     "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
     "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+    "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
     "docs/spec/GC_AGENT_PROFILE_v0.3.json",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
     "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
@@ -74,6 +83,7 @@ required_included = [
     "docs/write_genesisCode_skill.md",
     "examples/canonical_language/v0.1/README.md",
     "examples/canonical_language/v0.1/suite.json",
+    "benchmarks/agent_tasks/v0.1/suite.json",
 ]
 missing_required = [p for p in required_included if p not in included_paths]
 if missing_required:
@@ -153,6 +163,16 @@ if examples_rel not in agent_index_spec or examples_rel not in agent_index_cmd:
 if examples_rel not in canonical_test or "cargo_bin_cmd!(\"genesis\")" not in canonical_test:
     raise SystemExit(
         "agent-authoring-bundle: canonical examples need a shipped genesis integration test"
+    )
+
+benchmark_rel = "benchmarks/agent_tasks/v0.1/suite.json"
+if benchmark_rel not in agent_index_spec or benchmark_rel not in agent_index_cmd:
+    raise SystemExit(
+        "agent-authoring-bundle: agent index must expose the task benchmark"
+    )
+if benchmark_rel not in task_benchmark_test or "cargo_bin_cmd!(\"genesis\")" not in task_benchmark_test:
+    raise SystemExit(
+        "agent-authoring-bundle: task benchmark needs a shipped genesis integration test"
     )
 
 print(

@@ -114,6 +114,11 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("examples/canonical_language/v0.1/suite.json")
     );
     assert_eq!(
+        json.pointer("/data/docs/gc_agent_task_benchmark")
+            .and_then(Value::as_str),
+        Some("benchmarks/agent_tasks/v0.1/suite.json")
+    );
+    assert_eq!(
         json.pointer("/data/language_symbol_index/path")
             .and_then(Value::as_str),
         Some("docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json")

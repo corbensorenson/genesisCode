@@ -10,6 +10,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GC_AGENT_CORPUS_v0.1.json`
 - `docs/spec/GC_AGENT_CORPUS_v0.1.schema.json`
 - `docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json`
+- `docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json`
 - `docs/spec/GC_AGENT_PROFILE_v0.3.json`
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md`
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`
@@ -28,6 +29,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/write_genesisCode_skill.md`
 - `examples/canonical_language/v0.1/README.md`
 - `examples/canonical_language/v0.1/suite.json`
+- `benchmarks/agent_tasks/v0.1/suite.json`
 
 ## Legacy Split Docs (must stay marked)
 
@@ -46,5 +48,6 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Validate capabilities and contracts through `genesis --json agent-index`.
 - Resolve failures through bounded `genesis --json agent-index --diagnostic <exact-code>` records from the closed, content-addressed diagnostic catalog; never route on message prose.
 - Learn or repair a language construct by selecting its signed pair in `GC-CANONICAL-EXAMPLES-v0.1`, executing both sides through the recorded production argv, and changing only the declared `replace-once` mutation. Never train on an invalid example without its rejection class and valid repair partner.
+- Evaluate generation, completion, repair, refactor, policy minimization, replay investigation, performance repair, package migration, and deployment against `GC-AGENT-TASK-BENCHMARK-v0.1`. Treat its references as public development oracles, never as held-out evidence.
 - Keep authoring guidance synchronized with
   `.agents/skills/genesiscode-authoring/SKILL.md`.

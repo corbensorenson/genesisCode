@@ -563,6 +563,7 @@ pub(super) fn cmd_agent_index(
                 "gc_agent_core_card": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
                 "gc_agent_corpus": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
                 "gc_canonical_examples": "examples/canonical_language/v0.1/suite.json",
+                "gc_agent_task_benchmark": "benchmarks/agent_tasks/v0.1/suite.json",
                 "gc_agent_task_cards": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
                 "gc_agent_symbol_index": AGENT_SYMBOL_INDEX_PATH,
                 "diagnostic_catalog": diagnostics::DIAGNOSTIC_CATALOG_PATH,

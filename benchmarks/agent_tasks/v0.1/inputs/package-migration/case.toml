@@ -1,0 +1,9 @@
+schema = 2
+name = "benchmark_package"
+version = "0.1.0"
+dependencies = []
+obligations = []
+tests = []
+
+[[modules]]
+path = "main.gc"

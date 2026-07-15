@@ -1,15 +1,15 @@
 {
   "authorities": {
-    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "1c818f172d66d3f6b1a9c8107ebeca71ab232787e06498e815ea79d46f77dc78",
-    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "3f06a6cc664d267a149801024fa01f3e4085cf8cfff9b5e9eaa3a8688000e2a6",
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "73a8976527a30aeda1589d5464267c018959d6370a2983665f41bb6f03ffb4ce",
+    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "e346d15571b3a9295388b313a18821ed9b07ecc66e4a88f5a64f62d4d5cdf755",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 234,
+    "canonicalSources": 235,
     "diagnostics": 185,
     "exampleFiles": 171,
     "hostOperations": 188,
-    "schemas": 46,
+    "schemas": 47,
     "symbols": 168
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,11 +28,11 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "ac32ac665713fae9c0db30fff86920c7b872eb617414149f2ea26b6a11cda9f0"
+      "sha256": "6b62f19b3501f58778de62c05423528024ec4294fb7ed55a018a626d19ac9258"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
-      "sha256": "6d2f7dfc2f769dc52eef0bd388f659ec0407a5c2cd5fab8cb95454e2e7a7ad29"
+      "sha256": "49e04f75c0717441140a0eb58151d27ee1f611720e0e544788d54864177240fd"
     },
     {
       "path": "docs/DEPRECATION_MAP_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "34740556f6c8b7ed27e409278247ae8ee166b44fcbab6af264ce270464de9c6e"
+      "sha256": "4c8404d17f8fa5a6a4785836be3ea68f4bcf1da726fc8a4624289d81e43d0f41"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -124,7 +124,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "f79eeee6498c0733056f3911cebfbe9c0032c4aa90f8b504a330da411369fb9a"
+      "sha256": "7462758e93fbb83c88ea2df6c06e3aae6b2a1cb6aacaf1d57ca0cce282f68600"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -332,7 +332,7 @@
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "45729aeec6c19cbfad1f972f92f63b44bbe3f590480b09cc261c75d52e2b6853"
+      "sha256": "e72031a5b465b34c1fed954d8daf5880842eaa205f3dae9b7273b359718ae60d"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -344,7 +344,7 @@
     },
     {
       "path": "docs/spec/AGENT_INDEX_v0.1.md",
-      "sha256": "a53766a6caa838609fbe663e9b0f9917a68d40e262a00a20722e9926894d6626"
+      "sha256": "491bf499fba9fcc0e15915015917798795dd8ababc2f7eb579009b3ba0ed1247"
     },
     {
       "path": "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
@@ -420,7 +420,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "9eea59e626832fe91fde6cb43f95b2e4f34978898ddc206ce1a3465f7d0e0bd4"
+      "sha256": "82a8168955d15d8fe66f2b476104dd26cf36c02bd785a05904e0681cf80d95a4"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -576,15 +576,15 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "ceee8bb6c2288de0d7f6927f6353031f72e5913c884c48cea3f2bf70a1fb6085"
+      "sha256": "84227320cc427e0b876763e612d644f4a4790a32a4c16e3eca27fd09d53c8a72"
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-      "sha256": "591c25a9f660dbdd2166b8500a548aa97a5a0bed960c7b64712aab441b154fef"
+      "sha256": "098e886844a55d473bc809591b114eb6e98921c2675d38e731898761725ed2e2"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "fbfa52c2554dc25b3ec50bf5df34a1644ad1438a5733ebf6667638f533de151d"
+      "sha256": "c7eb93c77a76099563f5c0903d80bf63cbcb6f16b685244081ba35b15bcde210"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -592,7 +592,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "bafa199ce37011d7564553dca701ed04565d0d60c43ace5c1315e2f19e183ad1"
+      "sha256": "0cbef38bc4b98f747d6dbf470e0659eaecccc5ed10e05b9dc93e9ec9ed80d0cc"
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
@@ -600,19 +600,23 @@
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
-      "sha256": "1c818f172d66d3f6b1a9c8107ebeca71ab232787e06498e815ea79d46f77dc78"
+      "sha256": "73a8976527a30aeda1589d5464267c018959d6370a2983665f41bb6f03ffb4ce"
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
       "sha256": "0f27aabe83fc3d0e721e2a98f0e7db8f1e9b19022c3c0d763cd096bf6cbc765a"
     },
     {
+      "path": "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+      "sha256": "2741d3984d3a5837e42e23fab0072404f88593e715cf3cf8bd6be17ead31458a"
+    },
+    {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "33b95f668032f8f5b62f5077c8aa4d1b94afa4f9f924b6511b13eba634a39195"
+      "sha256": "4df32ced04d5e540c0cd98267ae35fbb19d2c86e3b0ac6370776de6e1ae5a2a5"
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-      "sha256": "b142bd01e7560790d4b9333496d15d1fb28cec0fd140527fb21f98b4b0dbaa3f"
+      "sha256": "12c61db7d479e40d50ba1595cdea87561d980a30e9dc32b2fe9105476cdaf8b5"
     },
     {
       "path": "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
@@ -620,7 +624,7 @@
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
-      "sha256": "3f06a6cc664d267a149801024fa01f3e4085cf8cfff9b5e9eaa3a8688000e2a6"
+      "sha256": "e346d15571b3a9295388b313a18821ed9b07ecc66e4a88f5a64f62d4d5cdf755"
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
@@ -908,7 +912,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
-      "sha256": "aec8b2dcbc0d790aaa0f25106cc25fd5777725012dfb433504c68288a1761daa"
+      "sha256": "362f66e6c984c9fd73676dcb8fe6350d96946a629b17a20717e9b41ea1e969b3"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",

@@ -65,6 +65,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json` - closed schema for signed valid/invalid language pairs, production argv, exact envelope assertions, rejection classes, and one-site repairs.
 - `examples/canonical_language/v0.1/suite.json` - content-addressed canonical teaching authority covering pure functions, persistent collections, contracts, modules, sealed errors, effects, replay, packages, patches, tests, and resource failures.
 - `scripts/lib/gc_canonical_examples.py` - read-only tree/hash/profile/argv/mutation validator with permanent adversarial controls; production behavior is exercised by `crates/gc_cli/tests/cli_canonical_language_examples.rs`.
+- `docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json` - closed 27-case generation, completion, repair, refactor, policy-minimization, replay-investigation, performance-repair, package-migration, and deployment benchmark contract.
+- `benchmarks/agent_tasks/v0.1/suite.json` - content-addressed public development benchmark crossing all nine task classes with approximately 4 KB, 34 KB, and 276 KB context tiers.
+- `scripts/lib/gc_task_benchmarks.py` - read-only complete-tree, identity, matrix, context, editable-surface, and adversarial benchmark validator; references execute through `crates/gc_cli/tests/cli_agent_task_benchmarks.rs`.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` - generated capability, package, patch, replay, testing, deployment, and troubleshooting card compendium.
 - `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json` - embedded intent-selector registry with per-card content, budgets, source hashes, and selector contracts.
 - `scripts/check_gc_agent_task_cards.sh` - read-only registry/reference/production parity gate; `scripts/update_gc_agent_task_cards.sh` is its explicit generator.

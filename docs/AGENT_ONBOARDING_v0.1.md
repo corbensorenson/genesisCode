@@ -47,6 +47,7 @@ This file is the single agent-first onboarding spine.
 - GFX runtime contracts: `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - Test/perf/release lanes: `docs/spec/TESTING_BUNDLE_v0.1.md`
 - Agent authoring entrypoint: `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+- Public 27-case authoring benchmark: `benchmarks/agent_tasks/v0.1/suite.json`
 - Versioned skill pack: `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
 - Executable skill distribution kit: `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
 - Active risk backlog: `upgrade_plan.md`
@@ -61,3 +62,4 @@ This file is the single agent-first onboarding spine.
 - Treat `experimental-syntax`, `host-only-operation`, `unavailable-target`, `nondeterministic-facility`, and `out-of-profile-capability` as mandatory fail-closed classes. Use each record's `safeAlternative`; profile/capability negotiation is explicit and cannot be inferred from availability.
 - Route failures on exact `genesis/diagnostic/v1/...` IDs or cataloged codes, never prose. Pin `catalogIdentitySha256` for training/evaluation and use `agent-index --diagnostic <exact-code>` rather than loading the full catalog.
 - For language generation and repair, retrieve the nearest `GC-CANONICAL-EXAMPLES-v0.1` pair, execute both recorded scenarios, and apply only its declared one-site repair. Invalid fixtures are counterexamples, never standalone templates.
+- For public development evaluation, select the exact task and context tier from `GC-AGENT-TASK-BENCHMARK-v0.1`; its references are public oracles and cannot support a held-out claim.

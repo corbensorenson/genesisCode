@@ -1,0 +1,13 @@
+((fn (self n)
+   (if (prim int/lt n 2)
+     n
+     (prim int/add
+       (self self (prim int/sub n 1))
+       (self self (prim int/sub n 2)))))
+ (fn (self n)
+   (if (prim int/lt n 2)
+     n
+     (prim int/add
+       (self self (prim int/sub n 1))
+       (self self (prim int/sub n 2)))))
+ 20)

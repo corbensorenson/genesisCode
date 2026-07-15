@@ -1,0 +1,7 @@
+(def ::meta
+  (quote
+    {:caps []
+     :exports [benchmark/package::answer]
+     :types {benchmark/package::answer ?}}))
+(def benchmark/package::answer 42)
+benchmark/package::answer

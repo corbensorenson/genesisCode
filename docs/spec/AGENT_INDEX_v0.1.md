@@ -86,6 +86,9 @@ genesis --json agent-index --diagnostic <exact-code>
   - includes `gc_canonical_examples = "examples/canonical_language/v0.1/suite.json"` as the
     signed, recursively closed teaching authority for minimal valid/invalid language pairs,
     exact production argv, rejection classes, and deterministic one-site repairs.
+  - includes `gc_agent_task_benchmark = "benchmarks/agent_tasks/v0.1/suite.json"` as the
+    content-addressed 27-case public benchmark crossing nine authoring tasks with three
+    strictly increasing context tiers and production-CLI reference verification.
   - includes `gc_agent_task_cards = "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json"` as the
     embedded seven-card registry used by deterministic intent selection.
   - includes `gc_agent_symbol_index = "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"` as the

@@ -50,6 +50,14 @@ CANONICAL_EXAMPLE_FILES = tuple(
     )
 )
 
+TASK_BENCHMARK_FILES = tuple(
+    sorted(
+        str(path.relative_to(ROOT))
+        for path in (ROOT / "benchmarks/agent_tasks/v0.1").rglob("*")
+        if path.is_file()
+    )
+)
+
 BUNDLES: Mapping[str, Sequence[str]] = {
     "capability-ledger-bundle": COMMON_CAPABILITY_FILES,
     "status-authority-bundle": COMMON_CAPABILITY_FILES
@@ -687,6 +695,26 @@ BUNDLES: Mapping[str, Sequence[str]] = {
         "scripts/lib/roadmap_evidence.py",
     )
     + CANONICAL_EXAMPLE_FILES,
+    "gc-agent-task-benchmark-bundle": (
+        "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+        "scripts/lib/gc_task_benchmarks.py",
+        "crates/gc_cli/tests/cli_agent_task_benchmarks.rs",
+        "crates/gc_cli/tests/cli_agent_index.rs",
+        "crates/gc_cli_driver/src/cmd_agent_index.rs",
+        "scripts/check_agent_authoring_bundle.sh",
+        "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+        "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_INDEX_v0.1.md",
+        "docs/AGENT_ONBOARDING_v0.1.md",
+        "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
+        "docs/INDEX.md",
+        "llms.txt",
+        "_quarto.yml",
+        "scripts/render_quarto_reference.py",
+        "scripts/lib/roadmap_evidence.py",
+    )
+    + TASK_BENCHMARK_FILES,
     "gc-agent-task-cards-bundle": (
         "policies/gc_agent_task_cards_v0.3.json",
         "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
@@ -1176,6 +1204,7 @@ BUNDLE_OCCURRENCES = {
     "gc-agent-core-card-bundle": 1,
     "gc-agent-corpus-bundle": 1,
     "gc-canonical-examples-bundle": 1,
+    "gc-agent-task-benchmark-bundle": 1,
     "gc-agent-task-cards-bundle": 1,
     "gc-agent-symbol-index-bundle": 1,
     "gc-agent-unsupported-behavior-bundle": 1,

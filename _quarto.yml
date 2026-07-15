@@ -32,6 +32,7 @@ project:
     - docs/policies/*.toml
     - policies/**
     - examples/**
+    - benchmarks/agent_tasks/**
     - genesis.*
     - package.json
     - package-lock.json
