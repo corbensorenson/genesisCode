@@ -534,7 +534,7 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_microbench:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
     runs-on: [self-hosted, linux, x64, gpu]
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
