@@ -14,7 +14,7 @@ pub(in super::super) fn eval_compiled_closure_body_scoped(
     );
     let runtime = RuntimeEnv {
         lexical: call.lexical_env.unwrap_or_else(CompiledLexicalEnv::empty),
-        inline_slot: None,
+        inline_slots: Rc::new(Vec::new()),
         module: call.module_env.unwrap_or_else(CompiledModuleCells::empty),
         external: call.external_env,
         coverage_sites: call.coverage_sites.clone(),
@@ -119,7 +119,7 @@ pub(super) fn apply_value_to_arg(
                             .compiled_env
                             .clone()
                             .unwrap_or_else(CompiledLexicalEnv::empty),
-                        inline_slot: None,
+                        inline_slots: Rc::new(Vec::new()),
                         module: data
                             .module_env
                             .clone()
@@ -216,7 +216,7 @@ fn eval_app_n_callable_runtime(
                                 .compiled_env
                                 .clone()
                                 .unwrap_or_else(CompiledLexicalEnv::empty),
-                            inline_slot: None,
+                            inline_slots: Rc::new(Vec::new()),
                             module: data
                                 .module_env
                                 .clone()
@@ -370,7 +370,7 @@ fn eval_compiled_closure_appn_inline(
             .compiled_env
             .clone()
             .unwrap_or_else(CompiledLexicalEnv::empty),
-        inline_slot: None,
+        inline_slots: Rc::new(Vec::new()),
         module: data
             .module_env
             .clone()

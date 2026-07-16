@@ -366,6 +366,10 @@ fn compiled_closure_capture_is_sparse_and_survives_blob_roundtrip() {
     let compiled_closure =
         eval_compiled_module(&mut compiled_ctx, &mut compiled_env, &restored).unwrap();
     assert_eq!(compiled_closure.closure_captured_value_count(), Some(1));
+    assert_eq!(
+        compiled_closure.compiled_closure_capture_slot_span(),
+        Some(129)
+    );
     assert_value_int(
         &compiled_closure
             .apply(&mut compiled_ctx, Value::data(Term::Int(BigInt::from(2))))
@@ -475,6 +479,36 @@ fn compiled_slot_resolution_preserves_lexical_shadowing_and_module_forward_refs(
 
     assert_value_int(&v_tree, 42);
     assert_eq!(v_tree.debug_repr(), v_comp.debug_repr());
+}
+
+#[test]
+fn compiled_flat_slots_preserve_deep_sequential_let_and_closure_resolution() {
+    let bindings = (0..512)
+        .map(|index| format!("(v{index} {index})"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let source = format!("(let ({bindings}) (fn (x) (prim int/add (prim int/add v0 v511) x)))");
+    let forms = parse_module(&source).unwrap();
+
+    let mut tree_ctx = EvalCtx::new();
+    let mut tree_env = Env::empty();
+    let tree_closure = eval_module(&mut tree_ctx, &mut tree_env, &forms).unwrap();
+
+    let mut compiled_ctx = EvalCtx::new();
+    let mut compiled_env = Env::empty();
+    let compiled_closure =
+        eval_module_compiled(&mut compiled_ctx, &mut compiled_env, &forms).unwrap();
+
+    assert_eq!(compiled_closure.closure_captured_value_count(), Some(2));
+    assert_eq!(
+        compiled_closure.compiled_closure_capture_slot_span(),
+        Some(512)
+    );
+    let argument = Value::data(Term::Int(BigInt::from(1)));
+    let tree = tree_closure.apply(&mut tree_ctx, argument.clone()).unwrap();
+    let compiled = compiled_closure.apply(&mut compiled_ctx, argument).unwrap();
+    assert_value_int(&tree, 512);
+    assert_eq!(tree.debug_repr(), compiled.debug_repr());
 }
 
 #[test]

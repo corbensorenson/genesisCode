@@ -360,6 +360,16 @@ impl Value {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn compiled_closure_capture_slot_span(&self) -> Option<usize> {
+        match self {
+            Value::CompiledClosure(data) => {
+                Some(data.compiled_env.as_ref().map_or(0, |env| env.slot_span()))
+            }
+            _ => None,
+        }
+    }
+
     fn apply_inner(self, ctx: &mut crate::eval::EvalCtx, arg: Value) -> Result<Value, KernelError> {
         match self {
             Value::Closure(data) => {
