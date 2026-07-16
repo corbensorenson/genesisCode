@@ -42,6 +42,8 @@ run_parallel 08 genesisbench-registry \
   python3 scripts/lib/genesisbench_registry.py check --self-test
 run_parallel 09 genesisbench-analysis \
   python3 scripts/lib/genesisbench_analysis.py --check --self-test
+run_parallel 10 gc-agent-profile \
+  bash -c 'python3 scripts/lib/gc_agent_profile.py --check && python3 scripts/lib/gc_agent_profile.py --self-test'
 
 parallel_status=0
 for index in "${!parallel_pids[@]}"; do

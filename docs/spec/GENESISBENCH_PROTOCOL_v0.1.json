@@ -26,19 +26,19 @@
       "bytes": 12088,
       "id": "agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "ac9d16d9e6cc80e67551fff9442d03aeff75fd44a4d4626bc336c1261772f466"
+      "sha256": "4516561e026129ffaa38c0b5f1a8754e0407ad092895775ec873de57ec00e1b9"
     },
     {
       "bytes": 36175,
       "id": "agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "0113cea95962bfd00ca283fac728ad2d765f5b3c57667528a4e662fefbca9bb3"
+      "sha256": "9e15b587e54512fdfb28d56af3be8269691a85f6da57310e5aedbfde9895d35a"
     },
     {
       "bytes": 110673,
       "id": "agent-task-benchmark",
       "path": "benchmarks/agent_tasks/v0.1/suite.json",
-      "sha256": "b643c09a20b93be27bded35edda505a0fe07caa7f8201cab22d2c93556732d1c"
+      "sha256": "7607a10f9793d5e06b332e30e0ff414e08c6c3e4100fb6dd72289c8a5ea1eaed"
     },
     {
       "bytes": 7487,
@@ -56,7 +56,7 @@
       "bytes": 12919,
       "id": "agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "31cc8f43e44eedbc1b009c1c2aeb40ac4425c84aafcf1fce0e84cc704d8ad978"
+      "sha256": "e71a20925495a088c670bea60c8bc9a9398c1471c05529e50cbd6c7c1ad74935"
     },
     {
       "bytes": 8116,
@@ -86,7 +86,7 @@
       "bytes": 5323,
       "id": "benchmark-scoring",
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "5583393d9d983cedf6fa4c11318be8dc7670ec9f0a97fcedaba7af6014f7105c"
+      "sha256": "4aae52446f1503730e244f4b5777b0ed134b982498d9c1cd4a02519225ca657b"
     },
     {
       "bytes": 7019,
@@ -200,7 +200,7 @@
       "bytes": 2423,
       "id": "genesisbench-analysis-plan",
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "75a863aa6aca85bf1149f41a3322125d5139509f4fbc95697aa5f3b66945189d"
+      "sha256": "c616019e7e25107dab71a8b288ac000ac50af00f99879532cf8a4baafe6ade60"
     },
     {
       "bytes": 4614,
@@ -314,13 +314,13 @@
       "bytes": 8730,
       "id": "genesisbench-reference-agent",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "4036babb5b301b1523055b3d97e3c6c62c69fe8b01159f2bd7b869d973e0737c"
+      "sha256": "3336086d020adcd9612693eb3b9b47b121b950cf5ed1a1804a993c9931dcb1ce"
     },
     {
       "bytes": 47673,
       "id": "genesisbench-reference-agent-ablations",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "ce4cee73bd833699470a171cced767e8429a7980a1313ff91bdeb32c963d6c7e"
+      "sha256": "75fb6cd55aacf351590f1ac32830b64aa31204d8ffb3755068e3702c168ca33f"
     },
     {
       "bytes": 4871,
@@ -332,7 +332,7 @@
       "bytes": 5733,
       "id": "genesisbench-reference-agent-plan-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
-      "sha256": "562d74693bd21a0f0405d894d8a75b57cd85cae560e68ef9a7836f9d1674c52a"
+      "sha256": "15d2905904edcab156b9bab195d95c14e03d0837e6e4b9344bdf867ad16c284e"
     },
     {
       "bytes": 1032,
@@ -356,7 +356,7 @@
       "bytes": 4427,
       "id": "genesisbench-reference-agent-trace-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
-      "sha256": "ff37f2f0fc453f11f47241eb62f95ae5ba2e1afc44006c2978d5f2052307402f"
+      "sha256": "9e2d6eea94507ae7dae70e21a4757b049f0670bc3360588ab3796f9c5c34d56b"
     },
     {
       "bytes": 2212,
@@ -452,7 +452,7 @@
       "bytes": 78248,
       "id": "held-out-evaluation",
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "f924b331cb11a37b077a1ff7cad2d0361c5f810564e3fe1d6f3e868c05437777"
+      "sha256": "9c08aefaebbba64c2056ae897b49cf81ca5f58ef266b4776c361b56c1d5f2663"
     },
     {
       "bytes": 13030,
@@ -524,7 +524,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "4f726d57fe1216dae34507733637ce31aaabb6d59623541b37334fb52b4e7744",
+  "contentIdentitySha256": "df088b2c1aae88bb4baa06c64d5c9c5331797a801043c50e4780d6de11f6b5a4",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
