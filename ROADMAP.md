@@ -1,10 +1,10 @@
-# GenesisCode Roadmap: Agent-Native, Efficient, Self-Hosted, and Trustworthy
+# GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy
 
 Last audited: 2026-07-16
 
 Status: canonical strategic plan for the path from v0.2 to v1.0 and the post-v1 frontier. This file is not release evidence. Repository history, clean-clone verification, and remote CI evidence are mandatory under R0.1.
 
-Active project goal: fully complete this roadmap end-to-end in a beyond state-of-the-art manner: AI-first, super efficient, fully self-hosted above a minimal auditable host, reproducible, formally hardened, and validated by executable evidence.
+Active project goal: fully complete this roadmap end-to-end in a beyond state-of-the-art manner: AI-first, universal across declared product and hardware profiles, super efficient, fully self-hosted above a minimal auditable host, reproducible, formally hardened, and validated by executable evidence.
 
 GenesisCode is not trying to be another general-purpose language with an AI plugin. It is a deterministic software substrate designed for AI-authored and AI-iterated systems. Its differentiator is the combination of compact machine-facing semantics, content-addressed identity, sealed effects, deny-by-default capabilities, deterministic replay, semantic patches, evidence-carrying packages, and a self-hosted toolchain whose claims can be independently checked.
 
@@ -18,7 +18,9 @@ The roadmap is intentionally ambitious, but it is not a list of unrelated ambiti
 
 ### 1.1 North-star outcome
 
-A local or remote AI agent should be able to learn the stable GenesisCode profile from a small, generated context bundle; create or repair a program; receive structured diagnostics; run it under explicit capabilities and resource bounds; inspect or replay every effect; package it with provenance and obligation evidence; and deploy it without trusting raw model output.
+A local or remote AI agent should be able to learn the stable GenesisCode profile from a small, generated context bundle; create or repair a complete product; receive structured diagnostics; run it under explicit capabilities and resource bounds; inspect or replay every effect; package it with provenance and obligation evidence; and deploy it without trusting raw model output. Within a declared target profile, the application author writes GenesisCode plus GenesisCode-owned manifests, policies, schemas, tests, and assets. They do not hand-maintain HTML, CSS, JavaScript, TypeScript, Python, Rust, C/C++, Swift, Kotlin, Java, shader source, linker scripts, or deployment YAML to finish the product.
+
+This is a one-language **authoring** contract, not a claim that browsers, operating systems, silicon SDKs, databases, GPU drivers, or every third-party library cease to exist. GenesisCode may compile to or generate standards-compliant foreign artifacts and may consume audited components behind the capability boundary. Those implementation details are content-addressed, reproducible, inspectable, replaceable, and never become an undocumented second source language for the application.
 
 The v1 toolchain should be self-hosted above a deliberately small stage0 host. "Fully self-hosted" means the language-level frontend, typechecker, formatter, optimizer, patch engine, obligation logic, package/registry logic, documentation generators, and build orchestration are authored in GenesisCode and bootstrap to a reproducible fixpoint. It does not mean pretending that hardware, an operating system, a WebAssembly engine, or the minimal evaluator/effect host does not exist.
 
@@ -56,12 +58,28 @@ GenesisCode v1 must be strong in all of these dimensions at once:
 8. **Replaceability:** an independent implementation can pass the kernel and artifact conformance suites from the published specifications.
 9. **Benchmark validity:** model comparisons use precommitted tasks, deterministic scoring, reproducible run records, contamination labels, temporal challenge sets, and independently replayable evidence rather than opaque leaderboards.
 10. **Learning flywheel:** benchmark failures improve GenesisCode, verified successes seed useful examples and packages, and only governed artifacts enter a lineage-preserving corpus for a future GenesisCode-native model.
+11. **One-language product construction:** declared web, service, desktop, mobile, game, data/AI, embedded-Linux, and microcontroller profiles can be authored, tested, built, deployed, operated, and maintained without handwritten foreign-language glue.
+12. **Authentic targets:** a filename, archive, descriptor, headless plan, empty Wasm export, or shell smoke token never counts as an application. Target support means the artifact executes the declared workload in the real browser, OS, simulator/device, container/runtime, or board and exposes exact evidence of that execution.
 
-### 1.3 Non-goals before v1
+### 1.3 One-language authoring contract
+
+| Layer | Allowed application-owned inputs | Toolchain responsibility | Acceptance rule |
+|---|---|---|---|
+| Language and product logic | `.gc`, Genesis package/workspace manifests, capability policy, typed schemas, tests, assets, and generated-lock inputs | Parse, type/effect check, optimize, compile, link, package, and diagnose | No handwritten foreign source is required in a canonical starter or flagship product. |
+| Web presentation | Genesis document/component/style/route/accessibility IR | Emit HTML/CSS/JavaScript/Wasm/service-worker artifacts and source maps as deterministic build outputs | Browser-matrix behavior, accessibility, hydration/SSR identity, and network policy pass from the `.gc` source alone. |
+| Native/mobile presentation | Genesis app, lifecycle, UI, permission, asset, and platform-service declarations | Generate platform project metadata, bindings, resources, signing plans, and executable packages | Real install, launch, lifecycle, accessibility, and device/simulator tests pass; generated Swift/Kotlin/XML/project files are not edited. |
+| Games, graphics, and media | Genesis scene/ECS/render/shader/audio/asset descriptions and logic | Generate validated shaders, pipelines, asset packs, and target adapters | A real interactive frame/audio/input loop meets target budgets; a frame-plan hash alone is insufficient. |
+| Services and operations | Genesis routes, schemas, migrations, jobs, deployment and observability declarations | Generate portable components, service/container/unit manifests, SBOM/provenance, and reviewable deploy plans | The service handles real protocol traffic, persistence, upgrade/rollback, and fault injection without handwritten shell/YAML. |
+| Embedded and hardware | Genesis embedded-profile source, board manifest, pin/peripheral policy, static resource budget, and tests | Select BSP/HAL components, AOT compile/link, generate startup/link layout, flash/debug/OTA plans, and hardware evidence | The exact firmware boots and performs the workload on a named board; descriptor-only or host-bridge simulation does not count. |
+| Extension packages | Genesis bindings and capability declarations | Import WIT/schema/header metadata and isolate audited foreign internals behind components | Application authors remain in GenesisCode; foreign internals are explicit supply-chain dependencies, not ambient escape hatches. |
+
+The contract is profile-scoped. A target that cannot meet it is reported as unsupported or experimental. GenesisCode does not silently emit a misleading file extension, invoke an undeclared cloud compiler, or ask the agent to finish generated glue by hand.
+
+### 1.4 Non-goals before v1
 
 - Syntax breadth is not a goal. New syntax must reduce total agent/human complexity or unlock a required semantic capability.
 - A production JIT is not automatically a v1 requirement. It becomes critical-path work only if the interpreter, bytecode VM, prelude snapshot, and warm daemon cannot meet the measured product budgets.
-- "Supports anything" is not an acceptable release claim. v1 supports the explicit domain matrix in R5/R6/R8; other domains remain experimental until they satisfy the same evidence bar.
+- "Supports anything" is not an acceptable release claim. The north star is universal product construction through a finite, versioned profile and extension matrix; every release names exactly which products, hosts, boards, services, and lifecycle operations have authentic L4/L5 proof.
 - Raw LLM inference never enters the pure kernel. Model access is an explicit host effect with capability, provenance, budget, redaction, and replay rules.
 - One aggregate leaderboard never mixes raw-model acquisition, open agent scaffolds, GenesisCode-adapted systems, and embedded local systems. They answer different questions and remain separate tracks.
 - GenesisCode novelty is not evidence of training-data absence. Public fixtures establish conformance and practice, not temporal cleanliness.
@@ -200,6 +218,25 @@ Point 1 had no implementation owner despite being stated as an invariant. This r
 
 The current local Theseus and ASI Stack worktrees are active and dirty, so their moving state is intentionally not pinned here. R8 freezes clean content-addressed source editions when the model lane actually begins; importing today's mutable state would create false currentness and contaminate later experimental attribution.
 
+### 3.7 Universal product and hardware audit delta: 2026-07-16
+
+This audit tested the repository against the stronger one-language authoring objective rather than inferring product support from operation names, archive suffixes, or deterministic mock workflows. The existing foundation is useful: GenesisCode already has capability-shaped filesystem, process, network, database, crypto, media, plugin, browser, graphics, GPU, XR, package, and deployment surfaces; native/WASI/Wasm hosts; deterministic frame planning; mobile/edge target labels; and agent workflow fixtures. However, the generated capability ledger correctly rates the broad surfaces only L1. Reachability is not a product stack.
+
+The audit establishes these gaps and owners:
+
+1. `gcpm build` currently accepts `web`, `desktop`, `service`, `ios`, `android`, `edge`, and `service-runtime`, but several outputs are envelopes rather than executable products. The iOS and Android archives contain metadata, Genesis source, and a runtime descriptor without an executable app runtime; edge/service Wasm exports an empty function; web/desktop/service packages are CoreForm maps; launch scripts verify bytes and print synthetic boot/smoke tokens. R6.3 and R6.5-R6.7 must replace suffix-level conformance with authentic compilation, installation, launch, protocol, and device evidence while preserving these formats only as explicitly labeled descriptors if still useful.
+2. Browser support exposes a small first-party window/input/audio/storage profile and deterministic graphics plans, not a complete website/application authoring system. There is no normative Genesis document/component/style/layout/router/forms/accessibility/SSR/hydration/PWA contract or compiler that removes handwritten HTML/CSS/JavaScript. R5.6 and R6.5 own that product layer.
+3. `gc_gfx` provides valuable headless resource/frame codecs and scene/UI planning, but a frame hash is not a game or production UI toolkit. The repository lacks a complete retained/reactive app model, accessible widgets, text/layout/input composition, ECS, deterministic simulation clock, physics/collision, animation, asset pipeline, Genesis-authored shaders, game networking, save state, editor/inspector, and real multi-target render/audio loops. R5.6, R5.8, R6.6, and R8.2 own closure.
+4. Mobile and desktop workflows do not yet prove installable applications, native lifecycle, permissions, accessibility, input, sensors, store packaging, signing, crash reporting, update/rollback, or real device behavior. R6.6 turns generated project glue into a toolchain-owned detail and requires simulator plus physical-device evidence without application authors editing it.
+5. Service/data primitives exist but not a cohesive batteries-included product platform. Typed routing/middleware, authentication/session policy, schema/query/migration tooling, queues/jobs/cache/object storage/email, observability, configuration/secrets, and local production orchestration need one compatible package and capability model. R5.7 and R6.4 own it.
+6. The hardware workflow is a shell plugin fixture, not a GPIO or firmware implementation. There is no bare-metal/no-OS Genesis profile, static-memory verifier, interrupt semantics, AOT MCU backend, linker/startup generation, BSP/HAL registry, GPIO/ADC/PWM/I2C/SPI/UART/CAN/USB/BLE/Wi-Fi surface, flasher/debugger/OTA flow, board simulator, or hardware-in-the-loop gate. R5.9 and R6.7 add Embedded Linux first, then representative RP2040, ESP32, and Arduino-compatible MCU families without silently changing core semantics.
+7. Raspberry Pi-class Linux devices are best treated first as reproducible `linux-arm64` hosts with explicit GPIO/I2C/SPI/serial capabilities, not conflated with bare metal. Tiny MCUs require a validated constrained Genesis profile with closed-world AOT, statically bounded memory/stack/effects, fixed-width numeric types, and explicit unsupported features; they cannot inherit arbitrary-precision/dynamic host behavior by accident.
+8. Foreign ecosystems remain necessary under the hood, but the application authoring boundary is undefined. R5.5 expands schema/WIT/header import, generated bindings, component sandboxing, and audited package adapters so a missing domain library does not force the user or model into a second source language.
+9. The current ten-archetype gauntlet and five flagship systems under-sample the north star. R8.2 expands to eighteen authentic product archetypes and R8.3 requires maintained cross-target products, real hardware, upgrades, and zero handwritten foreign application source. GenesisBench later measures these tasks by independent product lineage rather than multiplying target conditions.
+10. Genesis Model cannot compensate for a missing platform contract. It may retrieve domain packages and propose GenesisCode, but compiler/runtime/package/deployment evidence remains authoritative. The model succeeds only when a general model and the eventual specialist can build and maintain products through public Genesis interfaces without private glue or privileged target knowledge.
+
+The practical conclusion is not to put every framework into the kernel. Keep the language and TCB small; build breadth as versioned Genesis libraries, capability profiles, target adapters, component packages, generated bindings, and evidence-backed product kits. Common product paths are first-party and coherent. Long-tail domains use the same extension boundary without weakening the one-language authoring contract.
+
 ---
 
 ## 4. Non-negotiable invariants
@@ -232,8 +269,8 @@ These invariants apply to every phase and every execution tier:
 | M1 GenesisBench and Agent Preview | v0.3 | A public GenesisBench Preview, compact SDK, stable diagnostics, fixed reference agent, local warm/MCP interface, canonical benchmark CLI/adapters, and typed English-intent preview produce reproducible evidence | R1 |
 | M2 Runtime Beta | v0.4 | Interactive, resource-bounded execution with validated bytecode and bounded long-lived processes | R2-R3 core |
 | M3 Self-Host Authority Beta | v0.5 | Frozen core semantics above stage0 are GenesisCode-authoritative and bootstrap to a cross-host fixpoint | R5.1 and R5.3 core freeze, then R4 |
-| M4 Platform Beta | v0.6 | Versioned language profile, declared stdlib/domain matrix, registry, and target builds work offline/self-hosted | R5-R6 |
-| M5 Trust Release Candidate | GenesisCode v1.0-rc plus compatible GenesisBench release | Formal/fuzz/security evidence, real agent-authored flagship systems, and a mature independently reproduced benchmark meet their product SLOs | R7 plus the R8 language/benchmark acceptance lane |
+| M4 Platform Beta | v0.6 | Versioned language/profile and one-language authoring contract; web/UI, service/data, game/media, and embedded SDKs; authentic reproducible target builds; registry and deployment work offline/self-hosted | R5-R6 |
+| M5 Trust Release Candidate | GenesisCode v1.0-rc plus compatible GenesisBench release | Formal/fuzz/security evidence, eighteen authentic agent-authored archetypes, ten maintained flagship products including real boards, and a mature independently reproduced benchmark meet their product SLOs | R7 plus the R8 language/benchmark acceptance lane |
 | M5-M Genesis Model Preview | independently versioned model package | A firewall-audited, research-lineage-bound, profile-bound local specialist is reproducible and useful without becoming a GenesisCode or GenesisBench release dependency | R8.5.f-r; may complete before or after M6 |
 | M6 GenesisCode Trust Release | GenesisCode v1.0 | Reproducible artifacts, signed evidence, compatibility guarantees, and operational support are published; compatible GenesisBench and Genesis Model versions are named but independently released | R9 |
 | F1 Frontier Lab | post-v1 | Bounded self-improvement and optional validated JIT/research backends | F1-F4 |
@@ -247,7 +284,7 @@ R0 truth/evidence
   -> R3 validated bytecode and tiering
   -> R5.1 + R5.3 core semantic/profile freeze
   -> R4 semantic self-host authority + bootstrap fixpoint
-  -> R5.2 + R5.4 + R5.5 platform completion
+  -> R5.2 + R5.4-R5.9 platform and product SDK completion
   -> R6 ecosystem/deployment
   -> R7 assurance
   -> R8 language/benchmark product proof
@@ -265,7 +302,7 @@ Parallel, non-blocking lanes:
 - R4.1 ownership/TCB work and self-host prototypes can progress after R0; no R4.2 production-authority switch occurs before the relevant R5.1/R5.3 semantic contract is frozen.
 - Formal models can start immediately and hard-gate R7.
 - JIT research can start after the bytecode semantics are stable, but cannot displace critical-path work without failing a published performance decision gate.
-- Additional capability families remain experimental until existing families meet the maturity and domain-proof rules.
+- Additional capability families remain experimental until existing families meet the maturity and domain-proof rules. Universal-product work grows primarily through libraries, components, target adapters, and BSP packages; it does not expand the kernel or bypass profile negotiation.
 
 ---
 
@@ -283,7 +320,7 @@ Budgets are acceptance contracts, not aspirations. R0 records the reference mach
 | AB-4 | Changed-file edit/check loop | p95 <= 2s on a 100-module workspace | p95 <= 1s |
 | AB-5 | Reference-agent parse success | >= 95% first attempt on public test split | >= 98% |
 | AB-6 | Diagnostic-guided repair | >= 85% recovery within two repair turns | >= 95% |
-| AB-7 | Held-out capability coverage | >=8/9 core task classes have an independently verified baseline solve across the >=45-lineage Preview, with uncertainty over lineages | 9/9 classes across two independent model families plus 9/10 product archetypes |
+| AB-7 | Held-out capability coverage | >=8/9 core task classes have an independently verified baseline solve across the >=45-lineage Preview, with uncertainty over lineages | 9/9 classes across two independent model families plus 18/18 authentic product archetypes for release-claimed profiles |
 | AB-8 | Structured-output stability | 100% protocol/schema conformance or explicit typed failure | 100% |
 | AB-9 | Benchmark run reproducibility | 100% of published runs validate and deterministically rescore from their closed bundle | 100% plus independent replay by two operators |
 | AB-10 | Benchmark-to-language feedback | Every repeated failure cluster has a typed owner and disposition | >= 90% of eligible clusters produce a language/tooling fix or an explicit non-goal |
@@ -364,6 +401,25 @@ These budgets govern what may be learned from Project Theseus, The ASI Stack, Ge
 | MQ-7 | Negative-result retention | Failed replay, null lift, regressions, stale evidence, missing artifacts, unsafe transfers, and no-promotion decisions remain content-addressed and searchable. Selection cannot silently discard them or train only on favorable descendants. |
 | MQ-8 | Currentness and supersession | Refresh the transfer crosswalk before each model architecture freeze, training run, and release candidate. Changed upstream evidence creates a new candidate decision; it never rewrites the source edition, experiment, model checkpoint, or prior release history. |
 
+### 6.7 Universal product budgets
+
+These budgets prevent broad platform names from substituting for usable products. Each target profile also publishes stricter hardware-specific limits.
+
+| ID | Contract | Acceptance |
+|---|---|---|
+| UP-1 | One-language source closure | Every canonical starter and flagship contains zero handwritten foreign application/build/deploy source. Generated foreign artifacts are inventory-bound outputs, reproducible from Genesis inputs, read-only to authors, and deletable without losing source. |
+| UP-2 | Authentic artifact execution | 100% of claimed target artifacts install or start in the named real runtime and execute a nontrivial acceptance workload. Descriptors, empty exports, extension-only archives, host-side simulations, and scripts that merely hash bytes are ineligible. |
+| UP-3 | Product profile conformance | Each product declares language, library, capability, target, SDK/BSP, artifact, lifecycle, and evidence profile identities. Unsupported combinations fail before build; no target silently falls back to a host interpreter or cloud service. |
+| UP-4 | Cross-target semantic identity | Shared pure logic, schemas, state transitions, and replayable effects agree across every promoted target. Platform-specific behavior is isolated behind typed capabilities and explicit differential tests. |
+| UP-5 | Web quality | Promoted web profiles pass real-engine navigation, responsive layout, keyboard/screen-reader semantics, security policy, offline/PWA where claimed, SSR/hydration equivalence, and declared startup/transfer budgets from Genesis source alone. |
+| UP-6 | Native/mobile quality | Promoted desktop/mobile profiles pass install, launch, suspend/resume, termination, permissions, accessibility, input, storage, network loss, update/rollback, and crash-recovery tests on supported simulators plus named physical devices. |
+| UP-7 | Interactive quality | Promoted game/graphics profiles meet declared frame-time, input-latency, audio-underrun, memory, asset-load, deterministic-simulation, and save/replay budgets on representative scenes; headless plan identity remains a prerequisite, not the product proof. |
+| UP-8 | Service quality | Reference services pass typed protocol, authentication/authorization, persistence/migration, concurrency, backpressure, observability, secret, rolling-upgrade, rollback, fault-injection, and sustained-load SLOs in a self-hosted deployment. |
+| UP-9 | Embedded static closure | Every MCU image has statically proven flash, RAM, stack, heap/arena, interrupt, task, peripheral, and energy/timing envelopes for its board profile. Unsupported dynamic language features fail at compile time with repair guidance. |
+| UP-10 | Hardware authenticity | Embedded Linux and MCU claims include emulator/simulator evidence plus repeated hardware-in-the-loop boot, peripheral, reset, brownout/power-loss, watchdog, flash/debug, and OTA/rollback results on named boards. |
+| UP-11 | Product iteration | After caches are warm, a representative one-file logic/UI/firmware edit reaches a runnable local target within the target's published p95 budget; the build graph reports where time, disk, memory, and external SDK work were spent. |
+| UP-12 | Agent autonomy | A published general model, using only the released Genesis SDK and declared domain packages, completes each promoted product archetype from English request through build, run/device test, policy minimization, package, deploy, and maintenance without human-written code or foreign-source edits. |
+
 ---
 
 ## 7. Execution protocol
@@ -398,6 +454,7 @@ These budgets govern what may be learned from Project Theseus, The ASI Stack, Ge
 - [x] **R0.1.f Add a machine-readable execution manifest.** Mirror every roadmap task ID into a versioned manifest with prerequisites, risk class, expected inputs/outputs, owning spec/implementation surfaces, required checks and negative controls, resource class, rollback, and acceptance evidence. A drift check proves one-to-one coverage; the manifest schedules approved work but cannot mark its own task complete or override this roadmap's definition of done. done 2026-07-10; evidence: `scripts/check_roadmap_execution_manifest.sh`; input: `roadmap-execution-contract-bundle-sha256:f59b9ca5417caf544106180b7d4f332c51039b6837feb0f53b9152395eb5d31f`
 - [x] **R0.1.g Establish checkpoint and remote-CI discipline.** Publish each coherent task-scoped checkpoint before the next high-risk tranche, require a clean-clone reconstruction from the published revision, run the complete GitHub CI matrix at least once as a shakedown, classify every remote-only failure, and protect release branches from bypassing required checks. A draft pull request is a valid backup checkpoint but cannot close this task until its exact revision is green remotely. done 2026-07-14; evidence: `.github/workflows/ci.yml`, `.github/workflows/docs-site.yml`, and `scripts/check_docs_quickstart.sh`; input: `git-commit-object-sha256:1a0d9bdc8d967af45835abeb4391a1601ab6e9e56cc6a16db35882ee198b527e`
   Evidence 2026-07-14: task-scoped commits were published through PR 1 and the exact head revision passed the complete push CI run `29383561115` with all 63 executed stages successful. The same revision passed PR-only strict selfhost/WASM equivalence, deterministic GPU-device, WebXR browser, and 170-page Quarto/Playwright lanes; the only remote-only defect found was the documentation-maintainer shell fence being executed as a language quickstart, fixed by the explicit `genesis-doc-skip` contract and revalidated locally and on Linux. A fresh network clone independently reconstructed the revision and passed the R0.1 checks. GitHub exposes exactly one default branch, `main`; it requires an up-to-date `test` status, enforces protection for administrators and linear history, and disables force pushes and branch deletion.
+- [ ] **R0.1.h Expand the capability ledger to product and target truth.** Replace broad rows that conflate headless planning, host reachability, archive generation, and real products with independently governed rows for application/UI, static web, interactive/SSR/PWA web, service/data, desktop by OS, iOS, Android, games/media, data/ML, Embedded Linux, MCU language/AOT, board/HAL families, flash/debug/OTA, and hardware-in-the-loop. Each row names exact L0-L5 maturity, host/device scope, authentic artifact predicate, one-language source predicate, owner, gaps, evidence, and release eligibility. Generate a product/target matrix and prohibit aggregate `CAP-DEPLOYMENT-PIPELINE`, `CAP-GRAPHICS-RUNTIME`, or similar L1 wiring from implying child-target support.
 
 ### R0.2 Evidence lifecycle
 
@@ -552,6 +609,7 @@ These budgets govern what may be learned from Project Theseus, The ASI Stack, Ge
 - [ ] **R1.5.d Add compact workflows.** Provide author, repair, refactor, package, replay-debug, optimize, deploy, and self-host migration flows with exact stop/fail conditions.
 - [ ] **R1.5.e Add safety invariants to tool calls.** The skill never edits policy, signing roots, generated evidence, bootstrap trust, or format versions incidentally.
 - [ ] **R1.5.f Validate distribution.** Test clean install, offline use, stale-card rejection, token budgets, links, examples, and behavior with at least two independent agent/model families.
+- [ ] **R1.5.g Generate domain and target guidance on demand.** Build compact cards from the product/target capability ledger, package index, BSP/component catalogs, authentic artifact predicates, and unsupported-feature diagnostics. The skill retrieves only the selected web/service/desktop/mobile/game/data/embedded profile, never invents an unavailable API or board, never treats generated foreign glue as an editable fallback, and proposes an extension-package gap when first-party coverage is absent.
 
 ### R1.6 Agent-safe collaboration
 
@@ -569,8 +627,9 @@ These budgets govern what may be learned from Project Theseus, The ASI Stack, Ge
 - [ ] **R1.7.c Keep planning and specialization replaceable.** Support one general model for English/domain planning and an optional separate GenesisCode specialist for source, patches, policies, tests, and repairs, with explicit content-addressed handoff records. Routing is versioned and benchmarked against a single-model baseline; no architecture is made permanent without measured quality, cost, privacy, and local-deployment benefit.
 - [ ] **R1.7.d Capture complete quarantined trajectories.** Retain authorized English request, typed intent, retrievals, model calls, tool actions, attempts, diagnostics, repairs, accepted/rejected patches, capability decisions, evidence, and final outcome under AB-12. Raw trajectories are user-owned/quarantined by default and are not examples, packages, training data, or benchmark authority until a separate R8.5 promotion record proves consent/license, privacy, lineage, verification, deduplication, and held-out isolation.
 - [ ] **R1.7.e Evaluate intent safety and usefulness.** Measure typed-goal validity, clarification/abstention calibration, acceptance-test completeness, capability excess, unsupported invention, transaction escape, repair recovery, user correction burden, and end-to-end verified completion across at least two general-model families. Prompt injection, retrieved instruction confusion, secret exfiltration, evaluator tampering, and direct-mutation attempts fail closed.
+- [ ] **R1.7.f Compile product intents into closed acceptance graphs.** Decompose requests such as a website, game, mobile app, service, data pipeline, Raspberry Pi system, or MCU device into product features, target profiles, domain packages, assets, capabilities, resource/SLO budgets, real-runtime/device tests, deployment/update/rollback, and one-language source obligations. Unknown domain knowledge triggers typed retrieval or clarification; an unavailable target produces a truthful staged plan rather than foreign code or a fake artifact.
 
-**R1 exit criteria:** `GC-AGENT-v0.3` is frozen and versioned; compact cards meet AB-1/AB-2; diagnostics are structured across every user boundary; warm/MCP meets AB-3/AB-4 and survives cancellation/leak stress; GenesisBench publishes four isolated tracks, lineage-correct statistics, >=45 independent Preview lineages, useful temporal overlays, a fixed reference scaffold, canonical CLI/adapters, self-hostable result registry, benchmark card/methods, closed baseline bundles, and signed public-governance rules; the authoring skill passes clean/offline installs; typed English intent meets AB-11/AB-12 without bypassing deterministic acceptance; pinned runs meet AB-5 through AB-10 and BQ-1 through BQ-6 plus BQ-9 through BQ-14 without private repository context. BQ-7/BQ-8 remain hard blockers for training-corpus admission, not for quarantined preview research.
+**R1 exit criteria:** `GC-AGENT-v0.3` is frozen and versioned; compact cards meet AB-1/AB-2; diagnostics are structured across every user boundary; warm/MCP meets AB-3/AB-4 and survives cancellation/leak stress; GenesisBench publishes four isolated tracks, lineage-correct statistics, >=45 independent Preview lineages, useful temporal overlays, a fixed reference scaffold, canonical CLI/adapters, self-hostable result registry, benchmark card/methods, closed baseline bundles, and signed public-governance rules; the authoring skill passes clean/offline installs and negotiates domain/target support without foreign-source escape; typed English intent meets AB-11/AB-12 and emits closed product acceptance graphs without bypassing deterministic acceptance; pinned runs meet AB-5 through AB-10 and BQ-1 through BQ-6 plus BQ-9 through BQ-14 without private repository context. BQ-7/BQ-8 remain hard blockers for training-corpus admission, not for quarantined preview research.
 
 ---
 
@@ -745,8 +804,46 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R5.5.b Generate bindings and capability manifests.** Types, ownership, errors, resources, limits, and evidence derive from one schema.
 - [ ] **R5.5.c Sandbox extensions.** Memory, CPU, calls, effects, filesystem/network, cancellation, and lifecycle are bounded; malformed components cannot panic the host.
 - [ ] **R5.5.d Make extension behavior replayable.** Pure components are content-addressed; effectful calls log canonical request/response or an explicit non-replayable policy decision.
+- [ ] **R5.5.e Generate foreign-schema adapters without foreign application code.** Import pinned WIT, OpenAPI/JSON Schema, Protocol Buffers, SQL schemas, C header metadata, and selected platform interface descriptions into one typed Genesis binding IR. Generated wrappers, ownership shims, codecs, capability manifests, cards, tests, and SBOM edges are deterministic and carry source identity; unsupported constructs fail with an exact adapter gap rather than producing unsafe bindings.
+- [ ] **R5.5.f Govern native and legacy ecosystem packages.** Where Component Model isolation is unavailable, package native libraries behind a separately signed high-risk adapter profile with ABI/SDK/architecture identity, memory/lifetime rules, thread/callback policy, hard resource isolation where possible, and platform-specific negative controls. Application packages consume only Genesis APIs; handwritten foreign glue cannot hide in the application tree or acquire ambient authority.
 
-**R5 exit criteria:** the v1 profile has no spec/implementation matrix gaps; effect rows and concurrency meet L3; numeric/text/path behavior is cross-host deterministic; stdlib APIs satisfy ownership/resource rules; compatibility and migrations work on the full corpus; extension negative controls pass.
+### R5.6 Unified application, web, and UI model
+
+- [ ] **R5.6.a Define one application architecture.** Specify deterministic lifecycle, immutable state/update/view/effect boundaries, component identity, routing/navigation, dependency injection, configuration, localization, theming, error boundaries, hot replacement, and server/client/native ownership without adding UI semantics to the kernel.
+- [ ] **R5.6.b Build a typed presentation and style IR.** GenesisCode owns document structure, components, layout, typography, color, responsive constraints, animation, focus, semantics, forms, validation, canvas/scene embedding, and design tokens. Invalid trees, inaccessible interactions, unbounded layout, unsupported target features, and style conflicts produce structured diagnostics.
+- [ ] **R5.6.c Implement the web product stack.** Compile Genesis routes/views/styles to deterministic static HTML, scoped CSS, browser Wasm/JavaScript adapters, assets, source maps, CSP/integrity metadata, workers, service workers, and manifests. Support static sites, SPA, SSR/streaming, hydration, forms/actions, API routes, WebSocket, storage, offline/PWA, and progressive enhancement without application-authored HTML/CSS/JavaScript.
+- [ ] **R5.6.d Implement accessible cross-target widgets.** Text shaping, images, lists, tables, controls, dialogs, menus, navigation, virtualized content, drag/drop, clipboard, accessibility trees, keyboard/touch/pointer/gamepad input, IME, reduced motion, high contrast, and screen-reader semantics behave consistently or expose explicit target limitations.
+- [ ] **R5.6.e Make UI rendering efficient and inspectable.** Incremental dependency tracking, keyed diffing, layout/paint invalidation, batching, retained resources, streaming SSR, and target-specific rendering are outside semantic trust but translation-validated against the presentation IR. Devtools expose state, effects, layout, accessibility, frame work, and source spans without hidden mutation.
+- [ ] **R5.6.f Ship product-grade UI testing.** Pure state/update tests, semantic-tree goldens, screenshot/pixel tolerances, accessibility audits, browser/native interaction replay, responsive matrices, network/offline faults, and performance traces share one Genesis test API and deterministic fixture format.
+
+### R5.7 Batteries-included service, data, and AI platform
+
+- [ ] **R5.7.a Complete typed service construction.** Provide routing, middleware, request/response streaming, TLS termination policy, compression, cookies, sessions, CSRF/CORS, authentication, authorization, OIDC/OAuth integration, rate limits, idempotency, health/readiness, graceful drain, and generated API schemas/clients under explicit capabilities.
+- [ ] **R5.7.b Complete durable data APIs.** Add typed schemas, queries, transactions, pools, migrations, fixtures, pagination, change streams, backup/restore, and deterministic local test stores across an embedded database plus profiled SQL, KV, and object-store adapters. Query generation is injection-safe and migration plans are reviewable and reversible where declared.
+- [ ] **R5.7.c Add production coordination primitives.** Bounded queues, jobs, schedules, cache, pub/sub, email, object storage, distributed locks/leases, workflow checkpoints, and retry/idempotency policies expose exact delivery/order/failure semantics and replayable local substitutes.
+- [ ] **R5.7.d Unify observability and operations.** Structured logs, metrics, traces, profiles, audit events, correlation/context propagation, redaction, sampling, retention, SLOs, alerts, and incident bundles are capability-scoped and portable to self-hosted open telemetry/storage components without entering deterministic application semantics.
+- [ ] **R5.7.e Build first-party data/numeric/ML libraries.** Add typed arrays/tensors, tables/dataframes, streaming transforms, statistics, linear algebra, signal/image/audio operations, dataset manifests, checkpointed pipelines, and local model inference/training adapters with CPU/GPU backends, deterministic profiles, resource accounting, and no Python requirement for users.
+- [ ] **R5.7.f Provide secure application foundations.** Password/key handling, account/session lifecycle, tenancy, authorization policy, schema validation, file upload, content scanning hooks, audit trails, privacy retention/deletion, and abuse controls ship as reviewed packages and threat-modeled reference architectures rather than ad hoc snippets.
+
+### R5.8 Games, simulation, graphics, and creative media
+
+- [ ] **R5.8.a Define a deterministic game/simulation core.** Add fixed/variable-step clocks, ECS or equally explicit world state, scenes/prefabs, events, input mapping, deterministic RNG, rollback snapshots, save/load, and reproducible simulation tests; wall time, devices, network, and assets remain effects.
+- [ ] **R5.8.b Complete 2D/3D runtime systems.** Provide sprites, tilemaps, cameras, meshes, materials, lighting, animation, particles, collision/physics, navigation, spatial queries, culling, level streaming, and bounded resource lifecycles with headless reference behavior and real GPU/render backends.
+- [ ] **R5.8.c Make shaders and assets Genesis-authored.** A typed Genesis shader/kernel IR emits validated WGSL/SPIR-V or target formats; image/audio/font/model/scene import, compression, atlasing, level-of-detail, packaging, hot reload, and license/provenance tracking form one deterministic asset graph. Users never patch shader or importer source in another language.
+- [ ] **R5.8.d Add audio and creative timelines.** Mixing, buses, spatial audio, synthesis/effects, MIDI, recording/playback, animation/video timelines, deterministic offline renders, real-time deadlines, device loss, and content pipelines have explicit quality and resource profiles.
+- [ ] **R5.8.e Support networked interactive systems.** Authoritative server, snapshots/deltas, prediction/reconciliation, rollback, lag compensation, matchmaking/lobbies, anti-cheat evidence hooks, replay/spectator, and bandwidth budgets are packages over the typed service and deterministic simulation contracts.
+- [ ] **R5.8.f Ship editor and debugging workflows.** Scene/world inspector, asset browser, profiler, frame capture, live reload, deterministic record/replay, test level, packaging, and crash evidence are available through Genesis-native tools and generated MCP surfaces, not a mandatory foreign editor scripting language.
+
+### R5.9 Embedded language and hardware contract
+
+- [ ] **R5.9.a Define Embedded Linux and MCU profiles separately.** Embedded Linux retains the full compatible host profile on pinned `linux-arm64`/`linux-riscv64` systems. MCU profiles name exact CoreForm, type, numeric, allocation, recursion, concurrency, effect, panic, and library subsets; unsupported full-language behavior is diagnosed before code generation.
+- [ ] **R5.9.b Add closed-world static resource verification.** Whole-program analysis computes flash/ROM, static RAM, stack per task/interrupt, bounded arena/heap, handles, queues, DMA buffers, timing classes, and peripheral ownership. Dynamic dispatch, recursion, allocation, or effect bounds that cannot be proven require an explicit larger profile or fail closed.
+- [ ] **R5.9.c Specify real-time and interrupt semantics.** Interrupt handlers, priorities, critical sections, atomics, timers, watchdogs, RTOS tasks, cancellation, deadlines, power/sleep transitions, startup/reset, and crash persistence have deterministic core rules and clearly delimited hardware nondeterminism.
+- [ ] **R5.9.d Define capability-safe HAL APIs.** Board manifests grant typed ownership of GPIO, ADC/DAC, PWM, timers, I2C, SPI, UART, CAN, USB, storage, display, audio, camera, sensors, motors, BLE, Wi-Fi, and Ethernet resources. Pin conflicts, voltage/mode errors, concurrent ownership, unsafe ISR calls, and unavailable peripherals fail before flash.
+- [ ] **R5.9.e Build IoT and robotics packages.** MQTT/CoAP or selected profiled protocols, device identity/provisioning, secure boot/update hooks, telemetry, local rules, time synchronization, sensor fusion, motor control, safety stops, digital-twin simulation, and fleet policy remain self-hostable and capability-minimal.
+- [ ] **R5.9.f Preserve semantic identity across constrained compilation.** The MCU AOT backend validates each accepted program against authoritative semantics for the embedded subset; fixed-width arithmetic, memory layout, volatile I/O, interrupt observations, and hardware faults use explicit target profiles and never masquerade as full-host equivalence.
+
+**R5 exit criteria:** the v1 profile has no spec/implementation matrix gaps; effect rows and concurrency meet L3; numeric/text/path behavior is cross-host deterministic; stdlib APIs satisfy ownership/resource rules; compatibility and migrations work on the full corpus; extension negative controls pass; web/UI, service/data, game/media, and embedded profiles each have closed semantics, resource and capability models, generated agent cards, unsupported-feature diagnostics, and at least L2 reference implementations before target packaging may claim support.
 
 ---
 
@@ -771,11 +868,13 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 
 ### R6.3 Build target matrix
 
-- [ ] **R6.3.a Define target profiles.** Native CLI/service, WASI, browser worker, edge/serverless, OCI image, and portable component are v1 candidates. Mobile app embedding is promoted only if flagship proof meets L4.
+- [ ] **R6.3.a Define target profiles and promotion tiers.** Profile native CLI/service, self-contained desktop, static/SPA/SSR/PWA web, WASI/component, edge/serverless, OCI/system service, iOS, Android, embedded Linux, and constrained MCU firmware separately. Each binds exact host/architecture/SDK/BSP/runtime, supported language/library/capability subset, artifact/install/launch contract, resource envelope, signing/update policy, and evidence level. A shared product may select several profiles, but an unavailable target fails before build.
 - [ ] **R6.3.b Implement `genesis build`.** One self-hosted build graph emits target artifacts, capability manifests, runtime requirements, a profiled SPDX SBOM, in-toto/SLSA provenance, and Genesis evidence pointers.
 - [ ] **R6.3.c Make builds reproducible.** Normalize paths/timestamps/order/archives; pin base images and SDK identities; compare independent outputs.
 - [ ] **R6.3.d Minimize artifacts.** Tree-shake unused Prelude/capabilities, strip evidence duplication without losing verification, and report size/startup/memory budgets per target.
 - [ ] **R6.3.e Validate target parity.** Normative programs produce the same semantic result/effects or an explicitly declared target limitation.
+- [ ] **R6.3.f Enforce authentic-artifact qualification.** Replace current descriptor, empty-export, and synthetic launcher smoke paths with target-native executable entrypoints. Tests install or start each artifact in its declared runtime, cross the real process/browser/device boundary, exercise application logic and at least one scoped effect, collect logs/crashes/resources, and reject an archive whose suffix or metadata is the only target-specific property.
+- [ ] **R6.3.g Make generated glue disposable and non-authoritative.** Platform projects, HTML/CSS/JavaScript adapters, Swift/Kotlin/XML, C startup/link files, shaders, container/unit manifests, and deployment configuration live in declared generated roots, carry source maps and input identities, are never hand-edited, and reproduce after deletion. Build diagnostics map failures back to Genesis source or a typed toolchain/SDK gap.
 
 ### R6.4 Operations and lifecycle
 
@@ -783,8 +882,33 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R6.4.b Add health, migration, rollback, and recovery contracts.** Service upgrades and data migrations are bounded, idempotent where required, observable, and reversible or explicitly irreversible.
 - [ ] **R6.4.c Handle secrets safely.** Secret values never enter canonical source, logs, diagnostics, model contexts, or evidence; only references/policy and redacted attestations do.
 - [ ] **R6.4.d Verify deployment provenance.** Running instances can report the exact package/artifact/evidence/profile identity without exposing secrets.
+- [ ] **R6.4.e Build a self-hostable deployment IR.** Express machines, containers, services, routes, certificates, storage, queues, schedules, health, scaling bounds, updates, and rollback in typed Genesis data. Generate reviewable systemd/OCI/Kubernetes/edge/provider adapters where selected, but retain a direct single-machine path and never require users to author shell or YAML.
+- [ ] **R6.4.f Close application observability and incident response.** Deployments bind dashboards/queries/alerts/runbooks to application schemas, preserve redaction and tenant boundaries, capture crash/replay/evidence bundles, and rehearse backup, restore, regional/host loss, certificate/key rotation, and compromised release rollback.
 
-**R6 exit criteria:** deterministic offline resolution and package builds pass tier-1 hosts; a self-hosted registry supports publish/mirror/revoke/recover; target builds meet reproducibility and semantic-parity gates; at least native, WASI, browser, and OCI profiles reach L4; deploy/rollback/secret negative controls pass.
+### R6.5 Web and full-stack product delivery
+
+- [ ] **R6.5.a Ship the Genesis web compiler and development server.** Incremental route/view/style/asset compilation, SSR and browser bundles, hot reload, source-mapped diagnostics, local TLS, API proxying, deterministic fixtures, and offline operation use the same build graph and never require Node as an application-level dependency.
+- [ ] **R6.5.b Produce standards-valid deployable sites and applications.** Emit static hosting bundles, self-hosted SSR services, portable edge components, service workers/PWA packages, integrity/CSP metadata, cache policy, redirects/headers, sitemap/feed/metadata, and optional OCI artifacts from one Genesis workspace.
+- [ ] **R6.5.c Prove real browser behavior.** Test supported browser engines and mobile viewports for routing, forms, storage, workers, offline/online transitions, WebSocket, accessibility, security policy, hydration, update/rollback, and performance. Generated output is inspected for deterministic identity, dead-code/asset elimination, and absence of undeclared network dependencies.
+- [ ] **R6.5.d Ship a maintained full-stack reference product.** Authentication, authorization, database/migrations, background work, file/object storage, email substitute, realtime updates, observability, backup/restore, deployment, and seeded maintenance are implemented in GenesisCode and run self-hosted end to end.
+
+### R6.6 Desktop and mobile product delivery
+
+- [ ] **R6.6.a Build real desktop applications.** Generate signed/installable macOS, Windows, and Linux packages with a Genesis runtime/component, native windows, menus, tray, dialogs, clipboard, drag/drop, notifications, file associations, deep links, accessibility, GPU/audio/input, crash capture, auto-update, and rollback. Headless CI is supplemented by real OS launch and interaction evidence.
+- [ ] **R6.6.b Build real iOS and Android applications.** Generate complete Xcode/Gradle projects as disposable outputs, compile/link the Genesis runtime and app, package valid signed `.ipa`/`.aab` artifacts, and support lifecycle, navigation/UI, touch/keyboard, accessibility, permissions, storage, networking, background modes, notifications, deep links, camera/media/location/sensors where profiled, crash evidence, and deterministic app data migration.
+- [ ] **R6.6.c Automate platform qualification.** Simulator/emulator matrices plus named physical devices test install, first launch, suspend/resume, process death, permission denial/revocation, rotation/window changes, offline recovery, low memory/disk, upgrade/downgrade policy, and uninstall/data retention. Store submission remains an explicit operator-approved effect with reproducible unsigned inputs and separately managed credentials.
+- [ ] **R6.6.d Prove shared-product reuse honestly.** A reference app shares Genesis business logic, schemas, tests, state/update/view code, and assets across web, desktop, iOS, and Android while recording target-specific code, capability, artifact-size, startup, memory, accessibility, and maintenance deltas. No percentage claim hides generated or duplicated code.
+
+### R6.7 Embedded Linux, microcontroller, and board delivery
+
+- [ ] **R6.7.a Promote Embedded Linux first.** Produce reproducible `linux-arm64` images/packages for Raspberry Pi-class boards with service/UI modes, GPIO/I2C/SPI/UART access, device-tree/udev/system integration through capabilities, cross-build and native-build parity, remote deploy/debug, read-only/offline operation, update/rollback, and power-loss recovery.
+- [ ] **R6.7.b Implement a closed-world MCU AOT pipeline.** Compile the R5.9 subset to validated machine/object code or a proven minimal runtime; generate startup, vector table, linker layout, BSP/HAL bindings, memory map, debug symbols, firmware image, SBOM, provenance, and flash plan. Host Rust/C toolchains may be pinned implementation dependencies, but users author no C/C++/linker/startup source.
+- [ ] **R6.7.c Establish representative board families.** Reach L4 on at least RP2040, a RISC-V ESP32 profile, an Xtensa ESP32 profile where the pinned toolchain is reproducible, and one Arduino-compatible constrained board; add new boards through signed BSP packages and conformance kits rather than compiler special cases.
+- [ ] **R6.7.d Build board simulation and hardware-in-the-loop infrastructure.** Deterministic peripheral models and QEMU/Renode or selected open simulators run ordinary CI; isolated physical rigs flash, power-cycle, capture serial/debug traces, inject peripheral/network/power faults, measure timing/memory/power, and retain signed evidence without exposing lab control as application authority.
+- [ ] **R6.7.e Complete flash, debug, and OTA lifecycle.** `genesis device` discovers only explicitly authorized boards, explains pin/resource plans, flashes/verifies, opens bounded serial/debug sessions, captures crash dumps, provisions secrets without logging values, performs signed A/B OTA with rollback, and recovers bricked/interrupted updates where the board permits.
+- [ ] **R6.7.f Ship maintained hardware products.** Required proofs include a Raspberry Pi edge service/UI, RP2040 sensor/control firmware, ESP32 connected device with offline behavior and signed OTA, and an Arduino-compatible teaching/control workload. Each has a digital-twin test, physical-device test, enclosure/power assumptions, and seeded maintenance task authored entirely in GenesisCode.
+
+**R6 exit criteria:** deterministic offline resolution and package builds pass tier-1 hosts; a self-hosted registry supports publish/mirror/revoke/recover; target builds meet reproducibility, semantic-parity, authentic-execution, and one-language-source gates; native CLI/service, WASI/component, web static/interactive/SSR, OCI/system service, desktop, iOS, Android, Embedded Linux, and at least two materially different MCU families reach L4 or are explicitly excluded from the named release; deploy/rollback/secret/device negative controls pass; no descriptor, empty export, synthetic hash launcher, simulator-only result, or generated-glue edit is counted as product support.
 
 ---
 
@@ -799,6 +923,7 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R7.1.c Fuzz every parser and decoder.** Source, CoreForm/artifacts, GCLOG, evidence, packages, locks, patches, bytecode, Wasm/component, protocols, and registry inputs must be bounded and panic-free.
 - [ ] **R7.1.d Add fault injection.** Partial reads/writes, ENOSPC, permission races, process hangs, crashes, corrupt caches, lost network, clock anomalies, cancellation, and concurrent updates fail closed.
 - [ ] **R7.1.e Use mutation testing on trust checks.** Demonstrate that tests fail when capability, seal, replay, signature, hash, bootstrap, and evidence validation is intentionally weakened.
+- [ ] **R7.1.f Test product generators and target adapters adversarially.** Mutate presentation IR, generated glue, SDK/BSP identities, app/container archives, linker/memory layouts, shader/asset graphs, permission manifests, deploy plans, and device evidence; prove stale, hand-edited, malformed, over-authorized, or non-executable outputs cannot qualify.
 
 ### R7.2 Formal models and proofs
 
@@ -817,12 +942,14 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R7.3.c Pin and audit dependencies.** Provenance, licenses, advisories, minimal features, checksums, vendoring/offline mirror, and update policy are part of release evidence.
 - [ ] **R7.3.d Harden release keys and builders.** Isolated signing, threshold/recovery policy, reproducible unsigned artifacts, attestations, builder identity, and independent mirrors.
 - [ ] **R7.3.e Run external review.** Commission or invite independent review of TCB, effects/replay, package/registry trust, bytecode verifier, and bootstrap process; track findings in `upgrade_plan.md`.
+- [ ] **R7.3.f Threat-model product and hardware supply chains.** Cover browser injection/XSS and origin policy, native/mobile signing and permissions, game asset/shader parsing, service authentication/data isolation, cross-compilers/SDKs/BSPs, debug and provisioning ports, physical access, firmware rollback, secure boot, OTA, peripheral/DMA races, and malicious component packages with profile-specific mitigations and honest hardware-root assumptions.
 
 ### R7.4 Reliability and scale
 
 - [ ] **R7.4.a Soak long-lived daemons/services.** 100k+ requests, cancellation storms, malformed clients, package churn, cache corruption, and constrained memory/disk.
 - [ ] **R7.4.b Test adversarial complexity.** Parser/typechecker/collections/solver/log/registry inputs have documented worst-case or enforced budgets.
 - [ ] **R7.4.c Validate disaster recovery.** Registry restore, key compromise, corrupt release mirror, bad migration, failed bootstrap, and incompatible package release have rehearsed runbooks and automated tests.
+- [ ] **R7.4.d Soak real products and devices.** Browser/native/mobile applications, services, games, Embedded Linux systems, and MCU firmware undergo lifecycle, update, power/network loss, resource exhaustion, malformed input, and long-duration hardware tests under their declared SLOs; emulator success cannot erase physical failures.
 
 **R7 exit criteria:** all trust boundaries have threat models and mutation-tested negative controls; fuzz/sanitizer/property soak has 30 clean days with no unresolved P0/P1; required formal statements are checked and coverage limits are published; independent review findings are closed or explicitly release-blocking; supply-chain/recovery drills pass.
 
@@ -839,7 +966,7 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R8.1.c Publish failure taxonomy.** Attribute failures to language ambiguity, card retrieval, diagnostics, model reasoning, tool protocol, runtime, policy, performance, or missing domain support.
 - [ ] **R8.1.d Ratchet from evidence.** Roadmap priority responds to repeated measured failure classes, not isolated demo success or benchmark gaming.
 
-### R8.2 Ten-archetype gauntlet
+### R8.2 Eighteen-archetype universal product gauntlet
 
 - [ ] **R8.2.a Pure library and CLI.** Parsing/transformation, tests, package, reproducible native/WASI builds.
 - [ ] **R8.2.b HTTP/WebSocket service.** Structured concurrency, TLS policy, persistence, cancellation, replayable tests, OCI deploy/rollback.
@@ -851,19 +978,29 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R8.2.h GPU or numeric workload.** Pure kernel semantics, deterministic tolerance/profile, backend evidence, CPU fallback.
 - [ ] **R8.2.i Mobile embedding pilot.** One iOS and one Android host integration using preserved platform toolchains; promote only if reproducibility, lifecycle, size, and debugging meet L4.
 - [ ] **R8.2.j Self-host toolchain change.** Agent updates a non-TCB compiler/tooling component, bootstraps, differentially verifies, and produces a reviewable evidence bundle.
+- [ ] **R8.2.k Full-stack web product.** The agent builds a responsive accessible site plus authenticated interactive application, SSR/API/database/background/realtime paths, offline behavior, browser tests, self-hosted deployment, and rollback with no handwritten HTML/CSS/JavaScript/YAML.
+- [ ] **R8.2.l Native desktop product.** One shared Genesis app installs and runs on macOS, Windows, and Linux with native lifecycle, accessibility, filesystem/dialog/clipboard/notification capabilities, signed artifacts, update, crash recovery, and no edited generated project files.
+- [ ] **R8.2.m Cross-target game.** A nontrivial 2D or 3D game uses deterministic simulation, input, physics/collision, animation, audio, Genesis-authored shader/assets, save/replay, networking or a declared offline scope, and real web/desktop plus one mobile build under frame/resource budgets.
+- [ ] **R8.2.n Creative media tool.** An image/audio/video/scene workflow imports assets, performs deterministic transforms, previews through the real UI/media runtime, exports a standard artifact, preserves license/provenance, and handles malformed or oversized content safely.
+- [ ] **R8.2.o Embedded Linux product.** A Raspberry Pi-class device runs a Genesis service or UI, accesses real GPIO/I2C/SPI/UART hardware under policy, survives power/network loss, updates/rolls back, and reproduces from a clean cross-build without foreign application code.
+- [ ] **R8.2.p Microcontroller firmware.** RP2040 and ESP32-class boards compile the constrained profile, pass static memory/timing checks, exercise real peripherals and watchdog/reset paths, flash/debug through Genesis tools, and complete signed OTA/rollback where supported.
+- [ ] **R8.2.q IoT or robotics system.** Device, gateway, service, dashboard, provisioning, telemetry/control, offline reconciliation, safety stop, fleet update, digital twin, and hardware-in-the-loop test form one capability-minimal Genesis workspace.
+- [ ] **R8.2.r Data science and local ML system.** A reproducible dataset-to-analysis/model pipeline uses Genesis tables/tensors/statistics, CPU/GPU execution, checkpoints, evaluation, local inference service/UI, provenance, and resource evidence without Python notebooks or scripts.
 
 ### R8.3 Flagship systems
 
-- [ ] **R8.3.a Ship at least five maintained programs.** Required set: replay-audited data service, MCP tool server, static site/build tool, package registry deployment, and one compute/visual/mobile application.
+- [ ] **R8.3.a Ship at least ten maintained products.** Required set: replay-audited service/data system, MCP tool server, full-stack web product, native desktop app, iOS/Android app, game or rich interactive simulation, creative/data/ML tool, self-hosted package registry deployment, Raspberry Pi-class product, and MCU/IoT product across at least two board families.
 - [ ] **R8.3.b Treat examples as products.** Each has tests, threat model, capability policy, budgets, packages, deploy/rollback, operations guide, and pinned evidence.
 - [ ] **R8.3.c Measure maintenance.** Perform seeded upgrades, dependency changes, defect repairs, policy tightening, and profile migrations through agents; report patch quality and human review time.
+- [ ] **R8.3.d Enforce the one-language source audit.** Every flagship publishes a complete source/generated/dependency inventory, proves generated foreign artifacts can be deleted and reproduced, and rejects hidden handwritten glue, vendored target projects, cloud-only build steps, or manual post-build repair.
+- [ ] **R8.3.e Require independent product operators.** At least two people or organizations outside the producing agent run a clean install/build/deploy/device workflow, complete a maintenance change from public documentation, and report every undocumented prerequisite or foreign-language escape as a product defect.
 
 ### R8.4 Minimal human surface
 
 - [ ] **R8.4.a REPL:** structured values/effects, multiline editing, history privacy, resource controls, profile selection, and replay inspection.
 - [ ] **R8.4.b LSP:** parser/type/effect diagnostics, semantic navigation, format, safe actions, capability/policy insights, and incremental performance from shared schemas.
 - [ ] **R8.4.c Playground:** locally hostable, browser-sandboxed, capability-minimal, version-pinned, shareable by content hash, and incapable of implying unsupported host effects.
-- [ ] **R8.4.d Documentation spine:** one getting-started path, language reference, agent SDK, capability reference, operations/security, package/registry, self-host/bootstrap, and contribution guide generated from canonical sources.
+- [ ] **R8.4.d Documentation spine:** one getting-started path, language reference, agent SDK, capability and product/target matrices, web/full-stack, desktop/mobile, game/media, service/data/AI, Embedded Linux/MCU/board guides, operations/security, package/registry, self-host/bootstrap, and contribution guide generated from canonical sources. Every product tutorial starts from Genesis-only source, shows real build/run/device evidence, and labels generated foreign artifacts as disposable internals.
 - [ ] **R8.4.e Ten-minute proof:** a clean user evaluates a pure program, runs an effect under policy, inspects the log, and replays it in <=10 minutes without hidden setup.
 
 ### R8.5 Benchmark-to-adoption and native-model flywheel
@@ -888,7 +1025,7 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R8.5.r Run four-cell language/model co-evolution experiments.** For every candidate language/tooling change and candidate model, predeclare and run current-model/current-language, current-model/candidate-language, candidate-model/current-language, and candidate-model/candidate-language cells across frozen model families. Measure verified solve rate and total agent work: context consumed, tokens, retrievals, repair turns, tools, runtime resources, required authority, migration, TCB/proof burden, and human inspectability. Reject private co-adaptation that improves only the combined cell, damages cold general-model learnability, weakens compatibility, or encodes benchmark answers. Research may run continuously; language or model promotion remains discrete and independently authorized.
 - [ ] **R8.5.s Prove independent value and adoption.** Require external operators to reproduce benchmark results, submit useful challenge tasks, and build maintained GenesisCode artifacts without private project prompts. Track benchmark-to-doc, benchmark-to-diagnostic, benchmark-to-package, benchmark-to-flagship, benchmark-user-to-language-user, and language-user-to-corpus conversion with consent. Optimize for durable software, trustworthy agents, and lower total agent work rather than leaderboard traffic or synthetic volume alone.
 
-**R8 acceptance lanes:** the language/benchmark lane closes when AB-5 through AB-12 and BQ-1 through BQ-6 plus BQ-9 through BQ-14 meet v1 targets on held-out, temporal, maintenance, and isolated-track tasks; at least 9/10 archetypes pass without human code edits; five flagship systems reach L4; three model families and two independent operators reproduce closed benchmark runs; seeded maintenance exercises succeed; human quickstart and tooling meet their SLOs; and failures and unsupported domains are published. That lane may advance GenesisCode and GenesisBench to release candidacy without a native model. The independent Genesis Model lane closes only when BQ-7/BQ-8, MQ-1 through MQ-8, and R8.5.f-r pass: the firewall survives adversarial audit, every admitted artifact satisfies corpus policy, the Theseus/ASI transfer manifest is independently reproduced and reviewed, the profile-bound model meets one declared Embedded Local class without cloud fallback, and four-cell studies preserve cold-model accessibility. Completing both lanes completes R8; neither product may borrow the other lane's evidence.
+**R8 acceptance lanes:** the language/benchmark lane closes when AB-5 through AB-12, UP-1 through UP-12, and BQ-1 through BQ-6 plus BQ-9 through BQ-14 meet v1 targets on held-out, temporal, maintenance, authentic-target, and isolated-track tasks; all 18 archetypes pass without human code or foreign-source edits for every profile claimed by the release; ten flagship products reach L4; three model families and two independent operators reproduce closed benchmark runs; seeded cross-target and device maintenance exercises succeed; human quickstart and tooling meet their SLOs; and failures and unsupported domains are published. That lane may advance GenesisCode and GenesisBench to release candidacy without a native model. The independent Genesis Model lane closes only when BQ-7/BQ-8, MQ-1 through MQ-8, and R8.5.f-r pass: the firewall survives adversarial audit, every admitted artifact satisfies corpus policy, the Theseus/ASI transfer manifest is independently reproduced and reviewed, the profile-bound model meets one declared Embedded Local class without cloud fallback, and four-cell studies preserve cold-model accessibility across the universal product profiles. Completing both lanes completes R8; neither product may borrow the other lane's evidence.
 
 ---
 
@@ -902,13 +1039,15 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R9.1.b Enforce release branches by evidence.** Only reviewed semantic patches with required gates and compatibility decisions enter release candidates.
 - [ ] **R9.1.c Run at least two candidates.** Each receives full host matrix, 30-day soak overlap where possible, agent gauntlet, bootstrap, reproducibility, migration, rollback, security, and performance review.
 - [ ] **R9.1.d Publish product-scoped release manifests.** GenesisCode, GenesisBench, reference scaffold/adapters, task epochs, and Genesis Model packages each receive a distinct signed identity, owner, support window, compatibility range, evidence set, rollback path, and status. A portfolio release may link compatible identities but cannot merge authorities, imply lockstep versions, or block GenesisCode because an optional model package is absent.
+- [ ] **R9.1.e Freeze the supported product/target matrix.** Name every release-qualified web, service, desktop, mobile, game/media, data/AI, Embedded Linux, MCU, board, SDK/BSP, architecture, artifact, install/deploy, update, and operations profile at its exact L-level. Experimental or unavailable cells remain machine-readable exclusions and cannot inherit a broad "full stack" or "embedded" claim.
 
 ### R9.2 Reproducible distribution
 
 - [ ] **R9.2.a Produce signed source and binary bundles.** Include installers/packages for supported hosts, self-host artifacts, offline dependency/registry options, profiled SPDX inventory, in-toto/SLSA provenance, licenses, symbols, and independent verification instructions.
 - [ ] **R9.2.b Reproduce independently.** Two builders reproduce every tier-1 artifact; discrepancies block release and are preserved as evidence.
 - [ ] **R9.2.c Publish independently controlled E4 attestations and mirrors.** At least two attesters/signers and two durable mirrors, controlled by independent people or organizations with disclosed conflicts and threshold/rotation/revocation policy, bind source-to-artifact, bootstrap witness, package graph, target profile, and evidence identities. Users can verify the complete set offline; loss or compromise of one project-controlled key, host, or operator cannot erase history, forge quorum, or make an unsupported claim E4.
-- [ ] **R9.2.d Test install/upgrade/uninstall.** Clean, existing v0.x, air-gapped, low-disk, and rollback paths preserve user data and report exact compatibility issues.
+- [ ] **R9.2.d Reproduce authentic products and firmware.** Independent builders reproduce, install, launch, exercise, update, and roll back each claimed artifact class; physical-device witnesses reproduce named board workloads. Generated foreign glue is rebuilt from Genesis source and compared, not accepted as an opaque checked-in input.
+- [ ] **R9.2.e Test install/upgrade/uninstall.** Clean, existing v0.x, air-gapped, low-disk, and rollback paths preserve user data and report exact compatibility issues.
 
 ### R9.3 Operations and governance
 
@@ -924,8 +1063,9 @@ Each component follows the same sequence: normative corpus -> GenesisCode implem
 - [ ] **R9.4.b Independent verification succeeds.** A clean verifier environment checks the release, conformance corpus, bootstrap witness, registry/package proofs, and signatures without the producing CLI.
 - [ ] **R9.4.c User AI pilot succeeds.** The user's target AI systems complete the declared held-out workflows with the published SDK and no private migration prompt.
 - [ ] **R9.4.d Publish v1.0 and preserve it.** Tag, sign, mirror, archive source/dependencies/evidence, publish migration/support dates, and create the post-v1 baseline.
+- [ ] **R9.4.e Demonstrate the one-language promise publicly.** From clean machines and reset devices, independent general agents build and maintain a representative full-stack web product, native/mobile product, game or media product, service/data system, Embedded Linux application, and MCU firmware using only released GenesisCode interfaces. Publish complete failures and manual interventions; any foreign-source edit invalidates that target's claim.
 
-**R9 exit criteria:** every R9 task is complete; all M6 GenesisCode claims have E4 attestations; independent reproduction and verification pass; operational drills pass; GenesisCode is installable and usable offline without a Genesis Model; public claims exactly match the capability ledger; and every linked GenesisBench, scaffold, epoch, or model identity is independently releasable and truthfully marked required, optional, compatible, incompatible, preview, or absent.
+**R9 exit criteria:** every R9 task is complete; all M6 GenesisCode claims have E4 attestations; independent reproduction, authentic target execution, real-device witnesses, and verification pass; operational drills pass; GenesisCode is installable and usable offline without a Genesis Model; public claims exactly match the capability and product/target ledgers; the one-language source audit passes for every flagship; and every linked GenesisBench, scaffold, epoch, or model identity is independently releasable and truthfully marked required, optional, compatible, incompatible, preview, or absent.
 
 ---
 
@@ -966,7 +1106,7 @@ Post-v1 autonomous promotion is intentionally outside the v1 critical path. Sand
 ## 10. Sequencing and parallelization
 
 ```text
-GenesisCode:  R0 -> R1 interfaces -> R2 -> R3 -> R5 core -> R4 -> R5/R6 -> R7/R8 -> R9
+GenesisCode:  R0 -> R1 interfaces -> R2 -> R3 -> R5 core -> R4 -> R5 product SDKs -> R6 authentic targets -> R7/R8 -> R9
                          ^                                               |
                          | failures improve semantics/docs/tools/libs    |
 GenesisBench:       R1.4.g -> Preview h-o -> rolling epochs/frontier ----+
@@ -989,9 +1129,9 @@ Practical order:
 4. Finish R2 before relying on a long-lived agent daemon or advertising robust services.
 5. Build R3 bytecode after the resource contract is fixed. Decide JIT only from measured product gaps.
 6. Start R4.1's ownership/TCB ledger early, but freeze each relevant R5.1/R5.3 core contract before switching its R4.2 production authority. Sequence migration by semantic risk and build leverage, not easiest wrapper count.
-7. Complete the remaining R5 platform contract before claiming package/target compatibility in R6.
+7. Complete the remaining R5 platform contract before claiming package/target compatibility in R6. Implement breadth as libraries/capabilities/components: first web/UI and service/data foundations, then desktop/mobile and game/media, while the embedded subset/resource contract develops against the same frozen core.
 8. Run R7 continuously, but require its soak/formal/external-review gates for release candidates.
-9. Let R8 flagship, benchmark, maintenance, and four-cell failures drive final priorities. Do not add new domains to hide weaknesses in existing ones. After the firewall passes, freeze clean Theseus/ASI editions and complete the MQ-governed transfer manifest before tokenizer, architecture, or training promotion; no imported idea bypasses Genesis-specific replication. Close the language/benchmark and model acceptance lanes independently.
+9. Let R8 flagship, benchmark, maintenance, authentic-target, and four-cell failures drive final priorities. Do not count target labels, descriptor archives, empty exports, headless plans, or simulator-only demos as products, and do not add new domains to hide weaknesses in existing ones. After the firewall passes, freeze clean Theseus/ASI editions and complete the MQ-governed transfer manifest before tokenizer, architecture, or training promotion; no imported idea bypasses Genesis-specific replication. Close the language/benchmark and model acceptance lanes independently.
 10. Treat R9 as GenesisCode release engineering with independent authority, not a documentation ceremony or a reason to force GenesisBench and Genesis Model into lockstep versions.
 
 Workstream dependency matrix:
@@ -1018,9 +1158,15 @@ Workstream dependency matrix:
 | R4.1 ownership/TCB | R0 truthful ledgers | R2-R3 and R5 core audit | all R4.2 migration acceptance |
 | R4.2-R4.5 self-host closure | relevant R5.1/R5.3 contract frozen; R3 verified artifact path | remaining R5.2/R5.4/R5.5 implementation | M3 and trusted self-hosted R6 orchestration |
 | R5.2/R5.4/R5.5 completion | R5 core profile plus R2/R3 resource semantics | late R4 migration | R6 compatibility and target claims |
-| R6 ecosystem/deployment | R5 compatibility/ABI freeze; self-host build authority for GA | R7 continuous assurance | M4 and flagship deployment |
+| R5.6 web/UI and R5.7 service/data | R5.1/R5.3 core, R5.2 concurrency, R5.4 stdlib, R5.5 extension boundary | late R4 migration and R5.8/R5.9 | R6.5 web/full-stack and shared product foundations |
+| R5.8 game/media | R5.1/R5.3 core, R2 resources, R3 tiers, R5.4/R5.6 | R5.7 and R5.9 | real interactive target/product claims |
+| R5.9 embedded contract | R5.1 numeric/text/profile semantics, R2 resources, R3 validated AOT inputs, R5.4/R5.5 | R5.6-R5.8 | R6.7 firmware and board claims |
+| R6.1-R6.4 ecosystem/core delivery | R5 compatibility/ABI freeze; self-host build authority for GA | R7 continuous assurance | target packaging, registry, and operations authority |
+| R6.5 web/full-stack delivery | R5.6/R5.7 and R6.1-R6.4 | R6.6/R6.7 | authentic web/full-stack flagships |
+| R6.6 desktop/mobile delivery | R5.6/R5.8 and R6.1-R6.4 | R6.5/R6.7 | authentic native/mobile flagships |
+| R6.7 embedded/MCU delivery | R5.9, R5.7 IoT services, R6.1/R6.3/R6.4 | R6.5/R6.6 | authentic Embedded Linux/board flagships |
 | R7 assurance | models/scaffolding may start immediately; release claims require frozen subjects | all phases | M5/M6 |
-| R8 language/benchmark product proof | M1 interfaces/GenesisBench; relevant R2-R7 features at least L3 | late R6/R7 hardening and the independently gated model lane | GenesisCode/GenesisBench v1 scope and release-candidate acceptance |
+| R8 language/benchmark product proof | M1 interfaces/GenesisBench; relevant R2-R7 features at least L3; authentic target and one-language source gates for claimed profiles | late R6/R7 hardening and the independently gated model lane | GenesisCode/GenesisBench v1 scope and release-candidate acceptance |
 | R8 Genesis Model lane | M1 interfaces/GenesisBench; BQ-7/BQ-8 before corpus admission or training; MQ-1 through MQ-8 and R8.5.i before Theseus/ASI-derived design promotion | language/benchmark product proof and non-authoritative model research | independently reviewed research-transfer manifest, profile-bound model package, and Embedded Local evidence; never blocks GenesisCode v1 |
 | R9 GenesisCode release | R0-R7 plus the R8 language/benchmark acceptance lane and zero GenesisCode release blockers | continued independently gated model work; no unbounded language feature work | GenesisCode v1.0 |
 | F1-F4 frontier | preserved v1 compatibility/governance baseline | post-v1 research lanes | no v1 milestone |
@@ -1058,8 +1204,8 @@ Completed work from the prior plan is preserved in git history and the audited b
 | M1 GenesisBench and Agent Preview | R1 | Versioned compact SDK; structured diagnostics; warm/MCP; four-track GenesisBench profile; >=45 independent held-out lineages; fixed scaffold; CLI/adapters; registry; protected temporal overlays; typed intent preview; closed baselines/methods |
 | M2 Runtime Beta | R2-R3 core | Resource-bounded runtime; deterministic snapshot/incremental loop; verified bytecode; semantic tier parity |
 | M3 Self-Host Authority Beta | R4 | H2 toolchain authority; H3 cross-host fixpoint; DDC; independently verifiable stage0 contract |
-| M4 Platform Beta | R5-R6 | Stable language/profile; deterministic concurrency; safe FFI; offline registry; reproducible target matrix |
-| M5 Trust Release Candidate | R7 plus R8 language/benchmark lane | Formal/fuzz/security gates; 9/10 gauntlet; five maintained flagship systems; >=90-lineage independently reproduced temporal/maintenance benchmark; signed public governance; external review |
+| M4 Platform Beta | R5-R6 | Stable language/profile; deterministic concurrency; safe extension boundary; web/UI, service/data, game/media, and embedded SDKs; offline registry; authentic reproducible web/native/mobile/service/Embedded Linux/MCU targets; one-language source closure |
+| M5 Trust Release Candidate | R7 plus R8 language/benchmark lane | Formal/fuzz/security gates; 18/18 authentic archetypes for claimed profiles; ten maintained flagship products including physical boards; >=90-lineage independently reproduced temporal/maintenance benchmark; signed public governance; external review |
 | M5-M Genesis Model Preview | R8 Genesis Model lane | Audited training/evaluation firewall; admitted lineage-preserving corpus; clean pinned Theseus/ASI editions with an independently reviewed MQ transfer manifest and preserved rejections; profile-bound Embedded Local model; four-cell accessibility proof; independent model evidence and rollback |
 | M6 GenesisCode Trust Release | R9 | Reproduced signed GenesisCode release, E4 evidence, offline verification/install without a model dependency, compatibility/security operations, and product-scoped compatibility manifests |
 
@@ -1098,6 +1244,13 @@ Completed work from the prior plan is preserved in git history and the audited b
 | Registry/signing compromise | Invalidates ecosystem trust | Offline roots, threshold/rotation/revocation, transparency, mirrors, rehearsed recovery |
 | Formal work becomes decorative | Proofs may cover a toy subset while claims imply full runtime | Coverage ledger tied to executable forms; published assumptions/gaps; proofs hard-gate only their stated claims |
 | Public claims outrun product proof | Damages credibility and user trust | E4-linked claims, explicit unsupported domains, flagship maintenance exercises |
+| Artifact-suffix theater | An `.ipa`, `.aab`, `.wasm`, app bundle, firmware image, or launcher can look complete while containing no executable product logic | UP-2 authentic-runtime execution, R6.3.f real install/launch/effect workloads, target-native inspectors, independent builders, and explicit descriptor labels |
+| Generated glue becomes a second source language | Agents may be forced to patch HTML/CSS/JavaScript, Swift/Kotlin, C/linker scripts, shaders, shell, or YAML, defeating the one-language promise and reproducibility | UP-1 inventories, read-only disposable generated roots, source maps, deterministic regeneration, R8.3.d deletion/rebuild audit, fail instead of manual repair |
+| Universal scope collapses delivery | Web, mobile, games, data, and boards can turn one language into many unfinished frameworks | Shared app/data/capability/extension contracts, profile promotion by L-level, authentic flagship gates, package-first breadth, no kernel growth for domain convenience, explicit unsupported cells |
+| Platform semantics leak into the kernel | UI, cloud, device, or game convenience forms could bloat the TCB and make portability impossible | Keep product APIs in libraries/effects/components, use typed target profiles, preserve pure shared logic, require compatibility and proof-cost review for syntax/semantic changes |
+| Embedded profile silently changes GenesisCode | Fixed-width arithmetic, static allocation, interrupts, and no-OS constraints can diverge from host semantics while still using the same name | R5.9 explicit subset/profile, compile-time rejection, translation validation, target-specific numeric/fault rules, cross-profile corpus, never claim full-host equivalence |
+| Simulator-only hardware confidence | Mocks can pass while pin maps, timing, electrical behavior, resets, radio, flash, or OTA fail on physical boards | R6.7 hardware-in-the-loop, named boards, repeated power/peripheral fault tests, measured envelopes, independent device witnesses, simulator evidence remains separate |
+| Ecosystem escape-hatch erosion | Missing packages may push agents toward arbitrary native code or broad process plugins | R5.5 component-first adapters, signed high-risk native profiles, generated bindings, package provenance, explicit capability/resource isolation, application tree foreign-source audit |
 | Single-project review authority | One maintainer, key, host, or organization can accidentally validate its own benchmark, model, and release claims | BQ-14 independent reviewer/operator, conflict records, role-separated custody, R9.2.c threshold attestations, and independently controlled mirrors |
 | Coupled product release clocks | Waiting for model training can delay a ready language, while shared version numbers can make benchmark/model evidence appear authoritative for language semantics | Independent signed release manifests, compatibility ranges, product-scoped blockers, optional model integration, and separate GenesisCode/GenesisBench/Genesis Model acceptance lanes |
 
@@ -1126,6 +1279,9 @@ Completed work from the prior plan is preserved in git history and the audited b
 - Import Theseus or ASI Stack learning only through a clean signed content-addressed R8.5.i source edition and transfer manifest. Mutable `latest` state, dirty worktrees, prose summaries, dashboards, and uncaptured conversations may propose a candidate but cannot authorize model design, data, training, or release decisions.
 - Evaluate a language/model pair change through R8.5.r's four cells before promotion. Preserve cold-model accessibility and reject benchmark-specific APIs, evaluator changes, or combined-only co-adaptation even when the candidate specialist improves.
 - Add a new capability family only with a spec owner, capability schema, resource model, threat model, host/platform scope, negative controls, generated bindings/cards, and at least one product workload.
+- A target name or file suffix is never capability evidence. Promotion requires install/start/flash and a nontrivial workload in the declared real runtime, plus resource/lifecycle evidence; descriptor, empty-export, synthetic launcher, and simulator-only results remain labeled below L4.
+- Preserve the one-language authoring contract. Generated foreign artifacts are disposable read-only outputs with source maps and identities; if a user or agent must edit one, record a product defect and remove that target from the qualified matrix until GenesisCode owns the missing abstraction.
+- Keep Embedded Linux, full-host, and constrained MCU profiles distinct. New boards arrive through BSP/HAL packages and conformance suites, never hidden compiler branches; every firmware claim names exact silicon, board, toolchain, memory map, peripherals, and physical evidence.
 - Change canonical hashes, logs, package/patch/evidence formats, bytecode, snapshots, or bootstrap envelopes only through a versioned compatibility proposal and migration corpus.
 - Review this roadmap at every milestone and at least monthly while active. Reordering must explain dependency or evidence changes, not preference alone.
 - The final test of the roadmap is not how advanced it sounds. It is whether an independent user and their agents can reproduce the claims, understand failures, remain inside explicit authority, and ship useful software without trusting hidden machinery.
