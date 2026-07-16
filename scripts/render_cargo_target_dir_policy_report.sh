@@ -391,6 +391,29 @@ with tempfile.TemporaryDirectory(prefix="genesis-cargo-cache-policy.") as temp_r
         str(github_resolved["target_dir"]) == github_env["CARGO_TARGET_DIR"],
         "GitHub environment provenance changed the resolved cache target",
     )
+    github_transition_script = r'''
+set -euo pipefail
+source "$1"
+inherited_target="$CARGO_TARGET_DIR"
+genesis_clear_resolved_cargo_target_dir github-environment-transition
+export CARGO_INCREMENTAL=0
+export CARGO_PROFILE_DEV_DEBUG=0
+genesis_configure_cargo_target_dir "$2" github-environment-transition root-host >/dev/null
+test "$inherited_target" != "$CARGO_TARGET_DIR"
+genesis_clear_resolved_cargo_target_dir github-environment-transition-exit
+'''
+    proc = subprocess.run(
+        ["bash", "-c", github_transition_script, "bash", str(helper), str(fixture)],
+        env=github_env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    require(
+        proc.returncode == 0,
+        f"GitHub environment key transition failed: {proc.stderr}",
+    )
+    passed("github-environment-key-transition")
     lease_contract_script = r'''
 set -euo pipefail
 source "$1"
@@ -529,6 +552,7 @@ expected_controls = {
     "duplicate-policy-key-rejection",
     "feature-definition-sensitivity",
     "fresh-checkout-materialization",
+    "github-environment-key-transition",
     "host-profile-co-residency",
     "host-path-exclusion",
     "legacy-override-rejection",
