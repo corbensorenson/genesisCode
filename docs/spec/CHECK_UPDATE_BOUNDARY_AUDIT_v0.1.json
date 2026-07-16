@@ -3440,7 +3440,7 @@
       "execution_helper_invocations": [
         "scripts/render_kernel_tcb_contract_report.sh"
       ],
-      "execution_identity_sha256": "6b9884b0649313bd3fbd8ed8371881d2efb805c0f0334553a87208977d400bd6",
+      "execution_identity_sha256": "8e66e921d9ffe8d628ebda5bff8964b7fbc551ecced928438117b93dffee7586",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3451,7 +3451,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "63d0d6bd368ab5b892d06af41a34e0e58f4c4fd739578877b12f6f485703feb4",
+      "sha256": "368b6412eca3afd005870c6cfd989ac472acb57a75ebb2ef74f0f4b8cb4cc147",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -5442,7 +5442,7 @@
       "direct_write_candidates": [],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "ec4469a4ba304463024983085710052b62dfcc5b6287fdfa10ff0461a1023acd",
+      "execution_identity_sha256": "ffd358668705bc2fb1e731a76e80ad0a06812da8acf501a99ab6fab07c008917",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5453,7 +5453,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "0c82d9dd582e5a679a4af4f90c323240f6fa9f80675153b52f3a8adde3192d5c",
+      "sha256": "b10383c84616bf04fba38f4f9a8ea87d1ed730c60545a7c8fbd2d7867d8e5882",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []
@@ -5675,17 +5675,21 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "c77c41f61c4283cd56df4ac2935a34d3ba71318347a5ea3462aa84d86b883f07"
+          "sha256": "908ca79cb28bbbc3838c44c7cfe92cb9dbc0f0a635d62cfa58d54889037ff803"
         },
         {
           "path": "scripts/test_changed_fast.sh",
           "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
+        },
+        {
+          "path": "scripts/test_perf_gates.sh",
+          "sha256": "b4fe31289d58b78438cd8f837fa1a52f46ceb250ca7862533985cc0392cc8859"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "16935ea55e72416e6fac6f9308206eaa434ac40f14a3f71c747d2f1debe1fcd6",
+      "execution_identity_sha256": "fff7267a1984826b74efb00aeff8853378d223e7e2b4756b44c3020ec9057855",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],

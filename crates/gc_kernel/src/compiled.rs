@@ -19,6 +19,10 @@ mod compiled_compile;
 mod compiled_coverage;
 #[path = "compiled_runtime/mod.rs"]
 mod compiled_runtime;
+#[cfg(test)]
+mod tests;
+
+pub(crate) use compiled_runtime::{CompiledClosureCall, apply_compiled_closure};
 
 const COMPILED_MODULE_BLOB_MAGIC: &[u8] = b"GCKM5\0";
 
@@ -506,48 +510,4 @@ pub fn encode_compiled_module_blob(m: &CompiledModule) -> Result<Vec<u8>, Kernel
 
 pub fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule, KernelError> {
     compiled_blob::decode_compiled_module_blob(bytes)
-}
-
-pub(crate) struct CompiledClosureCall {
-    pub(crate) external_env: Env,
-    pub(crate) lexical_env: Option<CompiledLexicalEnv>,
-    pub(crate) module_env: Option<CompiledModuleCells>,
-    pub(crate) coverage_sites: Arc<CompiledCoverageSites>,
-    pub(crate) param: crate::value::Sym,
-    pub(crate) bind_external_param: bool,
-    pub(crate) body: Arc<CExpr>,
-    pub(crate) arg: Value,
-}
-
-pub(crate) fn apply_compiled_closure(
-    ctx: &mut EvalCtx,
-    call: CompiledClosureCall,
-) -> Result<Value, KernelError> {
-    compiled_runtime::eval_compiled_closure_body_scoped(ctx, call)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn inline_slot_segment_mutates_in_place_until_runtime_is_shared() {
-        let mut runtime = RuntimeEnv::new(
-            Env::empty(),
-            CompiledModuleCells::empty(),
-            Arc::new(CompiledCoverageSites::default()),
-            None,
-        );
-        let allocation = Rc::as_ptr(&runtime.inline_slots);
-        for _ in 0..512 {
-            runtime.push_slot(Value::data(Term::Nil));
-            assert_eq!(Rc::as_ptr(&runtime.inline_slots), allocation);
-        }
-
-        let mut fork = runtime.clone();
-        fork.push_slot(Value::data(Term::Nil));
-        assert!(!Rc::ptr_eq(&runtime.inline_slots, &fork.inline_slots));
-        assert_eq!(runtime.inline_slots.len(), 512);
-        assert_eq!(fork.inline_slots.len(), 513);
-    }
 }

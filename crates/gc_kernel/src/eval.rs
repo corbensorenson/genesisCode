@@ -6,6 +6,9 @@ use crate::value::{SealId, Value};
 use gc_coreform::{Term, TermOrdKey};
 use num_traits::ToPrimitive;
 
+#[cfg(test)]
+use std::cell::Cell;
+
 #[path = "eval_coverage.rs"]
 mod eval_coverage;
 #[path = "eval_decimal_ops.rs"]
@@ -27,6 +30,45 @@ use eval_decimal_ops::{
 };
 pub(crate) use eval_prims::{PrimOp, prim, prim_op, prim_op2, type_err};
 use eval_value_ops::{eq_value, escape_bytes, escape_str};
+
+#[cfg(test)]
+thread_local! {
+    static EVALUATOR_CALL_DEPTH: Cell<u32> = const { Cell::new(0) };
+    static EVALUATOR_MAX_CALL_DEPTH: Cell<u32> = const { Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) struct EvaluatorDepthGuard;
+
+#[cfg(test)]
+impl EvaluatorDepthGuard {
+    pub(crate) fn enter() -> Self {
+        EVALUATOR_CALL_DEPTH.with(|depth| {
+            let next = depth.get().saturating_add(1);
+            depth.set(next);
+            EVALUATOR_MAX_CALL_DEPTH.with(|maximum| maximum.set(maximum.get().max(next)));
+        });
+        Self
+    }
+}
+
+#[cfg(test)]
+impl Drop for EvaluatorDepthGuard {
+    fn drop(&mut self) {
+        EVALUATOR_CALL_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn reset_evaluator_max_call_depth() {
+    EVALUATOR_CALL_DEPTH.with(|depth| assert_eq!(depth.get(), 0));
+    EVALUATOR_MAX_CALL_DEPTH.with(|maximum| maximum.set(0));
+}
+
+#[cfg(test)]
+pub(crate) fn evaluator_max_call_depth() -> u32 {
+    EVALUATOR_MAX_CALL_DEPTH.with(Cell::get)
+}
 
 /// Toolchain default evaluation step limit.
 ///
@@ -376,6 +418,8 @@ pub fn eval_module(ctx: &mut EvalCtx, env: &mut Env, forms: &[Term]) -> Result<V
 }
 
 pub fn eval_term(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
+    #[cfg(test)]
+    let _depth_guard = EvaluatorDepthGuard::enter();
     ctx.run_panic_guarded("eval_term", |ctx| {
         // Evaluator is structurally recursive; grow stack as needed.
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {

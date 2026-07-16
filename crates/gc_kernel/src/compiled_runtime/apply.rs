@@ -4,7 +4,18 @@ use super::patterns::{
     eval_binary_prim_wrapper_inline, eval_byte_get_or_nil_inline, eval_counted_vec_push_loop_inline,
 };
 
-pub(in super::super) fn eval_compiled_closure_body_scoped(
+pub(crate) struct CompiledClosureCall {
+    pub(crate) external_env: Env,
+    pub(crate) lexical_env: Option<CompiledLexicalEnv>,
+    pub(crate) module_env: Option<CompiledModuleCells>,
+    pub(crate) coverage_sites: Arc<CompiledCoverageSites>,
+    pub(crate) param: crate::value::Sym,
+    pub(crate) bind_external_param: bool,
+    pub(crate) body: Arc<CExpr>,
+    pub(crate) arg: Value,
+}
+
+pub(crate) fn eval_compiled_closure_body_scoped(
     ctx: &mut EvalCtx,
     call: CompiledClosureCall,
 ) -> Result<Value, KernelError> {

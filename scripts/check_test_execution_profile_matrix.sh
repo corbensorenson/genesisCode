@@ -44,6 +44,8 @@ GC_AGENT_SYMBOL_INDEX_UPDATE="scripts/update_gc_agent_symbol_index.sh"
 GC_AGENT_SYMBOL_INDEX="docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"
 GC_AGENT_SYMBOL_INDEX_SCHEMA="docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json"
 PERF_GATES_SCRIPT="scripts/test_perf_gates.sh"
+KERNEL_TCB_SCRIPT="scripts/check_kernel_tcb_contract.sh"
+PERF_GATES_SCRIPT="scripts/test_perf_gates.sh"
 DEFAULT_LOOP_SCRIPT="scripts/check_default_iteration_workflow.sh"
 STRICT_GOLDEN_SCRIPT="scripts/selfhost_strict_golden.sh"
 WASM_CROSS_HOST_SCRIPT="scripts/wasm_cross_host_determinism.mjs"
@@ -122,6 +124,7 @@ for path in \
   "$GC_AGENT_TASK_CARDS" \
   "$GC_AGENT_TASK_CARDS_REGISTRY" \
   "$PERF_GATES_SCRIPT" \
+  "$KERNEL_TCB_SCRIPT" \
   "$DEFAULT_LOOP_SCRIPT" \
   "$STRICT_GOLDEN_SCRIPT" \
   "$WASM_CROSS_HOST_SCRIPT" \
@@ -190,6 +193,7 @@ require_ci_pattern() {
 require_doc_pattern '| `smoke` |'
 require_doc_pattern '| `changed-fast` |'
 require_doc_pattern '| `perf-gate-regressions` |'
+require_doc_pattern '| `kernel-tail-stress` |'
 require_doc_pattern '| `agent-inner-loop` |'
 require_doc_pattern '| `release-full` |'
 require_doc_pattern '| `strict-golden` |'
@@ -496,6 +500,21 @@ if ! grep -B 2 -F 'fn task_cards_python_and_planner_selection_remain_stable_unde
   scripts/check_gc_agent_task_cards.sh || \
    ! grep -Fq -- '--locked -- --ignored --exact' scripts/check_gc_agent_task_cards.sh; then
   echo "test-execution-profile-matrix: agent-plan parallel parity must remain in the dedicated agent-card gate" >&2
+  exit 1
+fi
+
+if ! grep -B 2 -F 'fn tail_loop_ten_million_iterations_has_constant_evaluator_depth' \
+  crates/gc_kernel/src/tests.rs | grep -Fq '#[ignore = "stress-gate"]' || \
+   ! grep -Fq 'tests::tail_loop_ten_million_iterations_has_constant_evaluator_depth' \
+  "$PERF_GATES_SCRIPT" || \
+   ! grep -Fq -- '--ignored' "$PERF_GATES_SCRIPT" || \
+   ! grep -Fq 'GENESIS_KERNEL_TAIL_STRESS_BUDGET_MS:-300000' \
+  "$PERF_GATES_SCRIPT" || \
+   ! grep -Fq 'GENESIS_KERNEL_TAIL_STRESS_DISK_BUDGET_BYTES:-536870912' \
+  "$PERF_GATES_SCRIPT" || \
+   ! grep -Fq 'bash scripts/check_kernel_tcb_contract.sh' "$PERF_GATES_SCRIPT" || \
+   ! grep -Fq 'bash scripts/test_perf_gates.sh --kernel-tail-stress' "$HEALTH_RENDERER"; then
+  echo "test-execution-profile-matrix: kernel 10M tail proof must remain in the bounded release-full stress lane" >&2
   exit 1
 fi
 

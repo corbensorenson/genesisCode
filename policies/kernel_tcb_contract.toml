@@ -14,6 +14,7 @@ expected_kernel_surface_files = [
   "compiled_runtime/mod.rs",
   "compiled_runtime/patterns.rs",
   "env.rs",
+  "env/capture.rs",
   "error.rs",
   "eval.rs",
   "eval_coverage.rs",
@@ -23,6 +24,7 @@ expected_kernel_surface_files = [
   "eval_prims/text_bytes.rs",
   "eval_treewalk.rs",
   "eval_value_ops.rs",
+  "free_vars.rs",
   "lib.rs",
   "value.rs",
 ]
@@ -48,6 +50,7 @@ forbidden_eval_markers = [
 "crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/patterns.rs" = 400
 "crates/gc_kernel/src/env.rs" = 100
+"crates/gc_kernel/src/env/capture.rs" = 60
 "crates/gc_kernel/src/error.rs" = 80
 "crates/gc_kernel/src/eval.rs" = 550
 "crates/gc_kernel/src/eval_coverage.rs" = 430
@@ -57,5 +60,6 @@ forbidden_eval_markers = [
 "crates/gc_kernel/src/eval_prims/text_bytes.rs" = 450
 "crates/gc_kernel/src/eval_decimal_ops.rs" = 160
 "crates/gc_kernel/src/eval_value_ops.rs" = 140
+"crates/gc_kernel/src/free_vars.rs" = 160
 "crates/gc_kernel/src/lib.rs" = 80
 "crates/gc_kernel/src/value.rs" = 720

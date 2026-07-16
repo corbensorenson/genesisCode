@@ -6,6 +6,8 @@ pub(in super::super) fn eval_cexpr_runtime(
     runtime: RuntimeEnv,
     expr: &Arc<CExpr>,
 ) -> Result<Value, KernelError> {
+    #[cfg(test)]
+    let _depth_guard = crate::eval::EvaluatorDepthGuard::enter();
     // Like eval_term, implement tail-call optimization for:
     // - (if ...) branches
     // - (begin ...) last form

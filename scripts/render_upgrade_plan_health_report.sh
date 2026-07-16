@@ -1438,6 +1438,7 @@ case "$PROFILE" in
     ;;
   release-full)
     PROFILE_GATES+=("if git rev-parse --verify origin/main >/dev/null 2>&1; then python3 scripts/lib/generated_authority.py --freshness --git-base origin/main; else python3 scripts/lib/generated_authority.py --freshness; fi")
+    PROFILE_GATES+=("bash scripts/test_perf_gates.sh --kernel-tail-stress")
     PROFILE_GATES+=("bash scripts/check_domain_starter_registry_bootstrap.sh")
     PROFILE_GATES+=("cargo clippy --workspace --all-targets --locked --offline -- -D warnings")
     PROFILE_GATES+=("bash scripts/check_no_user_panics_compiler.sh")

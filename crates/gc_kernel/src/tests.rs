@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::eval::PrimOp;
+use crate::eval::{evaluator_max_call_depth, reset_evaluator_max_call_depth};
 use crate::{
     Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError, KernelErrorKind,
     MemLimits, NativeFn, Sym, Value, ValueMap, ValueVector, compile_module,
@@ -800,6 +801,87 @@ fn compiled_step_accounting_matches_treewalk_for_appn_and_core_paths() {
             "{name}"
         );
     }
+}
+
+fn countdown_tail_expected_steps(iterations: u64) -> u64 {
+    iterations.saturating_add(1).saturating_mul(9)
+}
+
+fn run_countdown_tail_loop_with_limit(
+    iterations: u64,
+    compiled: bool,
+    step_limit: u64,
+) -> (Result<Value, KernelError>, u64, u32) {
+    let source = format!(
+        "(def countdown (fn (n) (if (prim int/eq? n 0) 0 (countdown (prim int/sub n 1)))))\n(countdown {iterations})\n"
+    );
+    let forms = parse_module(&source).unwrap();
+    let mut ctx = EvalCtx::with_step_limit(Some(step_limit));
+    let mut env = Env::empty();
+    reset_evaluator_max_call_depth();
+    let value = if compiled {
+        eval_module_compiled(&mut ctx, &mut env, &forms)
+    } else {
+        eval_module(&mut ctx, &mut env, &forms)
+    };
+    (
+        value,
+        ctx.observed_counters().steps,
+        evaluator_max_call_depth(),
+    )
+}
+
+fn run_countdown_tail_loop(iterations: u64, compiled: bool) -> (Value, u64, u32) {
+    let expected_steps = countdown_tail_expected_steps(iterations);
+    let (value, steps, depth) =
+        run_countdown_tail_loop_with_limit(iterations, compiled, expected_steps);
+    (value.unwrap(), steps, depth)
+}
+
+#[test]
+fn tail_loop_step_accounting_is_exact_linear_and_cross_evaluator() {
+    let samples = [0_u64, 1, 2, 10];
+    let mut observed = Vec::new();
+    for iterations in samples {
+        let (tree, tree_steps, tree_depth) = run_countdown_tail_loop(iterations, false);
+        let (compiled, compiled_steps, compiled_depth) = run_countdown_tail_loop(iterations, true);
+        assert_eq!(tree.debug_repr(), compiled.debug_repr());
+        assert_eq!(tree_steps, compiled_steps);
+        assert_eq!(tree_steps, countdown_tail_expected_steps(iterations));
+        assert_eq!(tree_depth, compiled_depth);
+        assert_eq!(tree_depth, 3);
+        observed.push((iterations, tree_steps, tree_depth));
+    }
+    assert_eq!(observed, [(0, 9, 3), (1, 18, 3), (2, 27, 3), (10, 99, 3)]);
+}
+
+#[test]
+fn tail_loop_rejects_a_one_step_short_budget_identically() {
+    const ITERATIONS: u64 = 10;
+    let expected_steps = countdown_tail_expected_steps(ITERATIONS);
+    for compiled in [false, true] {
+        let (result, observed_steps, depth) =
+            run_countdown_tail_loop_with_limit(ITERATIONS, compiled, expected_steps - 1);
+        let error = result.unwrap_err();
+        assert!(matches!(error.kind, KernelErrorKind::StepLimit));
+        assert_eq!(error.msg, "step limit exceeded");
+        assert_eq!(observed_steps, expected_steps);
+        assert_eq!(depth, 3);
+    }
+}
+
+#[test]
+#[ignore = "stress-gate"]
+fn tail_loop_ten_million_iterations_has_constant_evaluator_depth() {
+    const ITERATIONS: u64 = 10_000_000;
+    let (tree, tree_steps, tree_depth) = run_countdown_tail_loop(ITERATIONS, false);
+    let (compiled, compiled_steps, compiled_depth) = run_countdown_tail_loop(ITERATIONS, true);
+    assert_value_int(&tree, 0);
+    assert_eq!(tree.debug_repr(), compiled.debug_repr());
+    assert_eq!(tree_steps, compiled_steps);
+    assert_eq!(tree_steps, countdown_tail_expected_steps(ITERATIONS));
+    assert_eq!(tree_depth, compiled_depth);
+    assert_eq!(tree_depth, 3);
 }
 
 fn native_test_add3(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
