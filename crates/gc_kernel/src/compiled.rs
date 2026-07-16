@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use num_traits::ToPrimitive;
 
@@ -135,6 +135,10 @@ enum CompiledLexicalSlots {
     Empty,
     One(Value),
     Many(Box<[Value]>),
+    Sparse {
+        span: usize,
+        values: BTreeMap<usize, Value>,
+    },
 }
 
 impl CompiledLexicalEnv {
@@ -182,8 +186,55 @@ impl CompiledLexicalEnv {
                     }
                     depth = depth.checked_sub(values.len())?;
                 }
+                CompiledLexicalSlots::Sparse { span, values } => {
+                    if slot == 0
+                        && let Some(value) = values.get(&depth)
+                    {
+                        return Some(value.clone());
+                    }
+                    depth = depth.checked_sub(*span)?;
+                }
             }
             cur = cur.0.parent.as_ref()?.clone();
+        }
+    }
+
+    fn capture(&self, depths: &BTreeSet<usize>) -> Result<Self, KernelError> {
+        let Some(max_depth) = depths.last().copied() else {
+            return Ok(Self::empty());
+        };
+        let mut values = BTreeMap::new();
+        for depth in depths {
+            let depth_u16 = u16::try_from(*depth).map_err(|_| {
+                KernelError::new(
+                    KernelErrorKind::Internal,
+                    "compiled closure capture depth exceeds u16 range",
+                )
+            })?;
+            let value = self.get(depth_u16, 0).ok_or_else(|| {
+                KernelError::new(
+                    KernelErrorKind::Internal,
+                    format!("compiled closure capture slot is missing at depth {depth}"),
+                )
+            })?;
+            values.insert(*depth, value);
+        }
+        Ok(Self(Rc::new(CompiledLexicalFrame {
+            parent: None,
+            slots: CompiledLexicalSlots::Sparse {
+                span: max_depth.saturating_add(1),
+                values,
+            },
+        })))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn captured_value_count(&self) -> usize {
+        match &self.0.slots {
+            CompiledLexicalSlots::Empty => 0,
+            CompiledLexicalSlots::One(_) => 1,
+            CompiledLexicalSlots::Many(values) => values.len(),
+            CompiledLexicalSlots::Sparse { values, .. } => values.len(),
         }
     }
 }
@@ -300,8 +351,16 @@ impl RuntimeEnv {
         self.lexical.get(depth, slot)
     }
 
-    fn lexical_for_capture(&self) -> CompiledLexicalEnv {
+    fn lexical_for_capture(
+        &self,
+        plan: &ClosureCapturePlan,
+    ) -> Result<CompiledLexicalEnv, KernelError> {
         self.lexical_with_inline_spilled()
+            .capture(&plan.lexical_depths)
+    }
+
+    fn external_for_capture(&self, plan: &ClosureCapturePlan) -> Env {
+        self.external.capture(&plan.external_names)
     }
 
     fn lexical_with_inline_spilled(&self) -> CompiledLexicalEnv {
@@ -336,6 +395,7 @@ pub(crate) enum CExpr {
         param: String,
         body_term: Term,
         body: Arc<CExpr>,
+        capture_plan: OnceLock<ClosureCapturePlan>,
     },
     Prim {
         op: PrimOp,
@@ -354,6 +414,84 @@ pub(crate) enum CExpr {
         args: Box<[Arc<CExpr>]>,
         extra_app_ticks: u32,
     },
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct ClosureCapturePlan {
+    lexical_depths: BTreeSet<usize>,
+    external_names: BTreeSet<String>,
+}
+
+impl ClosureCapturePlan {
+    pub(crate) fn for_body(body: &Arc<CExpr>) -> Self {
+        let mut plan = Self::default();
+        collect_compiled_captures(body, 1, &mut plan);
+        plan
+    }
+}
+
+fn collect_compiled_captures(expr: &Arc<CExpr>, introduced: usize, plan: &mut ClosureCapturePlan) {
+    match expr.as_ref() {
+        CExpr::Var {
+            name, resolution, ..
+        } => match resolution {
+            VarResolution::Local { depth, .. } => {
+                let depth = usize::from(*depth);
+                if depth >= introduced {
+                    plan.lexical_depths.insert(depth - introduced);
+                }
+            }
+            VarResolution::External => {
+                plan.external_names.insert(name.clone());
+            }
+            VarResolution::Module { .. } => {}
+        },
+        CExpr::Map(entries) => {
+            for (_, value) in entries {
+                collect_compiled_captures(value, introduced, plan);
+            }
+        }
+        CExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            ..
+        } => {
+            collect_compiled_captures(cond, introduced, plan);
+            collect_compiled_captures(then_expr, introduced, plan);
+            collect_compiled_captures(else_expr, introduced, plan);
+        }
+        CExpr::Begin(items) => {
+            for item in items {
+                collect_compiled_captures(item, introduced, plan);
+            }
+        }
+        CExpr::Let(bindings, body) => {
+            for (index, (_, rhs)) in bindings.iter().enumerate() {
+                collect_compiled_captures(rhs, introduced.saturating_add(index), plan);
+            }
+            collect_compiled_captures(body, introduced.saturating_add(bindings.len()), plan);
+        }
+        CExpr::FnUnary { body, .. } => {
+            collect_compiled_captures(body, introduced.saturating_add(1), plan);
+        }
+        CExpr::Prim { args, .. } | CExpr::PrimUnknown { args, .. } => {
+            for arg in args {
+                collect_compiled_captures(arg, introduced, plan);
+            }
+        }
+        CExpr::Seal(value, token) | CExpr::Unseal(value, token) | CExpr::App(value, token) => {
+            collect_compiled_captures(value, introduced, plan);
+            collect_compiled_captures(token, introduced, plan);
+        }
+        CExpr::AppN { callee, args, .. } => {
+            collect_compiled_captures(callee, introduced, plan);
+            for arg in args {
+                collect_compiled_captures(arg, introduced, plan);
+            }
+        }
+        CExpr::Atom(_) | CExpr::Vector(_) | CExpr::Quote(_) | CExpr::SealNew => {}
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -410,6 +548,7 @@ pub fn eval_compiled_module(
     env: &mut Env,
     m: &CompiledModule,
 ) -> Result<Value, KernelError> {
+    env.mark_module_scope();
     let module = CompiledModuleCells::new(m.module_names.len());
     let coverage_run = ctx.coverage_begin_indexed_run(
         m.coverage_sites.statement_sites().len(),

@@ -5,6 +5,7 @@ pub(super) fn eval_module(
     env: &mut Env,
     forms: &[Term],
 ) -> Result<Value, KernelError> {
+    env.mark_module_scope();
     let mut last = Value::data(Term::Nil);
     for form in forms {
         if let Some((name, expr)) = parse_def(form) {
@@ -186,11 +187,9 @@ pub(super) fn eval_fn(
             "internal fn desugaring produced non-symbol param",
         ));
     };
-    Ok(Value::closure(
-        param.clone(),
-        items2[2].clone(),
-        env.clone(),
-    ))
+    let body = items2[2].clone();
+    let free = crate::free_vars::closure_free_vars(param, &body);
+    Ok(Value::closure(param.clone(), body, env.capture(&free)))
 }
 
 pub(super) fn eval_seal(

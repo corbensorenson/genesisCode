@@ -1,8 +1,9 @@
-use gc_coreform::{Term, parse_module};
+use gc_coreform::{Term, parse_module, parse_term};
 use num_bigint::BigInt;
 use std::collections::BTreeSet;
 use std::mem::size_of;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use crate::eval::PrimOp;
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
     compile_module_with_site_namespace, compiled_module_coverage_manifest,
     compiled_module_coverage_manifest_from_compiled, decode_compiled_module_blob,
     encode_compiled_module_blob, eval_compiled_module, eval_module, eval_module_compiled,
-    value_hash,
+    eval_term, value_hash,
 };
 
 fn assert_value_int(value: &Value, expected: i64) {
@@ -304,6 +305,152 @@ fn compiled_eval_matches_treewalk_eval_with_closure_calls() {
     let v_comp = eval_module_compiled(&mut ctx_comp, &mut env_comp, &forms).unwrap();
 
     assert_eq!(v_tree.debug_repr(), v_comp.debug_repr());
+}
+
+#[test]
+fn treewalk_closure_capture_releases_unreferenced_lexical_values() {
+    let root = Env::empty();
+    let dead_vector = Value::vector(ValueVector::from_iter([
+        Value::data(Term::Int(BigInt::from(1))),
+        Value::data(Term::Int(BigInt::from(2))),
+    ]));
+    let dead_weak = match &dead_vector {
+        Value::Vector(values) => Rc::downgrade(values),
+        other => panic!("expected vector, got {}", other.debug_repr()),
+    };
+    let mut lexical = Env::with_binding(&root, "dead/target", dead_vector.clone());
+    for index in 0..128 {
+        lexical = Env::with_binding(
+            &lexical,
+            format!("dead/{index}"),
+            Value::data(Term::Int(BigInt::from(index))),
+        );
+    }
+    lexical = Env::with_binding(&lexical, "keep", Value::data(Term::Int(BigInt::from(40))));
+
+    let term = parse_term("(fn (x) (prim int/add keep x))").unwrap();
+    let mut ctx = EvalCtx::new();
+    let closure = eval_term(&mut ctx, &lexical, &term).unwrap();
+    assert_eq!(closure.closure_captured_value_count(), Some(1));
+
+    drop(lexical);
+    drop(dead_vector);
+    assert!(
+        dead_weak.upgrade().is_none(),
+        "closure retained an unrelated lexical value"
+    );
+    assert_value_int(
+        &closure
+            .apply(&mut ctx, Value::data(Term::Int(BigInt::from(2))))
+            .unwrap(),
+        42,
+    );
+}
+
+#[test]
+fn compiled_closure_capture_is_sparse_and_survives_blob_roundtrip() {
+    let mut bindings = vec!["(keep 40)".to_string()];
+    bindings.extend((0..128).map(|index| format!("(dead{index} {index})")));
+    let source = format!(
+        "(let ({}) (fn (x) (prim int/add keep x)))",
+        bindings.join(" ")
+    );
+    let forms = parse_module(&source).unwrap();
+
+    let compiled = compile_module(&forms).unwrap();
+    let blob = encode_compiled_module_blob(&compiled).unwrap();
+    assert!(blob.starts_with(b"GCKM5\0"));
+    let restored = decode_compiled_module_blob(&blob).unwrap();
+    let mut compiled_ctx = EvalCtx::new();
+    let mut compiled_env = Env::empty();
+    let compiled_closure =
+        eval_compiled_module(&mut compiled_ctx, &mut compiled_env, &restored).unwrap();
+    assert_eq!(compiled_closure.closure_captured_value_count(), Some(1));
+    assert_value_int(
+        &compiled_closure
+            .apply(&mut compiled_ctx, Value::data(Term::Int(BigInt::from(2))))
+            .unwrap(),
+        42,
+    );
+
+    let mut tree_ctx = EvalCtx::new();
+    let mut tree_env = Env::empty();
+    let tree_closure = eval_module(&mut tree_ctx, &mut tree_env, &forms).unwrap();
+    assert_eq!(tree_closure.closure_captured_value_count(), Some(1));
+    assert_value_int(
+        &tree_closure
+            .apply(&mut tree_ctx, Value::data(Term::Int(BigInt::from(2))))
+            .unwrap(),
+        42,
+    );
+}
+
+#[test]
+fn minimal_capture_preserves_shadowing_mutual_recursion_and_nested_binders() {
+    let programs = [
+        r#"
+          (def x 1000)
+          (def mk (fn (x) (let ((saved x)) (fn (x) (fn (z) (prim int/add saved (prim int/add x z)))))))
+          (((mk 10) 20) 12)
+        "#,
+        r#"
+          (def even? (fn (n) (if (prim int/eq? n 0) true (odd? (prim int/sub n 1)))))
+          (def odd? (fn (n) (if (prim int/eq? n 0) false (even? (prim int/sub n 1)))))
+          (even? 100)
+        "#,
+    ];
+
+    for source in programs {
+        let forms = parse_module(source).unwrap();
+        let mut tree_ctx = EvalCtx::new();
+        let mut tree_env = Env::empty();
+        let tree = eval_module(&mut tree_ctx, &mut tree_env, &forms).unwrap();
+        let mut compiled_ctx = EvalCtx::new();
+        let mut compiled_env = Env::empty();
+        let compiled = eval_module_compiled(&mut compiled_ctx, &mut compiled_env, &forms).unwrap();
+        assert_eq!(tree.debug_repr(), compiled.debug_repr(), "{source}");
+    }
+
+    let invalid_nested_pattern = parse_module("(((fn (x) (fn ((not-a-symbol)) x)) 1) 2)").unwrap();
+    let mut tree_ctx = EvalCtx::new();
+    let mut tree_env = Env::empty();
+    let tree_error =
+        eval_module(&mut tree_ctx, &mut tree_env, &invalid_nested_pattern).unwrap_err();
+    let mut compiled_ctx = EvalCtx::new();
+    let mut compiled_env = Env::empty();
+    let compiled_error = eval_module_compiled(
+        &mut compiled_ctx,
+        &mut compiled_env,
+        &invalid_nested_pattern,
+    )
+    .unwrap_err();
+    assert_eq!(tree_error.kind.to_string(), compiled_error.kind.to_string());
+    assert_eq!(tree_error.msg, compiled_error.msg);
+}
+
+#[test]
+fn minimal_capture_tracks_module_scope_above_a_parent_environment() {
+    let forms = parse_module(
+        r#"
+          (def call-later (fn (x) (later (prim int/add host/base x))))
+          (def later (fn (x) x))
+          (call-later 2)
+        "#,
+    )
+    .unwrap();
+    let root = Env::empty();
+    let parent = Env::with_binding(&root, "host/base", Value::data(Term::Int(BigInt::from(40))));
+
+    let mut tree_env = Env::with_binding(&parent, "module/sentinel", Value::data(Term::Nil));
+    let mut tree_ctx = EvalCtx::new();
+    let tree = eval_module(&mut tree_ctx, &mut tree_env, &forms).unwrap();
+
+    let mut compiled_env = Env::with_binding(&parent, "module/sentinel", Value::data(Term::Nil));
+    let mut compiled_ctx = EvalCtx::new();
+    let compiled = eval_module_compiled(&mut compiled_ctx, &mut compiled_env, &forms).unwrap();
+
+    assert_value_int(&tree, 42);
+    assert_eq!(tree.debug_repr(), compiled.debug_repr());
 }
 
 #[test]
