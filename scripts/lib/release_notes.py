@@ -189,6 +189,21 @@ def capability_is_eligible(claim: Mapping[str, Any], tier1_ids: Sequence[str]) -
     )
 
 
+def product_target_is_eligible(target: Mapping[str, Any]) -> bool:
+    required_scopes = [
+        scope for scope in target["scopes"] if scope["required_for_release"]
+    ]
+    immutable = target["immutable_evidence_ids"]
+    return (
+        target["release_status"] == "qualified"
+        and target["maturity"] == "L5"
+        and bool(required_scopes)
+        and all(scope["maturity"] == "L5" for scope in required_scopes)
+        and bool(immutable)
+        and all(item.startswith(("E3:", "E4:")) for item in immutable)
+    )
+
+
 def render_document() -> Mapping[str, Any]:
     policy = load_policy()
     versions = load_json(ROOT / "genesis.version-surfaces.json")
@@ -251,10 +266,37 @@ def render_document() -> Mapping[str, Any]:
             }
         )
 
+    product_targets = []
+    authorized_product_targets = []
+    for item in ledger["product_target_claims"]:
+        eligible = product_target_is_eligible(item)
+        if eligible:
+            authorized_product_targets.append(item["id"])
+        product_targets.append(
+            {
+                "authenticArtifactPredicate": item["authentic_artifact_predicate"],
+                "evidenceIds": item["evidence_ids"],
+                "gapIds": item["gap_ids"],
+                "id": item["id"],
+                "immutableEvidenceIds": item["immutable_evidence_ids"],
+                "limitations": item["limitations"],
+                "maturity": item["maturity"],
+                "oneLanguageSourcePredicate": item["one_language_source_predicate"],
+                "releaseClaimEligible": eligible,
+                "releaseStatus": item["release_status"],
+                "scopes": item["scopes"],
+                "targetProfile": item["target_profile"],
+                "title": item["title"],
+            }
+        )
+
     gap_claims = {gap_id: [] for gap_id in ledger["gap_catalog"]}
     for claim in ledger["claims"]:
         for gap_id in claim["gap_ids"]:
             gap_claims[gap_id].append(claim["id"])
+    for target in ledger["product_target_claims"]:
+        for gap_id in target["gap_ids"]:
+            gap_claims[gap_id].append(target["id"])
     gaps = [
         {
             "affectedClaims": sorted(gap_claims[gap_id]),
@@ -326,9 +368,12 @@ def render_document() -> Mapping[str, Any]:
         "releaseTrain": release_train,
         "sections": {
             "capabilityEvidence": {
+                "aggregateFoundationClaims": ledger["aggregate_claim_ids"],
+                "authorizedProductTargetClaims": authorized_product_targets,
                 "authorizedUnqualifiedClaims": authorized,
                 "claims": claims,
                 "platforms": ledger["platforms"],
+                "productTargets": product_targets,
             },
             "compatibility": {
                 "entries": compatibility_entries,
@@ -433,6 +478,8 @@ def render_markdown() -> str:
             "- Release-note authority: `E1`; runtime gate results are not asserted.",
             "- Retained fixture distribution class: `{}`; fixture authority: `{}`.".format(evidence["fixtureDistributionClass"], str(evidence["fixtureAuthority"]).lower()),
             "- Authorized unqualified capability claims: {}.".format(", ".join("`{}`".format(value) for value in capabilities["authorizedUnqualifiedClaims"]) or "none"),
+            "- Authorized product/target claims: {}.".format(", ".join("`{}`".format(value) for value in capabilities["authorizedProductTargetClaims"]) or "none"),
+            "- Aggregate foundation claims never imply product/target qualification: {}.".format(", ".join("`{}`".format(value) for value in capabilities["aggregateFoundationClaims"])),
         ]
     )
     for baseline in evidence["baselines"]:
@@ -546,6 +593,7 @@ def self_test() -> None:
     reject("migration-omission", lambda d: d["sections"]["migrations"]["entries"].pop())
     reject("gap-omission", lambda d: d["sections"]["knownGaps"]["roadmapGaps"].pop())
     reject("capability-escalation", lambda d: d["sections"]["capabilityEvidence"]["claims"][0].__setitem__("releaseClaimEligible", True))
+    reject("product-target-escalation", lambda d: d["sections"]["capabilityEvidence"]["productTargets"][0].__setitem__("releaseClaimEligible", True))
     reject("limitation-omission", lambda d: d["sections"]["capabilityEvidence"]["claims"][0].__setitem__("limitations", ""))
     reject("evidence-authority-escalation", lambda d: d["sections"]["evidence"].__setitem__("fixtureAuthority", True))
     reject("baseline-authority-escalation", lambda d: d["sections"]["evidence"]["baselines"][0].__setitem__("signatureGrantsAuthority", True))
@@ -576,7 +624,7 @@ def self_test() -> None:
             controls.append(label)
         else:
             raise ReleaseNotesError("self-test accepted " + label)
-    require(len(controls) == 17, "release-note self-test control inventory drift")
+    require(len(controls) == 18, "release-note self-test control inventory drift")
     print("release-notes: self-test ok (negative_controls={})".format(len(controls)))
 
 

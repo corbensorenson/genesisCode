@@ -18,6 +18,7 @@ DEFAULT_LEDGER = ROOT / "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json"
 DEFAULT_MATRIX = ROOT / "feature_matrix.md"
 DEFAULT_EVIDENCE_JSON = ROOT / "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json"
 DEFAULT_EVIDENCE_MD = ROOT / "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md"
+DEFAULT_PRODUCT_TARGET_JSON = ROOT / "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json"
 DEFAULT_SELFHOST_STATUS = ROOT / "docs/status/SELFHOST_AUTHORITY_v0.1.md"
 DEFAULT_REDTEAM_STATUS = ROOT / "docs/status/REDTEAM_REPORT.md"
 
@@ -25,9 +26,26 @@ MATURITY_LEVELS = tuple(f"L{i}" for i in range(6))
 MATURITY_RANK = {level: index for index, level in enumerate(MATURITY_LEVELS)}
 SELFHOST_LEVELS = ("N/A", "H0", "H1", "H2", "H3", "H4")
 CLAIM_ID_RE = re.compile(r"^CAP-[A-Z0-9]+(?:-[A-Z0-9]+)*$")
+TARGET_ID_RE = re.compile(r"^TARGET-[A-Z0-9]+(?:-[A-Z0-9]+)*$")
+SCOPE_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 GAP_ID_RE = re.compile(r"^(?:P\d+\.\d+|R\d+\.\d+(?:\.[a-z])?|F\d+(?:\.[a-z])?)$")
 EVIDENCE_ID_RE = re.compile(r"^E[1-4]:[a-z0-9][a-z0-9._/-]*$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TARGET_SCOPE_KINDS = ("browser", "host", "runtime", "simulator", "device", "board", "lab")
+TARGET_RELEASE_STATUS_BY_MATURITY = {
+    "L0": "unsupported",
+    "L1": "experimental",
+    "L2": "experimental",
+    "L3": "experimental",
+    "L4": "candidate",
+    "L5": "qualified",
+}
+REQUIRED_AGGREGATE_CLAIM_IDS = {
+    "CAP-DEPLOYMENT-PIPELINE",
+    "CAP-DOMAIN-STARTERS",
+    "CAP-GRAPHICS-RUNTIME",
+    "CAP-RUNTIME-SURFACES",
+}
 
 
 class LedgerError(ValueError):
@@ -148,10 +166,12 @@ def validate_ledger(doc: Any) -> Mapping[str, Any]:
             "version",
             "audit_date",
             "platforms",
+            "aggregate_claim_ids",
             "active_defect_ids",
             "gap_catalog",
             "primary_evidence_paths",
             "claims",
+            "product_target_claims",
         ),
         "ledger",
     )
@@ -346,6 +366,183 @@ def validate_ledger(doc: Any) -> Mapping[str, Any]:
         if maturity != "L5" and not limitations.strip():
             raise LedgerError(f"{claim_id}.limitations must not be empty below L5")
 
+    aggregate_claim_ids = set(
+        require_string_list(
+            ledger.get("aggregate_claim_ids"),
+            "ledger.aggregate_claim_ids",
+            non_empty=True,
+        )
+    )
+    unknown_aggregates = sorted(aggregate_claim_ids - claim_ids)
+    if unknown_aggregates:
+        raise LedgerError(
+            "aggregate_claim_ids references unknown foundation claims: "
+            + ", ".join(unknown_aggregates)
+        )
+    missing_aggregates = sorted(REQUIRED_AGGREGATE_CLAIM_IDS - aggregate_claim_ids)
+    if missing_aggregates:
+        raise LedgerError(
+            "aggregate_claim_ids must classify broad non-product claims: "
+            + ", ".join(missing_aggregates)
+        )
+
+    product_targets_raw = ledger.get("product_target_claims")
+    if not isinstance(product_targets_raw, list) or not product_targets_raw:
+        raise LedgerError("ledger.product_target_claims must be a non-empty array")
+    target_ids = set()
+    target_profiles = set()
+    target_titles = set()
+    for index, raw in enumerate(product_targets_raw):
+        target = require_object(raw, f"ledger.product_target_claims[{index}]")
+        label = f"ledger.product_target_claims[{index}]"
+        reject_unknown_fields(
+            target,
+            (
+                "id",
+                "title",
+                "product_family",
+                "target_profile",
+                "owner",
+                "maturity",
+                "release_status",
+                "scopes",
+                "authentic_artifact_predicate",
+                "one_language_source_predicate",
+                "related_foundation_claim_ids",
+                "spec_paths",
+                "implementation_paths",
+                "check_paths",
+                "evidence_ids",
+                "immutable_evidence_ids",
+                "gap_ids",
+                "limitations",
+            ),
+            label,
+        )
+        target_id = require_string(target.get("id"), f"{label}.id")
+        if not TARGET_ID_RE.fullmatch(target_id):
+            raise LedgerError(f"invalid product target id: {target_id}")
+        if target_id in target_ids:
+            raise LedgerError(f"duplicate product target id: {target_id}")
+        target_ids.add(target_id)
+        title = require_string(target.get("title"), f"{target_id}.title")
+        if title in target_titles:
+            raise LedgerError(f"duplicate product target title: {title}")
+        target_titles.add(title)
+        require_string(target.get("product_family"), f"{target_id}.product_family")
+        profile = require_string(target.get("target_profile"), f"{target_id}.target_profile")
+        if not SCOPE_ID_RE.fullmatch(profile):
+            raise LedgerError(f"invalid target profile for {target_id}: {profile}")
+        if profile in target_profiles:
+            raise LedgerError(f"duplicate product target profile: {profile}")
+        target_profiles.add(profile)
+        require_string(target.get("owner"), f"{target_id}.owner")
+
+        maturity = target.get("maturity")
+        if maturity not in MATURITY_LEVELS:
+            raise LedgerError(f"{target_id}.maturity must be L0-L5")
+        expected_status = TARGET_RELEASE_STATUS_BY_MATURITY[maturity]
+        if target.get("release_status") != expected_status:
+            raise LedgerError(
+                f"{target_id}.release_status must be {expected_status} at {maturity}"
+            )
+
+        scopes_raw = target.get("scopes")
+        if not isinstance(scopes_raw, list) or not scopes_raw:
+            raise LedgerError(f"{target_id}.scopes must be a non-empty array")
+        scope_ids = set()
+        required_scope_levels = []
+        for scope_index, raw_scope in enumerate(scopes_raw):
+            scope = require_object(raw_scope, f"{target_id}.scopes[{scope_index}]")
+            scope_label = f"{target_id}.scopes[{scope_index}]"
+            reject_unknown_fields(
+                scope,
+                ("id", "label", "kind", "required_for_release", "maturity"),
+                scope_label,
+            )
+            scope_id = require_string(scope.get("id"), f"{scope_label}.id")
+            if not SCOPE_ID_RE.fullmatch(scope_id):
+                raise LedgerError(f"invalid scope id for {target_id}: {scope_id}")
+            if scope_id in scope_ids:
+                raise LedgerError(f"duplicate scope id for {target_id}: {scope_id}")
+            scope_ids.add(scope_id)
+            require_string(scope.get("label"), f"{scope_label}.label")
+            if scope.get("kind") not in TARGET_SCOPE_KINDS:
+                raise LedgerError(
+                    f"{scope_label}.kind must be one of {', '.join(TARGET_SCOPE_KINDS)}"
+                )
+            if not isinstance(scope.get("required_for_release"), bool):
+                raise LedgerError(f"{scope_label}.required_for_release must be boolean")
+            scope_maturity = scope.get("maturity")
+            if scope_maturity not in MATURITY_LEVELS:
+                raise LedgerError(f"{scope_label}.maturity must be L0-L5")
+            if scope["required_for_release"]:
+                required_scope_levels.append(MATURITY_RANK[scope_maturity])
+        if not required_scope_levels:
+            raise LedgerError(f"{target_id} must have at least one release-required scope")
+        if MATURITY_RANK[maturity] > min(required_scope_levels):
+            raise LedgerError(
+                f"{target_id}.maturity exceeds its lowest release-required scope maturity"
+            )
+
+        for predicate_name in (
+            "authentic_artifact_predicate",
+            "one_language_source_predicate",
+        ):
+            predicate = require_string(target.get(predicate_name), f"{target_id}.{predicate_name}")
+            if len(predicate) < 20:
+                raise LedgerError(f"{target_id}.{predicate_name} must be specific and testable")
+
+        related = require_string_list(
+            target.get("related_foundation_claim_ids"),
+            f"{target_id}.related_foundation_claim_ids",
+            non_empty=True,
+        )
+        unknown_related = sorted(set(related) - claim_ids)
+        if unknown_related:
+            raise LedgerError(
+                f"{target_id} references unknown foundation claims: "
+                + ", ".join(unknown_related)
+            )
+
+        for field in ("spec_paths", "implementation_paths", "check_paths"):
+            paths = require_string_list(target.get(field), f"{target_id}.{field}", non_empty=True)
+            for path_index, path in enumerate(paths):
+                validate_relative_path(path, f"{target_id}.{field}[{path_index}]")
+        evidence_ids = require_string_list(
+            target.get("evidence_ids"), f"{target_id}.evidence_ids", non_empty=True
+        )
+        immutable_ids = require_string_list(
+            target.get("immutable_evidence_ids"), f"{target_id}.immutable_evidence_ids"
+        )
+        if len(evidence_ids) != len(target["check_paths"]):
+            raise LedgerError(f"{target_id}.evidence_ids must map one-to-one to check_paths")
+        for evidence_id in evidence_ids + immutable_ids:
+            if not EVIDENCE_ID_RE.fullmatch(evidence_id):
+                raise LedgerError(f"invalid evidence id for {target_id}: {evidence_id}")
+            if evidence_id in all_evidence_ids:
+                raise LedgerError(f"duplicate evidence id: {evidence_id}")
+            all_evidence_ids.add(evidence_id)
+        for evidence_id in immutable_ids:
+            if not evidence_id.startswith(("E3:", "E4:")):
+                raise LedgerError(
+                    f"{target_id}.immutable_evidence_ids may contain only E3/E4 IDs"
+                )
+        if maturity == "L5" and not immutable_ids:
+            raise LedgerError(f"{target_id} is L5 but has no immutable evidence IDs")
+        gaps = require_string_list(
+            target.get("gap_ids"), f"{target_id}.gap_ids", non_empty=maturity != "L5"
+        )
+        for gap_id in gaps:
+            if gap_id not in gap_catalog:
+                raise LedgerError(f"{target_id} references unknown gap id: {gap_id}")
+            referenced_gap_ids.add(gap_id)
+        limitations = target.get("limitations")
+        if not isinstance(limitations, str):
+            raise LedgerError(f"{target_id}.limitations must be a string")
+        if maturity != "L5" and not limitations.strip():
+            raise LedgerError(f"{target_id}.limitations must not be empty below L5")
+
     stale_gaps = sorted(set(gap_catalog) - referenced_gap_ids)
     if stale_gaps:
         raise LedgerError(
@@ -365,6 +562,7 @@ def render_matrix(ledger: Mapping[str, Any]) -> str:
         "Scope: capability maturity for AI-agent autonomy, semantic selfhost closure, and production runtime trust.",
         "",
         "This is a generated status view, not release evidence. The canonical source is `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json`.",
+        "Product and deployment qualification is reported in this document's generated product/target section and `docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json`; foundation maturity never implies a child target.",
         "",
         "Maturity legend:",
         "- `L0` specified",
@@ -392,8 +590,8 @@ def render_matrix(ledger: Mapping[str, Any]) -> str:
             "",
             "## Capability Maturity",
             "",
-            f"| ID | Capability | Overall | {platform_headers} | Selfhost | Owner |",
-            "|---|---|---|" + "---|" * len(platforms) + "---|---|",
+            f"| ID | Capability | Class | Overall | {platform_headers} | Selfhost | Owner |",
+            "|---|---|---|---|" + "---|" * len(platforms) + "---|---|",
         ]
     )
     for claim in claims:
@@ -402,7 +600,9 @@ def render_matrix(ledger: Mapping[str, Any]) -> str:
             for platform in platforms
         )
         lines.append(
-            f"| `{claim['id']}` | {claim['title']} | **{claim['maturity']}** | "
+            f"| `{claim['id']}` | {claim['title']} | "
+            f"{'aggregate foundation' if claim['id'] in ledger['aggregate_claim_ids'] else 'foundation'} | "
+            f"**{claim['maturity']}** | "
             f"{platform_cells} | {claim['selfhost_level']} | `{claim['owner']}` |"
         )
 
@@ -451,6 +651,9 @@ def render_matrix(ledger: Mapping[str, Any]) -> str:
     for claim in claims:
         for gap_id in claim["gap_ids"]:
             gap_to_claims[gap_id].append(claim["id"])
+    for target in ledger["product_target_claims"]:
+        for gap_id in target["gap_ids"]:
+            gap_to_claims[gap_id].append(target["id"])
     lines.extend(["", "Known GenesisCode gaps", ""])
     for gap_id, summary in ledger["gap_catalog"].items():
         linked = ", ".join(f"`{claim_id}`" for claim_id in gap_to_claims[gap_id])
@@ -460,6 +663,7 @@ def render_matrix(ledger: Mapping[str, Any]) -> str:
             "- Active `upgrade_plan.md` P0/P1 defects: none. Roadmap maturity gaps above remain open and are not erased by an empty defect queue."
         )
 
+    lines.extend(render_product_target_sections(ledger))
     lines.extend(["", "Primary evidence paths:", ""])
     for path in ledger["primary_evidence_paths"]:
         lines.append(f"- `{path}`")
@@ -472,6 +676,7 @@ def render_matrix(ledger: Mapping[str, Any]) -> str:
             "- Mutable `.genesis/perf/` reports are E0 local observations and cannot establish L5.",
             "- Overall maturity cannot exceed the weakest required tier-1 platform.",
             "- Selfhost levels describe semantic authority, not the existence of a `.gc` wrapper.",
+            "- Aggregate foundation claims report shared plumbing only. They cannot authorize any product or target listed in the product/target matrix.",
             "- `upgrade_plan.md` is the active P0/P1 defect queue; `ROADMAP.md` contains strategic maturity gaps.",
         ]
     )
@@ -504,10 +709,98 @@ def render_evidence_json(ledger: Mapping[str, Any]) -> str:
         "version": "0.1",
         "source_ledger": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
         "audit_date": ledger["audit_date"],
+        "aggregate_foundation_claim_ids": ledger["aggregate_claim_ids"],
         "entry_count": len(entries),
         "entries": entries,
     }
     return json.dumps(output, indent=2, sort_keys=True) + "\n"
+
+
+def product_target_is_eligible(target: Mapping[str, Any]) -> bool:
+    required_scopes = [
+        scope for scope in target["scopes"] if scope["required_for_release"]
+    ]
+    return (
+        target["release_status"] == "qualified"
+        and target["maturity"] == "L5"
+        and bool(required_scopes)
+        and all(scope["maturity"] == "L5" for scope in required_scopes)
+        and bool(target["immutable_evidence_ids"])
+    )
+
+
+def render_product_target_json(ledger: Mapping[str, Any]) -> str:
+    entries = []
+    for target in ledger["product_target_claims"]:
+        entry = dict(target)
+        entry["release_eligible"] = product_target_is_eligible(target)
+        entries.append(entry)
+    output = {
+        "kind": "genesis/product-target-matrix-v0.1",
+        "version": "0.1",
+        "source_ledger": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+        "audit_date": ledger["audit_date"],
+        "entry_count": len(entries),
+        "aggregate_foundation_claim_ids": ledger["aggregate_claim_ids"],
+        "entries": entries,
+    }
+    return json.dumps(output, indent=2, sort_keys=True) + "\n"
+
+
+def render_product_target_sections(ledger: Mapping[str, Any]) -> List[str]:
+    lines = [
+        "",
+        "## Product and Target Qualification",
+        "",
+        "This matrix is the authority for product and target support. Foundation capability rows, host-operation reachability, archive suffixes, descriptors, empty exports, headless plans, synthetic launchers, and simulator-only runs do not raise a product target's maturity.",
+        "",
+        "Release states are mechanically tied to maturity: `L0` unsupported, `L1-L3` experimental, `L4` candidate, and `L5` qualified. Release eligibility additionally requires L5 on every required scope plus immutable E3/E4 evidence.",
+        "",
+        "### Qualification Summary",
+        "",
+        "| ID | Product / target | Family | Profile | Overall | Release state | Scope maturity | Eligible | Owner |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for target in ledger["product_target_claims"]:
+        scopes = "<br>".join(
+            f"`{scope['id']}`={scope['maturity']} ({scope['kind']}; "
+            f"{'required' if scope['required_for_release'] else 'optional'})"
+            for scope in target["scopes"]
+        )
+        lines.append(
+            f"| `{target['id']}` | {target['title']} | {target['product_family']} | "
+            f"`{target['target_profile']}` | **{target['maturity']}** | "
+            f"**{target['release_status']}** | {scopes} | "
+            f"{'yes' if product_target_is_eligible(target) else '**no**'} | `{target['owner']}` |"
+        )
+    lines.extend(["", "### Predicates and Evidence", ""])
+    for target in ledger["product_target_claims"]:
+        related = ", ".join(f"`{item}`" for item in target["related_foundation_claim_ids"])
+        gaps = ", ".join(f"`{item}`" for item in target["gap_ids"])
+        evidence = ", ".join(f"`{item}`" for item in target["evidence_ids"])
+        lines.extend(
+            [
+                f"#### `{target['id']}`: {target['title']}",
+                "",
+                f"- **Authentic artifact:** {target['authentic_artifact_predicate']}",
+                f"- **One-language source:** {target['one_language_source_predicate']}",
+                f"- **Related foundations, not inherited support:** {related}",
+                f"- **Current evidence:** {evidence}",
+                f"- **Open gaps:** {gaps}",
+                f"- **Limitations:** {target['limitations']}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "### Aggregate Claim Boundary",
+            "",
+            "The following capability claims are aggregate foundations and cannot imply support for any row above:",
+            "",
+        ]
+    )
+    lines.extend(f"- `{claim_id}`" for claim_id in ledger["aggregate_claim_ids"])
+    return lines
 
 
 def render_evidence_md(ledger: Mapping[str, Any]) -> str:
@@ -633,6 +926,7 @@ def expected_outputs(ledger: Mapping[str, Any]) -> Mapping[Path, str]:
         DEFAULT_MATRIX: render_matrix(ledger),
         DEFAULT_EVIDENCE_JSON: render_evidence_json(ledger),
         DEFAULT_EVIDENCE_MD: render_evidence_md(ledger),
+        DEFAULT_PRODUCT_TARGET_JSON: render_product_target_json(ledger),
         DEFAULT_SELFHOST_STATUS: render_selfhost_status(ledger),
         DEFAULT_REDTEAM_STATUS: render_redteam_status(ledger),
     }
@@ -655,6 +949,9 @@ def configured_outputs(ledger: Mapping[str, Any]) -> Mapping[Path, str]:
         resolve_output(
             DEFAULT_EVIDENCE_MD, "GENESIS_FEATURE_MATRIX_EVIDENCE_MD"
         ): rendered[DEFAULT_EVIDENCE_MD],
+        resolve_output(
+            DEFAULT_PRODUCT_TARGET_JSON, "GENESIS_PRODUCT_TARGET_MATRIX_JSON"
+        ): rendered[DEFAULT_PRODUCT_TARGET_JSON],
         resolve_output(
             DEFAULT_SELFHOST_STATUS, "GENESIS_SELFHOST_AUTHORITY_STATUS"
         ): rendered[DEFAULT_SELFHOST_STATUS],
@@ -711,6 +1008,7 @@ def main(argv: Sequence[str]) -> int:
             print(
                 "capability-evidence-ledger: ok "
                 f"(claims={len(ledger['claims'])} platforms={len(ledger['platforms'])} "
+                f"targets={len(ledger['product_target_claims'])} "
                 f"l5={sum(1 for claim in ledger['claims'] if claim['maturity'] == 'L5')})"
             )
         else:
@@ -719,7 +1017,7 @@ def main(argv: Sequence[str]) -> int:
             print(
                 "update-capability-status-views: wrote "
                 + ", ".join(display_path(path) for path in outputs)
-                + f" (claims={len(ledger['claims'])})"
+                + f" (claims={len(ledger['claims'])} targets={len(ledger['product_target_claims'])})"
             )
     except LedgerError as exc:
         print(f"capability-evidence-ledger: {exc}", file=sys.stderr)

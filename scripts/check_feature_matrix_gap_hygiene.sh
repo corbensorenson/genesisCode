@@ -39,16 +39,23 @@ if ledger_ids != plan_ids:
         f"ledger={ledger_ids} plan={plan_ids}"
     )
 
-roadmap_gap_count = len(
-    {
-        gap
-        for claim in ledger.get("claims", [])
-        for gap in claim.get("gap_ids", [])
-        if str(gap).startswith(("R", "F"))
-    }
-)
+foundation_gaps = {
+    gap
+    for claim in ledger.get("claims", [])
+    for gap in claim.get("gap_ids", [])
+    if str(gap).startswith(("R", "F"))
+}
+product_target_gaps = {
+    gap
+    for target in ledger.get("product_target_claims", [])
+    for gap in target.get("gap_ids", [])
+    if str(gap).startswith(("R", "F"))
+}
+roadmap_gap_count = len(foundation_gaps | product_target_gaps)
 print(
     "feature-matrix-gap-hygiene: ok "
-    f"(active_defects={len(plan_ids)} roadmap_gaps={roadmap_gap_count} read_only=true)"
+    f"(active_defects={len(plan_ids)} roadmap_gaps={roadmap_gap_count} "
+    f"foundation_gaps={len(foundation_gaps)} product_target_gaps={len(product_target_gaps)} "
+    "read_only=true)"
 )
 PY

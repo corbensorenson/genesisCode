@@ -1140,13 +1140,14 @@
       "executionIdentitySha256": "d368d86edc3ac9c640e631f0fafc9012460c8fb68f88949143d1f595760d87c8",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger",
-      "inputIdentitySha256": "1335ff0c7cdf6df79e52fdd41068ca850ba732358fde8d2ba420846e35fe1dda",
+      "inputIdentitySha256": "33ba6a6f6351acd10e9c974d014b14029c8278a09097271f101a585fedf019f6",
       "inputs": {
         "paths": [
           "ROADMAP.md",
           "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/status/REDTEAM_REPORT.md",
           "docs/status/SELFHOST_AUTHORITY_v0.1.md",
           "docs/status/SELFHOST_CUTOVER.md",
@@ -1194,10 +1195,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_capability_evidence_ledger_contract.sh",
-      "executionIdentitySha256": "9a5f8f280190371d8333df37932ae9e4f0a8013bd9efb22ab91b3cfab0fda35a",
+      "executionIdentitySha256": "e3716f4f7d312499bac18885ec17e630edd440b1e87a200717bf1f4557022f0f",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1546,6 +1547,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -2077,7 +2079,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "d13e15f1aaf5a0bc62b7df7073a9882d6dec48256b23b22423e02b99cd9e0b25",
+      "sourceSha256": "c038fe15e60b4d9c0cb3ee1932e90d8e43f8220441df8dd402e122f80e4f23a1",
       "tools": [
         "bash",
         "git",
@@ -2332,7 +2334,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2681,6 +2683,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -3695,10 +3698,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_doc_topology_drift.sh",
-      "executionIdentitySha256": "ff924202b8a8dde9faea2b0b2e927ee4a6fa81e42a60176174fe3f7788b47175",
+      "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "5e0a7c91e9139f3a6a5ac0b2cf6f75256107e971f7f2d825b409e6dcac4b6cc1",
+      "inputIdentitySha256": "206dea5112681dd6931f535db82c31af5a389a82ed1cb99643dc4e3da75371f5",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3727,6 +3730,7 @@
           "docs/spec/HOST_ABI.md",
           "docs/spec/HOST_ABI_INDEX_v0.1.json",
           "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
           "docs/status/REDTEAM_REPORT.md",
           "docs/status/SELFHOST_AUTHORITY_v0.1.md",
@@ -3765,7 +3769,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "14958fc63503e3a7a00a895ca6b8e3160291122bf1798442fcfe817d620649f6",
+      "sourceSha256": "ea4200d6748caa6f1d9d4e52d775e8b265507a9f812fda9ed0297e80470d9025",
       "tools": [
         "bash",
         "git",
@@ -3974,7 +3978,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4323,6 +4327,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -5016,16 +5021,17 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_feature_matrix_gap_hygiene.sh",
-      "executionIdentitySha256": "47a51aaba95c9a852ce38a24be9a4996db3129cfb0d0328d90e50956c8ee5251",
+      "executionIdentitySha256": "a633534861b74b8d43cdd3226dbcfc79e1b417f9f151828002d3177a7e37eb79",
       "expectedDurationSeconds": 600,
       "id": "gate/feature-matrix-gap-hygiene",
-      "inputIdentitySha256": "2f5c0a9b1bb888bf894213d44e35e93018056786fca2baef46e5f674d1dd60c7",
+      "inputIdentitySha256": "9738a5be1899271b6d972b6e3eaab11f75003be672ee584a735295e507799b2d",
       "inputs": {
         "paths": [
           "ROADMAP.md",
           "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/status/REDTEAM_REPORT.md",
           "docs/status/SELFHOST_AUTHORITY_v0.1.md",
           "docs/status/SELFHOST_CUTOVER.md",
@@ -5063,7 +5069,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "15fb15524e225f363d7ca8534e2bc61a185781ccae22a62844ea475a82b77666",
+      "sourceSha256": "b03862ac98850a39b6ff565c408930e0d3e900f22be13aac3c4c689119f1abf3",
       "tools": [
         "bash",
         "cargo",
@@ -5451,7 +5457,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "6b8b536a101e4cabe6f2166f74ff82d330e15fead5bab9723cb916896d2850ad",
+      "inputIdentitySha256": "10d29dd4254d156d53ee1ede24569e495b528f6cc7ead9a04d264b1acd2ba7d8",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5516,7 +5522,7 @@
       "executionIdentitySha256": "bb0f9dc73bdea6da6f719477b5fecbd454c85b1ef233ab8ab02970964d507f33",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5865,6 +5871,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -8242,7 +8249,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8591,6 +8598,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -9293,7 +9301,7 @@
       "executionIdentitySha256": "d4d3aeacdb08b59b6319f1eeb418f5073ae866091669ba47e7e4925e0d514df6",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9642,6 +9650,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -10676,7 +10685,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11025,6 +11034,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -11810,7 +11820,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "10722d1b25ce024718a0c96582456ced4b98ebc80f7b2e2920900862d61372cb",
+      "inputIdentitySha256": "cfeef48444ddab087de7038f4bef2134f8bc0f779a77001a2cb2310cf2f04d0a",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -12118,13 +12128,14 @@
       "executionIdentitySha256": "40e0e760812ac402a0da62d9f43d62652d9bbe79f74df874a1bd7d528bb19c06",
       "expectedDurationSeconds": 600,
       "id": "gate/redteam-report",
-      "inputIdentitySha256": "193970315b75cb0b624e53d95e617393e52dc0aa0f4a08254027f24feccadd5a",
+      "inputIdentitySha256": "dbcff372b914acdb690c6a4229187ed2a7f8346c99588513fc1e9e6dd8dc747d",
       "inputs": {
         "paths": [
           "ROADMAP.md",
           "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/status/REDTEAM_REPORT.md",
           "docs/status/SELFHOST_AUTHORITY_v0.1.md",
           "docs/status/SELFHOST_CUTOVER.md",
@@ -12240,7 +12251,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "77ba1f07ca8d6763990a3ced276cda7c592479b377b10a8792610d556d2c8052",
+      "inputIdentitySha256": "5e5c0f7b4395bb294fec6774ff15f6286b97b7f1af4fcb0ea943d7a35f91793a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12303,7 +12314,7 @@
       "executionIdentitySha256": "c59c9164fcc916fc8d61251191cdc71a6a10d69a8ba4569f47fee59fccbbe5b7",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "822beed753d17ca869c90c3e8f9d40445b6f3624a64963ed998c7bd939cf8a41",
+      "inputIdentitySha256": "31194bfd000a11a77daeda85d98bc22e222243fea1949b23677155dff94dd73f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12521,7 +12532,7 @@
       "executionIdentitySha256": "37b42742d763be7f504a77620bfaa920ce51763477c46817e8a55322a61eeb7d",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "13b394554cf48cb57e90733ea3af77d5cb2c61e2a300d74fb93eb97565d8a681",
+      "inputIdentitySha256": "e1452113c9740010597add6d9aa54022495c52904472265caad45783f4500516",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -12529,6 +12540,7 @@
           "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
           "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json",
           "docs/status/REDTEAM_REPORT.md",
           "docs/status/SELFHOST_AUTHORITY_v0.1.md",
@@ -13211,7 +13223,7 @@
       "executionIdentitySha256": "cf1fe30a2554237728646a150a4c156b56df055a457cf361d69820de4950261c",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-doc-runtime-parity",
-      "inputIdentitySha256": "45907399c0aa11d5e8fb68d2d1aae21a7998b8bfb12c2fe8f61087d7b280a5ec",
+      "inputIdentitySha256": "eb5f7edefbd6c02c09ee1e7bad71df913826584ea2d063bd182585f3e71a9657",
       "inputs": {
         "paths": [
           "docs/spec/CLI.md",
@@ -13980,7 +13992,7 @@
       "executionIdentitySha256": "b501afcace3420598559a953b315613575e8580aa43a6ba5d64291741124e5a0",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14329,6 +14341,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -14990,7 +15003,7 @@
       "executionIdentitySha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "079af406e977a79929c3a30d7ea13d327b766d9ac5456e8a0a641dfb697e7b1d",
+      "inputIdentitySha256": "8c91aed8d976288dc36f22f3216300469aa3a42361d1aad40b6da5b16cbbba34",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -15339,6 +15352,7 @@
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/PREREQUISITES_v0.1.md",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -16079,7 +16093,7 @@
       "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "6e2b7cd16f80009e9e82d4be926f09d59c4a954206ec166100a8147289d549fd",
+      "inputIdentitySha256": "d1fd0d79c01e04cf55697bdb0f2dda9aaea3b4ec8fe2c9ef90b4454c29af764b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -16738,7 +16752,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "ab0aaea8e2bd67ceff9a6234288d2a7c99218b221495a267baa5803bc0604d4b",
+      "inputIdentitySha256": "a1b0914b645517f9343883233ddf688b16c6c823a4eb38e390e9399acf930def",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -16829,7 +16843,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "2312067798434e88ba83c4e0e1f204bfc0e786b5e2285591eb1881e91c3c7d30"
+        "sha256": "c4878140b67efd4f3ad5cfcd77f664fdcffe0a40a7cff4b8c5d8d3ba582d061d"
       },
       {
         "path": "genesis.prerequisites.json",

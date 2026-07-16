@@ -9,10 +9,12 @@
     "version",
     "audit_date",
     "platforms",
+    "aggregate_claim_ids",
     "active_defect_ids",
     "gap_catalog",
     "primary_evidence_paths",
-    "claims"
+    "claims",
+    "product_target_claims"
   ],
   "properties": {
     "kind": {
@@ -31,6 +33,15 @@
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/platform"
+      }
+    },
+    "aggregate_claim_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^CAP-[A-Z0-9]+(?:-[A-Z0-9]+)*$"
       }
     },
     "active_defect_ids": {
@@ -58,6 +69,13 @@
       "items": {
         "$ref": "#/$defs/claim"
       }
+    },
+    "product_target_claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/productTargetClaim"
+      }
     }
   },
   "$defs": {
@@ -72,7 +90,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          "pattern": "^[a-z0-9_]+(?:-[a-z0-9_]+)*$"
         },
         "label": {
           "type": "string",
@@ -201,6 +219,155 @@
         },
         "host_binding_paths": {
           "$ref": "#/$defs/pathArray"
+        },
+        "check_paths": {
+          "$ref": "#/$defs/nonEmptyPathArray"
+        },
+        "evidence_ids": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/evidenceIdArray"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        },
+        "immutable_evidence_ids": {
+          "$ref": "#/$defs/evidenceIdArray"
+        },
+        "gap_ids": {
+          "$ref": "#/$defs/gapIdArray"
+        },
+        "limitations": {
+          "type": "string"
+        }
+      }
+    },
+    "productTargetScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "required_for_release",
+        "maturity"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "browser",
+            "host",
+            "runtime",
+            "simulator",
+            "device",
+            "board",
+            "lab"
+          ]
+        },
+        "required_for_release": {
+          "type": "boolean"
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity"
+        }
+      }
+    },
+    "productTargetClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "product_family",
+        "target_profile",
+        "owner",
+        "maturity",
+        "release_status",
+        "scopes",
+        "authentic_artifact_predicate",
+        "one_language_source_predicate",
+        "related_foundation_claim_ids",
+        "spec_paths",
+        "implementation_paths",
+        "check_paths",
+        "evidence_ids",
+        "immutable_evidence_ids",
+        "gap_ids",
+        "limitations"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^TARGET-[A-Z0-9]+(?:-[A-Z0-9]+)*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "product_family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_profile": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity"
+        },
+        "release_status": {
+          "type": "string",
+          "enum": [
+            "unsupported",
+            "experimental",
+            "candidate",
+            "qualified"
+          ]
+        },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/productTargetScope"
+          }
+        },
+        "authentic_artifact_predicate": {
+          "type": "string",
+          "minLength": 20
+        },
+        "one_language_source_predicate": {
+          "type": "string",
+          "minLength": 20
+        },
+        "related_foundation_claim_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^CAP-[A-Z0-9]+(?:-[A-Z0-9]+)*$"
+          }
+        },
+        "spec_paths": {
+          "$ref": "#/$defs/nonEmptyPathArray"
+        },
+        "implementation_paths": {
+          "$ref": "#/$defs/nonEmptyPathArray"
         },
         "check_paths": {
           "$ref": "#/$defs/nonEmptyPathArray"

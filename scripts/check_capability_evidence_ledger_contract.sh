@@ -14,12 +14,14 @@ LEDGER="docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json"
 MATRIX="$TMP_DIR/feature_matrix.md"
 EVIDENCE_JSON="$TMP_DIR/evidence.json"
 EVIDENCE_MD="$TMP_DIR/evidence.md"
+PRODUCT_TARGET_JSON="$TMP_DIR/product-targets.json"
 SELFHOST_STATUS="$TMP_DIR/selfhost-authority.md"
 REDTEAM_STATUS="$TMP_DIR/redteam.md"
 OUTPUTS=(
   "$MATRIX"
   "$EVIDENCE_JSON"
   "$EVIDENCE_MD"
+  "$PRODUCT_TARGET_JSON"
   "$SELFHOST_STATUS"
   "$REDTEAM_STATUS"
 )
@@ -28,6 +30,7 @@ run_tool() {
   GENESIS_FEATURE_MATRIX_PATH="$MATRIX" \
   GENESIS_FEATURE_MATRIX_EVIDENCE_JSON="$EVIDENCE_JSON" \
   GENESIS_FEATURE_MATRIX_EVIDENCE_MD="$EVIDENCE_MD" \
+  GENESIS_PRODUCT_TARGET_MATRIX_JSON="$PRODUCT_TARGET_JSON" \
   GENESIS_SELFHOST_AUTHORITY_STATUS="$SELFHOST_STATUS" \
   GENESIS_REDTEAM_REPORT_FILE="$REDTEAM_STATUS" \
     python3 scripts/lib/capability_ledger.py "$@"
@@ -80,6 +83,12 @@ def invalid_l5(doc):
 write("l5-without-immutable-evidence.json", invalid_l5)
 write("unknown-gap.json", lambda d: d["claims"][0]["gap_ids"].append("R99.99.z"))
 write("unknown-field.json", lambda d: d["claims"][0].__setitem__("trust_me", True))
+write("duplicate-target-id.json", lambda d: d["product_target_claims"][1].__setitem__("id", d["product_target_claims"][0]["id"]))
+write("missing-required-aggregate.json", lambda d: d.__setitem__("aggregate_claim_ids", [item for item in d["aggregate_claim_ids"] if item != "CAP-DEPLOYMENT-PIPELINE"]))
+write("target-release-escalation.json", lambda d: d["product_target_claims"][0].__setitem__("release_status", "qualified"))
+write("target-empty-artifact-predicate.json", lambda d: d["product_target_claims"][0].__setitem__("authentic_artifact_predicate", ""))
+write("target-unknown-foundation.json", lambda d: d["product_target_claims"][0]["related_foundation_claim_ids"].append("CAP-NOT-REAL"))
+write("target-no-required-scope.json", lambda d: [scope.__setitem__("required_for_release", False) for scope in d["product_target_claims"][0]["scopes"]])
 
 raw = Path(sys.argv[1]).read_text(encoding="utf-8")
 audit_date = source["audit_date"]
@@ -99,6 +108,12 @@ expect_rejected missing-path "$TMP_DIR/missing-path.json"
 expect_rejected l5-without-immutable-evidence "$TMP_DIR/l5-without-immutable-evidence.json"
 expect_rejected unknown-gap "$TMP_DIR/unknown-gap.json"
 expect_rejected unknown-field "$TMP_DIR/unknown-field.json"
+expect_rejected duplicate-target-id "$TMP_DIR/duplicate-target-id.json"
+expect_rejected missing-required-aggregate "$TMP_DIR/missing-required-aggregate.json"
+expect_rejected target-release-escalation "$TMP_DIR/target-release-escalation.json"
+expect_rejected target-empty-artifact-predicate "$TMP_DIR/target-empty-artifact-predicate.json"
+expect_rejected target-unknown-foundation "$TMP_DIR/target-unknown-foundation.json"
+expect_rejected target-no-required-scope "$TMP_DIR/target-no-required-scope.json"
 expect_rejected duplicate-key "$TMP_DIR/duplicate-key.json"
 
 for output in "${OUTPUTS[@]}"; do
@@ -160,4 +175,4 @@ if python3 scripts/lib/roadmap_evidence.py --check --roadmap "$TMP_DIR/roadmap-o
   exit 1
 fi
 
-echo "capability-evidence-ledger-contract: ok (negative_controls=13 check_mode=read_only generated_views=5 roadmap_identities=$roadmap_identity_count)"
+echo "capability-evidence-ledger-contract: ok (negative_controls=19 check_mode=read_only generated_views=6 roadmap_identities=$roadmap_identity_count)"
