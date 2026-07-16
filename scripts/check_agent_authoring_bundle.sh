@@ -44,6 +44,8 @@ run_parallel 09 genesisbench-analysis \
   python3 scripts/lib/genesisbench_analysis.py --check --self-test
 run_parallel 10 gc-agent-profile \
   bash -c 'python3 scripts/lib/gc_agent_profile.py --check && python3 scripts/lib/gc_agent_profile.py --self-test'
+run_parallel 11 genesisbench-construct-validity \
+  python3 scripts/lib/genesisbench_construct_validity.py --check --self-test
 
 parallel_status=0
 for index in "${!parallel_pids[@]}"; do
@@ -86,6 +88,7 @@ SCORING_TEST="crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
 RUN_TEST="crates/gc_cli/tests/cli_agent_benchmark_run.rs"
 FRONT_DOOR_TEST="crates/gc_cli/tests/cli_genesisbench_front_door.rs"
 REGISTRY_TEST="crates/gc_cli/tests/cli_genesisbench_registry.rs"
+CONSTRUCT_TEST="crates/gc_cli/tests/cli_genesisbench_construct_validity.rs"
 
 [[ -f "$BUNDLE" ]] || {
   echo "agent-authoring-bundle: missing bundle doc: $BUNDLE" >&2
@@ -123,8 +126,12 @@ REGISTRY_TEST="crates/gc_cli/tests/cli_genesisbench_registry.rs"
   echo "agent-authoring-bundle: missing benchmark registry production test: $REGISTRY_TEST" >&2
   exit 1
 }
+[[ -f "$CONSTRUCT_TEST" ]] || {
+  echo "agent-authoring-bundle: missing construct-validity production test: $CONSTRUCT_TEST" >&2
+  exit 1
+}
 
-python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" "$SCORING_TEST" "$RUN_TEST" "$FRONT_DOOR_TEST" "$REGISTRY_TEST" <<'PY'
+python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" "$SCORING_TEST" "$RUN_TEST" "$FRONT_DOOR_TEST" "$REGISTRY_TEST" "$CONSTRUCT_TEST" <<'PY'
 import pathlib
 import re
 import sys
@@ -138,6 +145,7 @@ scoring_test_path = pathlib.Path(sys.argv[6])
 run_test_path = pathlib.Path(sys.argv[7])
 front_door_test_path = pathlib.Path(sys.argv[8])
 registry_test_path = pathlib.Path(sys.argv[9])
+construct_test_path = pathlib.Path(sys.argv[10])
 
 bundle = bundle_path.read_text(encoding="utf-8")
 agent_index_spec = agent_index_spec_path.read_text(encoding="utf-8")
@@ -148,6 +156,7 @@ scoring_test = scoring_test_path.read_text(encoding="utf-8")
 run_test = run_test_path.read_text(encoding="utf-8")
 front_door_test = front_door_test_path.read_text(encoding="utf-8")
 registry_test = registry_test_path.read_text(encoding="utf-8")
+construct_test = construct_test_path.read_text(encoding="utf-8")
 
 include_re = re.compile(r"^- `([^`]+)`\s*$", re.MULTILINE)
 included_paths = include_re.findall(bundle)
@@ -190,6 +199,11 @@ required_included = [
     "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
     "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
     "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
+    "policies/genesisbench_construct_validity_v0.1.json",
+    "docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json",
+    "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+    "scripts/lib/genesisbench_construct_validity.py",
+    "crates/gc_cli/tests/cli_genesisbench_construct_validity.rs",
     "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
@@ -360,6 +374,16 @@ if (
 ):
     raise SystemExit(
         "agent-authoring-bundle: scoring needs shipped-binary and model-separation integration coverage"
+    )
+if (
+    "scripts/lib/genesisbench_construct_validity.py" not in construct_test
+    or 'env!("CARGO_BIN_EXE_genesis")' not in construct_test
+    or "alternativeAcceptanceBasisPoints" not in construct_test
+    or "negativeRejectionBasisPoints" not in construct_test
+    or "maintenanceBasisPoints" not in construct_test
+):
+    raise SystemExit(
+        "agent-authoring-bundle: construct validity needs shipped-binary replay and two-sided controls"
     )
 
 run_schema_rel = "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json"

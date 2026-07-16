@@ -58,6 +58,14 @@ TASK_BENCHMARK_FILES = tuple(
     )
 )
 
+CONSTRUCT_VALIDITY_FILES = tuple(
+    sorted(
+        str(path.relative_to(ROOT))
+        for path in (ROOT / "benchmarks/genesisbench/v0.1/construct-validity").rglob("*")
+        if path.is_file()
+    )
+)
+
 BUNDLES: Mapping[str, Sequence[str]] = {
     "capability-ledger-bundle": COMMON_CAPABILITY_FILES,
     "status-authority-bundle": COMMON_CAPABILITY_FILES
@@ -567,7 +575,7 @@ BUNDLES: Mapping[str, Sequence[str]] = {
         "docs/spec/GC_AGENT_PROFILE_v0.3.json",
         "scripts/lib/gc_agent_profile.py",
         "scripts/check_gc_agent_profile.sh",
-        "scripts/update_gc_agent_profile.sh",
+        "scripts/update_agent_authoring_bundle.sh",
         "crates/gc_cli/tests/gc_agent_profile_v03.rs",
         "crates/gc_cli/Cargo.toml",
         "Cargo.lock",
@@ -832,6 +840,40 @@ BUNDLES: Mapping[str, Sequence[str]] = {
         "scripts/render_quarto_reference.py",
         "scripts/lib/roadmap_evidence.py",
     ),
+    "genesisbench-construct-validity-bundle": (
+        "policies/genesisbench_construct_validity_v0.1.json",
+        "docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json",
+        "scripts/lib/genesisbench_construct_validity.py",
+        "crates/gc_cli/tests/cli_genesisbench_construct_validity.rs",
+        "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+        "benchmarks/agent_tasks/v0.1/suite.json",
+        "scripts/lib/gc_task_benchmarks.py",
+        "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+        "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+        "scripts/lib/gc_agent_scoring.py",
+        "scripts/lib/gc_agent_scoring_contract.py",
+        "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
+        "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+        "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
+        "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+        "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+        "scripts/lib/genesisbench_protocol.py",
+        "scripts/lib/genesisbench_protocol_contract.py",
+        "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "scripts/check_agent_authoring_bundle.sh",
+        "docs/spec/AGENT_INDEX_v0.1.md",
+        "crates/gc_cli_driver/src/cmd_agent_index.rs",
+        "crates/gc_cli/tests/cli_agent_index.rs",
+        "guides/genesisbench.qmd",
+        "benchmarks/genesisbench/v0.1/README.md",
+        "README.md",
+        "docs/INDEX.md",
+        "llms.txt",
+        "scripts/render_quarto_reference.py",
+        "scripts/lib/roadmap_evidence.py",
+    )
+    + CONSTRUCT_VALIDITY_FILES,
     "genesisbench-lineage-analysis-bundle": (
         "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
         "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -1049,7 +1091,7 @@ BUNDLES: Mapping[str, Sequence[str]] = {
         "docs/spec/GC_AGENT_PROFILE_v0.3.json",
         "scripts/lib/gc_agent_profile.py",
         "scripts/check_gc_agent_profile.sh",
-        "scripts/update_gc_agent_profile.sh",
+        "scripts/update_agent_authoring_bundle.sh",
         "policies/gc_agent_core_card_v0.3.json",
         "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
         "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
@@ -1458,6 +1500,7 @@ BUNDLE_OCCURRENCES = {
     "gc-agent-benchmark-scoring-bundle": 1,
     "gc-agent-benchmark-run-bundle": 1,
     "genesisbench-protocol-bundle": 2,
+    "genesisbench-construct-validity-bundle": 1,
     "genesisbench-lineage-analysis-bundle": 1,
     "gc-agent-held-out-evaluation-bundle": 1,
     "genesisbench-temporal-epochs-bundle": 1,

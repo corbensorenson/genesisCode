@@ -34,8 +34,19 @@ def require(value, message):
 policy = telemetry.load_policy(root)
 require(
     policy["exactDiskEntrypoints"]
-    == ["scripts/check_docs_quickstart.sh", "scripts/check_gate_manifest.sh"]
+    == [
+        "scripts/check_agent_authoring_bundle.sh",
+        "scripts/check_cargo_target_dir_policy.sh",
+        "scripts/check_check_update_boundary.sh",
+        "scripts/check_docs_quickstart.sh",
+        "scripts/check_gate_manifest.sh",
+        "scripts/check_gate_resource_telemetry.sh",
+    ]
+    and telemetry.exact_disk_enabled(policy, "scripts/check_agent_authoring_bundle.sh", None)
+    and telemetry.exact_disk_enabled(policy, "scripts/check_cargo_target_dir_policy.sh", None)
+    and telemetry.exact_disk_enabled(policy, "scripts/check_check_update_boundary.sh", None)
     and telemetry.exact_disk_enabled(policy, "scripts/check_docs_quickstart.sh", None)
+    and telemetry.exact_disk_enabled(policy, "scripts/check_gate_resource_telemetry.sh", None)
     and telemetry.exact_disk_enabled(policy, "scripts/check_gate_manifest.sh", None)
     and not telemetry.exact_disk_enabled(policy, "scripts/check_doc_hygiene.sh", None)
     and telemetry.exact_disk_enabled(policy, "scripts/check_doc_hygiene.sh", "1"),
@@ -161,7 +172,7 @@ proc = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
     "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
     "--out", str(cache_report), "--emit", "none", "--", "bash", "-c", cache_command,
-], cwd=root)
+], cwd=root, env=event_env)
 cache = telemetry.load_json(cache_report)
 require(proc.returncode == 0 and cache["metrics"]["cacheHits"]["value"] >= 1, "Cargo cache reuse event was not observed")
 controls.append("cargo-cache-hit-instrumentation")

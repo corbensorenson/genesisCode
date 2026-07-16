@@ -407,8 +407,16 @@ evaluator, deterministic resource-exhaustion, and package schema/path cases.
 schema closure and retained-byte freshness, runs twenty authority/surface/
 case/source adversarial controls, then compiles and executes the Rust integration
 corpus directly against CoreForm, the kernel, Prelude, and package loader. A
-stale profile fails with `bash scripts/update_gc_agent_profile.sh`; that explicit
+stale profile fails with `bash scripts/update_agent_authoring_bundle.sh profile`; that explicit
 resolver updates only the resolved JSON and cannot alter the reviewed policy.
+
+The same updater is the single mutation surface for the coupled agent-authoring
+trust domain. Its component selectors regenerate one authority and immediately
+validate it; `all` executes profile, canonical examples, task benchmarks,
+held-out openings, scoring, construct validity, benchmark run, protocol fixtures,
+and corpus in dependency order, then runs the complete read-only authoring gate.
+Adding one updater per generated file is forbidden by the governance entrypoint
+budget.
 
 ### Compact agent core card
 

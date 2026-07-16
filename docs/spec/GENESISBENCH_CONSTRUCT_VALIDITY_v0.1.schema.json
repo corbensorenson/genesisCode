@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/genesisbench-construct-validity-v0.1.json",
+  "title": "GenesisBench construct validity report v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "studyId", "bindings", "coverage", "alternatives", "negativeControls", "mutationAnalysis", "maintenance", "nuisanceAnalysis", "statistics", "saturation", "audit", "contentIdentitySha256"],
+  "properties": {
+    "kind": {"const": "genesis/genesisbench-construct-validity-v0.1"},
+    "version": {"const": "0.1.0"},
+    "studyId": {"const": "GenesisBench-Construct-Validity-v0.1"},
+    "bindings": {"$ref": "#/$defs/bindings"},
+    "coverage": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"$ref": "#/$defs/coverage"}},
+    "alternatives": {"type": "array", "minItems": 9, "items": {"$ref": "#/$defs/outcome"}},
+    "negativeControls": {"type": "array", "minItems": 9, "items": {"$ref": "#/$defs/outcome"}},
+    "mutationAnalysis": {"$ref": "#/$defs/mutationAnalysis"},
+    "maintenance": {"$ref": "#/$defs/maintenance"},
+    "nuisanceAnalysis": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"$ref": "#/$defs/nuisance"}},
+    "statistics": {"$ref": "#/$defs/statistics"},
+    "saturation": {"$ref": "#/$defs/saturation"},
+    "audit": {"$ref": "#/$defs/audit"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "bindings": {"type": "object", "additionalProperties": false, "required": ["policySha256", "benchmarkIdentitySha256", "scoringIdentitySha256", "profileSha256", "heldOutIdentitySha256", "scorerRuntimeSha256", "studyRuntimeSha256"], "properties": {"policySha256": {"$ref": "#/$defs/sha256"}, "benchmarkIdentitySha256": {"$ref": "#/$defs/sha256"}, "scoringIdentitySha256": {"$ref": "#/$defs/sha256"}, "profileSha256": {"$ref": "#/$defs/sha256"}, "heldOutIdentitySha256": {"$ref": "#/$defs/sha256"}, "scorerRuntimeSha256": {"$ref": "#/$defs/sha256"}, "studyRuntimeSha256": {"$ref": "#/$defs/sha256"}}},
+    "coverage": {"type": "object", "additionalProperties": false, "required": ["construct", "evidenceIds"], "properties": {"construct": {"type": "string"}, "evidenceIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}}},
+    "outcome": {"type": "object", "additionalProperties": false, "required": ["id", "taskClass", "caseId", "candidateIdentitySha256", "scoreIdentitySha256", "valid", "qualityScoreBasisPoints", "failedDimensions"], "properties": {"id": {"type": "string"}, "taskClass": {"type": "string"}, "caseId": {"type": "string"}, "candidateIdentitySha256": {"$ref": "#/$defs/sha256"}, "scoreIdentitySha256": {"$ref": "#/$defs/sha256"}, "valid": {"type": "boolean"}, "qualityScoreBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}, "failedDimensions": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}}},
+    "mutationAnalysis": {"type": "object", "additionalProperties": false, "required": ["mutants", "killed", "survived", "mutationScoreBasisPoints", "records"], "properties": {"mutants": {"type": "integer", "minimum": 1}, "killed": {"type": "integer", "minimum": 1}, "survived": {"type": "integer", "minimum": 0}, "mutationScoreBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}, "records": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/mutationRecord"}}}},
+    "mutationRecord": {"type": "object", "additionalProperties": false, "required": ["id", "killedBy", "killed"], "properties": {"id": {"type": "string", "minLength": 1}, "killedBy": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "killed": {"const": true}}},
+    "maintenance": {"type": "object", "additionalProperties": false, "required": ["families", "records", "maintained", "maintenanceBasisPoints", "temporalQualityContractLineages", "activeOverlayMaintained"], "properties": {"families": {"type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": {"type": "string"}}, "records": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"$ref": "#/$defs/maintenanceRecord"}}, "maintained": {"type": "integer", "minimum": 5}, "maintenanceBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}, "temporalQualityContractLineages": {"type": "integer", "minimum": 1}, "activeOverlayMaintained": {"const": true}}},
+    "maintenanceRecord": {"type": "object", "additionalProperties": false, "required": ["id", "family", "taskClass", "maintainedCandidateId", "regressionControlId", "evidenceIds", "passed"], "properties": {"id": {"type": "string", "minLength": 1}, "family": {"type": "string", "minLength": 1}, "taskClass": {"type": "string", "minLength": 1}, "maintainedCandidateId": {"type": "string", "minLength": 1}, "regressionControlId": {"type": "string", "minLength": 1}, "evidenceIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "passed": {"const": true}}},
+    "nuisance": {"type": "object", "additionalProperties": false, "required": ["factor", "qualityAuthority", "control", "passed"], "properties": {"factor": {"type": "string"}, "qualityAuthority": {"enum": ["excluded", "executable-evidence-only", "non-ranking-metric"]}, "control": {"type": "string"}, "passed": {"const": true}}},
+    "statistics": {"type": "object", "additionalProperties": false, "required": ["independentUnit", "replicates", "seed", "confidenceBasisPoints", "alternativeAcceptanceBasisPoints", "negativeRejectionBasisPoints", "alternativeAcceptanceInterval", "negativeRejectionInterval"], "properties": {"independentUnit": {"const": "lineageId"}, "replicates": {"type": "integer", "minimum": 1000}, "seed": {"type": "integer"}, "confidenceBasisPoints": {"type": "integer"}, "alternativeAcceptanceBasisPoints": {"type": "integer"}, "negativeRejectionBasisPoints": {"type": "integer"}, "alternativeAcceptanceInterval": {"$ref": "#/$defs/interval"}, "negativeRejectionInterval": {"$ref": "#/$defs/interval"}}},
+    "interval": {"type": "object", "additionalProperties": false, "required": ["lowerBasisPoints", "upperBasisPoints", "method"], "properties": {"lowerBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}, "upperBasisPoints": {"type": "integer", "minimum": 0, "maximum": 10000}, "method": {"const": "deterministic-cluster-bootstrap-percentile-v0.1"}}},
+    "saturation": {"type": "object", "additionalProperties": false, "required": ["thresholdBasisPoints", "families", "consecutiveEpochs", "triggerScenario", "singleEpochScenario", "underThresholdScenario", "publicConformanceExcluded"], "properties": {"thresholdBasisPoints": {"type": "integer"}, "families": {"type": "integer"}, "consecutiveEpochs": {"type": "integer"}, "triggerScenario": {"const": true}, "singleEpochScenario": {"const": false}, "underThresholdScenario": {"const": false}, "publicConformanceExcluded": {"const": true}}},
+    "audit": {"type": "object", "additionalProperties": false, "required": ["strata", "records", "verifiers", "conflicts", "preferenceOracle", "hiddenVerifierCommitmentRequired"], "properties": {"strata": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"type": "string"}}, "records": {"type": "integer", "minimum": 18}, "verifiers": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}}, "conflicts": {"type": "array", "items": {"type": "string"}}, "preferenceOracle": {"const": false}, "hiddenVerifierCommitmentRequired": {"const": true}}}
+  }
+}

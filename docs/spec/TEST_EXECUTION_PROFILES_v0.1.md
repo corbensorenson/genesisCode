@@ -45,7 +45,7 @@ Release-hardening guard lanes:
 - supply-chain policy: `scripts/check_supply_chain.sh` using `cargo-deny` and `deny.toml`
 - release smoke contract: `scripts/check_release_smoke.sh`
 - generated release-note contract: `scripts/check_release_notes.sh`; refresh only with `scripts/update_release_notes.sh`
-- frozen agent authoring surface: `docs/spec/GC_AGENT_PROFILE_v0.3.json`, validated read-only by `scripts/check_gc_agent_profile.sh`; refresh only with `scripts/update_gc_agent_profile.sh`
+- frozen agent authoring surface: `docs/spec/GC_AGENT_PROFILE_v0.3.json`, validated read-only by `scripts/check_gc_agent_profile.sh`; refresh only with `scripts/update_agent_authoring_bundle.sh profile`
 - compact agent card: `docs/spec/GC_AGENT_CORE_CARD_v0.3.md` with machine manifest `docs/spec/GC_AGENT_CORE_CARD_v0.3.json`, validated read-only by `scripts/check_gc_agent_core_card.sh`; refresh only with `scripts/update_gc_agent_core_card.sh`
 - intent-selected task cards: `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` with embedded registry `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`, validated read-only against production `agent-plan` by `scripts/check_gc_agent_task_cards.sh`; refresh only with `scripts/update_gc_agent_task_cards.sh`
 - exact language-symbol index: `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json` under closed schema `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json`, validated read-only against frozen authorities and production `agent-index --symbol` by `scripts/check_gc_agent_symbol_index.sh`; refresh only with `scripts/update_gc_agent_symbol_index.sh`

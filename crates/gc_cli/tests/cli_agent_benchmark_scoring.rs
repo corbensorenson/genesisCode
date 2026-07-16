@@ -103,7 +103,7 @@ fn public_references_score_perfectly_and_deterministically_with_shipped_binary()
         "replay-investigation",
     ];
 
-    let mut repeated_completion = None;
+    let mut repeated_scores = Vec::new();
     for task in tasks {
         let case = small_case(&suite, task);
         let workspace = tempfile::tempdir().expect("isolated scoring candidate");
@@ -137,17 +137,19 @@ fn public_references_score_perfectly_and_deterministically_with_shipped_binary()
             !serialized.contains(root.to_str().expect("UTF-8 repository path")),
             "score report leaked the repository path"
         );
-        if task == "completion" {
-            repeated_completion = Some((case.clone(), workspace, report));
+        if task == "completion" || task == "deployment" {
+            repeated_scores.push((task, case.clone(), workspace, report));
         }
     }
 
-    let (case, workspace, first) = repeated_completion.expect("completion report");
-    let second = score(&root, &case, workspace.path());
-    assert_eq!(
-        first, second,
-        "identical candidates must produce identical scores"
-    );
+    assert_eq!(repeated_scores.len(), 2, "repeated-score coverage drift");
+    for (task, case, workspace, first) in repeated_scores {
+        let second = score(&root, &case, workspace.path());
+        assert_eq!(
+            first, second,
+            "identical {task} candidates must produce identical scores"
+        );
+    }
 }
 
 #[test]
@@ -163,6 +165,63 @@ fn scoring_fails_closed_or_penalizes_independent_adversarial_candidates() {
     assert_eq!(dimension(&wrong_report, "semantics")["scoreBasisPoints"], 0);
     assert_eq!(wrong_report["qualityScoreBasisPoints"], 0);
     assert_eq!(wrong_report["validity"]["passed"], false);
+
+    let deployment = small_case(&suite, "deployment");
+    let empty_plan = tempfile::tempdir().expect("empty deployment-plan candidate");
+    copy_reference(&root, deployment, empty_plan.path());
+    fs::write(empty_plan.path().join("deployment.json"), "{}\n").expect("erase deployment plan");
+    let empty_plan_report = score(&root, deployment, empty_plan.path());
+    assert_eq!(
+        dimension(&empty_plan_report, "semantics")["scoreBasisPoints"],
+        6666
+    );
+    assert_eq!(empty_plan_report["validity"]["passed"], false);
+    assert_eq!(empty_plan_report["qualityScoreBasisPoints"], 0);
+
+    let migration = small_case(&suite, "package-migration");
+    let rebound_package = tempfile::tempdir().expect("rebound package candidate");
+    copy_reference(&root, migration, rebound_package.path());
+    let manifest = rebound_package.path().join("case.toml");
+    let source = fs::read_to_string(&manifest).expect("read migrated package");
+    fs::write(
+        &manifest,
+        source.replace(
+            "name = \"benchmark_package\"",
+            "name = \"benchmark_impostor\"",
+        ),
+    )
+    .expect("rebind migrated package");
+    let rebound_report = score(&root, migration, rebound_package.path());
+    assert_eq!(
+        dimension(&rebound_report, "semantics")["scoreBasisPoints"],
+        5000
+    );
+    assert_eq!(rebound_report["validity"]["passed"], false);
+    assert_eq!(rebound_report["qualityScoreBasisPoints"], 0);
+
+    let repair = small_case(&suite, "repair");
+    let constant_repair = tempfile::tempdir().expect("constant repair candidate");
+    copy_reference(&root, repair, constant_repair.path());
+    fs::write(constant_repair.path().join("main.gc"), "3\n").expect("replace repair with constant");
+    let constant_report = score(&root, repair, constant_repair.path());
+    assert_eq!(
+        dimension(&constant_report, "semantics")["scoreBasisPoints"],
+        3333
+    );
+    assert_eq!(constant_report["validity"]["passed"], false);
+    assert_eq!(constant_report["qualityScoreBasisPoints"], 0);
+
+    let replay = small_case(&suite, "replay-investigation");
+    let empty_finding = tempfile::tempdir().expect("empty replay-finding candidate");
+    copy_reference(&root, replay, empty_finding.path());
+    fs::write(empty_finding.path().join("finding.json"), "{}\n").expect("erase replay finding");
+    let empty_finding_report = score(&root, replay, empty_finding.path());
+    assert_eq!(
+        dimension(&empty_finding_report, "semantics")["scoreBasisPoints"],
+        5000
+    );
+    assert_eq!(empty_finding_report["validity"]["passed"], false);
+    assert_eq!(empty_finding_report["qualityScoreBasisPoints"], 0);
 
     let policy_case = small_case(&suite, "policy-minimization");
     let broad = tempfile::tempdir().expect("broad-policy candidate");

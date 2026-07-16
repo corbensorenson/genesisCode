@@ -359,6 +359,34 @@ def validate_scoring(document: Any, *, check_identity: bool = True) -> dict[str,
     return doc
 
 
+def render_scoring(document: Any) -> dict[str, Any]:
+    """Refresh every derived authority binding from canonical repository inputs."""
+    doc = copy.deepcopy(document)
+    suite = load_json(BENCHMARK)
+    doc["benchmark"] = {
+        "id": "GC-AGENT-TASK-BENCHMARK-v0.1",
+        "path": "benchmarks/agent_tasks/v0.1/suite.json",
+        "sha256": file_sha256(BENCHMARK),
+        "contentIdentitySha256": suite["contentIdentitySha256"],
+    }
+    doc["profile"] = {
+        "id": "GC-AGENT-v0.3",
+        "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+        "sha256": file_sha256(PROFILE),
+    }
+    doc["implementation"] = {
+        "runtimePath": "scripts/lib/gc_agent_scoring.py",
+        "runtimeSha256": file_sha256(SCORER_RUNTIME),
+        "contractPath": "scripts/lib/gc_agent_scoring_contract.py",
+        "contractSha256": file_sha256(SCORER_CONTRACT),
+        "integrationTestPath": "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs",
+        "integrationTestSha256": file_sha256(SCORER_TEST),
+    }
+    doc["contentIdentitySha256"] = ""
+    doc["contentIdentitySha256"] = content_identity(doc, "contentIdentitySha256")
+    return validate_scoring(doc)
+
+
 def validate_score(document: Any) -> dict[str, Any]:
     doc = closed(
         document,

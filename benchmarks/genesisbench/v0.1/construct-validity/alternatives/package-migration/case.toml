@@ -1,0 +1,14 @@
+# Ordering and comments are intentionally non-reference syntax.
+name = "benchmark_package"
+version = "0.1.0"
+schema = 1
+tests = []
+obligations = []
+dependencies = []
+
+[[modules]]
+path = "main.gc"
+
+[limits]
+allow_unlimited = false
+step_limit = 100000

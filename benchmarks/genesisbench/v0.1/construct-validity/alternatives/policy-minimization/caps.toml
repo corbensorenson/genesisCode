@@ -1,0 +1,5 @@
+# Exact authority with an equivalent source layout.
+allow = ["io/fs::read"]
+
+[op."io/fs::read"]
+base_dir = "."

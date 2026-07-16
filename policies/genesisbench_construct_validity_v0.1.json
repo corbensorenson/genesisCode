@@ -1,0 +1,60 @@
+{
+  "kind": "genesis/genesisbench-construct-validity-policy-v0.1",
+  "version": "0.1.0",
+  "studyId": "GenesisBench-Construct-Validity-v0.1",
+  "caseTier": "small",
+  "constructs": [
+    "diagnostic-recovery",
+    "maintainable-patch-quality",
+    "minimal-authority",
+    "obligation-preservation",
+    "repository-localization",
+    "resource-boundedness",
+    "semantic-correctness"
+  ],
+  "nuisanceFactors": [
+    "formatting",
+    "model-identity",
+    "oracle-leakage",
+    "prompt-length",
+    "provider-latency",
+    "syntax-imitation",
+    "task-specific-recognizer"
+  ],
+  "maintenanceFamilies": [
+    "defect-repair",
+    "follow-on-requirement",
+    "performance-constraint",
+    "policy-tightening",
+    "profile-migration"
+  ],
+  "alternativeDesignPolicy": {
+    "exactReferenceBytesRequired": false,
+    "behavioralVerificationRequired": true,
+    "artifactContractsMayRequireExactData": true,
+    "propertyAndMetamorphicTestsRequired": true,
+    "capabilityResourceAndApiEnvelopesRequired": true
+  },
+  "statistics": {
+    "independentUnit": "lineageId",
+    "bootstrapReplicates": 10000,
+    "bootstrapSeed": 17012026,
+    "confidenceBasisPoints": 9500,
+    "saturationThresholdBasisPoints": 9000,
+    "saturationFamilies": 3,
+    "saturationConsecutiveEpochs": 2
+  },
+  "audit": {
+    "strata": ["construct", "outcomeClass", "taskClass"],
+    "minimumVerifiers": 2,
+    "modelOrHumanPreferenceIsOracle": false,
+    "conflictDisclosureRequired": true,
+    "hiddenVerifierCommitmentRequiredForRanking": true
+  },
+  "primaryReferences": [
+    {"id": "evalplus", "url": "https://arxiv.org/abs/2305.01210", "principle": "mutation-amplified-functional-tests"},
+    {"id": "livecodebench", "url": "https://arxiv.org/abs/2403.07974", "principle": "fresh-holistic-code-evaluation"},
+    {"id": "swe-bench", "url": "https://arxiv.org/abs/2310.06770", "principle": "repository-level-software-engineering"},
+    {"id": "swe-bench-live", "url": "https://arxiv.org/abs/2505.23419", "principle": "live-updatable-reproducible-tasks"}
+  ]
+}

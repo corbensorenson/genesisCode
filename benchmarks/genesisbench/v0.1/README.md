@@ -15,3 +15,9 @@ python3 scripts/lib/genesisbench_analysis.py --check --self-test
 ```
 
 The report counts missing, invalid, abstained, solved, and unsolved cells exactly; computes headline solve intervals over one primary condition per lineage; keeps context ablations clustered by lineage; applies paired exact tests and Holm correction; and refuses rank or saturation claims for public conformance evidence.
+
+`construct-validity/` contains the R1.4.n executable study rather than model results. Its nine alternative overlays deliberately differ from the public reference bytes while satisfying the same behavioral, artifact, obligation, capability, resource, and metamorphic contracts. Its report also records one targeted invalid control per task class, ten killed evaluator/scorer mutants, maintenance and saturation controls, and lineage-level deterministic bootstrap intervals. The shipped-binary Rust test regenerates the report byte-for-byte; the read-only static validator is:
+
+```sh
+python3 scripts/lib/genesisbench_construct_validity.py --check --self-test
+```

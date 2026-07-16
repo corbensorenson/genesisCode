@@ -1,0 +1,6 @@
+(def benchmark/repair::lookup
+  (fn (seed)
+    (let ((m (prim map/put {:a 1} (quote :b) seed)))
+      (prim map/get m (quote :b)))))
+
+(benchmark/repair::lookup 3)

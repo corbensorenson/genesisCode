@@ -1,0 +1,518 @@
+{
+  "alternatives": [
+    {
+      "candidateIdentitySha256": "d9fce3b227fc9a111c2a35ff578d57f4dbdd62e1f53a2649ada9ccd6cebba886",
+      "caseId": "completion-small",
+      "failedDimensions": [],
+      "id": "alternative-completion",
+      "qualityScoreBasisPoints": 9973,
+      "scoreIdentitySha256": "e3262a727a4fbe16c4de0f1452cd8efadb9876bba38538bff49733ad689aa117",
+      "taskClass": "completion",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "cc7be16ad5d91367ef7698f0913844541445b44299e22edf67b8d96a2b9e40e8",
+      "caseId": "deployment-small",
+      "failedDimensions": [],
+      "id": "alternative-deployment",
+      "qualityScoreBasisPoints": 9977,
+      "scoreIdentitySha256": "7f375bf47c77de320f730300685acd705bcace8566a93c67c55f563f4e0b4c02",
+      "taskClass": "deployment",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "240c767e6ce1c19533969c16a3ab8ab8a73c9f25817e3451bd75ce6e6a4b0a15",
+      "caseId": "generation-small",
+      "failedDimensions": [],
+      "id": "alternative-generation",
+      "qualityScoreBasisPoints": 9893,
+      "scoreIdentitySha256": "04490292fbd568feac6ee42e3dedbf71b96c68ee4293c3f8cd5b6f0cd034c80a",
+      "taskClass": "generation",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "3035bfe690d1a5964814cbda9db3fda670b25d4625bec45a35a31da1b4914752",
+      "caseId": "package-migration-small",
+      "failedDimensions": [],
+      "id": "alternative-package-migration",
+      "qualityScoreBasisPoints": 9784,
+      "scoreIdentitySha256": "11622ec88c2349d37da314410cdaf148b89c2f1422cc6fb82fa0a164f7e88d4b",
+      "taskClass": "package-migration",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "fb8a6746c7daa0693d19146b496413884e022fa97dd1a562b29b0907f1b07973",
+      "caseId": "performance-repair-small",
+      "failedDimensions": [],
+      "id": "alternative-performance-repair",
+      "qualityScoreBasisPoints": 9932,
+      "scoreIdentitySha256": "69265e1eaaf6dbbbbb113ede1034ce2b927feff94137e0aa4307fe39d651ff71",
+      "taskClass": "performance-repair",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "3b66de892ab59f59f37dfa7dec0c9d70efeff8da8f73f3b06e59560b0e202af2",
+      "caseId": "policy-minimization-small",
+      "failedDimensions": [],
+      "id": "alternative-policy-minimization",
+      "qualityScoreBasisPoints": 9853,
+      "scoreIdentitySha256": "421e5663ae4bfac45d9540e813a6adc3555dea2b27d1b3c4524a7533dabad1cd",
+      "taskClass": "policy-minimization",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "ccb1420f69f69225b33b622896d64d31d5e8c98e4de32efaa251c203fa1678bb",
+      "caseId": "refactor-small",
+      "failedDimensions": [],
+      "id": "alternative-refactor",
+      "qualityScoreBasisPoints": 9995,
+      "scoreIdentitySha256": "5f63a958d576e45e3243a61a6b0d7c4447a9137c96bb683117f80693e7790ded",
+      "taskClass": "refactor",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "c17d1c60779eb8a73c74cf836bda391109f5a1dcf23b897ae1288d9a7309b66e",
+      "caseId": "repair-small",
+      "failedDimensions": [],
+      "id": "alternative-repair",
+      "qualityScoreBasisPoints": 9671,
+      "scoreIdentitySha256": "c043075b1e0813a772c19c44cfe742d8377d22ec6a65673cfb94c88ab22ac28a",
+      "taskClass": "repair",
+      "valid": true
+    },
+    {
+      "candidateIdentitySha256": "89f7dc474fa6d7f4c259e83cf6c3f54157e72561cc2f2a5ed4d544c856d0b9e7",
+      "caseId": "replay-investigation-small",
+      "failedDimensions": [],
+      "id": "alternative-replay-investigation",
+      "qualityScoreBasisPoints": 9970,
+      "scoreIdentitySha256": "a48c89aecc660e6590d3689040db2e27bdc3ff4dd8a728dbd7ec1f49c289e48e",
+      "taskClass": "replay-investigation",
+      "valid": true
+    }
+  ],
+  "audit": {
+    "conflicts": [],
+    "hiddenVerifierCommitmentRequired": true,
+    "preferenceOracle": false,
+    "records": 18,
+    "strata": [
+      "construct",
+      "outcomeClass",
+      "taskClass"
+    ],
+    "verifiers": [
+      "gc-agent-scoring-v0.1",
+      "genesisbench-construct-validity-v0.1"
+    ]
+  },
+  "bindings": {
+    "benchmarkIdentitySha256": "e7ff3292809daffa0709e99be8168b3bfdc9d7876007e9b777668eda40144f6f",
+    "heldOutIdentitySha256": "3fd1eaa784d631679372e036cb678ce014ff2280657245a3c4e163c0943e2adf",
+    "policySha256": "46e599503def80b6da9891a9d4235ccc8f1a88f69d82c5bdba7e2cab99533fcf",
+    "profileSha256": "01cb6905dadf1b44b5115fc3e3341afad7e8d299ed9f4d12af2f6bd704226d6d",
+    "scorerRuntimeSha256": "9a78a2def8f3ac7d14605821004404c1caa0331a5db5d04de2e66daac493db2c",
+    "scoringIdentitySha256": "115f18c838ad6ce85fb10535948c128659b20ade8789509cc712e0a04977d529",
+    "studyRuntimeSha256": "8ef750406b50d6ea22fb5c43ce076a7b11d42e1e963446c67d029f3b4f94bb06"
+  },
+  "contentIdentitySha256": "bc90de57c3fb30f1ecce967aa0e7368fcde4fae4e68324b97c69f745645ca12e",
+  "coverage": [
+    {
+      "construct": "diagnostic-recovery",
+      "evidenceIds": [
+        "artifact-contract",
+        "negative-replay-investigation"
+      ]
+    },
+    {
+      "construct": "maintainable-patch-quality",
+      "evidenceIds": [
+        "alternative-refactor",
+        "temporal-quality-contracts"
+      ]
+    },
+    {
+      "construct": "minimal-authority",
+      "evidenceIds": [
+        "negative-policy-minimization",
+        "policy-scope"
+      ]
+    },
+    {
+      "construct": "obligation-preservation",
+      "evidenceIds": [
+        "negative-package-migration",
+        "obligation-identity"
+      ]
+    },
+    {
+      "construct": "repository-localization",
+      "evidenceIds": [
+        "negative-generation",
+        "negative-refactor"
+      ]
+    },
+    {
+      "construct": "resource-boundedness",
+      "evidenceIds": [
+        "negative-performance-repair",
+        "resource-use"
+      ]
+    },
+    {
+      "construct": "semantic-correctness",
+      "evidenceIds": [
+        "alternative-repair",
+        "metamorphic-execution",
+        "negative-completion"
+      ]
+    }
+  ],
+  "kind": "genesis/genesisbench-construct-validity-v0.1",
+  "maintenance": {
+    "activeOverlayMaintained": true,
+    "families": [
+      "defect-repair",
+      "follow-on-requirement",
+      "performance-constraint",
+      "policy-tightening",
+      "profile-migration"
+    ],
+    "maintained": 5,
+    "maintenanceBasisPoints": 10000,
+    "records": [
+      {
+        "evidenceIds": [
+          "artifact-contract",
+          "metamorphic-execution"
+        ],
+        "family": "defect-repair",
+        "id": "maintenance-defect-repair",
+        "maintainedCandidateId": "alternative-repair",
+        "passed": true,
+        "regressionControlId": "negative-repair",
+        "taskClass": "repair"
+      },
+      {
+        "evidenceIds": [
+          "unseen-seed-5",
+          "unseen-seed-8"
+        ],
+        "family": "follow-on-requirement",
+        "id": "maintenance-follow-on-requirement",
+        "maintainedCandidateId": "alternative-repair",
+        "passed": true,
+        "regressionControlId": "negative-repair",
+        "taskClass": "repair"
+      },
+      {
+        "evidenceIds": [
+          "finite-resource-envelope"
+        ],
+        "family": "performance-constraint",
+        "id": "maintenance-performance-constraint",
+        "maintainedCandidateId": "alternative-performance-repair",
+        "passed": true,
+        "regressionControlId": "negative-performance-repair",
+        "taskClass": "performance-repair"
+      },
+      {
+        "evidenceIds": [
+          "exact-authority-envelope"
+        ],
+        "family": "policy-tightening",
+        "id": "maintenance-policy-tightening",
+        "maintainedCandidateId": "alternative-policy-minimization",
+        "passed": true,
+        "regressionControlId": "negative-policy-minimization",
+        "taskClass": "policy-minimization"
+      },
+      {
+        "evidenceIds": [
+          "obligation-identity",
+          "schema-2-artifact-contract"
+        ],
+        "family": "profile-migration",
+        "id": "maintenance-profile-migration",
+        "maintainedCandidateId": "alternative-package-migration",
+        "passed": true,
+        "regressionControlId": "negative-package-migration",
+        "taskClass": "package-migration"
+      }
+    ],
+    "temporalQualityContractLineages": 90
+  },
+  "mutationAnalysis": {
+    "killed": 10,
+    "mutants": 10,
+    "mutationScoreBasisPoints": 10000,
+    "records": [
+      {
+        "id": "accept-exact-reference-only",
+        "killed": true,
+        "killedBy": [
+          "alternative-completion",
+          "alternative-deployment",
+          "alternative-generation",
+          "alternative-package-migration",
+          "alternative-performance-repair",
+          "alternative-policy-minimization",
+          "alternative-refactor",
+          "alternative-repair",
+          "alternative-replay-investigation"
+        ]
+      },
+      {
+        "id": "drop-artifact-contracts",
+        "killed": true,
+        "killedBy": [
+          "negative-deployment",
+          "negative-package-migration",
+          "negative-replay-investigation"
+        ]
+      },
+      {
+        "id": "drop-editable-scope",
+        "killed": true,
+        "killedBy": [
+          "negative-generation",
+          "negative-refactor"
+        ]
+      },
+      {
+        "id": "drop-metamorphic-execution",
+        "killed": true,
+        "killedBy": [
+          "negative-repair"
+        ]
+      },
+      {
+        "id": "drop-obligation-preservation",
+        "killed": true,
+        "killedBy": [
+          "negative-package-migration"
+        ]
+      },
+      {
+        "id": "drop-policy-scope",
+        "killed": true,
+        "killedBy": [
+          "negative-policy-minimization"
+        ]
+      },
+      {
+        "id": "drop-resource-envelope",
+        "killed": true,
+        "killedBy": [
+          "negative-performance-repair"
+        ]
+      },
+      {
+        "id": "drop-semantic-gate",
+        "killed": true,
+        "killedBy": [
+          "negative-completion",
+          "negative-performance-repair"
+        ]
+      },
+      {
+        "id": "trust-oracle-marker",
+        "killed": true,
+        "killedBy": [
+          "negative-generation"
+        ]
+      },
+      {
+        "id": "trust-provider-or-model-metadata",
+        "killed": true,
+        "killedBy": [
+          "scorer-has-no-model-or-latency-input"
+        ]
+      }
+    ],
+    "survived": 0
+  },
+  "negativeControls": [
+    {
+      "candidateIdentitySha256": "a22250eff70125f44e615a3f1d8092311b35b9399f5da027215f1970974e528c",
+      "caseId": "completion-small",
+      "failedDimensions": [
+        "semantics"
+      ],
+      "id": "negative-completion",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "b8e367f5fd4b4ae05c24f5320161edb7ec15216a94c98464db2ae17dea6f4ccf",
+      "taskClass": "completion",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "06fc4d986f22f9cc7f370d29acdba2e35cddeefb55c162e55659b4b49f214eb1",
+      "caseId": "deployment-small",
+      "failedDimensions": [
+        "semantics"
+      ],
+      "id": "negative-deployment",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "27d8dd0f4655546c3366255586970e6a312f8e55791471788078bed404254a7a",
+      "taskClass": "deployment",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "f8862fa12aa67c8345e1ee3f7bf31bdb41b27490079c4ab0b20a4bf1b5a2a40f",
+      "caseId": "generation-small",
+      "failedDimensions": [
+        "editable-scope"
+      ],
+      "id": "negative-generation",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "744a6e454978bd5ae65cb7feca883a78af7bc6f9dadceedb249282707c2c4e82",
+      "taskClass": "generation",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "3ba940ce9df2ef3066d17a0cfb0415cad75e5ea7ab8401bf4a3e16e442aee12b",
+      "caseId": "package-migration-small",
+      "failedDimensions": [
+        "semantics"
+      ],
+      "id": "negative-package-migration",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "d59027530b9bf255ea7618d70f91a0b862d22ae2326e6910bf011d58a47ab179",
+      "taskClass": "package-migration",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "ccf1f19c2ac1842e15d74c426e640627366519d8f5452653fcbd762375b97ac4",
+      "caseId": "performance-repair-small",
+      "failedDimensions": [
+        "semantics"
+      ],
+      "id": "negative-performance-repair",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "204e5ee08dc53c18e01004947a8b53f4124c6c43e5c751a9753bb7ffba11d02a",
+      "taskClass": "performance-repair",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "10b01bca501c0c55e61a803eed77a00f66944ad2deeb83ddbd278e97ab6500fb",
+      "caseId": "policy-minimization-small",
+      "failedDimensions": [
+        "policy-scope"
+      ],
+      "id": "negative-policy-minimization",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "ade01fdf521c7c52941d571bc11feebdb9dbf4cdbbfab60e2f46e4da08bd273b",
+      "taskClass": "policy-minimization",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "e9d5e9edff8b1ea90c5dad19ff262939b9536b81663ed26a717055d94270a368",
+      "caseId": "refactor-small",
+      "failedDimensions": [
+        "editable-scope"
+      ],
+      "id": "negative-refactor",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "628a2f6e2c68bea34ddce70420bf335540916e2a12751c23fa865e08a5793550",
+      "taskClass": "refactor",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "9ef4fa142021e1f23735825583b47445767bd8a0e994bea8a9ce05169e219a79",
+      "caseId": "repair-small",
+      "failedDimensions": [
+        "semantics"
+      ],
+      "id": "negative-repair",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "949c3449404336788c22143e4f435f421379f6193d0622f23906445b07133aa8",
+      "taskClass": "repair",
+      "valid": false
+    },
+    {
+      "candidateIdentitySha256": "3c0e6f468e6a3e3222c6166ecf8eded765d6c55d455802b1d0210d9b61ee11ec",
+      "caseId": "replay-investigation-small",
+      "failedDimensions": [
+        "semantics"
+      ],
+      "id": "negative-replay-investigation",
+      "qualityScoreBasisPoints": 0,
+      "scoreIdentitySha256": "0495cab7b5e026193ade4368c8a2382c6190626f35f267a71d7ec007457105a2",
+      "taskClass": "replay-investigation",
+      "valid": false
+    }
+  ],
+  "nuisanceAnalysis": [
+    {
+      "control": "noncanonical-json-toml-and-source-alternatives",
+      "factor": "formatting",
+      "passed": true,
+      "qualityAuthority": "executable-evidence-only"
+    },
+    {
+      "control": "scorer-api-has-no-model-identity-input",
+      "factor": "model-identity",
+      "passed": true,
+      "qualityAuthority": "excluded"
+    },
+    {
+      "control": "undeclared-oracle-file-fails-editable-scope",
+      "factor": "oracle-leakage",
+      "passed": true,
+      "qualityAuthority": "executable-evidence-only"
+    },
+    {
+      "control": "lineage-bound-prompt-is-not-a-score-input",
+      "factor": "prompt-length",
+      "passed": true,
+      "qualityAuthority": "excluded"
+    },
+    {
+      "control": "model-specific-latency-is-excluded-from-quality",
+      "factor": "provider-latency",
+      "passed": true,
+      "qualityAuthority": "non-ranking-metric"
+    },
+    {
+      "control": "artifact-and-metamorphic-controls-reject-shallow-matches",
+      "factor": "syntax-imitation",
+      "passed": true,
+      "qualityAuthority": "executable-evidence-only"
+    },
+    {
+      "control": "unseen-seed-metamorphic-execution",
+      "factor": "task-specific-recognizer",
+      "passed": true,
+      "qualityAuthority": "executable-evidence-only"
+    }
+  ],
+  "saturation": {
+    "consecutiveEpochs": 2,
+    "families": 3,
+    "publicConformanceExcluded": true,
+    "singleEpochScenario": false,
+    "thresholdBasisPoints": 9000,
+    "triggerScenario": true,
+    "underThresholdScenario": false
+  },
+  "statistics": {
+    "alternativeAcceptanceBasisPoints": 10000,
+    "alternativeAcceptanceInterval": {
+      "lowerBasisPoints": 10000,
+      "method": "deterministic-cluster-bootstrap-percentile-v0.1",
+      "upperBasisPoints": 10000
+    },
+    "confidenceBasisPoints": 9500,
+    "independentUnit": "lineageId",
+    "negativeRejectionBasisPoints": 10000,
+    "negativeRejectionInterval": {
+      "lowerBasisPoints": 10000,
+      "method": "deterministic-cluster-bootstrap-percentile-v0.1",
+      "upperBasisPoints": 10000
+    },
+    "replicates": 10000,
+    "seed": 17012026
+  },
+  "studyId": "GenesisBench-Construct-Validity-v0.1",
+  "version": "0.1.0"
+}

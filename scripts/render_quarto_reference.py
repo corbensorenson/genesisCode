@@ -358,6 +358,8 @@ def render_llms(symbol_doc: dict[str, Any], cap_doc: dict[str, Any], diag_doc: d
         "- Model-agnostic benchmark scoring: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
         "- Benchmark score schema: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
         "- Reproducible benchmark run schema: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+        "- GenesisBench construct-validity policy: https://corbensorenson.github.io/genesisCode/policies/genesisbench_construct_validity_v0.1.json",
+        "- GenesisBench construct-validity report: https://corbensorenson.github.io/genesisCode/benchmarks/genesisbench/v0.1/construct-validity/report.json",
         "- Local benchmark model effect: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.html",
         "- Canonical reproducible run: https://corbensorenson.github.io/genesisCode/examples/agent_benchmark_reproducibility/run.json",
         "- Held-out commitments (public ledger only; never retrieve private custody): https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",

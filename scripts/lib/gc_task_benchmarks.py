@@ -21,50 +21,63 @@ TASKS: dict[str, dict[str, Any]] = {
     "completion": {
         "prompt": "Replace the single __HOLE__ token with the smallest pure expression that makes main.gc evaluate to 42.",
         "editable": ["main.gc"],
-        "steps": [["execute", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "42"]]]],
+        "artifact_assertions": [],
+        "steps": [["execute", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "42"]], None]],
     },
     "deployment": {
         "prompt": "Add the closed deployment plan, then package and build the service target without broadening the empty capability policy.",
         "editable": ["deployment.json"],
+        "artifact_assertions": [["deployment.json", "json", "", "equals", {"policy": "caps.toml", "target": "service", "verification": "build-and-provenance"}]],
         "steps": [
-            ["package", ["--json", "pack", "--pkg", "package.toml"], 0, True, "genesis/pack-v0.2", []],
-            ["build", ["--json", "gcpm", "--caps", "caps.toml", "build", "--pkg", "package.toml", "--target", "service", "--out-dir", "dist"], 0, True, "genesis/pkg-build-v0.1", [["/data/report/target", "equals", "service"]]],
+            ["package", ["--json", "pack", "--pkg", "package.toml"], 0, True, "genesis/pack-v0.2", [], None],
+            ["build", ["--json", "gcpm", "--caps", "caps.toml", "build", "--pkg", "package.toml", "--target", "service", "--out-dir", "dist"], 0, True, "genesis/pkg-build-v0.1", [["/data/report/target", "equals", "service"]], None],
         ],
     },
     "generation": {
         "prompt": "Generate main.gc from requirements.md as a pure, capability-free program with the exact integer result 42.",
         "editable": ["main.gc"],
-        "steps": [["execute", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "42"]]]],
+        "artifact_assertions": [],
+        "steps": [["execute", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "42"]], None]],
     },
     "package-migration": {
         "prompt": "Migrate case.toml from unsupported schema 2 to schema 1, retaining the package identity and module while adding finite limits.",
         "editable": ["case.toml"],
-        "steps": [["typecheck", ["--json", "typecheck", "--pkg", "case.toml"], 0, True, "genesis/typecheck-v0.2", [["/data/strict_sound", "equals", False]]]],
+        "artifact_assertions": [["case.toml", "toml", "", "equals", {"schema": 1, "name": "benchmark_package", "version": "0.1.0", "dependencies": [], "obligations": [], "tests": [], "limits": {"step_limit": 100000, "allow_unlimited": False}, "modules": [{"path": "main.gc"}]}]],
+        "steps": [["typecheck", ["--json", "typecheck", "--pkg", "case.toml"], 0, True, "genesis/typecheck-v0.2", [["/data/strict_sound", "equals", False]], None]],
     },
     "performance-repair": {
         "prompt": "Replace the exponential closed computation with a semantics-preserving result that succeeds under a ten-step evaluator budget.",
         "editable": ["main.gc"],
-        "steps": [["budgeted-execute", ["--json", "--step-limit", "10", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "6765"]]]],
+        "artifact_assertions": [],
+        "steps": [["budgeted-execute", ["--json", "--step-limit", "10", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "6765"]], None]],
     },
     "policy-minimization": {
         "prompt": "Grant exactly the capability required by program.gc to read data.txt; do not alter the program or add wildcard authority.",
         "editable": ["caps.toml"],
-        "steps": [["authorized-run", ["--json", "run", "program.gc", "--caps", "caps.toml", "--log", "effect.gclog"], 0, True, "genesis/run-v0.2", [["/data/denied", "equals", False], ["/data/value", "equals", "22"]]]],
+        "artifact_assertions": [],
+        "steps": [["authorized-run", ["--json", "run", "program.gc", "--caps", "caps.toml", "--log", "effect.gclog"], 0, True, "genesis/run-v0.2", [["/data/denied", "equals", False], ["/data/value", "equals", "22"]], None]],
     },
     "refactor": {
         "prompt": "Remove the unnecessary local bindings from main.gc while preserving the exact pure result and introducing no capability.",
         "editable": ["main.gc"],
-        "steps": [["execute", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "42"]]]],
+        "artifact_assertions": [],
+        "steps": [["execute", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "42"]], None]],
     },
     "repair": {
         "prompt": "Repair the collection lookup so main.gc evaluates successfully to 3; change only main.gc and keep persistent data semantics.",
         "editable": ["main.gc"],
-        "steps": [["execute", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "3"]]]],
+        "artifact_assertions": [],
+        "steps": [
+            ["execute-default", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "3"]], None],
+            ["execute-metamorphic-five", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "5"]], ["main.gc", "\n(benchmark/repair::lookup 5)\n"]],
+            ["execute-metamorphic-eight", ["--json", "eval", "main.gc"], 0, True, "genesis/eval-v0.2", [["/data/value", "equals", "8"]], ["main.gc", "\n(benchmark/repair::lookup 8)\n"]],
+        ],
     },
     "replay-investigation": {
         "prompt": "Investigate the deterministic replay failure and add finding.json with the exact mismatch class, entry, and safe remediation; never repair or trust the log.",
         "editable": ["finding.json"],
-        "steps": [["confirm-mismatch", ["--json", "replay", "program.gc", "--log", "run.gclog"], 40, False, "genesis/error-v0.2", [["/error/code", "equals", "replay/mismatch"]]]],
+        "artifact_assertions": [["finding.json", "json", "", "equals", {"code": "replay/mismatch", "classification": "response-hash-divergence", "entryIndex": 0, "recommendedAction": "reject-log-and-regenerate-from-authorized-run"}]],
+        "steps": [["confirm-mismatch", ["--json", "replay", "program.gc", "--log", "run.gclog"], 40, False, "genesis/error-v0.2", [["/error/code", "equals", "replay/mismatch"]], None]],
     },
 }
 
@@ -164,6 +177,13 @@ def assertions(rows: list[list[Any]]) -> list[dict[str, Any]]:
     return [{"pointer": pointer, "operator": operator, "value": value} for pointer, operator, value in rows]
 
 
+def artifact_assertions(rows: list[list[Any]]) -> list[dict[str, Any]]:
+    return [
+        {"path": path, "format": format_id, "pointer": pointer, "operator": operator, "value": value}
+        for path, format_id, pointer, operator, value in rows
+    ]
+
+
 def render_document() -> dict[str, Any]:
     profile_hash = sha256(safe_path(PROFILE).read_bytes()).hexdigest()
     tiers = []
@@ -185,9 +205,18 @@ def render_document() -> dict[str, Any]:
         if not changed or not set(changed).issubset(config["editable"]):
             raise BenchmarkError(f"{task_id} changed paths exceed editable surface: {changed}")
         steps = [
-            {"id": step_id, "argv": argv, "exitCode": code, "ok": ok, "kind": kind, "assertions": assertions(checks)}
-            for step_id, argv, code, ok, kind, checks in config["steps"]
+            {
+                "id": step_id,
+                "argv": argv,
+                "exitCode": code,
+                "ok": ok,
+                "kind": kind,
+                "assertions": assertions(checks),
+                "sourceAppend": None if source_append is None else {"path": source_append[0], "source": source_append[1]},
+            }
+            for step_id, argv, code, ok, kind, checks, source_append in config["steps"]
         ]
+        artifact_checks = artifact_assertions(config["artifact_assertions"])
         lineage = identified({
             "id": f"lineage-{task_id}-001",
             "taskClass": task_id,
@@ -199,6 +228,7 @@ def render_document() -> dict[str, Any]:
             "editablePaths": config["editable"],
             "changedPaths": changed,
             "oracleExposure": "public-development-reference",
+            "artifactAssertions": artifact_checks,
             "verification": steps,
         })
         lineages.append(lineage)
@@ -237,6 +267,7 @@ def render_document() -> dict[str, Any]:
                 "changedPaths": changed,
                 "contextBytes": tier_bytes[tier_id] + input_bytes + prompt_bytes,
                 "oracleExposure": "public-development-reference",
+                "artifactAssertions": artifact_checks,
                 "verification": steps,
             })
     document = {
@@ -317,6 +348,8 @@ def self_test(document: dict[str, Any]) -> int:
         ("changed-surface", lambda d: d["cases"][0]["changedPaths"].append("caps.toml")),
         ("context-drift", lambda d: d["cases"][0].__setitem__("contextBytes", 1)),
         ("reference-tamper", lambda d: d["cases"][0]["referenceFiles"][0].__setitem__("sha256", "f" * 64)),
+        ("artifact-oracle-tamper", lambda d: d["cases"][3]["artifactAssertions"][0].__setitem__("value", {})),
+        ("metamorphic-oracle-tamper", lambda d: d["cases"][21]["verification"][1]["sourceAppend"].__setitem__("source", "\n3\n")),
     ]
     passed = 0
     for name, mutate in mutations:
@@ -333,11 +366,19 @@ def self_test(document: dict[str, Any]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--refresh", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
-    if not args.check:
-        parser.error("--check is required; this validator never writes evidence")
+    if args.refresh:
+        if args.self_test:
+            parser.error("--refresh does not run mutation controls")
+        document = render_document()
+        SUITE.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        validate(document)
+        print(f"gc-task-benchmarks: refreshed {SUITE.relative_to(ROOT)}")
+        return 0
     document = validate(load_json(SUITE))
     controls = self_test(document) if args.self_test else 0
     print(f"gc-task-benchmarks: ok (cases={len(document['cases'])} tasks={len(TASKS)} controls={controls} identity={document['contentIdentitySha256']})")

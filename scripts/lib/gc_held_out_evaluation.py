@@ -465,6 +465,18 @@ def resign_document(document: dict[str, Any]) -> None:
     document["contentIdentitySha256"] = content_identity(document)
 
 
+def refresh_profile_bindings(document: Any) -> dict[str, Any]:
+    """Refresh only the frozen language-profile digest; commitments stay immutable."""
+    doc = copy.deepcopy(document)
+    profile_sha = hashlib.sha256(
+        (ROOT / "docs/spec/GC_AGENT_PROFILE_v0.3.json").read_bytes()
+    ).hexdigest()
+    for epoch in doc["epochs"]:
+        epoch["profile"]["sha256"] = profile_sha
+    resign_document(doc)
+    return validate(doc)
+
+
 def self_test(document: dict[str, Any]) -> int:
     active_index = next(i for i, row in enumerate(document["epochs"]) if row["status"] == "active")
     controls: list[tuple[str, Any, bool]] = [
@@ -514,12 +526,22 @@ def self_test(document: dict[str, Any]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--refresh-profile", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--verify-private", type=Path)
     parser.add_argument("--audit-out", type=Path)
     args = parser.parse_args()
-    require(args.check or args.verify_private is not None, "select --check or --verify-private")
+    if args.refresh_profile:
+        require(
+            not args.self_test and args.verify_private is None and args.audit_out is None,
+            "profile refresh does not accept verification options",
+        )
+        document = refresh_profile_bindings(load_json(MANIFEST))
+        MANIFEST.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"gc-held-out-evaluation: refreshed {MANIFEST.relative_to(ROOT)}")
+        return 0
     require(args.audit_out is None or args.verify_private is not None, "--audit-out requires --verify-private")
     validate_schema()
     document = validate(load_json(MANIFEST))
@@ -529,7 +551,8 @@ def main() -> int:
         if args.audit_out is not None:
             write_audit(private_result, args.audit_out)
     controls = self_test(document) if args.self_test else 0
-    audit = validate_audit(document) if AUDIT.is_file() else None
+    audit_path = args.audit_out if args.audit_out is not None else AUDIT
+    audit = validate_audit(document, audit_path) if audit_path.is_file() else None
     active = next(row for row in document["epochs"] if row["status"] == "active")
     print(
         "gc-held-out-evaluation: ok "

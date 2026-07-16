@@ -101,6 +101,10 @@ genesis --json agent-index --diagnostic <exact-code>
   - includes `genesisbench_protocol = "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"`
     as the active self-hostable benchmark profile binding the frozen repository/runtime/docs
     snapshot, context and tool authority, contamination evidence, and ranked eligibility.
+  - includes `genesisbench_construct_validity_policy`, `genesisbench_construct_validity_schema`,
+    and `genesisbench_construct_validity_report` as the predeclared construct/nuisance authority,
+    closed report contract, and executable alternative-design, negative-control, mutation,
+    maintenance, statistical, saturation, and independent-audit evidence.
   - includes `genesisbench_reference_agent = "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json"`,
     `genesisbench_reference_agent_ablations = "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json"`,
     and `genesisbench_reference_agent_trace_schema = "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json"`
