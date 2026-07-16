@@ -89,6 +89,11 @@
   ],
   "staticReclassifications": [
     {
+      "entrypoint": "scripts/check_agent_authoring_bundle.sh",
+      "kind": "benchmark",
+      "profile": "release-full"
+    },
+    {
       "entrypoint": "scripts/check_agent_generative_workloads.sh",
       "kind": "benchmark",
       "profile": "release-full"

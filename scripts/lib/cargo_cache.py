@@ -338,9 +338,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.root.resolve(), ".genesis/build", "cargo-cache"
                 )
                 scope = result["metadata"]["cacheKey"]["scope"]
+                build_environment = result["metadata"]["cacheKey"]["buildEnvironment"]
                 size_class = (
                     "cargo-verifier"
                     if scope == "evidence-verifier-host"
+                    else "cargo-host-slim"
+                    if scope == "root-host"
+                    and build_environment.get("CARGO_INCREMENTAL") == "0"
+                    and build_environment.get("CARGO_PROFILE_DEV_DEBUG") == "0"
                     else "cargo-wasm"
                     if scope in ("root-wasi", "root-wasm")
                     else "cargo-host"

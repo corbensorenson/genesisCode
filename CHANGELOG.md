@@ -4,6 +4,10 @@ All notable GenesisCode changes are tracked here. The project is pre-1.0; format
 
 ## [Unreleased]
 
+- Define GenesisCode, GenesisBench, and Genesis Model as independently versioned products with separate release authorities, typed compatibility, isolated acceptance lanes, and no model dependency for the language release.
+- Expand the benchmark roadmap through signed public governance, lineage-correct statistics, fixed-scaffold model comparison, temporal challenge overlays, construct-validity studies, a training/evaluation firewall, profile-bound local models, and four-cell language/model co-evolution.
+- Add the self-hostable signed GenesisBench result registry and deterministic lexicographic static leaderboard, preserving complete append-only result history and independently replayed scoring.
+- Keep Cargo build caches within the generated-state quota through profile-aware cache classes, priority-based reclamation, explicit lease release, and exact disk telemetry for cache-sensitive gates.
 - Harden generated-state startup and reclamation: clean checkouts create provenance-marked Cargo roots before admission, one-shot resolvers release transient leases, and deterministic cleanup tolerates bounded metadata recreation after atomic quarantine.
 - Avoid false generated-state quota denial by keeping Python-only evidence gates lease-free while nested verifier builds reserve their own declared cache class.
 - Render non-JSON failures from the structured diagnostic catalog with operation, redacted subject, primary cause, one safe next action, deterministic wrapping, and terminal-aware color.
@@ -93,7 +97,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 | Lockfile | Records | Registry | Git | SHA-256 |
 |---|---:|---:|---:|---|
-| `Cargo.lock` | 461 | 443 | 0 | `b8667de599b793d740708ef4150548d270269009c7025fbc13cf3b1d5fcf5806` |
+| `Cargo.lock` | 461 | 443 | 0 | `43fb232af747e3224dbfd6715f5e9e68a7fd3dbb9b48188c98bf983855ed7bbf` |
 | `tools/genesis-evidence-producer/Cargo.lock` | 41 | 40 | 0 | `a7aa895176386dcbde3de7e0d49a8511ca38227880ee30e82c12978cc5fa416e` |
 | `tools/genesis-evidence-verifier/Cargo.lock` | 41 | 40 | 0 | `d3a5c9c2e7d3cb614d79b3360210c93f63317cdbb808250d0084ff4c1822f3eb` |
 | `package-lock.json` | 3 | sha512 integrity | 0 | `f5b2fa938c2c572fa8172b0f57418c10dca846791855fbd25b1b662b188097ed` |
@@ -112,7 +116,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `e63560cbc37ef25f75d7f7f846e5db7188eccd184c394eef5afcd6a9de4c85b1`.
+Machine-readable identity: `b30112500fc65dcaee215fca18ba71d4296f5c064c92c936d51571ea868d3217`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

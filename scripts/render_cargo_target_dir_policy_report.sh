@@ -157,6 +157,43 @@ with tempfile.TemporaryDirectory(prefix="genesis-cargo-cache-policy.") as temp_r
     )
     passed("fresh-checkout-materialization")
 
+    slim_env = dict(fresh_env)
+    slim_env["CARGO_INCREMENTAL"] = "0"
+    slim_env["CARGO_PROFILE_DEV_DEBUG"] = "0"
+    slim = subprocess.run(
+        [
+            sys.executable,
+            str(fixture / "scripts/lib/cargo_cache.py"),
+            "--root",
+            str(fixture),
+            "--scope",
+            "root-host",
+            "--format",
+            "json",
+        ],
+        cwd=fixture,
+        env=slim_env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    require(slim.returncode == 0, f"slim host cache admission failed: {slim.stderr}")
+    slim_result = json.loads(slim.stdout)
+    registry = cache.load_json(
+        fixture / ".genesis/build/.generated-state-v0.1/registry.json"
+    )
+    cache_entries = [
+        entry for entry in registry["entries"] if entry["owner"] == "cargo-cache"
+    ]
+    require(
+        pathlib.Path(slim_result["targetDir"]).is_dir()
+        and {entry["sizeClass"] for entry in cache_entries}
+        == {"cargo-host", "cargo-host-slim"}
+        and len(cache_entries) == 2,
+        "normal and slim host cache profiles did not coexist under the soft quota",
+    )
+    passed("host-profile-co-residency")
+
     env = mock_env(temp / "cache-a")
     baseline = cache.resolve(fixture, "root-host", env)
     repeated_env = dict(env)
@@ -223,7 +260,10 @@ with tempfile.TemporaryDirectory(prefix="genesis-cargo-cache-policy.") as temp_r
     wasi = cache.resolve(fixture, "root-wasi", env)
     wasm = cache.resolve(fixture, "root-wasm", env)
     verifier = cache.resolve(fixture, "evidence-verifier-host", env)
-    require(len({key(baseline), key(wasi), key(wasm), key(verifier)}) == 4, "declared scopes collided")
+    require(
+        len({key(baseline), key(wasi), key(wasm), key(verifier)}) == 4,
+        "declared scopes collided",
+    )
     passed("workspace-target-separation")
 
     metadata_text = json.dumps(baseline["metadata"], sort_keys=True)
@@ -489,6 +529,7 @@ expected_controls = {
     "duplicate-policy-key-rejection",
     "feature-definition-sensitivity",
     "fresh-checkout-materialization",
+    "host-profile-co-residency",
     "host-path-exclusion",
     "legacy-override-rejection",
     "lease-validation-fail-closed",

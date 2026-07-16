@@ -6,7 +6,7 @@
     "maxEntries": 256,
     "maxLeases": 1024,
     "minFreeBytes": 2147483648,
-    "softBytes": 6442450944
+    "softBytes": 7784628224
   },
   "producers": [
     {
@@ -20,6 +20,7 @@
       ],
       "sizeClasses": [
         "cargo-host",
+        "cargo-host-slim",
         "cargo-verifier",
         "cargo-wasm"
       ]
@@ -137,34 +138,47 @@
   "sizeClasses": [
     {
       "id": "cargo-host",
-      "reservationBytes": 8589934592
+      "reclaimPriority": 300,
+      "reservationBytes": 4831838208
+    },
+    {
+      "id": "cargo-host-slim",
+      "reclaimPriority": 100,
+      "reservationBytes": 2147483648
     },
     {
       "id": "cargo-verifier",
+      "reclaimPriority": 200,
       "reservationBytes": 2147483648
     },
     {
       "id": "cargo-wasm",
+      "reclaimPriority": 250,
       "reservationBytes": 4294967296
     },
     {
       "id": "node-install",
+      "reclaimPriority": 80,
       "reservationBytes": 2147483648
     },
     {
       "id": "observed",
+      "reclaimPriority": 10,
       "reservationBytes": 0
     },
     {
       "id": "protected",
+      "reclaimPriority": 1000,
       "reservationBytes": 0
     },
     {
       "id": "selfhost-cache",
+      "reclaimPriority": 120,
       "reservationBytes": 1073741824
     },
     {
       "id": "temporary",
+      "reclaimPriority": 0,
       "reservationBytes": 536870912
     }
   ],

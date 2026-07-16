@@ -30,9 +30,10 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "reservationBytes"],
+        "required": ["id", "reclaimPriority", "reservationBytes"],
         "properties": {
           "id": {"$ref": "#/$defs/id"},
+          "reclaimPriority": {"type": "integer", "minimum": 0, "maximum": 1000},
           "reservationBytes": {"type": "integer", "minimum": 0, "maximum": 8589934592}
         }
       }

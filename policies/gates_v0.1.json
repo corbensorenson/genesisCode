@@ -24,7 +24,7 @@
         "path": "scripts/check_feature_matrix_evidence.sh",
         "replacement": "scripts/check_capability_evidence_ledger.sh",
         "surface": "check",
-        "declaredDurationSeconds": 600,
+        "declaredDurationSeconds": 570,
         "declaredDiskMiB": 4096
       },
       {
@@ -292,6 +292,12 @@
     }
   },
   "gateOverrides": {
+    "scripts/check_agent_authoring_bundle.sh": {
+      "kind": "benchmark",
+      "profile": "release-full",
+      "expectedDurationSeconds": 45,
+      "diskBudgetMiB": 64
+    },
     "scripts/check_gate_manifest.sh": {
       "kind": "static",
       "profile": "local-fast",

@@ -344,6 +344,7 @@ bounded_policy["limits"].update({
 })
 reservations = {
     "cargo-host": 8192,
+    "cargo-host-slim": 4096,
     "cargo-verifier": 4096,
     "cargo-wasm": 8192,
     "node-install": 8192,
@@ -503,6 +504,43 @@ steady = state.status(lifecycle)
 require(steady["rebuildableEntries"] <= 1 and steady["accountingBytes"] <= 8192, "profile cycles did not reach bounded steady state")
 controls.append("generated-state-bounded-steady-state")
 
+priority = temp / "priority"
+(priority / "policies").mkdir(parents=True)
+shutil.copyfile(source_root / cleanup.POLICY_REL, priority / cleanup.POLICY_REL)
+priority_policy = copy.deepcopy(bounded_policy)
+priority_policy["limits"]["softBytes"] = 14336
+(priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))
+(priority / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
+(priority / "source.gc").write_text("fixture\n", encoding="utf-8")
+subprocess.run(["git", "init", "-q"], cwd=priority, check=True)
+subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=priority, check=True)
+(priority / ".genesis/build").mkdir(parents=True)
+cleanup.initialize_root_marker(priority, ".genesis/build", "priority-fixture")
+host = state.admit(
+    priority, "cargo-cache", "6" * 64,
+    ".genesis/build/cargo-cache/v1/root/host/normal", "cargo-host",
+    free_bytes_override=1 << 30,
+)
+state.release(priority, host["leaseToken"])
+slim = state.admit(
+    priority, "cargo-cache", "7" * 64,
+    ".genesis/build/cargo-cache/v1/root/host/slim", "cargo-host-slim",
+    free_bytes_override=1 << 30,
+)
+state.release(priority, slim["leaseToken"])
+verifier = state.admit(
+    priority, "cargo-cache", "8" * 64,
+    ".genesis/build/cargo-cache/v1/tools-genesis-evidence-verifier/host/verifier",
+    "cargo-verifier", free_bytes_override=1 << 30,
+)
+require(
+    slim["entryId"] in verifier["reclaimedEntryIds"]
+    and host["entryId"] not in verifier["reclaimedEntryIds"],
+    "size-class reclaim priority did not preserve the warm host cache",
+)
+state.release(priority, verifier["leaseToken"])
+controls.append("generated-state-size-class-reclaim-priority")
+
 state_rejected(
     "generated-state-unknown-owner-rejection",
     lambda: state.admit(lifecycle, "unknown", "3" * 64, ".genesis/build/unknown", "cargo-host"),
@@ -584,7 +622,7 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(len(controls) == 41 and len(set(controls)) == 41, f"control coverage drift: {controls}")
+require(len(controls) == 42 and len(set(controls)) == 42, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",

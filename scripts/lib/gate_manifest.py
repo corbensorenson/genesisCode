@@ -174,13 +174,21 @@ def require_unique_strings(values: Any, context: str, *, allow_empty: bool = Tru
     return out
 
 
-def validate_repo_path(raw: Any, context: str, *, must_exist: bool = False) -> str:
-    value = require_string(raw, context)
+@lru_cache(maxsize=None)
+def _repo_path_error(value: str, must_exist: bool) -> Optional[str]:
     path = PurePosixPath(value)
     if path.is_absolute() or ".." in path.parts or "." in path.parts or "\\" in value:
-        raise GateManifestError(f"{context} must be a normalized repository-relative path")
+        return "must be a normalized repository-relative path"
     if must_exist and not (ROOT / value).is_file():
-        raise GateManifestError(f"{context} references missing file: {value}")
+        return f"references missing file: {value}"
+    return None
+
+
+def validate_repo_path(raw: Any, context: str, *, must_exist: bool = False) -> str:
+    value = require_string(raw, context)
+    error = _repo_path_error(value, must_exist)
+    if error is not None:
+        raise GateManifestError(f"{context} {error}")
     return value
 
 
@@ -559,7 +567,8 @@ def discover_repo_inputs(seed_paths: Sequence[str]) -> list[str]:
     return sorted(seen)
 
 
-def path_set_identity(paths: Sequence[str]) -> str:
+@lru_cache(maxsize=None)
+def _path_set_identity(paths: Tuple[str, ...]) -> str:
     rows = [
         {"path": path, "sha256": digest_file(ROOT / path)}
         for path in paths
@@ -571,6 +580,10 @@ def path_set_identity(paths: Sequence[str]) -> str:
     return sha256(
         json.dumps(rows, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+
+
+def path_set_identity(paths: Sequence[str]) -> str:
+    return _path_set_identity(tuple(paths))
 
 
 def render_manifest(policy: Any, audit: Any, prerequisites: Any) -> Mapping[str, Any]:

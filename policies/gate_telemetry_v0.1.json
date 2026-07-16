@@ -5,6 +5,10 @@
     ".genesis/perf",
     "target"
   ],
+  "exactDiskEntrypoints": [
+    "scripts/check_docs_quickstart.sh",
+    "scripts/check_gate_manifest.sh"
+  ],
   "eventKinds": [
     "cache-hit",
     "network-attempt"

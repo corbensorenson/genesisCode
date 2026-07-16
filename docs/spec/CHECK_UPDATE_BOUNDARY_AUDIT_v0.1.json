@@ -15,11 +15,11 @@
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
       "direct_write_candidates": [
-        "trap 'rm -f \"$protocol_report\"' EXIT"
+        "trap 'rm -rf \"$TMP_DIR\"' EXIT"
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "80d2dc4c42472727ceef7716083fcdbf57fedfbab70a93ccdb45dfb3b553f218",
+      "execution_identity_sha256": "bbf7583a8559275b022e1efa30b76a61b26d1e2724bed0ac6f805102491104ca",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -30,11 +30,11 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "cafdbd0fef4e555ce9c74dc3b8e27cbea8dcc389f4833235ea6d4ff1ee7d2187",
+      "sha256": "38e098c6f0561288bb9c453fbbcbe4c422ff6dfe709033ded53179dada85cd0a",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
-        "trap 'rm -f \"$protocol_report\"' EXIT"
+        "trap 'rm -rf \"$TMP_DIR\"' EXIT"
       ]
     },
     {
@@ -742,7 +742,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "b971b0450bb5ba10f3af9284a43284d7b8df03e6c0acefdb3aba00482f570842",
+      "execution_identity_sha256": "e8919e07596737b3307e3e9f193a115b03b7039dc09f98436e586e5a63a3fabb",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -753,7 +753,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "67ca29195c92482c79febf1ed5bfd9d31565730a7908ab396e812909f158b8ef",
+      "sha256": "5da2a64f6e0919a9b72a59906db2e6e9d6da0dc54f7ab0519c6f061d6fa2653a",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -821,13 +821,13 @@
       "execution_helper_closure": [
         {
           "path": "scripts/render_cargo_target_dir_policy_report.sh",
-          "sha256": "e287c4e78e1a6b7fdb25a044a59ed88fb8bc8377c49812ce9ef3c808578966c0"
+          "sha256": "b529853064e7a9fe3297eaf1333921c82d20e5e28c601e060a7eb6fd04482ed4"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cargo_target_dir_policy_report.sh"
       ],
-      "execution_identity_sha256": "1a04ae94521d759b71aa473f012ecfecf0a4d1ad7c0065f9b9f5e9e3900e22bb",
+      "execution_identity_sha256": "a7f1f06b9d97144bc15639a9d250c0b365e80c4b3990799974acdf9c4732a39e",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1194,6 +1194,11 @@
         "(linked_repo / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
         "(linked_repo / \"policies\").mkdir(parents=True)",
         "(linked_repo / \"source.gc\").write_text(\"fixture\\n\", encoding=\"utf-8\")",
+        "(priority / \".genesis/build\").mkdir(parents=True)",
+        "(priority / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
+        "(priority / \"policies\").mkdir(parents=True)",
+        "(priority / \"source.gc\").write_text(\"fixture\\n\", encoding=\"utf-8\")",
+        "(priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))",
         "(quarantine / \"orphan\").write_text(\"state\\n\", encoding=\"utf-8\")",
         "(repo / \".genesis/build/drift.bin\").write_bytes(b\"drift\")",
         "(repo / \".genesis/build/payload.bin\").write_bytes(b\"build\" * 128)",
@@ -1230,7 +1235,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "7ed203698fd5c4e80b85cea8bb96173293459321cf8309f067a1b39c093c8ac9",
+      "execution_identity_sha256": "bcf3b309450d0e00354b85981d9b46d78118c882b41a06a07e245670d9d46107",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1241,7 +1246,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "f2d60cd40f79747e5456553f752058173e86edc4fdc154e78ecd8f3d538c3b93",
+      "sha256": "d369d47274e62efe8519d497a3c322f0af0df1a36ad4bdeecadcfb81118f1a9e",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -1257,6 +1262,11 @@
         "(linked_repo / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
         "(linked_repo / \"policies\").mkdir(parents=True)",
         "(linked_repo / \"source.gc\").write_text(\"fixture\\n\", encoding=\"utf-8\")",
+        "(priority / \".genesis/build\").mkdir(parents=True)",
+        "(priority / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
+        "(priority / \"policies\").mkdir(parents=True)",
+        "(priority / \"source.gc\").write_text(\"fixture\\n\", encoding=\"utf-8\")",
+        "(priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))",
         "(quarantine / \"orphan\").write_text(\"state\\n\", encoding=\"utf-8\")",
         "(repo / \".genesis/build/drift.bin\").write_bytes(b\"drift\")",
         "(repo / \".genesis/build/payload.bin\").write_bytes(b\"build\" * 128)",
@@ -1463,7 +1473,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "ce4c6313be2f26d3addc15e5fbb0ce37605521bda7ec6d29252bebdd9e689a9c",
+      "execution_identity_sha256": "540222ba5162167d160c31200f329e2fee2bab36b7ddb48b4d438bade346af10",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1474,7 +1484,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "9a55f99209c874da3e82634b0fe21c499cd8e5472be95fd00791397debe782a0",
+      "sha256": "c1c345add1ad9cbc119762348f1b25e01a704e47b5cb5e3d44cc1ee877fb6f10",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -2018,7 +2028,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "881cdf79f0e0604d1f4b89609d6d62f234c7aa331562c47714ba30ff90e7dca4",
+      "execution_identity_sha256": "f9c880c9d000be7b6c17a6465856315230c83924ce7e71118de7c29dda4ed4b8",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -2029,7 +2039,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "5559c8424654eccf0804e26c9d56fd9ed0708495677785da2ab57a48023aa994",
+      "sha256": "1a9d3eed91866c4c89a2fbba0e36ecc4048d8689876b6f1ed975e96caca89a0d",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [

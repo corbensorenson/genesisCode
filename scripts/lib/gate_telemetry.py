@@ -22,6 +22,7 @@ MANIFEST_REL = "genesis.gates.json"
 POLICY_FIELDS = {
     "aggregateSampleIntervalMs",
     "diskRoots",
+    "exactDiskEntrypoints",
     "eventKinds",
     "kind",
     "maxEventCount",
@@ -71,12 +72,16 @@ def load_policy(root: Path) -> dict:
         raise TelemetryError("telemetry policy fields mismatch")
     if policy["kind"] != "genesis/gate-resource-telemetry-policy-v0.1" or policy["version"] != "0.1":
         raise TelemetryError("telemetry policy identity mismatch")
-    for field in ("diskRoots", "eventKinds"):
+    for field in ("diskRoots", "exactDiskEntrypoints", "eventKinds"):
         values = policy[field]
         if not isinstance(values, list) or not values or values != sorted(set(values)):
             raise TelemetryError(f"{field} must be sorted and unique")
     for value in policy["diskRoots"]:
         repo_path(value, "disk root")
+    for value in policy["exactDiskEntrypoints"]:
+        repo_path(value, "exact-disk entrypoint")
+        if not value.startswith("scripts/check_") or not value.endswith(".sh"):
+            raise TelemetryError(f"exact-disk entrypoint is not a governed check: {value}")
     if policy["eventKinds"] != ["cache-hit", "network-attempt"]:
         raise TelemetryError("event kind contract drift")
     for field in (
@@ -96,6 +101,12 @@ def sample_interval_ms(policy: dict, gate: dict) -> int:
     if gate.get("boundaryClass") == "aggregate":
         return int(policy["aggregateSampleIntervalMs"])
     return int(policy["sampleIntervalMs"])
+
+
+def exact_disk_enabled(policy: dict, entrypoint: str, override: str | None) -> bool:
+    if override not in (None, "0", "1"):
+        raise TelemetryError("GENESIS_GATE_TELEMETRY_EXACT_DISK must be 0 or 1")
+    return override == "1" or entrypoint in policy["exactDiskEntrypoints"]
 
 
 def logical_size(path: Path) -> int:
@@ -264,7 +275,9 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
     gate = gates[entrypoint]
     if not command:
         raise TelemetryError("gate command is empty")
-    exact_disk = os.environ.get("GENESIS_GATE_TELEMETRY_EXACT_DISK", "0") == "1"
+    exact_disk = exact_disk_enabled(
+        policy, entrypoint, os.environ.get("GENESIS_GATE_TELEMETRY_EXACT_DISK")
+    )
     before_disk = disk_size(root, policy["diskRoots"]) if exact_disk else filesystem_free_bytes(root)
     event_fd, event_name = tempfile.mkstemp(prefix="genesis-gate-events.", suffix=".jsonl")
     os.close(event_fd)

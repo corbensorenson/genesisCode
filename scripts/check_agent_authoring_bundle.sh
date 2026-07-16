@@ -7,19 +7,59 @@ genesis_gate_telemetry_reexec "$0" "$@"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-python3 scripts/lib/gc_agent_corpus.py --check --self-test
-python3 scripts/lib/gc_canonical_examples.py --check --self-test
-python3 scripts/lib/gc_task_benchmarks.py --check --self-test
-python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
-python3 scripts/lib/gc_agent_scoring.py --check --self-test
-python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test
-python3 scripts/lib/genesisbench_protocol.py --check --self-test
-python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
-python3 scripts/lib/genesisbench_front_door.py check --self-test
-python3 scripts/lib/genesisbench_registry.py check --self-test
-python3 scripts/lib/genesisbench_analysis.py --check --self-test
-protocol_report="$(mktemp)"
-trap 'rm -f "$protocol_report"' EXIT
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/genesis-agent-authoring.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+parallel_pids=()
+parallel_names=()
+run_parallel() {
+  local index="$1"
+  local name="$2"
+  shift 2
+  ("$@" >"$TMP_DIR/$index.stdout" 2>"$TMP_DIR/$index.stderr") &
+  parallel_pids+=("$!")
+  parallel_names+=("$name")
+}
+
+run_parallel 00 gc-agent-corpus \
+  python3 scripts/lib/gc_agent_corpus.py --check --self-test
+run_parallel 01 gc-canonical-examples \
+  python3 scripts/lib/gc_canonical_examples.py --check --self-test
+run_parallel 02 gc-task-benchmarks \
+  python3 scripts/lib/gc_task_benchmarks.py --check --self-test
+run_parallel 03 gc-held-out-evaluation \
+  python3 scripts/lib/gc_held_out_evaluation.py --check --self-test
+run_parallel 04 gc-agent-scoring \
+  python3 scripts/lib/gc_agent_scoring.py --check --self-test
+run_parallel 05 gc-agent-benchmark-run \
+  python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test
+# This validator executes the complete reference-agent validator and mutation suite.
+run_parallel 06 genesisbench-protocol \
+  python3 scripts/lib/genesisbench_protocol.py --check --self-test
+run_parallel 07 genesisbench-front-door \
+  python3 scripts/lib/genesisbench_front_door.py check --self-test
+run_parallel 08 genesisbench-registry \
+  python3 scripts/lib/genesisbench_registry.py check --self-test
+run_parallel 09 genesisbench-analysis \
+  python3 scripts/lib/genesisbench_analysis.py --check --self-test
+
+parallel_status=0
+for index in "${!parallel_pids[@]}"; do
+  if ! wait "${parallel_pids[$index]}"; then
+    echo "agent-authoring-bundle: ${parallel_names[$index]} validator failed" >&2
+    parallel_status=1
+  fi
+done
+for raw_index in "${!parallel_pids[@]}"; do
+  index="$(printf '%02d' "$raw_index")"
+  cat "$TMP_DIR/$index.stdout"
+  cat "$TMP_DIR/$index.stderr" >&2
+done
+if [[ "$parallel_status" != "0" ]]; then
+  exit 1
+fi
+
+protocol_report="$TMP_DIR/protocol-report.json"
 python3 scripts/lib/genesisbench_protocol.py \
   --check \
   --run examples/agent_benchmark_reproducibility/run.json \

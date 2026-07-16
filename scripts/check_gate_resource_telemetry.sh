@@ -33,6 +33,22 @@ def require(value, message):
 
 policy = telemetry.load_policy(root)
 require(
+    policy["exactDiskEntrypoints"]
+    == ["scripts/check_docs_quickstart.sh", "scripts/check_gate_manifest.sh"]
+    and telemetry.exact_disk_enabled(policy, "scripts/check_docs_quickstart.sh", None)
+    and telemetry.exact_disk_enabled(policy, "scripts/check_gate_manifest.sh", None)
+    and not telemetry.exact_disk_enabled(policy, "scripts/check_doc_hygiene.sh", None)
+    and telemetry.exact_disk_enabled(policy, "scripts/check_doc_hygiene.sh", "1"),
+    "exact logical-disk policy drift",
+)
+try:
+    telemetry.exact_disk_enabled(policy, "scripts/check_doc_hygiene.sh", "yes")
+except telemetry.TelemetryError:
+    pass
+else:
+    raise SystemExit("gate-resource-telemetry: malformed exact-disk override accepted")
+controls.append("entrypoint-scoped-exact-disk-accounting")
+require(
     telemetry.sample_interval_ms(policy, {"boundaryClass": "static"}) == policy["sampleIntervalMs"]
     and telemetry.sample_interval_ms(policy, {"boundaryClass": "aggregate"}) == policy["aggregateSampleIntervalMs"]
     and policy["aggregateSampleIntervalMs"] >= 10 * policy["sampleIntervalMs"],
@@ -221,7 +237,7 @@ for path in check_scripts:
 require(not missing, f"governed checks missing telemetry wrapper: {missing}")
 controls.append("complete-gate-wrapper-coverage")
 
-require(len(controls) == 16 and len(set(controls)) == 16, "control coverage drift")
+require(len(controls) == 17 and len(set(controls)) == 17, "control coverage drift")
 authorities = [
     "policies/gate_telemetry_v0.1.json",
     "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json",

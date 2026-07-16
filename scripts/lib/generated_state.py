@@ -136,7 +136,9 @@ def load_policy(root: Path, override: Path | None = None) -> tuple[dict[str, Any
         raise GeneratedStateError("generated-state size classes must be non-empty")
     size_ids: list[str] = []
     for item in size_classes:
-        if not isinstance(item, dict) or set(item) != {"id", "reservationBytes"}:
+        if not isinstance(item, dict) or set(item) != {
+            "id", "reclaimPriority", "reservationBytes"
+        }:
             raise GeneratedStateError("generated-state size-class fields mismatch")
         if not isinstance(item["id"], str) or not ID_RE.fullmatch(item["id"]):
             raise GeneratedStateError("invalid generated-state size-class id")
@@ -145,6 +147,11 @@ def load_policy(root: Path, override: Path | None = None) -> tuple[dict[str, Any
         )
         if reservation > limits["hardBytes"]:
             raise GeneratedStateError("size-class reservation exceeds hard quota")
+        _positive_int(
+            item["reclaimPriority"], "sizeClass.reclaimPriority", allow_zero=True
+        )
+        if item["reclaimPriority"] > 1000:
+            raise GeneratedStateError("size-class reclaim priority is unbounded")
         size_ids.append(item["id"])
     if size_ids != sorted(set(size_ids)):
         raise GeneratedStateError("generated-state size classes must be sorted and unique")
@@ -431,6 +438,13 @@ def _size_reservation(policy: Mapping[str, Any], size_class: str) -> int:
     raise GeneratedStateError(f"undeclared generated-state size class: {size_class}")
 
 
+def _size_reclaim_priority(policy: Mapping[str, Any], size_class: str) -> int:
+    for item in policy["sizeClasses"]:
+        if item["id"] == size_class:
+            return int(item["reclaimPriority"])
+    raise GeneratedStateError(f"undeclared generated-state size class: {size_class}")
+
+
 def _path_matches(path: str, roots: Sequence[str]) -> bool:
     candidate = PurePosixPath(path)
     return any(candidate == PurePosixPath(root) or PurePosixPath(root) in candidate.parents for root in roots)
@@ -646,9 +660,18 @@ def _register_entry(
     return _entry_by_id(registry, candidate["id"])  # type: ignore[return-value]
 
 
-def _cargo_size_class(scope: str) -> str:
+def _cargo_size_class(
+    scope: str, build_environment: Mapping[str, Any] | None = None
+) -> str:
     if scope == "evidence-verifier-host":
         return "cargo-verifier"
+    if (
+        scope == "root-host"
+        and build_environment is not None
+        and build_environment.get("CARGO_INCREMENTAL") == "0"
+        and build_environment.get("CARGO_PROFILE_DEV_DEBUG") == "0"
+    ):
+        return "cargo-host-slim"
     if scope in ("root-wasi", "root-wasm"):
         return "cargo-wasm"
     return "cargo-host"
@@ -678,12 +701,18 @@ def _discover_legacy_build_entries(
                     document = load_json(metadata)
                     key = document["cacheKeySha256"]
                     scope = document["cacheKey"]["scope"]
+                    build_environment = document["cacheKey"].get("buildEnvironment")
                 except (GeneratedStateError, KeyError, TypeError):
                     raise GeneratedStateError("Cargo cache metadata cannot be registered safely")
                 if not isinstance(key, str) or not SHA_RE.fullmatch(key):
                     raise GeneratedStateError("Cargo cache content key is invalid")
                 candidate = _entry(
-                    policy, "cargo-cache", key, relative, _cargo_size_class(scope), sequence,
+                    policy,
+                    "cargo-cache",
+                    key,
+                    relative,
+                    _cargo_size_class(scope, build_environment),
+                    sequence,
                     allocated_bytes(target),
                 )
                 _register_entry(registry, candidate)
@@ -811,7 +840,12 @@ def _enforce_limits(
                 and entry["id"] not in active
                 and entry["id"] != protected_entry_id
             ),
-            key=lambda item: (item["reclaimOrder"], item["lastUseSequence"], item["id"]),
+            key=lambda item: (
+                _size_reclaim_priority(policy, item["sizeClass"]),
+                item["reclaimOrder"],
+                item["lastUseSequence"],
+                item["id"],
+            ),
         )
 
     projected_free = free_bytes
