@@ -1,12 +1,12 @@
 {
   "authorities": {
     "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "a393bfe98a2db8b66ecb20a46529c07f926cdf72de92da331b958fd834119512",
-    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "307d05d4d6f5db93fc533c983c1349f086ffe7f565d1123177af41c430a67f37",
+    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "d1f369e6c6dd9f99dce1fab8ff435a87c01dd79a2dcbe5408328300b2ca1fa5a",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
     "canonicalSources": 278,
-    "diagnostics": 194,
+    "diagnostics": 195,
     "exampleFiles": 189,
     "hostOperations": 188,
     "schemas": 78,
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "b0144a2e08fc929d89f8126f5e7d388d6d13fe6d83bad44e1e7f339437bbf4c3"
+      "sha256": "bd86c268ba11a422f90d97c6812c74e9989ef136ed90c292e2b156da39749988"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "ca17e95f6b2916aef42c7f51570b771bd2b1c17c46096d775dbe86783efd6f3e"
+      "sha256": "767da9ce842a253fab973cdd2a1c30d14b91884e9918061d15a54e8dee3e62e9"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -604,7 +604,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "17cd55d38b8bf5e0d9f746df84c661f45b433b74cf9d22d58b09a9b2131aa796"
+      "sha256": "850d78c824ba43b10e4e4366844d37d88253d11b95c6b28fa02b1bf309655b76"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -668,7 +668,7 @@
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
-      "sha256": "307d05d4d6f5db93fc533c983c1349f086ffe7f565d1123177af41c430a67f37"
+      "sha256": "d1f369e6c6dd9f99dce1fab8ff435a87c01dd79a2dcbe5408328300b2ca1fa5a"
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
@@ -768,7 +768,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "73d367b2202c46e48b168c6f677585084fe8e4f9dfec1131aeb3074391c22bbd"
+      "sha256": "9bfecd115821b501b2de004104bccf13f763a8caa01badbce8075b0da4fce84b"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -776,7 +776,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "75fb6cd55aacf351590f1ac32830b64aa31204d8ffb3755068e3702c168ca33f"
+      "sha256": "7e91821f0497399a89e4f5aa88f1559d79515f69a6ebb22de519e1250815993f"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
@@ -788,7 +788,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "3336086d020adcd9612693eb3b9b47b121b950cf5ed1a1804a993c9931dcb1ce"
+      "sha256": "65fb0518fc08e7e0a6edba05014aceeb99e80796beff3d31a3aaa6c7ea3dc066"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",

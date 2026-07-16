@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Structured failures
 
-**194 diagnostics** · catalog identity `0b64616055c1ea14cba05f68efc976a09fe2fcac4b4bd89c2ec19c7723b4dfe8`
+**195 diagnostics** · catalog identity `87742c7704924a43fd79ccb33d9134cd5f8a2c6e29f58123c3110c5fa2792515`
 
 Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
 
@@ -290,6 +290,7 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 | [`agent-index/symbol-not-found`](#agent-index-symbol-not-found-37eac89c) | error | `inspect-invocation-contract` |
 | [`agent-plan/task-cards`](#agent-plan-task-cards-3ffeb48d) | error | `inspect-invocation-contract` |
 | [`bench/authority-root-missing`](#bench-authority-root-missing-b71d8f28) | error | `inspect-invocation-contract` |
+| [`bench/crypto-dispatch`](#bench-crypto-dispatch-8ccca534) | error | `inspect-invocation-contract` |
 | [`bench/current-directory`](#bench-current-directory-254ae86c) | error | `inspect-invocation-contract` |
 | [`bench/driver-invalid`](#bench-driver-invalid-f5e8c5bf) | error | `inspect-invocation-contract` |
 | [`bench/driver-spawn`](#bench-driver-spawn-0c50a076) | error | `inspect-invocation-contract` |
@@ -461,6 +462,21 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `bench/authority-root-missing` {#bench-authority-root-missing-b71d8f28}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/bench/authority-root-missing`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/crypto-dispatch` {#bench-crypto-dispatch-8ccca534}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/crypto-dispatch`
 
 **Likely causes**
 
