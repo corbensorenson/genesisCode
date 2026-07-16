@@ -67,11 +67,49 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R5.2.e`: Differentially explore and replay bounded schedules across tiers and hosts. Affected claims: `CAP-CONCURRENCY-REPLAY`.
 - `R5.5.a`: Adopt and pin the WebAssembly Component Model/WIT extension boundary. Affected claims: `CAP-PLUGIN-FFI`.
 - `R5.5.c`: Sandbox extension memory, CPU, calls, effects, cancellation, and lifecycle. Affected claims: `CAP-PLUGIN-FFI`.
+- `R5.6.a`: Define the deterministic shared application architecture and lifecycle. Affected claims: `TARGET-APPLICATION-UI`.
+- `R5.6.b`: Build the typed presentation and style intermediate representation. Affected claims: `TARGET-APPLICATION-UI`.
+- `R5.6.c`: Implement the complete static, interactive, SSR, and PWA web product stack. Affected claims: `TARGET-WEB-INTERACTIVE-SSR-PWA`, `TARGET-WEB-STATIC`.
+- `R5.6.d`: Implement accessible cross-target widgets and input semantics. Affected claims: `TARGET-ANDROID`, `TARGET-APPLICATION-UI`, `TARGET-DESKTOP-LINUX`, `TARGET-DESKTOP-MACOS`, `TARGET-DESKTOP-WINDOWS`, `TARGET-IOS`.
+- `R5.6.e`: Make UI rendering efficient, incremental, validated, and inspectable. Affected claims: `TARGET-WEB-INTERACTIVE-SSR-PWA`.
+- `R5.6.f`: Ship one product-grade cross-target UI testing API. Affected claims: `TARGET-APPLICATION-UI`, `TARGET-WEB-INTERACTIVE-SSR-PWA`.
+- `R5.7.a`: Complete typed service routing, middleware, security, and protocol construction. Affected claims: `TARGET-SERVICE-DATA`.
+- `R5.7.b`: Complete durable typed data, query, transaction, and migration APIs. Affected claims: `TARGET-SERVICE-DATA`.
+- `R5.7.c`: Add production queues, jobs, cache, storage, and coordination primitives. Affected claims: `TARGET-SERVICE-DATA`.
+- `R5.7.d`: Unify capability-scoped observability and operations. Affected claims: `TARGET-SERVICE-DATA`.
+- `R5.7.e`: Build first-party data, numeric, tensor, and local ML libraries. Affected claims: `TARGET-DATA-ML`.
+- `R5.8.a`: Define the deterministic game and simulation core. Affected claims: `TARGET-GAMES-MEDIA`.
+- `R5.8.b`: Complete real 2D and 3D runtime systems. Affected claims: `TARGET-GAMES-MEDIA`.
+- `R5.8.c`: Make shaders and the asset pipeline Genesis-authored. Affected claims: `TARGET-GAMES-MEDIA`.
+- `R5.8.d`: Add production audio and creative timeline systems. Affected claims: `TARGET-GAMES-MEDIA`.
+- `R5.8.f`: Ship Genesis-native game and media editing and debugging workflows. Affected claims: `TARGET-GAMES-MEDIA`.
+- `R5.9.a`: Define Embedded Linux and constrained MCU profiles separately. Affected claims: `TARGET-EMBEDDED-LINUX`, `TARGET-MCU-LANGUAGE-AOT`.
+- `R5.9.b`: Implement closed-world static flash, RAM, stack, timing, and resource verification. Affected claims: `TARGET-MCU-LANGUAGE-AOT`.
+- `R5.9.c`: Specify real-time, interrupt, reset, watchdog, and power semantics. Affected claims: `TARGET-MCU-LANGUAGE-AOT`.
+- `R5.9.d`: Define capability-safe typed board and peripheral HAL APIs. Affected claims: `TARGET-BOARD-HAL-FAMILIES`, `TARGET-EMBEDDED-LINUX`.
+- `R5.9.e`: Build self-hostable IoT and robotics packages. Affected claims: `TARGET-BOARD-HAL-FAMILIES`.
+- `R5.9.f`: Preserve and validate semantic identity across constrained compilation. Affected claims: `TARGET-MCU-LANGUAGE-AOT`.
 - `R6.1.a`: Freeze and migrate deterministic package manifest and lock schemas. Affected claims: `CAP-PACKAGE-MANAGER`.
 - `R6.2.d`: Enforce package evidence policy at registry acceptance. Affected claims: `CAP-EVIDENCE-GATED-PUBLISH`.
 - `R6.3.a`: Define the supported v1 build target profiles. Affected claims: `CAP-RUNTIME-SURFACES`.
 - `R6.3.b`: Implement the selfhosted genesis build graph and evidence outputs. Affected claims: `CAP-DEPLOYMENT-PIPELINE`.
 - `R6.3.c`: Make target artifacts reproducible across independent builders. Affected claims: `CAP-DEPLOYMENT-PIPELINE`.
+- `R6.3.f`: Require target-native executable entrypoints and authentic runtime workloads. Affected claims: `TARGET-ANDROID`, `TARGET-DESKTOP-LINUX`, `TARGET-DESKTOP-MACOS`, `TARGET-DESKTOP-WINDOWS`, `TARGET-IOS`.
+- `R6.3.g`: Make all generated foreign glue disposable, reproducible, and non-authoritative. Affected claims: `TARGET-ANDROID`, `TARGET-DESKTOP-LINUX`, `TARGET-DESKTOP-MACOS`, `TARGET-DESKTOP-WINDOWS`, `TARGET-IOS`.
+- `R6.5.a`: Ship the incremental Genesis web compiler and development server. Affected claims: `TARGET-WEB-INTERACTIVE-SSR-PWA`, `TARGET-WEB-STATIC`.
+- `R6.5.b`: Produce standards-valid deployable static, SSR, edge, and PWA artifacts. Affected claims: `TARGET-WEB-INTERACTIVE-SSR-PWA`, `TARGET-WEB-STATIC`.
+- `R6.5.c`: Prove supported behavior in real browser engines and mobile viewports. Affected claims: `TARGET-WEB-INTERACTIVE-SSR-PWA`, `TARGET-WEB-STATIC`.
+- `R6.5.d`: Ship and maintain a complete self-hosted full-stack reference product. Affected claims: `TARGET-SERVICE-DATA`.
+- `R6.6.a`: Build signed and installable real macOS, Windows, and Linux applications. Affected claims: `TARGET-DESKTOP-LINUX`, `TARGET-DESKTOP-MACOS`, `TARGET-DESKTOP-WINDOWS`.
+- `R6.6.b`: Build complete executable iOS and Android applications. Affected claims: `TARGET-ANDROID`, `TARGET-IOS`.
+- `R6.6.c`: Automate simulator, emulator, and physical mobile and desktop qualification. Affected claims: `TARGET-ANDROID`, `TARGET-DESKTOP-LINUX`, `TARGET-DESKTOP-MACOS`, `TARGET-DESKTOP-WINDOWS`, `TARGET-IOS`.
+- `R6.6.d`: Prove shared product reuse without hiding target-specific work. Affected claims: `TARGET-ANDROID`, `TARGET-IOS`.
+- `R6.7.a`: Promote reproducible Raspberry Pi-class Embedded Linux delivery. Affected claims: `TARGET-EMBEDDED-LINUX`.
+- `R6.7.b`: Implement the closed-world MCU AOT, link, firmware, and evidence pipeline. Affected claims: `TARGET-MCU-LANGUAGE-AOT`.
+- `R6.7.c`: Establish qualified RP2040, RISC-V ESP32, Xtensa ESP32, and Arduino-compatible board families. Affected claims: `TARGET-BOARD-HAL-FAMILIES`.
+- `R6.7.d`: Build deterministic board simulation and physical hardware-in-the-loop infrastructure. Affected claims: `TARGET-DEVICE-FLASH-DEBUG-OTA`, `TARGET-HARDWARE-IN-THE-LOOP`.
+- `R6.7.e`: Complete authorized device discovery, flash, debug, provisioning, crash, and OTA lifecycle. Affected claims: `TARGET-DEVICE-FLASH-DEBUG-OTA`.
+- `R6.7.f`: Ship maintained Embedded Linux and physical MCU hardware products. Affected claims: `TARGET-BOARD-HAL-FAMILIES`, `TARGET-DEVICE-FLASH-DEBUG-OTA`, `TARGET-EMBEDDED-LINUX`, `TARGET-HARDWARE-IN-THE-LOOP`.
 - `R7.1.a`: Classify and own the complete layered verification suite. Affected claims: `CAP-ASSURANCE-PROFILES`.
 - `R7.1.e`: Use mutation testing to demonstrate trust-check sensitivity. Affected claims: `CAP-TOOL-QUALIFICATION`.
 - `R7.2.a`: Mechanize the pure core semantics and determinism theorem. Affected claims: `CAP-KERNEL-DETERMINISM`.
@@ -83,6 +121,12 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.a`: Prove the pure library and CLI agent archetype end to end. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`.
 - `R8.2.e`: Prove the browser application agent archetype and its sandboxed effects. Affected claims: `CAP-BROWSER-XR`.
 - `R8.2.h`: Prove the GPU or numeric agent archetype with deterministic backend evidence. Affected claims: `CAP-GPU-COMPUTE`.
+- `R8.2.m`: Prove a nontrivial cross-target game under real frame and resource budgets. Affected claims: `TARGET-GAMES-MEDIA`.
+- `R8.2.n`: Prove a creative media tool with deterministic transforms and real preview/export. Affected claims: `TARGET-GAMES-MEDIA`.
+- `R8.2.o`: Prove a Raspberry Pi-class Embedded Linux product on real hardware. Affected claims: `TARGET-EMBEDDED-LINUX`.
+- `R8.2.p`: Prove RP2040 and ESP32-class constrained firmware on physical boards. Affected claims: `TARGET-HARDWARE-IN-THE-LOOP`, `TARGET-MCU-LANGUAGE-AOT`.
+- `R8.2.q`: Prove an end-to-end IoT or robotics system with hardware-in-the-loop. Affected claims: `TARGET-BOARD-HAL-FAMILIES`, `TARGET-HARDWARE-IN-THE-LOOP`.
+- `R8.2.r`: Prove a reproducible Genesis-native data science and local ML system. Affected claims: `TARGET-DATA-ML`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
 - Active P0/P1 defect IDs: none. Roadmap gaps above remain open.
@@ -92,6 +136,8 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - Release-note authority: `E1`; runtime gate results are not asserted.
 - Retained fixture distribution class: `E2`; fixture authority: `false`.
 - Authorized unqualified capability claims: none.
+- Authorized product/target claims: none.
+- Aggregate foundation claims never imply product/target qualification: `CAP-RUNTIME-SURFACES`, `CAP-DOMAIN-STARTERS`, `CAP-GPU-COMPUTE`, `CAP-GRAPHICS-RUNTIME`, `CAP-BROWSER-XR`, `CAP-DEPLOYMENT-PIPELINE`.
 - Baseline `a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967` is signed `E0` observation only: 2 passing, 2 failing, 5 unavailable, 1 decision-gated; its signature grants no authority.
 
 #### Dependencies
@@ -117,7 +163,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `bea9b60038d00ce88f20be328e537dc08798750481fabd23aa7a66ad43ad1b38`.
+Machine-readable identity: `53755a83a56e7deed211a3ae7647d25ef9310b10e4014e6959c7ba95a9551614`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

@@ -211,6 +211,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json` - canonical capability claims, authorities, platform maturity, selfhost level, evidence IDs, and open roadmap gaps.
 - `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json` - machine-readable capability-ledger contract.
 - `feature_matrix.md` - generated per-platform capability compatibility, maturity, and release-claim eligibility view.
+- `docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json` - generated machine-readable product/target maturity, authentic-artifact, one-language-source, scope, evidence, and release-eligibility matrix.
 - `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md` - normative read-only check, explicit update, reachable-helper, and mutation prohibition contract.
 - `policies/check_update_boundary_v0.1.json` - reviewed reachable compilation/network declarations and zero-growth output/mutation ratchets for every check entrypoint.
 - `docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json` - generated 100%-coverage check/update boundary inventory and R0.2.a progress report.

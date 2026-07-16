@@ -1,0 +1,969 @@
+{
+  "aggregate_foundation_claim_ids": [
+    "CAP-RUNTIME-SURFACES",
+    "CAP-DOMAIN-STARTERS",
+    "CAP-GPU-COMPUTE",
+    "CAP-GRAPHICS-RUNTIME",
+    "CAP-BROWSER-XR",
+    "CAP-DEPLOYMENT-PIPELINE"
+  ],
+  "audit_date": "2026-07-16",
+  "entries": [
+    {
+      "authentic_artifact_predicate": "The same state/update/view application executes accessible interactions and scoped effects in real browser, desktop, iOS, and Android runtimes.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-application-ui/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.a",
+        "R5.6.b",
+        "R5.6.d",
+        "R5.6.f"
+      ],
+      "id": "TARGET-APPLICATION-UI",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_gfx/src",
+        "crates/gc_effects/src"
+      ],
+      "limitations": "No normative cross-target application, presentation, accessibility, widget, or UI test contract exists; current graphics and browser operations are foundation plumbing only.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Deleting every generated platform root and rebuilding from .gc, Genesis manifests, policies, tests, and assets reproduces all target projects without foreign-source edits.",
+      "owner": "application-platform",
+      "product_family": "application-ui",
+      "related_foundation_claim_ids": [
+        "CAP-GRAPHICS-RUNTIME",
+        "CAP-RUNTIME-SURFACES",
+        "CAP-EFFECT-REPLAY"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "browser-evergreen",
+          "kind": "browser",
+          "label": "Evergreen browser engines",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "desktop-tier1",
+          "kind": "host",
+          "label": "Tier-1 desktop hosts",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "mobile-ios-android",
+          "kind": "device",
+          "label": "iOS and Android devices",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md"
+      ],
+      "target_profile": "application-ui-shared",
+      "title": "Cross-target application and UI architecture"
+    },
+    {
+      "authentic_artifact_predicate": "The emitted directory serves standards-valid HTML, CSS, assets, routes, metadata, CSP and integrity data and passes real-browser navigation, accessibility, and offline checks.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-web-static/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.c",
+        "R6.5.a",
+        "R6.5.b",
+        "R6.5.c"
+      ],
+      "id": "TARGET-WEB-STATIC",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build_packagers.rs"
+      ],
+      "limitations": "The current web target is a CoreForm package and synthetic launcher, not a deployable website, so aggregate deployment reachability grants no web support.",
+      "maturity": "L0",
+      "one_language_source_predicate": "The deployable site is regenerated from GenesisCode views, routes, styles, tests, manifests, and assets with no authored HTML, CSS, JavaScript, Node configuration, or hosting YAML.",
+      "owner": "web-platform",
+      "product_family": "web",
+      "related_foundation_claim_ids": [
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-BROWSER-XR",
+        "CAP-DOMAIN-STARTERS"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "standards-static-host",
+          "kind": "runtime",
+          "label": "Standards-compliant static hosting",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "browser-evergreen",
+          "kind": "browser",
+          "label": "Evergreen browser engines",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CLI.md"
+      ],
+      "target_profile": "web-static",
+      "title": "Static website output"
+    },
+    {
+      "authentic_artifact_predicate": "A real browser and SSR process execute routing, hydration, forms, workers, storage, WebSocket, offline service-worker, update, rollback, and scoped network effects under declared budgets.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-web-interactive/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.c",
+        "R5.6.e",
+        "R5.6.f",
+        "R6.5.a",
+        "R6.5.b",
+        "R6.5.c"
+      ],
+      "id": "TARGET-WEB-INTERACTIVE-SSR-PWA",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src/runner_browser_host.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build_packagers.rs"
+      ],
+      "limitations": "No web component/style/router/SSR/hydration/PWA compiler exists, and the current edge Wasm export performs no application work.",
+      "maturity": "L0",
+      "one_language_source_predicate": "All client, server, style, route, worker, service-worker, schema, and deployment behavior is authored in GenesisCode inputs; generated HTML, CSS, JavaScript, and runtime configuration are disposable.",
+      "owner": "web-platform",
+      "product_family": "web",
+      "related_foundation_claim_ids": [
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-BROWSER-XR",
+        "CAP-EFFECT-REPLAY",
+        "CAP-STAGE2-WASM-VALIDATION"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "chromium-current",
+          "kind": "browser",
+          "label": "Current Chromium",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "firefox-current",
+          "kind": "browser",
+          "label": "Current Firefox",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "webkit-current",
+          "kind": "browser",
+          "label": "Current WebKit",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "linux-ssr-runtime",
+          "kind": "runtime",
+          "label": "Pinned self-hosted Linux SSR runtime",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/HOST_ABI.md"
+      ],
+      "target_profile": "web-interactive-ssr-pwa",
+      "title": "Interactive, SSR, and PWA web application"
+    },
+    {
+      "authentic_artifact_predicate": "A deployed process handles real protocol traffic, authentication, persistence, migrations, jobs, observability, backup, restore, graceful drain, update, rollback, and injected faults.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-service-data/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.7.a",
+        "R5.7.b",
+        "R5.7.c",
+        "R5.7.d",
+        "R6.5.d"
+      ],
+      "id": "TARGET-SERVICE-DATA",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src/runner_capability_dispatch",
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build_packagers.rs"
+      ],
+      "limitations": "Individual network and database effects exist, but there is no cohesive typed service, durable data, operations, or authentic service artifact platform.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Routes, middleware, schemas, queries, migrations, jobs, policies, observability, deployment, and tests are GenesisCode-owned inputs with no handwritten Python, shell, SQL migration, or YAML requirement.",
+      "owner": "service-platform",
+      "product_family": "service-data",
+      "related_foundation_claim_ids": [
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-HOST-BRIDGE",
+        "CAP-PLUGIN-FFI",
+        "CAP-PACKAGE-MANAGER"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "linux-x86-64-service",
+          "kind": "host",
+          "label": "Linux x86-64 service host",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "linux-arm64-service",
+          "kind": "host",
+          "label": "Linux arm64 service host",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "wasi-component-service",
+          "kind": "runtime",
+          "label": "WASI component service runtime",
+          "maturity": "L0",
+          "required_for_release": false
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/HOST_ABI.md",
+        "docs/spec/CAPS_TOML.md"
+      ],
+      "target_profile": "service-data-selfhosted",
+      "title": "Self-hosted service and data platform"
+    },
+    {
+      "authentic_artifact_predicate": "A signed app package installs, launches a native window, performs accessible input and one scoped host effect, captures crashes, updates, rolls back, and uninstalls on macOS arm64.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-desktop-macos/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.d",
+        "R6.3.f",
+        "R6.3.g",
+        "R6.6.a",
+        "R6.6.c"
+      ],
+      "id": "TARGET-DESKTOP-MACOS",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build.rs",
+        "crates/gc_gfx/src"
+      ],
+      "limitations": "The desktop target emits a descriptor-style package and launcher rather than a signed native macOS application.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Application logic, lifecycle, UI, permissions, assets, tests, and packaging declarations are GenesisCode inputs; generated Xcode, plist, entitlement, and signing plans are never edited.",
+      "owner": "native-app-platform",
+      "product_family": "desktop",
+      "related_foundation_claim_ids": [
+        "CAP-GRAPHICS-RUNTIME",
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-RUNTIME-SURFACES"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "macos-arm64",
+          "kind": "host",
+          "label": "Supported macOS arm64 release host",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CLI.md"
+      ],
+      "target_profile": "desktop-macos-arm64",
+      "title": "Installable macOS desktop application"
+    },
+    {
+      "authentic_artifact_predicate": "A native package installs, launches a real accessible window, performs one scoped host effect, records resource and crash evidence, updates, rolls back, and uninstalls on supported Linux hosts.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-desktop-linux/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.d",
+        "R6.3.f",
+        "R6.3.g",
+        "R6.6.a",
+        "R6.6.c"
+      ],
+      "id": "TARGET-DESKTOP-LINUX",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build.rs",
+        "crates/gc_gfx/src"
+      ],
+      "limitations": "No installable Linux desktop runtime, package integration, lifecycle, accessibility, update, or interaction evidence exists.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Application, UI, desktop integration, assets, tests, and packaging are GenesisCode inputs; generated desktop files, unit manifests, and native adapters are disposable and unedited.",
+      "owner": "native-app-platform",
+      "product_family": "desktop",
+      "related_foundation_claim_ids": [
+        "CAP-GRAPHICS-RUNTIME",
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-RUNTIME-SURFACES"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "linux-x86-64",
+          "kind": "host",
+          "label": "Supported Linux x86-64 desktop",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "linux-arm64",
+          "kind": "host",
+          "label": "Supported Linux arm64 desktop",
+          "maturity": "L0",
+          "required_for_release": false
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CLI.md"
+      ],
+      "target_profile": "desktop-linux",
+      "title": "Installable Linux desktop application"
+    },
+    {
+      "authentic_artifact_predicate": "A signed Windows package installs, launches a real accessible window, performs one scoped host effect, captures crashes, updates, rolls back, and uninstalls on Windows x86-64.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-desktop-windows/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.d",
+        "R6.3.f",
+        "R6.3.g",
+        "R6.6.a",
+        "R6.6.c"
+      ],
+      "id": "TARGET-DESKTOP-WINDOWS",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build.rs",
+        "crates/gc_gfx/src"
+      ],
+      "limitations": "No installable Windows desktop runtime, package integration, lifecycle, accessibility, update, or interaction evidence exists.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Application, UI, Windows integration, assets, tests, installer, and signing declarations are GenesisCode inputs; generated project and installer sources are disposable and unedited.",
+      "owner": "native-app-platform",
+      "product_family": "desktop",
+      "related_foundation_claim_ids": [
+        "CAP-GRAPHICS-RUNTIME",
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-RUNTIME-SURFACES"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "windows-x86-64",
+          "kind": "host",
+          "label": "Supported Windows x86-64 desktop",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CLI.md"
+      ],
+      "target_profile": "desktop-windows-x86-64",
+      "title": "Installable Windows desktop application"
+    },
+    {
+      "authentic_artifact_predicate": "A valid signed IPA containing executable Genesis application code installs and passes launch, lifecycle, accessibility, permission, storage, network, process-death, upgrade, and rollback workloads on simulator and device.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-ios/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.d",
+        "R6.3.f",
+        "R6.3.g",
+        "R6.6.b",
+        "R6.6.c",
+        "R6.6.d"
+      ],
+      "id": "TARGET-IOS",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build_packagers.rs"
+      ],
+      "limitations": "The current IPA is a deterministic metadata/source archive without an executable app runtime and therefore provides no iOS product support.",
+      "maturity": "L0",
+      "one_language_source_predicate": "The Xcode project, Swift/Objective-C adapters, plist, entitlements, resources, and signing plan regenerate from GenesisCode-owned application inputs and are never manually patched.",
+      "owner": "native-app-platform",
+      "product_family": "mobile",
+      "related_foundation_claim_ids": [
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-RUNTIME-SURFACES",
+        "CAP-GRAPHICS-RUNTIME"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "ios-simulator-arm64",
+          "kind": "simulator",
+          "label": "Pinned iOS simulator",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "ios-device-arm64",
+          "kind": "device",
+          "label": "Named physical iOS device",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CLI.md"
+      ],
+      "target_profile": "mobile-ios",
+      "title": "Installable iOS application"
+    },
+    {
+      "authentic_artifact_predicate": "A valid signed AAB/APK containing executable Genesis application code installs and passes launch, lifecycle, accessibility, permission, storage, network, process-death, upgrade, and rollback workloads on emulator and device.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-android/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.6.d",
+        "R6.3.f",
+        "R6.3.g",
+        "R6.6.b",
+        "R6.6.c",
+        "R6.6.d"
+      ],
+      "id": "TARGET-ANDROID",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build_packagers.rs"
+      ],
+      "limitations": "The current AAB declares android:hasCode=false and contains only metadata and Genesis source, so it provides no Android product support.",
+      "maturity": "L0",
+      "one_language_source_predicate": "The Gradle project, Kotlin/Java adapters, XML resources, manifest, permissions, and signing plan regenerate from GenesisCode-owned application inputs and are never manually patched.",
+      "owner": "native-app-platform",
+      "product_family": "mobile",
+      "related_foundation_claim_ids": [
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-RUNTIME-SURFACES",
+        "CAP-GRAPHICS-RUNTIME"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "android-emulator-x86-64",
+          "kind": "simulator",
+          "label": "Pinned Android emulator",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "android-device-arm64",
+          "kind": "device",
+          "label": "Named physical Android device",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CLI.md"
+      ],
+      "target_profile": "mobile-android",
+      "title": "Installable Android application"
+    },
+    {
+      "authentic_artifact_predicate": "A nontrivial game or media tool runs real frame, audio, input, asset, save/replay, and device-loss workloads under declared frame-time, memory, startup, and artifact budgets on every required scope.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-games-media/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.8.a",
+        "R5.8.b",
+        "R5.8.c",
+        "R5.8.d",
+        "R5.8.f",
+        "R8.2.m",
+        "R8.2.n"
+      ],
+      "id": "TARGET-GAMES-MEDIA",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_gfx/src",
+        "crates/gc_effects/src"
+      ],
+      "limitations": "Current graphics support is deterministic headless planning and resource codecs, not a production UI, game, shader, physics, asset, audio, or creative runtime.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Simulation, scenes, UI, shaders, audio, assets, networking, tooling, tests, and packaging are GenesisCode inputs; generated shaders and target adapters are disposable outputs.",
+      "owner": "interactive-runtime",
+      "product_family": "games-media",
+      "related_foundation_claim_ids": [
+        "CAP-GRAPHICS-RUNTIME",
+        "CAP-GPU-COMPUTE",
+        "CAP-BROWSER-XR",
+        "CAP-DEPLOYMENT-PIPELINE"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "browser-game",
+          "kind": "browser",
+          "label": "Real browser render/audio/input loop",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "desktop-game",
+          "kind": "host",
+          "label": "Real desktop render/audio/input loop",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "mobile-game",
+          "kind": "device",
+          "label": "Named mobile device render/audio/input loop",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md",
+        "docs/spec/GPU_GFX_BUNDLE_v0.1.md"
+      ],
+      "target_profile": "games-media-cross-target",
+      "title": "Cross-target games and creative media runtime"
+    },
+    {
+      "authentic_artifact_predicate": "A reproducible dataset-to-analysis-or-model pipeline executes typed table/tensor/statistics workloads, checkpoints, evaluation, local inference, and resource accounting on CPU and a qualified GPU backend.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-data-ml/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.7.e",
+        "R8.2.r"
+      ],
+      "id": "TARGET-DATA-ML",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_gfx/src",
+        "crates/gc_effects/src"
+      ],
+      "limitations": "GPU dispatch foundations exist, but typed arrays, tensors, dataframes, statistics, model adapters, datasets, and end-to-end local ML workflows are absent.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Datasets, transforms, analyses, model pipelines, evaluation, services, UI, and tests are GenesisCode inputs with no Python notebook, Python package, or foreign orchestration script required.",
+      "owner": "data-ml-platform",
+      "product_family": "data-ml",
+      "related_foundation_claim_ids": [
+        "CAP-GPU-COMPUTE",
+        "CAP-PACKAGE-MANAGER",
+        "CAP-EFFECT-REPLAY"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "macos-arm64-cpu-gpu",
+          "kind": "host",
+          "label": "macOS arm64 CPU/GPU",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "linux-x86-64-cpu-gpu",
+          "kind": "host",
+          "label": "Linux x86-64 CPU/GPU",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md"
+      ],
+      "target_profile": "data-ml-local",
+      "title": "Data science and local machine-learning platform"
+    },
+    {
+      "authentic_artifact_predicate": "A reproducible image or package boots on the named board, runs a Genesis service or UI, accesses real GPIO/I2C/SPI/UART under policy, survives power/network loss, and updates and rolls back.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-embedded-linux/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.9.a",
+        "R5.9.d",
+        "R6.7.a",
+        "R6.7.f",
+        "R8.2.o"
+      ],
+      "id": "TARGET-EMBEDDED-LINUX",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src",
+        "crates/gc_cli_driver/src/pkg_workspace_ops_build.rs"
+      ],
+      "limitations": "Linux arm64 is listed as a host tier but no Raspberry Pi image/package, peripheral capability, remote lifecycle, power-loss, or physical-device evidence exists.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Device application, service/UI, peripheral policy, system integration, deployment, tests, and update plan are GenesisCode inputs; generated units, udev, device-tree overlays, and scripts are unedited.",
+      "owner": "embedded-platform",
+      "product_family": "embedded-linux",
+      "related_foundation_claim_ids": [
+        "CAP-RUNTIME-SURFACES",
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-HOST-BRIDGE"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "raspberry-pi-5",
+          "kind": "device",
+          "label": "Raspberry Pi 5 linux-arm64",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "linux-riscv64-sbc",
+          "kind": "device",
+          "label": "Pinned Linux riscv64 SBC",
+          "maturity": "L0",
+          "required_for_release": false
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CAPS_TOML.md"
+      ],
+      "target_profile": "embedded-linux-arm64",
+      "title": "Embedded Linux and Raspberry Pi-class application"
+    },
+    {
+      "authentic_artifact_predicate": "Closed-world compilation emits linked firmware that boots and executes the normative embedded subset on every required architecture with validated semantics and measured flash, RAM, stack, timing, reset, and fault behavior.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-mcu-aot/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.9.a",
+        "R5.9.b",
+        "R5.9.c",
+        "R5.9.f",
+        "R6.7.b",
+        "R8.2.p"
+      ],
+      "id": "TARGET-MCU-LANGUAGE-AOT",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_kernel/src",
+        "crates/gc_wasm/src"
+      ],
+      "limitations": "No no-OS language subset, static resource verifier, interrupt contract, MCU code generator, startup/linker pipeline, or semantic validation exists.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Firmware, static resource declarations, interrupts, tasks, peripherals, tests, startup intent, and memory policy are GenesisCode inputs; generated C/Rust, startup, vector, and linker sources are disposable.",
+      "owner": "embedded-platform",
+      "product_family": "microcontroller",
+      "related_foundation_claim_ids": [
+        "CAP-COREFORM-IDENTITY",
+        "CAP-STAGE2-WASM-VALIDATION",
+        "CAP-RUNTIME-SURFACES"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "armv6m-thumb",
+          "kind": "runtime",
+          "label": "ARMv6-M Thumb MCU profile",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "riscv32imc",
+          "kind": "runtime",
+          "label": "RISC-V RV32IMC MCU profile",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "xtensa-esp32",
+          "kind": "runtime",
+          "label": "Pinned Xtensa ESP32 MCU profile",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "avr8",
+          "kind": "runtime",
+          "label": "Constrained AVR8 MCU profile",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/COREFORM_CANON_HASH.md"
+      ],
+      "target_profile": "mcu-closed-world-aot",
+      "title": "Constrained MCU language profile and AOT backend"
+    },
+    {
+      "authentic_artifact_predicate": "Signed BSP/HAL packages compile, flash, and exercise typed GPIO, timers, serial, and at least one bus or radio peripheral on each named physical board with pin-conflict and unavailable-peripheral negative tests.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-board-hal/ledger-classification"
+      ],
+      "gap_ids": [
+        "R5.9.d",
+        "R5.9.e",
+        "R6.7.c",
+        "R6.7.f",
+        "R8.2.q"
+      ],
+      "id": "TARGET-BOARD-HAL-FAMILIES",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src",
+        "crates/gc_pkg/src"
+      ],
+      "limitations": "No board manifests, BSP/HAL registry, peripheral ownership checker, board conformance kit, or physical board implementation exists.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Board manifests, pin/peripheral ownership, firmware, tests, and resource policy are GenesisCode inputs; vendor bindings and register adapters are audited package internals rather than application source.",
+      "owner": "embedded-platform",
+      "product_family": "microcontroller",
+      "related_foundation_claim_ids": [
+        "CAP-PACKAGE-MANAGER",
+        "CAP-EVIDENCE-GATED-PUBLISH",
+        "CAP-HOST-BRIDGE"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "rp2040-pico",
+          "kind": "board",
+          "label": "Raspberry Pi Pico RP2040",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "esp32-c3",
+          "kind": "board",
+          "label": "RISC-V ESP32-C3 board",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "esp32-xtensa",
+          "kind": "board",
+          "label": "Pinned Xtensa ESP32 board",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "arduino-uno-r3",
+          "kind": "board",
+          "label": "Arduino Uno R3 compatible AVR board",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CAPS_TOML.md"
+      ],
+      "target_profile": "board-hal-families-v1",
+      "title": "Representative board and capability-safe HAL families"
+    },
+    {
+      "authentic_artifact_predicate": "Genesis tooling discovers only authorized devices, flashes and verifies exact firmware, opens bounded serial/debug sessions, captures crashes, and performs interrupted-update recovery and signed rollback on supported boards.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-device-lifecycle/ledger-classification"
+      ],
+      "gap_ids": [
+        "R6.7.d",
+        "R6.7.e",
+        "R6.7.f"
+      ],
+      "id": "TARGET-DEVICE-FLASH-DEBUG-OTA",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "crates/gc_effects/src/runner_host_bridge.rs",
+        "crates/gc_cli_driver/src"
+      ],
+      "limitations": "The repository has no Genesis device command, authorized discovery, flasher, debugger, provisioning, crash capture, OTA, rollback, or brick-recovery implementation.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Flash, debug, provisioning, crash, OTA, rollback, and recovery intents are Genesis manifests and policies; users do not author shell scripts, OpenOCD files, vendor CLI wrappers, or updater code.",
+      "owner": "embedded-tooling",
+      "product_family": "device-lifecycle",
+      "related_foundation_claim_ids": [
+        "CAP-HOST-BRIDGE",
+        "CAP-DEPLOYMENT-PIPELINE",
+        "CAP-DENY-DEFAULT-POLICY"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "rp2040-debug-probe",
+          "kind": "board",
+          "label": "RP2040 flash/debug path",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "esp32-secure-ota",
+          "kind": "board",
+          "label": "ESP32 flash/debug/signed OTA path",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "arduino-serial-bootloader",
+          "kind": "board",
+          "label": "Arduino-compatible serial bootloader",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/CAPS_TOML.md"
+      ],
+      "target_profile": "device-flash-debug-ota",
+      "title": "Device discovery, flashing, debugging, and OTA lifecycle"
+    },
+    {
+      "authentic_artifact_predicate": "Ordinary CI runs deterministic peripheral simulation while an isolated rig repeatedly flashes, power-cycles, measures, injects peripheral/network/power faults, and retains signed serial/debug/resource evidence from named boards.",
+      "check_paths": [
+        "scripts/check_capability_evidence_ledger_contract.sh"
+      ],
+      "evidence_ids": [
+        "E1:target-hil/ledger-classification"
+      ],
+      "gap_ids": [
+        "R6.7.d",
+        "R6.7.f",
+        "R8.2.p",
+        "R8.2.q"
+      ],
+      "id": "TARGET-HARDWARE-IN-THE-LOOP",
+      "immutable_evidence_ids": [],
+      "implementation_paths": [
+        "scripts",
+        "docs/program/evidence"
+      ],
+      "limitations": "No board simulator contract, isolated physical rig, power/peripheral fault injection, timing/power measurement, or signed hardware witness exists.",
+      "maturity": "L0",
+      "one_language_source_predicate": "Device tests, digital twins, fault plans, expected traces, resource budgets, and qualification policy are GenesisCode inputs; lab-control internals remain isolated infrastructure rather than application authority.",
+      "owner": "embedded-assurance",
+      "product_family": "hardware-assurance",
+      "related_foundation_claim_ids": [
+        "CAP-ASSURANCE-PROFILES",
+        "CAP-TOOL-QUALIFICATION",
+        "CAP-HOST-BRIDGE"
+      ],
+      "release_eligible": false,
+      "release_status": "unsupported",
+      "scopes": [
+        {
+          "id": "isolated-device-lab",
+          "kind": "lab",
+          "label": "Isolated physical device lab",
+          "maturity": "L0",
+          "required_for_release": true
+        },
+        {
+          "id": "board-simulator",
+          "kind": "simulator",
+          "label": "Pinned deterministic board simulator",
+          "maturity": "L0",
+          "required_for_release": true
+        }
+      ],
+      "spec_paths": [
+        "ROADMAP.md",
+        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md"
+      ],
+      "target_profile": "hardware-in-the-loop-v1",
+      "title": "Physical hardware-in-the-loop qualification"
+    }
+  ],
+  "entry_count": 16,
+  "kind": "genesis/product-target-matrix-v0.1",
+  "source_ledger": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+  "version": "0.1"
+}

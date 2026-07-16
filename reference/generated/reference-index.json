@@ -5,7 +5,7 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 279,
+    "canonicalSources": 280,
     "diagnostics": 195,
     "exampleFiles": 189,
     "hostOperations": 188,
@@ -20,7 +20,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "fcc9f456a6b09266e8a4ecffc1220b82147806562e286dc7eb2d90b623a3493a"
+      "sha256": "12bf91b1f749d6a925efa226f22741d3ad9ab9d97aaf042229e432d6edcacc13"
     },
     {
       "path": "README.md",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "8dc0687a5fb655d0163eacf17796792c696adb8bd876eaa764376b2b40d088bc"
+      "sha256": "0b1fe8ecc21db0fc759ff91e21314252963269a4649821dd3d58f8a9fca8e03a"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "9395d4b0b05366ea15005b46a831dfaa5c5a94bd8dde646aeced3789ddb9fda2"
+      "sha256": "bb46ce23d1a36aa813da711f6400d4a9a7735239373e708a781d11183f566e34"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -124,11 +124,11 @@
     },
     {
       "path": "docs/program/RELEASE_NOTES_v0.2.0.json",
-      "sha256": "aac7663a17c569c6b27ea1ea87eb40d2b9ef3126659c8d4a4abae0c3311da40d"
+      "sha256": "fc93aa75b9946944e078f8717ed0e92e2a7f32e55c67e033e105057f21d1b9a9"
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "19ef1b2c56c9142cf9b4c1959ddd3c2bcaa67a357843ab065597c068f4803d32"
+      "sha256": "cf31b58308a064805a697ea75c59acc0f1d65c76bd94e66c6f0c82d4094714d0"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -404,11 +404,11 @@
     },
     {
       "path": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
-      "sha256": "96d63a1b9f32278929115e6baa69d3cc7d98285eed2c6aa2bf88e53f692fca9f"
+      "sha256": "dc718f1c9adaabdc1a044454fae32020c7af8faece8ba382b1696264266afa9b"
     },
     {
       "path": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json",
-      "sha256": "2c3c10ba24e4efb49ab0cd6fdaa7b15f553fe72e9c7a2629e6c1a9089e4d4a5b"
+      "sha256": "cd3c5b62c057335fa95c63174d9c53e56c44c17e7137c5bd643eb3c6183c40e6"
     },
     {
       "path": "docs/spec/CAPS_TOML.md",
@@ -424,7 +424,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "2312067798434e88ba83c4e0e1f204bfc0e786b5e2285591eb1881e91c3c7d30"
+      "sha256": "c4878140b67efd4f3ad5cfcd77f664fdcffe0a40a7cff4b8c5d8d3ba582d061d"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -496,7 +496,7 @@
     },
     {
       "path": "docs/spec/DOC_TOPOLOGY_v0.1.md",
-      "sha256": "26ac0f7fda123a95cba525e2904c26170577c81af787d2042dd07739094037b1"
+      "sha256": "e6ac2e11bc8d3c69f97820eb3e8643c883576aeeca7d20a0df2e35f1626b3e16"
     },
     {
       "path": "docs/spec/DOMAIN_KITS_v0.1.md",
@@ -532,11 +532,11 @@
     },
     {
       "path": "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
-      "sha256": "12887bd910cd3ffe7cd12c5efee9ee5367da4177aec0185f870f03481266313b"
+      "sha256": "72de1c7a366ce008289fe3eec067f95e6246d988f5822551a290b37d749bcfce"
     },
     {
       "path": "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
-      "sha256": "c9115a2898cf1969805d8627368b8735a7471a6557e440dd18212d7aac7425e5"
+      "sha256": "043047352947b803437d4851998b21039e570655306bf8c5a507fd63534a7d39"
     },
     {
       "path": "docs/spec/FS_SANDBOX.md",
@@ -939,6 +939,10 @@
       "sha256": "181f708c951af2afb37fb5549014797be92c99a6a017a99fc358f457ad6f950c"
     },
     {
+      "path": "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
+      "sha256": "8b3993b36c07fe939c083e409e3665de902ac505b578a991f07a46d94d2f03e8"
+    },
+    {
       "path": "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
       "sha256": "8a94e816ed67cdb913a66b5729e687f078ea3dd256d7684c50ea68100810721a"
     },
@@ -1104,11 +1108,11 @@
     },
     {
       "path": "docs/status/REDTEAM_REPORT.md",
-      "sha256": "47732bd52a56a82c537d0033118b778aa37931782537130a35a7ac8b47fa8f90"
+      "sha256": "c6c9d0cda2f4e1b4655059668e23387ccf0eb730e67b5539576aa498a528c726"
     },
     {
       "path": "docs/status/SELFHOST_AUTHORITY_v0.1.md",
-      "sha256": "085ffaa5efd9a53fabac77c6fe17db138ad13e7f28e03426797663b72ee94c60"
+      "sha256": "6a158dadd92b8529c0da5074e40bdddb25933b2c9562b19de8600ff748567aba"
     },
     {
       "path": "docs/status/SELFHOST_CUTOVER.md",
@@ -1120,7 +1124,7 @@
     },
     {
       "path": "feature_matrix.md",
-      "sha256": "91f1ced125878b0ba0c9b9260d0ee4b1d1dc66a854a70bf3e71d571e76d1a6b0"
+      "sha256": "a2478ff1283793743993dfec1d3a2770d74dc609b367621cbd31c487544fbf48"
     },
     {
       "path": "genesisCode.md",

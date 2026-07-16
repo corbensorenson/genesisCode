@@ -4,11 +4,20 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "bea9b60038d00ce88f20be328e537dc08798750481fabd23aa7a66ad43ad1b38",
+  "contentIdentitySha256": "53755a83a56e7deed211a3ae7647d25ef9310b10e4014e6959c7ba95a9551614",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
     "capabilityEvidence": {
+      "aggregateFoundationClaims": [
+        "CAP-RUNTIME-SURFACES",
+        "CAP-DOMAIN-STARTERS",
+        "CAP-GPU-COMPUTE",
+        "CAP-GRAPHICS-RUNTIME",
+        "CAP-BROWSER-XR",
+        "CAP-DEPLOYMENT-PIPELINE"
+      ],
+      "authorizedProductTargetClaims": [],
       "authorizedUnqualifiedClaims": [],
       "claims": [
         {
@@ -695,6 +704,670 @@
           "label": "Windows x86_64",
           "tier": 2
         }
+      ],
+      "productTargets": [
+        {
+          "authenticArtifactPredicate": "The same state/update/view application executes accessible interactions and scoped effects in real browser, desktop, iOS, and Android runtimes.",
+          "evidenceIds": [
+            "E1:target-application-ui/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.a",
+            "R5.6.b",
+            "R5.6.d",
+            "R5.6.f"
+          ],
+          "id": "TARGET-APPLICATION-UI",
+          "immutableEvidenceIds": [],
+          "limitations": "No normative cross-target application, presentation, accessibility, widget, or UI test contract exists; current graphics and browser operations are foundation plumbing only.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Deleting every generated platform root and rebuilding from .gc, Genesis manifests, policies, tests, and assets reproduces all target projects without foreign-source edits.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "browser-evergreen",
+              "kind": "browser",
+              "label": "Evergreen browser engines",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "desktop-tier1",
+              "kind": "host",
+              "label": "Tier-1 desktop hosts",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "mobile-ios-android",
+              "kind": "device",
+              "label": "iOS and Android devices",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "application-ui-shared",
+          "title": "Cross-target application and UI architecture"
+        },
+        {
+          "authenticArtifactPredicate": "The emitted directory serves standards-valid HTML, CSS, assets, routes, metadata, CSP and integrity data and passes real-browser navigation, accessibility, and offline checks.",
+          "evidenceIds": [
+            "E1:target-web-static/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.c",
+            "R6.5.a",
+            "R6.5.b",
+            "R6.5.c"
+          ],
+          "id": "TARGET-WEB-STATIC",
+          "immutableEvidenceIds": [],
+          "limitations": "The current web target is a CoreForm package and synthetic launcher, not a deployable website, so aggregate deployment reachability grants no web support.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "The deployable site is regenerated from GenesisCode views, routes, styles, tests, manifests, and assets with no authored HTML, CSS, JavaScript, Node configuration, or hosting YAML.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "standards-static-host",
+              "kind": "runtime",
+              "label": "Standards-compliant static hosting",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "browser-evergreen",
+              "kind": "browser",
+              "label": "Evergreen browser engines",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "web-static",
+          "title": "Static website output"
+        },
+        {
+          "authenticArtifactPredicate": "A real browser and SSR process execute routing, hydration, forms, workers, storage, WebSocket, offline service-worker, update, rollback, and scoped network effects under declared budgets.",
+          "evidenceIds": [
+            "E1:target-web-interactive/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.c",
+            "R5.6.e",
+            "R5.6.f",
+            "R6.5.a",
+            "R6.5.b",
+            "R6.5.c"
+          ],
+          "id": "TARGET-WEB-INTERACTIVE-SSR-PWA",
+          "immutableEvidenceIds": [],
+          "limitations": "No web component/style/router/SSR/hydration/PWA compiler exists, and the current edge Wasm export performs no application work.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "All client, server, style, route, worker, service-worker, schema, and deployment behavior is authored in GenesisCode inputs; generated HTML, CSS, JavaScript, and runtime configuration are disposable.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "chromium-current",
+              "kind": "browser",
+              "label": "Current Chromium",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "firefox-current",
+              "kind": "browser",
+              "label": "Current Firefox",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "webkit-current",
+              "kind": "browser",
+              "label": "Current WebKit",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "linux-ssr-runtime",
+              "kind": "runtime",
+              "label": "Pinned self-hosted Linux SSR runtime",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "web-interactive-ssr-pwa",
+          "title": "Interactive, SSR, and PWA web application"
+        },
+        {
+          "authenticArtifactPredicate": "A deployed process handles real protocol traffic, authentication, persistence, migrations, jobs, observability, backup, restore, graceful drain, update, rollback, and injected faults.",
+          "evidenceIds": [
+            "E1:target-service-data/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.7.a",
+            "R5.7.b",
+            "R5.7.c",
+            "R5.7.d",
+            "R6.5.d"
+          ],
+          "id": "TARGET-SERVICE-DATA",
+          "immutableEvidenceIds": [],
+          "limitations": "Individual network and database effects exist, but there is no cohesive typed service, durable data, operations, or authentic service artifact platform.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Routes, middleware, schemas, queries, migrations, jobs, policies, observability, deployment, and tests are GenesisCode-owned inputs with no handwritten Python, shell, SQL migration, or YAML requirement.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "linux-x86-64-service",
+              "kind": "host",
+              "label": "Linux x86-64 service host",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "linux-arm64-service",
+              "kind": "host",
+              "label": "Linux arm64 service host",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "wasi-component-service",
+              "kind": "runtime",
+              "label": "WASI component service runtime",
+              "maturity": "L0",
+              "required_for_release": false
+            }
+          ],
+          "targetProfile": "service-data-selfhosted",
+          "title": "Self-hosted service and data platform"
+        },
+        {
+          "authenticArtifactPredicate": "A signed app package installs, launches a native window, performs accessible input and one scoped host effect, captures crashes, updates, rolls back, and uninstalls on macOS arm64.",
+          "evidenceIds": [
+            "E1:target-desktop-macos/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.d",
+            "R6.3.f",
+            "R6.3.g",
+            "R6.6.a",
+            "R6.6.c"
+          ],
+          "id": "TARGET-DESKTOP-MACOS",
+          "immutableEvidenceIds": [],
+          "limitations": "The desktop target emits a descriptor-style package and launcher rather than a signed native macOS application.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Application logic, lifecycle, UI, permissions, assets, tests, and packaging declarations are GenesisCode inputs; generated Xcode, plist, entitlement, and signing plans are never edited.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "macos-arm64",
+              "kind": "host",
+              "label": "Supported macOS arm64 release host",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "desktop-macos-arm64",
+          "title": "Installable macOS desktop application"
+        },
+        {
+          "authenticArtifactPredicate": "A native package installs, launches a real accessible window, performs one scoped host effect, records resource and crash evidence, updates, rolls back, and uninstalls on supported Linux hosts.",
+          "evidenceIds": [
+            "E1:target-desktop-linux/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.d",
+            "R6.3.f",
+            "R6.3.g",
+            "R6.6.a",
+            "R6.6.c"
+          ],
+          "id": "TARGET-DESKTOP-LINUX",
+          "immutableEvidenceIds": [],
+          "limitations": "No installable Linux desktop runtime, package integration, lifecycle, accessibility, update, or interaction evidence exists.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Application, UI, desktop integration, assets, tests, and packaging are GenesisCode inputs; generated desktop files, unit manifests, and native adapters are disposable and unedited.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "linux-x86-64",
+              "kind": "host",
+              "label": "Supported Linux x86-64 desktop",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "linux-arm64",
+              "kind": "host",
+              "label": "Supported Linux arm64 desktop",
+              "maturity": "L0",
+              "required_for_release": false
+            }
+          ],
+          "targetProfile": "desktop-linux",
+          "title": "Installable Linux desktop application"
+        },
+        {
+          "authenticArtifactPredicate": "A signed Windows package installs, launches a real accessible window, performs one scoped host effect, captures crashes, updates, rolls back, and uninstalls on Windows x86-64.",
+          "evidenceIds": [
+            "E1:target-desktop-windows/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.d",
+            "R6.3.f",
+            "R6.3.g",
+            "R6.6.a",
+            "R6.6.c"
+          ],
+          "id": "TARGET-DESKTOP-WINDOWS",
+          "immutableEvidenceIds": [],
+          "limitations": "No installable Windows desktop runtime, package integration, lifecycle, accessibility, update, or interaction evidence exists.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Application, UI, Windows integration, assets, tests, installer, and signing declarations are GenesisCode inputs; generated project and installer sources are disposable and unedited.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "windows-x86-64",
+              "kind": "host",
+              "label": "Supported Windows x86-64 desktop",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "desktop-windows-x86-64",
+          "title": "Installable Windows desktop application"
+        },
+        {
+          "authenticArtifactPredicate": "A valid signed IPA containing executable Genesis application code installs and passes launch, lifecycle, accessibility, permission, storage, network, process-death, upgrade, and rollback workloads on simulator and device.",
+          "evidenceIds": [
+            "E1:target-ios/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.d",
+            "R6.3.f",
+            "R6.3.g",
+            "R6.6.b",
+            "R6.6.c",
+            "R6.6.d"
+          ],
+          "id": "TARGET-IOS",
+          "immutableEvidenceIds": [],
+          "limitations": "The current IPA is a deterministic metadata/source archive without an executable app runtime and therefore provides no iOS product support.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "The Xcode project, Swift/Objective-C adapters, plist, entitlements, resources, and signing plan regenerate from GenesisCode-owned application inputs and are never manually patched.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "ios-simulator-arm64",
+              "kind": "simulator",
+              "label": "Pinned iOS simulator",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "ios-device-arm64",
+              "kind": "device",
+              "label": "Named physical iOS device",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "mobile-ios",
+          "title": "Installable iOS application"
+        },
+        {
+          "authenticArtifactPredicate": "A valid signed AAB/APK containing executable Genesis application code installs and passes launch, lifecycle, accessibility, permission, storage, network, process-death, upgrade, and rollback workloads on emulator and device.",
+          "evidenceIds": [
+            "E1:target-android/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.6.d",
+            "R6.3.f",
+            "R6.3.g",
+            "R6.6.b",
+            "R6.6.c",
+            "R6.6.d"
+          ],
+          "id": "TARGET-ANDROID",
+          "immutableEvidenceIds": [],
+          "limitations": "The current AAB declares android:hasCode=false and contains only metadata and Genesis source, so it provides no Android product support.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "The Gradle project, Kotlin/Java adapters, XML resources, manifest, permissions, and signing plan regenerate from GenesisCode-owned application inputs and are never manually patched.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "android-emulator-x86-64",
+              "kind": "simulator",
+              "label": "Pinned Android emulator",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "android-device-arm64",
+              "kind": "device",
+              "label": "Named physical Android device",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "mobile-android",
+          "title": "Installable Android application"
+        },
+        {
+          "authenticArtifactPredicate": "A nontrivial game or media tool runs real frame, audio, input, asset, save/replay, and device-loss workloads under declared frame-time, memory, startup, and artifact budgets on every required scope.",
+          "evidenceIds": [
+            "E1:target-games-media/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.8.a",
+            "R5.8.b",
+            "R5.8.c",
+            "R5.8.d",
+            "R5.8.f",
+            "R8.2.m",
+            "R8.2.n"
+          ],
+          "id": "TARGET-GAMES-MEDIA",
+          "immutableEvidenceIds": [],
+          "limitations": "Current graphics support is deterministic headless planning and resource codecs, not a production UI, game, shader, physics, asset, audio, or creative runtime.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Simulation, scenes, UI, shaders, audio, assets, networking, tooling, tests, and packaging are GenesisCode inputs; generated shaders and target adapters are disposable outputs.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "browser-game",
+              "kind": "browser",
+              "label": "Real browser render/audio/input loop",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "desktop-game",
+              "kind": "host",
+              "label": "Real desktop render/audio/input loop",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "mobile-game",
+              "kind": "device",
+              "label": "Named mobile device render/audio/input loop",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "games-media-cross-target",
+          "title": "Cross-target games and creative media runtime"
+        },
+        {
+          "authenticArtifactPredicate": "A reproducible dataset-to-analysis-or-model pipeline executes typed table/tensor/statistics workloads, checkpoints, evaluation, local inference, and resource accounting on CPU and a qualified GPU backend.",
+          "evidenceIds": [
+            "E1:target-data-ml/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.7.e",
+            "R8.2.r"
+          ],
+          "id": "TARGET-DATA-ML",
+          "immutableEvidenceIds": [],
+          "limitations": "GPU dispatch foundations exist, but typed arrays, tensors, dataframes, statistics, model adapters, datasets, and end-to-end local ML workflows are absent.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Datasets, transforms, analyses, model pipelines, evaluation, services, UI, and tests are GenesisCode inputs with no Python notebook, Python package, or foreign orchestration script required.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "macos-arm64-cpu-gpu",
+              "kind": "host",
+              "label": "macOS arm64 CPU/GPU",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "linux-x86-64-cpu-gpu",
+              "kind": "host",
+              "label": "Linux x86-64 CPU/GPU",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "data-ml-local",
+          "title": "Data science and local machine-learning platform"
+        },
+        {
+          "authenticArtifactPredicate": "A reproducible image or package boots on the named board, runs a Genesis service or UI, accesses real GPIO/I2C/SPI/UART under policy, survives power/network loss, and updates and rolls back.",
+          "evidenceIds": [
+            "E1:target-embedded-linux/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.9.a",
+            "R5.9.d",
+            "R6.7.a",
+            "R6.7.f",
+            "R8.2.o"
+          ],
+          "id": "TARGET-EMBEDDED-LINUX",
+          "immutableEvidenceIds": [],
+          "limitations": "Linux arm64 is listed as a host tier but no Raspberry Pi image/package, peripheral capability, remote lifecycle, power-loss, or physical-device evidence exists.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Device application, service/UI, peripheral policy, system integration, deployment, tests, and update plan are GenesisCode inputs; generated units, udev, device-tree overlays, and scripts are unedited.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "raspberry-pi-5",
+              "kind": "device",
+              "label": "Raspberry Pi 5 linux-arm64",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "linux-riscv64-sbc",
+              "kind": "device",
+              "label": "Pinned Linux riscv64 SBC",
+              "maturity": "L0",
+              "required_for_release": false
+            }
+          ],
+          "targetProfile": "embedded-linux-arm64",
+          "title": "Embedded Linux and Raspberry Pi-class application"
+        },
+        {
+          "authenticArtifactPredicate": "Closed-world compilation emits linked firmware that boots and executes the normative embedded subset on every required architecture with validated semantics and measured flash, RAM, stack, timing, reset, and fault behavior.",
+          "evidenceIds": [
+            "E1:target-mcu-aot/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.9.a",
+            "R5.9.b",
+            "R5.9.c",
+            "R5.9.f",
+            "R6.7.b",
+            "R8.2.p"
+          ],
+          "id": "TARGET-MCU-LANGUAGE-AOT",
+          "immutableEvidenceIds": [],
+          "limitations": "No no-OS language subset, static resource verifier, interrupt contract, MCU code generator, startup/linker pipeline, or semantic validation exists.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Firmware, static resource declarations, interrupts, tasks, peripherals, tests, startup intent, and memory policy are GenesisCode inputs; generated C/Rust, startup, vector, and linker sources are disposable.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "armv6m-thumb",
+              "kind": "runtime",
+              "label": "ARMv6-M Thumb MCU profile",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "riscv32imc",
+              "kind": "runtime",
+              "label": "RISC-V RV32IMC MCU profile",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "xtensa-esp32",
+              "kind": "runtime",
+              "label": "Pinned Xtensa ESP32 MCU profile",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "avr8",
+              "kind": "runtime",
+              "label": "Constrained AVR8 MCU profile",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "mcu-closed-world-aot",
+          "title": "Constrained MCU language profile and AOT backend"
+        },
+        {
+          "authenticArtifactPredicate": "Signed BSP/HAL packages compile, flash, and exercise typed GPIO, timers, serial, and at least one bus or radio peripheral on each named physical board with pin-conflict and unavailable-peripheral negative tests.",
+          "evidenceIds": [
+            "E1:target-board-hal/ledger-classification"
+          ],
+          "gapIds": [
+            "R5.9.d",
+            "R5.9.e",
+            "R6.7.c",
+            "R6.7.f",
+            "R8.2.q"
+          ],
+          "id": "TARGET-BOARD-HAL-FAMILIES",
+          "immutableEvidenceIds": [],
+          "limitations": "No board manifests, BSP/HAL registry, peripheral ownership checker, board conformance kit, or physical board implementation exists.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Board manifests, pin/peripheral ownership, firmware, tests, and resource policy are GenesisCode inputs; vendor bindings and register adapters are audited package internals rather than application source.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "rp2040-pico",
+              "kind": "board",
+              "label": "Raspberry Pi Pico RP2040",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "esp32-c3",
+              "kind": "board",
+              "label": "RISC-V ESP32-C3 board",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "esp32-xtensa",
+              "kind": "board",
+              "label": "Pinned Xtensa ESP32 board",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "arduino-uno-r3",
+              "kind": "board",
+              "label": "Arduino Uno R3 compatible AVR board",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "board-hal-families-v1",
+          "title": "Representative board and capability-safe HAL families"
+        },
+        {
+          "authenticArtifactPredicate": "Genesis tooling discovers only authorized devices, flashes and verifies exact firmware, opens bounded serial/debug sessions, captures crashes, and performs interrupted-update recovery and signed rollback on supported boards.",
+          "evidenceIds": [
+            "E1:target-device-lifecycle/ledger-classification"
+          ],
+          "gapIds": [
+            "R6.7.d",
+            "R6.7.e",
+            "R6.7.f"
+          ],
+          "id": "TARGET-DEVICE-FLASH-DEBUG-OTA",
+          "immutableEvidenceIds": [],
+          "limitations": "The repository has no Genesis device command, authorized discovery, flasher, debugger, provisioning, crash capture, OTA, rollback, or brick-recovery implementation.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Flash, debug, provisioning, crash, OTA, rollback, and recovery intents are Genesis manifests and policies; users do not author shell scripts, OpenOCD files, vendor CLI wrappers, or updater code.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "rp2040-debug-probe",
+              "kind": "board",
+              "label": "RP2040 flash/debug path",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "esp32-secure-ota",
+              "kind": "board",
+              "label": "ESP32 flash/debug/signed OTA path",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "arduino-serial-bootloader",
+              "kind": "board",
+              "label": "Arduino-compatible serial bootloader",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "device-flash-debug-ota",
+          "title": "Device discovery, flashing, debugging, and OTA lifecycle"
+        },
+        {
+          "authenticArtifactPredicate": "Ordinary CI runs deterministic peripheral simulation while an isolated rig repeatedly flashes, power-cycles, measures, injects peripheral/network/power faults, and retains signed serial/debug/resource evidence from named boards.",
+          "evidenceIds": [
+            "E1:target-hil/ledger-classification"
+          ],
+          "gapIds": [
+            "R6.7.d",
+            "R6.7.f",
+            "R8.2.p",
+            "R8.2.q"
+          ],
+          "id": "TARGET-HARDWARE-IN-THE-LOOP",
+          "immutableEvidenceIds": [],
+          "limitations": "No board simulator contract, isolated physical rig, power/peripheral fault injection, timing/power measurement, or signed hardware witness exists.",
+          "maturity": "L0",
+          "oneLanguageSourcePredicate": "Device tests, digital twins, fault plans, expected traces, resource budgets, and qualification policy are GenesisCode inputs; lab-control internals remain isolated infrastructure rather than application authority.",
+          "releaseClaimEligible": false,
+          "releaseStatus": "unsupported",
+          "scopes": [
+            {
+              "id": "isolated-device-lab",
+              "kind": "lab",
+              "label": "Isolated physical device lab",
+              "maturity": "L0",
+              "required_for_release": true
+            },
+            {
+              "id": "board-simulator",
+              "kind": "simulator",
+              "label": "Pinned deterministic board simulator",
+              "maturity": "L0",
+              "required_for_release": true
+            }
+          ],
+          "targetProfile": "hardware-in-the-loop-v1",
+          "title": "Physical hardware-in-the-loop qualification"
+        }
       ]
     },
     "compatibility": {
@@ -1368,6 +2041,169 @@
         },
         {
           "affectedClaims": [
+            "TARGET-APPLICATION-UI"
+          ],
+          "id": "R5.6.a",
+          "summary": "Define the deterministic shared application architecture and lifecycle."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-APPLICATION-UI"
+          ],
+          "id": "R5.6.b",
+          "summary": "Build the typed presentation and style intermediate representation."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-WEB-INTERACTIVE-SSR-PWA",
+            "TARGET-WEB-STATIC"
+          ],
+          "id": "R5.6.c",
+          "summary": "Implement the complete static, interactive, SSR, and PWA web product stack."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-ANDROID",
+            "TARGET-APPLICATION-UI",
+            "TARGET-DESKTOP-LINUX",
+            "TARGET-DESKTOP-MACOS",
+            "TARGET-DESKTOP-WINDOWS",
+            "TARGET-IOS"
+          ],
+          "id": "R5.6.d",
+          "summary": "Implement accessible cross-target widgets and input semantics."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-WEB-INTERACTIVE-SSR-PWA"
+          ],
+          "id": "R5.6.e",
+          "summary": "Make UI rendering efficient, incremental, validated, and inspectable."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-APPLICATION-UI",
+            "TARGET-WEB-INTERACTIVE-SSR-PWA"
+          ],
+          "id": "R5.6.f",
+          "summary": "Ship one product-grade cross-target UI testing API."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-SERVICE-DATA"
+          ],
+          "id": "R5.7.a",
+          "summary": "Complete typed service routing, middleware, security, and protocol construction."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-SERVICE-DATA"
+          ],
+          "id": "R5.7.b",
+          "summary": "Complete durable typed data, query, transaction, and migration APIs."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-SERVICE-DATA"
+          ],
+          "id": "R5.7.c",
+          "summary": "Add production queues, jobs, cache, storage, and coordination primitives."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-SERVICE-DATA"
+          ],
+          "id": "R5.7.d",
+          "summary": "Unify capability-scoped observability and operations."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-DATA-ML"
+          ],
+          "id": "R5.7.e",
+          "summary": "Build first-party data, numeric, tensor, and local ML libraries."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-GAMES-MEDIA"
+          ],
+          "id": "R5.8.a",
+          "summary": "Define the deterministic game and simulation core."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-GAMES-MEDIA"
+          ],
+          "id": "R5.8.b",
+          "summary": "Complete real 2D and 3D runtime systems."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-GAMES-MEDIA"
+          ],
+          "id": "R5.8.c",
+          "summary": "Make shaders and the asset pipeline Genesis-authored."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-GAMES-MEDIA"
+          ],
+          "id": "R5.8.d",
+          "summary": "Add production audio and creative timeline systems."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-GAMES-MEDIA"
+          ],
+          "id": "R5.8.f",
+          "summary": "Ship Genesis-native game and media editing and debugging workflows."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-EMBEDDED-LINUX",
+            "TARGET-MCU-LANGUAGE-AOT"
+          ],
+          "id": "R5.9.a",
+          "summary": "Define Embedded Linux and constrained MCU profiles separately."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-MCU-LANGUAGE-AOT"
+          ],
+          "id": "R5.9.b",
+          "summary": "Implement closed-world static flash, RAM, stack, timing, and resource verification."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-MCU-LANGUAGE-AOT"
+          ],
+          "id": "R5.9.c",
+          "summary": "Specify real-time, interrupt, reset, watchdog, and power semantics."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-BOARD-HAL-FAMILIES",
+            "TARGET-EMBEDDED-LINUX"
+          ],
+          "id": "R5.9.d",
+          "summary": "Define capability-safe typed board and peripheral HAL APIs."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-BOARD-HAL-FAMILIES"
+          ],
+          "id": "R5.9.e",
+          "summary": "Build self-hostable IoT and robotics packages."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-MCU-LANGUAGE-AOT"
+          ],
+          "id": "R5.9.f",
+          "summary": "Preserve and validate semantic identity across constrained compilation."
+        },
+        {
+          "affectedClaims": [
             "CAP-PACKAGE-MANAGER"
           ],
           "id": "R6.1.a",
@@ -1400,6 +2236,141 @@
           ],
           "id": "R6.3.c",
           "summary": "Make target artifacts reproducible across independent builders."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-ANDROID",
+            "TARGET-DESKTOP-LINUX",
+            "TARGET-DESKTOP-MACOS",
+            "TARGET-DESKTOP-WINDOWS",
+            "TARGET-IOS"
+          ],
+          "id": "R6.3.f",
+          "summary": "Require target-native executable entrypoints and authentic runtime workloads."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-ANDROID",
+            "TARGET-DESKTOP-LINUX",
+            "TARGET-DESKTOP-MACOS",
+            "TARGET-DESKTOP-WINDOWS",
+            "TARGET-IOS"
+          ],
+          "id": "R6.3.g",
+          "summary": "Make all generated foreign glue disposable, reproducible, and non-authoritative."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-WEB-INTERACTIVE-SSR-PWA",
+            "TARGET-WEB-STATIC"
+          ],
+          "id": "R6.5.a",
+          "summary": "Ship the incremental Genesis web compiler and development server."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-WEB-INTERACTIVE-SSR-PWA",
+            "TARGET-WEB-STATIC"
+          ],
+          "id": "R6.5.b",
+          "summary": "Produce standards-valid deployable static, SSR, edge, and PWA artifacts."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-WEB-INTERACTIVE-SSR-PWA",
+            "TARGET-WEB-STATIC"
+          ],
+          "id": "R6.5.c",
+          "summary": "Prove supported behavior in real browser engines and mobile viewports."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-SERVICE-DATA"
+          ],
+          "id": "R6.5.d",
+          "summary": "Ship and maintain a complete self-hosted full-stack reference product."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-DESKTOP-LINUX",
+            "TARGET-DESKTOP-MACOS",
+            "TARGET-DESKTOP-WINDOWS"
+          ],
+          "id": "R6.6.a",
+          "summary": "Build signed and installable real macOS, Windows, and Linux applications."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-ANDROID",
+            "TARGET-IOS"
+          ],
+          "id": "R6.6.b",
+          "summary": "Build complete executable iOS and Android applications."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-ANDROID",
+            "TARGET-DESKTOP-LINUX",
+            "TARGET-DESKTOP-MACOS",
+            "TARGET-DESKTOP-WINDOWS",
+            "TARGET-IOS"
+          ],
+          "id": "R6.6.c",
+          "summary": "Automate simulator, emulator, and physical mobile and desktop qualification."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-ANDROID",
+            "TARGET-IOS"
+          ],
+          "id": "R6.6.d",
+          "summary": "Prove shared product reuse without hiding target-specific work."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-EMBEDDED-LINUX"
+          ],
+          "id": "R6.7.a",
+          "summary": "Promote reproducible Raspberry Pi-class Embedded Linux delivery."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-MCU-LANGUAGE-AOT"
+          ],
+          "id": "R6.7.b",
+          "summary": "Implement the closed-world MCU AOT, link, firmware, and evidence pipeline."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-BOARD-HAL-FAMILIES"
+          ],
+          "id": "R6.7.c",
+          "summary": "Establish qualified RP2040, RISC-V ESP32, Xtensa ESP32, and Arduino-compatible board families."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-DEVICE-FLASH-DEBUG-OTA",
+            "TARGET-HARDWARE-IN-THE-LOOP"
+          ],
+          "id": "R6.7.d",
+          "summary": "Build deterministic board simulation and physical hardware-in-the-loop infrastructure."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-DEVICE-FLASH-DEBUG-OTA"
+          ],
+          "id": "R6.7.e",
+          "summary": "Complete authorized device discovery, flash, debug, provisioning, crash, and OTA lifecycle."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-BOARD-HAL-FAMILIES",
+            "TARGET-DEVICE-FLASH-DEBUG-OTA",
+            "TARGET-EMBEDDED-LINUX",
+            "TARGET-HARDWARE-IN-THE-LOOP"
+          ],
+          "id": "R6.7.f",
+          "summary": "Ship maintained Embedded Linux and physical MCU hardware products."
         },
         {
           "affectedClaims": [
@@ -1478,6 +2449,50 @@
           ],
           "id": "R8.2.h",
           "summary": "Prove the GPU or numeric agent archetype with deterministic backend evidence."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-GAMES-MEDIA"
+          ],
+          "id": "R8.2.m",
+          "summary": "Prove a nontrivial cross-target game under real frame and resource budgets."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-GAMES-MEDIA"
+          ],
+          "id": "R8.2.n",
+          "summary": "Prove a creative media tool with deterministic transforms and real preview/export."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-EMBEDDED-LINUX"
+          ],
+          "id": "R8.2.o",
+          "summary": "Prove a Raspberry Pi-class Embedded Linux product on real hardware."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-HARDWARE-IN-THE-LOOP",
+            "TARGET-MCU-LANGUAGE-AOT"
+          ],
+          "id": "R8.2.p",
+          "summary": "Prove RP2040 and ESP32-class constrained firmware on physical boards."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-BOARD-HAL-FAMILIES",
+            "TARGET-HARDWARE-IN-THE-LOOP"
+          ],
+          "id": "R8.2.q",
+          "summary": "Prove an end-to-end IoT or robotics system with hardware-in-the-loop."
+        },
+        {
+          "affectedClaims": [
+            "TARGET-DATA-ML"
+          ],
+          "id": "R8.2.r",
+          "summary": "Prove a reproducible Genesis-native data science and local ML system."
         },
         {
           "affectedClaims": [
@@ -1659,7 +2674,7 @@
     "docs/program/evidence/artifact/genesis-example.bin": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
-    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "96d63a1b9f32278929115e6baa69d3cc7d98285eed2c6aa2bf88e53f692fca9f",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "dc718f1c9adaabdc1a044454fae32020c7af8faece8ba382b1696264266afa9b",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",

@@ -1,5 +1,13 @@
 {
-  "audit_date": "2026-07-14",
+  "aggregate_foundation_claim_ids": [
+    "CAP-RUNTIME-SURFACES",
+    "CAP-DOMAIN-STARTERS",
+    "CAP-GPU-COMPUTE",
+    "CAP-GRAPHICS-RUNTIME",
+    "CAP-BROWSER-XR",
+    "CAP-DEPLOYMENT-PIPELINE"
+  ],
+  "audit_date": "2026-07-16",
   "entries": [
     {
       "capability": "Pure deterministic kernel separated from effects",

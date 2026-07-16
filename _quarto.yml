@@ -117,6 +117,9 @@ website:
           - reference/formats.qmd
           - reference/examples.qmd
           - reference/source-catalog.qmd
+      - section: "Product and target status"
+        contents:
+          - feature_matrix.md
       - section: "Normative roots"
         contents:
           - docs/PAPER_v0.2.md

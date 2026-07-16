@@ -26,6 +26,7 @@ COMMON_CAPABILITY_FILES = (
     "feature_matrix.md",
     "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
     "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+    "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
     "docs/status/SELFHOST_AUTHORITY_v0.1.md",
     "docs/status/REDTEAM_REPORT.md",
 )
@@ -1468,7 +1469,7 @@ CHANGED_IMPACT_AUTHORITY_FILES = (
 )
 
 BUNDLE_OCCURRENCES = {
-    "capability-ledger-bundle": 2,
+    "capability-ledger-bundle": 3,
     "status-authority-bundle": 2,
     "root-lock-policy-bundle": 1,
     "roadmap-execution-contract-bundle": 1,

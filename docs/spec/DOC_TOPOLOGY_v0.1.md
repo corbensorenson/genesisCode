@@ -107,6 +107,7 @@ Owner: Documentation + release maintainers.
 - Agent-first onboarding spine: `docs/AGENT_ONBOARDING_v0.1.md`
 - Canonical capability/evidence ledger: `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json`
 - Generated capability compatibility, maturity, and release-claim view: `feature_matrix.md`
+- Generated product/target qualification and one-language predicate views: the product/target section of `feature_matrix.md` and `docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json`
 - Generated semantic selfhost authority view: `docs/status/SELFHOST_AUTHORITY_v0.1.md`
 - Normative check/update lifecycle: `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`
 - Canonical check/update boundary policy: `policies/check_update_boundary_v0.1.json`

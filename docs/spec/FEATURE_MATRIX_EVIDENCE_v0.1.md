@@ -6,7 +6,7 @@ Machine-readable source: `docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json`.
 Generated status view: `feature_matrix.md`.
 Canonical source: `docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json`.
 
-- Audit date: `2026-07-14`
+- Audit date: `2026-07-16`
 - Capability entries: `29`
 - L5 release-eligible entries: `0`
 

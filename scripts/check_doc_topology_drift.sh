@@ -57,6 +57,8 @@ if capability_ledger_ref not in matrix:
         + capability_ledger_ref
         + " as its canonical source"
     )
+if "Aggregate Claim Boundary" not in matrix:
+    raise SystemExit("doc-topology-drift: product target matrix must publish the aggregate claim boundary")
 
 for header in (
     "## Authoring",
@@ -85,6 +87,7 @@ for required_ref in (
     "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
     "upgrade_plan.md",
     "feature_matrix.md",
+    "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
     "docs/status/REDTEAM_REPORT.md",
 ):
     if required_ref not in topology:
@@ -102,6 +105,7 @@ if "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md" not in index:
 for generated_status in (
     "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
     "docs/status/SELFHOST_AUTHORITY_v0.1.md",
+    "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
     "policies/check_update_boundary_v0.1.json",
     "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
 ):
