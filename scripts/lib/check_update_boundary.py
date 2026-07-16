@@ -19,6 +19,12 @@ ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / "policies/check_update_boundary_v0.1.json"
 REPORT_PATH = ROOT / "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json"
 CHECK_GLOB = "check_*.sh"
+POLICY_FIELDS = {
+    "audit_date", "compile_allowlist", "expected_scripts", "generated_authority",
+    "kind", "legacy_mutation_helper_allowlist",
+    "legacy_persistent_output_allowlist", "network_allowlist", "ratchets",
+    "roadmap_task", "version",
+}
 
 COMPILE_RE = re.compile(
     r"(?:^|[;&|\s])(?:cargo\s+(?:build|test|run|check|clippy|metadata|package)|rustc\s|lake\s|lean\s|npm\s|pnpm\s|yarn\s)"
@@ -397,6 +403,12 @@ def require_string_map(value: Any, label: str) -> Mapping[str, str]:
 def validate_policy(policy: Any, observations: Sequence[Mapping[str, Any]]) -> None:
     if not isinstance(policy, dict):
         raise BoundaryError("policy must be an object")
+    if set(policy) != POLICY_FIELDS:
+        raise BoundaryError(
+            "policy fields drift: "
+            f"missing={sorted(POLICY_FIELDS-set(policy))} "
+            f"extra={sorted(set(policy)-POLICY_FIELDS)}"
+        )
     if policy.get("kind") != "genesis/check-update-boundary-policy-v0.1":
         raise BoundaryError("invalid check/update boundary policy kind")
     if policy.get("version") != "0.1":

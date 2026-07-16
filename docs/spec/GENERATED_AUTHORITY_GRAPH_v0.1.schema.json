@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/generated-authority-graph-v0.1.json",
+  "title": "GenesisCode Generated Authority Graph v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "schema",
+    "orchestratorEntrypoint",
+    "limits",
+    "identityExclusions",
+    "protectedOutputs",
+    "stagingTemporaryWrites",
+    "excludedEntrypoints",
+    "nodes",
+    "mutationControls"
+  ],
+  "properties": {
+    "kind": { "const": "genesis/generated-authority-graph-v0.1" },
+    "version": { "const": "0.1" },
+    "schema": { "const": "docs/spec/GENERATED_AUTHORITY_GRAPH_v0.1.schema.json" },
+    "orchestratorEntrypoint": { "const": "scripts/update_generated_authority.sh" },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxNodes", "maxOutputs", "maxTimeoutSeconds", "maxDiskMiB"],
+      "properties": {
+        "maxNodes": { "type": "integer", "minimum": 1, "maximum": 128 },
+        "maxOutputs": { "type": "integer", "minimum": 1, "maximum": 1024 },
+        "maxTimeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 7200 },
+        "maxDiskMiB": { "type": "integer", "minimum": 1, "maximum": 16384 }
+      }
+    },
+    "identityExclusions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "protectedOutputs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoGlob" }
+    },
+    "stagingTemporaryWrites": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": { "const": ".genesis/**" }
+    },
+    "excludedEntrypoints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "mutationControls": {
+      "type": "array",
+      "minItems": 5,
+      "items": { "$ref": "#/$defs/mutationControl" }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "repoGlob": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[A-Za-z0-9_.*?\\[\\]-]+(?:/[A-Za-z0-9_.*?\\[\\]-]+)*$"
+    },
+    "stringList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "pathList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoPath" }
+    },
+    "globList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoGlob" }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "command",
+        "dependencies",
+        "inputs",
+        "outputs",
+        "checks",
+        "mode",
+        "timeoutSeconds",
+        "diskMiB"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^generate/[a-z0-9][a-z0-9-]*$" },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": false,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "dependencies": { "$ref": "#/$defs/stringList" },
+        "inputs": { "$ref": "#/$defs/globList" },
+        "outputs": { "$ref": "#/$defs/pathList" },
+        "checks": { "$ref": "#/$defs/pathList" },
+        "mode": { "enum": ["automatic", "operator-gated"] },
+        "timeoutSeconds": { "type": "integer", "minimum": 1 },
+        "diskMiB": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "mutationControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "expectedNodes", "expectedOutputs"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "expectedNodes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^generate/[a-z0-9][a-z0-9-]*$" }
+        },
+        "expectedOutputs": { "$ref": "#/$defs/pathList" }
+      }
+    }
+  }
+}

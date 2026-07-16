@@ -44,4 +44,7 @@ if [[ "$violations" -ne 0 ]]; then
   exit 1
 fi
 
+python3 scripts/lib/generated_authority.py --check
+python3 scripts/lib/generated_authority.py --self-test
+
 echo "generated-artifact-policy: ok"

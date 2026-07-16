@@ -82,7 +82,7 @@ DETERMINISTIC_CLEANUP_POLICY_SCHEMA="docs/spec/DETERMINISTIC_CLEANUP_POLICY_v0.1
 DETERMINISTIC_CLEANUP_MARKER_SCHEMA="docs/spec/DETERMINISTIC_CLEANUP_MARKER_v0.1.schema.json"
 DETERMINISTIC_CLEANUP_PLAN_SCHEMA="docs/spec/DETERMINISTIC_CLEANUP_PLAN_v0.1.schema.json"
 DETERMINISTIC_CLEANUP_RESULT_SCHEMA="docs/spec/DETERMINISTIC_CLEANUP_RESULT_v0.1.schema.json"
-UPGRADE_PLAN_SYNC_SCRIPT="scripts/sync_upgrade_plan_state.sh"
+GENERATED_AUTHORITY_UPDATE_SCRIPT="scripts/update_generated_authority.sh"
 AGENT_GPU_PROFILE_CONTRACT_SCRIPT="scripts/check_agent_gpu_profile_contract.sh"
 AGENT_GPU_PROFILE_LIB="scripts/lib/agent_gpu_profile_contract.sh"
 DENY_CONFIG="deny.toml"
@@ -160,7 +160,7 @@ for path in \
   "$DETERMINISTIC_CLEANUP_MARKER_SCHEMA" \
   "$DETERMINISTIC_CLEANUP_PLAN_SCHEMA" \
   "$DETERMINISTIC_CLEANUP_RESULT_SCHEMA" \
-  "$UPGRADE_PLAN_SYNC_SCRIPT" \
+  "$GENERATED_AUTHORITY_UPDATE_SCRIPT" \
   "$AGENT_GPU_PROFILE_CONTRACT_SCRIPT" \
   "$AGENT_GPU_PROFILE_LIB" \
   "$LINT_SUPPRESSION_POLICY" \
@@ -593,8 +593,8 @@ if ! grep -Fq 'export GENESIS_PERF_DISK_STRICT_MODE="1"' "$HEALTH_RENDERER" || \
   exit 1
 fi
 
-if ! grep -Fq 'sync-upgrade-plan-state: ok' "$UPGRADE_PLAN_SYNC_SCRIPT"; then
-  echo "test-execution-profile-matrix: sync_upgrade_plan_state command must perform end-to-end synchronization checks" >&2
+if ! grep -Fq 'generated_authority.py --update' "$GENERATED_AUTHORITY_UPDATE_SCRIPT"; then
+  echo "test-execution-profile-matrix: canonical generated-authority updater must delegate to the transactional graph runner" >&2
   exit 1
 fi
 

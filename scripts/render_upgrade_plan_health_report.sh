@@ -1421,6 +1421,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh")
     ;;
   prepush-standard)
+    PROFILE_GATES+=("if git rev-parse --verify origin/main >/dev/null 2>&1; then python3 scripts/lib/generated_authority.py --freshness --git-base origin/main; else python3 scripts/lib/generated_authority.py --freshness; fi")
     PROFILE_GATES+=("cargo clippy --workspace --all-targets --locked --offline -- -D warnings")
     PROFILE_GATES+=("bash scripts/check_no_user_panics_compiler.sh")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
@@ -1436,6 +1437,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     ;;
   release-full)
+    PROFILE_GATES+=("if git rev-parse --verify origin/main >/dev/null 2>&1; then python3 scripts/lib/generated_authority.py --freshness --git-base origin/main; else python3 scripts/lib/generated_authority.py --freshness; fi")
     PROFILE_GATES+=("bash scripts/check_domain_starter_registry_bootstrap.sh")
     PROFILE_GATES+=("cargo clippy --workspace --all-targets --locked --offline -- -D warnings")
     PROFILE_GATES+=("bash scripts/check_no_user_panics_compiler.sh")
@@ -1484,6 +1486,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_wasm_production_surface.sh")
     ;;
   full-selfhost-cutover)
+    PROFILE_GATES+=("if git rev-parse --verify origin/main >/dev/null 2>&1; then python3 scripts/lib/generated_authority.py --freshness --git-base origin/main; else python3 scripts/lib/generated_authority.py --freshness; fi")
     PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh")
     ;;
 esac

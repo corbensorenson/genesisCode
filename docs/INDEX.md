@@ -1,6 +1,6 @@
 # GenesisCode Docs Index
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 This is the canonical entrypoint for project documentation.
 
@@ -147,6 +147,8 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `policies/cargo_cache_v0.1.json` - authoritative four-scope Cargo cache policy.
 - `docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json` - closed changed-impact selection policy schema.
 - `policies/changed_impact_v0.1.json` - conservative crate, gate, generated-authority, and profile-fallback selection policy.
+- `docs/spec/GENERATED_AUTHORITY_GRAPH_v0.1.schema.json` - closed schema for the canonical generated-authority dependency graph, exact owners/read-write sets, resource bounds, protected evidence, and mutation routes embedded in `policies/check_update_boundary_v0.1.json`.
+- `scripts/update_generated_authority.sh` - sole tracked-publication orchestrator; stages the affected DAG outside the checkout, validates it, and transactionally promotes or rolls back the complete closure.
 - `upgrade_plan.md` - unresolved red-team backlog only.
 - `docs/status/REDTEAM_REPORT.md` - active P0/P1 risk summary.
 - `docs/status/SELFHOST_CUTOVER.md` - generated selfhost command-routing dashboard; routing is not semantic authority.
@@ -158,7 +160,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `.genesis/perf/gcpm_operation_contract_pack_report.json` - optional local GCPM contract-pack observation, produced only by `scripts/update_gcpm_operation_contract_pack_report.sh`.
 - `.genesis/perf/vcs_selfhost_contract_report.json` - optional local VCS self-host contract observation, produced only by `scripts/update_vcs_selfhost_contract_report.sh`.
 - `.genesis/perf/selfhost_symbol_ownership_report.json` - optional local symbol-ownership observation, produced only by `scripts/update_selfhost_symbol_ownership_report.sh`.
-- `.genesis/perf/cli_diagnostics_contract_report.json` - optional local CLI-diagnostics timing observation, produced only by `scripts/update_cli_diagnostics_contract_report.sh`.
+- `.genesis/perf/cli_diagnostics_contract_report.json` - optional local CLI-diagnostics timing observation, produced explicitly by `scripts/render_cli_diagnostics_contract_report.sh`; tracked diagnostic authorities use `scripts/update_generated_authority.sh`.
 - `.genesis/perf/foundation_stdlib_conformance_report.json` - optional local foundation-stdlib timing observation, produced only by `scripts/update_foundation_stdlib_conformance_report.sh`.
 - `.genesis/perf/fuzz_differential_hardening_report.json` - optional local fuzz/differential timing observation, produced only by `scripts/update_fuzz_differential_hardening_report.sh`.
 - `.genesis/perf/wasm_production_surface_report.json` - optional local WASM production-surface observation, produced only by `scripts/update_wasm_production_surface_report.sh`.

@@ -49,10 +49,16 @@ configure_genesis_binary() {
   GENESIS_AUTHORING_BIN="$CARGO_TARGET_DIR/debug/genesis"
 }
 
+validate_unless_staged() {
+  if [[ "${GENESIS_GENERATED_AUTHORITY_STAGE:-0}" != "1" ]]; then
+    "$@"
+  fi
+}
+
 update_profile() {
   atomic_render docs/spec/GC_AGENT_PROFILE_v0.3.json \
     python3 scripts/lib/gc_agent_profile.py --render
-  bash scripts/check_gc_agent_profile.sh
+  validate_unless_staged bash scripts/check_gc_agent_profile.sh
   echo "update-agent-authoring-bundle: refreshed profile"
 }
 
@@ -60,7 +66,7 @@ update_diagnostics() {
   bash scripts/update_gc_diagnostic_catalog.sh
   bash scripts/update_cli_diagnostic_goldens.sh
   bash scripts/update_gc_repair_utility_report.sh
-  bash scripts/check_cli_diagnostics_contract.sh
+  validate_unless_staged bash scripts/check_cli_diagnostics_contract.sh
   echo "update-agent-authoring-bundle: refreshed diagnostic authorities and evidence"
 }
 
@@ -68,7 +74,7 @@ update_derived_agent_surfaces() {
   bash scripts/update_gc_agent_core_card.sh
   bash scripts/update_gc_agent_task_cards.sh
   bash scripts/update_gc_agent_symbol_index.sh
-  bash scripts/check_gc_agent_symbol_index.sh
+  validate_unless_staged bash scripts/check_gc_agent_symbol_index.sh
   python3 scripts/lib/genesisbench_reference_agent.py --write
   python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
   echo "update-agent-authoring-bundle: refreshed derived agent surfaces"
@@ -198,7 +204,7 @@ case "$component" in
     update_benchmark_run
     update_protocol_fixtures
     update_corpus
-    bash scripts/check_agent_authoring_bundle.sh
+    validate_unless_staged bash scripts/check_agent_authoring_bundle.sh
     ;;
   -h|--help) usage ;;
   *) usage >&2; exit 2 ;;

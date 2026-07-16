@@ -40,6 +40,18 @@ done
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+GENESIS_PRELUDE_OUT="$TMP_DIR/prelude.gc" \
+GENESIS_PRELUDE_MANIFEST_HASH_OUT="$TMP_DIR/prelude.manifest.sha256" \
+  bash scripts/assemble_prelude.sh
+cmp -s "$TMP_DIR/prelude.gc" prelude/prelude.gc || {
+  echo "prelude-capability-coverage: assembled prelude is stale; run scripts/update_generated_authority.sh --path prelude/modules/manifest.toml" >&2
+  exit 1
+}
+cmp -s "$TMP_DIR/prelude.manifest.sha256" prelude/prelude.manifest.sha256 || {
+  echo "prelude-capability-coverage: prelude manifest identity is stale; run scripts/update_generated_authority.sh --path prelude/modules/manifest.toml" >&2
+  exit 1
+}
+
 WRAPPER_OPS="$TMP_DIR/wrapper_ops.txt"
 RUNNER_OPS="$TMP_DIR/runner_ops.txt"
 MISSING="$TMP_DIR/missing.txt"
