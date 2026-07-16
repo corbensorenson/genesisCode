@@ -66,6 +66,13 @@ ADAPTER_REQUEST_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTER_REQUEST_v0.1.sch
 ADAPTER_RESPONSE_SCHEMA = ROOT / "docs/spec/GENESISBENCH_ADAPTER_RESPONSE_v0.1.schema.json"
 EXECUTION_RUN_SCHEMA = ROOT / "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json"
 BUNDLE_MANIFEST_SCHEMA = ROOT / "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json"
+SUBMISSION_CLAIM_SCHEMA = ROOT / "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json"
+SIGNED_SUBMISSION_SCHEMA = ROOT / "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json"
+REGISTRY_POLICY_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json"
+REGISTRY_RESULT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json"
+REGISTRY_EVENT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json"
+REGISTRY_CHECKPOINT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json"
+LEADERBOARD_SCHEMA = ROOT / "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json"
 RUN_EXAMPLE = ROOT / "examples/agent_benchmark_reproducibility/run.json"
 ATTESTATION_FIXTURE = ROOT / "benchmarks/genesisbench/v0.1/contamination.fixture.json"
 TASK_BENCHMARK = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
@@ -697,6 +704,13 @@ def main() -> int:
     validate_schema(ADAPTER_RESPONSE_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-adapter-response-v0.1.json")
     validate_schema(EXECUTION_RUN_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-execution-run-v0.1.json")
     validate_schema(BUNDLE_MANIFEST_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-bundle-manifest-v0.1.json")
+    validate_schema(SUBMISSION_CLAIM_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-submission-claim-v0.1.json")
+    validate_schema(SIGNED_SUBMISSION_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-signed-submission-v0.1.json")
+    validate_schema(REGISTRY_POLICY_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-registry-policy-v0.1.json")
+    validate_schema(REGISTRY_RESULT_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-registry-result-v0.1.json")
+    validate_schema(REGISTRY_EVENT_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-registry-event-v0.1.json")
+    validate_schema(REGISTRY_CHECKPOINT_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-registry-checkpoint-v0.1.json")
+    validate_schema(LEADERBOARD_SCHEMA, "https://genesiscode.dev/schemas/genesisbench-leaderboard-v0.1.json")
     reference_agent = render_reference_agent()
     validate_reference_agent(reference_agent)
     if args.refresh_profile:

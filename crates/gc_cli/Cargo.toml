@@ -33,6 +33,8 @@ assert_cmd = "2"
 predicates = "3"
 tempfile = "3"
 serde_json.workspace = true
+sha2.workspace = true
+base64ct.workspace = true
 blake3.workspace = true
 gc_coreform = { path = "../gc_coreform" }
 gc_effects = { path = "../gc_effects" }

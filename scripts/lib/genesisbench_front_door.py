@@ -1166,7 +1166,7 @@ def submit_bundle(bundle: Path, outbox: Path, submitter: str) -> dict[str, Any]:
 def inspect(case_id: str | None, adapter_path: Path | None) -> dict[str, Any]:
     suite = load_json(SUITE_PATH)
     profile = load_json(PROFILE_PATH)
-    data: dict[str, Any] = {"kind": "genesis/genesisbench-inspect-v0.1", "profileIdentitySha256": profile["contentIdentitySha256"], "cases": [{"id": row["id"], "taskClass": row["taskClass"], "lineageId": row["lineageId"], "conditionId": row["conditionId"]} for row in suite["cases"]], "adapterClasses": list(ADAPTER_CLASSES), "commands": ["inspect", "run", "validate-run", "score", "replay", "bundle", "submit"]}
+    data: dict[str, Any] = {"kind": "genesis/genesisbench-inspect-v0.1", "profileIdentitySha256": profile["contentIdentitySha256"], "cases": [{"id": row["id"], "taskClass": row["taskClass"], "lineageId": row["lineageId"], "conditionId": row["conditionId"]} for row in suite["cases"]], "adapterClasses": list(ADAPTER_CLASSES), "commands": ["inspect", "run", "validate-run", "score", "replay", "bundle", "submit", "registry-init", "registry-admit", "registry-verify", "registry-build"]}
     if case_id is not None:
         data["case"] = find_case(case_id)
     if adapter_path is not None:

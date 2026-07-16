@@ -112,8 +112,19 @@ genesis --json agent-index --diagnostic <exact-code>
     `genesisbench_adapter_schema = "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json"`,
     `genesisbench_execution_run_schema = "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json"`,
     and `genesisbench_bundle_manifest_schema = "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json"`
-    as the canonical seven-command benchmark surface, closed five-class transport contract,
+    as the canonical eleven-command benchmark and registry surface, closed five-class transport contract,
     strict run/replay record, and deterministic submission bundle.
+  - includes `genesisbench_registry = "docs/spec/GENESISBENCH_REGISTRY_v0.1.json"`,
+    `genesisbench_submission_claim_schema = "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json"`,
+    `genesisbench_signed_submission_schema = "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json"`,
+    `genesisbench_registry_policy_schema = "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json"`,
+    `genesisbench_registry_result_schema = "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json"`,
+    `genesisbench_registry_event_schema = "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json"`,
+    `genesisbench_registry_checkpoint_schema = "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json"`,
+    and `genesisbench_leaderboard_schema = "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json"`
+    as the separate signed-admission and static-publication authority. Verification rederives
+    every result from retained bundle bytes, every event prefix is operator-signed, and rank is
+    lexicographic within one exact cohort without cost or latency as a tie-breaker.
   - includes `genesisbench_analysis_plan = "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json"`,
     `genesisbench_observations_schema = "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json"`,
     and `genesisbench_analysis_report_schema = "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json"`

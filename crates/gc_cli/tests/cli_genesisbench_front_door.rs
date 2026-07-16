@@ -1,5 +1,6 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -44,6 +45,75 @@ fn copy_tree(source: &Path, target: &Path) {
     }
 }
 
+fn seal(mut value: Value) -> Value {
+    value["contentIdentitySha256"] = Value::String(String::new());
+    let mut bytes = serde_json::to_vec(&value).expect("canonical JSON");
+    bytes.push(b'\n');
+    value["contentIdentitySha256"] = Value::String(format!("{:x}", Sha256::digest(bytes)));
+    value
+}
+
+fn write_submission_claim(root: &Path, path: &Path) {
+    let reference: Value = serde_json::from_slice(
+        &fs::read(root.join("docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json"))
+            .expect("read reference agent"),
+    )
+    .expect("parse reference agent");
+    let lineages = serde_json::json!(["lineage-generation-001"]);
+    let mut lineage_bytes = serde_json::to_vec(&lineages).expect("lineage JSON");
+    lineage_bytes.push(b'\n');
+    let claim = seal(serde_json::json!({
+        "kind": "genesis/genesisbench-submission-claim-v0.1",
+        "version": "0.1.0",
+        "registryPolicyIdentitySha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "evaluation": {
+            "id": "front-door-integration",
+            "taskEpochId": "public-v0.1",
+            "contextMode": "compact-small",
+            "interactionMode": "artifact-response-v0.1",
+            "expectedLineageIds": lineages,
+            "expectedLineagesIdentitySha256": format!("{:x}", Sha256::digest(lineage_bytes)),
+        },
+        "track": {
+            "id": "open-agent",
+            "scaffoldClass": "fixed-reference",
+            "scaffoldIdentitySha256": reference["contentIdentitySha256"],
+            "genesisSpecificTraining": "unknown",
+            "adaptationIdentitySha256": null,
+            "inferenceMode": "local-offline",
+            "networkMode": "deny",
+        },
+        "model": {
+            "familyId": "fixture-family",
+            "providerId": "fixture-provider",
+            "id": "genesisbench-fixture-model",
+            "revision": "v0.1",
+            "runtimeId": "command-fixture",
+            "runtimeVersion": "v0.1",
+            "runtimeArtifactSha256": null,
+        },
+        "contamination": {
+            "label": "declared-contaminated",
+            "evidenceCodes": ["known-exposure/public-reference"],
+            "evidenceIdentitySha256": null,
+        },
+        "hardware": {
+            "classId": null,
+            "combinedResidentBytes": null,
+            "evidenceIdentitySha256": null,
+            "measurementMethod": "not-claimed",
+        },
+        "economics": {
+            "currency": null,
+            "costMicrounits": null,
+            "latencyMs": 0,
+            "energyMillijoules": null,
+        },
+        "contentIdentitySha256": "",
+    }));
+    fs::write(path, serde_json::to_vec_pretty(&claim).unwrap()).expect("write claim");
+}
+
 #[test]
 fn canonical_front_door_runs_replays_bundles_and_submits_without_adapter_reinvocation() {
     let root = support::repo_root();
@@ -65,7 +135,7 @@ fn canonical_front_door_runs_replays_bundles_and_submits_without_adapter_reinvoc
             "deterministic-mock"
         ])
     );
-    assert_eq!(inspected["commands"].as_array().unwrap().len(), 7);
+    assert_eq!(inspected["commands"].as_array().unwrap().len(), 11);
 
     let external_adapter = temp.path().join("adapter.json");
     let external_executable = temp.path().join("adapter.py");
@@ -166,6 +236,19 @@ fn canonical_front_door_runs_replays_bundles_and_submits_without_adapter_reinvoc
     assert_eq!(fs::read(&bundle_a).unwrap(), fs::read(&bundle_b).unwrap());
 
     let outbox = temp.path().join("outbox");
+    let signing_key = temp.path().join("submitter.toml");
+    let generated_key = run_genesis(
+        &root,
+        &artifact,
+        &["keygen", "--out", signing_key.to_str().unwrap()],
+    );
+    assert!(
+        generated_key.status.success(),
+        "{}",
+        String::from_utf8_lossy(&generated_key.stderr)
+    );
+    let claim = temp.path().join("claim.json");
+    write_submission_claim(&root, &claim);
     let submitted = data(&run_genesis(
         &root,
         &artifact,
@@ -174,13 +257,17 @@ fn canonical_front_door_runs_replays_bundles_and_submits_without_adapter_reinvoc
             "submit",
             "--bundle",
             bundle_a.to_str().unwrap(),
+            "--claim",
+            claim.to_str().unwrap(),
             "--outbox",
             outbox.to_str().unwrap(),
             "--submitter",
             "integration-test",
+            "--key",
+            signing_key.to_str().unwrap(),
         ],
     ));
-    assert_eq!(submitted["transport"], "local-immutable-outbox-v0.1");
+    assert_eq!(submitted["transport"], "local-signed-immutable-outbox-v0.1");
     assert_eq!(fs::read_dir(&outbox).unwrap().count(), 2);
 
     let tampered = temp.path().join("tampered");

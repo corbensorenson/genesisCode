@@ -999,6 +999,7 @@ name = "gc_cli"
 version = "0.2.0"
 dependencies = [
  "assert_cmd",
+ "base64ct",
  "blake3",
  "gc_cli_driver",
  "gc_cli_driver_parity",
@@ -1011,6 +1012,7 @@ dependencies = [
  "gc_vcs",
  "predicates",
  "serde_json",
+ "sha2",
  "tempfile",
 ]
 

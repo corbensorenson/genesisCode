@@ -494,7 +494,7 @@ pub(super) fn cmd_agent_index(
     }
     missing_sources.extend(selfhost_missing_sources);
 
-    let docs = serde_json::json!({
+    let mut docs = serde_json::json!({
         "cli": "docs/spec/CLI.md",
         "schema_registry": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
         "host_abi": "docs/spec/HOST_ABI.md",
@@ -535,6 +535,42 @@ pub(super) fn cmd_agent_index(
         "write_genesiscode_skill_distribution": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
         "selfhost_symbol_ownership": "docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.md",
     });
+    for (key, path) in [
+        (
+            "genesisbench_registry",
+            "docs/spec/GENESISBENCH_REGISTRY_v0.1.json",
+        ),
+        (
+            "genesisbench_submission_claim_schema",
+            "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_signed_submission_schema",
+            "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_registry_policy_schema",
+            "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_registry_result_schema",
+            "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_registry_event_schema",
+            "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_registry_checkpoint_schema",
+            "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_leaderboard_schema",
+            "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
+        ),
+    ] {
+        docs[key] = serde_json::Value::String(path.to_string());
+    }
     let env = JsonEnvelope {
         ok: true,
         kind: "genesis/agent-index-v0.1",

@@ -1,0 +1,53 @@
+{
+  "admission": {
+    "adapterOrRunMaySelfRank": false,
+    "allAttemptsAndFailuresRetained": true,
+    "bundleValidation": "strict-all-fields-and-bytes",
+    "closedTrackAndProfileRequired": true,
+    "independentRescore": "required-before-result-derivation",
+    "invalidPartialQuality": 0
+  },
+  "contentIdentitySha256": "017cca0158ab32df4dd89c0fd6713d3527460547e1283065ef862d4e3c678dd0",
+  "cryptography": {
+    "algorithm": "ed25519",
+    "canonicalPayload": "ascii-sorted-integer-json-newline-v0.1",
+    "envelope": "dsse-v1",
+    "signatureGrantsScoreAuthority": false,
+    "submitterAndOperatorKeysSeparated": true
+  },
+  "history": {
+    "appendOnlyByResultIdentity": true,
+    "deleteOrRewriteCommands": false,
+    "eventSequenceStartsAt": 1,
+    "everyPrefixCheckpointed": true,
+    "model": "single-writer-signed-hash-chain",
+    "silentSuppressionAllowed": false
+  },
+  "kind": "genesis/genesisbench-registry-authority-v0.1",
+  "publication": {
+    "confidence": "wilson-95-lineage-binomial",
+    "derivedOnlyFromSignedHistory": true,
+    "format": "deterministic-static-json-html",
+    "historicalCheckpointsPublished": true,
+    "invalidMissingAbstainedAndAttempts": true,
+    "perLineageAndClass": true,
+    "replayInstructions": true
+  },
+  "ranking": {
+    "cohortIsolation": "exact-content-addressed-cohort-only",
+    "completeEvaluationSetRequired": true,
+    "costLatencyAffectRank": false,
+    "independentUnit": "lineage-id",
+    "lexicographicKeys": [
+      "verified-solve-rate-desc",
+      "conditional-quality-desc",
+      "capability-excess-asc",
+      "context-bytes-asc",
+      "tool-calls-asc",
+      "repair-calls-asc"
+    ],
+    "tiesRemainTies": true
+  },
+  "registryId": "GenesisBench-Signed-Registry-v0.1",
+  "version": "0.1.0"
+}

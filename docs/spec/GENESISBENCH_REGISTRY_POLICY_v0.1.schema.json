@@ -1,0 +1,200 @@
+{
+  "$defs": {
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "nullableHash": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-registry-policy-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "admission": {
+      "additionalProperties": false,
+      "properties": {
+        "allowedTracks": {
+          "items": {
+            "enum": [
+              "cold-acquisition",
+              "embedded-local",
+              "genesis-adapted",
+              "open-agent"
+            ]
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "maxBundleBytes": {
+          "maximum": 67108864,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "rankPublicReferences": {
+          "const": false
+        }
+      },
+      "required": [
+        "allowedTracks",
+        "maxBundleBytes",
+        "rankPublicReferences"
+      ],
+      "type": "object"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-registry-policy-v0.1"
+    },
+    "operator": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "keyId": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "provenance": {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        "publicKeyBase64": {
+          "maxLength": 44,
+          "minLength": 44,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "keyId",
+        "publicKeyBase64",
+        "provenance"
+      ],
+      "type": "object"
+    },
+    "protocol": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "identitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "identitySha256"
+      ],
+      "type": "object"
+    },
+    "ranking": {
+      "additionalProperties": false,
+      "properties": {
+        "completeEvaluationSetRequired": {
+          "const": true
+        },
+        "costLatencyAffectRank": {
+          "const": false
+        },
+        "lexicographicKeys": {
+          "const": [
+            "verified-solve-rate-desc",
+            "conditional-quality-desc",
+            "capability-excess-asc",
+            "context-bytes-asc",
+            "tool-calls-asc",
+            "repair-calls-asc"
+          ]
+        },
+        "tiesRemainTies": {
+          "const": true
+        }
+      },
+      "required": [
+        "lexicographicKeys",
+        "costLatencyAffectRank",
+        "completeEvaluationSetRequired",
+        "tiesRemainTies"
+      ],
+      "type": "object"
+    },
+    "registryId": {
+      "$ref": "#/$defs/id"
+    },
+    "submitters": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "keyId": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "provenance": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "publicKeyBase64": {
+            "maxLength": 44,
+            "minLength": 44,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "keyId",
+          "publicKeyBase64",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "maxItems": 1024,
+      "minItems": 1,
+      "type": "array"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "registryId",
+    "protocol",
+    "operator",
+    "submitters",
+    "admission",
+    "ranking",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench registry policy v0.1",
+  "type": "object"
+}

@@ -29,6 +29,13 @@ The normative authorities are:
 - [Closed adapter-profile schema](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json)
 - [Execution-run schema](../docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json)
 - [Deterministic bundle schema](../docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json)
+- [Signed registry authority](../docs/spec/GENESISBENCH_REGISTRY_v0.1.json)
+- [Submission claim schema](../docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json)
+- [Registry policy schema](../docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json)
+- [Registry result schema](../docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json)
+- [Append event schema](../docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json)
+- [Checkpoint schema](../docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json)
+- [Static leaderboard schema](../docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json)
 - [Task benchmark](../benchmarks/agent_tasks/v0.1/suite.json)
 - [Scoring authority](../docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json)
 - [Run schema](../docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json)
@@ -120,11 +127,36 @@ genesis --json bench bundle \
   --out .genesis/bench/conformance.gcbundle
 genesis --json bench submit \
   --bundle .genesis/bench/conformance.gcbundle \
+  --claim .genesis/bench/claim.json \
   --outbox .genesis/bench/outbox \
-  --submitter example-lab
+  --submitter example-lab \
+  --key .genesis/keys/example-lab.toml
 ```
 
-The bundle is byte-reproducible gzip/USTAR with fixed metadata and a closed artifact manifest. `submit` performs no network operation and writes a content-addressed immutable outbox envelope. This transport-neutral execution evidence is not yet a ranked result: registry admission must independently validate and rescore it and bind signed submitter, track, contamination, cohort, and hardware evidence.
+The bundle is byte-reproducible gzip/USTAR with fixed metadata and a closed artifact manifest. `submit` performs no network operation. It validates a closed claim, signs a domain-separated DSSE statement through the Rust Ed25519 boundary, and writes a content-addressed immutable outbox. The claim binds one target registry policy, evaluation set, track/scaffold/training facts, immutable model/runtime identity, contamination and hardware evidence, and separately reported economics.
+
+Initialize and operate a local registry with a distinct operator key:
+
+```bash
+genesis --json bench registry-init \
+  --registry .genesis/bench/registry \
+  --policy .genesis/bench/registry-policy.json \
+  --operator-key .genesis/keys/registry-operator.toml
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench registry-admit \
+  --registry .genesis/bench/registry \
+  --submission .genesis/bench/outbox/SUBMISSION.submission.json \
+  --bundle .genesis/bench/conformance.gcbundle \
+  --operator-key .genesis/keys/registry-operator.toml
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench registry-verify \
+  --registry .genesis/bench/registry
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench registry-build \
+  --registry .genesis/bench/registry \
+  --out .genesis/bench/static-leaderboard
+```
+
+Admission verifies pinned submitter provenance, every bundle byte, run closure, and strict replay, then independently re-scores before deriving a result. It appends one operator-signed hash-chain event and a signed checkpoint over the complete signed event prefix. Verification re-extracts every retained bundle and rederives every result; signatures alone are insufficient. Unknown files, orphaned objects, gaps, deletions, byte rewrites, and hidden history fail closed.
+
+Static ranking is restricted to complete evaluation sets inside one exact cohort. It orders verified solve rate first, conditional quality among solved lineages second, then capability excess, context bytes, tool calls, and repair calls. Invalid partial quality is zero. Cost, latency, energy, provider identity, and stable system IDs never improve substantive rank; exact ties remain ties. The publication retains every attempt, failure, invalid, abstention, missing lineage, per-class result, model/runtime fact, contamination/hardware fact, and offline replay command.
 
 ## Analyze lineages, not repeated conditions
 
@@ -263,7 +295,7 @@ Never collapse these labels into one leaderboard. The closed cohort record binds
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, scorer, canonical seven-command CLI, five closed adapter classes, strict replay, deterministic run bundles, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. The signed registry and leaderboard are R1.4.m; construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, scorer, canonical eleven-command CLI, five closed adapter classes, strict replay, deterministic run bundles, signed append-only registry, lexicographic static leaderboard, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. Construct and anti-gaming studies are R1.4.n; reproducible baselines, benchmark card, and methods paper are R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 

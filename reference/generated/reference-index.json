@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 270,
+    "canonicalSources": 278,
     "diagnostics": 194,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 71,
+    "schemas": 78,
     "symbols": 168
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -24,7 +24,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "415cac540284133dbf100b86f4c726d7f520adc5035df3a1cf98cb1640c72c71"
+      "sha256": "9802fea4df88ec8fdc704763665cc0e88c86f8c7975e48d5186055bd84c5df04"
     },
     {
       "path": "ROADMAP.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "ce7e83ef8a7ba0dd5f9650f5d377d768f1842cde2a89206da094e758100c2da7"
+      "sha256": "566d4a2a56e85878bd0596c603209b04d3fd863e6a48ad9b65eb6787f9625744"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -336,7 +336,7 @@
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "cc062d75d017bc5f4a501fff84909e5e8927a6c1ce2250fa45bde69f9b82bbc9"
+      "sha256": "bb881a49a6298a5d1076f41a026c348bdf8d775305c48fda30c6fcf755e9a574"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -348,7 +348,7 @@
     },
     {
       "path": "docs/spec/AGENT_INDEX_v0.1.md",
-      "sha256": "febedfdf7bf050291f62b2b069088ab9b04641159a327d24a0df27847bca73bf"
+      "sha256": "3e699ebb68c385e50b5fe0306e2285f02dd241a7605201c6e9b364d881905e10"
     },
     {
       "path": "docs/spec/AGENT_SESSION_RESOURCES_v0.1.schema.json",
@@ -752,11 +752,15 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
-      "sha256": "815c8e82b78330fcc7cc3e75679ae58c22946632acb34b1d14907161649db8fc"
+      "sha256": "804555fb4474adf4e31b3e8d0f152a134fbda45e8cd78a8ba144894266385a41"
     },
     {
       "path": "docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json",
       "sha256": "c32ef46008f9244c5c8b4ca8922f3dadf664909d9a696e0ac21e0ba2ce626b73"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
+      "sha256": "7ed78f85992ab6c7cc99f455be5fca01c1d0f6ff6520787b25a4880f2bdcfb93"
     },
     {
       "path": "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
@@ -791,8 +795,36 @@
       "sha256": "e839917454ab0f5c83ecbffe883996af05bc7dc6802fe401f6cd37d5857bb205"
     },
     {
+      "path": "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
+      "sha256": "abab627807e8ec698ef9bd5e005efc9d4831b6d18d8e3428af9afab411c36f0d"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
+      "sha256": "6f97ff4279a7c5fd519095d53d7898eb63fa73ba21fce543685b46a5827c4b76"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json",
+      "sha256": "aa460f77574fa4710f231b219ba1d51adf951b219a93855d32b3279da5a2da04"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json",
+      "sha256": "f79c782a8763306125ec5443e83bb2f93b3e810786e098e1f6bdd4e06a163f7d"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_REGISTRY_v0.1.json",
+      "sha256": "cf276c3cb0e0863c494e8a8d15b244ff0516ba6442a0174519ae336406f83402"
+    },
+    {
       "path": "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
       "sha256": "527c402107d7f72f309f451e581be1ec5a4dc81140b329d8e0490ccfb36c9c2e"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json",
+      "sha256": "f5435f31df34a9d2b4281836c5be502c443a009369ce4be4f1f1fb35306a181a"
+    },
+    {
+      "path": "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json",
+      "sha256": "3b5e763dd53de6eaae091f1750018c0a636269a06e3fbb39f0556f03484b528a"
     },
     {
       "path": "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",

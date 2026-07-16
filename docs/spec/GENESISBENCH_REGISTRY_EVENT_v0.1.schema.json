@@ -1,0 +1,145 @@
+{
+  "$defs": {
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "nullableHash": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-registry-event-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "envelope": {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "maxLength": 33554432,
+          "minLength": 1,
+          "type": "string"
+        },
+        "payloadType": {
+          "const": "application/vnd.genesiscode.genesisbench-registry-event.v0.1+json"
+        },
+        "signatures": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "keyid": {
+                "pattern": "^sha256:[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "sig": {
+                "maxLength": 88,
+                "minLength": 88,
+                "type": "string"
+              }
+            },
+            "required": [
+              "keyid",
+              "sig"
+            ],
+            "type": "object"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "payloadType",
+        "payload",
+        "signatures"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-signed-event-v0.1"
+    },
+    "statement": {
+      "additionalProperties": false,
+      "properties": {
+        "bundleSha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "contentIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "decision": {
+          "enum": [
+            "invalid",
+            "ranked",
+            "unranked"
+          ]
+        },
+        "kind": {
+          "const": "genesis/genesisbench-registry-event-statement-v0.1"
+        },
+        "policyIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "previousEventIdentitySha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "registryId": {
+          "$ref": "#/$defs/id"
+        },
+        "resultIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "sequence": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "submissionIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "version": {
+          "const": "0.1.0"
+        }
+      },
+      "required": [
+        "kind",
+        "version",
+        "registryId",
+        "policyIdentitySha256",
+        "sequence",
+        "previousEventIdentitySha256",
+        "resultIdentitySha256",
+        "submissionIdentitySha256",
+        "bundleSha256",
+        "decision",
+        "contentIdentitySha256"
+      ],
+      "type": "object"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "statement",
+    "envelope",
+    "contentIdentitySha256"
+  ],
+  "title": "Signed GenesisBench registry event v0.1",
+  "type": "object"
+}

@@ -16,6 +16,7 @@ python3 scripts/lib/gc_agent_benchmark_run.py --check --self-test
 python3 scripts/lib/genesisbench_protocol.py --check --self-test
 python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
 python3 scripts/lib/genesisbench_front_door.py check --self-test
+python3 scripts/lib/genesisbench_registry.py check --self-test
 python3 scripts/lib/genesisbench_analysis.py --check --self-test
 protocol_report="$(mktemp)"
 trap 'rm -f "$protocol_report"' EXIT
@@ -42,6 +43,7 @@ TASK_BENCHMARK_TEST="crates/gc_cli/tests/cli_agent_task_benchmarks.rs"
 SCORING_TEST="crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
 RUN_TEST="crates/gc_cli/tests/cli_agent_benchmark_run.rs"
 FRONT_DOOR_TEST="crates/gc_cli/tests/cli_genesisbench_front_door.rs"
+REGISTRY_TEST="crates/gc_cli/tests/cli_genesisbench_registry.rs"
 
 [[ -f "$BUNDLE" ]] || {
   echo "agent-authoring-bundle: missing bundle doc: $BUNDLE" >&2
@@ -75,8 +77,12 @@ FRONT_DOOR_TEST="crates/gc_cli/tests/cli_genesisbench_front_door.rs"
   echo "agent-authoring-bundle: missing benchmark front-door production test: $FRONT_DOOR_TEST" >&2
   exit 1
 }
+[[ -f "$REGISTRY_TEST" ]] || {
+  echo "agent-authoring-bundle: missing benchmark registry production test: $REGISTRY_TEST" >&2
+  exit 1
+}
 
-python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" "$SCORING_TEST" "$RUN_TEST" "$FRONT_DOOR_TEST" <<'PY'
+python3 - "$BUNDLE" "$AGENT_INDEX_SPEC" "$AGENT_INDEX_CMD" "$CANONICAL_TEST" "$TASK_BENCHMARK_TEST" "$SCORING_TEST" "$RUN_TEST" "$FRONT_DOOR_TEST" "$REGISTRY_TEST" <<'PY'
 import pathlib
 import re
 import sys
@@ -89,6 +95,7 @@ task_benchmark_test_path = pathlib.Path(sys.argv[5])
 scoring_test_path = pathlib.Path(sys.argv[6])
 run_test_path = pathlib.Path(sys.argv[7])
 front_door_test_path = pathlib.Path(sys.argv[8])
+registry_test_path = pathlib.Path(sys.argv[9])
 
 bundle = bundle_path.read_text(encoding="utf-8")
 agent_index_spec = agent_index_spec_path.read_text(encoding="utf-8")
@@ -98,6 +105,7 @@ task_benchmark_test = task_benchmark_test_path.read_text(encoding="utf-8")
 scoring_test = scoring_test_path.read_text(encoding="utf-8")
 run_test = run_test_path.read_text(encoding="utf-8")
 front_door_test = front_door_test_path.read_text(encoding="utf-8")
+registry_test = registry_test_path.read_text(encoding="utf-8")
 
 include_re = re.compile(r"^- `([^`]+)`\s*$", re.MULTILINE)
 included_paths = include_re.findall(bundle)
@@ -132,6 +140,14 @@ required_included = [
     "docs/spec/GENESISBENCH_ADAPTER_RESPONSE_v0.1.schema.json",
     "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json",
     "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_v0.1.json",
+    "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
     "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
     "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
@@ -184,11 +200,13 @@ required_included = [
     "scripts/lib/genesisbench_eligibility.py",
     "scripts/lib/genesisbench_reference_agent.py",
     "scripts/lib/genesisbench_front_door.py",
+    "scripts/lib/genesisbench_registry.py",
     "scripts/lib/gc_held_out_evaluation.py",
     "scripts/lib/gc_capability_lease.py",
     "examples/agent_benchmark_reproducibility/run.json",
     "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
     "crates/gc_cli/tests/cli_genesisbench_front_door.rs",
+    "crates/gc_cli/tests/cli_genesisbench_registry.rs",
 ]
 missing_required = [p for p in required_included if p not in included_paths]
 if missing_required:
@@ -356,6 +374,32 @@ if (
 ):
     raise SystemExit(
         "agent-authoring-bundle: benchmark front door needs shipped CLI, no-reinvoke, deterministic-bundle, and retained-failure coverage"
+    )
+
+registry_paths = (
+    "docs/spec/GENESISBENCH_REGISTRY_v0.1.json",
+    "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
+)
+for path in registry_paths:
+    if path not in agent_index_spec or path not in agent_index_cmd:
+        raise SystemExit(
+            f"agent-authoring-bundle: agent index must expose signed registry authority: {path}"
+        )
+if (
+    'cargo_bin_cmd!("genesis")' not in registry_test
+    or "forged-submission" not in registry_test
+    or "registry-hidden-history" not in registry_test
+    or "registry-rewritten-result" not in registry_test
+    or "registry-deleted-event" not in registry_test
+):
+    raise SystemExit(
+        "agent-authoring-bundle: registry needs shipped CLI, signature, hidden-history, rewrite, and deletion controls"
     )
 
 analysis_paths = (

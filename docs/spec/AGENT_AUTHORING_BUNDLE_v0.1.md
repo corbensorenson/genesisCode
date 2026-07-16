@@ -30,6 +30,14 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GENESISBENCH_ADAPTER_RESPONSE_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REGISTRY_v0.1.json`
+- `docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
 - `docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json`
@@ -86,11 +94,13 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `scripts/lib/genesisbench_eligibility.py`
 - `scripts/lib/genesisbench_reference_agent.py`
 - `scripts/lib/genesisbench_front_door.py`
+- `scripts/lib/genesisbench_registry.py`
 - `scripts/lib/gc_held_out_evaluation.py`
 - `scripts/lib/gc_capability_lease.py`
 - `examples/agent_benchmark_reproducibility/run.json`
 - `crates/gc_cli/tests/cli_agent_benchmark_run.rs`
 - `crates/gc_cli/tests/cli_genesisbench_front_door.rs`
+- `crates/gc_cli/tests/cli_genesisbench_registry.rs`
 
 ## Legacy Split Docs (must stay marked)
 
@@ -117,6 +127,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Execute transport-neutral benchmark runs only through `genesis bench`. Validate the closed five-class adapter profile with `python3 scripts/lib/genesisbench_front_door.py check --self-test`; retain failed attempts, never retry invisibly, replay without model or adapter access, and use deterministic `.gcbundle` plus local immutable outbox submission. An execution bundle is not ranked until R1.4.m independently validates, rescores, signs, and binds track, contamination, cohort, and submitter evidence.
 - Declare exactly one content-addressed GenesisBench track. Use `cold-acquisition` only for an unadapted model under the fixed reference scaffold, `open-agent` for disclosed custom orchestration without claimed adaptation, `genesis-adapted` only with a public lineage-manifest identity, and `embedded-local` only with offline inference plus measured or hard-enforced combined model/runtime memory evidence. Never compare or aggregate across track, scaffold, profile, epoch, context/tool, attempt-policy, or hardware-class cohort keys.
 - Analyze results only through `GENESISBENCH_ANALYSIS_PLAN_v0.1` and `scripts/lib/genesisbench_analysis.py`. Use one primary condition per lineage, keep repeated-condition summaries clustered by lineage, publish solved/unsolved/invalid/abstained/missing denominators, Wilson uncertainty, paired exact effects, and Holm correction, and emit `indeterminate` rather than unsupported pairwise decimal ranks. Public conformance observations are always unranked and cannot trigger saturation.
+- Submit only signed closed bundles through `genesis bench submit`, and admit them only through a policy-pinned local registry. Registry admission revalidates and independently rescores before deriving eligibility; verification repeats derivation from retained bytes. Compare only complete systems inside one exact cohort by solve rate, conditional quality, authority excess, context/tool use, and repair use, in that order. Cost and latency remain published facts and never break a quality tie.
 - A fully local benchmark model may run only through `genesis.agent-model-runner.v0.1` / `infer` on the pinned `host/plugin::command` bridge profile. Preserve its request, response, tool transcript, and `.gclog`; replay must not reinvoke the model. This benchmark integration does not preempt the future standard model API.
 - Make a held-out claim only against the active epoch in `GC-AGENT-HELD-OUT-v0.1`. Its active epoch contains 90 independently salted lineages, ten per core task class, with exact balance and custody attestations. Keep case payloads, salts, and oracles under ignored `.genesis/private/agent-evaluation`; bind every result to the epoch and commitment snapshot; use `unknown` contamination whenever training provenance is incomplete; and rotate within 90 days or earlier on leakage or saturation.
 - Treat `GC-CAPABILITY-LEASE-v0.1` as a general maintained capability protocol, not a benchmark-only oracle. It uses explicit logical steps, exact content-addressed scope, finite use budgets, deny-by-default decisions, append-only transitions, and replay-bound state identities.

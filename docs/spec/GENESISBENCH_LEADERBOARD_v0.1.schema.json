@@ -1,0 +1,1446 @@
+{
+  "$defs": {
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "nullableHash": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-leaderboard-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cohorts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cohort": {
+            "additionalProperties": false,
+            "properties": {
+              "contaminationLabel": {
+                "enum": [
+                  "declared-contaminated",
+                  "declared-uncontaminated",
+                  "temporal-clean",
+                  "unknown"
+                ]
+              },
+              "contentIdentitySha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "contextMode": {
+                "enum": [
+                  "compact-small",
+                  "extended-large",
+                  "standard-medium"
+                ]
+              },
+              "expectedLineagesIdentitySha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "hardwareClassId": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "embedded-l",
+                      "embedded-m",
+                      "embedded-s"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "interactionMode": {
+                "enum": [
+                  "artifact-response-v0.1",
+                  "genesis-mcp-2025-11-25"
+                ]
+              },
+              "protocolIdentitySha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "scaffoldIdentitySha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "taskEpochId": {
+                "$ref": "#/$defs/id"
+              },
+              "trackId": {
+                "enum": [
+                  "cold-acquisition",
+                  "embedded-local",
+                  "genesis-adapted",
+                  "open-agent"
+                ]
+              },
+              "visibilityClass": {
+                "enum": [
+                  "held-out-commitment",
+                  "public-development-reference"
+                ]
+              }
+            },
+            "required": [
+              "protocolIdentitySha256",
+              "trackId",
+              "scaffoldIdentitySha256",
+              "taskEpochId",
+              "contextMode",
+              "interactionMode",
+              "hardwareClassId",
+              "contaminationLabel",
+              "visibilityClass",
+              "expectedLineagesIdentitySha256",
+              "contentIdentitySha256"
+            ],
+            "type": "object"
+          },
+          "costLatencyAffectRank": {
+            "const": false
+          },
+          "rankedSystems": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "capabilityExcessUnits": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "completeEvaluationSet": {
+                  "type": "boolean"
+                },
+                "conditionalQualityDenominator": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "conditionalQualityMeanBasisPoints": {
+                  "oneOf": [
+                    {
+                      "maximum": 10000,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "contextBytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "economics": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "costMicrounits": {
+                        "oneOf": [
+                          {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "currency": {
+                        "oneOf": [
+                          {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "energyMillijoules": {
+                        "oneOf": [
+                          {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "latencyMs": {
+                        "oneOf": [
+                          {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "currency",
+                      "costMicrounits",
+                      "latencyMs",
+                      "energyMillijoules"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "expectedLineages": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "missingLineageIds": {
+                  "items": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "model": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "familyId": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "id": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "providerId": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "revision": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "runtimeArtifactSha256": {
+                      "$ref": "#/$defs/nullableHash"
+                    },
+                    "runtimeId": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "runtimeVersion": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "required": [
+                    "familyId",
+                    "providerId",
+                    "id",
+                    "revision",
+                    "runtimeId",
+                    "runtimeVersion",
+                    "runtimeArtifactSha256"
+                  ],
+                  "type": "object"
+                },
+                "observedLineages": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "perClass": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "conditionalQualityMeanBasisPoints": {
+                        "oneOf": [
+                          {
+                            "maximum": 10000,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "observed": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "taskClass": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "verifiedSolved": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "taskClass",
+                      "observed",
+                      "verifiedSolved",
+                      "conditionalQualityMeanBasisPoints"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "perLineage": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "lineageId": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "outcome": {
+                        "enum": [
+                          "abstained",
+                          "failed",
+                          "invalid",
+                          "missing",
+                          "verified"
+                        ]
+                      },
+                      "resultIdentitySha256": {
+                        "$ref": "#/$defs/nullableHash"
+                      },
+                      "verifiedSolve": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "lineageId",
+                      "resultIdentitySha256",
+                      "outcome",
+                      "verifiedSolve"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "rank": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "rankEligible": {
+                  "type": "boolean"
+                },
+                "repairCalls": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "resultIdentities": {
+                  "items": {
+                    "$ref": "#/$defs/hash"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "solveRateBasisPoints": {
+                  "maximum": 10000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "solveRateWilson95BasisPoints": {
+                  "items": {
+                    "maximum": 10000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "type": "array"
+                },
+                "systemId": {
+                  "$ref": "#/$defs/hash"
+                },
+                "toolCalls": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "track": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "adaptationIdentitySha256": {
+                      "$ref": "#/$defs/nullableHash"
+                    },
+                    "genesisSpecificTraining": {
+                      "enum": [
+                        "declared-public",
+                        "none",
+                        "unknown"
+                      ]
+                    },
+                    "id": {
+                      "enum": [
+                        "cold-acquisition",
+                        "embedded-local",
+                        "genesis-adapted",
+                        "open-agent"
+                      ]
+                    },
+                    "inferenceMode": {
+                      "enum": [
+                        "local-offline",
+                        "remote-disclosed"
+                      ]
+                    },
+                    "networkMode": {
+                      "enum": [
+                        "deny",
+                        "provider-only"
+                      ]
+                    },
+                    "scaffoldClass": {
+                      "enum": [
+                        "disclosed-custom",
+                        "fixed-reference"
+                      ]
+                    },
+                    "scaffoldIdentitySha256": {
+                      "$ref": "#/$defs/hash"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scaffoldClass",
+                    "scaffoldIdentitySha256",
+                    "genesisSpecificTraining",
+                    "adaptationIdentitySha256",
+                    "inferenceMode",
+                    "networkMode"
+                  ],
+                  "type": "object"
+                },
+                "verifiedSolvedLineages": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "systemId",
+                "model",
+                "track",
+                "completeEvaluationSet",
+                "rankEligible",
+                "expectedLineages",
+                "observedLineages",
+                "verifiedSolvedLineages",
+                "solveRateBasisPoints",
+                "solveRateWilson95BasisPoints",
+                "conditionalQualityDenominator",
+                "conditionalQualityMeanBasisPoints",
+                "capabilityExcessUnits",
+                "contextBytes",
+                "toolCalls",
+                "repairCalls",
+                "economics",
+                "resultIdentities",
+                "missingLineageIds",
+                "perLineage",
+                "perClass",
+                "rank"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "rankingKeys": {
+            "const": [
+              "verified-solve-rate-desc",
+              "conditional-quality-desc",
+              "capability-excess-asc",
+              "context-bytes-asc",
+              "tool-calls-asc",
+              "repair-calls-asc"
+            ]
+          },
+          "unrankedSystems": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "capabilityExcessUnits": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "completeEvaluationSet": {
+                  "type": "boolean"
+                },
+                "conditionalQualityDenominator": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "conditionalQualityMeanBasisPoints": {
+                  "oneOf": [
+                    {
+                      "maximum": 10000,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "contextBytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "economics": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "costMicrounits": {
+                        "oneOf": [
+                          {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "currency": {
+                        "oneOf": [
+                          {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "energyMillijoules": {
+                        "oneOf": [
+                          {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "latencyMs": {
+                        "oneOf": [
+                          {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "currency",
+                      "costMicrounits",
+                      "latencyMs",
+                      "energyMillijoules"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "expectedLineages": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "missingLineageIds": {
+                  "items": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "model": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "familyId": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "id": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "providerId": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "revision": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "runtimeArtifactSha256": {
+                      "$ref": "#/$defs/nullableHash"
+                    },
+                    "runtimeId": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "runtimeVersion": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "required": [
+                    "familyId",
+                    "providerId",
+                    "id",
+                    "revision",
+                    "runtimeId",
+                    "runtimeVersion",
+                    "runtimeArtifactSha256"
+                  ],
+                  "type": "object"
+                },
+                "observedLineages": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "perClass": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "conditionalQualityMeanBasisPoints": {
+                        "oneOf": [
+                          {
+                            "maximum": 10000,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "observed": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "taskClass": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "verifiedSolved": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "taskClass",
+                      "observed",
+                      "verifiedSolved",
+                      "conditionalQualityMeanBasisPoints"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "perLineage": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "lineageId": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "outcome": {
+                        "enum": [
+                          "abstained",
+                          "failed",
+                          "invalid",
+                          "missing",
+                          "verified"
+                        ]
+                      },
+                      "resultIdentitySha256": {
+                        "$ref": "#/$defs/nullableHash"
+                      },
+                      "verifiedSolve": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "lineageId",
+                      "resultIdentitySha256",
+                      "outcome",
+                      "verifiedSolve"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "rankEligible": {
+                  "type": "boolean"
+                },
+                "repairCalls": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "resultIdentities": {
+                  "items": {
+                    "$ref": "#/$defs/hash"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "solveRateBasisPoints": {
+                  "maximum": 10000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "solveRateWilson95BasisPoints": {
+                  "items": {
+                    "maximum": 10000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "type": "array"
+                },
+                "systemId": {
+                  "$ref": "#/$defs/hash"
+                },
+                "toolCalls": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "track": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "adaptationIdentitySha256": {
+                      "$ref": "#/$defs/nullableHash"
+                    },
+                    "genesisSpecificTraining": {
+                      "enum": [
+                        "declared-public",
+                        "none",
+                        "unknown"
+                      ]
+                    },
+                    "id": {
+                      "enum": [
+                        "cold-acquisition",
+                        "embedded-local",
+                        "genesis-adapted",
+                        "open-agent"
+                      ]
+                    },
+                    "inferenceMode": {
+                      "enum": [
+                        "local-offline",
+                        "remote-disclosed"
+                      ]
+                    },
+                    "networkMode": {
+                      "enum": [
+                        "deny",
+                        "provider-only"
+                      ]
+                    },
+                    "scaffoldClass": {
+                      "enum": [
+                        "disclosed-custom",
+                        "fixed-reference"
+                      ]
+                    },
+                    "scaffoldIdentitySha256": {
+                      "$ref": "#/$defs/hash"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scaffoldClass",
+                    "scaffoldIdentitySha256",
+                    "genesisSpecificTraining",
+                    "adaptationIdentitySha256",
+                    "inferenceMode",
+                    "networkMode"
+                  ],
+                  "type": "object"
+                },
+                "verifiedSolvedLineages": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "systemId",
+                "model",
+                "track",
+                "completeEvaluationSet",
+                "rankEligible",
+                "expectedLineages",
+                "observedLineages",
+                "verifiedSolvedLineages",
+                "solveRateBasisPoints",
+                "solveRateWilson95BasisPoints",
+                "conditionalQualityDenominator",
+                "conditionalQualityMeanBasisPoints",
+                "capabilityExcessUnits",
+                "contextBytes",
+                "toolCalls",
+                "repairCalls",
+                "economics",
+                "resultIdentities",
+                "missingLineageIds",
+                "perLineage",
+                "perClass"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "cohort",
+          "rankedSystems",
+          "unrankedSystems",
+          "rankingKeys",
+          "costLatencyAffectRank"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "history": {
+      "additionalProperties": false,
+      "properties": {
+        "allEventStatementIdentities": {
+          "items": {
+            "$ref": "#/$defs/hash"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "checkpointIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "eventCount": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "headEventStatementIdentitySha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "headSignedEventIdentitySha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "historicalResultsMutable": {
+          "const": false
+        },
+        "signedEventLogIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "silentSuppressionAllowed": {
+          "const": false
+        }
+      },
+      "required": [
+        "eventCount",
+        "headEventStatementIdentitySha256",
+        "headSignedEventIdentitySha256",
+        "signedEventLogIdentitySha256",
+        "checkpointIdentitySha256",
+        "allEventStatementIdentities",
+        "historicalResultsMutable",
+        "silentSuppressionAllowed"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-leaderboard-v0.1"
+    },
+    "registry": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "identitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "policyIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "protocolIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        }
+      },
+      "required": [
+        "id",
+        "identitySha256",
+        "policyIdentitySha256",
+        "protocolIdentitySha256"
+      ],
+      "type": "object"
+    },
+    "results": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "elapsedMs": {
+                  "maximum": 86400000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "index": {
+                  "maximum": 15,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "requestArtifact": {
+                  "pattern": "^[A-Za-z0-9._/-]{1,512}$",
+                  "type": "string"
+                },
+                "requestIdentitySha256": {
+                  "$ref": "#/$defs/hash"
+                },
+                "responseArtifact": {
+                  "pattern": "^[A-Za-z0-9._/-]{1,512}$",
+                  "type": "string"
+                },
+                "responseIdentitySha256": {
+                  "$ref": "#/$defs/hash"
+                },
+                "secretDisclosure": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "declaredNames": {
+                      "items": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "maxItems": 1,
+                      "type": "array",
+                      "uniqueItems": true
+                    },
+                    "presenceRecorded": {
+                      "const": true
+                    },
+                    "presentNames": {
+                      "items": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "maxItems": 1,
+                      "type": "array",
+                      "uniqueItems": true
+                    },
+                    "valuesRecorded": {
+                      "const": false
+                    }
+                  },
+                  "required": [
+                    "valuesRecorded",
+                    "declaredNames",
+                    "presentNames",
+                    "presenceRecorded"
+                  ],
+                  "type": "object"
+                },
+                "status": {
+                  "enum": [
+                    "cancelled",
+                    "failed",
+                    "succeeded",
+                    "timed-out"
+                  ]
+                }
+              },
+              "required": [
+                "index",
+                "requestArtifact",
+                "requestIdentitySha256",
+                "responseArtifact",
+                "responseIdentitySha256",
+                "status",
+                "elapsedMs",
+                "secretDisclosure"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "case": {
+            "additionalProperties": false,
+            "properties": {
+              "conditionId": {
+                "$ref": "#/$defs/id"
+              },
+              "conditionIdentitySha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "contextTier": {
+                "enum": [
+                  "large",
+                  "medium",
+                  "small"
+                ]
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "lineageId": {
+                "$ref": "#/$defs/id"
+              },
+              "lineageIdentitySha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "taskClass": {
+                "$ref": "#/$defs/id"
+              },
+              "visibilityClass": {
+                "enum": [
+                  "held-out-commitment",
+                  "public-development-reference"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "lineageId",
+              "lineageIdentitySha256",
+              "conditionId",
+              "conditionIdentitySha256",
+              "taskClass",
+              "contextTier",
+              "visibilityClass"
+            ],
+            "type": "object"
+          },
+          "cohortIdentitySha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "contamination": {
+            "additionalProperties": false,
+            "properties": {
+              "claimedLabel": {
+                "enum": [
+                  "declared-contaminated",
+                  "declared-uncontaminated",
+                  "temporal-clean",
+                  "unknown"
+                ]
+              },
+              "evidenceCodes": {
+                "items": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 1024,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "evidenceIdentitySha256": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "strongestSupportedLabel": {
+                "enum": [
+                  "declared-contaminated",
+                  "declared-uncontaminated",
+                  "temporal-clean",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "claimedLabel",
+              "strongestSupportedLabel",
+              "evidenceCodes",
+              "evidenceIdentitySha256"
+            ],
+            "type": "object"
+          },
+          "economics": {
+            "additionalProperties": false,
+            "properties": {
+              "costMicrounits": {
+                "oneOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "currency": {
+                "oneOf": [
+                  {
+                    "pattern": "^[A-Z]{3}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "energyMillijoules": {
+                "oneOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "latencyMs": {
+                "oneOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "currency",
+              "costMicrounits",
+              "latencyMs",
+              "energyMillijoules"
+            ],
+            "type": "object"
+          },
+          "hardware": {
+            "additionalProperties": false,
+            "properties": {
+              "classId": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "embedded-l",
+                      "embedded-m",
+                      "embedded-s"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "combinedResidentBytes": {
+                "oneOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "evidenceIdentitySha256": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "measurementMethod": {
+                "enum": [
+                  "enforced-hard-ceiling",
+                  "measured-peak-rss",
+                  "not-claimed"
+                ]
+              }
+            },
+            "required": [
+              "classId",
+              "combinedResidentBytes",
+              "evidenceIdentitySha256",
+              "measurementMethod"
+            ],
+            "type": "object"
+          },
+          "model": {
+            "additionalProperties": false,
+            "properties": {
+              "familyId": {
+                "$ref": "#/$defs/id"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "providerId": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/id"
+              },
+              "runtimeArtifactSha256": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "runtimeId": {
+                "$ref": "#/$defs/id"
+              },
+              "runtimeVersion": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "required": [
+              "familyId",
+              "providerId",
+              "id",
+              "revision",
+              "runtimeId",
+              "runtimeVersion",
+              "runtimeArtifactSha256"
+            ],
+            "type": "object"
+          },
+          "outcome": {
+            "additionalProperties": false,
+            "properties": {
+              "admissionDecision": {
+                "enum": [
+                  "invalid",
+                  "ranked",
+                  "unranked"
+                ]
+              },
+              "reasonCodes": {
+                "items": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 1024,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "runOutcome": {
+                "enum": [
+                  "abstained",
+                  "failed",
+                  "invalid",
+                  "verified"
+                ]
+              },
+              "validityFailures": {
+                "items": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 1024,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "verifiedSolve": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "runOutcome",
+              "verifiedSolve",
+              "admissionDecision",
+              "reasonCodes",
+              "validityFailures"
+            ],
+            "type": "object"
+          },
+          "replay": {
+            "additionalProperties": false,
+            "properties": {
+              "adapterInvoked": {
+                "const": false
+              },
+              "command": {
+                "maxLength": 2048,
+                "minLength": 1,
+                "type": "string"
+              },
+              "independentRescoreMatched": {
+                "type": "boolean"
+              },
+              "modelAccessed": {
+                "const": false
+              }
+            },
+            "required": [
+              "command",
+              "adapterInvoked",
+              "modelAccessed",
+              "independentRescoreMatched"
+            ],
+            "type": "object"
+          },
+          "resultIdentitySha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "score": {
+            "additionalProperties": false,
+            "properties": {
+              "dimensions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "applicable": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "scoreBasisPoints": {
+                      "maximum": 10000,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "weightBasisPoints": {
+                      "maximum": 10000,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "applicable",
+                    "id",
+                    "scoreBasisPoints",
+                    "weightBasisPoints"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
+              "identitySha256": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "invalidPartialQualityBasisPoints": {
+                "oneOf": [
+                  {
+                    "const": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "qualityScoreBasisPoints": {
+                "oneOf": [
+                  {
+                    "maximum": 10000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "identitySha256",
+              "qualityScoreBasisPoints",
+              "dimensions",
+              "invalidPartialQualityBasisPoints"
+            ],
+            "type": "object"
+          },
+          "systemId": {
+            "$ref": "#/$defs/hash"
+          },
+          "track": {
+            "additionalProperties": false,
+            "properties": {
+              "adaptationIdentitySha256": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "genesisSpecificTraining": {
+                "enum": [
+                  "declared-public",
+                  "none",
+                  "unknown"
+                ]
+              },
+              "id": {
+                "enum": [
+                  "cold-acquisition",
+                  "embedded-local",
+                  "genesis-adapted",
+                  "open-agent"
+                ]
+              },
+              "inferenceMode": {
+                "enum": [
+                  "local-offline",
+                  "remote-disclosed"
+                ]
+              },
+              "networkMode": {
+                "enum": [
+                  "deny",
+                  "provider-only"
+                ]
+              },
+              "scaffoldClass": {
+                "enum": [
+                  "disclosed-custom",
+                  "fixed-reference"
+                ]
+              },
+              "scaffoldIdentitySha256": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "required": [
+              "id",
+              "scaffoldClass",
+              "scaffoldIdentitySha256",
+              "genesisSpecificTraining",
+              "adaptationIdentitySha256",
+              "inferenceMode",
+              "networkMode"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "resultIdentitySha256",
+          "systemId",
+          "cohortIdentitySha256",
+          "case",
+          "outcome",
+          "score",
+          "attempts",
+          "model",
+          "track",
+          "contamination",
+          "hardware",
+          "economics",
+          "replay"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "registry",
+    "history",
+    "cohorts",
+    "results",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench static leaderboard v0.1",
+  "type": "object"
+}

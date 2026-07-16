@@ -1,0 +1,440 @@
+{
+  "$defs": {
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "nullableHash": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-signed-submission-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "envelope": {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "maxLength": 33554432,
+          "minLength": 1,
+          "type": "string"
+        },
+        "payloadType": {
+          "const": "application/vnd.genesiscode.genesisbench-submission.v0.1+json"
+        },
+        "signatures": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "keyid": {
+                "pattern": "^sha256:[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "sig": {
+                "maxLength": 88,
+                "minLength": 88,
+                "type": "string"
+              }
+            },
+            "required": [
+              "keyid",
+              "sig"
+            ],
+            "type": "object"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "payloadType",
+        "payload",
+        "signatures"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-signed-submission-v0.1"
+    },
+    "statement": {
+      "additionalProperties": false,
+      "properties": {
+        "bundle": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "maximum": 67108864,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "manifestIdentitySha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "runIdentitySha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "sha256": {
+              "$ref": "#/$defs/hash"
+            }
+          },
+          "required": [
+            "sha256",
+            "bytes",
+            "manifestIdentitySha256",
+            "runIdentitySha256"
+          ],
+          "type": "object"
+        },
+        "claim": {
+          "additionalProperties": false,
+          "properties": {
+            "contamination": {
+              "additionalProperties": false,
+              "properties": {
+                "evidenceCodes": {
+                  "items": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 1024,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "evidenceIdentitySha256": {
+                  "$ref": "#/$defs/nullableHash"
+                },
+                "label": {
+                  "enum": [
+                    "declared-contaminated",
+                    "declared-uncontaminated",
+                    "temporal-clean",
+                    "unknown"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "evidenceCodes",
+                "evidenceIdentitySha256"
+              ],
+              "type": "object"
+            },
+            "contentIdentitySha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "economics": {
+              "additionalProperties": false,
+              "properties": {
+                "costMicrounits": {
+                  "oneOf": [
+                    {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "currency": {
+                  "oneOf": [
+                    {
+                      "pattern": "^[A-Z]{3}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "energyMillijoules": {
+                  "oneOf": [
+                    {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "latencyMs": {
+                  "oneOf": [
+                    {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "currency",
+                "costMicrounits",
+                "latencyMs",
+                "energyMillijoules"
+              ],
+              "type": "object"
+            },
+            "evaluation": {
+              "additionalProperties": false,
+              "properties": {
+                "contextMode": {
+                  "enum": [
+                    "compact-small",
+                    "extended-large",
+                    "standard-medium"
+                  ]
+                },
+                "expectedLineageIds": {
+                  "items": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "maxItems": 1024,
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "expectedLineagesIdentitySha256": {
+                  "$ref": "#/$defs/hash"
+                },
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "interactionMode": {
+                  "enum": [
+                    "artifact-response-v0.1",
+                    "genesis-mcp-2025-11-25"
+                  ]
+                },
+                "taskEpochId": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "required": [
+                "id",
+                "taskEpochId",
+                "contextMode",
+                "interactionMode",
+                "expectedLineageIds",
+                "expectedLineagesIdentitySha256"
+              ],
+              "type": "object"
+            },
+            "hardware": {
+              "additionalProperties": false,
+              "properties": {
+                "classId": {
+                  "oneOf": [
+                    {
+                      "enum": [
+                        "embedded-l",
+                        "embedded-m",
+                        "embedded-s"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "combinedResidentBytes": {
+                  "oneOf": [
+                    {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "evidenceIdentitySha256": {
+                  "$ref": "#/$defs/nullableHash"
+                },
+                "measurementMethod": {
+                  "enum": [
+                    "enforced-hard-ceiling",
+                    "measured-peak-rss",
+                    "not-claimed"
+                  ]
+                }
+              },
+              "required": [
+                "classId",
+                "combinedResidentBytes",
+                "evidenceIdentitySha256",
+                "measurementMethod"
+              ],
+              "type": "object"
+            },
+            "kind": {
+              "const": "genesis/genesisbench-submission-claim-v0.1"
+            },
+            "model": {
+              "additionalProperties": false,
+              "properties": {
+                "familyId": {
+                  "$ref": "#/$defs/id"
+                },
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "providerId": {
+                  "$ref": "#/$defs/id"
+                },
+                "revision": {
+                  "$ref": "#/$defs/id"
+                },
+                "runtimeArtifactSha256": {
+                  "$ref": "#/$defs/nullableHash"
+                },
+                "runtimeId": {
+                  "$ref": "#/$defs/id"
+                },
+                "runtimeVersion": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "required": [
+                "familyId",
+                "providerId",
+                "id",
+                "revision",
+                "runtimeId",
+                "runtimeVersion",
+                "runtimeArtifactSha256"
+              ],
+              "type": "object"
+            },
+            "registryPolicyIdentitySha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "track": {
+              "additionalProperties": false,
+              "properties": {
+                "adaptationIdentitySha256": {
+                  "$ref": "#/$defs/nullableHash"
+                },
+                "genesisSpecificTraining": {
+                  "enum": [
+                    "declared-public",
+                    "none",
+                    "unknown"
+                  ]
+                },
+                "id": {
+                  "enum": [
+                    "cold-acquisition",
+                    "embedded-local",
+                    "genesis-adapted",
+                    "open-agent"
+                  ]
+                },
+                "inferenceMode": {
+                  "enum": [
+                    "local-offline",
+                    "remote-disclosed"
+                  ]
+                },
+                "networkMode": {
+                  "enum": [
+                    "deny",
+                    "provider-only"
+                  ]
+                },
+                "scaffoldClass": {
+                  "enum": [
+                    "disclosed-custom",
+                    "fixed-reference"
+                  ]
+                },
+                "scaffoldIdentitySha256": {
+                  "$ref": "#/$defs/hash"
+                }
+              },
+              "required": [
+                "id",
+                "scaffoldClass",
+                "scaffoldIdentitySha256",
+                "genesisSpecificTraining",
+                "adaptationIdentitySha256",
+                "inferenceMode",
+                "networkMode"
+              ],
+              "type": "object"
+            },
+            "version": {
+              "const": "0.1.0"
+            }
+          },
+          "required": [
+            "kind",
+            "version",
+            "registryPolicyIdentitySha256",
+            "evaluation",
+            "track",
+            "model",
+            "contamination",
+            "hardware",
+            "economics",
+            "contentIdentitySha256"
+          ],
+          "type": "object"
+        },
+        "contentIdentitySha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "kind": {
+          "const": "genesis/genesisbench-submission-statement-v0.1"
+        },
+        "submitterId": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "const": "0.1.0"
+        }
+      },
+      "required": [
+        "kind",
+        "version",
+        "submitterId",
+        "bundle",
+        "claim",
+        "contentIdentitySha256"
+      ],
+      "type": "object"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "statement",
+    "envelope",
+    "contentIdentitySha256"
+  ],
+  "title": "Signed GenesisBench submission v0.1",
+  "type": "object"
+}
