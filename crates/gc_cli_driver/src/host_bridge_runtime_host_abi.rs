@@ -179,10 +179,24 @@ fn run_command_with_optional_stdin(
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
         let mut child = cmd.spawn().map_err(|e| e.to_string())?;
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(&stdin_bytes).map_err(|e| e.to_string())?;
+        let write_result = child
+            .stdin
+            .take()
+            .map(|mut stdin| stdin.write_all(&stdin_bytes))
+            .unwrap_or(Ok(()));
+        let output = child.wait_with_output().map_err(|e| e.to_string())?;
+        match write_result {
+            Ok(()) => Ok(output),
+            // A successful command may intentionally ignore its payload and close
+            // stdin. Reaping first prevents that valid result from becoming a
+            // transport failure on fast hosts.
+            Err(error)
+                if error.kind() == std::io::ErrorKind::BrokenPipe && output.status.success() =>
+            {
+                Ok(output)
+            }
+            Err(error) => Err(error.to_string()),
         }
-        child.wait_with_output().map_err(|e| e.to_string())
     } else {
         cmd.output().map_err(|e| e.to_string())
     }

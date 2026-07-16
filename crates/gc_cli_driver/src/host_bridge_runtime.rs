@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream, ToSocketAddrs, UdpSocket};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use aes_gcm::Aes256Gcm;
@@ -10,6 +10,7 @@ use aes_gcm::aead::{AeadInPlace, KeyInit};
 use base64ct::{Base64, Encoding};
 use chacha20poly1305::ChaCha20Poly1305;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use fs2::FileExt;
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use hkdf::Hkdf;
 use hmac::{Hmac, Mac};
@@ -53,7 +54,7 @@ struct NetBridgeState {
     http_listeners: BTreeMap<String, TcpListener>,
     http_listener_by_local: BTreeMap<String, String>,
     http_requests: BTreeMap<String, HttpPendingRequest>,
-    ws_streams: BTreeMap<String, WsStream>,
+    ws_streams: BTreeMap<String, Arc<Mutex<WsStream>>>,
 }
 
 struct HttpPendingRequest {
@@ -305,6 +306,14 @@ fn next_counter(name: &str) -> Result<u64, String> {
     let root = state_root()?;
     let counter_dir = root.join("counters");
     std::fs::create_dir_all(&counter_dir).map_err(|e| e.to_string())?;
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(counter_dir.join(format!("{name}.lock")))
+        .map_err(|e| e.to_string())?;
+    lock.lock_exclusive().map_err(|e| e.to_string())?;
     let path = counter_dir.join(format!("{name}.txt"));
     let current = match std::fs::read_to_string(&path) {
         Ok(src) => src.trim().parse::<u64>().unwrap_or(0),
@@ -312,6 +321,7 @@ fn next_counter(name: &str) -> Result<u64, String> {
     };
     let next = current.saturating_add(1);
     std::fs::write(&path, format!("{next}\n")).map_err(|e| e.to_string())?;
+    FileExt::unlock(&lock).map_err(|e| e.to_string())?;
     Ok(next)
 }
 

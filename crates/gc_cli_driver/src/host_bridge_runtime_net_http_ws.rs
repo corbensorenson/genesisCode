@@ -598,10 +598,10 @@ pub(super) fn net_ws_accept(payload: &Term) -> Result<Term, String> {
         .ws_streams
         .insert(
             stream_id.clone(),
-            WsStream {
+            Arc::new(Mutex::new(WsStream {
                 stream: pending.stream,
                 mask_outgoing: false,
-            },
+            })),
         );
     Ok(ok_term(vec![
         (":accepted", Term::Bool(true)),
@@ -653,10 +653,10 @@ pub(super) fn net_ws_open(payload: &Term) -> Result<Term, String> {
         .ws_streams
         .insert(
             stream_id.clone(),
-            WsStream {
+            Arc::new(Mutex::new(WsStream {
                 stream,
                 mask_outgoing: true,
-            },
+            })),
         );
     Ok(ok_term(vec![
         (":stream-id", Term::Str(stream_id)),
@@ -667,16 +667,23 @@ pub(super) fn net_ws_open(payload: &Term) -> Result<Term, String> {
 pub(super) fn net_ws_send(payload: &Term) -> Result<Term, String> {
     let stream_id = req_string(payload, ":stream-id")?;
     let data = req_bytes(payload, ":data")?;
-    let mut state = net_bridge_state()
+    let ws = net_bridge_state()
         .lock()
-        .map_err(|_| "net bridge state lock poisoned".to_string())?;
-    let Some(ws) = state.ws_streams.get_mut(&stream_id) else {
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .ws_streams
+        .get(&stream_id)
+        .cloned();
+    let Some(ws) = ws else {
         return Err(
             "unknown `:stream-id`; use persistent-stdio bridge transport for ws lifecycle"
                 .to_string(),
         );
     };
-    write_ws_frame(&mut ws.stream, 0x2, &data, ws.mask_outgoing)?;
+    let mut ws = ws
+        .lock()
+        .map_err(|_| format!("ws stream state lock poisoned `{stream_id}`"))?;
+    let mask_outgoing = ws.mask_outgoing;
+    write_ws_frame(&mut ws.stream, 0x2, &data, mask_outgoing)?;
     Ok(ok_term(vec![(
         ":sent-bytes",
         Term::Int((data.len() as i64).into()),
@@ -689,15 +696,21 @@ pub(super) fn net_ws_recv(payload: &Term) -> Result<Term, String> {
     if timeout_ms < 0 {
         return Err("`:timeout-ms` must be >= 0".to_string());
     }
-    let mut state = net_bridge_state()
+    let ws = net_bridge_state()
         .lock()
-        .map_err(|_| "net bridge state lock poisoned".to_string())?;
-    let Some(ws) = state.ws_streams.get_mut(&stream_id) else {
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .ws_streams
+        .get(&stream_id)
+        .cloned();
+    let Some(ws) = ws else {
         return Err(
             "unknown `:stream-id`; use persistent-stdio bridge transport for ws lifecycle"
                 .to_string(),
         );
     };
+    let mut ws = ws
+        .lock()
+        .map_err(|_| format!("ws stream state lock poisoned `{stream_id}`"))?;
     ws.stream
         .set_read_timeout(Some(Duration::from_millis(timeout_ms as u64)))
         .map_err(|e| e.to_string())?;
@@ -716,7 +729,8 @@ pub(super) fn net_ws_recv(payload: &Term) -> Result<Term, String> {
                 ]));
             }
             0x9 => {
-                write_ws_frame(&mut ws.stream, 0xA, &data, ws.mask_outgoing)?;
+                let mask_outgoing = ws.mask_outgoing;
+                write_ws_frame(&mut ws.stream, 0xA, &data, mask_outgoing)?;
             }
             0x1 | 0x2 => {
                 return Ok(ok_term(vec![
@@ -735,13 +749,17 @@ pub(super) fn net_ws_recv(payload: &Term) -> Result<Term, String> {
 
 pub(super) fn net_ws_close(payload: &Term) -> Result<Term, String> {
     let stream_id = req_string(payload, ":stream-id")?;
-    let mut stream = net_bridge_state()
+    let stream = net_bridge_state()
         .lock()
         .map_err(|_| "net bridge state lock poisoned".to_string())?
         .ws_streams
         .remove(&stream_id);
-    if let Some(ref mut ws) = stream {
-        let _ = write_ws_frame(&mut ws.stream, 0x8, &[], ws.mask_outgoing);
+    if let Some(ws) = stream {
+        let mut ws = ws
+            .lock()
+            .map_err(|_| format!("ws stream state lock poisoned `{stream_id}`"))?;
+        let mask_outgoing = ws.mask_outgoing;
+        let _ = write_ws_frame(&mut ws.stream, 0x8, &[], mask_outgoing);
         let _ = ws.stream.shutdown(Shutdown::Both);
     }
     Ok(ok_term(vec![(":closed", Term::Bool(true))]))
