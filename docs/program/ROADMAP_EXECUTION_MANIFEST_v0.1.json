@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "64edb43ad957bd45edfc26b2a67543feaf2ef4005b441a0b03cf6477dfbded82",
-    "roadmap_sha256": "339c6081bc41f8b7ba2da00199f95a6c485bb48133f5fc5e291b429d906716d2",
+    "roadmap_sha256": "6fc3ce6a5a052d533ccfa637bc5c47d42e42c76f77b50125c02eec4b88a5c8de",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -1332,7 +1332,7 @@
             "scripts/check_release_smoke.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "version-surface-bundle-sha256:7cb384b57e9bb4b281297371203fedbdf16be5f8009ada47bbddc27de96e01ef"
+          "input_identity": "version-surface-bundle-sha256:ef8cbb3830fd26d3f88460d177984a20ac63f6a909c694042992d363b8d5c0cb"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2318,7 +2318,7 @@
             "scripts/check_release_notes.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "release-notes-bundle-sha256:96cc32a8ebc9e99216b943db3b6c4c0cd58d4b796c84c223e23ec62f42a718e7"
+          "input_identity": "release-notes-bundle-sha256:c5cd883fe4e579d462005a29fb07fad2961d6fac2b20c6e34a7a950ba2d082d2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
