@@ -11,6 +11,9 @@ use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use gc_coreform::{HASH_DOMAIN_PREFIX, Term, TermOrdKey, hash_term, print_term};
 
+#[cfg(test)]
+mod tests;
+
 pub const VALUE_EFFECT_HASH_PROFILE_ID: &str = "genesis/value-effect-hash/v0.2";
 
 pub type ValueMap = rpds::RedBlackTreeMap<TermOrdKey, Value>;
@@ -345,29 +348,6 @@ impl Value {
 
     pub fn effect_request(r: EffectRequest) -> Self {
         Self::EffectRequest(Rc::new(r))
-    }
-
-    #[cfg(test)]
-    pub(crate) fn closure_captured_value_count(&self) -> Option<usize> {
-        match self {
-            Value::Closure(data) => Some(data.env.captured_local_binding_count()),
-            Value::CompiledClosure(data) => Some(
-                data.compiled_env
-                    .as_ref()
-                    .map_or(0, |env| env.captured_value_count()),
-            ),
-            _ => None,
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn compiled_closure_capture_slot_span(&self) -> Option<usize> {
-        match self {
-            Value::CompiledClosure(data) => {
-                Some(data.compiled_env.as_ref().map_or(0, |env| env.slot_span()))
-            }
-            _ => None,
-        }
     }
 
     fn apply_inner(self, ctx: &mut crate::eval::EvalCtx, arg: Value) -> Result<Value, KernelError> {

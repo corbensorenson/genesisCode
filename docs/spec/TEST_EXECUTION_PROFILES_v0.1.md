@@ -17,6 +17,7 @@ Deterministic test execution policy for local iteration and CI.
 | `smoke` | `bash scripts/selfhost_strict_smoke.sh` | `<= 3m` |
 | `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 120000` | `<= 2m` |
 | `perf-gate-regressions` | `bash scripts/test_perf_gates.sh` | profile-specific |
+| `kernel-tail-stress` | `bash scripts/test_perf_gates.sh --kernel-tail-stress` | `<= 5m` |
 | `agent-inner-loop` | `bash scripts/check_upgrade_plan_health.sh --profile agent-inner-loop` | `<= 5m` |
 | `release-full` | `bash scripts/check_upgrade_plan_health.sh --profile release-full` | `<= 30m` |
 | `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 8m` |
@@ -353,6 +354,13 @@ Strict/full profile runtime reports:
     `scripts/update_host_bridge_fault_injection_report.sh`.
     The spawn-per-op and persistent hard-cancellation loops are marked `stress-gate` and execute
     only through this host-bridge gate, never through default workspace tests.
+  - release-full enables the composite `--kernel-tail-stress` mode of `scripts/test_perf_gates.sh`:
+    it first runs `scripts/check_kernel_tcb_contract.sh` under the structural check's unchanged
+    local-fast telemetry envelope, then the ignored
+    stress case executes ten million bounded tail iterations in both treewalk and compiled modes.
+    It requires exactly `90000009` steps and maximum evaluator call depth `3` per mode, with a
+    `300000ms` wall budget and `536870912`-byte cold-cache growth budget. Default workspace tests
+    retain the exact small-loop and one-step-short controls.
   - `scripts/check_gc_agent_task_cards.sh` owns the ignored parallel Rust/Python agent-plan
     selector parity stress case; the default suite retains only single-invocation contract tests.
   - runs `scripts/check_agent_reference_workflows.sh` as the scored

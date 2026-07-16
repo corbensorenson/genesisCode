@@ -2,5 +2,7 @@ mod apply;
 mod eval;
 mod patterns;
 
-pub(super) use apply::eval_compiled_closure_body_scoped;
+pub(crate) use apply::{
+    CompiledClosureCall, eval_compiled_closure_body_scoped as apply_compiled_closure,
+};
 pub(super) use eval::eval_cexpr_runtime;

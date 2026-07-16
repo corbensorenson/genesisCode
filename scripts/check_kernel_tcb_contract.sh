@@ -10,5 +10,5 @@ cd "$ROOT_DIR"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/genesis-kernel-tcb.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-exec bash scripts/render_kernel_tcb_contract_report.sh \
+bash scripts/render_kernel_tcb_contract_report.sh \
   "$TMP_DIR/kernel_tcb_contract_report.json"
