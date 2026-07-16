@@ -1,5 +1,5 @@
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
 use crate::Value;
@@ -14,6 +14,7 @@ pub struct EnvFrame {
     // closures capture an `Env`, and later defs become visible without rebuilding env chains.
     pub binds: RefCell<BTreeMap<String, Value>>,
     pub rev: Cell<u64>,
+    module_scope: Cell<bool>,
 }
 
 impl Env {
@@ -22,6 +23,7 @@ impl Env {
             parent: None,
             binds: RefCell::new(BTreeMap::new()),
             rev: Cell::new(0),
+            module_scope: Cell::new(false),
         }))
     }
 
@@ -32,6 +34,7 @@ impl Env {
             parent: Some(parent.clone()),
             binds: RefCell::new(binds),
             rev: Cell::new(0),
+            module_scope: Cell::new(false),
         }))
     }
 
@@ -40,12 +43,17 @@ impl Env {
             parent: Some(parent.clone()),
             binds: RefCell::new(new_binds),
             rev: Cell::new(0),
+            module_scope: Cell::new(false),
         }))
     }
 
     pub fn set_local(&mut self, name: impl Into<String>, val: Value) {
         self.0.binds.borrow_mut().insert(name.into(), val);
         self.0.rev.set(self.0.rev.get().wrapping_add(1));
+    }
+
+    pub(crate) fn mark_module_scope(&self) {
+        self.0.module_scope.set(true);
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
@@ -57,5 +65,51 @@ impl Env {
             cur = frame.parent.as_ref().map(|e| e.0.as_ref());
         }
         None
+    }
+
+    /// Detach a closure from intermediate lexical frames while retaining the live module root.
+    pub(crate) fn capture(&self, names: &BTreeSet<String>) -> Self {
+        let root = self.module_anchor();
+        let mut captures = BTreeMap::new();
+        for name in names {
+            let mut cur = Some(self.clone());
+            while let Some(env) = cur {
+                if Rc::ptr_eq(&env.0, &root.0) {
+                    break;
+                }
+                if let Some(value) = env.0.binds.borrow().get(name).cloned() {
+                    captures.insert(name.clone(), value);
+                    break;
+                }
+                cur = env.0.parent.clone();
+            }
+        }
+        if captures.is_empty() {
+            root
+        } else {
+            Self::with_bindings(&root, captures)
+        }
+    }
+
+    fn module_anchor(&self) -> Self {
+        let mut current = self.clone();
+        loop {
+            if current.0.module_scope.get() {
+                return current;
+            }
+            let Some(parent) = current.0.parent.clone() else {
+                return current;
+            };
+            current = parent;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn captured_local_binding_count(&self) -> usize {
+        if self.0.parent.is_none() {
+            0
+        } else {
+            self.0.binds.borrow().len()
+        }
     }
 }

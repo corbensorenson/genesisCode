@@ -333,6 +333,7 @@ fn compile_list(
                     param,
                     body_term,
                     body,
+                    capture_plan: OnceLock::new(),
                 });
             }
             "if" => {

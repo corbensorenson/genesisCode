@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use crate::error::{KernelError, KernelErrorKind};
 use crate::eval::PrimOp;
@@ -209,6 +209,7 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
             param,
             body_term,
             body,
+            ..
         } => {
             out.push(8);
             push_str(out, param)?;
@@ -432,6 +433,7 @@ fn decode_cexpr(
                 param,
                 body_term,
                 body,
+                capture_plan: OnceLock::new(),
             }
         }
         9 => {

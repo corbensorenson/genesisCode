@@ -143,13 +143,15 @@ pub(in super::super) fn eval_cexpr_runtime(
                 param,
                 body_term,
                 body,
+                capture_plan,
             } => {
+                let plan = capture_plan.get_or_init(|| ClosureCapturePlan::for_body(body));
                 return Ok(Value::compiled_closure(
                     param.clone(),
                     body_term.clone(),
                     crate::value::CompiledExpr::new(body.clone(), cur_env.coverage_sites.clone()),
-                    cur_env.external.clone(),
-                    Some(cur_env.lexical_for_capture()),
+                    cur_env.external_for_capture(plan),
+                    Some(cur_env.lexical_for_capture(plan)?),
                     Some(cur_env.module.clone()),
                 ));
             }

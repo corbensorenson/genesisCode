@@ -2,6 +2,7 @@ mod compiled;
 mod env;
 mod error;
 mod eval;
+mod free_vars;
 mod value;
 
 pub use compiled::{
