@@ -537,6 +537,30 @@ pub(super) fn cmd_agent_index(
     });
     for (key, path) in [
         (
+            "genesisbench_baseline_protocol",
+            "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
+        ),
+        (
+            "genesisbench_baseline_predeclaration_schema",
+            "docs/spec/GENESISBENCH_BASELINE_PREDECLARATION_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_baseline_evidence_schema",
+            "docs/spec/GENESISBENCH_BASELINE_EVIDENCE_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_baseline_publication_schema",
+            "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_benchmark_card",
+            "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
+        ),
+        (
+            "genesisbench_failure_taxonomy",
+            "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
+        ),
+        (
             "genesisbench_construct_validity_policy",
             "policies/genesisbench_construct_validity_v0.1.json",
         ),

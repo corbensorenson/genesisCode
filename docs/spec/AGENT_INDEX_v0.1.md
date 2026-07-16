@@ -133,6 +133,11 @@ genesis --json agent-index --diagnostic <exact-code>
     `genesisbench_observations_schema = "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json"`,
     and `genesisbench_analysis_report_schema = "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json"`
     as the predeclared lineage-clustered statistical contract and its closed evidence surfaces.
+  - includes `genesisbench_baseline_protocol`, `genesisbench_baseline_predeclaration_schema`,
+    `genesisbench_baseline_evidence_schema`, `genesisbench_baseline_publication_schema`,
+    `genesisbench_benchmark_card`, and `genesisbench_failure_taxonomy` as the locked
+    real-model study, complete attempt-custody, deterministic publication, and non-promotable
+    synthetic-conformance authority.
   - includes `gc_agent_model_runner_effect = "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json"`
     as the explicit deny-by-default local benchmark integration over the pinned
     `host/plugin::command` effect and replayable `.gclog` transcript.

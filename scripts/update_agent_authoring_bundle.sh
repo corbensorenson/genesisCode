@@ -20,6 +20,7 @@ components:
   construct-validity
   benchmark-run
   protocol-fixtures
+  baseline-authority
   corpus
   all
 EOF
@@ -171,6 +172,12 @@ update_protocol_fixtures() {
   echo "update-agent-authoring-bundle: refreshed protocol authority and fixtures"
 }
 
+update_baseline_authority() {
+  python3 scripts/lib/genesisbench_baselines.py --write
+  python3 scripts/lib/genesisbench_baselines.py --check --self-test
+  echo "update-agent-authoring-bundle: refreshed baseline-study authority and fixtures"
+}
+
 update_corpus() {
   python3 scripts/lib/gc_agent_corpus.py --refresh
   python3 scripts/lib/gc_agent_corpus.py --check --self-test
@@ -190,6 +197,7 @@ case "$component" in
   construct-validity) update_construct_validity ;;
   benchmark-run) update_benchmark_run ;;
   protocol-fixtures) update_protocol_fixtures ;;
+  baseline-authority) update_baseline_authority ;;
   corpus) update_corpus ;;
   all)
     update_profile
@@ -203,6 +211,7 @@ case "$component" in
     update_construct_validity
     update_benchmark_run
     update_protocol_fixtures
+    update_baseline_authority
     update_corpus
     validate_unless_staged bash scripts/check_agent_authoring_bundle.sh
     ;;

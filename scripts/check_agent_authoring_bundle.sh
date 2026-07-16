@@ -34,6 +34,7 @@ expected = [
     "update_construct_validity",
     "update_benchmark_run",
     "update_protocol_fixtures",
+    "update_baseline_authority",
     "update_corpus",
     "validate_unless_staged bash scripts/check_agent_authoring_bundle.sh",
 ]
@@ -82,9 +83,11 @@ run_parallel 08 genesisbench-registry \
   python3 scripts/lib/genesisbench_registry.py check --self-test
 run_parallel 09 genesisbench-analysis \
   python3 scripts/lib/genesisbench_analysis.py --check --self-test
-run_parallel 10 gc-agent-profile \
+run_parallel 10 genesisbench-baselines \
+  python3 scripts/lib/genesisbench_baselines.py --check --self-test
+run_parallel 11 gc-agent-profile \
   bash -c 'python3 scripts/lib/gc_agent_profile.py --check && python3 scripts/lib/gc_agent_profile.py --self-test'
-run_parallel 11 genesisbench-construct-validity \
+run_parallel 12 genesisbench-construct-validity \
   python3 scripts/lib/genesisbench_construct_validity.py --check --self-test
 
 parallel_status=0
@@ -239,6 +242,13 @@ required_included = [
     "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
     "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
     "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
+    "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_BASELINE_PREDECLARATION_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_BASELINE_EVIDENCE_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
+    "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
+    "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
     "policies/genesisbench_construct_validity_v0.1.json",
     "docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json",
     "benchmarks/genesisbench/v0.1/construct-validity/report.json",
@@ -284,7 +294,10 @@ required_included = [
     "benchmarks/genesisbench/v0.1/adapters/direct-local-runtime.json",
     "benchmarks/genesisbench/v0.1/adapters/hosted-api.json",
     "benchmarks/genesisbench/v0.1/adapters/local-openai-compatible.json",
+    "benchmarks/genesisbench/v0.1/baselines/conformance/evidence.fixture.json",
+    "benchmarks/genesisbench/v0.1/baselines/conformance/publication.fixture.json",
     "guides/genesisbench.qmd",
+    "guides/genesisbench-methods.qmd",
     "scripts/lib/gc_agent_scoring.py",
     "scripts/lib/gc_agent_scoring_contract.py",
     "scripts/lib/gc_agent_benchmark_run.py",
@@ -297,6 +310,7 @@ required_included = [
     "scripts/lib/genesisbench_reference_agent.py",
     "scripts/lib/genesisbench_front_door.py",
     "scripts/lib/genesisbench_registry.py",
+    "scripts/lib/genesisbench_baselines.py",
     "scripts/lib/gc_held_out_evaluation.py",
     "scripts/lib/gc_capability_lease.py",
     "examples/agent_benchmark_reproducibility/run.json",

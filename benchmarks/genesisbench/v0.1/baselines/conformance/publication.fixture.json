@@ -1,0 +1,249 @@
+{
+  "contentIdentitySha256": "5e8c35acca79c53758457285aa5bc5af199aa61b14b485d324ef06e404952be2",
+  "economics": {
+    "affectsRank": false,
+    "currency": "USD",
+    "totalCostMicrounits": 0,
+    "totalLatencyMs": 36
+  },
+  "evidenceIdentitySha256": "bc71111c750638ccaefedf912b750e10cf1f6d86b4352e92f23c12ac7658f85d",
+  "failureCounts": {
+    "adapter/cancelled": 0,
+    "adapter/failed": 0,
+    "adapter/timed-out": 0,
+    "agent/abstained": 0,
+    "artifact/invalid": 0,
+    "authority/broadened": 0,
+    "budget/exhausted": 0,
+    "candidate/incomplete": 0,
+    "candidate/invalid": 0,
+    "capability/requested": 0,
+    "harness/invalid": 0,
+    "model/refusal": 0,
+    "obligation/failed": 0,
+    "policy/excess": 0,
+    "replay/mismatch": 0,
+    "resource/exceeded": 0,
+    "scope/escaped": 0,
+    "semantic/incorrect": 6,
+    "transport/invalid": 0,
+    "unknown/failure": 0
+  },
+  "kind": "genesis/genesisbench-baseline-publication-v0.1",
+  "nonClaims": [
+    "No model capability is measured.",
+    "No rank or reality-gate claim is allowed.",
+    "No temporal-clean claim is made."
+  ],
+  "predeclarationIdentitySha256": "1ca5c77c3f8ddee5ec4ccbfd014e6450e20d484622b6796ab1bc309ec50285b8",
+  "publicationMode": "synthetic-conformance",
+  "realityGate": {
+    "authentic": false,
+    "expansionAuthorized": false,
+    "mockCanSatisfy": false,
+    "observedCases": 9,
+    "passed": false,
+    "requiredCases": 9
+  },
+  "systemSummaries": [
+    {
+      "attempts": 9,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 3333,
+      "boundedPassAtKSolved": 3,
+      "clusteredBy": "lineageId",
+      "conditionCells": 9,
+      "conditionalQualityDenominator": 3,
+      "conditionalQualityMeanBasisPoints": 8997,
+      "independentLineages": 9,
+      "passAtOneBasisPoints": 3333,
+      "passAtOneSolved": 3,
+      "systemId": "synthetic-frontier"
+    }
+  ],
+  "taskClassSummaries": [
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 10000,
+      "boundedPassAtKSolved": 1,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 1,
+      "conditionalQualityMeanBasisPoints": 9000,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 10000,
+      "passAtOneSolved": 1,
+      "systemId": "synthetic-frontier",
+      "taskClass": "completion"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 0,
+      "boundedPassAtKSolved": 0,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 0,
+      "conditionalQualityMeanBasisPoints": null,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 0,
+      "passAtOneSolved": 0,
+      "systemId": "synthetic-frontier",
+      "taskClass": "deployment"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 0,
+      "boundedPassAtKSolved": 0,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 0,
+      "conditionalQualityMeanBasisPoints": null,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 0,
+      "passAtOneSolved": 0,
+      "systemId": "synthetic-frontier",
+      "taskClass": "generation"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 10000,
+      "boundedPassAtKSolved": 1,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 1,
+      "conditionalQualityMeanBasisPoints": 8997,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 10000,
+      "passAtOneSolved": 1,
+      "systemId": "synthetic-frontier",
+      "taskClass": "package-migration"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 0,
+      "boundedPassAtKSolved": 0,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 0,
+      "conditionalQualityMeanBasisPoints": null,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 0,
+      "passAtOneSolved": 0,
+      "systemId": "synthetic-frontier",
+      "taskClass": "performance-repair"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 0,
+      "boundedPassAtKSolved": 0,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 0,
+      "conditionalQualityMeanBasisPoints": null,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 0,
+      "passAtOneSolved": 0,
+      "systemId": "synthetic-frontier",
+      "taskClass": "policy-minimization"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 10000,
+      "boundedPassAtKSolved": 1,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 1,
+      "conditionalQualityMeanBasisPoints": 8994,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 10000,
+      "passAtOneSolved": 1,
+      "systemId": "synthetic-frontier",
+      "taskClass": "refactor"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 0,
+      "boundedPassAtKSolved": 0,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 0,
+      "conditionalQualityMeanBasisPoints": null,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 0,
+      "passAtOneSolved": 0,
+      "systemId": "synthetic-frontier",
+      "taskClass": "repair"
+    },
+    {
+      "attempts": 1,
+      "boundedPassAtK": 1,
+      "boundedPassAtKBasisPoints": 0,
+      "boundedPassAtKSolved": 0,
+      "clusteredBy": "lineageId",
+      "conditionCells": 1,
+      "conditionalQualityDenominator": 0,
+      "conditionalQualityMeanBasisPoints": null,
+      "independentLineages": 1,
+      "passAtOneBasisPoints": 0,
+      "passAtOneSolved": 0,
+      "systemId": "synthetic-frontier",
+      "taskClass": "replay-investigation"
+    }
+  ],
+  "teacherCandidates": [
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "completion",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "deployment",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "generation",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "package-migration",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "performance-repair",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "policy-minimization",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "refactor",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "repair",
+      "trajectories": []
+    },
+    {
+      "selection": "verified-trajectory-per-class-not-aggregate-rank",
+      "taskClass": "replay-investigation",
+      "trajectories": []
+    }
+  ],
+  "version": "0.1.0"
+}

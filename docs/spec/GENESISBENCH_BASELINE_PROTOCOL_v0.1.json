@@ -1,0 +1,113 @@
+{
+  "analysis": {
+    "clusterUnit": "lineageId",
+    "costAndLatencyAffectRank": false,
+    "missingness": "explicit-and-in-denominator",
+    "primaryContextTier": "small",
+    "teacherSelection": "per-task-class-verified-trajectory",
+    "uncertainty": "lineage-cluster-bootstrap-and-wilson-95"
+  },
+  "attemptPolicy": {
+    "boundedPassK": 3,
+    "hiddenRetriesAllowed": false,
+    "passAtOneAttempt": 0,
+    "preserveEveryAttempt": true,
+    "selectionAfterOutcomeAllowed": false
+  },
+  "authorities": {
+    "analysisPlanIdentitySha256": "8fc768d5d83ef10910599703b762ae34fbfaab768768f9ca4375818a135f1b92",
+    "constructValidityIdentitySha256": "fbd592f5dad28ece5fcb235ef65381dc10e90a5b70095c52ab18af78b568470d",
+    "protocolIdentitySha256": "092f4a1a4fecfb55f88571131717502026d0fa1651af32969ed259bf4163ee34",
+    "referenceAgentIdentitySha256": "b4ade2dc13af42a9ec803928c48083dd951437f70a9b745373df0f8ff5002704",
+    "scoringIdentitySha256": "2025953abbd1f9c9033a565500649326471a0d6d414115cea7670bd3f532c91e",
+    "suiteIdentitySha256": "434a4f81323a4be6d48132016b04f89f7e0c62df398d1e2f96318289deb01b3b"
+  },
+  "contentIdentitySha256": "a07e3c293bb4763c8373a5ee92a7756926e3254bbec940dc11d784d38de62c98",
+  "custody": {
+    "closedBundlesRequired": true,
+    "failedAttemptsRetained": true,
+    "providerSecretsRecorded": false,
+    "rawRequestsAndResponsesRetained": true,
+    "replayWithoutModelAccess": true
+  },
+  "kind": "genesis/genesisbench-baseline-protocol-v0.1",
+  "phases": {
+    "publicMatrix": {
+      "attemptsPerCell": 3,
+      "caseIds": [
+        "completion-large",
+        "completion-medium",
+        "completion-small",
+        "deployment-large",
+        "deployment-medium",
+        "deployment-small",
+        "generation-large",
+        "generation-medium",
+        "generation-small",
+        "package-migration-large",
+        "package-migration-medium",
+        "package-migration-small",
+        "performance-repair-large",
+        "performance-repair-medium",
+        "performance-repair-small",
+        "policy-minimization-large",
+        "policy-minimization-medium",
+        "policy-minimization-small",
+        "refactor-large",
+        "refactor-medium",
+        "refactor-small",
+        "repair-large",
+        "repair-medium",
+        "repair-small",
+        "replay-investigation-large",
+        "replay-investigation-medium",
+        "replay-investigation-small"
+      ],
+      "requiredSystemClasses": [
+        "code-specialized",
+        "frontier-general",
+        "open-agent",
+        "open-weight",
+        "small-local"
+      ],
+      "startRequiresPassedRealityGate": true,
+      "syntheticEvidenceAllowed": false
+    },
+    "realityGate": {
+      "attemptsPerCell": 1,
+      "caseIds": [
+        "completion-small",
+        "deployment-small",
+        "generation-small",
+        "package-migration-small",
+        "performance-repair-small",
+        "policy-minimization-small",
+        "refactor-small",
+        "repair-small",
+        "replay-investigation-small"
+      ],
+      "immutableModelRequired": true,
+      "minimumSystems": 1,
+      "requiredSystemClass": "frontier-general",
+      "sameScaffoldAcrossClasses": true,
+      "syntheticEvidenceAllowed": false
+    }
+  },
+  "publication": {
+    "artifacts": [
+      "accepted-closed-bundles",
+      "benchmark-card",
+      "complete-attempt-table",
+      "failure-taxonomy",
+      "methods-paper",
+      "model-cards",
+      "reproduction-manifest"
+    ],
+    "economics": "reported-non-ranking",
+    "invalidPartialQuality": "never-ranked",
+    "nonClaimsRequired": true,
+    "temporalCleanRequiresReleasePrecommitProof": true
+  },
+  "status": "project-controlled-preview",
+  "version": "0.1.0"
+}

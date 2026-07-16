@@ -1,0 +1,238 @@
+{
+  "$defs": {
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "utc": {
+      "pattern": "^20[0-9]{2}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]Z$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-baseline-evidence-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attempts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt": {
+            "maximum": 15,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "bundlePath": {
+            "anyOf": [
+              {
+                "pattern": "^[^/].*\\.gcbundle$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bundleSha256": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/sha256"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capabilityRequests": {
+            "items": {
+              "maxLength": 256,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "caseId": {
+            "$ref": "#/$defs/id"
+          },
+          "costMicrounits": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidenceClass": {
+            "enum": [
+              "authentic-closed-bundle",
+              "declared-missing",
+              "synthetic-conformance"
+            ]
+          },
+          "failureCodes": {
+            "items": {
+              "enum": [
+                "agent/abstained",
+                "adapter/cancelled",
+                "adapter/failed",
+                "adapter/timed-out",
+                "artifact/invalid",
+                "authority/broadened",
+                "budget/exhausted",
+                "candidate/incomplete",
+                "candidate/invalid",
+                "capability/requested",
+                "harness/invalid",
+                "model/refusal",
+                "obligation/failed",
+                "policy/excess",
+                "replay/mismatch",
+                "resource/exceeded",
+                "scope/escaped",
+                "semantic/incorrect",
+                "transport/invalid",
+                "unknown/failure"
+              ]
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "inputTokens": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latencyMs": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "enum": [
+              "abstained",
+              "invalid",
+              "missing",
+              "solved",
+              "unsolved"
+            ]
+          },
+          "outputTokens": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "qualityScoreBasisPoints": {
+            "anyOf": [
+              {
+                "maximum": 10000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resourceFacts": {
+            "additionalProperties": {
+              "type": [
+                "integer",
+                "string",
+                "boolean",
+                "null"
+              ]
+            },
+            "type": "object"
+          },
+          "runIdentitySha256": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/sha256"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "systemId": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "required": [
+          "systemId",
+          "caseId",
+          "attempt",
+          "evidenceClass",
+          "bundlePath",
+          "bundleSha256",
+          "runIdentitySha256",
+          "outcome",
+          "qualityScoreBasisPoints",
+          "failureCodes",
+          "inputTokens",
+          "outputTokens",
+          "latencyMs",
+          "costMicrounits",
+          "capabilityRequests",
+          "resourceFacts"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-baseline-evidence-v0.1"
+    },
+    "predeclarationIdentitySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "publicationMode": {
+      "enum": [
+        "authentic-study",
+        "synthetic-conformance"
+      ]
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "predeclarationIdentitySha256",
+    "publicationMode",
+    "attempts",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench baseline evidence v0.1",
+  "type": "object"
+}

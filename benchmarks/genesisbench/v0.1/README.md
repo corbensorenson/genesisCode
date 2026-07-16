@@ -16,6 +16,8 @@ python3 scripts/lib/genesisbench_analysis.py --check --self-test
 
 The report counts missing, invalid, abstained, solved, and unsolved cells exactly; computes headline solve intervals over one primary condition per lineage; keeps context ablations clustered by lineage; applies paired exact tests and Holm correction; and refuses rank or saturation claims for public conformance evidence.
 
+`baselines/conformance/` exercises the R1.4.o predeclaration, complete-attempt, pass@1/pass@k, failure-taxonomy, teacher-selection, economics, and publication validators without invoking a model. It is permanently synthetic: its publication records `realityGate.passed=false`, and the validator rejects any attempt to promote it. Authentic studies must provide closed bundles under one declared root; the validator reopens each bundle and binds its adapter, immutable model revision, case, score, token facts, and latency before deriving a publication. See `guides/genesisbench-methods.qmd`.
+
 `construct-validity/` contains the R1.4.n executable study rather than model results. Its nine alternative overlays deliberately differ from the public reference bytes while satisfying the same behavioral, artifact, obligation, capability, resource, and metamorphic contracts. Its report also records one targeted invalid control per task class, ten killed evaluator/scorer mutants, maintenance and saturation controls, and lineage-level deterministic bootstrap intervals. The shipped-binary Rust test regenerates the report byte-for-byte; the read-only static validator is:
 
 ```sh

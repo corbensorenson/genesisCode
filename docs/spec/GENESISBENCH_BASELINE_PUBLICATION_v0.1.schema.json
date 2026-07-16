@@ -1,0 +1,460 @@
+{
+  "$defs": {
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "utc": {
+      "pattern": "^20[0-9]{2}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]Z$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-baseline-publication-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "economics": {
+      "additionalProperties": false,
+      "properties": {
+        "affectsRank": {
+          "const": false
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "type": "string"
+        },
+        "totalCostMicrounits": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "totalLatencyMs": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currency",
+        "totalCostMicrounits",
+        "totalLatencyMs",
+        "affectsRank"
+      ],
+      "type": "object"
+    },
+    "evidenceIdentitySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "failureCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter/cancelled": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "adapter/failed": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "adapter/timed-out": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "agent/abstained": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "artifact/invalid": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "authority/broadened": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "budget/exhausted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "candidate/incomplete": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "candidate/invalid": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "capability/requested": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "harness/invalid": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "model/refusal": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "obligation/failed": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "policy/excess": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "replay/mismatch": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "resource/exceeded": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "scope/escaped": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "semantic/incorrect": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "transport/invalid": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unknown/failure": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "agent/abstained",
+        "adapter/cancelled",
+        "adapter/failed",
+        "adapter/timed-out",
+        "artifact/invalid",
+        "authority/broadened",
+        "budget/exhausted",
+        "candidate/incomplete",
+        "candidate/invalid",
+        "capability/requested",
+        "harness/invalid",
+        "model/refusal",
+        "obligation/failed",
+        "policy/excess",
+        "replay/mismatch",
+        "resource/exceeded",
+        "scope/escaped",
+        "semantic/incorrect",
+        "transport/invalid",
+        "unknown/failure"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-baseline-publication-v0.1"
+    },
+    "nonClaims": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "predeclarationIdentitySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "publicationMode": {
+      "enum": [
+        "authentic-study",
+        "synthetic-conformance"
+      ]
+    },
+    "realityGate": {
+      "additionalProperties": false,
+      "properties": {
+        "authentic": {
+          "type": "boolean"
+        },
+        "expansionAuthorized": {
+          "type": "boolean"
+        },
+        "mockCanSatisfy": {
+          "const": false
+        },
+        "observedCases": {
+          "maximum": 9,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "requiredCases": {
+          "const": 9
+        }
+      },
+      "required": [
+        "passed",
+        "authentic",
+        "requiredCases",
+        "observedCases",
+        "mockCanSatisfy",
+        "expansionAuthorized"
+      ],
+      "type": "object"
+    },
+    "systemSummaries": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "boundedPassAtK": {
+            "maximum": 3,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "boundedPassAtKBasisPoints": {
+            "maximum": 10000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "boundedPassAtKSolved": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "clusteredBy": {
+            "const": "lineageId"
+          },
+          "conditionCells": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "conditionalQualityDenominator": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "conditionalQualityMeanBasisPoints": {
+            "anyOf": [
+              {
+                "maximum": 10000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "independentLineages": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "passAtOneBasisPoints": {
+            "maximum": 10000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "passAtOneSolved": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "systemId": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "required": [
+          "attempts",
+          "boundedPassAtK",
+          "boundedPassAtKBasisPoints",
+          "boundedPassAtKSolved",
+          "clusteredBy",
+          "conditionCells",
+          "conditionalQualityDenominator",
+          "conditionalQualityMeanBasisPoints",
+          "independentLineages",
+          "passAtOneBasisPoints",
+          "passAtOneSolved",
+          "systemId"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "taskClassSummaries": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "boundedPassAtK": {
+            "maximum": 3,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "boundedPassAtKBasisPoints": {
+            "maximum": 10000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "boundedPassAtKSolved": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "clusteredBy": {
+            "const": "lineageId"
+          },
+          "conditionCells": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "conditionalQualityDenominator": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "conditionalQualityMeanBasisPoints": {
+            "anyOf": [
+              {
+                "maximum": 10000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "independentLineages": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "passAtOneBasisPoints": {
+            "maximum": 10000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "passAtOneSolved": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "systemId": {
+            "$ref": "#/$defs/id"
+          },
+          "taskClass": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "required": [
+          "attempts",
+          "boundedPassAtK",
+          "boundedPassAtKBasisPoints",
+          "boundedPassAtKSolved",
+          "clusteredBy",
+          "conditionCells",
+          "conditionalQualityDenominator",
+          "conditionalQualityMeanBasisPoints",
+          "independentLineages",
+          "passAtOneBasisPoints",
+          "passAtOneSolved",
+          "systemId",
+          "taskClass"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "teacherCandidates": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "selection": {
+            "const": "verified-trajectory-per-class-not-aggregate-rank"
+          },
+          "taskClass": {
+            "$ref": "#/$defs/id"
+          },
+          "trajectories": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "attempt": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "bundleSha256": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "caseId": {
+                  "$ref": "#/$defs/id"
+                },
+                "qualityScoreBasisPoints": {
+                  "maximum": 10000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "runIdentitySha256": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "systemId": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "required": [
+                "systemId",
+                "caseId",
+                "attempt",
+                "bundleSha256",
+                "runIdentitySha256",
+                "qualityScoreBasisPoints"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "taskClass",
+          "trajectories",
+          "selection"
+        ],
+        "type": "object"
+      },
+      "maxItems": 9,
+      "minItems": 9,
+      "type": "array"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "predeclarationIdentitySha256",
+    "evidenceIdentitySha256",
+    "publicationMode",
+    "realityGate",
+    "systemSummaries",
+    "taskClassSummaries",
+    "teacherCandidates",
+    "failureCounts",
+    "economics",
+    "nonClaims",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench baseline publication v0.1",
+  "type": "object"
+}

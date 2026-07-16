@@ -1,0 +1,89 @@
+{
+  "closedCodes": [
+    "agent/abstained",
+    "adapter/cancelled",
+    "adapter/failed",
+    "adapter/timed-out",
+    "artifact/invalid",
+    "authority/broadened",
+    "budget/exhausted",
+    "candidate/incomplete",
+    "candidate/invalid",
+    "capability/requested",
+    "harness/invalid",
+    "model/refusal",
+    "obligation/failed",
+    "policy/excess",
+    "replay/mismatch",
+    "resource/exceeded",
+    "scope/escaped",
+    "semantic/incorrect",
+    "transport/invalid",
+    "unknown/failure"
+  ],
+  "contentIdentitySha256": "a494ae4aaaa271bd6f7f719581f355204c8aa449eb014243c813e1857d112dde",
+  "groups": {
+    "adapter": [
+      "adapter/cancelled",
+      "adapter/failed",
+      "adapter/timed-out"
+    ],
+    "agent": [
+      "agent/abstained"
+    ],
+    "artifact": [
+      "artifact/invalid"
+    ],
+    "authority": [
+      "authority/broadened"
+    ],
+    "budget": [
+      "budget/exhausted"
+    ],
+    "candidate": [
+      "candidate/incomplete",
+      "candidate/invalid"
+    ],
+    "capability": [
+      "capability/requested"
+    ],
+    "harness": [
+      "harness/invalid"
+    ],
+    "model": [
+      "model/refusal"
+    ],
+    "obligation": [
+      "obligation/failed"
+    ],
+    "policy": [
+      "policy/excess"
+    ],
+    "replay": [
+      "replay/mismatch"
+    ],
+    "resource": [
+      "resource/exceeded"
+    ],
+    "scope": [
+      "scope/escaped"
+    ],
+    "semantic": [
+      "semantic/incorrect"
+    ],
+    "transport": [
+      "transport/invalid"
+    ],
+    "unknown": [
+      "unknown/failure"
+    ]
+  },
+  "kind": "genesis/genesisbench-failure-taxonomy-v0.1",
+  "protocolIdentitySha256": "a07e3c293bb4763c8373a5ee92a7756926e3254bbec940dc11d784d38de62c98",
+  "rules": {
+    "nonSolvedHasAtLeastOneFailureCode": true,
+    "solvedHasNoFailureCodes": true,
+    "unknownMapsOnlyToUnknownFailure": true
+  },
+  "version": "0.1.0"
+}

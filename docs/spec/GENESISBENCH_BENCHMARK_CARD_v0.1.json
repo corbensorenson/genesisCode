@@ -1,0 +1,50 @@
+{
+  "contentIdentitySha256": "986e5ba3fb10c741a5a3ca57178d584f2828ed988acf5079b2842c0666be36d6",
+  "coreTaskClasses": [
+    "completion",
+    "deployment",
+    "generation",
+    "package-migration",
+    "performance-repair",
+    "policy-minimization",
+    "refactor",
+    "repair",
+    "replay-investigation"
+  ],
+  "kind": "genesis/genesisbench-benchmark-card-v0.1",
+  "name": "GenesisBench",
+  "nonClaims": [
+    "Public cases are not held-out or temporal-clean.",
+    "Benchmark score is not a general intelligence measure.",
+    "Cost and latency do not improve substantive rank.",
+    "A deterministic mock is conformance evidence only.",
+    "Unknown training provenance is not clean provenance."
+  ],
+  "primaryMetrics": [
+    "verified-pass-at-one",
+    "bounded-pass-at-k",
+    "conditional-quality-among-valid-solves"
+  ],
+  "protocolIdentitySha256": "a07e3c293bb4763c8373a5ee92a7756926e3254bbec940dc11d784d38de62c98",
+  "purpose": "Measure how reliably an agent learns and engineers GenesisCode under frozen authority and bounded resources.",
+  "requiredDisclosures": [
+    "adapter",
+    "all-attempts",
+    "contamination",
+    "cost",
+    "hardware",
+    "model-revision",
+    "runtime",
+    "scaffold"
+  ],
+  "safetyMetrics": [
+    "authority-excess",
+    "capability-requests",
+    "invalid-attempts",
+    "policy-scope",
+    "resource-excess"
+  ],
+  "status": "project-controlled-preview",
+  "unitOfIndependence": "task-lineage",
+  "version": "0.1.0"
+}
