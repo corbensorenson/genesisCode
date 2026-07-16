@@ -10,6 +10,38 @@ cd "$ROOT_DIR"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/genesis-agent-authoring.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+python3 - <<'PY'
+from pathlib import Path
+
+source = Path("scripts/update_agent_authoring_bundle.sh").read_text(encoding="ascii")
+all_branch = source.split("  all)\n", 1)[1].split("    ;;", 1)[0]
+expected = [
+    "update_profile",
+    "update_derived_agent_surfaces",
+    "update_canonical_examples",
+    "update_task_benchmarks",
+    "update_analysis_fixtures",
+    "update_held_out_evaluation",
+    "update_benchmark_scoring",
+    "update_construct_validity",
+    "update_benchmark_run",
+    "update_protocol_fixtures",
+    "update_corpus",
+    "bash scripts/check_agent_authoring_bundle.sh",
+]
+positions = [all_branch.find(f"    {step}\n") for step in expected]
+if any(position < 0 for position in positions) or positions != sorted(set(positions)):
+    raise SystemExit("agent-authoring-bundle: updater dependency order drift")
+
+derived = source.split("update_derived_agent_surfaces() {\n", 1)[1].split("\n}", 1)[0]
+required_checks = [
+    "bash scripts/check_gc_agent_symbol_index.sh",
+    "python3 scripts/lib/genesisbench_reference_agent.py --check --self-test",
+]
+if any(check not in derived for check in required_checks):
+    raise SystemExit("agent-authoring-bundle: derived-surface validation drift")
+PY
+
 parallel_pids=()
 parallel_names=()
 run_parallel() {

@@ -10,8 +10,10 @@ usage: scripts/update_agent_authoring_bundle.sh <component>
 
 components:
   profile
+  derived-agent-surfaces
   canonical-examples
   task-benchmarks
+  analysis-fixtures
   held-out-evaluation
   benchmark-scoring
   construct-validity
@@ -53,6 +55,16 @@ update_profile() {
   echo "update-agent-authoring-bundle: refreshed profile"
 }
 
+update_derived_agent_surfaces() {
+  bash scripts/update_gc_agent_core_card.sh
+  bash scripts/update_gc_agent_task_cards.sh
+  bash scripts/update_gc_agent_symbol_index.sh
+  bash scripts/check_gc_agent_symbol_index.sh
+  python3 scripts/lib/genesisbench_reference_agent.py --write
+  python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
+  echo "update-agent-authoring-bundle: refreshed derived agent surfaces"
+}
+
 update_canonical_examples() {
   python3 scripts/lib/gc_canonical_examples.py --refresh
   python3 scripts/lib/gc_canonical_examples.py --check --self-test
@@ -63,6 +75,12 @@ update_task_benchmarks() {
   python3 scripts/lib/gc_task_benchmarks.py --refresh
   python3 scripts/lib/gc_task_benchmarks.py --check --self-test
   echo "update-agent-authoring-bundle: refreshed task benchmarks"
+}
+
+update_analysis_fixtures() {
+  python3 scripts/lib/genesisbench_analysis.py --refresh-fixtures
+  python3 scripts/lib/genesisbench_analysis.py --check --self-test
+  echo "update-agent-authoring-bundle: refreshed analysis authority and fixtures"
 }
 
 update_held_out_evaluation() {
@@ -147,8 +165,10 @@ update_corpus() {
 component="${1:-}"
 case "$component" in
   profile) update_profile ;;
+  derived-agent-surfaces) update_derived_agent_surfaces ;;
   canonical-examples) update_canonical_examples ;;
   task-benchmarks) update_task_benchmarks ;;
+  analysis-fixtures) update_analysis_fixtures ;;
   held-out-evaluation) update_held_out_evaluation ;;
   benchmark-scoring) update_benchmark_scoring ;;
   construct-validity) update_construct_validity ;;
@@ -157,8 +177,10 @@ case "$component" in
   corpus) update_corpus ;;
   all)
     update_profile
+    update_derived_agent_surfaces
     update_canonical_examples
     update_task_benchmarks
+    update_analysis_fixtures
     update_held_out_evaluation
     update_benchmark_scoring
     update_construct_validity
