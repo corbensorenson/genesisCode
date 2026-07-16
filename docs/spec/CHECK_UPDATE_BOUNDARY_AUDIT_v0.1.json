@@ -19,7 +19,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "91795f9eee10c7f08b9191c981710cd8c3ec1b956c0209437d050b80655c313f",
+      "execution_identity_sha256": "66971a4f383e417597eaeda0a0ba925d7d67a4c71b69eeb2f13490fc5cc0f952",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -30,7 +30,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "0e5a1d6ccd2902c38b7650e17f24c28a667473502d2327949e3dbb2faf55afb7",
+      "sha256": "8aa68348d999264ca9f7995436bcd57d412f452fe6af1c6d93f6c442116569c5",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -349,13 +349,13 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "926805655ab5792d7c2ed6373846d02fe6af6ddf87e21c45a9cf4a3324171270"
+          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_ai_iteration_slo_report.sh"
       ],
-      "execution_identity_sha256": "7a8994fd70c67fc163413b205303c3ffc81882335d503684dca47385ffe5898c",
+      "execution_identity_sha256": "dd9235692532edbce242ce53472d2a4b4b5e2a54b8456d0508eb9a47e462e7a6",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -742,7 +742,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "e3716f4f7d312499bac18885ec17e630edd440b1e87a200717bf1f4557022f0f",
+      "execution_identity_sha256": "e0baaf6e00cd4a9638a912802b34ad722fa317fc8e137e844421647840510154",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -753,7 +753,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "c038fe15e60b4d9c0cb3ee1932e90d8e43f8220441df8dd402e122f80e4f23a1",
+      "sha256": "cb6b237e000bdc9813b2b43cc2d4f04b863d6929f2c48b36f95143a0b26b8566",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -1068,7 +1068,7 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "926805655ab5792d7c2ed6373846d02fe6af6ddf87e21c45a9cf4a3324171270"
+          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
         },
         {
           "path": "scripts/test_shard_workspace.sh",
@@ -1080,7 +1080,7 @@
         "scripts/test_changed_fast.sh",
         "scripts/test_shard_workspace.sh"
       ],
-      "execution_identity_sha256": "d8b333666af65270de1b68cfb31b8614b4651f73a01fdb224f7d30f430e167cc",
+      "execution_identity_sha256": "3d20b3ed1680f52aa2f040d99e3c41cb48a829d4b907490ae43da9fcfc550a1a",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -2389,7 +2389,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "325c2e7cd80f8964d9f0c0b3045bae119f64e167a14b05a6ab69afafbff58ffe",
+      "execution_identity_sha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -2400,7 +2400,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "f13a29c829e4191b93d828f8c385958fcdb95d55988a86bbebc8bfef533d3550",
+      "sha256": "fcd13e1c8a70328f6e68c58cae806e9a44b3ed7f9c0428f87d4996d31ee4a2b4",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -3135,13 +3135,13 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "926805655ab5792d7c2ed6373846d02fe6af6ddf87e21c45a9cf4a3324171270"
+          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
         }
       ],
       "execution_helper_invocations": [
         "scripts/test_changed_fast.sh"
       ],
-      "execution_identity_sha256": "d4d3aeacdb08b59b6319f1eeb418f5073ae866091669ba47e7e4925e0d514df6",
+      "execution_identity_sha256": "9fdac0f40c85548c596c2bcbd3661a4613abe1c293c541d5a00bf99ca8cf2803",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3847,9 +3847,16 @@
       "direct_write_candidates": [
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"
       ],
-      "execution_helper_closure": [],
-      "execution_helper_invocations": [],
-      "execution_identity_sha256": "83a350ab7c1734bc31b830da38569d4f0a6b00ed3a9ade8dc9bf4be9706097f6",
+      "execution_helper_closure": [
+        {
+          "path": "scripts/assemble_prelude.sh",
+          "sha256": "b8258af193e05432b648b563bc65872904fc3941a33f5a362117615d3683ad0d"
+        }
+      ],
+      "execution_helper_invocations": [
+        "scripts/assemble_prelude.sh"
+      ],
+      "execution_identity_sha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3860,10 +3867,12 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "d4e2a7888d6b013f1d03f3a84023470e8534145bee272ce2e1fdc1656a54899d",
+      "sha256": "58a833309c0fab58603e59922b4ecaf771787a5d68fc7c306a5411534125ca83",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
+        "scripts/assemble_prelude.sh: manifest_hash_path.write_text(",
+        "scripts/assemble_prelude.sh: out_path.write_text(assembled, encoding=\"utf-8\")",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"
       ]
     },
@@ -5433,7 +5442,7 @@
       "direct_write_candidates": [],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "b501afcace3420598559a953b315613575e8580aa43a6ba5d64291741124e5a0",
+      "execution_identity_sha256": "ec4469a4ba304463024983085710052b62dfcc5b6287fdfa10ff0461a1023acd",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5444,7 +5453,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "40158af34bb0f4e00c06bccd7fd81d92f493ab5af784e6a9dbecfa40c59b1fec",
+      "sha256": "0c82d9dd582e5a679a4af4f90c323240f6fa9f80675153b52f3a8adde3192d5c",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []
@@ -5666,17 +5675,17 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "3fe58790e708421b4c88c5dccf1ced98063d50ff49ef04576c96db6f03b5c05d"
+          "sha256": "c77c41f61c4283cd56df4ac2935a34d3ba71318347a5ea3462aa84d86b883f07"
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "926805655ab5792d7c2ed6373846d02fe6af6ddf87e21c45a9cf4a3324171270"
+          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
+      "execution_identity_sha256": "16935ea55e72416e6fac6f9308206eaa434ac40f14a3f71c747d2f1debe1fcd6",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],

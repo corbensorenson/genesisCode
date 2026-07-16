@@ -260,6 +260,14 @@ fi
 mkdir -p "$(dirname "$REPORT_PATH")"
 mkdir -p "$(dirname "$HISTORY_PATH")"
 
+# Generated authorities are resolved in an external staging worktree before any
+# selected gate can validate or publish a stale derived view.
+declare -a GENERATED_AUTHORITY_ARGS=(--freshness)
+for path in "${CHANGED_FILES[@]-}"; do
+  GENERATED_AUTHORITY_ARGS+=(--path "$path")
+done
+python3 scripts/lib/generated_authority.py "${GENERATED_AUTHORITY_ARGS[@]}"
+
 for cmd in "${COMMANDS[@]-}"; do
   echo ">> $cmd"
   # Execute in-process to avoid one shell startup per command in the hot loop.

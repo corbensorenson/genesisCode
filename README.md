@@ -52,6 +52,7 @@ provenance, and custom-404 surfaces against that commit.
 - `scripts/`: test/health/profile gates and CI-style contract checks
 - `ROADMAP.md`: canonical v0.2-to-v1 roadmap (truthful evidence, agent SDK, bounded runtime, semantic selfhost authority, platform delivery, and post-v1 research; strategic plan, not release evidence)
 - `docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`: generated machine-readable roadmap DAG with exact readiness, risk, ownership, guards, negative controls, rollback, and evidence requirements
+- `policies/check_update_boundary_v0.1.json`: canonical check/update policy plus the generated-authority ownership DAG; use `scripts/update_generated_authority.sh` to stage, validate, and transactionally publish affected derived views
 - `docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json`: authenticated in-toto Statement v1, Genesis predicate, and SLSA Provenance v1 conformance vector
 - `tools/genesis-evidence-verifier/`: standalone, read-only DSSE/SLSA/Genesis policy, signature, Merkle-tree, and artifact verifier outside the main CLI dependency graph
 - `policies/evidence_storage_classes_v0.1.json`: enforced E0-E4 authority, in-tree fixture, immutable release-asset, and no-overwrite mirror boundaries

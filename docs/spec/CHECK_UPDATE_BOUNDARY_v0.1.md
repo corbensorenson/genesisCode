@@ -478,9 +478,9 @@ severity, span contract, structured parameter definitions, and source callsites.
 `scripts/check_cli_diagnostics_contract.sh` is read-only: it checks byte
 freshness, source closure, identity, eleven adversarial mutations, two bounded
 lookup controls, runtime envelope conformance, and exact production agent
-lookup. `scripts/update_cli_diagnostics_contract_report.sh` first invokes
-`scripts/update_gc_diagnostic_catalog.sh`, the sole catalog writer, before
-refreshing retained performance evidence.
+lookup. `scripts/update_generated_authority.sh` owns the coupled tracked
+diagnostic closure. Optional local timing evidence remains an explicit,
+untracked invocation of `scripts/render_cli_diagnostics_contract_report.sh`.
 
 ## Deterministic Cleanup
 
@@ -666,6 +666,71 @@ order-independent path-free plans, complete Git-state collection, and closed
 policy behavior. The changed-fast timing report binds the selected plan hash,
 affected crate/gate counts, and fallback profile.
 
+## Atomic Generated-Authority Closure
+
+The `generated_authority` object embedded in
+`policies/check_update_boundary_v0.1.json` is the sole dependency and ownership
+authority for tracked derived publication. Its closed schema is
+`docs/spec/GENERATED_AUTHORITY_GRAPH_v0.1.schema.json`. It deliberately reuses
+`genesis.gates.json` and
+`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json` as the check discovery
+authorities: a declared validator must exist in both, and every live
+`scripts/update_*.sh` entrypoint must be classified exactly once as the
+orchestrator, a graph-owned component, or an explicitly excluded local/operator
+producer. A second independent updater inventory is forbidden.
+
+Every graph node declares one exact owner ID, direct argv, dependencies, input
+globs, exact output paths, read-only validators, mode, timeout, and disk bound.
+Output ownership is globally unique. Every output must also occur in its owner's
+input set so an edited or stale generated file routes back to its producer.
+Tracked generated source is not exempt: the assembled Prelude and its manifest
+identity, the self-host toolchain artifact, the cutover dashboard, and the
+self-host review each have explicit owners and freshness validators in the same
+graph as publication manifests and reference pages.
+Rebuildable writes are inherited from the single `.genesis/**` staging-only
+class, bounded by each node's disk declaration, and are never promoted.
+Dependencies are acyclic and deterministically ordered. Graph, output, timeout,
+and disk cardinalities are bounded. The four fixed-point exclusions for the gate
+manifest, changelog, roadmap citation destination, and roadmap execution
+manifest are explicit and domain-specific; adding an implicit self-exclusion is
+not allowed.
+
+`scripts/update_generated_authority.sh` is the only complete tracked-publication
+orchestrator. It selects direct input matches and their complete downstream
+closure, creates a detached staging worktree outside the authoritative checkout,
+overlays committed, staged, unstaged, deleted, and non-ignored untracked state,
+then executes direct argv in topological order. A byte snapshot before and after
+each node must differ only at that node's declared outputs. The staged result
+must pass every affected read-only validator before publication. A validator
+never invokes the updater against the authoritative checkout.
+
+Publication snapshots all non-output inputs, rejects concurrent source drift,
+and acquires one create-new lock in the Git common directory. Each replacement
+is prepared beside its destination while termination signals are blocked. A
+rollback journal preserves the original bytes until every output is promoted;
+any copy, replace, validation, injected-failure, or signal-path error restores
+every already replaced path in reverse order and removes the lock. Read-only
+generated-authority checks fail closed while that lock exists. Repeating a
+successful closure must produce no changed bytes and a clean working tree.
+
+Automatic closure can never execute signing, attestation, key generation,
+dependency custody, release-asset publication, or retained E3/E4 evidence
+rewrites. Those producers remain operator-gated and outside the tracked graph;
+reaching one is an error rather than a partial update. The closure may regenerate
+E1/E2 fixtures and indexes, but regeneration never upgrades a maturity,
+qualification, assurance, or release claim.
+
+`scripts/test_changed_fast.sh` sends the exact changed-path set through staged
+freshness closure before selected gates run. `prepush-standard`, `release-full`,
+and `full-selfhost-cutover` do the same for committed divergence from
+`origin/main` when available. Six fixed routing controls cover `Cargo.lock`,
+the CLI schema, roadmap text, agent diagnostic/profile authority, and the
+GenesisBench suite. The structural gate also executes adversarial controls for
+duplicate owners, cycles, unknown checks and updaters, resource overflow,
+protected evidence, forbidden signing, automatic operator-gated publication,
+route drift, undeclared writes, concurrent input/output drift, mid-promotion
+failure, byte-identical rollback, and second-pass no-op behavior.
+
 ## Explicit E0 Producers
 
 These migrated checks render into private temporary paths. Their optional local
@@ -692,7 +757,7 @@ E0 observations are produced only by the paired update command.
 | scripts/check_gcpm_operation_contract_pack.sh | scripts/update_gcpm_operation_contract_pack_report.sh |
 | scripts/check_vcs_selfhost_contract.sh | scripts/update_vcs_selfhost_contract_report.sh |
 | scripts/check_selfhost_symbol_ownership.sh | scripts/update_selfhost_symbol_ownership_report.sh |
-| scripts/check_cli_diagnostics_contract.sh | scripts/update_cli_diagnostics_contract_report.sh |
+| scripts/check_cli_diagnostics_contract.sh | scripts/render_cli_diagnostics_contract_report.sh |
 | scripts/check_foundation_stdlib_conformance.sh | scripts/update_foundation_stdlib_conformance_report.sh |
 | scripts/check_fuzz_differential_hardening.sh | scripts/update_fuzz_differential_hardening_report.sh |
 | scripts/check_wasm_production_surface.sh | scripts/update_wasm_production_surface_report.sh |

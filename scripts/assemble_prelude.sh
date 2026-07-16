@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODULES_DIR="$ROOT_DIR/prelude/modules"
 MANIFEST_FILE="$MODULES_DIR/manifest.toml"
-OUT_FILE="$ROOT_DIR/prelude/prelude.gc"
-MANIFEST_HASH_FILE="$ROOT_DIR/prelude/prelude.manifest.sha256"
+OUT_FILE="${GENESIS_PRELUDE_OUT:-$ROOT_DIR/prelude/prelude.gc}"
+MANIFEST_HASH_FILE="${GENESIS_PRELUDE_MANIFEST_HASH_OUT:-$ROOT_DIR/prelude/prelude.manifest.sha256}"
 
 if [ ! -d "$MODULES_DIR" ]; then
   echo "modules directory missing: $MODULES_DIR" >&2

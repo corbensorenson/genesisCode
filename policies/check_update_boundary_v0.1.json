@@ -24,6 +24,7 @@
     "scripts/check_gcpm_operation_contract_pack.sh": "Operation-pack conformance conditionally invokes the declared native/WASI remote-registry parity compiler lane.",
     "scripts/check_gcpm_target_runtime_pipelines.sh": "build-runtime check executes compiler/build tooling as its declared subject.",
     "scripts/check_genesis_evidence_verifier.sh": "Standalone verifier conformance check compiles and tests the independent Rust verifier as its declared subject.",
+    "scripts/check_gfx_runtime_profile.sh": "Runtime-profile benchmark builds and executes the declared GFX workload subjects.",
     "scripts/check_gpu_compute_device_conformance.sh": "Device-conformance aggregate reaches declared microbench and compute-profile compilation renderers.",
     "scripts/check_gpu_compute_runtime_profile.sh": "build-runtime check executes compiler/build tooling as its declared subject.",
     "scripts/check_gpu_gfx_headroom_conformance.sh": "benchmark check executes compiler/build tooling as its declared subject.",
@@ -32,14 +33,13 @@
     "scripts/check_host_bridge_fault_injection.sh": "build-runtime check executes compiler/build tooling as its declared subject.",
     "scripts/check_hot_path_budgets.sh": "benchmark check executes compiler/build tooling as its declared subject.",
     "scripts/check_large_workspace_agent_perf.sh": "benchmark check executes compiler/build tooling as its declared subject.",
-    "scripts/check_gfx_runtime_profile.sh": "Runtime-profile benchmark builds and executes the declared GFX workload subjects.",
     "scripts/check_no_user_panics_compiler.sh": "Compiler-backed panic assurance runs Clippy over the production library and binary target closure.",
     "scripts/check_perf_budgets.sh": "benchmark check executes compiler/build tooling as its declared subject.",
     "scripts/check_production_cli_help_surface.sh": "Production CLI surface check reaches declared release-binary build helpers.",
     "scripts/check_production_cli_parse_surface.sh": "Production CLI surface check reaches declared release-binary build helpers.",
     "scripts/check_release_smoke.sh": "build-runtime check executes compiler/build tooling as its declared subject.",
-    "scripts/check_roadmap_baseline.sh": "Build-runtime check compiles the standalone DSSE producer and independent baseline verifier before adversarial signature validation.",
     "scripts/check_remote_registry_runtime_parity.sh": "build-runtime check executes compiler/build tooling as its declared subject.",
+    "scripts/check_roadmap_baseline.sh": "Build-runtime check compiles the standalone DSSE producer and independent baseline verifier before adversarial signature validation.",
     "scripts/check_runtime_backend_feature_matrix.sh": "build-runtime check executes compiler/build tooling as its declared subject.",
     "scripts/check_runtime_microbench_budgets.sh": "benchmark check executes compiler/build tooling as its declared subject.",
     "scripts/check_runtime_workload_budgets.sh": "benchmark check executes compiler/build tooling as its declared subject.",
@@ -182,6 +182,1368 @@
     "scripts/check_write_genesiscode_skill_guide.sh",
     "scripts/check_write_genesiscode_skill_pack.sh"
   ],
+  "generated_authority": {
+    "excludedEntrypoints": {
+      "scripts/update_agent_generative_workloads_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_agent_reference_workflows_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_agent_scenario_perf_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_agent_workflow_runtime_parity_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_ai_iteration_slo_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_ai_stress_suite_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_assurance_profile_packs_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_assurance_standards_crosswalk_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_backend_starter_workflows_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_bootstrap_retirement_gate_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_cargo_target_dir_policy_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_cli_diagnostic_goldens.sh": "Component generator invoked only through its graph-owned coupled authority node.",
+      "scripts/update_dependency_mirror.sh": "Operator-gated trust, signing, retained-evidence, or dependency-custody producer; never part of automatic publication.",
+      "scripts/update_doc_complexity_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_domain_starter_registry_bootstrap_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_evidence_release_asset.sh": "Operator-gated trust, signing, retained-evidence, or dependency-custody producer; never part of automatic publication.",
+      "scripts/update_foundation_stdlib_conformance_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_full_cross_host_profile_budget_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_full_selfhost_cutover_profile_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_fuzz_differential_hardening_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gc_agent_core_card.sh": "Component generator invoked only through its graph-owned coupled authority node.",
+      "scripts/update_gc_agent_symbol_index.sh": "Component generator invoked only through its graph-owned coupled authority node.",
+      "scripts/update_gc_agent_task_cards.sh": "Component generator invoked only through its graph-owned coupled authority node.",
+      "scripts/update_gc_diagnostic_catalog.sh": "Component generator invoked only through its graph-owned coupled authority node.",
+      "scripts/update_gc_repair_utility_report.sh": "Component generator invoked only through its graph-owned coupled authority node.",
+      "scripts/update_gcpm_operation_contract_pack_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gcpm_target_runtime_pipelines_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_genesis_evidence_profile.sh": "Superseded single-vector component; the operator-gated verifier-vector node uniquely owns the complete coupled retained fixture set.",
+      "scripts/update_gfx_runtime_profile_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gpu_compute_device_conformance_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gpu_compute_runtime_profile_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gpu_device_conformance_lane_parity_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gpu_device_conformance_matrix_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gpu_gfx_headroom_conformance_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_gpu_xr_productization_kits_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_host_api_evolution_contract_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_host_bridge_fault_injection_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_hot_path_budgets_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_kernel_tcb_contract_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_large_workspace_agent_perf_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_no_user_panics_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_perf_budgets_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_production_cli_help_surface_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_production_cli_parse_surface_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_remote_registry_runtime_parity_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_roadmap_baseline.sh": "Operator-gated trust, signing, retained-evidence, or dependency-custody producer; never part of automatic publication.",
+      "scripts/update_runtime_backend_feature_matrix_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_runtime_microbench_budgets_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_runtime_workload_budgets_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_selfhost_artifact_fresh_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_selfhost_dashboard_fresh_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_selfhost_gc_migration_plan_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_selfhost_readiness_scorecard_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_selfhost_symbol_ownership_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_source_decomposition_progress_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_source_decomposition_tracked_parity_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_task_concurrency_stress_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_test_changed_fast_metrics.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_tool_qualification_lineage_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_upgrade_plan_health_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_vcs_selfhost_contract_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_wasm_production_surface_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_webxr_browser_conformance_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure.",
+      "scripts/update_write_genesiscode_skill_conformance_report.sh": "Explicit local or CI E0 observation producer; outputs remain ignored and outside tracked publication closure."
+    },
+    "identityExclusions": {
+      "CHANGELOG.md": "Release derivation excludes the generated changelog destination while preserving released history.",
+      "ROADMAP.md": "Roadmap bundle citations exclude the citation destination while binding every declared source.",
+      "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json": "Roadmap execution identity excludes its generated destination.",
+      "genesis.gates.json": "Gate-manifest identity excludes its generated destination to avoid an impossible hash fixed point."
+    },
+    "kind": "genesis/generated-authority-graph-v0.1",
+    "limits": {
+      "maxDiskMiB": 8192,
+      "maxNodes": 32,
+      "maxOutputs": 128,
+      "maxTimeoutSeconds": 7200
+    },
+    "mutationControls": [
+      {
+        "expectedNodes": [
+          "generate/selfhost-artifact",
+          "generate/agent-profile",
+          "generate/selfhost-freshness",
+          "generate/agent-diagnostics",
+          "generate/canonical-examples",
+          "generate/selfhost-dashboard",
+          "generate/selfhost-review",
+          "generate/agent-surfaces",
+          "generate/task-benchmarks",
+          "generate/benchmark-analysis",
+          "generate/benchmark-scoring",
+          "generate/held-out-profile",
+          "generate/construct-validity",
+          "generate/benchmark-run",
+          "generate/benchmark-protocol",
+          "generate/agent-corpus",
+          "generate/gate-manifest",
+          "generate/release-surfaces",
+          "generate/roadmap-evidence",
+          "generate/roadmap-manifest",
+          "generate/quarto-reference"
+        ],
+        "expectedOutputs": [
+          "CHANGELOG.md",
+          "ROADMAP.md",
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "benchmarks/diagnostics/repair_utility/v0.1/report.json",
+          "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
+          "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
+          "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+          "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+          "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+          "docs/program/RELEASE_NOTES_v0.2.0.json",
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+          "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/status/SELFHOST_CUTOVER.md",
+          "examples/agent_benchmark_reproducibility/caps.toml",
+          "examples/agent_benchmark_reproducibility/invocation/request.json",
+          "examples/agent_benchmark_reproducibility/invocation/response.json",
+          "examples/agent_benchmark_reproducibility/model-effect.gclog",
+          "examples/agent_benchmark_reproducibility/model_effect.gc",
+          "examples/agent_benchmark_reproducibility/run.json",
+          "examples/agent_benchmark_reproducibility/scaffold-manifest.json",
+          "examples/agent_benchmark_reproducibility/score.json",
+          "examples/agent_benchmark_reproducibility/tool-transcript.jsonl",
+          "examples/agent_benchmark_reproducibility/tools/local_model_bridge.py",
+          "examples/canonical_language/v0.1/suite.json",
+          "genesis.gates.json",
+          "llms.txt",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-index.json",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/source-catalog.qmd",
+          "reference/symbols.qmd",
+          "selfhost/toolchain.freshness.json",
+          "selfhost/toolchain.gc",
+          "selfhost/toolchain.review.md",
+          "tests/diagnostics/goldens/v0.1/diagnostics.json"
+        ],
+        "path": "Cargo.lock"
+      },
+      {
+        "expectedNodes": [
+          "generate/agent-profile",
+          "generate/agent-diagnostics",
+          "generate/canonical-examples",
+          "generate/agent-surfaces",
+          "generate/task-benchmarks",
+          "generate/benchmark-analysis",
+          "generate/benchmark-scoring",
+          "generate/held-out-profile",
+          "generate/construct-validity",
+          "generate/benchmark-run",
+          "generate/benchmark-protocol",
+          "generate/agent-corpus",
+          "generate/gate-manifest",
+          "generate/release-surfaces",
+          "generate/roadmap-evidence",
+          "generate/roadmap-manifest",
+          "generate/quarto-reference"
+        ],
+        "expectedOutputs": [
+          "CHANGELOG.md",
+          "ROADMAP.md",
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "benchmarks/diagnostics/repair_utility/v0.1/report.json",
+          "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
+          "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
+          "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+          "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+          "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+          "docs/program/RELEASE_NOTES_v0.2.0.json",
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+          "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "examples/agent_benchmark_reproducibility/caps.toml",
+          "examples/agent_benchmark_reproducibility/invocation/request.json",
+          "examples/agent_benchmark_reproducibility/invocation/response.json",
+          "examples/agent_benchmark_reproducibility/model-effect.gclog",
+          "examples/agent_benchmark_reproducibility/model_effect.gc",
+          "examples/agent_benchmark_reproducibility/run.json",
+          "examples/agent_benchmark_reproducibility/scaffold-manifest.json",
+          "examples/agent_benchmark_reproducibility/score.json",
+          "examples/agent_benchmark_reproducibility/tool-transcript.jsonl",
+          "examples/agent_benchmark_reproducibility/tools/local_model_bridge.py",
+          "examples/canonical_language/v0.1/suite.json",
+          "genesis.gates.json",
+          "llms.txt",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-index.json",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/source-catalog.qmd",
+          "reference/symbols.qmd",
+          "tests/diagnostics/goldens/v0.1/diagnostics.json"
+        ],
+        "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+      },
+      {
+        "expectedNodes": [
+          "generate/roadmap-evidence",
+          "generate/roadmap-manifest",
+          "generate/quarto-reference"
+        ],
+        "expectedOutputs": [
+          "ROADMAP.md",
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "llms.txt",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-index.json",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/source-catalog.qmd",
+          "reference/symbols.qmd"
+        ],
+        "path": "ROADMAP.md"
+      },
+      {
+        "expectedNodes": [
+          "generate/agent-profile",
+          "generate/agent-diagnostics",
+          "generate/canonical-examples",
+          "generate/agent-surfaces",
+          "generate/task-benchmarks",
+          "generate/benchmark-analysis",
+          "generate/benchmark-scoring",
+          "generate/held-out-profile",
+          "generate/construct-validity",
+          "generate/benchmark-run",
+          "generate/benchmark-protocol",
+          "generate/agent-corpus",
+          "generate/gate-manifest",
+          "generate/release-surfaces",
+          "generate/roadmap-evidence",
+          "generate/roadmap-manifest",
+          "generate/quarto-reference"
+        ],
+        "expectedOutputs": [
+          "CHANGELOG.md",
+          "ROADMAP.md",
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "benchmarks/diagnostics/repair_utility/v0.1/report.json",
+          "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
+          "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
+          "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+          "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+          "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+          "docs/program/RELEASE_NOTES_v0.2.0.json",
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+          "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "examples/agent_benchmark_reproducibility/caps.toml",
+          "examples/agent_benchmark_reproducibility/invocation/request.json",
+          "examples/agent_benchmark_reproducibility/invocation/response.json",
+          "examples/agent_benchmark_reproducibility/model-effect.gclog",
+          "examples/agent_benchmark_reproducibility/model_effect.gc",
+          "examples/agent_benchmark_reproducibility/run.json",
+          "examples/agent_benchmark_reproducibility/scaffold-manifest.json",
+          "examples/agent_benchmark_reproducibility/score.json",
+          "examples/agent_benchmark_reproducibility/tool-transcript.jsonl",
+          "examples/agent_benchmark_reproducibility/tools/local_model_bridge.py",
+          "examples/canonical_language/v0.1/suite.json",
+          "genesis.gates.json",
+          "llms.txt",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-index.json",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/source-catalog.qmd",
+          "reference/symbols.qmd",
+          "tests/diagnostics/goldens/v0.1/diagnostics.json"
+        ],
+        "path": "policies/gc_agent_profile_v0.3.json"
+      },
+      {
+        "expectedNodes": [
+          "generate/task-benchmarks",
+          "generate/benchmark-analysis",
+          "generate/benchmark-scoring",
+          "generate/held-out-profile",
+          "generate/construct-validity",
+          "generate/benchmark-run",
+          "generate/benchmark-protocol",
+          "generate/agent-corpus",
+          "generate/gate-manifest",
+          "generate/release-surfaces",
+          "generate/roadmap-evidence",
+          "generate/roadmap-manifest",
+          "generate/quarto-reference"
+        ],
+        "expectedOutputs": [
+          "CHANGELOG.md",
+          "ROADMAP.md",
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
+          "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
+          "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+          "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+          "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "docs/program/RELEASE_NOTES_v0.2.0.json",
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+          "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+          "examples/agent_benchmark_reproducibility/caps.toml",
+          "examples/agent_benchmark_reproducibility/invocation/request.json",
+          "examples/agent_benchmark_reproducibility/invocation/response.json",
+          "examples/agent_benchmark_reproducibility/model-effect.gclog",
+          "examples/agent_benchmark_reproducibility/model_effect.gc",
+          "examples/agent_benchmark_reproducibility/run.json",
+          "examples/agent_benchmark_reproducibility/scaffold-manifest.json",
+          "examples/agent_benchmark_reproducibility/score.json",
+          "examples/agent_benchmark_reproducibility/tool-transcript.jsonl",
+          "examples/agent_benchmark_reproducibility/tools/local_model_bridge.py",
+          "genesis.gates.json",
+          "llms.txt",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-index.json",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/source-catalog.qmd",
+          "reference/symbols.qmd"
+        ],
+        "path": "benchmarks/agent_tasks/v0.1/suite.json"
+      },
+      {
+        "expectedNodes": [
+          "generate/agent-diagnostics",
+          "generate/agent-surfaces",
+          "generate/benchmark-run",
+          "generate/benchmark-protocol",
+          "generate/agent-corpus",
+          "generate/gate-manifest",
+          "generate/release-surfaces",
+          "generate/roadmap-evidence",
+          "generate/roadmap-manifest",
+          "generate/quarto-reference"
+        ],
+        "expectedOutputs": [
+          "CHANGELOG.md",
+          "ROADMAP.md",
+          "benchmarks/diagnostics/repair_utility/v0.1/report.json",
+          "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+          "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+          "docs/program/RELEASE_NOTES_v0.2.0.json",
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "examples/agent_benchmark_reproducibility/caps.toml",
+          "examples/agent_benchmark_reproducibility/invocation/request.json",
+          "examples/agent_benchmark_reproducibility/invocation/response.json",
+          "examples/agent_benchmark_reproducibility/model-effect.gclog",
+          "examples/agent_benchmark_reproducibility/model_effect.gc",
+          "examples/agent_benchmark_reproducibility/run.json",
+          "examples/agent_benchmark_reproducibility/scaffold-manifest.json",
+          "examples/agent_benchmark_reproducibility/score.json",
+          "examples/agent_benchmark_reproducibility/tool-transcript.jsonl",
+          "examples/agent_benchmark_reproducibility/tools/local_model_bridge.py",
+          "genesis.gates.json",
+          "llms.txt",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-index.json",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/source-catalog.qmd",
+          "reference/symbols.qmd",
+          "tests/diagnostics/goldens/v0.1/diagnostics.json"
+        ],
+        "path": "policies/gc_diagnostic_catalog_v0.1.json"
+      }
+    ],
+    "nodes": [
+      {
+        "checks": [
+          "scripts/check_capability_indices.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_capability_indices.sh"
+        ],
+        "dependencies": [
+          "generate/prelude-assembly"
+        ],
+        "diskMiB": 32,
+        "id": "generate/capability-indices",
+        "inputs": [
+          "crates/gc_effects/**",
+          "crates/gc_runner/**",
+          "prelude/**",
+          "scripts/generate_capability_indices.py",
+          "docs/spec/HOST_ABI_INDEX_v0.1.json",
+          "docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json",
+          "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/HOST_ABI_INDEX_v0.1.json",
+          "docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json",
+          "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json"
+        ],
+        "timeoutSeconds": 120
+      },
+      {
+        "checks": [
+          "scripts/check_capability_coverage_audit.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_capability_coverage_audit.sh"
+        ],
+        "dependencies": [
+          "generate/capability-indices"
+        ],
+        "diskMiB": 32,
+        "id": "generate/capability-coverage",
+        "inputs": [
+          "docs/spec/HOST_ABI_INDEX_v0.1.json",
+          "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
+          "docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json",
+          "upgrade_plan.md",
+          "scripts/generate_capability_coverage_audit.py",
+          "docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json",
+          "docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.md"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json",
+          "docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.md"
+        ],
+        "timeoutSeconds": 120
+      },
+      {
+        "checks": [
+          "scripts/check_capability_evidence_ledger.sh",
+          "scripts/check_capability_evidence_ledger_contract.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_capability_status_views.sh"
+        ],
+        "dependencies": [
+          "generate/capability-coverage"
+        ],
+        "diskMiB": 64,
+        "id": "generate/capability-status",
+        "inputs": [
+          "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+          "scripts/lib/capability_ledger.py",
+          "feature_matrix.md",
+          "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
+          "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
+          "docs/status/SELFHOST_AUTHORITY_v0.1.md",
+          "docs/status/REDTEAM_REPORT.md"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "feature_matrix.md",
+          "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
+          "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+          "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
+          "docs/status/SELFHOST_AUTHORITY_v0.1.md",
+          "docs/status/REDTEAM_REPORT.md"
+        ],
+        "timeoutSeconds": 180
+      },
+      {
+        "checks": [
+          "scripts/check_gc_agent_profile.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "profile"
+        ],
+        "dependencies": [
+          "generate/prelude-assembly"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/agent-profile",
+        "inputs": [
+          "Cargo.lock",
+          "Cargo.toml",
+          "crates/**",
+          "prelude/**",
+          "policies/gc_agent_profile_v0.3.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
+          "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "scripts/lib/gc_agent_profile.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_cli_diagnostics_contract.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "diagnostics"
+        ],
+        "dependencies": [
+          "generate/agent-profile"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/agent-diagnostics",
+        "inputs": [
+          "crates/gc_cli_driver/**",
+          "crates/gc_cli/tests/**",
+          "policies/gc_diagnostic_catalog_v0.1.json",
+          "policies/gc_repair_utility_v0.1.json",
+          "benchmarks/diagnostics/repair_utility/v0.1/workloads.json",
+          "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "tests/diagnostics/goldens/v0.1/diagnostics.json",
+          "benchmarks/diagnostics/repair_utility/v0.1/report.json",
+          "scripts/lib/gc_diagnostic_catalog.py",
+          "scripts/lib/gc_diagnostic_goldens.py",
+          "scripts/lib/gc_repair_utility.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "tests/diagnostics/goldens/v0.1/diagnostics.json",
+          "benchmarks/diagnostics/repair_utility/v0.1/report.json"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_gc_agent_core_card.sh",
+          "scripts/check_gc_agent_task_cards.sh",
+          "scripts/check_gc_agent_symbol_index.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "derived-agent-surfaces"
+        ],
+        "dependencies": [
+          "generate/agent-profile",
+          "generate/agent-diagnostics"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/agent-surfaces",
+        "inputs": [
+          "policies/gc_agent_core_card_v0.3.json",
+          "policies/gc_agent_task_cards_v0.3.json",
+          "policies/gc_agent_symbol_index_v0.3.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+          "scripts/lib/gc_agent_*.py",
+          "scripts/lib/genesisbench_reference_agent.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "canonical-examples"
+        ],
+        "dependencies": [
+          "generate/agent-profile"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/canonical-examples",
+        "inputs": [
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
+          "examples/canonical_language/v0.1/**",
+          "scripts/lib/gc_canonical_examples.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "examples/canonical_language/v0.1/suite.json"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "task-benchmarks"
+        ],
+        "dependencies": [
+          "generate/agent-profile",
+          "generate/canonical-examples"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/task-benchmarks",
+        "inputs": [
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+          "benchmarks/agent_tasks/v0.1/**",
+          "examples/canonical_language/v0.1/**",
+          "scripts/lib/gc_task_benchmarks.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "benchmarks/agent_tasks/v0.1/suite.json"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "analysis-fixtures"
+        ],
+        "dependencies": [
+          "generate/task-benchmarks"
+        ],
+        "diskMiB": 256,
+        "id": "generate/benchmark-analysis",
+        "inputs": [
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+          "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
+          "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
+          "scripts/lib/genesisbench_analysis.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+          "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
+          "benchmarks/genesisbench/v0.1/analysis/report.fixture.json"
+        ],
+        "timeoutSeconds": 600
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "python3",
+          "scripts/lib/gc_held_out_evaluation.py",
+          "--refresh-profile"
+        ],
+        "dependencies": [
+          "generate/agent-profile",
+          "generate/task-benchmarks"
+        ],
+        "diskMiB": 64,
+        "id": "generate/held-out-profile",
+        "inputs": [
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "scripts/lib/gc_held_out_evaluation.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "benchmark-scoring"
+        ],
+        "dependencies": [
+          "generate/agent-profile",
+          "generate/task-benchmarks"
+        ],
+        "diskMiB": 256,
+        "id": "generate/benchmark-scoring",
+        "inputs": [
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "scripts/lib/gc_agent_scoring.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json"
+        ],
+        "timeoutSeconds": 600
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "construct-validity"
+        ],
+        "dependencies": [
+          "generate/benchmark-analysis",
+          "generate/held-out-profile",
+          "generate/benchmark-scoring"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/construct-validity",
+        "inputs": [
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "benchmarks/genesisbench/v0.1/construct-validity/**",
+          "policies/genesisbench_construct_validity_v0.1.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "scripts/lib/genesisbench_construct_validity.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "benchmarks/genesisbench/v0.1/construct-validity/report.json"
+        ],
+        "timeoutSeconds": 3600
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "benchmark-run"
+        ],
+        "dependencies": [
+          "generate/agent-surfaces",
+          "generate/construct-validity"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/benchmark-run",
+        "inputs": [
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
+          "examples/agent_benchmark_reproducibility/**",
+          "scripts/lib/gc_agent_benchmark_run.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "examples/agent_benchmark_reproducibility/caps.toml",
+          "examples/agent_benchmark_reproducibility/model_effect.gc",
+          "examples/agent_benchmark_reproducibility/tools/local_model_bridge.py",
+          "examples/agent_benchmark_reproducibility/invocation/request.json",
+          "examples/agent_benchmark_reproducibility/invocation/response.json",
+          "examples/agent_benchmark_reproducibility/tool-transcript.jsonl",
+          "examples/agent_benchmark_reproducibility/model-effect.gclog",
+          "examples/agent_benchmark_reproducibility/score.json",
+          "examples/agent_benchmark_reproducibility/scaffold-manifest.json",
+          "examples/agent_benchmark_reproducibility/run.json"
+        ],
+        "timeoutSeconds": 3600
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "protocol-fixtures"
+        ],
+        "dependencies": [
+          "generate/benchmark-run",
+          "generate/held-out-profile"
+        ],
+        "diskMiB": 256,
+        "id": "generate/benchmark-protocol",
+        "inputs": [
+          "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+          "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+          "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
+          "benchmarks/agent_tasks/v0.1/suite.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "scripts/lib/genesisbench_protocol.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
+          "benchmarks/genesisbench/v0.1/contamination.fixture.json",
+          "benchmarks/genesisbench/v0.1/eligibility.fixture.json"
+        ],
+        "timeoutSeconds": 600
+      },
+      {
+        "checks": [
+          "scripts/check_agent_authoring_bundle.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_agent_authoring_bundle.sh",
+          "corpus"
+        ],
+        "dependencies": [
+          "generate/benchmark-protocol",
+          "generate/benchmark-analysis"
+        ],
+        "diskMiB": 256,
+        "id": "generate/agent-corpus",
+        "inputs": [
+          "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
+          "benchmarks/agent_tasks/v0.1/**",
+          "examples/canonical_language/v0.1/**",
+          "scripts/lib/gc_agent_corpus.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/GC_AGENT_CORPUS_v0.1.json"
+        ],
+        "timeoutSeconds": 600
+      },
+      {
+        "checks": [
+          "scripts/check_selfhost_artifact_fresh.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_selfhost_freshness_metadata.sh"
+        ],
+        "dependencies": [
+          "generate/selfhost-artifact"
+        ],
+        "diskMiB": 64,
+        "id": "generate/selfhost-freshness",
+        "inputs": [
+          "selfhost/*.gc",
+          "selfhost/toolchain.freshness.json",
+          "scripts/update_selfhost_freshness_metadata.sh"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "selfhost/toolchain.freshness.json"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_evidence_storage_classes.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_evidence_fixture_classification.sh"
+        ],
+        "dependencies": [],
+        "diskMiB": 64,
+        "id": "generate/evidence-fixture-classification",
+        "inputs": [
+          "policies/evidence_storage_classes_v0.1.json",
+          "docs/program/evidence/**",
+          "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+          "scripts/lib/evidence_storage.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_check_update_boundary.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_check_update_boundary_audit.sh"
+        ],
+        "dependencies": [],
+        "diskMiB": 64,
+        "id": "generate/check-update-audit",
+        "inputs": [
+          "scripts/check_*.sh",
+          "scripts/lib/check_update_boundary.py",
+          "policies/check_update_boundary_v0.1.json",
+          "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json"
+        ],
+        "timeoutSeconds": 180
+      },
+      {
+        "checks": [
+          "scripts/check_gate_manifest.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_gate_manifest.sh"
+        ],
+        "dependencies": [
+          "generate/capability-status",
+          "generate/agent-corpus",
+          "generate/selfhost-freshness",
+          "generate/evidence-fixture-classification",
+          "generate/check-update-audit",
+          "generate/selfhost-review",
+          "generate/selfhost-dashboard"
+        ],
+        "diskMiB": 128,
+        "id": "generate/gate-manifest",
+        "inputs": [
+          "Cargo.lock",
+          "Cargo.toml",
+          "README.md",
+          "benchmarks/**",
+          "crates/**",
+          "docs/spec/**",
+          "examples/**",
+          "genesis.*",
+          "genesis.gates.json",
+          "policies/**",
+          "prelude/**",
+          "rust-toolchain.toml",
+          "scripts/**",
+          "selfhost/**",
+          "tests/**",
+          "tools/**"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "genesis.gates.json"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_release_notes.sh",
+          "scripts/check_versioning_release_hygiene.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_release_notes.sh"
+        ],
+        "dependencies": [
+          "generate/gate-manifest",
+          "generate/benchmark-run",
+          "generate/capability-status",
+          "generate/selfhost-freshness"
+        ],
+        "diskMiB": 128,
+        "id": "generate/release-surfaces",
+        "inputs": [
+          "Cargo.toml",
+          "Cargo.lock",
+          "crates/*/Cargo.toml",
+          "genesis.lock",
+          "genesis.workspace.toml",
+          "docs/spec/**",
+          "policies/**",
+          "scripts/lib/release_notes.py",
+          "docs/program/RELEASE_NOTES_v0.2.0.json",
+          "CHANGELOG.md"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/program/RELEASE_NOTES_v0.2.0.json",
+          "CHANGELOG.md"
+        ],
+        "timeoutSeconds": 600
+      },
+      {
+        "checks": [
+          "scripts/check_planning_docs_fresh.sh"
+        ],
+        "command": [
+          "internal:roadmap-evidence"
+        ],
+        "dependencies": [
+          "generate/release-surfaces"
+        ],
+        "diskMiB": 64,
+        "id": "generate/roadmap-evidence",
+        "inputs": [
+          "ROADMAP.md",
+          "scripts/lib/roadmap_evidence.py",
+          "scripts/lib/generated_authority.py",
+          "docs/spec/GENERATED_AUTHORITY_GRAPH_v0.1.schema.json",
+          "policies/check_update_boundary_v0.1.json"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "ROADMAP.md"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_roadmap_execution_manifest.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_roadmap_execution_manifest.sh"
+        ],
+        "dependencies": [
+          "generate/roadmap-evidence"
+        ],
+        "diskMiB": 64,
+        "id": "generate/roadmap-manifest",
+        "inputs": [
+          "ROADMAP.md",
+          "policies/roadmap_execution_v0.1.json",
+          "docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json",
+          "scripts/lib/roadmap_execution_manifest.py",
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_doc_topology_drift.sh"
+        ],
+        "command": [
+          "python3",
+          "scripts/render_quarto_reference.py"
+        ],
+        "dependencies": [
+          "generate/roadmap-manifest",
+          "generate/agent-surfaces",
+          "generate/capability-indices",
+          "generate/agent-diagnostics"
+        ],
+        "diskMiB": 1024,
+        "id": "generate/quarto-reference",
+        "inputs": [
+          "docs/**",
+          "examples/**",
+          "policies/**",
+          "scripts/render_quarto_reference.py",
+          "reference/symbols.qmd",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/source-catalog.qmd",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/reference-index.json",
+          "llms.txt"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "reference/symbols.qmd",
+          "reference/capabilities.qmd",
+          "reference/diagnostics.qmd",
+          "reference/examples.qmd",
+          "reference/source-catalog.qmd",
+          "reference/generated/home-stats.mdinc",
+          "reference/generated/reference-stats.mdinc",
+          "reference/generated/schema-catalog.mdinc",
+          "reference/generated/cli-commands.mdinc",
+          "reference/generated/reference-index.json",
+          "llms.txt"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_selfhost_toolchain_review_fresh.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_selfhost_toolchain_review.sh"
+        ],
+        "dependencies": [
+          "generate/selfhost-freshness"
+        ],
+        "diskMiB": 64,
+        "id": "generate/selfhost-review",
+        "inputs": [
+          "selfhost/toolchain.gc",
+          "selfhost/toolchain_manifest.gc",
+          "selfhost/toolchain.freshness.json",
+          "selfhost/toolchain.review.md",
+          "scripts/render_selfhost_toolchain_review.sh"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "selfhost/toolchain.review.md"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_genesis_evidence_profile.sh",
+          "scripts/check_genesis_evidence_verifier.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_genesis_evidence_verifier_vectors.sh"
+        ],
+        "dependencies": [],
+        "diskMiB": 1024,
+        "id": "generate/evidence-verifier-vectors",
+        "inputs": [
+          "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json",
+          "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
+          "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json",
+          "docs/program/evidence/artifact/genesis-example.bin",
+          "policies/evidence_verifier_trust_v0.1.json",
+          "docs/spec/GENESIS_EVIDENCE_*.schema.json",
+          "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
+          "scripts/lib/genesis_evidence_profile.py",
+          "scripts/lib/genesis_evidence_verifier_vectors.py"
+        ],
+        "mode": "operator-gated",
+        "outputs": [
+          "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json",
+          "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
+          "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json",
+          "docs/program/evidence/artifact/genesis-example.bin",
+          "policies/evidence_verifier_trust_v0.1.json"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_ai_iteration_slo.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_ai_iteration_slo_baseline.sh"
+        ],
+        "dependencies": [],
+        "diskMiB": 1024,
+        "id": "generate/ai-iteration-baseline",
+        "inputs": [
+          ".genesis/perf/ai_iteration_slo_history.jsonl",
+          "policies/perf/ai_iteration_slo_seed_history.jsonl",
+          "scripts/update_ai_iteration_slo_baseline.sh"
+        ],
+        "mode": "operator-gated",
+        "outputs": [
+          "policies/perf/ai_iteration_slo_seed_history.jsonl"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_prelude_capability_coverage.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/assemble_prelude.sh"
+        ],
+        "dependencies": [],
+        "diskMiB": 64,
+        "id": "generate/prelude-assembly",
+        "inputs": [
+          "prelude/modules/**",
+          "prelude/prelude.gc",
+          "prelude/prelude.manifest.sha256",
+          "scripts/assemble_prelude.sh",
+          "scripts/lib/toml_compat.py"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "prelude/prelude.gc",
+          "prelude/prelude.manifest.sha256"
+        ],
+        "timeoutSeconds": 300
+      },
+      {
+        "checks": [
+          "scripts/check_selfhost_artifact_fresh.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_selfhost_toolchain_review.sh",
+          "artifact"
+        ],
+        "dependencies": [],
+        "diskMiB": 4096,
+        "id": "generate/selfhost-artifact",
+        "inputs": [
+          "Cargo.toml",
+          "Cargo.lock",
+          "crates/gc_cli/**",
+          "crates/gc_cli_driver/**",
+          "crates/gc_coreform/**",
+          "crates/gc_types/**",
+          "selfhost/*.gc",
+          "selfhost/toolchain.gc",
+          "scripts/update_selfhost_toolchain_review.sh"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "selfhost/toolchain.gc"
+        ],
+        "timeoutSeconds": 1800
+      },
+      {
+        "checks": [
+          "scripts/check_selfhost_dashboard_fresh.sh",
+          "scripts/check_selfhost_doc_runtime_parity.sh"
+        ],
+        "command": [
+          "bash",
+          "scripts/update_selfhost_toolchain_review.sh",
+          "dashboard"
+        ],
+        "dependencies": [
+          "generate/selfhost-artifact",
+          "generate/selfhost-freshness"
+        ],
+        "diskMiB": 4096,
+        "id": "generate/selfhost-dashboard",
+        "inputs": [
+          "selfhost/toolchain.gc",
+          "selfhost/toolchain.freshness.json",
+          "docs/status/SELFHOST_CUTOVER.md",
+          "crates/gc_cli_driver/src/cmd_selfhost.rs",
+          "scripts/update_selfhost_toolchain_review.sh"
+        ],
+        "mode": "automatic",
+        "outputs": [
+          "docs/status/SELFHOST_CUTOVER.md"
+        ],
+        "timeoutSeconds": 1800
+      }
+    ],
+    "orchestratorEntrypoint": "scripts/update_generated_authority.sh",
+    "protectedOutputs": [
+      ".genesis/release-assets/evidence/E3/**",
+      ".genesis/release-assets/evidence/E4/**",
+      "docs/program/evidence/E3/**",
+      "docs/program/evidence/E4/**"
+    ],
+    "schema": "docs/spec/GENERATED_AUTHORITY_GRAPH_v0.1.schema.json",
+    "stagingTemporaryWrites": [
+      ".genesis/**"
+    ],
+    "version": "0.1"
+  },
   "kind": "genesis/check-update-boundary-policy-v0.1",
   "legacy_mutation_helper_allowlist": {},
   "legacy_persistent_output_allowlist": {},

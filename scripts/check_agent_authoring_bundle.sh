@@ -14,6 +14,13 @@ python3 - <<'PY'
 from pathlib import Path
 
 source = Path("scripts/update_agent_authoring_bundle.sh").read_text(encoding="ascii")
+staging_guard = '''validate_unless_staged() {
+  if [[ "${GENESIS_GENERATED_AUTHORITY_STAGE:-0}" != "1" ]]; then
+    "$@"
+  fi
+}'''
+if staging_guard not in source:
+    raise SystemExit("agent-authoring-bundle: generated-authority staging guard drift")
 all_branch = source.split("  all)\n", 1)[1].split("    ;;", 1)[0]
 expected = [
     "update_profile",
@@ -28,7 +35,7 @@ expected = [
     "update_benchmark_run",
     "update_protocol_fixtures",
     "update_corpus",
-    "bash scripts/check_agent_authoring_bundle.sh",
+    "validate_unless_staged bash scripts/check_agent_authoring_bundle.sh",
 ]
 positions = [all_branch.find(f"    {step}\n") for step in expected]
 if any(position < 0 for position in positions) or positions != sorted(set(positions)):
@@ -36,7 +43,7 @@ if any(position < 0 for position in positions) or positions != sorted(set(positi
 
 derived = source.split("update_derived_agent_surfaces() {\n", 1)[1].split("\n}", 1)[0]
 required_checks = [
-    "bash scripts/check_gc_agent_symbol_index.sh",
+    "validate_unless_staged bash scripts/check_gc_agent_symbol_index.sh",
     "python3 scripts/lib/genesisbench_reference_agent.py --check --self-test",
 ]
 if any(check not in derived for check in required_checks):

@@ -88,9 +88,9 @@ Owner: Documentation + release maintainers.
 - Signed E0 baseline authority: `docs/program/evidence/roadmap-baselines/` with `docs/spec/ROADMAP_BASELINE_STATEMENT_v0.1.schema.json` and `docs/spec/ROADMAP_BASELINE_BUNDLE_v0.1.schema.json`
 - Baseline lifecycle: `scripts/update_roadmap_baseline.sh` is the sole append-only capture/signing entrypoint; `scripts/check_roadmap_baseline.sh`, `scripts/lib/roadmap_baseline.py`, and the standalone verifier are read-only
 - Release-note authority: `policies/release_notes_v0.1.json` with `docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json`, `docs/spec/RELEASE_NOTES_v0.1.schema.json`, and `docs/program/RELEASE_NOTES_v0.2.0.json`
-- Release-note lifecycle: `scripts/update_release_notes.sh` is the explicit deterministic producer; `scripts/check_release_notes.sh` rejects stale sources, omitted facts, and unsupported authority claims
+- Release-note lifecycle: `scripts/update_release_notes.sh` is the graph-owned component producer; `scripts/update_generated_authority.sh` is the sole complete tracked-publication orchestrator, and `scripts/check_release_notes.sh` rejects stale sources, omitted facts, and unsupported authority claims
 - Agent training profile authority: `policies/gc_agent_profile_v0.3.json` with `docs/spec/GC_AGENT_PROFILE_v0.3.schema.json` and resolved `docs/spec/GC_AGENT_PROFILE_v0.3.json`
-- Agent profile lifecycle: `scripts/update_agent_authoring_bundle.sh profile` explicitly resolves source identities; `scripts/check_gc_agent_profile.sh` executes parser, evaluator, package, and resource cases and rejects unsupported-surface drift
+- Agent profile lifecycle: the generated-authority graph invokes `scripts/update_agent_authoring_bundle.sh profile` to resolve source identities inside a staged closure; `scripts/check_gc_agent_profile.sh` executes parser, evaluator, package, and resource cases and rejects unsupported-surface drift
 - Compact agent card authority: `policies/gc_agent_core_card_v0.3.json` generates `docs/spec/GC_AGENT_CORE_CARD_v0.3.md` and `docs/spec/GC_AGENT_CORE_CARD_v0.3.json`; `scripts/check_gc_agent_core_card.sh` enforces freshness, the ASCII/token upper bound, and parser conformance
 - Task-card authority: `policies/gc_agent_task_cards_v0.3.json` generates `docs/spec/GC_AGENT_TASK_CARDS_v0.3.md` and embedded `docs/spec/GC_AGENT_TASK_CARDS_v0.3.json`; `scripts/check_gc_agent_task_cards.sh` enforces AB-2 budgets, source anchors, fail-closed intent selection, and production/reference parity
 - Agent symbol-index authority: `policies/gc_agent_symbol_index_v0.3.json` generates `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json` under the closed `docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json`; `scripts/check_gc_agent_symbol_index.sh` enforces complete frozen-surface coverage and exact production lookup
@@ -112,6 +112,7 @@ Owner: Documentation + release maintainers.
 - Normative check/update lifecycle: `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`
 - Canonical check/update boundary policy: `policies/check_update_boundary_v0.1.json`
 - Generated check/update audit: `docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`
+- Generated-authority graph schema: `docs/spec/GENERATED_AUTHORITY_GRAPH_v0.1.schema.json`; the canonical graph is embedded in `policies/check_update_boundary_v0.1.json`, reuses `genesis.gates.json` plus the check/update audit for discovery, and is executed only through `scripts/update_generated_authority.sh`
 - Optional local selfhost-readiness scorecard: `.genesis/perf/selfhost_readiness_report.json` (explicit updater: `scripts/update_selfhost_readiness_scorecard_report.sh`)
 - Optional local bootstrap-retirement report: `.genesis/perf/bootstrap_retirement_gate_report.json` (explicit updater: `scripts/update_bootstrap_retirement_gate_report.sh`)
 - Optional local full-selfhost-cutover report: `.genesis/perf/full_selfhost_cutover_profile_report.json` (explicit updater: `scripts/update_full_selfhost_cutover_profile_report.sh`)
@@ -119,7 +120,7 @@ Owner: Documentation + release maintainers.
 - Optional local GCPM contract-pack report: `.genesis/perf/gcpm_operation_contract_pack_report.json` (explicit updater: `scripts/update_gcpm_operation_contract_pack_report.sh`)
 - Optional local VCS self-host report: `.genesis/perf/vcs_selfhost_contract_report.json` (explicit updater: `scripts/update_vcs_selfhost_contract_report.sh`)
 - Optional local symbol-ownership report: `.genesis/perf/selfhost_symbol_ownership_report.json` (explicit updater: `scripts/update_selfhost_symbol_ownership_report.sh`)
-- Optional local CLI-diagnostics report: `.genesis/perf/cli_diagnostics_contract_report.json` (explicit updater: `scripts/update_cli_diagnostics_contract_report.sh`)
+- Optional local CLI-diagnostics report: `.genesis/perf/cli_diagnostics_contract_report.json` (explicit renderer: `scripts/render_cli_diagnostics_contract_report.sh`; tracked authorities use `scripts/update_generated_authority.sh`)
 - Optional local foundation-stdlib report: `.genesis/perf/foundation_stdlib_conformance_report.json` (explicit updater: `scripts/update_foundation_stdlib_conformance_report.sh`)
 - Optional local fuzz/differential report: `.genesis/perf/fuzz_differential_hardening_report.json` (explicit updater: `scripts/update_fuzz_differential_hardening_report.sh`)
 - Optional local WASM production-surface report: `.genesis/perf/wasm_production_surface_report.json` (explicit updater: `scripts/update_wasm_production_surface_report.sh`)
