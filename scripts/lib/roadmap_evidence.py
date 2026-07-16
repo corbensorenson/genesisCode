@@ -1578,12 +1578,20 @@ def check_roadmap(path: Path) -> None:
         raise EvidenceError(f"missing roadmap: {path}")
     text = path.read_text(encoding="utf-8")
     rendered = identities()
-    cited_names = set(re.findall(r"([a-z0-9-]+-bundle)-sha256:[0-9a-f]{64}", text))
+    citations = re.findall(r"([a-z0-9-]+-bundle)-sha256:([^`\s]+)", text)
+    malformed = sorted(
+        f"{name}-sha256:{digest}"
+        for name, digest in citations
+        if re.fullmatch(r"[0-9a-f]{64}", digest) is None
+    )
+    if malformed:
+        raise EvidenceError(f"malformed roadmap evidence identity: {malformed}")
+    cited_names = {name for name, _ in citations}
     unknown = sorted(cited_names - set(rendered))
     if unknown:
         raise EvidenceError(f"unregistered roadmap evidence bundle(s): {unknown}")
     for name, digest in rendered.items():
-        pattern = re.compile(rf"{re.escape(name)}-sha256:([0-9a-f]{{64}})")
+        pattern = re.compile(rf"{re.escape(name)}-sha256:([0-9a-f]{{64}})(?![0-9a-f])")
         observed = pattern.findall(text)
         expected_occurrences = BUNDLE_OCCURRENCES[name]
         if len(observed) != expected_occurrences:

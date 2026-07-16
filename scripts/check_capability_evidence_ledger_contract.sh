@@ -137,4 +137,27 @@ if python3 scripts/lib/roadmap_evidence.py --check --roadmap "$TMP_DIR/roadmap-s
   exit 1
 fi
 
-echo "capability-evidence-ledger-contract: ok (negative_controls=12 check_mode=read_only generated_views=5 roadmap_identities=$roadmap_identity_count)"
+cp ROADMAP.md "$TMP_DIR/roadmap-overlong.md"
+python3 - "$TMP_DIR/roadmap-overlong.md" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text, replacements = re.subn(
+    r"(capability-ledger-bundle-sha256:[0-9a-f]{64})",
+    r"\1f",
+    text,
+    count=1,
+)
+if replacements != 1:
+    raise SystemExit("capability-evidence-ledger-contract: overlong identity fixture was not mutated")
+path.write_text(text, encoding="utf-8")
+PY
+if python3 scripts/lib/roadmap_evidence.py --check --roadmap "$TMP_DIR/roadmap-overlong.md" >/dev/null 2>&1; then
+  echo "capability-evidence-ledger-contract: overlong roadmap evidence identity was accepted" >&2
+  exit 1
+fi
+
+echo "capability-evidence-ledger-contract: ok (negative_controls=13 check_mode=read_only generated_views=5 roadmap_identities=$roadmap_identity_count)"

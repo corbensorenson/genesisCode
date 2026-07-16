@@ -77,6 +77,10 @@ fn cli_schema_production_profile_emits_selfhost_only_values() {
         vec![
             "bundle",
             "inspect",
+            "registry-admit",
+            "registry-build",
+            "registry-init",
+            "registry-verify",
             "replay",
             "run",
             "score",

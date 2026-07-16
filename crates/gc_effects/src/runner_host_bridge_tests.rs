@@ -97,6 +97,63 @@ fn normalize_sha256_hex_accepts_prefixed_and_plain_hex() {
     assert!(runner_host_bridge_policy::normalize_sha256_hex("abc").is_none());
 }
 
+#[cfg(all(not(target_os = "wasi"), unix))]
+#[test]
+fn successful_spawn_bridge_can_close_unused_stdin_without_a_transport_error() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let td = tempfile::tempdir().expect("bridge tempdir");
+    let bridge = td.path().join("close_stdin_bridge.sh");
+    std::fs::write(
+        &bridge,
+        r#"#!/bin/sh
+exec 0<&-
+resp='{:ok true :stdin :closed}'
+printf '%s\n%s' "${#resp}" "$resp"
+"#,
+    )
+    .expect("write bridge");
+    let mut permissions = std::fs::metadata(&bridge)
+        .expect("bridge metadata")
+        .permissions();
+    permissions.set_mode(0o755);
+    std::fs::set_permissions(&bridge, permissions).expect("bridge chmod");
+    let payload = Term::Str("x".repeat(256 * 1024));
+
+    for timeout in [None, Some(5_000_u64)] {
+        let timeout_line = timeout
+            .map(|value| format!("timeout_ms = {value}"))
+            .unwrap_or_default();
+        let policy = CapsPolicy::from_toml_str(&format!(
+            r#"
+allow = ["gpu/compute::limits"]
+[op."gpu/compute::limits"]
+base_dir = "{}"
+bridge_cmd = "close_stdin_bridge.sh"
+max_bytes = 524288
+{}
+"#,
+            td.path().display(),
+            timeout_line
+        ))
+        .expect("bridge policy");
+        let response = call_host_bridge(
+            "gpu",
+            "gpu/compute::limits",
+            &payload,
+            policy.op_policy("gpu/compute::limits"),
+        )
+        .expect("successful bridge response must win over an unused-stdin broken pipe");
+        let Term::Map(response) = response else {
+            panic!("bridge response must be a map");
+        };
+        assert_eq!(
+            response.get(&TermOrdKey(Term::symbol(":stdin"))),
+            Some(&Term::symbol(":closed"))
+        );
+    }
+}
+
 #[cfg(not(target_os = "wasi"))]
 fn write_persistent_bridge_script(path: &std::path::Path) {
     let src = r#"#!/usr/bin/env sh

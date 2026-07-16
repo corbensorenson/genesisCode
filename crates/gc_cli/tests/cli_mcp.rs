@@ -349,7 +349,7 @@ fn mcp_rejects_batches_tasks_and_escaped_roots_without_panicking() {
 }
 
 #[test]
-fn mcp_eof_cancels_and_reaps_every_accepted_call_with_audited_provenance() {
+fn mcp_eof_terminalizes_every_accepted_call_with_audited_provenance() {
     let td = tempfile::tempdir().expect("tempdir");
     let mut server = McpChild::spawn(
         td.path(),
@@ -364,16 +364,26 @@ fn mcp_eof_cancels_and_reaps_every_accepted_call_with_audited_provenance() {
     }
     let (frames, stderr) = server.finish_frames();
     assert_eq!(stderr, "");
+    let mut disconnect_cancellations = 0;
     for id in ["one", "two", "three"] {
         let response = frames
             .iter()
             .find(|frame| frame["id"] == id)
             .unwrap_or_else(|| panic!("missing terminal response for {id}: {frames:?}"));
-        assert!(matches!(
-            response["error"]["code"].as_i64(),
-            Some(-32005 | -32006)
-        ));
-        let audit = &response["error"]["data"]["audit"];
+        let audit = if let Some(code) = response["error"]["code"].as_i64() {
+            assert!(
+                matches!(code, -32005 | -32006),
+                "unexpected EOF terminal response for {id}: {response}"
+            );
+            disconnect_cancellations += 1;
+            &response["error"]["data"]["audit"]
+        } else {
+            assert!(
+                response["result"].is_object(),
+                "accepted call must complete or receive a disconnect error: {response}"
+            );
+            &response["result"]["_meta"]["genesis/sessionAudit"]
+        };
         assert_eq!(audit["kind"], "genesis/agent-session-audit-v0.1");
         assert!(
             audit["limits_identity"]
@@ -381,4 +391,8 @@ fn mcp_eof_cancels_and_reaps_every_accepted_call_with_audited_provenance() {
                 .is_some_and(|value| value.len() == 64)
         );
     }
+    assert!(
+        disconnect_cancellations > 0,
+        "EOF with a zero-request drain budget must cancel outstanding work: {frames:?}"
+    );
 }

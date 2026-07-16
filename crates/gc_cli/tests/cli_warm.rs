@@ -540,7 +540,11 @@ max_bytes = 4096
     fs::write(
         td.path().join("heap_bridge.sh"),
         r#"#!/bin/sh
-awk 'BEGIN { value="x"; for (i=0; i<27; i++) value=value value; system("sleep 5") }'
+exec python3 -c 'import time
+resident = bytearray(96 * 1024 * 1024)
+for offset in range(0, len(resident), 4096):
+    resident[offset] = 1
+time.sleep(5)'
 "#,
     )
     .unwrap();
