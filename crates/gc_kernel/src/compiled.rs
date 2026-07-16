@@ -22,7 +22,13 @@ mod compiled_runtime;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use compiled_runtime::PrimitiveForwardPlan;
 pub(crate) use compiled_runtime::{CompiledClosureCall, apply_compiled_closure};
+#[cfg(test)]
+pub(crate) use compiled_runtime::{
+    appn_native_partial_materializations, primitive_forward_executions,
+    reset_appn_native_partial_materializations, reset_primitive_forward_executions,
+};
 
 const COMPILED_MODULE_BLOB_MAGIC: &[u8] = b"GCKM5\0";
 
@@ -305,6 +311,7 @@ pub(crate) enum CExpr {
         body_term: Term,
         body: Arc<CExpr>,
         capture_plan: OnceLock<ClosureCapturePlan>,
+        primitive_forward_plan: OnceLock<Option<Arc<compiled_runtime::PrimitiveForwardPlan>>>,
     },
     Prim {
         op: PrimOp,

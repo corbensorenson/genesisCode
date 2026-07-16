@@ -5,6 +5,10 @@ use std::mem::size_of;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use crate::compiled::{
+    appn_native_partial_materializations, primitive_forward_executions,
+    reset_appn_native_partial_materializations, reset_primitive_forward_executions,
+};
 use crate::eval::PrimOp;
 use crate::eval::{evaluator_max_call_depth, reset_evaluator_max_call_depth};
 use crate::{
@@ -172,38 +176,165 @@ fn int_prims_keep_small_fast_path_and_bignum_overflow_semantics() {
     }
 }
 
-#[test]
-fn compiled_binary_prim_wrapper_fast_path_preserves_values_and_errors_without_step_limit() {
-    let forms = parse_module(
-        r#"
-      (def add (fn (a) (fn (b) (prim int/add a b))))
-      (add 40 2)
-    "#,
-    )
-    .unwrap();
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let mut env = Env::empty();
-    let value = eval_module_compiled(&mut ctx, &mut env, &forms).unwrap();
-    assert_value_int(&value, 42);
+fn eval_tree_compiled_and_restored(src: &str) -> (Value, Value, Value, u64, u64) {
+    let forms = parse_module(src).unwrap();
+    let mut tree_ctx = EvalCtx::new();
+    let mut tree_env = Env::empty();
+    let tree = eval_module(&mut tree_ctx, &mut tree_env, &forms).unwrap();
 
-    let forms = parse_module(
-        r#"
-      (def add (fn (a) (fn (b) (prim int/add a b))))
-      (add 1 "x")
-    "#,
+    reset_primitive_forward_executions();
+    let compiled_module = compile_module(&forms).unwrap();
+    let blob = encode_compiled_module_blob(&compiled_module).unwrap();
+    let mut compiled_ctx = EvalCtx::new();
+    let mut compiled_env = Env::empty();
+    let compiled =
+        eval_compiled_module(&mut compiled_ctx, &mut compiled_env, &compiled_module).unwrap();
+    assert!(primitive_forward_executions() > 0, "source: {src}");
+
+    let restored_module = decode_compiled_module_blob(&blob).unwrap();
+    assert_eq!(encode_compiled_module_blob(&restored_module).unwrap(), blob);
+    let mut restored_ctx = EvalCtx::new();
+    let mut restored_env = Env::empty();
+    let restored =
+        eval_compiled_module(&mut restored_ctx, &mut restored_env, &restored_module).unwrap();
+    (
+        tree,
+        compiled,
+        restored,
+        tree_ctx.observed_counters().steps,
+        compiled_ctx.observed_counters().steps,
+    )
+}
+
+#[test]
+fn compiled_primitive_forward_plan_is_semantic_and_differentially_exact() {
+    let cases = [
+        (
+            "(def length (fn (value) (prim str/len value))) (length \"hi\")",
+            "2",
+        ),
+        (
+            "(def subtract-reversed (fn (left right) (prim int/sub right left))) (subtract-reversed 2 44)",
+            "42",
+        ),
+        (
+            "(def duplicate-first (fn (first ignored) (prim int/add first first))) (duplicate-first 21 999)",
+            "42",
+        ),
+        (
+            "(def outer-pair (fn (first ignored last) (prim int/add first last))) (outer-pair 40 999 2)",
+            "42",
+        ),
+    ];
+    for (src, expected) in cases {
+        let (tree, compiled, restored, tree_steps, compiled_steps) =
+            eval_tree_compiled_and_restored(src);
+        assert_eq!(tree.debug_repr(), expected, "source: {src}");
+        assert_eq!(compiled.debug_repr(), tree.debug_repr(), "source: {src}");
+        assert_eq!(restored.debug_repr(), tree.debug_repr(), "source: {src}");
+        assert_eq!(value_hash(&compiled), value_hash(&tree), "source: {src}");
+        assert_eq!(value_hash(&restored), value_hash(&tree), "source: {src}");
+        assert_eq!(compiled_steps, tree_steps, "source: {src}");
+    }
+}
+
+#[test]
+fn compiled_primitive_forward_plan_preserves_errors_limits_coverage_and_partial_hashes() {
+    let error_src = r#"
+      (def add (fn (left right) (prim int/add left right)))
+      (add 1 "not-an-int")
+    "#;
+    let (tree, compiled, restored, tree_steps, compiled_steps) =
+        eval_tree_compiled_and_restored(error_src);
+    assert_eq!(compiled.debug_repr(), tree.debug_repr());
+    assert_eq!(restored.debug_repr(), tree.debug_repr());
+    assert_eq!(value_hash(&compiled), value_hash(&tree));
+    assert_eq!(compiled_steps, tree_steps);
+
+    let over_forms =
+        parse_module("(def add (fn (left right) (prim int/add left right))) (add 40 2 missing)")
+            .unwrap();
+    let mut over_tree_ctx = EvalCtx::new();
+    let mut over_tree_env = Env::empty();
+    let tree_error = eval_module(&mut over_tree_ctx, &mut over_tree_env, &over_forms).unwrap_err();
+    let mut over_compiled_ctx = EvalCtx::new();
+    let mut over_compiled_env = Env::empty();
+    reset_primitive_forward_executions();
+    let compiled_error =
+        eval_module_compiled(&mut over_compiled_ctx, &mut over_compiled_env, &over_forms)
+            .unwrap_err();
+    assert!(primitive_forward_executions() > 0);
+    assert_eq!(
+        std::mem::discriminant(&compiled_error.kind),
+        std::mem::discriminant(&tree_error.kind)
+    );
+    assert_eq!(compiled_error.msg, tree_error.msg);
+
+    let forms =
+        parse_module("(def add (fn (left right) (prim int/add left right))) (add 40 2)").unwrap();
+    let mut baseline_ctx = EvalCtx::new();
+    let mut baseline_env = Env::empty();
+    let _ = eval_module(&mut baseline_ctx, &mut baseline_env, &forms).unwrap();
+    let exact_steps = baseline_ctx.observed_counters().steps;
+    let mut limited_ctx = EvalCtx::with_step_limit(Some(exact_steps - 1));
+    let mut limited_env = Env::empty();
+    reset_primitive_forward_executions();
+    let err = eval_module_compiled(&mut limited_ctx, &mut limited_env, &forms).unwrap_err();
+    assert!(matches!(err.kind, KernelErrorKind::StepLimit));
+    assert_eq!(limited_ctx.observed_counters().steps, exact_steps);
+    assert!(primitive_forward_executions() > 0);
+
+    let mut coverage_ctx = EvalCtx::new();
+    coverage_ctx.enable_coverage(BTreeSet::from(["left".to_string(), "right".to_string()]));
+    let mut coverage_env = Env::empty();
+    reset_primitive_forward_executions();
+    let covered = eval_module_compiled(&mut coverage_ctx, &mut coverage_env, &forms).unwrap();
+    assert_eq!(covered.debug_repr(), "42");
+    assert!(primitive_forward_executions() > 0);
+    assert_eq!(coverage_ctx.coverage_hits().unwrap().get("left"), Some(&1));
+    assert_eq!(coverage_ctx.coverage_hits().unwrap().get("right"), Some(&1));
+    assert_eq!(
+        coverage_ctx
+            .coverage_statement_site_hits()
+            .unwrap()
+            .values()
+            .sum::<u64>(),
+        3
+    );
+
+    let partial_forms =
+        parse_module("(def add (fn (left right) (prim int/add left right))) (add 40)").unwrap();
+    let partial_module = compile_module(&partial_forms).unwrap();
+    let partial_blob = encode_compiled_module_blob(&partial_module).unwrap();
+    let mut compiled_ctx = EvalCtx::new();
+    let mut compiled_env = Env::empty();
+    reset_primitive_forward_executions();
+    let compiled_partial =
+        eval_compiled_module(&mut compiled_ctx, &mut compiled_env, &partial_module).unwrap();
+    assert_eq!(primitive_forward_executions(), 0);
+    let restored_partial_module = decode_compiled_module_blob(&partial_blob).unwrap();
+    let mut restored_partial_ctx = EvalCtx::new();
+    let mut restored_partial_env = Env::empty();
+    let restored_partial = eval_compiled_module(
+        &mut restored_partial_ctx,
+        &mut restored_partial_env,
+        &restored_partial_module,
     )
     .unwrap();
-    let mut ctx = EvalCtx::with_step_limit(None);
-    let p = ctx.protocol.expect("EvalCtx reserves protocol tokens");
+    assert_eq!(value_hash(&compiled_partial), value_hash(&restored_partial));
+
+    let nontrivial = parse_module(
+        "(def add (fn (left right) (let ((copy left)) (prim int/add copy right)))) (add 40 2)",
+    )
+    .unwrap();
+    let mut ctx = EvalCtx::new();
     let mut env = Env::empty();
-    let value = eval_module_compiled(&mut ctx, &mut env, &forms).unwrap();
-    match value {
-        Value::Sealed { token, payload } => {
-            assert_eq!(token, p.error);
-            assert!(matches!(payload.as_ref().as_data(), Some(Term::Map(_))));
-        }
-        _ => panic!("expected sealed type error, got {}", value.debug_repr()),
-    }
+    reset_primitive_forward_executions();
+    assert_value_int(
+        &eval_module_compiled(&mut ctx, &mut env, &nontrivial).unwrap(),
+        42,
+    );
+    assert_eq!(primitive_forward_executions(), 0);
 }
 
 #[test]
@@ -927,9 +1058,23 @@ fn compiled_appn_collects_native_args_without_intermediate_value_roundtrip() {
         Value::native_fn(NativeFn::new("test/add3", 3, native_test_add3)),
     );
     let mut ctx = EvalCtx::new();
+    reset_appn_native_partial_materializations();
     let out = eval_compiled_module(&mut ctx, &mut env, &restored).unwrap();
 
     assert_eq!(out.as_data(), Some(&Term::Int(BigInt::from(42))));
+    assert_eq!(appn_native_partial_materializations(), 1);
+
+    let full_forms = parse_module("(test/add3 1 2 39)").unwrap();
+    let mut full_env = Env::empty();
+    full_env.set_local(
+        "test/add3",
+        Value::native_fn(NativeFn::new("test/add3", 3, native_test_add3)),
+    );
+    let mut full_ctx = EvalCtx::new();
+    reset_appn_native_partial_materializations();
+    let full = eval_module_compiled(&mut full_ctx, &mut full_env, &full_forms).unwrap();
+    assert_eq!(full.as_data(), Some(&Term::Int(BigInt::from(42))));
+    assert_eq!(appn_native_partial_materializations(), 0);
 }
 
 #[test]

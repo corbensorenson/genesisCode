@@ -1,8 +1,7 @@
 use super::super::*;
 use super::eval::eval_cexpr_runtime;
-use super::patterns::{
-    eval_binary_prim_wrapper_inline, eval_byte_get_or_nil_inline, eval_counted_vec_push_loop_inline,
-};
+use super::patterns::{eval_byte_get_or_nil_inline, eval_counted_vec_push_loop_inline};
+use super::primitive_forward::eval_primitive_forward_inline;
 
 pub(crate) struct CompiledClosureCall {
     pub(crate) external_env: Env,
@@ -57,7 +56,7 @@ pub(super) enum ApplyControl {
     },
 }
 
-enum AppNCallable {
+pub(super) enum AppNCallable {
     Value(Value),
     Compiled {
         runtime: RuntimeEnv,
@@ -65,25 +64,22 @@ enum AppNCallable {
         body: Arc<CExpr>,
     },
     Native {
-        native: NativeFn,
-        collected: Vec<Value>,
+        native: Rc<NativeFn>,
+        appended: Vec<Value>,
     },
 }
 
-fn appn_callable_from_value(value: Value) -> AppNCallable {
+pub(super) fn appn_callable_from_value(value: Value) -> AppNCallable {
     match value {
-        Value::NativeFn(native) => {
-            let collected = native.collected.clone();
-            AppNCallable::Native {
-                native: native.as_ref().clone(),
-                collected,
-            }
-        }
+        Value::NativeFn(native) => AppNCallable::Native {
+            native,
+            appended: Vec::new(),
+        },
         other => AppNCallable::Value(other),
     }
 }
 
-fn can_inline_compiled_coverage(
+pub(super) fn can_inline_compiled_coverage(
     caller_env: &RuntimeEnv,
     closure_coverage: &Arc<CompiledCoverageSites>,
 ) -> bool {
@@ -178,8 +174,8 @@ pub(super) fn eval_app_n_runtime(
     }
     let callee_value = eval_cexpr_runtime(ctx, caller_env.clone(), callee)?;
     if let Value::CompiledClosure(data) = callee_value {
-        if let Some(value) = eval_binary_prim_wrapper_inline(ctx, caller_env, data.clone(), args)? {
-            return Ok(ApplyControl::Value(value));
+        if let Some(control) = eval_primitive_forward_inline(ctx, caller_env, data.clone(), args)? {
+            return Ok(control);
         }
         if let Some(value) = eval_byte_get_or_nil_inline(ctx, caller_env, data.clone(), args)? {
             return Ok(ApplyControl::Value(value));
@@ -208,7 +204,7 @@ pub(super) fn eval_app_n_runtime(
     )
 }
 
-fn eval_app_n_callable_runtime(
+pub(super) fn eval_app_n_callable_runtime(
     ctx: &mut EvalCtx,
     caller_env: &RuntimeEnv,
     mut callable: AppNCallable,
@@ -321,21 +317,19 @@ fn eval_app_n_callable_runtime(
             }
             AppNCallable::Native {
                 native,
-                mut collected,
+                mut appended,
             } => {
-                collected.push(arg);
-                if collected.len() < native.arity {
+                appended.push(arg);
+                let total = native.collected.len().saturating_add(appended.len());
+                if total < native.arity {
                     if last {
-                        return Ok(ApplyControl::Value(Value::native_fn(NativeFn {
-                            name: native.name,
-                            arity: native.arity,
-                            collected,
-                            func: native.func,
-                        })));
+                        return Ok(ApplyControl::Value(materialize_native_partial(
+                            &native, appended,
+                        )));
                     }
-                    AppNCallable::Native { native, collected }
+                    AppNCallable::Native { native, appended }
                 } else {
-                    let value = native.apply_collected(ctx, collected)?;
+                    let value = native.apply_collected(ctx, native_args(&native, appended))?;
                     if last {
                         return Ok(ApplyControl::Value(value));
                     }
@@ -346,14 +340,9 @@ fn eval_app_n_callable_runtime(
     }
     match callable {
         AppNCallable::Value(value) => Ok(ApplyControl::Value(value)),
-        AppNCallable::Native { native, collected } => {
-            Ok(ApplyControl::Value(Value::native_fn(NativeFn {
-                name: native.name,
-                arity: native.arity,
-                collected,
-                func: native.func,
-            })))
-        }
+        AppNCallable::Native { native, appended } => Ok(ApplyControl::Value(
+            materialize_native_partial(&native, appended),
+        )),
         AppNCallable::Compiled {
             runtime: _,
             param,
@@ -363,6 +352,39 @@ fn eval_app_n_callable_runtime(
             format!("compiled AppN ended with pending parameter: {param}"),
         )),
     }
+}
+
+fn native_args(native: &NativeFn, appended: Vec<Value>) -> Vec<Value> {
+    let mut collected = Vec::with_capacity(native.collected.len().saturating_add(appended.len()));
+    collected.extend(native.collected.iter().cloned());
+    collected.extend(appended);
+    collected
+}
+
+fn materialize_native_partial(native: &NativeFn, appended: Vec<Value>) -> Value {
+    #[cfg(test)]
+    APPN_NATIVE_PARTIAL_MATERIALIZATIONS.with(|count| count.set(count.get().saturating_add(1)));
+    Value::native_fn(NativeFn {
+        name: native.name,
+        arity: native.arity,
+        collected: native_args(native, appended),
+        func: native.func,
+    })
+}
+
+#[cfg(test)]
+thread_local! {
+    static APPN_NATIVE_PARTIAL_MATERIALIZATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn reset_appn_native_partial_materializations() {
+    APPN_NATIVE_PARTIAL_MATERIALIZATIONS.with(|count| count.set(0));
+}
+
+#[cfg(test)]
+pub(crate) fn appn_native_partial_materializations() -> usize {
+    APPN_NATIVE_PARTIAL_MATERIALIZATIONS.with(std::cell::Cell::get)
 }
 
 fn eval_compiled_closure_appn_inline(

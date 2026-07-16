@@ -13,6 +13,7 @@ expected_kernel_surface_files = [
   "compiled_runtime/eval.rs",
   "compiled_runtime/mod.rs",
   "compiled_runtime/patterns.rs",
+  "compiled_runtime/primitive_forward.rs",
   "env.rs",
   "env/capture.rs",
   "error.rs",
@@ -49,6 +50,7 @@ forbidden_eval_markers = [
 "crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
 "crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/patterns.rs" = 400
+"crates/gc_kernel/src/compiled_runtime/primitive_forward.rs" = 180
 "crates/gc_kernel/src/env.rs" = 100
 "crates/gc_kernel/src/env/capture.rs" = 60
 "crates/gc_kernel/src/error.rs" = 80

@@ -434,6 +434,7 @@ fn decode_cexpr(
                 body_term,
                 body,
                 capture_plan: OnceLock::new(),
+                primitive_forward_plan: OnceLock::new(),
             }
         }
         9 => {

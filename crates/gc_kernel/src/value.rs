@@ -183,6 +183,8 @@ pub struct CompiledClosureData {
     pub env: Env,
     pub compiled_env: Option<crate::compiled::CompiledLexicalEnv>,
     pub module_env: Option<crate::compiled::CompiledModuleCells>,
+    pub(crate) primitive_forward_plan:
+        Option<std::sync::Arc<crate::compiled::PrimitiveForwardPlan>>,
 }
 
 #[derive(Clone)]
@@ -324,13 +326,14 @@ impl Value {
         }))
     }
 
-    pub fn compiled_closure(
+    pub(crate) fn compiled_closure(
         param: String,
         body: Term,
         body_c: CompiledExpr,
         env: Env,
         compiled_env: Option<crate::compiled::CompiledLexicalEnv>,
         module_env: Option<crate::compiled::CompiledModuleCells>,
+        primitive_forward_plan: Option<std::sync::Arc<crate::compiled::PrimitiveForwardPlan>>,
     ) -> Self {
         Self::CompiledClosure(Rc::new(CompiledClosureData {
             param: Rc::<str>::from(param),
@@ -339,6 +342,7 @@ impl Value {
             env,
             compiled_env,
             module_env,
+            primitive_forward_plan,
         }))
     }
 
