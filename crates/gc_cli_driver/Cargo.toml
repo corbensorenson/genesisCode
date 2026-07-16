@@ -36,6 +36,7 @@ aes-gcm = "0.10"
 chacha20poly1305 = "0.10"
 rusqlite = { version = "0.31", features = ["bundled"] }
 sha1 = "0.10"
+fs2 = "0.4"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -14,7 +14,6 @@ pub(super) fn configure_process(command: &mut Command, job: &WorkerJob) {
         .unwrap_or(u64::MAX)
         .div_ceil(1000)
         .max(1);
-    let heap_bytes = job.limits.max_heap_bytes;
     let file_bytes = job.limits.max_disk_bytes;
     // SAFETY: this hook performs only async-signal-safe setrlimit calls before exec.
     unsafe {
@@ -31,10 +30,9 @@ pub(super) fn configure_process(command: &mut Command, job: &WorkerJob) {
                 }
             };
             set(libc::RLIMIT_CPU, cpu_seconds)?;
-            #[cfg(not(target_os = "macos"))]
-            set(libc::RLIMIT_AS, heap_bytes)?;
-            #[cfg(target_os = "macos")]
-            let _ = heap_bytes;
+            // max_heap_bytes is aggregate resident memory for the complete process
+            // tree. RLIMIT_AS measures per-process virtual address space and can
+            // reject work below that contract before the audited tree monitor sees it.
             set(libc::RLIMIT_FSIZE, file_bytes)?;
             Ok(())
         });

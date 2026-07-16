@@ -34,11 +34,25 @@ fn next_temp_root() -> PathBuf {
     ))
 }
 
+struct TestWorkspaceGuard {
+    old: PathBuf,
+    root: PathBuf,
+}
+
+impl Drop for TestWorkspaceGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.old);
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
 fn with_test_workspace<F>(f: F)
 where
     F: FnOnce(&Path),
 {
-    let _guard = test_lock().lock().expect("lock test cwd");
+    let _guard = test_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let old = std::env::current_dir().expect("current dir");
     let root = next_temp_root();
     if root.exists() {
@@ -46,11 +60,12 @@ where
     }
     std::fs::create_dir_all(&root).expect("create temp root");
     std::env::set_current_dir(&root).expect("set current dir");
+    let workspace = TestWorkspaceGuard {
+        old,
+        root: root.clone(),
+    };
     f(&root);
-    std::env::set_current_dir(&old).expect("restore current dir");
-    if root.exists() {
-        std::fs::remove_dir_all(&root).expect("remove temp dir");
-    }
+    drop(workspace);
 }
 
 fn tcp_stream_pair() -> (std::net::TcpStream, std::net::TcpStream) {
@@ -86,6 +101,26 @@ fn write_executable_script(root: &Path, rel: &str, body: &str) -> PathBuf {
     perms.set_mode(0o755);
     std::fs::set_permissions(&path, perms).expect("set script permissions");
     path
+}
+
+#[test]
+fn persisted_runtime_counters_are_unique_under_concurrency() {
+    with_test_workspace(|_root| {
+        let threads = (0..64)
+            .map(|_| {
+                std::thread::spawn(|| {
+                    next_counter("concurrent_test").expect("allocate concurrent counter")
+                })
+            })
+            .collect::<Vec<_>>();
+        let values = threads
+            .into_iter()
+            .map(|thread| thread.join().expect("join counter allocator"))
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(values.len(), 64);
+        assert_eq!(values.first(), Some(&1));
+        assert_eq!(values.last(), Some(&64));
+    });
 }
 
 fn map_get_str<'a>(mm: &'a BTreeMap<TermOrdKey, Term>, key: &str) -> Option<&'a str> {
@@ -202,7 +237,7 @@ fn ffi_call_schema_driven_external_command_executes_without_unsupported() {
         let ffi_path = write_executable_script(
             root,
             "bin/ffi_sum.sh",
-            "#!/bin/sh\nsym=\"$1\"\nif [ \"$sym\" = \"sum\" ]; then\n  printf '{:ok true :result 7}'\nelse\n  printf '{:ok false :error {:code \"ffi/symbol\" :message \"unknown symbol\"}}'\nfi\n",
+            "#!/bin/sh\nexec 0<&-\nsym=\"$1\"\nif [ \"$sym\" = \"sum\" ]; then\n  printf '{:ok true :result 7}'\nelse\n  printf '{:ok false :error {:code \"ffi/symbol\" :message \"unknown symbol\"}}'\nfi\n",
         );
         let payload = term_map(vec![
             (":abi-id", Term::Str("abi.math.v1".to_string())),
