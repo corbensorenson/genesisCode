@@ -122,120 +122,32 @@ impl CompiledCoverageSites {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledLexicalEnv(Rc<CompiledLexicalFrame>);
-
-#[derive(Debug)]
-struct CompiledLexicalFrame {
-    parent: Option<CompiledLexicalEnv>,
-    slots: CompiledLexicalSlots,
-}
-
-#[derive(Debug)]
-enum CompiledLexicalSlots {
-    Empty,
-    One(Value),
-    Many(Box<[Value]>),
-    Sparse {
-        span: usize,
-        values: BTreeMap<usize, Value>,
-    },
-}
+pub struct CompiledLexicalEnv(Rc<[Option<Value>]>);
 
 impl CompiledLexicalEnv {
     fn empty() -> Self {
-        Self(Rc::new(CompiledLexicalFrame {
-            parent: None,
-            slots: CompiledLexicalSlots::Empty,
-        }))
-    }
-
-    fn with_slot(parent: &Self, value: Value) -> Self {
-        Self(Rc::new(CompiledLexicalFrame {
-            parent: Some(parent.clone()),
-            slots: CompiledLexicalSlots::One(value),
-        }))
-    }
-
-    fn with_slots(parent: &Self, mut values_oldest_to_newest: Vec<Value>) -> Self {
-        if values_oldest_to_newest.len() == 1 {
-            let value = values_oldest_to_newest.remove(0);
-            return Self::with_slot(parent, value);
-        }
-        values_oldest_to_newest.reverse();
-        Self(Rc::new(CompiledLexicalFrame {
-            parent: Some(parent.clone()),
-            slots: CompiledLexicalSlots::Many(values_oldest_to_newest.into_boxed_slice()),
-        }))
+        Self(Rc::from(Vec::<Option<Value>>::new().into_boxed_slice()))
     }
 
     fn get(&self, depth: u16, slot: u16) -> Option<Value> {
-        let mut cur = self.clone();
-        let mut depth = usize::from(depth);
-        loop {
-            match &cur.0.slots {
-                CompiledLexicalSlots::Empty => {}
-                CompiledLexicalSlots::One(value) => {
-                    if slot == 0 && depth == 0 {
-                        return Some(value.clone());
-                    }
-                    depth = depth.checked_sub(1)?;
-                }
-                CompiledLexicalSlots::Many(values) => {
-                    if slot == 0 && depth < values.len() {
-                        return Some(values[depth].clone());
-                    }
-                    depth = depth.checked_sub(values.len())?;
-                }
-                CompiledLexicalSlots::Sparse { span, values } => {
-                    if slot == 0
-                        && let Some(value) = values.get(&depth)
-                    {
-                        return Some(value.clone());
-                    }
-                    depth = depth.checked_sub(*span)?;
-                }
-            }
-            cur = cur.0.parent.as_ref()?.clone();
+        if slot != 0 {
+            return None;
         }
+        self.0.get(usize::from(depth)).cloned().flatten()
     }
 
-    fn capture(&self, depths: &BTreeSet<usize>) -> Result<Self, KernelError> {
-        let Some(max_depth) = depths.last().copied() else {
-            return Ok(Self::empty());
-        };
-        let mut values = BTreeMap::new();
-        for depth in depths {
-            let depth_u16 = u16::try_from(*depth).map_err(|_| {
-                KernelError::new(
-                    KernelErrorKind::Internal,
-                    "compiled closure capture depth exceeds u16 range",
-                )
-            })?;
-            let value = self.get(depth_u16, 0).ok_or_else(|| {
-                KernelError::new(
-                    KernelErrorKind::Internal,
-                    format!("compiled closure capture slot is missing at depth {depth}"),
-                )
-            })?;
-            values.insert(*depth, value);
-        }
-        Ok(Self(Rc::new(CompiledLexicalFrame {
-            parent: None,
-            slots: CompiledLexicalSlots::Sparse {
-                span: max_depth.saturating_add(1),
-                values,
-            },
-        })))
+    fn from_slots(slots: Vec<Option<Value>>) -> Self {
+        Self(Rc::from(slots.into_boxed_slice()))
     }
 
     #[cfg(test)]
     pub(crate) fn captured_value_count(&self) -> usize {
-        match &self.0.slots {
-            CompiledLexicalSlots::Empty => 0,
-            CompiledLexicalSlots::One(_) => 1,
-            CompiledLexicalSlots::Many(values) => values.len(),
-            CompiledLexicalSlots::Sparse { values, .. } => values.len(),
-        }
+        self.0.iter().filter(|value| value.is_some()).count()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn slot_span(&self) -> usize {
+        self.0.len()
     }
 }
 
@@ -275,7 +187,7 @@ impl CompiledModuleCells {
 #[derive(Clone, Debug)]
 struct RuntimeEnv {
     lexical: CompiledLexicalEnv,
-    inline_slot: Option<Value>,
+    inline_slots: Rc<Vec<Value>>,
     module: CompiledModuleCells,
     external: Env,
     coverage_sites: Arc<CompiledCoverageSites>,
@@ -291,7 +203,7 @@ impl RuntimeEnv {
     ) -> Self {
         Self {
             lexical: CompiledLexicalEnv::empty(),
-            inline_slot: None,
+            inline_slots: Rc::new(Vec::new()),
             module,
             external,
             coverage_sites,
@@ -299,75 +211,68 @@ impl RuntimeEnv {
         }
     }
 
-    fn with_slot(&self, _name: &str, value: Value) -> Self {
-        Self {
-            lexical: self.lexical_with_inline_spilled(),
-            inline_slot: Some(value),
-            module: self.module.clone(),
-            external: self.external.clone(),
-            coverage_sites: self.coverage_sites.clone(),
-            coverage_run: self.coverage_run,
-        }
+    fn with_slot(mut self, _name: &str, value: Value) -> Self {
+        self.push_slot(value);
+        self
     }
 
-    fn with_slots(&self, values_oldest_to_newest: Vec<Value>) -> Self {
-        if values_oldest_to_newest.len() == 1 {
-            let mut values = values_oldest_to_newest;
-            let value = values.remove(0);
-            return self.with_slot("", value);
-        }
-        Self {
-            lexical: CompiledLexicalEnv::with_slots(
-                &self.lexical_with_inline_spilled(),
-                values_oldest_to_newest,
-            ),
-            inline_slot: None,
-            module: self.module.clone(),
-            external: self.external.clone(),
-            coverage_sites: self.coverage_sites.clone(),
-            coverage_run: self.coverage_run,
-        }
+    fn with_slots(mut self, values_oldest_to_newest: Vec<Value>) -> Self {
+        Rc::make_mut(&mut self.inline_slots).extend(values_oldest_to_newest);
+        self
     }
 
-    fn with_slot_and_external(&self, name: &str, value: Value) -> Self {
-        Self {
-            lexical: self.lexical_with_inline_spilled(),
-            inline_slot: Some(value.clone()),
-            module: self.module.clone(),
-            external: Env::with_binding(&self.external, name.to_string(), value),
-            coverage_sites: self.coverage_sites.clone(),
-            coverage_run: self.coverage_run,
-        }
+    fn push_slot(&mut self, value: Value) {
+        Rc::make_mut(&mut self.inline_slots).push(value);
+    }
+
+    fn with_slot_and_external(mut self, name: &str, value: Value) -> Self {
+        self.push_slot(value.clone());
+        self.external = Env::with_binding(&self.external, name.to_string(), value);
+        self
     }
 
     fn local_get(&self, depth: u16, slot: u16) -> Option<Value> {
-        if let Some(value) = &self.inline_slot {
-            if depth == 0 && slot == 0 {
-                return Some(value.clone());
-            }
-            let depth = depth.checked_sub(1)?;
-            return self.lexical.get(depth, slot);
+        if slot != 0 {
+            return None;
         }
-        self.lexical.get(depth, slot)
+        let depth = usize::from(depth);
+        if depth < self.inline_slots.len() {
+            let index = self.inline_slots.len().checked_sub(depth + 1)?;
+            return self.inline_slots.get(index).cloned();
+        }
+        let captured_depth = depth.checked_sub(self.inline_slots.len())?;
+        let captured_depth = u16::try_from(captured_depth).ok()?;
+        self.lexical.get(captured_depth, slot)
     }
 
     fn lexical_for_capture(
         &self,
         plan: &ClosureCapturePlan,
     ) -> Result<CompiledLexicalEnv, KernelError> {
-        self.lexical_with_inline_spilled()
-            .capture(&plan.lexical_depths)
+        let Some(max_depth) = plan.lexical_depths.last().copied() else {
+            return Ok(CompiledLexicalEnv::empty());
+        };
+        let mut slots = vec![None; max_depth.saturating_add(1)];
+        for depth in &plan.lexical_depths {
+            let depth_u16 = u16::try_from(*depth).map_err(|_| {
+                KernelError::new(
+                    KernelErrorKind::Internal,
+                    "compiled closure capture depth exceeds u16 range",
+                )
+            })?;
+            let value = self.local_get(depth_u16, 0).ok_or_else(|| {
+                KernelError::new(
+                    KernelErrorKind::Internal,
+                    format!("compiled closure capture slot is missing at depth {depth}"),
+                )
+            })?;
+            slots[*depth] = Some(value);
+        }
+        Ok(CompiledLexicalEnv::from_slots(slots))
     }
 
     fn external_for_capture(&self, plan: &ClosureCapturePlan) -> Env {
         self.external.capture(&plan.external_names)
-    }
-
-    fn lexical_with_inline_spilled(&self) -> CompiledLexicalEnv {
-        match &self.inline_slot {
-            Some(value) => CompiledLexicalEnv::with_slot(&self.lexical, value.clone()),
-            None => self.lexical.clone(),
-        }
     }
 }
 
@@ -619,4 +524,30 @@ pub(crate) fn apply_compiled_closure(
     call: CompiledClosureCall,
 ) -> Result<Value, KernelError> {
     compiled_runtime::eval_compiled_closure_body_scoped(ctx, call)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inline_slot_segment_mutates_in_place_until_runtime_is_shared() {
+        let mut runtime = RuntimeEnv::new(
+            Env::empty(),
+            CompiledModuleCells::empty(),
+            Arc::new(CompiledCoverageSites::default()),
+            None,
+        );
+        let allocation = Rc::as_ptr(&runtime.inline_slots);
+        for _ in 0..512 {
+            runtime.push_slot(Value::data(Term::Nil));
+            assert_eq!(Rc::as_ptr(&runtime.inline_slots), allocation);
+        }
+
+        let mut fork = runtime.clone();
+        fork.push_slot(Value::data(Term::Nil));
+        assert!(!Rc::ptr_eq(&runtime.inline_slots, &fork.inline_slots));
+        assert_eq!(runtime.inline_slots.len(), 512);
+        assert_eq!(fork.inline_slots.len(), 513);
+    }
 }

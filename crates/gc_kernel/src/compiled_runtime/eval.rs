@@ -130,10 +130,10 @@ pub(in super::super) fn eval_cexpr_runtime(
                 continue;
             }
             CExpr::Let(bs, body) => {
-                let mut env2 = cur_env.clone();
-                for (name, rhs) in bs {
+                let mut env2 = cur_env;
+                for (_name, rhs) in bs {
                     let v = eval_cexpr_runtime(ctx, env2.clone(), rhs)?;
-                    env2 = env2.with_slot(name, v);
+                    env2.push_slot(v);
                 }
                 cur_env = env2;
                 cur = body.clone();
