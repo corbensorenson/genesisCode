@@ -535,6 +535,20 @@ for required in (
     if required not in workflow:
         violations.append(f"ci.yml:missing:{required}")
 
+docs_quickstart = (root / "scripts/check_docs_quickstart.sh").read_text(encoding="utf-8")
+require(
+    'WORKTREE="$TMP_ROOT/repo"' in docs_quickstart
+    and ".genesis/build/cargo-worktrees" not in docs_quickstart,
+    "docs quickstart worktree must remain outside reclaimable repository build state",
+)
+require(
+    'git rev-parse --absolute-git-dir' in docs_quickstart
+    and 'export GIT_DIR="$GENESIS_DOCS_QUICKSTART_GIT_DIR"' in docs_quickstart
+    and 'export GIT_WORK_TREE="$PWD"' in docs_quickstart,
+    "docs quickstart temporary snapshot must retain read-only repository history",
+)
+passed("quickstart-ephemeral-worktree-isolation")
+
 require(not violations, "static policy violations: " + ", ".join(violations))
 passed("static-script-and-ci-closure")
 
@@ -562,6 +576,7 @@ expected_controls = {
     "nested-live-lease-reuse",
     "nested-verifier-scope-reservation",
     "observed-toolchain-sensitivity",
+    "quickstart-ephemeral-worktree-isolation",
     "root-relocation-key-stability",
     "resolved-environment-transition",
     "source-edit-incremental-stability",
