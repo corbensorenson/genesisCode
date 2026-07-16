@@ -228,6 +228,21 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("docs/spec/GENESISBENCH_PROTOCOL_v0.1.json")
     );
     assert_eq!(
+        json.pointer("/data/docs/genesisbench_construct_validity_policy")
+            .and_then(Value::as_str),
+        Some("policies/genesisbench_construct_validity_v0.1.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_construct_validity_schema")
+            .and_then(Value::as_str),
+        Some("docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json")
+    );
+    assert_eq!(
+        json.pointer("/data/docs/genesisbench_construct_validity_report")
+            .and_then(Value::as_str),
+        Some("benchmarks/genesisbench/v0.1/construct-validity/report.json")
+    );
+    assert_eq!(
         json.pointer("/data/docs/genesisbench_reference_agent")
             .and_then(Value::as_str),
         Some("docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json")

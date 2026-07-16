@@ -82,6 +82,7 @@ preference.
 - Controlled ablations: eight predeclared conditions over the same nine lineages in `docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json`
 - Canonical execution and adapter contract: `docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md`
 - Signed append-only registry and lexicographic static leaderboard: `docs/spec/GENESISBENCH_REGISTRY_v0.1.json`
+- Construct-validity policy and reproducible study: `policies/genesisbench_construct_validity_v0.1.json` and `benchmarks/genesisbench/v0.1/construct-validity/report.json`
 - Normative explanation and tutorial: `guides/genesisbench.qmd`
 - Contamination-attestation schema: `docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`
 - Public practice suite: nine independent lineages under 27 context conditions in `benchmarks/agent_tasks/v0.1/suite.json`

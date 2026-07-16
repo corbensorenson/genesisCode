@@ -29,7 +29,7 @@ RELEASE_SMOKE_SCRIPT="scripts/check_release_smoke.sh"
 RELEASE_NOTES_SCRIPT="scripts/check_release_notes.sh"
 RELEASE_NOTES_UPDATE="scripts/update_release_notes.sh"
 GC_AGENT_PROFILE_SCRIPT="scripts/check_gc_agent_profile.sh"
-GC_AGENT_PROFILE_UPDATE="scripts/update_gc_agent_profile.sh"
+GC_AGENT_PROFILE_UPDATE="scripts/update_agent_authoring_bundle.sh"
 GC_AGENT_PROFILE="docs/spec/GC_AGENT_PROFILE_v0.3.json"
 GC_AGENT_CORE_CARD_SCRIPT="scripts/check_gc_agent_core_card.sh"
 GC_AGENT_CORE_CARD_UPDATE="scripts/update_gc_agent_core_card.sh"
@@ -298,7 +298,7 @@ require_doc_pattern 'scripts/update_release_notes.sh'
 require_doc_pattern 'docs/program/RELEASE_NOTES_v0.2.0.json'
 require_doc_pattern 'docs/spec/GC_AGENT_PROFILE_v0.3.json'
 require_doc_pattern 'scripts/check_gc_agent_profile.sh'
-require_doc_pattern 'scripts/update_gc_agent_profile.sh'
+require_doc_pattern 'scripts/update_agent_authoring_bundle.sh profile'
 require_doc_pattern 'docs/spec/GC_AGENT_CORE_CARD_v0.3.md'
 require_doc_pattern 'docs/spec/GC_AGENT_CORE_CARD_v0.3.json'
 require_doc_pattern 'scripts/check_gc_agent_core_card.sh'

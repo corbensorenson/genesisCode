@@ -338,7 +338,7 @@ def check() -> None:
     policy = load_json(POLICY_PATH)
     validate_policy(policy)
     output = relative_file(policy["output"], "agent profile output")
-    require(output.read_text(encoding="utf-8") == render_json(), "GC-AGENT-v0.3 is stale; run: bash scripts/update_gc_agent_profile.sh")
+    require(output.read_text(encoding="utf-8") == render_json(), "GC-AGENT-v0.3 is stale; run: bash scripts/update_agent_authoring_bundle.sh profile")
     candidate = load_json(output)
     validate_candidate(candidate)
     print(

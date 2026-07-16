@@ -537,6 +537,18 @@ pub(super) fn cmd_agent_index(
     });
     for (key, path) in [
         (
+            "genesisbench_construct_validity_policy",
+            "policies/genesisbench_construct_validity_v0.1.json",
+        ),
+        (
+            "genesisbench_construct_validity_schema",
+            "docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_construct_validity_report",
+            "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+        ),
+        (
             "genesisbench_registry",
             "docs/spec/GENESISBENCH_REGISTRY_v0.1.json",
         ),

@@ -6,8 +6,12 @@
     "target"
   ],
   "exactDiskEntrypoints": [
+    "scripts/check_agent_authoring_bundle.sh",
+    "scripts/check_cargo_target_dir_policy.sh",
+    "scripts/check_check_update_boundary.sh",
     "scripts/check_docs_quickstart.sh",
-    "scripts/check_gate_manifest.sh"
+    "scripts/check_gate_manifest.sh",
+    "scripts/check_gate_resource_telemetry.sh"
   ],
   "eventKinds": [
     "cache-hit",

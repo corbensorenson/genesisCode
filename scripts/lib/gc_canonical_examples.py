@@ -242,6 +242,21 @@ def validate(document: Any, *, check_identity: bool = True) -> dict[str, Any]:
     return document
 
 
+def refresh(document: Any) -> dict[str, Any]:
+    """Refresh profile and file facts without changing reviewed example semantics."""
+    doc = copy.deepcopy(document)
+    doc["profile"]["sha256"] = hashlib.sha256(PROFILE.read_bytes()).hexdigest()
+    for pair in doc["pairs"]:
+        for side in ("valid", "invalid"):
+            scenario = pair[side]
+            root = ROOT / scenario["root"]
+            for row in scenario["files"]:
+                payload = safe_file(root, row["path"], f"{pair['id']} {side}").read_bytes()
+                row["sha256"] = hashlib.sha256(payload).hexdigest()
+    doc["contentIdentitySha256"] = canonical_identity(doc)
+    return validate(doc)
+
+
 def self_test(document: dict[str, Any]) -> int:
     mutations: list[tuple[str, Any]] = []
 
@@ -281,12 +296,19 @@ def self_test(document: dict[str, Any]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true")
-    parser.add_argument("--print-identity", action="store_true")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--print-identity", action="store_true")
+    mode.add_argument("--refresh", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
-    require(args.check or args.print_identity, "select --check or --print-identity")
     validate_schema(load_json(SCHEMA))
+    if args.refresh:
+        require(not args.self_test, "refresh mode does not run mutation controls")
+        document = refresh(load_json(MANIFEST))
+        MANIFEST.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"gc-canonical-examples: refreshed {MANIFEST.relative_to(ROOT)}")
+        return 0
     document = validate(load_json(MANIFEST), check_identity=args.check)
     if args.print_identity:
         print(canonical_identity(document))

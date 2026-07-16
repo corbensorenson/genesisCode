@@ -27,9 +27,14 @@ from gc_agent_scoring_contract import (
     safe_relative,
     self_test,
     sha256_bytes,
+    render_scoring,
     validate_schema_markers,
     validate_score,
     validate_scoring,
+)
+
+RUNTIME_LOG_PATH_RE = re.compile(
+    r"^\.genesis/logs/(?P<command>[a-z0-9][a-z0-9_.-]*)-[0-9]+-[0-9]+\.gclog$"
 )
 
 def inventory_tree(
@@ -85,6 +90,30 @@ def inventory_identity(files: dict[str, bytes]) -> str:
     return sha256_bytes(canonical_bytes(rows))
 
 
+def normalize_runtime_generated_path(path: str) -> str:
+    """Canonicalize only the runtime's PID/clock-derived private log names."""
+    match = RUNTIME_LOG_PATH_RE.fullmatch(path)
+    if match is None:
+        return path
+    return f".genesis/logs/{match.group('command')}-$EPHEMERAL.gclog"
+
+
+def generated_inventory_identity(files: dict[str, bytes]) -> str:
+    # Keep every payload and duplicate row; only the runtime-private filename is unstable.
+    rows = sorted(
+        (
+            {
+                "path": normalize_runtime_generated_path(path),
+                "bytes": len(payload),
+                "sha256": sha256_bytes(payload),
+            }
+            for path, payload in files.items()
+        ),
+        key=lambda row: (row["path"], row["sha256"], row["bytes"]),
+    )
+    return sha256_bytes(canonical_bytes(rows))
+
+
 def materialize(files: dict[str, bytes], root: Path) -> None:
     for relative, payload in files.items():
         path = root.joinpath(*PurePosixPath(relative).parts)
@@ -136,6 +165,8 @@ def patch_units(before: dict[str, bytes], after: dict[str, bytes]) -> tuple[list
 
 
 def json_pointer(document: Any, pointer: str) -> Any:
+    if pointer == "":
+        return document
     require(pointer.startswith("/"), "assertion pointer is not absolute")
     current = document
     for raw in pointer.split("/")[1:]:
@@ -161,17 +192,25 @@ def assertion_matches(document: Any, assertion: dict[str, Any]) -> bool:
     return isinstance(actual, str) and isinstance(assertion["value"], str) and assertion["value"] in actual
 
 
-def normalize_execution_document(value: Any, selfhost_artifact: Path) -> Any:
-    """Remove the scorer-selected host path without changing language results."""
+def normalize_execution_document(
+    value: Any, selfhost_artifact: Path, *, field_name: str | None = None
+) -> Any:
+    """Remove scorer-selected host and runtime-private names without changing results."""
     if isinstance(value, dict):
         return {
-            key: normalize_execution_document(item, selfhost_artifact)
+            key: normalize_execution_document(item, selfhost_artifact, field_name=key)
             for key, item in value.items()
         }
     if isinstance(value, list):
-        return [normalize_execution_document(item, selfhost_artifact) for item in value]
-    if isinstance(value, str) and value == str(selfhost_artifact):
-        return "$SELFHOST_ARTIFACT"
+        return [
+            normalize_execution_document(item, selfhost_artifact, field_name=field_name)
+            for item in value
+        ]
+    if isinstance(value, str):
+        if value == str(selfhost_artifact):
+            return "$SELFHOST_ARTIFACT"
+        if field_name == "log":
+            return normalize_runtime_generated_path(value)
     return value
 
 
@@ -304,7 +343,7 @@ def run_step(
         else stdout[: resources["maxStdoutBytes"]]
     )
     output_identity = sha256_bytes(accounted_output)
-    generated_identity = inventory_identity(generated)
+    generated_identity = generated_inventory_identity(generated)
     units = generated_bytes + len(accounted_output) + stderr_size + 1
     report = {
         "id": step["id"],
@@ -408,6 +447,55 @@ def parse_toml_subset(payload: bytes) -> dict[str, Any]:
     return document
 
 
+def artifact_contract_report(
+    files: dict[str, bytes], checks: list[dict[str, Any]]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    results = []
+    passed = 0
+    for check in checks:
+        payload = files.get(check["path"])
+        document: Any = None
+        if payload is not None:
+            try:
+                if check["format"] == "json":
+                    document = json.loads(payload.decode("utf-8"), object_pairs_hook=_reject_pairs)
+                elif check["format"] == "toml":
+                    document = parse_toml_subset(payload)
+            except (UnicodeDecodeError, json.JSONDecodeError, ScoringError):
+                document = None
+        matched = document is not None and assertion_matches(document, check)
+        passed += int(matched)
+        results.append(
+            {
+                "format": check["format"],
+                "matched": matched,
+                "operator": check["operator"],
+                "path": check["path"],
+                "pointer": check["pointer"],
+            }
+        )
+    all_passed = passed == len(checks)
+    output = canonical_bytes(results)
+    report = {
+        "id": "artifact-contract",
+        "passed": all_passed,
+        "exitCode": 0 if all_passed else 1,
+        "ok": all_passed,
+        "kind": "genesis/artifact-contract-v0.1",
+        "assertionsPassed": passed,
+        "outputIdentitySha256": sha256_bytes(output),
+        "generatedIdentitySha256": inventory_identity({}),
+        "resourceUnits": max(1, len(output)),
+    }
+    internal = {
+        "generatedBytes": 0,
+        "limitsSatisfied": True,
+        "outputIdentitySha256": report["outputIdentitySha256"],
+        "generatedIdentitySha256": report["generatedIdentitySha256"],
+    }
+    return report, internal
+
+
 def run_submission(
     files: dict[str, bytes],
     case: dict[str, Any],
@@ -416,8 +504,9 @@ def run_submission(
     selfhost_artifact: Path,
     generated_path_prefixes: list[str],
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], int, int, bool]:
+    verification_count = len(case["verification"]) + bool(case["artifactAssertions"])
     require(
-        len(case["verification"]) <= resources["maxVerificationSteps"],
+        verification_count <= resources["maxVerificationSteps"],
         "verification count exceeds scorer policy",
     )
     reports = []
@@ -430,7 +519,26 @@ def run_submission(
         workspace = temp / "workspace"
         workspace.mkdir()
         materialize(files, workspace)
+        if case["artifactAssertions"]:
+            report, facts = artifact_contract_report(files, case["artifactAssertions"])
+            reports.append(report)
+            internal[report["id"]] = facts
+            execution_units += report["resourceUnits"]
         for step in case["verification"]:
+            source_append = step["sourceAppend"]
+            if source_append is not None:
+                relative = safe_relative(source_append["path"], "source append path")
+                require(
+                    source_append["path"] in case["editablePaths"],
+                    "source append escapes the editable surface",
+                )
+                source_path = workspace.joinpath(*relative.parts)
+                require(
+                    source_path.is_file() and not source_path.is_symlink(),
+                    "source append target is unavailable",
+                )
+                with source_path.open("ab") as handle:
+                    handle.write(source_append["source"].encode("utf-8"))
             report, facts = run_step(
                 workspace,
                 temp / "home",
@@ -702,6 +810,7 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--score", action="store_true")
+    mode.add_argument("--render", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--case")
     parser.add_argument("--candidate", type=Path)
@@ -709,6 +818,17 @@ def main() -> int:
     parser.add_argument("--selfhost-artifact", type=Path)
     args = parser.parse_args()
     validate_schema_markers()
+    if args.render:
+        require(
+            not args.self_test
+            and args.case is None
+            and args.candidate is None
+            and args.genesis_bin is None
+            and args.selfhost_artifact is None,
+            "render mode does not accept execution inputs",
+        )
+        sys.stdout.buffer.write(canonical_bytes(render_scoring(load_json(SCORING))))
+        return 0
     scoring = validate_scoring(load_json(SCORING))
     if args.check:
         require(
@@ -745,13 +865,68 @@ def main() -> int:
             )
             require(
                 normalize_execution_document(
-                    {"artifact": "/host/a/toolchain.gc", "value": "42"},
+                    {
+                        "artifact": "/host/a/toolchain.gc",
+                        "log": ".genesis/logs/pkg-build-123-456.gclog",
+                        "value": "42",
+                    },
                     Path("/host/a/toolchain.gc"),
                 )
-                == {"artifact": "$SELFHOST_ARTIFACT", "value": "42"},
-                "selfhost authority path normalization drift",
+                == {
+                    "artifact": "$SELFHOST_ARTIFACT",
+                    "log": ".genesis/logs/pkg-build-$EPHEMERAL.gclog",
+                    "value": "42",
+                },
+                "execution provenance normalization drift",
             )
-            controls += 8
+            require(
+                generated_inventory_identity(
+                    {".genesis/logs/pkg-build-123-456.gclog": b"stable-log\n"}
+                )
+                == generated_inventory_identity(
+                    {".genesis/logs/pkg-build-999-888.gclog": b"stable-log\n"}
+                ),
+                "runtime-private log filename affected generated identity",
+            )
+            require(
+                generated_inventory_identity(
+                    {".genesis/logs/pkg-build-123-456.gclog": b"stable-log\n"}
+                )
+                != generated_inventory_identity(
+                    {".genesis/logs/pkg-build-999-888.gclog": b"tampered-log\n"}
+                ),
+                "runtime-private log payload was excluded from generated identity",
+            )
+            require(
+                normalize_runtime_generated_path(
+                    ".genesis/logs/pkg-build-user-controlled.gclog"
+                )
+                == ".genesis/logs/pkg-build-user-controlled.gclog",
+                "non-runtime log name was normalized",
+            )
+            require(
+                normalize_execution_document(
+                    {"stdout": ".genesis/logs/pkg-build-123-456.gclog"},
+                    Path("/host/a/toolchain.gc"),
+                )
+                == {"stdout": ".genesis/logs/pkg-build-123-456.gclog"},
+                "user-controlled output was normalized as runtime provenance",
+            )
+            artifact_files = {
+                "answer.json": b'{"answer":42,"ok":true}\n',
+                "case.toml": b'name = "benchmark"\nschema = 1\n',
+            }
+            json_report, _ = artifact_contract_report(
+                artifact_files,
+                [{"path": "answer.json", "format": "json", "pointer": "/answer", "operator": "equals", "value": 42}],
+            )
+            require(json_report["passed"], "JSON artifact assertion drift")
+            toml_report, _ = artifact_contract_report(
+                artifact_files,
+                [{"path": "case.toml", "format": "toml", "pointer": "", "operator": "equals", "value": {"name": "benchmark", "schema": 1}}],
+            )
+            require(toml_report["passed"], "TOML artifact assertion drift")
+            controls += 14
         print(
             "gc-agent-scoring: ok "
             f"(dimensions={len(scoring['dimensions'])} tasks={len(scoring['taskPolicies'])} "

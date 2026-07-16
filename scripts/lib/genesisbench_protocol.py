@@ -75,6 +75,7 @@ REGISTRY_CHECKPOINT_SCHEMA = ROOT / "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_
 LEADERBOARD_SCHEMA = ROOT / "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json"
 RUN_EXAMPLE = ROOT / "examples/agent_benchmark_reproducibility/run.json"
 ATTESTATION_FIXTURE = ROOT / "benchmarks/genesisbench/v0.1/contamination.fixture.json"
+ELIGIBILITY_FIXTURE = ROOT / "benchmarks/genesisbench/v0.1/eligibility.fixture.json"
 TASK_BENCHMARK = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
 HELD_OUT = ROOT / "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json"
 MCP_CATALOG_SOURCE = ROOT / "crates/gc_cli_driver/src/mcp/catalog.rs"
@@ -676,11 +677,26 @@ def refresh_profile() -> None:
     PROFILE.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def refresh_fixtures() -> None:
+    """Rebind canonical contamination and eligibility fixtures to the validated run."""
+    run = validate_run_document(load_json(RUN_EXAMPLE), RUN_EXAMPLE)
+    attestation = load_json(ATTESTATION_FIXTURE)
+    attestation["runIdentitySha256"] = run["contentIdentitySha256"]
+    resign(attestation)
+    ATTESTATION_FIXTURE.write_text(
+        json.dumps(attestation, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    profile = validate_profile(load_json(PROFILE))
+    report = evaluate_run(profile, RUN_EXAMPLE, attestation_path=ATTESTATION_FIXTURE)
+    ELIGIBILITY_FIXTURE.write_bytes(canonical_bytes(report))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--refresh-profile", action="store_true")
+    mode.add_argument("--refresh-fixtures", action="store_true")
     parser.add_argument("--run", type=Path)
     parser.add_argument("--attestation", type=Path)
     parser.add_argument("--json", action="store_true")
@@ -718,6 +734,11 @@ def main() -> int:
         refresh_profile()
         document = validate_profile(load_json(PROFILE))
         print(f"genesisbench-protocol: refreshed identity={document['contentIdentitySha256']}")
+        return 0
+    if args.refresh_fixtures:
+        require(args.run is None and args.attestation is None and not args.json and not args.self_test, "fixture refresh accepts no check inputs")
+        refresh_fixtures()
+        print("genesisbench-protocol: refreshed contamination and eligibility fixtures")
         return 0
     document = validate_profile(load_json(PROFILE))
     controls = self_test(document) if args.self_test else 0

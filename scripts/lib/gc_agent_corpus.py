@@ -187,6 +187,27 @@ def validate(document: Any, *, check_identity: bool = True) -> dict[str, Any]:
     return document
 
 
+def refresh(document: Any) -> dict[str, Any]:
+    """Refresh derived file facts while preserving reviewed corpus membership and policy."""
+    doc = copy.deepcopy(document)
+    profile_path = safe_file(doc["profile"]["path"])
+    doc["profile"]["sha256"] = hashlib.sha256(profile_path.read_bytes()).hexdigest()
+    for entry in doc["entries"]:
+        context_bytes = 0
+        for artifact in entry["artifacts"]:
+            path = safe_file(artifact["path"])
+            payload = path.read_bytes()
+            artifact["sha256"] = hashlib.sha256(payload).hexdigest()
+            context_bytes += len(payload)
+        generator = entry["generator"]
+        if generator["kind"] == "deterministic-generator":
+            generator_path = safe_file(generator["path"])
+            generator["sha256"] = hashlib.sha256(generator_path.read_bytes()).hexdigest()
+        entry["difficulty"]["contextBytes"] = context_bytes
+    doc["contentIdentitySha256"] = canonical_identity(doc)
+    return validate(doc)
+
+
 def self_test(document: dict[str, Any]) -> int:
     mutations: list[tuple[str, Any]] = []
     def add(name: str, mutate: Any) -> None:
@@ -214,12 +235,19 @@ def self_test(document: dict[str, Any]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true")
-    parser.add_argument("--print-identity", action="store_true")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--print-identity", action="store_true")
+    mode.add_argument("--refresh", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
-    require(args.check or args.print_identity, "select --check or --print-identity")
     validate_schema_marker(load_json(SCHEMA))
+    if args.refresh:
+        require(not args.self_test, "refresh mode does not run mutation controls")
+        document = refresh(load_json(MANIFEST))
+        MANIFEST.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"gc-agent-corpus: refreshed {MANIFEST.relative_to(ROOT)}")
+        return 0
     document = validate(load_json(MANIFEST), check_identity=args.check)
     if args.print_identity: print(canonical_identity(document))
     if args.check:

@@ -1,3 +1,7 @@
-(let ((v (prim vec/push [1 2] 3)))
-  (let ((m (prim map/put {:a 1} (quote :b) (prim vec/get v 2))))
-    (prim map/get m (quote :b))))
+(def benchmark/repair::lookup
+  (fn (seed)
+    (let ((v (prim vec/push [1 2] seed)))
+      (let ((m (prim map/put {:a 1} (quote :b) (prim vec/get v 2))))
+        (prim map/get m (quote :b))))))
+
+(benchmark/repair::lookup 3)

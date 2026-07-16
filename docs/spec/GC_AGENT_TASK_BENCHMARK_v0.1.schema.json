@@ -57,21 +57,41 @@
         "value": {}
       }
     },
+    "artifactAssertion": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "format", "pointer", "operator", "value"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "format": {"enum": ["json", "toml"]},
+        "pointer": {"type": "string", "pattern": "^(/|$)"},
+        "operator": {"enum": ["equals", "contains"]},
+        "value": {}
+      }
+    },
+    "sourceAppend": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "source"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "source": {"type": "string", "minLength": 1, "maxLength": 4096}
+      }
+    },
     "step": {
       "type": "object", "additionalProperties": false,
-      "required": ["id", "argv", "exitCode", "ok", "kind", "assertions"],
+      "required": ["id", "argv", "exitCode", "ok", "kind", "assertions", "sourceAppend"],
       "properties": {
         "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
         "argv": {"type": "array", "minItems": 3, "items": {"type": "string"}},
         "exitCode": {"type": "integer", "minimum": 0, "maximum": 255},
         "ok": {"type": "boolean"},
         "kind": {"type": "string", "pattern": "^genesis/"},
-        "assertions": {"type": "array", "items": {"$ref": "#/$defs/assertion"}}
+        "assertions": {"type": "array", "items": {"$ref": "#/$defs/assertion"}},
+        "sourceAppend": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sourceAppend"}]}
       }
     },
     "lineage": {
       "type": "object", "additionalProperties": false,
-      "required": ["id", "taskClass", "prompt", "inputRoot", "referenceRoot", "inputFiles", "referenceFiles", "editablePaths", "changedPaths", "oracleExposure", "verification", "contentIdentitySha256"],
+      "required": ["id", "taskClass", "prompt", "inputRoot", "referenceRoot", "inputFiles", "referenceFiles", "editablePaths", "changedPaths", "oracleExposure", "artifactAssertions", "verification", "contentIdentitySha256"],
       "properties": {
         "id": {"type": "string", "pattern": "^lineage-[a-z0-9-]+-[0-9]{3}$"},
         "taskClass": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
@@ -83,6 +103,7 @@
         "editablePaths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/path"}},
         "changedPaths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/path"}},
         "oracleExposure": {"const": "public-development-reference"},
+        "artifactAssertions": {"type": "array", "items": {"$ref": "#/$defs/artifactAssertion"}},
         "verification": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/step"}},
         "contentIdentitySha256": {"$ref": "#/$defs/sha256"}
       }
@@ -112,7 +133,7 @@
     },
     "case": {
       "type": "object", "additionalProperties": false,
-      "required": ["id", "lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256", "taskClass", "contextTier", "prompt", "inputRoot", "referenceRoot", "inputFiles", "referenceFiles", "editablePaths", "changedPaths", "contextBytes", "oracleExposure", "verification"],
+      "required": ["id", "lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256", "taskClass", "contextTier", "prompt", "inputRoot", "referenceRoot", "inputFiles", "referenceFiles", "editablePaths", "changedPaths", "contextBytes", "oracleExposure", "artifactAssertions", "verification"],
       "properties": {
         "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
         "lineageId": {"type": "string", "pattern": "^lineage-[a-z0-9-]+-[0-9]{3}$"},
@@ -130,6 +151,7 @@
         "changedPaths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/path"}},
         "contextBytes": {"type": "integer", "minimum": 1},
         "oracleExposure": {"const": "public-development-reference"},
+        "artifactAssertions": {"type": "array", "items": {"$ref": "#/$defs/artifactAssertion"}},
         "verification": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/step"}}
       }
     }
