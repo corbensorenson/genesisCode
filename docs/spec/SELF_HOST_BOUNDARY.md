@@ -265,6 +265,27 @@ Design constraints:
 - Same protocol/error behavior (`UNHANDLED` / `EFFECT` / `ERROR`).
 - Value hashing/logging remain stable (compiled closures hash like regular closures by source body + env).
 
+#### Primitive-call normalization contract
+
+Source application remains left-associated curried application, including n-ary sugar. The compiled
+evaluator may normalize a fully supplied chain of unary closures whose final body is a known
+primitive applied only to resolved lexical parameters. Eligibility is derived from lexical
+`(depth, slot)` resolution and the primitive allowlist, never source names, literals, benchmark
+identity, or expected results.
+
+The normalization plan is evaluator metadata. It is not serialized in `GCKM5`, does not participate
+in value/effect hashing, and is recomputed from decoded semantic IR. Execution must preserve the
+source argument evaluation order, intermediate closure and final primitive step charges, variable
+coverage hits and statement sites, sealed values/errors, boundary error provenance, memory limits,
+and over-application order. A step limit or enabled coverage must not disable or alter the path.
+Partially supplied calls use ordinary closure semantics and retain their existing body, environment,
+hash, and later completion behavior. Unsupported shapes fall back before evaluating any argument;
+the plan cannot add a primitive or broaden an existing primitive's accepted values.
+
+Native n-ary calls may accumulate newly evaluated arguments without materializing intermediate
+wrapper values. A partial native function is materialized exactly when that partial value becomes
+observable; a fully supplied call invokes once after the same left-to-right argument evaluation.
+
 Current usage:
 - Prelude bootstrap runs through the compiled evaluator.
 - Selfhost toolchain bootstrap modules (`selfhost/{parse,canon,printer,hash,tool_coreform_v1}.gc`) run through the compiled evaluator.

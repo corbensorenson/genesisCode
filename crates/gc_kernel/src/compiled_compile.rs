@@ -334,6 +334,7 @@ fn compile_list(
                     body_term,
                     body,
                     capture_plan: OnceLock::new(),
+                    primitive_forward_plan: OnceLock::new(),
                 });
             }
             "if" => {

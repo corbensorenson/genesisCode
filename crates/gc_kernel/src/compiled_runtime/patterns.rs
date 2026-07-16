@@ -1,27 +1,6 @@
 use super::super::*;
 use super::eval::eval_cexpr_runtime;
 
-pub(super) fn eval_binary_prim_wrapper_inline(
-    ctx: &mut EvalCtx,
-    caller_env: &RuntimeEnv,
-    data: Rc<crate::value::CompiledClosureData>,
-    args: &[Arc<CExpr>],
-) -> Result<Option<Value>, KernelError> {
-    if args.len() != 2
-        || ctx.step_limit.is_some()
-        || ctx.coverage_enabled()
-        || caller_env.coverage_run.is_some()
-    {
-        return Ok(None);
-    }
-    let Some(op) = binary_prim_wrapper_op(&data) else {
-        return Ok(None);
-    };
-    let a = eval_cexpr_runtime(ctx, caller_env.clone(), &args[0])?;
-    let b = eval_cexpr_runtime(ctx, caller_env.clone(), &args[1])?;
-    Ok(Some(prim_op2(ctx, op, a, b)?))
-}
-
 pub(super) fn eval_byte_get_or_nil_inline(
     ctx: &mut EvalCtx,
     caller_env: &RuntimeEnv,

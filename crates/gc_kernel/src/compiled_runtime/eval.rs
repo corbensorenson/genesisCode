@@ -1,5 +1,7 @@
 use super::super::*;
+use super::PrimitiveForwardPlan;
 use super::apply::{ApplyControl, apply_value_to_arg, eval_app_n_runtime};
+use super::primitive_forward::eval_primitive_forward_inline;
 
 pub(in super::super) fn eval_cexpr_runtime(
     ctx: &mut EvalCtx,
@@ -146,8 +148,12 @@ pub(in super::super) fn eval_cexpr_runtime(
                 body_term,
                 body,
                 capture_plan,
+                primitive_forward_plan,
             } => {
                 let plan = capture_plan.get_or_init(|| ClosureCapturePlan::for_body(body));
+                let primitive_forward_plan = primitive_forward_plan
+                    .get_or_init(|| PrimitiveForwardPlan::derive(body).map(Arc::new))
+                    .clone();
                 return Ok(Value::compiled_closure(
                     param.clone(),
                     body_term.clone(),
@@ -155,6 +161,7 @@ pub(in super::super) fn eval_cexpr_runtime(
                     cur_env.external_for_capture(plan),
                     Some(cur_env.lexical_for_capture(plan)?),
                     Some(cur_env.module.clone()),
+                    primitive_forward_plan,
                 ));
             }
             CExpr::Prim { op, args } => {
@@ -206,7 +213,25 @@ pub(in super::super) fn eval_cexpr_runtime(
                 return Ok(Value::data(Term::Nil));
             }
             CExpr::App(f, x) => {
-                let fv = eval_cexpr_runtime(ctx, cur_env.clone(), f)?;
+                let mut fv = eval_cexpr_runtime(ctx, cur_env.clone(), f)?;
+                if let Value::CompiledClosure(data) = fv {
+                    if let Some(control) = eval_primitive_forward_inline(
+                        ctx,
+                        &cur_env,
+                        data.clone(),
+                        std::slice::from_ref(x),
+                    )? {
+                        match control {
+                            ApplyControl::Tail { runtime, body } => {
+                                cur_env = runtime;
+                                cur = body;
+                                continue;
+                            }
+                            ApplyControl::Value(value) => return Ok(value),
+                        }
+                    }
+                    fv = Value::CompiledClosure(data);
+                }
                 let xv = eval_cexpr_runtime(ctx, cur_env.clone(), x)?;
                 match apply_value_to_arg(ctx, &cur_env, fv, xv, true)? {
                     ApplyControl::Tail { runtime, body } => {
