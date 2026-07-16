@@ -17,6 +17,7 @@ source = Path("scripts/update_agent_authoring_bundle.sh").read_text(encoding="as
 all_branch = source.split("  all)\n", 1)[1].split("    ;;", 1)[0]
 expected = [
     "update_profile",
+    "update_diagnostics",
     "update_derived_agent_surfaces",
     "update_canonical_examples",
     "update_task_benchmarks",

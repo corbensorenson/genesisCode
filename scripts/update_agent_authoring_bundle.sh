@@ -10,6 +10,7 @@ usage: scripts/update_agent_authoring_bundle.sh <component>
 
 components:
   profile
+  diagnostics
   derived-agent-surfaces
   canonical-examples
   task-benchmarks
@@ -53,6 +54,14 @@ update_profile() {
     python3 scripts/lib/gc_agent_profile.py --render
   bash scripts/check_gc_agent_profile.sh
   echo "update-agent-authoring-bundle: refreshed profile"
+}
+
+update_diagnostics() {
+  bash scripts/update_gc_diagnostic_catalog.sh
+  bash scripts/update_cli_diagnostic_goldens.sh
+  bash scripts/update_gc_repair_utility_report.sh
+  bash scripts/check_cli_diagnostics_contract.sh
+  echo "update-agent-authoring-bundle: refreshed diagnostic authorities and evidence"
 }
 
 update_derived_agent_surfaces() {
@@ -165,6 +174,7 @@ update_corpus() {
 component="${1:-}"
 case "$component" in
   profile) update_profile ;;
+  diagnostics) update_diagnostics ;;
   derived-agent-surfaces) update_derived_agent_surfaces ;;
   canonical-examples) update_canonical_examples ;;
   task-benchmarks) update_task_benchmarks ;;
@@ -177,6 +187,7 @@ case "$component" in
   corpus) update_corpus ;;
   all)
     update_profile
+    update_diagnostics
     update_derived_agent_surfaces
     update_canonical_examples
     update_task_benchmarks
