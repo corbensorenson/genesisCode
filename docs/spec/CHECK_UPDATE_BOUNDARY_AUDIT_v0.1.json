@@ -821,13 +821,13 @@
       "execution_helper_closure": [
         {
           "path": "scripts/render_cargo_target_dir_policy_report.sh",
-          "sha256": "166aaad5c06618ab4840358e22dab3d21b33c214567526a7f3d23ed4074d912a"
+          "sha256": "6fa7ace534089fafb30c76036fd7552ee5397e588396bc88c8b2257794a2c2aa"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cargo_target_dir_policy_report.sh"
       ],
-      "execution_identity_sha256": "562450a46ca62511d585af8fecde850c76c0aed9518e6189437134ae3c36ae84",
+      "execution_identity_sha256": "125ecf0cdb1bfaaee43f3ee042b46bfe5ed1b2a303c7558324661a046be12970",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1463,17 +1463,15 @@
       "direct_update_invocations": [],
       "direct_write_candidates": [
         "\"mkdir -p .tmp\",",
-        "mkdir -p \"$(dirname \"$WORKTREE_STATE\")\"",
         "mkdir -p \"$WORKTREE\"",
         "plan_json.write_text(",
-        "rm -rf \"$LOCK_DIR\"",
         "rm -rf \"$TMP_ROOT\"",
         "rm -rf \"$WORKTREE\"",
         "run_script.write_text(\"\\n\\n\".join(script_lines) + \"\\n\", encoding=\"utf-8\")"
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "67615ad511ac852e6c3b875e6e7cddd2f2675277dd4cd5cff6b975fa625561bc",
+      "execution_identity_sha256": "b76d99cec379d2550ae5c258f43bbe188f709a60e021c0e9f570ef041c128b4b",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1484,15 +1482,13 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "d35e17020062229fa35a7b05f92e01066786c064986456dab2f2fa68259bbca1",
+      "sha256": "d07bc08fc40672f94b43c66686810417b4d1d5f77701a04a5a1915d4826eb663",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
         "\"mkdir -p .tmp\",",
-        "mkdir -p \"$(dirname \"$WORKTREE_STATE\")\"",
         "mkdir -p \"$WORKTREE\"",
         "plan_json.write_text(",
-        "rm -rf \"$LOCK_DIR\"",
         "rm -rf \"$TMP_ROOT\"",
         "rm -rf \"$WORKTREE\"",
         "run_script.write_text(\"\\n\\n\".join(script_lines) + \"\\n\", encoding=\"utf-8\")"

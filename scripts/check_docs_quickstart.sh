@@ -6,6 +6,7 @@ genesis_gate_telemetry_reexec "$0" "$@"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+export GENESIS_DOCS_QUICKSTART_GIT_DIR="$(git rev-parse --absolute-git-dir)"
 
 # boundary: dynamic-compilation-subject (executable documentation includes Cargo commands)
 
@@ -22,39 +23,14 @@ for doc in "${DOCS[@]}"; do
 done
 
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/genesis-docs-quickstart.XXXXXX")"
-WORKTREE_STATE="$ROOT_DIR/.genesis/build/cargo-worktrees/v1/docs-quickstart"
-WORKTREE="$WORKTREE_STATE/repo"
-LOCK_DIR="$WORKTREE_STATE.lock"
-LOCK_HELD=0
+WORKTREE="$TMP_ROOT/repo"
 cleanup() {
   rm -rf "$TMP_ROOT"
-  if [[ "$LOCK_HELD" == "1" ]]; then
-    rm -rf "$LOCK_DIR"
-  fi
 }
 trap cleanup EXIT
 
 RUN_SCRIPT="$TMP_ROOT/run_quickstart.sh"
 PLAN_JSON="$TMP_ROOT/quickstart_plan.json"
-
-mkdir -p "$(dirname "$WORKTREE_STATE")"
-for _ in $(seq 1 120); do
-  if mkdir "$LOCK_DIR" 2>/dev/null; then
-    printf '%s\n' "$$" >"$LOCK_DIR/pid"
-    LOCK_HELD=1
-    break
-  fi
-  owner="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
-  if [[ -n "$owner" && "$owner" =~ ^[0-9]+$ ]] && ! kill -0 "$owner" 2>/dev/null; then
-    rm -rf "$LOCK_DIR"
-    continue
-  fi
-  sleep 1
-done
-if [[ "$LOCK_HELD" != "1" ]]; then
-  echo "docs-quickstart: timed out waiting for stable worktree lock: $LOCK_DIR" >&2
-  exit 1
-fi
 
 if command -v rsync >/dev/null 2>&1; then
   mkdir -p "$WORKTREE"
@@ -159,6 +135,8 @@ script_lines = [
     "set -euo pipefail",
     'source scripts/lib/cargo_target_dir.sh',
     f"GENESIS_DOCS_QUICKSTART_ROOT={shlex.quote(str(root))}",
+    'export GIT_DIR="$GENESIS_DOCS_QUICKSTART_GIT_DIR"',
+    'export GIT_WORK_TREE="$PWD"',
     '# Discard only authenticated inherited resolver state before rotating the build key.',
     'genesis_clear_resolved_cargo_target_dir "docs-quickstart-inherited-cache"',
     '# Executable docs need behavioral coverage, not multi-gigabyte debug symbols.',
