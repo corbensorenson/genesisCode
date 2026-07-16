@@ -171,14 +171,11 @@ fn run_bridge_process_once(
         code: format!("{family}/bridge-spawn"),
         message: e.to_string(),
     })?;
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(payload_frame.as_bytes())
-            .map_err(|e| BridgeError {
-                code: format!("{family}/bridge-stdin-write"),
-                message: e.to_string(),
-            })?;
-    }
+    let write_result = child
+        .stdin
+        .take()
+        .map(|mut stdin| stdin.write_all(payload_frame.as_bytes()))
+        .unwrap_or(Ok(()));
     let out = child.wait_with_output().map_err(|e| BridgeError {
         code: format!("{family}/bridge-exec"),
         message: e.to_string(),
@@ -195,7 +192,25 @@ fn run_bridge_process_once(
             message: msg,
         });
     }
+    validate_bridge_stdin_write(family, write_result)?;
     Ok(out)
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn validate_bridge_stdin_write(
+    family: &str,
+    result: std::io::Result<()>,
+) -> Result<(), BridgeError> {
+    match result {
+        Ok(()) => Ok(()),
+        // A bridge may not need its payload and can close stdin after producing a
+        // successful response. The child status is validated before this helper.
+        Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        Err(error) => Err(BridgeError {
+            code: format!("{family}/bridge-stdin-write"),
+            message: error.to_string(),
+        }),
+    }
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -342,10 +357,6 @@ fn run_bridge_process_once_with_timeout(
         code: format!("{family}/bridge-thread"),
         message: "bridge stdin pump panicked".to_string(),
     })?;
-    write_result.map_err(|error| BridgeError {
-        code: format!("{family}/bridge-stdin-write"),
-        message: error.to_string(),
-    })?;
     let stdout = reader
         .join()
         .map_err(|_| BridgeError {
@@ -383,6 +394,7 @@ fn run_bridge_process_once_with_timeout(
             message: msg,
         });
     }
+    validate_bridge_stdin_write(family, write_result)?;
     Ok(out)
 }
 

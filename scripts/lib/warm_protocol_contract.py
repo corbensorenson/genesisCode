@@ -124,7 +124,7 @@ MCP_REQUIRED_TESTS = {
     "mcp_negotiates_roots_and_executes_parse_with_strict_progress",
     "mcp_executes_transactional_session_through_generated_cli_routes",
     "mcp_rejects_batches_tasks_and_escaped_roots_without_panicking",
-    "mcp_eof_cancels_and_reaps_every_accepted_call_with_audited_provenance",
+    "mcp_eof_terminalizes_every_accepted_call_with_audited_provenance",
 }
 TRANSACTION = "genesis/agent-transaction-v0.1"
 WORKSPACE_SNAPSHOT = "genesis/workspace-snapshot-v0.1"

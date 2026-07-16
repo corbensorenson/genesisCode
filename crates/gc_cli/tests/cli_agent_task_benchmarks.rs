@@ -1,8 +1,9 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::fs::{self, OpenOptions};
+use std::io::Write as _;
+use std::path::{Component, Path, PathBuf};
 
 fn repository_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -47,28 +48,93 @@ fn run_json(root: &Path, workspace: &Path, argv: &Value) -> (i32, Value) {
     (output.status.code().unwrap_or(-1), document)
 }
 
-fn assert_step(root: &Path, workspace: &Path, task: &str, step: &Value) {
+fn apply_source_append(workspace: &Path, editable_paths: &Value, source_append: &Value) {
+    if source_append.is_null() {
+        return;
+    }
+    let relative_raw = source_append["path"].as_str().expect("source append path");
+    assert!(
+        editable_paths
+            .as_array()
+            .expect("editable paths")
+            .iter()
+            .any(|path| path.as_str() == Some(relative_raw)),
+        "source append path must be in the case editable surface: {relative_raw}"
+    );
+    let relative = Path::new(relative_raw);
+    assert!(
+        !relative.as_os_str().is_empty()
+            && relative
+                .components()
+                .all(|component| matches!(component, Component::Normal(_))),
+        "source append path must be a non-empty safe relative path: {relative_raw}"
+    );
+
+    let mut target = workspace.to_path_buf();
+    for component in relative.components() {
+        target.push(component.as_os_str());
+        let metadata = fs::symlink_metadata(&target).unwrap_or_else(|error| {
+            panic!(
+                "source append target component is unavailable: {}; {error}",
+                target.display()
+            )
+        });
+        assert!(
+            !metadata.file_type().is_symlink(),
+            "source append target cannot traverse a symlink: {}",
+            target.display()
+        );
+    }
+    assert!(target.is_file(), "source append target must be a file");
+    OpenOptions::new()
+        .append(true)
+        .open(&target)
+        .expect("open source append target")
+        .write_all(
+            source_append["source"]
+                .as_str()
+                .expect("source append contents")
+                .as_bytes(),
+        )
+        .expect("append benchmark source");
+}
+
+fn assert_step(root: &Path, workspace: &Path, task: &str, editable_paths: &Value, step: &Value) {
+    apply_source_append(workspace, editable_paths, &step["sourceAppend"]);
     let (code, document) = run_json(root, workspace, &step["argv"]);
     assert_eq!(
         code, step["exitCode"],
         "benchmark exit code drifted for {task}/{}: {document}",
         step["id"]
     );
-    assert_eq!(document["ok"], step["ok"], "benchmark ok marker drifted");
-    assert_eq!(document["kind"], step["kind"], "benchmark kind drifted");
+    assert_eq!(
+        document["ok"], step["ok"],
+        "benchmark ok marker drifted for {task}/{}",
+        step["id"]
+    );
+    assert_eq!(
+        document["kind"], step["kind"],
+        "benchmark kind drifted for {task}/{}",
+        step["id"]
+    );
     for assertion in step["assertions"].as_array().expect("assertions") {
         let pointer = assertion["pointer"].as_str().expect("JSON pointer");
         let actual = document
             .pointer(pointer)
             .unwrap_or_else(|| panic!("missing benchmark pointer {pointer}"));
         match assertion["operator"].as_str().expect("assertion operator") {
-            "equals" => assert_eq!(actual, &assertion["value"], "assertion failed at {pointer}"),
+            "equals" => assert_eq!(
+                actual, &assertion["value"],
+                "assertion failed for {task}/{} at {pointer}",
+                step["id"]
+            ),
             "contains" => assert!(
                 actual
                     .as_str()
                     .expect("contains target")
                     .contains(assertion["value"].as_str().expect("contains value")),
-                "contains assertion failed at {pointer}"
+                "contains assertion failed for {task}/{} at {pointer}",
+                step["id"]
             ),
             operator => panic!("unsupported benchmark assertion {operator}"),
         }
@@ -190,7 +256,7 @@ fn task_benchmark_matrix_executes_public_references_through_production_cli() {
             workspace.path(),
         );
         for step in case["verification"].as_array().expect("verification steps") {
-            assert_step(&root, workspace.path(), task, step);
+            assert_step(&root, workspace.path(), task, &case["editablePaths"], step);
         }
 
         if task == "policy-minimization" {
