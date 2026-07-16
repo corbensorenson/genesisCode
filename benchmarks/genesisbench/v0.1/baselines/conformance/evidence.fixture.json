@@ -1,0 +1,201 @@
+{
+  "attempts": [
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "completion-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [],
+      "inputTokens": 1000,
+      "latencyMs": 0,
+      "outcome": "solved",
+      "outputTokens": 100,
+      "qualityScoreBasisPoints": 9000,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "deployment-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [
+        "semantic/incorrect"
+      ],
+      "inputTokens": 1001,
+      "latencyMs": 1,
+      "outcome": "unsolved",
+      "outputTokens": 101,
+      "qualityScoreBasisPoints": null,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "generation-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [
+        "semantic/incorrect"
+      ],
+      "inputTokens": 1002,
+      "latencyMs": 2,
+      "outcome": "unsolved",
+      "outputTokens": 102,
+      "qualityScoreBasisPoints": null,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "package-migration-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [],
+      "inputTokens": 1003,
+      "latencyMs": 3,
+      "outcome": "solved",
+      "outputTokens": 103,
+      "qualityScoreBasisPoints": 8997,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "performance-repair-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [
+        "semantic/incorrect"
+      ],
+      "inputTokens": 1004,
+      "latencyMs": 4,
+      "outcome": "unsolved",
+      "outputTokens": 104,
+      "qualityScoreBasisPoints": null,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "policy-minimization-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [
+        "semantic/incorrect"
+      ],
+      "inputTokens": 1005,
+      "latencyMs": 5,
+      "outcome": "unsolved",
+      "outputTokens": 105,
+      "qualityScoreBasisPoints": null,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "refactor-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [],
+      "inputTokens": 1006,
+      "latencyMs": 6,
+      "outcome": "solved",
+      "outputTokens": 106,
+      "qualityScoreBasisPoints": 8994,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "repair-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [
+        "semantic/incorrect"
+      ],
+      "inputTokens": 1007,
+      "latencyMs": 7,
+      "outcome": "unsolved",
+      "outputTokens": 107,
+      "qualityScoreBasisPoints": null,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    },
+    {
+      "attempt": 0,
+      "bundlePath": null,
+      "bundleSha256": null,
+      "capabilityRequests": [],
+      "caseId": "replay-investigation-small",
+      "costMicrounits": 0,
+      "evidenceClass": "synthetic-conformance",
+      "failureCodes": [
+        "semantic/incorrect"
+      ],
+      "inputTokens": 1008,
+      "latencyMs": 8,
+      "outcome": "unsolved",
+      "outputTokens": 108,
+      "qualityScoreBasisPoints": null,
+      "resourceFacts": {
+        "synthetic": true
+      },
+      "runIdentitySha256": null,
+      "systemId": "synthetic-frontier"
+    }
+  ],
+  "contentIdentitySha256": "bc71111c750638ccaefedf912b750e10cf1f6d86b4352e92f23c12ac7658f85d",
+  "kind": "genesis/genesisbench-baseline-evidence-v0.1",
+  "predeclarationIdentitySha256": "1ca5c77c3f8ddee5ec4ccbfd014e6450e20d484622b6796ab1bc309ec50285b8",
+  "publicationMode": "synthetic-conformance",
+  "version": "0.1.0"
+}

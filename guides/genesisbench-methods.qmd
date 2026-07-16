@@ -1,0 +1,102 @@
+---
+title: "GenesisBench baseline methods"
+description: "Predeclared real-model execution, complete evidence custody, lineage-aware analysis, and reproducible publication."
+---
+
+# Scope and research question
+
+This methods profile asks how reliably a disclosed immutable model learns and
+engineers GenesisCode under the fixed Cold Acquisition scaffold. It does not
+measure general intelligence, infer training-data absence, use model preference
+as a correctness oracle, or let economics improve rank.
+
+The machine protocol is
+[`GENESISBENCH_BASELINE_PROTOCOL_v0.1.json`](../docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json).
+This chapter is its normative human-readable workflow. Both are subordinate to
+the frozen GenesisBench profile, front door, scoring
+authority, signed registry, and construct-validity study.
+
+# Design
+
+The study begins with a nine-cell reality gate: one immutable frontier-general
+model, one public small-context case from each core task class, one attempt per
+case, one frozen scaffold, and no between-class tuning. Its stop budget is
+locked before the first request. Matrix expansion is forbidden until all nine
+attempts have closed bundles that validate and replay without model access.
+
+The expansion stage contains every 27 public context condition for at least one
+system in each declared class: frontier-general, code-specialized, open-weight,
+small-local, and disclosed open-agent. Three predeclared attempts per cell
+support bounded pass@3. Attempt zero remains pass@1, and no failed attempt is
+discarded when a later attempt succeeds. The matrix predeclaration binds the
+content identity of the passed authentic reality-gate publication; validation
+requires that publication and rejects a synthetic or unsuccessful gate.
+
+# Outcomes and scoring
+
+The closed outcomes are solved, unsolved, invalid, abstained, and missing. A
+solve requires a valid deterministic score; partial quality from an invalid
+candidate cannot count as a solve. Failures use the machine-readable
+[`GENESISBENCH_FAILURE_TAXONOMY_v0.1.json`](../docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json).
+
+Headline solve rate uses one primary small-context condition per lineage.
+Context tiers are repeated conditions on the same nine lineages. Reports keep
+those dependencies explicit, use lineage-clustered uncertainty, and publish
+missing, invalid, abstained, solved, and unsolved denominators.
+
+# Reproducibility and custody
+
+Each predeclaration binds the exact protocol, model revision, model family,
+provider, adapter identity, track, training provenance, operator, conflicts,
+cost ceiling, call count, and wall-time ceiling. Each authentic evidence row
+binds one deterministic bundle and run identity. Validation safely extracts the
+bundle, closes its tree, verifies the exact adapter and model, checks case and
+score bindings, and compares token and elapsed-time facts.
+
+Raw requests, responses, provider facts, failures, capability requests, and
+resource facts remain in retained evidence. Credentials do not. Replay never
+reinvokes the adapter or model. Accepted publications regenerate from the
+predeclaration and evidence with a read-only command.
+
+# Teacher trajectory policy
+
+Potential training teachers are selected per task class from authentic verified
+solutions, not from aggregate rank. The publication retains the complete
+trajectory and safety/resource facts. This supports later GenesisModel corpus
+review without turning a benchmark score into automatic training admission.
+
+# Contamination and chronology
+
+All 27 public conditions are public development references. Their results are
+never temporal-clean. A future temporal-clean claim requires a separately
+committed private case created after an independently proven immutable model
+release and continuously held under the documented custody boundary. Missing
+release or training provenance remains unknown rather than being upgraded by
+assumption.
+
+# Economics and limitations
+
+Cost, latency, energy, and hardware are published as non-ranking facts. Provider
+service changes, unavailable immutable revisions, small lineage count, public
+oracle exposure, and project-controlled operation limit interpretation. The
+benchmark remains project-controlled Preview until the independent governance
+requirements in the roadmap are satisfied.
+
+# Reproduce
+
+```sh
+python3 scripts/lib/genesisbench_baselines.py --check --self-test
+
+python3 scripts/lib/genesisbench_baselines.py \
+  --predeclaration study/predeclaration.json \
+  --reality-gate-publication study/reality-gate-publication.json \
+  --evidence study/evidence.json \
+  --bundle-root study/bundles \
+  --genesis-bin target/debug/genesis \
+  --selfhost-artifact selfhost/toolchain.gc \
+  --publication study/publication.json
+```
+
+The first command proves the static authority and that synthetic evidence cannot
+pass the reality gate. The second proves one authentic publication from retained
+bundles without provider or model access.

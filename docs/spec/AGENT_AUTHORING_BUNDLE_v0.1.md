@@ -38,6 +38,13 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json`
+- `docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_BASELINE_PREDECLARATION_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_BASELINE_EVIDENCE_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json`
+- `docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json`
 - `policies/genesisbench_construct_validity_v0.1.json`
 - `docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json`
 - `benchmarks/genesisbench/v0.1/construct-validity/report.json`
@@ -85,7 +92,10 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `benchmarks/genesisbench/v0.1/adapters/direct-local-runtime.json`
 - `benchmarks/genesisbench/v0.1/adapters/hosted-api.json`
 - `benchmarks/genesisbench/v0.1/adapters/local-openai-compatible.json`
+- `benchmarks/genesisbench/v0.1/baselines/conformance/evidence.fixture.json`
+- `benchmarks/genesisbench/v0.1/baselines/conformance/publication.fixture.json`
 - `guides/genesisbench.qmd`
+- `guides/genesisbench-methods.qmd`
 - `scripts/lib/gc_agent_scoring.py`
 - `scripts/lib/gc_agent_scoring_contract.py`
 - `scripts/lib/gc_agent_benchmark_run.py`
@@ -98,6 +108,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `scripts/lib/genesisbench_reference_agent.py`
 - `scripts/lib/genesisbench_front_door.py`
 - `scripts/lib/genesisbench_registry.py`
+- `scripts/lib/genesisbench_baselines.py`
 - `scripts/lib/genesisbench_construct_validity.py`
 - `scripts/lib/gc_held_out_evaluation.py`
 - `scripts/lib/gc_capability_lease.py`
@@ -132,6 +143,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Execute transport-neutral benchmark runs only through `genesis bench`. Validate the closed five-class adapter profile with `python3 scripts/lib/genesisbench_front_door.py check --self-test`; retain failed attempts, never retry invisibly, replay without model or adapter access, and use deterministic `.gcbundle` plus local immutable outbox submission. An execution bundle is not ranked until R1.4.m independently validates, rescores, signs, and binds track, contamination, cohort, and submitter evidence.
 - Declare exactly one content-addressed GenesisBench track. Use `cold-acquisition` only for an unadapted model under the fixed reference scaffold, `open-agent` for disclosed custom orchestration without claimed adaptation, `genesis-adapted` only with a public lineage-manifest identity, and `embedded-local` only with offline inference plus measured or hard-enforced combined model/runtime memory evidence. Never compare or aggregate across track, scaffold, profile, epoch, context/tool, attempt-policy, or hardware-class cohort keys.
 - Analyze results only through `GENESISBENCH_ANALYSIS_PLAN_v0.1` and `scripts/lib/genesisbench_analysis.py`. Use one primary condition per lineage, keep repeated-condition summaries clustered by lineage, publish solved/unsolved/invalid/abstained/missing denominators, Wilson uncertainty, paired exact effects, and Holm correction, and emit `indeterminate` rather than unsupported pairwise decimal ranks. Public conformance observations are always unranked and cannot trigger saturation.
+- Run real-model baselines only from a locked `GENESISBENCH_BASELINE_PREDECLARATION_v0.1` under `GENESISBENCH_BASELINE_PROTOCOL_v0.1`. Complete the nine-task-class reality gate before matrix expansion, bind the matrix predeclaration to that authentic publication, preserve every expected attempt or explicit missing cell, validate authentic closed bundles under one evidence root, report pass@1 separately from bounded pass@k, choose potential teachers per task class from exact verified bundle trajectories, and never let a synthetic fixture satisfy the gate or let cost improve rank.
 - Submit only signed closed bundles through `genesis bench submit`, and admit them only through a policy-pinned local registry. Registry admission revalidates and independently rescores before deriving eligibility; verification repeats derivation from retained bytes. Compare only complete systems inside one exact cohort by solve rate, conditional quality, authority excess, context/tool use, and repair use, in that order. Cost and latency remain published facts and never break a quality tie.
 - Treat `GenesisBench-Construct-Validity-v0.1` as the minimum evidence that a score measures GenesisCode engineering rather than reference-patch imitation. Alternative source layouts must pass behavioral, artifact, capability, obligation, resource, and metamorphic contracts; all targeted invalid controls and evaluator/scorer mutants must fail. Model identity, provider latency, prompt length, formatting, and preference are never correctness or quality oracles.
 - A fully local benchmark model may run only through `genesis.agent-model-runner.v0.1` / `infer` on the pinned `host/plugin::command` bridge profile. Preserve its request, response, tool transcript, and `.gclog`; replay must not reinvoke the model. This benchmark integration does not preempt the future standard model API.

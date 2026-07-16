@@ -1,0 +1,228 @@
+{
+  "$defs": {
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "utc": {
+      "pattern": "^20[0-9]{2}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]Z$",
+      "type": "string"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-baseline-predeclaration-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contentIdentitySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "kind": {
+      "const": "genesis/genesisbench-baseline-predeclaration-v0.1"
+    },
+    "lockedAtUtc": {
+      "$ref": "#/$defs/utc"
+    },
+    "nonClaims": {
+      "items": {
+        "maxLength": 512,
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "operator": {
+      "additionalProperties": false,
+      "properties": {
+        "conflicts": {
+          "items": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "custodyStatement": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "custodyStatement",
+        "conflicts"
+      ],
+      "type": "object"
+    },
+    "phase": {
+      "enum": [
+        "reality-gate",
+        "public-matrix"
+      ]
+    },
+    "protocolIdentitySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "realityGatePublicationIdentitySha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stopBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "type": "string"
+        },
+        "maximumCostMicrounits": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maximumModelCalls": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "maximumWallTimeMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "stopOnBudgetExhaustion": {
+          "const": true
+        }
+      },
+      "required": [
+        "maximumModelCalls",
+        "maximumCostMicrounits",
+        "currency",
+        "maximumWallTimeMs",
+        "stopOnBudgetExhaustion"
+      ],
+      "type": "object"
+    },
+    "studyId": {
+      "$ref": "#/$defs/id"
+    },
+    "systems": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "adapterClass": {
+            "enum": [
+              "command-plugin",
+              "direct-local-runtime",
+              "hosted-api",
+              "local-openai-compatible"
+            ]
+          },
+          "adapterIdentitySha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "familyId": {
+            "$ref": "#/$defs/id"
+          },
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "immutable": {
+            "const": true
+          },
+          "modelId": {
+            "$ref": "#/$defs/id"
+          },
+          "providerId": {
+            "$ref": "#/$defs/id"
+          },
+          "releaseEvidenceIdentitySha256": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/sha256"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "$ref": "#/$defs/id"
+          },
+          "systemClass": {
+            "enum": [
+              "code-specialized",
+              "frontier-general",
+              "open-agent",
+              "open-weight",
+              "small-local"
+            ]
+          },
+          "trackId": {
+            "enum": [
+              "cold-acquisition",
+              "embedded-local",
+              "genesis-adapted",
+              "open-agent"
+            ]
+          },
+          "trainingProvenance": {
+            "enum": [
+              "declared-public",
+              "none",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "systemClass",
+          "familyId",
+          "providerId",
+          "modelId",
+          "revision",
+          "immutable",
+          "adapterClass",
+          "adapterIdentitySha256",
+          "trackId",
+          "trainingProvenance",
+          "releaseEvidenceIdentitySha256"
+        ],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "type": "array"
+    },
+    "version": {
+      "const": "0.1.0"
+    }
+  },
+  "required": [
+    "kind",
+    "version",
+    "studyId",
+    "lockedAtUtc",
+    "protocolIdentitySha256",
+    "phase",
+    "realityGatePublicationIdentitySha256",
+    "systems",
+    "stopBudget",
+    "operator",
+    "nonClaims",
+    "contentIdentitySha256"
+  ],
+  "title": "GenesisBench baseline predeclaration v0.1",
+  "type": "object"
+}
