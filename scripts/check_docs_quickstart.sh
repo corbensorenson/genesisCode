@@ -159,6 +159,8 @@ script_lines = [
     "set -euo pipefail",
     'source scripts/lib/cargo_target_dir.sh',
     f"GENESIS_DOCS_QUICKSTART_ROOT={shlex.quote(str(root))}",
+    '# Discard only authenticated inherited resolver state before rotating the build key.',
+    'genesis_clear_resolved_cargo_target_dir "docs-quickstart-inherited-cache"',
     '# Executable docs need behavioral coverage, not multi-gigabyte debug symbols.',
     'export CARGO_INCREMENTAL=0',
     'export CARGO_PROFILE_DEV_DEBUG=0',
