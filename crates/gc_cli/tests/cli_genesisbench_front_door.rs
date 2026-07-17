@@ -534,18 +534,30 @@ fn retained_available_luna_campaign_replays_with_typed_harness_defects() {
         };
         assert_eq!(validated["outcome"], expected);
 
-        let replayed = data(&run_genesis(
+        let replay = run_genesis(
             &root,
             &artifact,
             &["bench", "agent-replay", "--run", run.to_str().unwrap()],
-        ));
-        assert_eq!(replayed["agentAccessed"], false);
-        assert_eq!(replayed["modelAccessed"], false);
-        assert_eq!(replayed["allFieldsValidated"], true);
-        if case == "package-migration-small" {
-            assert_eq!(replayed["independentRescoreMatched"], true);
+        );
+        let archive_platform_matches = cfg!(all(target_os = "macos", target_arch = "aarch64"));
+        if case == "package-migration-small" && !archive_platform_matches {
+            assert!(!replay.status.success());
+            assert!(
+                String::from_utf8_lossy(&replay.stdout)
+                    .contains("archived replay tool is incompatible with this host"),
+                "unexpected replay refusal: {}",
+                String::from_utf8_lossy(&replay.stdout),
+            );
         } else {
-            assert!(replayed["independentRescoreMatched"].is_null());
+            let replayed = data(&replay);
+            assert_eq!(replayed["agentAccessed"], false);
+            assert_eq!(replayed["modelAccessed"], false);
+            assert_eq!(replayed["allFieldsValidated"], true);
+            if case == "package-migration-small" {
+                assert_eq!(replayed["independentRescoreMatched"], true);
+            } else {
+                assert!(replayed["independentRescoreMatched"].is_null());
+            }
         }
     }
 
