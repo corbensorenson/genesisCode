@@ -30,6 +30,14 @@ expected_kernel_surface_files = [
   "value.rs",
 ]
 
+# Every production kernel file has exactly one architectural role. The reference
+# evaluator cannot depend on optimized-tier implementation details, while tier
+# bridges are explicit rather than silently expanding either side.
+differential_test_file = "crates/gc_kernel/src/tests.rs"
+required_differential_test_markers = [
+  "reference_compiled_differential_matrix_covers_semantic_observables",
+]
+
 # eval.rs must stay as boundary/orchestration; treewalk internals live in eval_treewalk.rs.
 required_eval_markers = [
   "mod eval_treewalk;",
@@ -39,6 +47,45 @@ required_eval_markers = [
 forbidden_eval_markers = [
   "fn eval_term_impl(",
   "fn eval_list_tco(",
+]
+
+[file_roles]
+"compiled.rs" = "optimized-tier"
+"compiled_blob.rs" = "optimized-tier"
+"compiled_compile.rs" = "optimized-tier"
+"compiled_coverage.rs" = "optimized-tier"
+"compiled_runtime/apply.rs" = "optimized-tier"
+"compiled_runtime/eval.rs" = "optimized-tier"
+"compiled_runtime/mod.rs" = "optimized-tier"
+"compiled_runtime/patterns.rs" = "optimized-tier"
+"compiled_runtime/primitive_forward.rs" = "optimized-tier"
+"env.rs" = "shared-semantics"
+"env/capture.rs" = "shared-semantics"
+"error.rs" = "shared-semantics"
+"eval.rs" = "shared-semantics"
+"eval_coverage.rs" = "shared-semantics"
+"eval_decimal_ops.rs" = "shared-semantics"
+"eval_forms.rs" = "reference-semantics"
+"eval_prims.rs" = "shared-semantics"
+"eval_prims/text_bytes.rs" = "shared-semantics"
+"eval_treewalk.rs" = "reference-semantics"
+"eval_value_ops.rs" = "shared-semantics"
+"free_vars.rs" = "reference-semantics"
+"lib.rs" = "tier-bridge"
+"value.rs" = "tier-bridge"
+
+[forbidden_role_markers]
+reference-semantics = [
+  "CExpr",
+  "CompiledClosure",
+  "PrimitiveForwardPlan",
+  "RuntimeEnv",
+  "compiled_runtime",
+  "crate::compiled",
+]
+optimized-tier = [
+  "eval_term_impl",
+  "eval_treewalk",
 ]
 
 [line_budgets]

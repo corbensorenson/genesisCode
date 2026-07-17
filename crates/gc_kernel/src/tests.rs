@@ -12,13 +12,43 @@ use crate::compiled::{
 use crate::eval::PrimOp;
 use crate::eval::{evaluator_max_call_depth, reset_evaluator_max_call_depth};
 use crate::{
-    Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError, KernelErrorKind,
-    MemLimits, NativeFn, Sym, Value, ValueMap, ValueVector, compile_module,
+    Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, EvalObservedCounters, KernelError,
+    KernelErrorKind, MemLimits, NativeFn, Sym, Value, ValueMap, ValueVector, compile_module,
     compile_module_with_site_namespace, compiled_module_coverage_manifest,
     compiled_module_coverage_manifest_from_compiled, decode_compiled_module_blob,
     encode_compiled_module_blob, eval_compiled_module, eval_module, eval_module_compiled,
     eval_term, value_hash,
 };
+
+#[derive(Debug, Eq, PartialEq)]
+struct TierObservation {
+    result: Result<(String, [u8; 32]), (String, String)>,
+    counters: EvalObservedCounters,
+}
+
+fn observe_tier(
+    source: &str,
+    compiled: bool,
+    step_limit: Option<u64>,
+    mem_limits: MemLimits,
+) -> TierObservation {
+    let forms =
+        parse_module(source).unwrap_or_else(|error| panic!("parse differential case: {error}"));
+    let mut ctx = EvalCtx::with_step_limit(step_limit);
+    ctx.set_mem_limits(mem_limits);
+    let mut env = Env::empty();
+    let result = if compiled {
+        eval_module_compiled(&mut ctx, &mut env, &forms)
+    } else {
+        eval_module(&mut ctx, &mut env, &forms)
+    };
+    TierObservation {
+        result: result
+            .map(|value| (value.debug_repr(), value_hash(&value)))
+            .map_err(|error| (error.kind.to_string(), error.msg)),
+        counters: ctx.observed_counters(),
+    }
+}
 
 fn assert_value_int(value: &Value, expected: i64) {
     match value.to_plain_term() {
@@ -417,6 +447,77 @@ fn compiled_eval_matches_treewalk_eval_on_pure_programs() {
     let v_comp = eval_module_compiled(&mut ctx_comp, &mut env_comp, &forms).unwrap();
 
     assert_eq!(v_tree.debug_repr(), v_comp.debug_repr());
+}
+
+#[test]
+fn reference_compiled_differential_matrix_covers_semantic_observables() {
+    let cases = [
+        (
+            "data-and-collections",
+            "{:answer (prim int/add 40 2) :items (prim vec/push [1 2] 3)}",
+            Some(1_000),
+            MemLimits::default(),
+        ),
+        (
+            "closure-and-shadowing",
+            "(def mk (fn (x) (fn (x) (prim int/add x 2))))\n((mk 100) 40)",
+            Some(1_000),
+            MemLimits::default(),
+        ),
+        (
+            "seal-roundtrip",
+            "(def token (seal))\n(unseal (seal 42 token) token)",
+            Some(1_000),
+            MemLimits::default(),
+        ),
+        (
+            "sealed-type-error",
+            "(prim int/add 1 \"not-an-int\")",
+            Some(1_000),
+            MemLimits::default(),
+        ),
+        (
+            "explicit-unbound-error",
+            "missing/value",
+            Some(1_000),
+            MemLimits::default(),
+        ),
+        (
+            "explicit-step-limit",
+            "(prim int/add 1 2)",
+            Some(2),
+            MemLimits::default(),
+        ),
+        (
+            "explicit-memory-limit",
+            "[1]",
+            Some(1_000),
+            MemLimits {
+                max_vec_len: Some(0),
+                ..MemLimits::default()
+            },
+        ),
+    ];
+
+    for (name, source, step_limit, mem_limits) in cases {
+        let reference = observe_tier(source, false, step_limit, mem_limits);
+        let optimized = observe_tier(source, true, step_limit, mem_limits);
+        assert_eq!(reference, optimized, "tier divergence in {name}");
+
+        if reference.result.is_ok() && reference.counters.steps > 0 {
+            let short_limit = reference.counters.steps - 1;
+            let reference_short = observe_tier(source, false, Some(short_limit), mem_limits);
+            let optimized_short = observe_tier(source, true, Some(short_limit), mem_limits);
+            assert_eq!(
+                reference_short, optimized_short,
+                "limit divergence in {name}"
+            );
+            assert!(
+                matches!(&reference_short.result, Err((kind, _)) if kind == "step limit exceeded"),
+                "one-step-short control did not fail closed in {name}: {reference_short:?}"
+            );
+        }
+    }
 }
 
 #[test]

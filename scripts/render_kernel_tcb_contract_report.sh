@@ -59,6 +59,48 @@ if (
 ):
     raise SystemExit("kernel-tcb-contract: forbidden_eval_markers must be a string list")
 
+file_roles = policy.get("file_roles")
+allowed_roles = {
+    "reference-semantics",
+    "shared-semantics",
+    "tier-bridge",
+    "optimized-tier",
+}
+if not isinstance(file_roles, dict) or not file_roles:
+    raise SystemExit("kernel-tcb-contract: file_roles must be a non-empty table")
+for rel, role in file_roles.items():
+    if not isinstance(rel, str) or not rel or role not in allowed_roles:
+        raise SystemExit(f"kernel-tcb-contract: invalid file role: {rel}={role}")
+
+forbidden_role_markers = policy.get("forbidden_role_markers")
+if (
+    not isinstance(forbidden_role_markers, dict)
+    or set(forbidden_role_markers) != {"reference-semantics", "optimized-tier"}
+):
+    raise SystemExit("kernel-tcb-contract: forbidden_role_markers role set mismatch")
+for role, markers in forbidden_role_markers.items():
+    if (
+        not isinstance(markers, list)
+        or not markers
+        or not all(isinstance(x, str) and x for x in markers)
+    ):
+        raise SystemExit(
+            f"kernel-tcb-contract: forbidden_role_markers[{role}] must be a non-empty string list"
+        )
+
+differential_test_file = policy.get("differential_test_file")
+required_differential_test_markers = policy.get("required_differential_test_markers")
+if not isinstance(differential_test_file, str) or not differential_test_file:
+    raise SystemExit("kernel-tcb-contract: differential_test_file must be a non-empty path")
+if (
+    not isinstance(required_differential_test_markers, list)
+    or not required_differential_test_markers
+    or not all(isinstance(x, str) and x for x in required_differential_test_markers)
+):
+    raise SystemExit(
+        "kernel-tcb-contract: required_differential_test_markers must be a non-empty string list"
+    )
+
 line_budgets = policy.get("line_budgets")
 if not isinstance(line_budgets, dict) or not line_budgets:
     raise SystemExit("kernel-tcb-contract: line_budgets must be a non-empty table")
@@ -78,6 +120,49 @@ if missing_surface:
     errors.append("missing-surface-files:" + ",".join(missing_surface))
 if extra_surface:
     errors.append("extra-surface-files:" + ",".join(extra_surface))
+
+declared_role_paths = set(file_roles)
+missing_role_paths = sorted(expected_set - declared_role_paths)
+stale_role_paths = sorted(declared_role_paths - expected_set)
+if missing_role_paths:
+    errors.append("missing-file-roles:" + ",".join(missing_role_paths))
+if stale_role_paths:
+    errors.append("stale-file-roles:" + ",".join(stale_role_paths))
+
+role_counts = {role: 0 for role in sorted(allowed_roles)}
+role_marker_rows = []
+for rel, role in sorted(file_roles.items()):
+    role_counts[role] += 1
+    if role == "reference-semantics" and rel.startswith("compiled"):
+        errors.append(f"reference-role-uses-compiled-path:{rel}")
+    if role == "optimized-tier" and not rel.startswith("compiled"):
+        errors.append(f"optimized-role-escaped-compiled-path:{rel}")
+    path = kernel_src / rel
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    present = [
+        marker
+        for marker in forbidden_role_markers.get(role, [])
+        if marker in text
+    ]
+    if present:
+        errors.append(f"forbidden-role-markers:{rel}:" + "|".join(present))
+    role_marker_rows.append(
+        {"path": rel, "role": role, "present_forbidden_markers": present}
+    )
+
+differential_path = root / differential_test_file
+if not differential_path.is_file():
+    errors.append(f"missing-differential-test-file:{differential_test_file}")
+    differential_text = ""
+else:
+    differential_text = differential_path.read_text(encoding="utf-8")
+missing_differential_markers = [
+    marker
+    for marker in required_differential_test_markers
+    if marker not in differential_text
+]
+if missing_differential_markers:
+    errors.append("missing-differential-test-markers:" + "|".join(missing_differential_markers))
 
 expected_budget_paths = {
     (pathlib.Path(kernel_src_rel) / rel).as_posix() for rel in expected_set
@@ -138,6 +223,14 @@ report = {
     "observed_surface_files": observed_files,
     "missing_surface_files": missing_surface,
     "extra_surface_files": extra_surface,
+    "file_roles": role_marker_rows,
+    "role_counts": role_counts,
+    "missing_role_paths": missing_role_paths,
+    "stale_role_paths": stale_role_paths,
+    "forbidden_role_markers": forbidden_role_markers,
+    "differential_test_file": differential_test_file,
+    "required_differential_test_markers": required_differential_test_markers,
+    "missing_differential_test_markers": missing_differential_markers,
     "missing_line_budget_paths": missing_budget_paths,
     "stale_line_budget_paths": stale_budget_paths,
     "line_budgets": line_rows,
@@ -159,6 +252,8 @@ except ValueError:
     report_display = str(report_path)
 print(
     "kernel-tcb-contract: ok "
-    f"(surface_files={len(observed_files)} max_lines={max_lines} report={report_display})"
+    f"(surface_files={len(observed_files)} reference={role_counts['reference-semantics']} "
+    f"shared={role_counts['shared-semantics']} bridge={role_counts['tier-bridge']} "
+    f"optimized={role_counts['optimized-tier']} max_lines={max_lines} report={report_display})"
 )
 PY

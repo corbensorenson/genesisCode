@@ -200,6 +200,23 @@ Kernel ops:
 * `seal(value, SealToken(id))` \-\> `Sealed{id, payload=value}`  
 * `unseal(sealed, SealToken(id))` \-\> returns payload if id matches else nil (or sealed ERROR; choose one and standardize)
 
+### **4.5 Reference and optimized execution tiers**
+
+GenesisCode has one semantic reference evaluator and a separately implemented compiled AST tier. The compiled tier may improve representation, lookup, dispatch, allocation, and tail execution, but it does not define language behavior. Normative language and hash specifications remain higher authority than either Rust tier. A mismatch fails the optimized tier; it does not silently redefine the reference or permit a compatibility exception.
+
+`policies/kernel_tcb_contract.toml` assigns every production file under `crates/gc_kernel/src` exactly one exhaustive, non-overlapping role:
+
+* `reference-semantics`: direct CoreForm interpretation and free-variable analysis. It cannot import compiled expressions, closures, runtime environments, forwarding plans, or compiled-runtime helpers.
+* `shared-semantics`: deterministic context, limits, coverage, primitive semantics, environments, and explicit errors used by both tiers. It cannot encode compiled-tier shortcuts or benchmark-specific results.
+* `tier-bridge`: the public kernel surface and value representation where reference and compiled closures coexist explicitly. It cannot make the optimized tier authoritative.
+* `optimized-tier`: CoreForm compilation, compiled artifacts, slot environments, optimized application, and compiled evaluation. It cannot call the treewalk implementation as a hidden fallback.
+
+New production files require an intentional role and line budget in the same reviewed policy change. For every program accepted by both tiers, reference and compiled execution must agree on success or explicit failure; observable value representation and canonical hash; error kind and structured message material; seal creation order and payload behavior; evaluation steps and semantic memory counters; coverage sites and decisions; and tail-call, partial-application, module, and closure behavior. Private optimized state must remain absent from canonical values, hashes, artifacts unless versioned, effects, and resource semantics.
+
+`scripts/check_kernel_tcb_contract.sh` enforces the complete inventory, role partition, forbidden cross-tier markers, evaluator boundary markers, line budgets, and presence of the default differential matrix. Mutation controls prove that role escape, a missing differential suite, and an optimized symbol admitted to the reference path all fail closed. The default `reference_compiled_differential_matrix_covers_semantic_observables` test compares values, hashes, explicit errors, step counters, and memory counters over representative data, collections, closures, shadowing, seals, type errors, unbound names, step exhaustion, and memory exhaustion. Successful cases also run one step short so a tier cannot bypass limits while preserving only the happy-path value.
+
+Any optimized-tier change must keep this gate and the broader kernel differential, coverage, artifact-roundtrip, resource, tail, and panic suites green. A future execution tier must define an equally explicit role and differential or translation-validation boundary before becoming a production path.
+
 ---
 
 ## **5\) Prelude contracts \+ hardened protocol**
