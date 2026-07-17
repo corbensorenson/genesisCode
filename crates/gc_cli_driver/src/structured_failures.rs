@@ -280,10 +280,16 @@ pub(super) fn evaluator_context(operation: &'static str, error: &gc_kernel::Kern
         gc_kernel::KernelErrorKind::StepLimit => "step-limit",
         gc_kernel::KernelErrorKind::MemoryLimit => "memory-limit",
     };
-    FailureContext::new("evaluator", kind, operation)
+    let mut context = FailureContext::new("evaluator", kind, operation)
         .fact("kernel_kind", format!("{:?}", error.kind))
-        .fact("reason", error.msg.clone())
-        .into_value()
+        .fact("reason", error.msg.clone());
+    if let Some(resource) = &error.resource_limit {
+        context = context
+            .fact("resource_dimension", resource.dimension)
+            .fact("resource_observed", resource.observed)
+            .fact("resource_limit", resource.limit);
+    }
+    context.into_value()
 }
 
 pub(super) fn effects_context(operation: &'static str, error: &gc_effects::EffectsError) -> Value {
@@ -491,7 +497,10 @@ mod tests {
     use gc_coreform::ParseError;
     use serde_json::Value;
 
-    use super::{FAILURE_CONTEXT_SCHEMA_V1, FailureContext, normalize_context, parser_context};
+    use super::{
+        FAILURE_CONTEXT_SCHEMA_V1, FailureContext, evaluator_context, normalize_context,
+        parser_context,
+    };
 
     #[test]
     fn parser_context_localizes_utf8_byte_offsets() {
@@ -521,6 +530,15 @@ mod tests {
             .into_value();
         assert_eq!(context["facts"]["reason"], "read package.toml: missing");
         assert!(!context["facts"]["reason"].to_string().contains("/private/"));
+    }
+
+    #[test]
+    fn evaluator_resource_context_preserves_typed_limit_facts() {
+        let error = gc_kernel::KernelError::memory_limit("live-units", 11, 10);
+        let context = evaluator_context("core/eval", &error);
+        assert_eq!(context["facts"]["resource_dimension"], "live-units");
+        assert_eq!(context["facts"]["resource_observed"], 11);
+        assert_eq!(context["facts"]["resource_limit"], 10);
     }
 
     #[test]

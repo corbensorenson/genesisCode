@@ -135,6 +135,8 @@ struct TrustedBootstrapBudget {
 
 fn production_bootstrap_mem_limits() -> MemLimits {
     MemLimits {
+        max_alloc_units: Some(500_000_000),
+        max_live_units: Some(250_000_000),
         max_pair_cells: Some(12_000_000),
         max_vec_len: Some(2_000_000),
         max_map_len: Some(2_000_000),
@@ -145,6 +147,8 @@ fn production_bootstrap_mem_limits() -> MemLimits {
 
 fn parity_bootstrap_mem_limits() -> MemLimits {
     MemLimits {
+        max_alloc_units: Some(1_000_000_000),
+        max_live_units: Some(500_000_000),
         max_pair_cells: Some(24_000_000),
         max_vec_len: Some(4_000_000),
         max_map_len: Some(4_000_000),
@@ -176,6 +180,14 @@ fn bootstrap_limits_term(limits: MemLimits, step_limit: u64) -> Term {
         Term::Int(step_limit.into()),
     );
     m.insert(
+        TermOrdKey(Term::symbol(":max-alloc-units")),
+        Term::Int(limits.max_alloc_units.unwrap_or(0).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-live-units")),
+        Term::Int(limits.max_live_units.unwrap_or(0).into()),
+    );
+    m.insert(
         TermOrdKey(Term::symbol(":max-pair-cells")),
         Term::Int(limits.max_pair_cells.unwrap_or(0).into()),
     );
@@ -203,6 +215,18 @@ fn bootstrap_observed_term(observed: EvalObservedCounters) -> Term {
     m.insert(
         TermOrdKey(Term::symbol(":steps")),
         Term::Int(observed.steps.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":allocated-units")),
+        Term::Int(observed.mem.allocated_units.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":live-units")),
+        Term::Int(observed.mem.live_units.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-live-units")),
+        Term::Int(observed.mem.max_live_units.into()),
     );
     m.insert(
         TermOrdKey(Term::symbol(":pair-cells")),
@@ -304,9 +328,9 @@ where
 {
     let budget = trusted_bootstrap_budget();
     let saved_step_limit = ctx.step_limit;
-    let saved_mem_limits = ctx.mem_limits;
+    let saved_mem_limits = ctx.mem_limits();
     ctx.step_limit = Some(budget.step_limit);
-    ctx.mem_limits = budget.mem_limits;
+    ctx.set_mem_limits(budget.mem_limits);
     ctx.reset_counters();
     let out = f(ctx, env);
     let observed = ctx.observed_counters();
@@ -316,14 +340,17 @@ where
         bootstrap_evidence_term(stage, budget, observed, err_msg.as_deref()),
     );
     ctx.step_limit = saved_step_limit;
-    ctx.mem_limits = saved_mem_limits;
+    ctx.set_mem_limits(saved_mem_limits);
     ctx.reset_counters();
     out.map_err(|err| {
         anyhow::anyhow!(
-            "selfhost bootstrap failed under bounded limits (stage={stage}, profile={}, step_limit={}, observed_steps={}, observed_pair_cells={}, observed_max_vec_len={}, observed_max_map_len={}, observed_max_bytes_len={}, observed_max_string_len={}): {err}",
+            "selfhost bootstrap failed under bounded limits (stage={stage}, profile={}, step_limit={}, observed_steps={}, observed_allocated_units={}, observed_live_units={}, observed_max_live_units={}, observed_pair_cells={}, observed_max_vec_len={}, observed_max_map_len={}, observed_max_bytes_len={}, observed_max_string_len={}): {err}",
             budget.profile,
             budget.step_limit,
             observed.steps,
+            observed.mem.allocated_units,
+            observed.mem.live_units,
+            observed.mem.max_live_units,
             observed.mem.pair_cells,
             observed.mem.max_vec_len,
             observed.mem.max_map_len,

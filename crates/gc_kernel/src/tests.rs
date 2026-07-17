@@ -50,6 +50,114 @@ fn observe_tier(
     }
 }
 
+fn logical_meter_limits() -> MemLimits {
+    MemLimits {
+        max_alloc_units: Some(u64::MAX - 1),
+        max_live_units: Some(u64::MAX - 1),
+        ..MemLimits::default()
+    }
+}
+
+#[test]
+fn logical_resource_counters_are_tier_exact_and_resettable() {
+    let source = r#"
+      (def add (fn (left right) (prim int/add left right)))
+      (def values [1 2])
+      (prim int/add (add 40 1) (prim vec/len values))
+    "#;
+    let reference = observe_tier(source, false, None, logical_meter_limits());
+    let optimized = observe_tier(source, true, None, logical_meter_limits());
+    assert_eq!(reference, optimized);
+    assert!(reference.counters.mem.allocated_units > 0);
+    assert!(reference.counters.mem.live_units > 0);
+    assert_eq!(
+        reference.counters.mem.live_units,
+        reference.counters.mem.max_live_units
+    );
+
+    let mut ctx = EvalCtx::new();
+    ctx.set_mem_limits(logical_meter_limits());
+    let mut env = Env::empty();
+    let forms = parse_module("[1 2]").unwrap();
+    eval_module(&mut ctx, &mut env, &forms).unwrap();
+    assert!(ctx.observed_counters().mem.allocated_units > 0);
+    ctx.reset_counters();
+    assert_eq!(ctx.observed_counters(), EvalObservedCounters::default());
+}
+
+#[test]
+fn logical_resource_limits_fail_one_unit_short_with_structured_sealed_context() {
+    let source = "(def identity (fn (value) value)) (identity [1 2])";
+    let baseline = observe_tier(source, false, None, logical_meter_limits());
+    let allocated = baseline.counters.mem.allocated_units;
+    let live = baseline.counters.mem.live_units;
+    assert!(allocated > 0 && live > 0);
+
+    for compiled in [false, true] {
+        let allocation_failure = observe_tier(
+            source,
+            compiled,
+            None,
+            MemLimits {
+                max_alloc_units: Some(allocated - 1),
+                max_live_units: Some(u64::MAX - 1),
+                ..MemLimits::default()
+            },
+        );
+        assert_eq!(
+            allocation_failure.result.as_ref().unwrap_err().0,
+            KernelErrorKind::MemoryLimit.to_string()
+        );
+
+        let live_failure = observe_tier(
+            source,
+            compiled,
+            None,
+            MemLimits {
+                max_alloc_units: Some(u64::MAX - 1),
+                max_live_units: Some(live - 1),
+                ..MemLimits::default()
+            },
+        );
+        assert_eq!(
+            live_failure.result.as_ref().unwrap_err().0,
+            KernelErrorKind::MemoryLimit.to_string()
+        );
+    }
+
+    let forms = parse_module(source).unwrap();
+    let mut ctx = EvalCtx::new();
+    ctx.set_mem_limits(MemLimits {
+        max_alloc_units: Some(allocated - 1),
+        max_live_units: Some(u64::MAX - 1),
+        ..MemLimits::default()
+    });
+    let mut env = Env::empty();
+    let error = eval_module(&mut ctx, &mut env, &forms).unwrap_err();
+    let resource = error
+        .resource_limit
+        .as_ref()
+        .expect("structured resource limit");
+    assert_eq!(resource.dimension, "allocation-units");
+    assert_eq!(resource.observed, allocated);
+    assert_eq!(resource.limit, allocated - 1);
+    let sealed = ctx
+        .seal_resource_error(&error)
+        .expect("resource limit has a sealed boundary form");
+    let protocol = ctx.protocol.expect("reserved protocol seals");
+    let Value::Sealed { token, payload } = sealed else {
+        panic!("expected sealed resource exhaustion");
+    };
+    assert_eq!(token, protocol.error);
+    let Some(Term::Map(payload)) = payload.as_data() else {
+        panic!("expected structured resource payload");
+    };
+    assert_eq!(
+        payload.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("core/resource-exhausted".to_string()))
+    );
+}
+
 fn assert_value_int(value: &Value, expected: i64) {
     match value.to_plain_term() {
         Some(Term::Int(n)) if n == BigInt::from(expected) => {}

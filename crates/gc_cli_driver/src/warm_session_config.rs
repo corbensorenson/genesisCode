@@ -37,6 +37,8 @@ pub(super) fn inherited_global_args(cli: &Cli, resources: &SessionResourceLimits
         .min(resources.max_steps);
     out.extend(["--step-limit".to_string(), step_limit.to_string()]);
     for (flag, value) in [
+        ("--max-alloc-units", cli.max_alloc_units),
+        ("--max-live-units", cli.max_live_units),
         ("--max-pair-cells", cli.max_pair_cells),
         ("--max-vec-len", cli.max_vec_len),
         ("--max-map-len", cli.max_map_len),

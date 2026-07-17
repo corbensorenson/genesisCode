@@ -13,6 +13,14 @@ struct Cli {
     #[arg(long, global = true, conflicts_with = "step_limit")]
     no_step_limit: bool,
 
+    /// Maximum cumulative logical allocation units during evaluation.
+    #[arg(long, global = true, value_name = "N")]
+    max_alloc_units: Option<u64>,
+
+    /// Maximum logical units reachable from evaluator roots at a safe point.
+    #[arg(long, global = true, value_name = "N")]
+    max_live_units: Option<u64>,
+
     /// Maximum total number of `pair/cons` cells allocated during evaluation.
     #[arg(long, global = true, value_name = "N")]
     max_pair_cells: Option<u64>,

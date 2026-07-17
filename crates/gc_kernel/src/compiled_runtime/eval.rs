@@ -186,7 +186,7 @@ pub(in super::super) fn eval_cexpr_runtime(
             CExpr::SealNew => {
                 let id = ctx.state.next_seal_id;
                 ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
-                return Ok(Value::SealToken(crate::value::SealId(id)));
+                return Ok(Value::seal_token(crate::value::SealId(id)));
             }
             CExpr::Seal(v, tok) => {
                 let vv = eval_cexpr_runtime(ctx, cur_env.clone(), v)?;
@@ -194,10 +194,7 @@ pub(in super::super) fn eval_cexpr_runtime(
                 let Value::SealToken(id) = tv else {
                     return type_err(ctx, "seal expects a seal token as second argument");
                 };
-                return Ok(Value::Sealed {
-                    token: id,
-                    payload: Box::new(vv),
-                });
+                return Ok(Value::sealed(id, vv));
             }
             CExpr::Unseal(w, tok) => {
                 let wv = eval_cexpr_runtime(ctx, cur_env.clone(), w)?;

@@ -1,11 +1,11 @@
 {
   "budget": {
     "asciiOnly": true,
-    "byteCount": 3916,
+    "byteCount": 3947,
     "maxAsciiBytes": 4000,
-    "tokenUpperBound": 3916
+    "tokenUpperBound": 3947
   },
-  "cardSha256": "8090ab913f4341722620464cb802d494553921105f375380937faf516e9fdf96",
+  "cardSha256": "f76309eb7b8fdfeb7260bf90c21ba995b59514e9826d94ae943a3bcd40798fb7",
   "examples": [
     {
       "expected": "42",
@@ -45,11 +45,11 @@
     }
   ],
   "kind": "genesis/gc-agent-core-card-v0.3",
-  "manifestIdentitySha256": "6aef406460d47b9e3902cdeefc2154e9ab898f970dc5690a55429d30a0bdfaf3",
+  "manifestIdentitySha256": "2cdffa20f4f5bbbae3e9275203b63b003eba4edd6259253abf0f00178722da1f",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "ff2a4286311ba1ba770c0a3399de633059ed0791040963e84f9c80ae646add17",
+  "profileIdentitySha256": "c140cf129c3118ae3e4a49c3d103783b63c00e514b005897f7e61366e4941995",
   "sourceIdentities": {
-    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "a08a2e1e7f179f4793d96141ba59cffa1c3243e7b8c442d7fc22d7bf36c0fb28",
+    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "c7e6772445aa820d5ac1807ecf7f19afaeb6b632b1599f158dc0d3213545eb60",
     "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json": "559ffafe661d3d95696107717acb159a38c60d7735bbc940ef2ac19f18be6314",
     "policies/gc_agent_core_card_v0.3.json": "1d6a5caff18bd42895fdbdcddcd8b27c88cd05786918879ab1ebbc2bec30f996"
   },
@@ -199,6 +199,8 @@
     "genesis/diagnostic/v1",
     "step_limit",
     "allow_unlimited",
+    "max_alloc_units",
+    "max_live_units",
     "max_pair_cells",
     "max_vec_len",
     "max_map_len",

@@ -84,7 +84,8 @@ pub(super) fn eval_primitive_forward_inline(
     let Some(plan) = data.primitive_forward_plan.as_ref() else {
         return Ok(None);
     };
-    if args.len() < plan.arity
+    if ctx.mem_limits != crate::eval::MemLimits::default()
+        || args.len() < plan.arity
         || !can_inline_compiled_coverage(caller_env, data.body_c.coverage_sites())
     {
         return Ok(None);

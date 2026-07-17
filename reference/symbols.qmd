@@ -6,7 +6,7 @@ toc: false
 
 # Frozen symbol inventory
 
-**168 symbols** · profile `GC-AGENT-v0.3` · identity `a335c496c9b21bc22ac47dcaa136e71ec31cbb719fb78aacb0e1db383934ffea`
+**170 symbols** · profile `GC-AGENT-v0.3` · identity `ca52628d897b3a07665993db43159a735fcf33a1df3eccd276992d6c9a89f507`
 
 This page is generated from the closed agent symbol index. Search by exact spelling; symbol names are case-sensitive.
 
@@ -128,10 +128,12 @@ This page is generated from the closed agent symbol index. Search by exact spell
 | [`map/len`](#map-len-656b3753) | callable | (prim map/len arg1:Map) -> Int | values |
 | [`map/merge`](#map-merge-0f418ba3) | callable | (prim map/merge arg1:Map arg2:Map) -> Map | values |
 | [`map/put`](#map-put-3db9f51b) | callable | (prim map/put arg1:Map arg2:Data arg3:Value) -> Map | values |
+| [`max_alloc_units`](#max-alloc-units-c2a860f5) | policy-field | reviewed manifest/policy field: max_alloc_units | resource-limits |
 | [`max_bytes_len`](#max-bytes-len-9e892574) | policy-field | reviewed manifest/policy field: max_bytes_len | resource-limits |
 | [`max_effect_entries_per_test`](#max-effect-entries-per-test-fb179f85) | policy-field | reviewed manifest/policy field: max_effect_entries_per_test | resource-limits |
 | [`max_effect_log_bytes_per_test`](#max-effect-log-bytes-per-test-e4edc773) | policy-field | reviewed manifest/policy field: max_effect_log_bytes_per_test | resource-limits |
 | [`max_effect_ops`](#max-effect-ops-f2bce6de) | policy-field | reviewed manifest/policy field: max_effect_ops | resource-limits |
+| [`max_live_units`](#max-live-units-43c06208) | policy-field | reviewed manifest/policy field: max_live_units | resource-limits |
 | [`max_map_len`](#max-map-len-f72f6510) | policy-field | reviewed manifest/policy field: max_map_len | resource-limits |
 | [`max_pair_cells`](#max-pair-cells-8f846171) | policy-field | reviewed manifest/policy field: max_pair_cells | resource-limits |
 | [`max_payload_bytes_per_op`](#max-payload-bytes-per-op-aae20312) | policy-field | reviewed manifest/policy field: max_payload_bytes_per_op | resource-limits |
@@ -1263,7 +1265,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -1281,7 +1283,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -3798,6 +3800,37 @@ allow_unlimited = false
 
 </details>
 
+## `max_alloc_units` {#max-alloc-units-c2a860f5}
+
+<span class="status-chip">core</span>
+
+**Signature:** `reviewed manifest/policy field: max_alloc_units`
+
+**Domains:** resource-limits<br>
+**Effects:** pure; no ambient host effect<br>
+**Capabilities:** none<br>
+**Diagnostics:** StepLimit, MemoryLimit, ERROR
+
+<details><summary>Contracts and examples</summary>
+
+**Contracts**
+
+- The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
+- Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
+
+**Examples**
+
+- **usage-template:** `reviewed manifest/policy field: max_alloc_units` → `ConfiguredValue`
+
+**Sources**
+
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
+- `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
+- `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
+
+</details>
+
 ## `max_bytes_len` {#max-bytes-len-9e892574}
 
 <span class="status-chip">core</span>
@@ -3814,7 +3847,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -3823,7 +3856,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -3845,7 +3878,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -3854,7 +3887,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -3876,7 +3909,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -3885,7 +3918,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -3907,7 +3940,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -3916,7 +3949,38 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
+- `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
+- `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
+
+</details>
+
+## `max_live_units` {#max-live-units-43c06208}
+
+<span class="status-chip">core</span>
+
+**Signature:** `reviewed manifest/policy field: max_live_units`
+
+**Domains:** resource-limits<br>
+**Effects:** pure; no ambient host effect<br>
+**Capabilities:** none<br>
+**Diagnostics:** StepLimit, MemoryLimit, ERROR
+
+<details><summary>Contracts and examples</summary>
+
+**Contracts**
+
+- The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
+- Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
+
+**Examples**
+
+- **usage-template:** `reviewed manifest/policy field: max_live_units` → `ConfiguredValue`
+
+**Sources**
+
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -3938,7 +4002,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -3947,7 +4011,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -3969,7 +4033,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -3978,7 +4042,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4000,7 +4064,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4009,7 +4073,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4031,7 +4095,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4040,7 +4104,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4062,7 +4126,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4071,7 +4135,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4093,7 +4157,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4102,7 +4166,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4124,7 +4188,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4133,7 +4197,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4155,7 +4219,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4164,7 +4228,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4186,7 +4250,7 @@ allow_unlimited = false
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4195,7 +4259,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 
@@ -4362,6 +4426,8 @@ path = "../escape.gc"
 **Examples**
 
 - **lexical-atoms:** `nil true false 0 -1 "x\n" b"\x41" symbol :keyword` → `accept`
+- **allocation-unit-limit:** `nil` → `MemoryLimit`
+- **live-unit-limit:** `nil` → `MemoryLimit`
 
 **Sources**
 
@@ -4862,7 +4928,7 @@ path = "../escape.gc"
 **Contracts**
 
 - The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.
-- Kernel memory limits are deterministic semantic counters rather than host RSS estimates.
+- Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.
 - Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes.
 
 **Examples**
@@ -4880,7 +4946,7 @@ allow_unlimited = false
 
 **Sources**
 
-- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_pair_cells, max_string_len
+- `crates/gc_kernel/src/eval.rs`: DEFAULT_STEP_LIMIT, pub struct MemLimits, max_alloc_units, max_live_units, max_pair_cells, max_string_len
 - `crates/gc_pkg/src/manifest.rs`: pub struct Limits, pub struct Budgets, allow_unlimited
 - `crates/gc_effects/src/policy.rs`: pub struct RuntimePolicy, max_effect_ops, max_response_bytes_per_run
 

@@ -158,6 +158,18 @@ if not isinstance(kernel_manifest, str) or not kernel_manifest:
 if not isinstance(ordinary_rc_expected_token_count, int) or ordinary_rc_expected_token_count < 0:
     raise SystemExit("kernel-tcb-contract: ordinary_rc_expected_token_count must be non-negative")
 
+resource_metering = policy.get("resource_metering")
+if not isinstance(resource_metering, dict):
+    raise SystemExit("kernel-tcb-contract: resource_metering must be a table")
+required_resource_source_markers = resource_metering.get("required_source_markers")
+required_resource_test_markers = resource_metering.get("required_test_markers")
+for label, values in {
+    "required_source_markers": required_resource_source_markers,
+    "required_test_markers": required_resource_test_markers,
+}.items():
+    if not isinstance(values, list) or not values or not all(isinstance(x, str) and x for x in values):
+        raise SystemExit(f"kernel-tcb-contract: resource_metering.{label} must be a non-empty string list")
+
 errors: list[str] = []
 
 production_sources = {
@@ -277,6 +289,20 @@ missing_differential_markers = [
 if missing_differential_markers:
     errors.append("missing-differential-test-markers:" + "|".join(missing_differential_markers))
 
+missing_resource_source_markers = [
+    marker for marker in required_resource_source_markers
+    if marker not in combined_production_source
+]
+resource_test_source = combined_production_source + "\n" + differential_text
+missing_resource_test_markers = [
+    marker for marker in required_resource_test_markers
+    if marker not in resource_test_source
+]
+if missing_resource_source_markers:
+    errors.append("missing-resource-source-markers:" + "|".join(missing_resource_source_markers))
+if missing_resource_test_markers:
+    errors.append("missing-resource-test-markers:" + "|".join(missing_resource_test_markers))
+
 expected_budget_paths = {
     (pathlib.Path(kernel_src_rel) / rel).as_posix() for rel in expected_set
 }
@@ -365,6 +391,12 @@ report = {
         "missing_owner_markers": missing_owner_markers,
         "missing_trace_markers": missing_trace_markers,
         "missing_safe_point_markers": missing_safe_point_markers,
+    },
+    "resource_metering": {
+        "required_source_markers": required_resource_source_markers,
+        "required_test_markers": required_resource_test_markers,
+        "missing_source_markers": missing_resource_source_markers,
+        "missing_test_markers": missing_resource_test_markers,
     },
 }
 report_path.parent.mkdir(parents=True, exist_ok=True)

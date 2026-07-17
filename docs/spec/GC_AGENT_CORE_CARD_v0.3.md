@@ -13,7 +13,7 @@ Pure evaluation is deterministic. Filesystem, time, network, process, and LLM wo
 - effects: core/effect::pure core/effect::perform core/effect::bind core/effect::map core/effect::then core/effect::catch core/effect::catch-payload caps.toml .gclog replay
 - packages: schema name version modules dependencies obligations tests property_tests caps_policy limits budgets property gfx
 - errors: BadForm Unbound Type NotCallable Internal StepLimit MemoryLimit UNHANDLED EFFECT ERROR genesis/error-v0.2 genesis/diagnostics-schema-v1 genesis/diagnostic-catalog-v0.1 genesis/diagnostic/v1
-- resource-limits: step_limit allow_unlimited max_pair_cells max_vec_len max_map_len max_bytes_len max_string_len max_steps_per_test max_effect_entries_per_test max_effect_log_bytes_per_test max_effect_ops max_payload_bytes_per_op max_payload_bytes_per_run max_response_bytes_per_op max_response_bytes_per_run
+- resource-limits: step_limit allow_unlimited max_alloc_units max_live_units max_pair_cells max_vec_len max_map_len max_bytes_len max_string_len max_steps_per_test max_effect_entries_per_test max_effect_log_bytes_per_test max_effect_ops max_payload_bytes_per_op max_payload_bytes_per_run max_response_bytes_per_op max_response_bytes_per_run
 - compatibility-identifiers: GC-AGENT-v0.3 genesis/language-profile/v0.2 genesis/coreform/v0.2 genesis/hash-profile/gcv0.2-blake3 genesis/value-effect-hash/v0.2 genesis/effect-log/v3 genesis/error-v0.2 genesis/diagnostics-schema-v1 package-schema-1 genesis-lock-v2 gpk-v2 reserved-not-stable
 
 ## Examples
@@ -27,5 +27,5 @@ Pure evaluation is deterministic. Filesystem, time, network, process, and LLM wo
 Negative examples are valid syntax that must fail at the named semantic/resource boundary.
 Compatibility: agentProfile=GC-AGENT-v0.3 cliEnvelope=genesis/error-v0.2 coreformProfile=genesis/coreform/v0.2 diagnostics=genesis/diagnostics-schema-v1 effectLog=genesis/effect-log/v3 genesisLock=2 gpk=2 hashProfile=genesis/hash-profile/gcv0.2-blake3 languageProfile=genesis/language-profile/v0.2 packageManifest=1 releaseTrain=0.2.0 v1ReleaseClaim=reserved-not-stable valueEffectHashProfile=genesis/value-effect-hash/v0.2
 Unsupported classes: experimental-syntax host-only-operation unavailable-target nondeterministic-facility out-of-profile-capability
-Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=ff2a4286311ba1ba770c0a3399de633059ed0791040963e84f9c80ae646add17
+Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=c140cf129c3118ae3e4a49c3d103783b63c00e514b005897f7e61366e4941995
 Verify: bash scripts/check_gc_agent_core_card.sh

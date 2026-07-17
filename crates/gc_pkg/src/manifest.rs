@@ -69,6 +69,12 @@ pub struct Limits {
     #[serde(default)]
     pub allow_unlimited: bool,
 
+    /// Maximum cumulative logical allocation units during evaluation.
+    pub max_alloc_units: Option<u64>,
+
+    /// Maximum logical units reachable from evaluator roots at a safe point.
+    pub max_live_units: Option<u64>,
+
     /// Maximum total number of `pair/cons` cells allocated during evaluation.
     pub max_pair_cells: Option<u64>,
 
@@ -269,6 +275,31 @@ mod tests {
             error.contains("unsupported package manifest schema"),
             "{error}"
         );
+    }
+
+    #[test]
+    fn logical_memory_limits_roundtrip_from_manifest() {
+        let td = tempfile::tempdir().unwrap();
+        let pkg = td.path().join("package.toml");
+        std::fs::write(
+            &pkg,
+            r#"
+schema = 1
+name = "x"
+version = "0.0.1"
+modules = []
+dependencies = []
+obligations = []
+
+[limits]
+max_alloc_units = 123
+max_live_units = 45
+"#,
+        )
+        .unwrap();
+        let manifest = PackageManifest::load(&pkg).unwrap().0;
+        assert_eq!(manifest.limits.max_alloc_units, Some(123));
+        assert_eq!(manifest.limits.max_live_units, Some(45));
     }
 
     #[test]

@@ -23,14 +23,14 @@ pub(super) fn make_genesis() -> Value {
 
     let shape_id = shape_id(None, &BTreeMap::new());
     let contract_id = contract_id(&shape_id, &handler, &meta, None);
-    Value::Contract(Shared::new(Contract {
+    Value::contract(Contract {
         handler,
         proto: None,
         meta,
         overrides: BTreeMap::new(),
         shape_id,
         contract_id,
-    }))
+    })
 }
 
 fn shape_id(proto: Option<&Contract>, overrides: &BTreeMap<String, Value>) -> [u8; 32] {
@@ -95,10 +95,7 @@ pub(super) fn nf_is_unhandled(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Val
 
 pub(super) fn nf_effect_wrap(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
-    Ok(Value::Sealed {
-        token: p.effect,
-        payload: Box::new(args[0].clone()),
-    })
+    Ok(Value::sealed(p.effect, args[0].clone()))
 }
 
 pub(super) fn nf_is_effect(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
@@ -110,10 +107,7 @@ pub(super) fn nf_is_effect(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value,
 
 pub(super) fn nf_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
-    Ok(Value::Sealed {
-        token: p.error,
-        payload: Box::new(args[0].clone()),
-    })
+    Ok(Value::sealed(p.error, args[0].clone()))
 }
 
 pub(super) fn nf_is_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
@@ -151,14 +145,14 @@ pub(super) fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Va
     let shape_id = shape_id(proto.as_deref(), &overrides);
     let contract_id = contract_id(&shape_id, &handler, &meta, proto.as_deref());
 
-    Ok(Value::Contract(Shared::new(Contract {
+    Ok(Value::contract(Contract {
         handler,
         proto,
         meta,
         overrides,
         shape_id,
         contract_id,
-    })))
+    }))
 }
 
 pub(super) fn nf_contract_extend(
@@ -205,14 +199,14 @@ pub(super) fn nf_contract_extend(
 
     let shape_id = shape_id(Some(base.as_ref()), &overrides);
     let contract_id = contract_id(&shape_id, &handler, &meta, Some(base.as_ref()));
-    Ok(Value::Contract(Shared::new(Contract {
+    Ok(Value::contract(Contract {
         handler,
         proto: Some(base),
         meta,
         overrides,
         shape_id,
         contract_id,
-    })))
+    }))
 }
 
 fn merge_meta(base: &Value, plus: &Value) -> Value {
@@ -222,7 +216,7 @@ fn merge_meta(base: &Value, plus: &Value) -> Value {
             for (k, v) in b.iter() {
                 Shared::make_mut(&mut out).insert_mut(k.clone(), v.clone());
             }
-            Value::Map(out)
+            Value::map_shared(out)
         }
         _ => plus.clone(),
     }
@@ -244,10 +238,7 @@ pub(super) fn nf_internal_override_handler(
     let (op, _payload) = match parse_msg_term(&msg_term) {
         Ok(x) => x,
         Err(e) => {
-            return Ok(Value::Sealed {
-                token: p.error,
-                payload: Box::new(Value::data(Term::Str(e.msg))),
-            });
+            return Ok(Value::sealed(p.error, Value::data(Term::Str(e.msg))));
         }
     };
     let Term::Symbol(op_s) = op else {
@@ -435,9 +426,7 @@ pub(super) fn nf_msg_payload(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Valu
 }
 
 pub(super) fn nf_effect_pure(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    Ok(Value::EffectProgram(Box::new(EffectProgram::Pure(
-        Box::new(args[0].clone()),
-    ))))
+    Ok(Value::pure_effect(args[0].clone()))
 }
 
 pub(super) fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
@@ -459,19 +448,14 @@ pub(super) fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<V
         payload,
         k: Box::new(k),
     });
-    let sealed = Value::Sealed {
-        token: p.effect,
-        payload: Box::new(req),
-    };
-    Ok(Value::EffectProgram(Box::new(EffectProgram::Perform {
-        request: Box::new(sealed),
-    })))
+    let sealed = Value::sealed(p.effect, req);
+    Ok(Value::perform_effect(sealed))
 }
 
 fn lift_to_effect_program(v: Value) -> Value {
     match v {
         Value::EffectProgram(_) => v,
-        other => Value::EffectProgram(Box::new(EffectProgram::Pure(Box::new(other)))),
+        other => Value::pure_effect(other),
     }
 }
 
@@ -507,13 +491,8 @@ fn bind_impl(ctx: &mut EvalCtx, program: Value, f: Value) -> Result<Value, Kerne
                 payload: req.payload.clone(),
                 k: Box::new(k2),
             });
-            let sealed2 = Value::Sealed {
-                token: tok,
-                payload: Box::new(req2),
-            };
-            Ok(Value::EffectProgram(Box::new(EffectProgram::Perform {
-                request: Box::new(sealed2),
-            })))
+            let sealed2 = Value::sealed(tok, req2);
+            Ok(Value::perform_effect(sealed2))
         }
     }
 }

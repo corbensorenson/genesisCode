@@ -499,7 +499,7 @@ pub fn eval_compiled_module(
             m.coverage_sites.decision_sites(),
         )?;
     }
-    result
+    ctx.finish_with_live_roots(result?, &[env])
 }
 
 pub fn eval_module_compiled(

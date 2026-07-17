@@ -201,7 +201,7 @@ pub(super) fn eval_seal(
         1 => {
             let id = ctx.state.next_seal_id;
             ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
-            Ok(Value::SealToken(SealId(id)))
+            Ok(Value::seal_token(SealId(id)))
         }
         3 => {
             let v = eval_term(ctx, env, items[1])?;
@@ -209,10 +209,7 @@ pub(super) fn eval_seal(
             let Value::SealToken(id) = tok else {
                 return type_err(ctx, "seal expects a seal token as second argument");
             };
-            Ok(Value::Sealed {
-                token: id,
-                payload: Box::new(v),
-            })
+            Ok(Value::sealed(id, v))
         }
         _ => Err(KernelError::new(
             KernelErrorKind::BadForm,

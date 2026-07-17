@@ -556,6 +556,8 @@ fn resolved_step_limit(cli: &Cli) -> StepLimit {
 
 fn resolved_mem_limits(cli: &Cli) -> MemLimits {
     MemLimits {
+        max_alloc_units: cli.max_alloc_units,
+        max_live_units: cli.max_live_units,
         max_pair_cells: cli.max_pair_cells,
         max_vec_len: cli.max_vec_len,
         max_map_len: cli.max_map_len,
