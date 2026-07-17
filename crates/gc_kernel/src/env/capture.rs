@@ -1,7 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet};
-use std::rc::Rc;
-
 use super::Env;
+use crate::Shared;
+use std::collections::{BTreeMap, BTreeSet};
 
 impl Env {
     /// Detach a closure from intermediate lexical frames while retaining the live module root.
@@ -11,7 +10,7 @@ impl Env {
         for name in names {
             let mut cur = Some(self.clone());
             while let Some(env) = cur {
-                if Rc::ptr_eq(&env.0, &root.0) {
+                if Shared::ptr_eq(&env.0, &root.0) {
                     break;
                 }
                 if let Some(value) = env.0.binds.borrow().get(name).cloned() {

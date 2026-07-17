@@ -1,4 +1,5 @@
 mod compiled;
+mod cycle;
 mod env;
 mod error;
 mod eval;
@@ -11,6 +12,7 @@ pub use compiled::{
     decode_compiled_module_blob, encode_compiled_module_blob, eval_compiled_module,
     eval_module_compiled,
 };
+pub use cycle::Shared;
 pub use env::{Env, EnvFrame};
 pub use error::{KernelError, KernelErrorKind};
 pub use eval::{

@@ -250,6 +250,37 @@ def validate_graph(root: Path, graph: Mapping[str, Any]) -> list[Mapping[str, An
             require(dependency != node["id"], f"{node['id']} depends on itself")
     topological(nodes)
 
+    ancestor_cache: dict[str, set[str]] = {}
+
+    def ancestors(node_id: str) -> set[str]:
+        cached = ancestor_cache.get(node_id)
+        if cached is not None:
+            return cached
+        result: set[str] = set()
+        pending = list(by_id[node_id]["dependencies"])
+        while pending:
+            dependency = pending.pop()
+            if dependency in result:
+                continue
+            result.add(dependency)
+            pending.extend(by_id[dependency]["dependencies"])
+        ancestor_cache[node_id] = result
+        return result
+
+    for consumer in nodes:
+        ordered_before = ancestors(consumer["id"])
+        for producer in nodes:
+            if producer["id"] == consumer["id"]:
+                continue
+            reads_producer = any(
+                matches(output, consumer["inputs"])
+                for output in producer["outputs"]
+            )
+            require(
+                not reads_producer or producer["id"] in ordered_before,
+                f"{consumer['id']} reads {producer['id']} outputs without depending on it",
+            )
+
     inventory = update_inventory(root)
     classified = update_commands | set(excluded) | {orchestrator}
     require(inventory == classified, f"updater inventory classification drift: missing={sorted(inventory-classified)} stale={sorted(classified-inventory)}")
@@ -660,6 +691,14 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
     rejected("signing-command", lambda g: g["nodes"][0].__setitem__("command", ["genesis", "attest"]))
     rejected("unknown-updater", lambda g: g["excludedEntrypoints"].pop(next(iter(g["excludedEntrypoints"]))))
     rejected("mutation-route-drift", lambda g: g["mutationControls"][0]["expectedNodes"].pop())
+    gate_node_index = next(
+        index for index, node in enumerate(graph["nodes"])
+        if node["id"] == "generate/gate-manifest"
+    )
+    rejected(
+        "output-read-order",
+        lambda g: g["nodes"][gate_node_index].__setitem__("dependencies", []),
+    )
     command_node_index = next(
         index for index, node in enumerate(graph["nodes"])
         if len(node["command"]) >= 2 and node["command"][1].startswith("scripts/")
@@ -794,7 +833,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 15, "generated-authority self-test inventory drift")
+    require(controls == 16, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 

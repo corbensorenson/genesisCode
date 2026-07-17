@@ -9,11 +9,13 @@ expected_kernel_surface_files = [
   "compiled_blob.rs",
   "compiled_compile.rs",
   "compiled_coverage.rs",
+  "compiled/trace_impl.rs",
   "compiled_runtime/apply.rs",
   "compiled_runtime/eval.rs",
   "compiled_runtime/mod.rs",
   "compiled_runtime/primitive_forward.rs",
   "compiled_runtime/tail_loop.rs",
+  "cycle.rs",
   "env.rs",
   "env/capture.rs",
   "error.rs",
@@ -28,6 +30,8 @@ expected_kernel_surface_files = [
   "free_vars.rs",
   "lib.rs",
   "value.rs",
+  "value/collections.rs",
+  "value/trace_impl.rs",
 ]
 
 # Every production kernel file has exactly one architectural role. The reference
@@ -37,6 +41,9 @@ differential_test_file = "crates/gc_kernel/src/tests.rs"
 required_differential_test_markers = [
   "reference_compiled_differential_matrix_covers_semantic_observables",
   "workload_recognizer_retirement_variants_preserve_semantic_observables",
+  "recursive_module_cycles_are_reclaimed_after_treewalk_and_compiled_roots_retire",
+  "indirect_container_cycles_are_reclaimed_across_repeated_sessions",
+  "every_cycle_capable_value_edge_participates_in_reclamation",
 ]
 
 # Production dispatch cannot regain source- or benchmark-shaped execution under
@@ -67,16 +74,62 @@ forbidden_eval_markers = [
   "fn eval_list_tco(",
 ]
 
+[cycle_ownership]
+kernel_manifest = "crates/gc_kernel/Cargo.toml"
+forbidden_manifest_markers = ["rpds"]
+ordinary_rc_allowed_files = ["value.rs"]
+ordinary_rc_expected_token_count = 6
+ordinary_rc_required_markers = [
+  "use std::rc::Rc;",
+  "pub type Sym = Rc<str>;",
+  "Data(Rc<Term>)",
+  "Self::Data(Rc::new(term))",
+]
+required_owner_markers = [
+  "Vector(Shared<ValueVector>)",
+  "Map(Shared<ValueMap>)",
+  "Closure(Shared<ClosureData>)",
+  "CompiledClosure(Shared<CompiledClosureData>)",
+  "NativeFn(Shared<NativeFn>)",
+  "Contract(Shared<Contract>)",
+  "EffectRequest(Shared<EffectRequest>)",
+  "Shared<EnvFrame>",
+  "Shared<Vec<Option<Value>>>",
+  "Shared<RefCell<Vec<Option<Value>>>>",
+  "Shared<Vec<Value>>",
+]
+required_trace_markers = [
+  "unsafe impl Trace for Value",
+  "unsafe impl Trace for ValueMap",
+  "unsafe impl Trace for ValueVector",
+  "unsafe impl Trace for ClosureData",
+  "unsafe impl Trace for CompiledClosureData",
+  "unsafe impl Trace for NativeFn",
+  "unsafe impl Trace for Contract",
+  "unsafe impl Trace for EffectProgram",
+  "unsafe impl Trace for EffectRequest",
+  "unsafe impl Trace for EnvFrame",
+  "unsafe impl Trace for CompiledLexicalEnv",
+  "unsafe impl Trace for CompiledModuleCells",
+]
+required_safe_point_markers = [
+  "let outermost = !self.panic_guard_active();",
+  "crate::cycle::collect_cycles",
+  "cycle collection panicked",
+]
+
 [file_roles]
 "compiled.rs" = "optimized-tier"
 "compiled_blob.rs" = "optimized-tier"
 "compiled_compile.rs" = "optimized-tier"
 "compiled_coverage.rs" = "optimized-tier"
+"compiled/trace_impl.rs" = "optimized-tier"
 "compiled_runtime/apply.rs" = "optimized-tier"
 "compiled_runtime/eval.rs" = "optimized-tier"
 "compiled_runtime/mod.rs" = "optimized-tier"
 "compiled_runtime/primitive_forward.rs" = "optimized-tier"
 "compiled_runtime/tail_loop.rs" = "optimized-tier"
+"cycle.rs" = "shared-semantics"
 "env.rs" = "shared-semantics"
 "env/capture.rs" = "shared-semantics"
 "error.rs" = "shared-semantics"
@@ -91,6 +144,8 @@ forbidden_eval_markers = [
 "free_vars.rs" = "reference-semantics"
 "lib.rs" = "tier-bridge"
 "value.rs" = "tier-bridge"
+"value/collections.rs" = "tier-bridge"
+"value/trace_impl.rs" = "tier-bridge"
 
 [forbidden_role_markers]
 reference-semantics = [
@@ -111,11 +166,13 @@ optimized-tier = [
 "crates/gc_kernel/src/compiled_blob.rs" = 520
 "crates/gc_kernel/src/compiled_compile.rs" = 700
 "crates/gc_kernel/src/compiled_coverage.rs" = 230
+"crates/gc_kernel/src/compiled/trace_impl.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/apply.rs" = 450
 "crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
 "crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/primitive_forward.rs" = 180
 "crates/gc_kernel/src/compiled_runtime/tail_loop.rs" = 700
+"crates/gc_kernel/src/cycle.rs" = 120
 "crates/gc_kernel/src/env.rs" = 100
 "crates/gc_kernel/src/env/capture.rs" = 60
 "crates/gc_kernel/src/error.rs" = 80
@@ -130,3 +187,5 @@ optimized-tier = [
 "crates/gc_kernel/src/free_vars.rs" = 160
 "crates/gc_kernel/src/lib.rs" = 80
 "crates/gc_kernel/src/value.rs" = 720
+"crates/gc_kernel/src/value/collections.rs" = 130
+"crates/gc_kernel/src/value/trace_impl.rs" = 120

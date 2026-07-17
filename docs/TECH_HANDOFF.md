@@ -218,10 +218,12 @@ New production files require an intentional role and line budget in the same rev
 Any optimized-tier change must keep this gate and the broader kernel differential, coverage, artifact-roundtrip, resource, tail, and panic suites green. A future execution tier must define an equally explicit role and differential or translation-validation boundary before becoming a production path.
 
 The normative runtime graph and lifetime contract is `docs/spec/VALUE_EFFECT_HASH.md`. In particular,
-the current tree-walk module frame and compiled module cells can form direct or indirect ownership
-cycles. Stable hash cycle breaking does not reclaim those cycles. No new execution tier may conceal
-that distinction, place a host handle inside a kernel value, expose reclamation timing, or substitute
-process RSS for deterministic logical allocation and live-heap charges.
+the tree-walk module frame and compiled module cells can form direct or indirect ownership cycles.
+The Rust tiers place every cycle-capable runtime owner behind trace-aware `Shared<T>` nodes and run
+explicit collection only after an outer evaluation/application boundary unwinds. Stable hash cycle
+breaking remains distinct from reclamation. No new execution tier may omit a graph edge, place a host
+handle inside a kernel value, expose reclamation timing, or substitute collector bytes or process RSS
+for deterministic logical allocation and live-heap charges.
 
 Production dispatch must not recognize benchmark IDs, exact source symbols, literal values, expected outputs, or workload AST shapes. The retired `compiled_runtime/patterns.rs` path is a governed tombstone and cannot return under another module name. Optimization plans must be derived from documented semantic properties such as resolved lexical identities and primitive opcodes, remain independent of source spelling and benchmark membership, and preserve all observable semantics under source-equivalent rewrites.
 

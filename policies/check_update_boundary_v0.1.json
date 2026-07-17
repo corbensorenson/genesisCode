@@ -282,11 +282,11 @@
           "generate/benchmark-protocol",
           "generate/agent-corpus",
           "generate/benchmark-baselines",
-          "generate/gate-manifest",
           "generate/release-surfaces",
           "generate/roadmap-evidence",
           "generate/roadmap-manifest",
-          "generate/quarto-reference"
+          "generate/quarto-reference",
+          "generate/gate-manifest"
         ],
         "expectedOutputs": [
           "CHANGELOG.md",
@@ -372,11 +372,11 @@
           "generate/benchmark-protocol",
           "generate/agent-corpus",
           "generate/benchmark-baselines",
-          "generate/gate-manifest",
           "generate/release-surfaces",
           "generate/roadmap-evidence",
           "generate/roadmap-manifest",
-          "generate/quarto-reference"
+          "generate/quarto-reference",
+          "generate/gate-manifest"
         ],
         "expectedOutputs": [
           "CHANGELOG.md",
@@ -447,11 +447,13 @@
         "expectedNodes": [
           "generate/roadmap-evidence",
           "generate/roadmap-manifest",
-          "generate/quarto-reference"
+          "generate/quarto-reference",
+          "generate/gate-manifest"
         ],
         "expectedOutputs": [
           "ROADMAP.md",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "genesis.gates.json",
           "llms.txt",
           "reference/capabilities.qmd",
           "reference/diagnostics.qmd",
@@ -481,11 +483,11 @@
           "generate/benchmark-protocol",
           "generate/agent-corpus",
           "generate/benchmark-baselines",
-          "generate/gate-manifest",
           "generate/release-surfaces",
           "generate/roadmap-evidence",
           "generate/roadmap-manifest",
-          "generate/quarto-reference"
+          "generate/quarto-reference",
+          "generate/gate-manifest"
         ],
         "expectedOutputs": [
           "CHANGELOG.md",
@@ -563,11 +565,11 @@
           "generate/benchmark-protocol",
           "generate/agent-corpus",
           "generate/benchmark-baselines",
-          "generate/gate-manifest",
           "generate/release-surfaces",
           "generate/roadmap-evidence",
           "generate/roadmap-manifest",
-          "generate/quarto-reference"
+          "generate/quarto-reference",
+          "generate/gate-manifest"
         ],
         "expectedOutputs": [
           "CHANGELOG.md",
@@ -632,11 +634,11 @@
           "generate/benchmark-protocol",
           "generate/agent-corpus",
           "generate/benchmark-baselines",
-          "generate/gate-manifest",
           "generate/release-surfaces",
           "generate/roadmap-evidence",
           "generate/roadmap-manifest",
-          "generate/quarto-reference"
+          "generate/quarto-reference",
+          "generate/gate-manifest"
         ],
         "expectedOutputs": [
           "CHANGELOG.md",
@@ -1235,7 +1237,9 @@
           "bash",
           "scripts/update_evidence_fixture_classification.sh"
         ],
-        "dependencies": [],
+        "dependencies": [
+          "generate/evidence-verifier-vectors"
+        ],
         "diskMiB": 64,
         "id": "generate/evidence-fixture-classification",
         "inputs": [
@@ -1284,34 +1288,40 @@
           "scripts/update_gate_manifest.sh"
         ],
         "dependencies": [
+          "generate/capability-indices",
+          "generate/capability-coverage",
           "generate/capability-status",
+          "generate/agent-profile",
+          "generate/agent-diagnostics",
+          "generate/agent-surfaces",
+          "generate/canonical-examples",
+          "generate/task-benchmarks",
+          "generate/benchmark-analysis",
+          "generate/held-out-profile",
+          "generate/benchmark-scoring",
+          "generate/construct-validity",
+          "generate/benchmark-run",
+          "generate/benchmark-protocol",
           "generate/agent-corpus",
           "generate/selfhost-freshness",
           "generate/evidence-fixture-classification",
           "generate/check-update-audit",
+          "generate/release-surfaces",
+          "generate/roadmap-evidence",
+          "generate/roadmap-manifest",
+          "generate/quarto-reference",
           "generate/selfhost-review",
-          "generate/selfhost-dashboard"
+          "generate/evidence-verifier-vectors",
+          "generate/ai-iteration-baseline",
+          "generate/prelude-assembly",
+          "generate/selfhost-artifact",
+          "generate/selfhost-dashboard",
+          "generate/benchmark-baselines"
         ],
         "diskMiB": 128,
         "id": "generate/gate-manifest",
         "inputs": [
-          "scripts/update_gate_manifest.sh",
-          "Cargo.lock",
-          "Cargo.toml",
-          "README.md",
-          "benchmarks/**",
-          "crates/**",
-          "docs/spec/**",
-          "examples/**",
-          "genesis.*",
-          "genesis.gates.json",
-          "policies/**",
-          "prelude/**",
-          "rust-toolchain.toml",
-          "scripts/**",
-          "selfhost/**",
-          "tests/**",
-          "tools/**"
+          "**"
         ],
         "mode": "automatic",
         "outputs": [
@@ -1329,10 +1339,14 @@
           "scripts/update_release_notes.sh"
         ],
         "dependencies": [
-          "generate/gate-manifest",
           "generate/benchmark-run",
           "generate/capability-status",
-          "generate/selfhost-freshness"
+          "generate/selfhost-freshness",
+          "generate/evidence-verifier-vectors",
+          "generate/ai-iteration-baseline",
+          "generate/benchmark-baselines",
+          "generate/agent-corpus",
+          "generate/check-update-audit"
         ],
         "diskMiB": 128,
         "id": "generate/release-surfaces",
@@ -1420,7 +1434,14 @@
           "generate/roadmap-manifest",
           "generate/agent-surfaces",
           "generate/capability-indices",
-          "generate/agent-diagnostics"
+          "generate/agent-diagnostics",
+          "generate/evidence-verifier-vectors",
+          "generate/ai-iteration-baseline",
+          "generate/benchmark-baselines",
+          "generate/agent-corpus",
+          "generate/evidence-fixture-classification",
+          "generate/check-update-audit",
+          "generate/selfhost-dashboard"
         ],
         "diskMiB": 1024,
         "id": "generate/quarto-reference",

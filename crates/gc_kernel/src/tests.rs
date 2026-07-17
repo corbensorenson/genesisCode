@@ -3,7 +3,6 @@ use num_bigint::BigInt;
 use std::collections::BTreeSet;
 use std::mem::size_of;
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use crate::compiled::{
     appn_native_partial_materializations, primitive_forward_executions,
@@ -145,8 +144,8 @@ fn value_layout_snapshot_documents_r1_5_baseline() {
     // representation drift is intentional and reviewed.
     assert_eq!(size_of::<Value>(), 24);
     assert_eq!(size_of::<Term>(), 40);
-    assert_eq!(size_of::<ValueVector>(), 32);
-    assert_eq!(size_of::<ValueMap>(), 16);
+    assert_eq!(size_of::<ValueVector>(), 24);
+    assert_eq!(size_of::<ValueMap>(), 24);
     assert_eq!(size_of::<Sym>(), 16);
     assert_eq!(size_of::<NativeFn>(), 56);
     assert_eq!(size_of::<Contract>(), 144);
@@ -650,7 +649,7 @@ fn treewalk_closure_capture_releases_unreferenced_lexical_values() {
         Value::data(Term::Int(BigInt::from(2))),
     ]));
     let dead_weak = match &dead_vector {
-        Value::Vector(values) => Rc::downgrade(values),
+        Value::Vector(values) => values.weak_alive_probe(),
         other => panic!("expected vector, got {}", other.debug_repr()),
     };
     let mut lexical = Env::with_binding(&root, "dead/target", dead_vector.clone());
@@ -670,16 +669,182 @@ fn treewalk_closure_capture_releases_unreferenced_lexical_values() {
 
     drop(lexical);
     drop(dead_vector);
-    assert!(
-        dead_weak.upgrade().is_none(),
-        "closure retained an unrelated lexical value"
-    );
+    assert!(!dead_weak(), "closure retained an unrelated lexical value");
     assert_value_int(
         &closure
             .apply(&mut ctx, Value::data(Term::Int(BigInt::from(2))))
             .unwrap(),
         42,
     );
+}
+
+fn value_owner_probe(value: &Value) -> Box<dyn Fn() -> bool> {
+    match value {
+        Value::Closure(owner) => owner.weak_alive_probe(),
+        Value::CompiledClosure(owner) => owner.weak_alive_probe(),
+        Value::Vector(owner) => owner.weak_alive_probe(),
+        other => panic!("expected cycle-capable value, got {}", other.debug_repr()),
+    }
+}
+
+fn trigger_collection_boundary(ctx: &mut EvalCtx) {
+    let fresh = Env::empty();
+    let nil = parse_term("nil").unwrap();
+    assert_eq!(eval_term(ctx, &fresh, &nil).unwrap().debug_repr(), "nil");
+}
+
+#[test]
+fn recursive_module_cycles_are_reclaimed_after_treewalk_and_compiled_roots_retire() {
+    let forms = parse_module("(def recurse (fn (x) (recurse x)))").unwrap();
+
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        let mut env = Env::empty();
+        if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &forms).unwrap();
+        } else {
+            eval_module(&mut ctx, &mut env, &forms).unwrap();
+        }
+        let closure = env.get("recurse").unwrap();
+        let alive = value_owner_probe(&closure);
+        let hash_before = value_hash(&closure);
+
+        trigger_collection_boundary(&mut ctx);
+        assert!(alive(), "a live recursive closure was collected");
+        assert_eq!(value_hash(&closure), hash_before);
+
+        drop(closure);
+        drop(env);
+        assert!(alive(), "the cycle disappeared without a safe point");
+        trigger_collection_boundary(&mut ctx);
+        assert!(!alive(), "an unreachable recursive module cycle leaked");
+    }
+}
+
+#[test]
+fn indirect_container_cycles_are_reclaimed_across_repeated_sessions() {
+    let forms =
+        parse_module("(def boxed [(fn (x) (prim vec/len boxed))])\n(prim vec/len boxed)").unwrap();
+
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        let mut retired = Vec::new();
+        for _ in 0..128 {
+            let mut env = Env::empty();
+            let result = if compiled {
+                eval_module_compiled(&mut ctx, &mut env, &forms).unwrap()
+            } else {
+                eval_module(&mut ctx, &mut env, &forms).unwrap()
+            };
+            assert_value_int(&result, 1);
+            let boxed = env.get("boxed").unwrap();
+            retired.push(value_owner_probe(&boxed));
+            drop(boxed);
+            drop(env);
+        }
+
+        trigger_collection_boundary(&mut ctx);
+        assert!(
+            retired.iter().all(|alive| !alive()),
+            "an indirect container/closure/module cycle leaked"
+        );
+    }
+}
+
+fn cycle_test_native(_ctx: &mut EvalCtx, mut args: Vec<Value>) -> Result<Value, KernelError> {
+    Ok(args.pop().unwrap_or_else(|| Value::data(Term::Nil)))
+}
+
+fn cycle_test_contract(handler: Value, meta: Value) -> Contract {
+    Contract {
+        handler,
+        proto: None,
+        meta,
+        overrides: std::collections::BTreeMap::new(),
+        shape_id: [0; 32],
+        contract_id: [0; 32],
+    }
+}
+
+#[test]
+fn every_cycle_capable_value_edge_participates_in_reclamation() {
+    type Wrapper = fn(Value) -> Value;
+    let wrappers: &[(&str, Wrapper)] = &[
+        ("vector", |closure| {
+            Value::vector(ValueVector::from_iter([closure]))
+        }),
+        ("map", |closure| {
+            Value::map(ValueMap::from_iter([(
+                gc_coreform::TermOrdKey(Term::Int(BigInt::from(0))),
+                closure,
+            )]))
+        }),
+        ("sealed payload", |closure| Value::Sealed {
+            token: crate::SealId(0),
+            payload: Box::new(closure),
+        }),
+        ("native partial", |closure| {
+            Value::native_fn(NativeFn {
+                name: "cycle-test",
+                arity: 2,
+                collected: vec![closure],
+                func: cycle_test_native,
+            })
+        }),
+        ("contract handler", |closure| {
+            Value::Contract(crate::Shared::new(cycle_test_contract(
+                closure,
+                Value::data(Term::Nil),
+            )))
+        }),
+        ("contract metadata", |closure| {
+            Value::Contract(crate::Shared::new(cycle_test_contract(
+                Value::data(Term::Nil),
+                closure,
+            )))
+        }),
+        ("contract override", |closure| {
+            let mut contract = cycle_test_contract(Value::data(Term::Nil), Value::data(Term::Nil));
+            contract.overrides.insert("call".to_string(), closure);
+            Value::Contract(crate::Shared::new(contract))
+        }),
+        ("contract prototype", |closure| {
+            let prototype =
+                crate::Shared::new(cycle_test_contract(closure, Value::data(Term::Nil)));
+            let mut contract = cycle_test_contract(Value::data(Term::Nil), Value::data(Term::Nil));
+            contract.proto = Some(prototype);
+            Value::Contract(crate::Shared::new(contract))
+        }),
+        ("pure effect program", |closure| {
+            Value::EffectProgram(Box::new(EffectProgram::Pure(Box::new(closure))))
+        }),
+        ("perform effect program", |closure| {
+            Value::EffectProgram(Box::new(EffectProgram::Perform {
+                request: Box::new(closure),
+            }))
+        }),
+        ("effect continuation", |closure| {
+            Value::effect_request(EffectRequest {
+                op: "cycle/test".to_string(),
+                payload: Term::Nil,
+                k: Box::new(closure),
+            })
+        }),
+    ];
+
+    let mut ctx = EvalCtx::new();
+    for (label, wrap) in wrappers {
+        let mut env = Env::empty();
+        let closure = Value::closure("x".to_string(), Term::Symbol("x".to_string()), env.clone());
+        let alive = value_owner_probe(&closure);
+        env.set_local("cycle", wrap(closure.clone()));
+
+        drop(closure);
+        drop(env);
+        assert!(alive(), "{label} cycle disappeared before a safe point");
+        trigger_collection_boundary(&mut ctx);
+        assert!(!alive(), "{label} cycle leaked");
+    }
 }
 
 #[test]

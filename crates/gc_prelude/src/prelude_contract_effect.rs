@@ -23,7 +23,7 @@ pub(super) fn make_genesis() -> Value {
 
     let shape_id = shape_id(None, &BTreeMap::new());
     let contract_id = contract_id(&shape_id, &handler, &meta, None);
-    Value::Contract(Rc::new(Contract {
+    Value::Contract(Shared::new(Contract {
         handler,
         proto: None,
         meta,
@@ -151,7 +151,7 @@ pub(super) fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Va
     let shape_id = shape_id(proto.as_deref(), &overrides);
     let contract_id = contract_id(&shape_id, &handler, &meta, proto.as_deref());
 
-    Ok(Value::Contract(Rc::new(Contract {
+    Ok(Value::Contract(Shared::new(Contract {
         handler,
         proto,
         meta,
@@ -205,7 +205,7 @@ pub(super) fn nf_contract_extend(
 
     let shape_id = shape_id(Some(base.as_ref()), &overrides);
     let contract_id = contract_id(&shape_id, &handler, &meta, Some(base.as_ref()));
-    Ok(Value::Contract(Rc::new(Contract {
+    Ok(Value::Contract(Shared::new(Contract {
         handler,
         proto: Some(base),
         meta,
@@ -220,7 +220,7 @@ fn merge_meta(base: &Value, plus: &Value) -> Value {
         (Value::Map(a), Value::Map(b)) => {
             let mut out = a.clone();
             for (k, v) in b.iter() {
-                Rc::make_mut(&mut out).insert_mut(k.clone(), v.clone());
+                Shared::make_mut(&mut out).insert_mut(k.clone(), v.clone());
             }
             Value::Map(out)
         }

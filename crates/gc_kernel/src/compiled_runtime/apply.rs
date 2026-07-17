@@ -2,6 +2,7 @@ use super::super::*;
 use super::eval::eval_cexpr_runtime;
 use super::primitive_forward::eval_primitive_forward_inline;
 use super::tail_loop::eval_tail_loop_inline;
+use crate::Shared;
 
 pub(crate) struct CompiledClosureCall {
     pub(crate) external_env: Env,
@@ -24,7 +25,7 @@ pub(crate) fn eval_compiled_closure_body_scoped(
     );
     let runtime = RuntimeEnv {
         lexical: call.lexical_env.unwrap_or_else(CompiledLexicalEnv::empty),
-        inline_slots: Rc::new(Vec::new()),
+        inline_slots: Shared::new(Vec::new()),
         module: call.module_env.unwrap_or_else(CompiledModuleCells::empty),
         external: call.external_env,
         coverage_sites: call.coverage_sites.clone(),
@@ -64,7 +65,7 @@ pub(super) enum AppNCallable {
         body: Arc<CExpr>,
     },
     Native {
-        native: Rc<NativeFn>,
+        native: Shared<NativeFn>,
         appended: Vec<Value>,
     },
 }
@@ -126,7 +127,7 @@ pub(super) fn apply_value_to_arg(
                             .compiled_env
                             .clone()
                             .unwrap_or_else(CompiledLexicalEnv::empty),
-                        inline_slots: Rc::new(Vec::new()),
+                        inline_slots: Shared::new(Vec::new()),
                         module: data
                             .module_env
                             .clone()
@@ -219,7 +220,7 @@ pub(super) fn eval_app_n_callable_runtime(
                                 .compiled_env
                                 .clone()
                                 .unwrap_or_else(CompiledLexicalEnv::empty),
-                            inline_slots: Rc::new(Vec::new()),
+                            inline_slots: Shared::new(Vec::new()),
                             module: data
                                 .module_env
                                 .clone()
@@ -386,7 +387,7 @@ pub(crate) fn appn_native_partial_materializations() -> usize {
 fn eval_compiled_closure_appn_inline(
     ctx: &mut EvalCtx,
     caller_env: &RuntimeEnv,
-    data: Rc<crate::value::CompiledClosureData>,
+    data: Shared<crate::value::CompiledClosureData>,
     args: &[Arc<CExpr>],
 ) -> Result<Option<ApplyControl>, KernelError> {
     let closure_coverage = data.body_c.coverage_sites().clone();
@@ -399,7 +400,7 @@ fn eval_compiled_closure_appn_inline(
             .compiled_env
             .clone()
             .unwrap_or_else(CompiledLexicalEnv::empty),
-        inline_slots: Rc::new(Vec::new()),
+        inline_slots: Shared::new(Vec::new()),
         module: data
             .module_env
             .clone()
