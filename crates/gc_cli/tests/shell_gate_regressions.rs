@@ -434,6 +434,26 @@ fn changed_fast_ambiguous_governance_change_escalates_without_empty_package_arg(
 }
 
 #[test]
+fn changed_fast_clean_tree_does_not_construct_an_empty_authority_path() {
+    let root = repo_root();
+    let changed_fast = fs::read_to_string(root.join("scripts/test_changed_fast.sh"))
+        .expect("read test_changed_fast.sh");
+
+    assert!(
+        changed_fast.contains("if (( ${#CHANGED_FILES[@]} > 0 )); then"),
+        "generated-authority staging must be guarded by the exact changed-path cardinality"
+    );
+    assert!(
+        changed_fast.contains("for path in \"${CHANGED_FILES[@]}\"; do"),
+        "generated-authority staging must not use a default expansion that yields an empty path"
+    );
+    assert!(
+        changed_fast.contains("generated-authority skipped (clean tree)"),
+        "clean-tree authority behavior must remain observable"
+    );
+}
+
+#[test]
 #[ignore = "perf-gate"]
 fn bootstrap_retirement_gate_has_explicit_local_degraded_mode() {
     let root = repo_root();

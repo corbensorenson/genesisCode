@@ -282,13 +282,17 @@ mkdir -p "$(dirname "$HISTORY_PATH")"
 # selected gate can validate or publish a stale derived view. Its path-specific
 # Cargo products remain stage-local and are reclaimed with that worktree rather
 # than contaminating this loop's reusable target and residual disk budget.
-declare -a GENERATED_AUTHORITY_ARGS=(--freshness)
-for path in "${CHANGED_FILES[@]-}"; do
-  GENERATED_AUTHORITY_ARGS+=(--path "$path")
-done
-python3 scripts/lib/generated_authority.py "${GENERATED_AUTHORITY_ARGS[@]}"
+if (( ${#CHANGED_FILES[@]} > 0 )); then
+  declare -a GENERATED_AUTHORITY_ARGS=(--freshness)
+  for path in "${CHANGED_FILES[@]}"; do
+    GENERATED_AUTHORITY_ARGS+=(--path "$path")
+  done
+  python3 scripts/lib/generated_authority.py "${GENERATED_AUTHORITY_ARGS[@]}"
+else
+  echo "test-changed-fast: generated-authority skipped (clean tree)"
+fi
 
-for cmd in "${COMMANDS[@]-}"; do
+for cmd in "${COMMANDS[@]}"; do
   echo ">> $cmd"
   # Execute in-process to avoid one shell startup per command in the hot loop.
   eval "$cmd"
