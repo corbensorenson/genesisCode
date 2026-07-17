@@ -25,6 +25,9 @@ The normative authorities are:
 - [Controlled ablations](../docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json)
 - [Reference trace schema](../docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json)
 - [Canonical front door](../docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md)
+- [Open Agent harness](../docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json)
+- [Open Agent predeclaration schema](../docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json)
+- [Open Agent run schema](../docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json)
 - [Closed adapter profile](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.json)
 - [Closed adapter-profile schema](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json)
 - [Execution-run schema](../docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json)
@@ -66,7 +69,7 @@ python3 scripts/lib/genesisbench_protocol.py --check --self-test
 The verifier checks:
 
 1. The immutable commit and Git tree.
-2. A complete SHA-256 manifest over all 1,709 frozen files.
+2. A complete SHA-256 manifest over all 1,775 frozen files.
 3. Independent runtime, documentation, and benchmark component identities.
 4. Every linked schema, card, task, scorer, run verifier, MCP catalog source, and integration test.
 5. Closed context, tool, capability, attempt, model-disclosure, visibility, scoring, contamination, track, cohort, and eligibility policies.
@@ -125,6 +128,38 @@ genesis --json --selfhost-artifact selfhost/toolchain.gc bench replay \
 The five adapter classes are hosted API, loopback OpenAI-compatible server, direct local runtime, command plugin, and deterministic mock. They share one strict request/response contract. Adapters may frame bytes for transport, but cannot alter candidate semantics, add provider tools, broaden context, hide retries, or emit undeclared provider facts. Hosted adapters receive one exact HTTPS endpoint and one named credential; local HTTP is loopback-only; process adapters are executable-digest-bound, use finite output and wall limits, and kill and reap their process group on timeout or cancellation. A direct local runtime additionally verifies the model artifact digest.
 
 Every attempt is retained. A provider failure, timeout, or cancellation becomes an immutable invalid run rather than disappearing. Secret values never enter evidence; only the declared variable name and presence are recorded. Replay validates all fields and bytes without adapter, endpoint, credential, executable, or model access, then independently rescores successful candidates.
+
+### Run a repository-editing agent
+
+The five fixed adapters above answer the Cold Acquisition transport question. They do not give a command plugin a repository workspace. Repository-editing systems use the separate Open Agent harness and remain in the `open-agent` track.
+
+Predeclare Codex CLI with Luna at `xhigh` before inference. A provider alias is useful exploratory evidence but is not immutable, so this example deliberately omits `--immutable-revision`:
+
+```bash
+CODEX=/Applications/ChatGPT.app/Contents/Resources/codex
+genesis --json bench agent-plan \
+  --case completion-small \
+  --campaign codex-luna-xhigh-2026-07 \
+  --runner codex-cli-hosted \
+  --agent-executable "$CODEX" \
+  --model luna \
+  --model-revision provider-alias:luna@2026-07-17 \
+  --reasoning-effort xhigh \
+  --timeout-ms 900000 \
+  --out .genesis/bench/predeclarations/completion-small.json
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-run \
+  --predeclaration .genesis/bench/predeclarations/completion-small.json \
+  --agent-executable "$CODEX" \
+  --out .genesis/bench/open-agent/completion-small
+genesis --json bench agent-validate \
+  --run .genesis/bench/open-agent/completion-small/run.json
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-replay \
+  --run .genesis/bench/open-agent/completion-small/run.json
+```
+
+The harness reconstructs and byte-checks the frozen source snapshot under a read-only input root. Only the case inputs are writable. One ephemeral JSONL Codex attempt runs with no resume, hidden retry, approval, or additional writable root. The post-run audit rejects source changes, symlinks, extra candidate paths, non-editable drift, malformed events, timeout, capture overflow, or nonzero exit. Replay validates retained evidence and independently rescores without resolving the Codex executable or contacting the model.
+
+For local comparisons, use `--runner codex-cli-local`, select `--local-provider lmstudio` or `ollama`, and bind `--model-artifact-sha256`. Hosted Luna and each local model/runtime/artifact combination are distinct cohorts. Complete one predeclared small-case reality gate across all nine task classes before spending on the full 27-condition matrix.
 
 Bundle and stage the evidence locally:
 
@@ -312,7 +347,7 @@ The retained report binds the benchmark, profile, scoring policy, held-out quali
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, construct-validity and anti-gaming study, scorer, canonical eleven-command CLI, five closed adapter classes, strict replay, deterministic run bundles, signed append-only registry, lexicographic static leaderboard, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. Reproducible multi-model baselines, benchmark card, and methods paper are R1.4.o.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, construct-validity and anti-gaming study, scorer, canonical fifteen-command CLI, five closed Cold Acquisition adapters, separate capability-minimal Open Agent harness, strict replay, deterministic run bundles, signed append-only registry, lexicographic static leaderboard, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. Reproducible multi-model campaigns, benchmark card, and methods paper remain R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 

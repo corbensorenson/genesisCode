@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Structured failures
 
-**195 diagnostics** · catalog identity `369cacde830066ee5ae8be523ffecba23f568802e30edfae14c48d1e9135ef2c`
+**196 diagnostics** · catalog identity `c4305992e3b43ea4f2b1364d9d3b33f0d063bbeeec8ce962c6be2937cc3b656f`
 
 Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
 
@@ -296,6 +296,7 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 | [`bench/driver-spawn`](#bench-driver-spawn-0c50a076) | error | `inspect-invocation-contract` |
 | [`bench/executable-unavailable`](#bench-executable-unavailable-5d5cc66d) | error | `inspect-invocation-contract` |
 | [`bench/front-door-failed`](#bench-front-door-failed-b0a89808) | error | `inspect-invocation-contract` |
+| [`bench/open-agent-dispatch`](#bench-open-agent-dispatch-e4774e0a) | error | `inspect-invocation-contract` |
 | [`bench/output-invalid`](#bench-output-invalid-2b7912ca) | error | `inspect-invocation-contract` |
 | [`bench/output-limit`](#bench-output-limit-8b1eb026) | error | `inspect-invocation-contract` |
 | [`bench/selfhost-artifact-required`](#bench-selfhost-artifact-required-676d727d) | error | `inspect-invocation-contract` |
@@ -552,6 +553,21 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `bench/front-door-failed` {#bench-front-door-failed-b0a89808}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/bench/front-door-failed`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `bench/open-agent-dispatch` {#bench-open-agent-dispatch-e4774e0a}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bench/open-agent-dispatch`
 
 **Likely causes**
 

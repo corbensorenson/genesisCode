@@ -1,0 +1,83 @@
+{
+  "$id": "https://genesiscode.dev/schemas/genesisbench-open-agent-run-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifactInventory": {"items": {"$ref": "#/$defs/artifact"}, "type": "array"},
+    "artifactInventoryIdentitySha256": {"$ref": "#/$defs/hash"},
+    "attempt": {"$ref": "#/$defs/attempt"},
+    "case": {"$ref": "#/$defs/case"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+    "kind": {"const": "genesis/genesisbench-open-agent-run-v0.1"},
+    "outcome": {"enum": ["verified", "failed", "invalid"]},
+    "predeclarationIdentitySha256": {"$ref": "#/$defs/hash"},
+    "replay": {"$ref": "#/$defs/replay"},
+    "scoreIdentitySha256": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+    "version": {"const": "0.1.0"},
+    "workspace": {"$ref": "#/$defs/workspace"}
+  },
+  "required": ["kind", "version", "predeclarationIdentitySha256", "case", "attempt", "workspace", "outcome", "scoreIdentitySha256", "artifactInventory", "artifactInventoryIdentitySha256", "replay", "contentIdentitySha256"],
+  "title": "GenesisBench Open Agent run v0.1",
+  "type": "object",
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {"bytes": {"minimum": 0, "type": "integer"}, "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$", "type": "string"}, "sha256": {"$ref": "#/$defs/hash"}},
+      "required": ["path", "bytes", "sha256"],
+      "type": "object"
+    },
+    "attempt": {
+      "additionalProperties": false,
+      "properties": {
+        "elapsedMs": {"minimum": 0, "type": "integer"},
+        "environmentPresentNames": {"items": {"type": "string"}, "type": "array", "uniqueItems": true},
+        "environmentValuesRecorded": {"const": false},
+        "eventCount": {"maximum": 100000, "minimum": 0, "type": "integer"},
+        "index": {"const": 0},
+        "returnCode": {"anyOf": [{"type": "integer"}, {"type": "null"}]},
+        "termination": {"enum": ["exited", "timeout", "capture-limit"]}
+      },
+      "required": ["index", "returnCode", "termination", "elapsedMs", "eventCount", "environmentPresentNames", "environmentValuesRecorded"],
+      "type": "object"
+    },
+    "case": {
+      "additionalProperties": false,
+      "properties": {
+        "conditionId": {"$ref": "#/$defs/id"},
+        "conditionIdentitySha256": {"$ref": "#/$defs/hash"},
+        "editablePaths": {"items": {"$ref": "#/$defs/path"}, "minItems": 1, "type": "array", "uniqueItems": true},
+        "id": {"$ref": "#/$defs/id"},
+        "lineageId": {"$ref": "#/$defs/id"},
+        "lineageIdentitySha256": {"$ref": "#/$defs/hash"}
+      },
+      "required": ["id", "lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256", "editablePaths"],
+      "type": "object"
+    },
+    "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "id": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$", "type": "string"},
+    "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$", "type": "string"},
+    "replay": {
+      "additionalProperties": false,
+      "properties": {
+        "agentAccessAllowed": {"const": false},
+        "independentRescoreRequired": {"type": "boolean"},
+        "modelAccessAllowed": {"const": false}
+      },
+      "required": ["agentAccessAllowed", "modelAccessAllowed", "independentRescoreRequired"],
+      "type": "object"
+    },
+    "workspace": {
+      "additionalProperties": false,
+      "properties": {
+        "afterInventory": {"items": {"$ref": "#/$defs/artifact"}, "type": "array"},
+        "afterInventoryStatus": {"enum": ["valid", "invalid"]},
+        "beforeInventory": {"items": {"$ref": "#/$defs/artifact"}, "type": "array"},
+        "sourceSnapshotAfterIdentitySha256": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "sourceSnapshotBeforeIdentitySha256": {"$ref": "#/$defs/hash"},
+        "violations": {"items": {"enum": ["capture-limit", "malformed-event-transcript", "noneditable-input-drift", "nonzero-exit", "repository-invalid", "timeout", "workspace-invalid", "workspace-path-drift"]}, "type": "array", "uniqueItems": true}
+      },
+      "required": ["beforeInventory", "afterInventory", "afterInventoryStatus", "sourceSnapshotBeforeIdentitySha256", "sourceSnapshotAfterIdentitySha256", "violations"],
+      "type": "object"
+    }
+  }
+}

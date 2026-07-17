@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import gc_agent_scoring
+import genesisbench_open_agent
 import genesisbench_reference_agent
 
 
@@ -1166,7 +1167,7 @@ def submit_bundle(bundle: Path, outbox: Path, submitter: str) -> dict[str, Any]:
 def inspect(case_id: str | None, adapter_path: Path | None) -> dict[str, Any]:
     suite = load_json(SUITE_PATH)
     profile = load_json(PROFILE_PATH)
-    data: dict[str, Any] = {"kind": "genesis/genesisbench-inspect-v0.1", "profileIdentitySha256": profile["contentIdentitySha256"], "cases": [{"id": row["id"], "taskClass": row["taskClass"], "lineageId": row["lineageId"], "conditionId": row["conditionId"]} for row in suite["cases"]], "adapterClasses": list(ADAPTER_CLASSES), "commands": ["inspect", "run", "validate-run", "score", "replay", "bundle", "submit", "registry-init", "registry-admit", "registry-verify", "registry-build"]}
+    data: dict[str, Any] = {"kind": "genesis/genesisbench-inspect-v0.1", "profileIdentitySha256": profile["contentIdentitySha256"], "openAgentHarnessIdentitySha256": genesisbench_open_agent.authority()["contentIdentitySha256"], "cases": [{"id": row["id"], "taskClass": row["taskClass"], "lineageId": row["lineageId"], "conditionId": row["conditionId"]} for row in suite["cases"]], "adapterClasses": list(ADAPTER_CLASSES), "commands": ["inspect", "run", "agent-plan", "agent-run", "agent-validate", "agent-replay", "validate-run", "score", "replay", "bundle", "submit", "registry-init", "registry-admit", "registry-verify", "registry-build"]}
     if case_id is not None:
         data["case"] = find_case(case_id)
     if adapter_path is not None:
@@ -1187,11 +1188,12 @@ def validate_authorities() -> dict[str, Any]:
     for path, expected in schemas.items():
         require(load_json(path) == expected, f"schema drift: {path.name}")
     require(FIXTURE_TOOL.read_bytes() == render_fixture_tool(), "command fixture drift")
+    genesisbench_open_agent.validate_authorities()
     return expected_profile
 
 
 def self_test(profile: dict[str, Any]) -> int:
-    controls = 0
+    controls = genesisbench_open_agent.self_test()
     case = find_case("generation-small")
     normalized: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="genesisbench-self-test-") as tmp_raw:

@@ -111,13 +111,17 @@ genesis --json agent-index --diagnostic <exact-code>
     as the frozen Cold Acquisition scaffold, its eight paired ablations over nine shared
     lineages, and the complete no-hidden-work trajectory contract.
   - includes `genesisbench_front_door = "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md"`,
+    `genesisbench_open_agent = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json"`,
+    `genesisbench_open_agent_predeclaration_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json"`,
+    `genesisbench_open_agent_run_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json"`,
     `genesisbench_adapters = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json"`,
     `genesisbench_adapters_schema = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json"`,
     `genesisbench_adapter_schema = "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json"`,
     `genesisbench_execution_run_schema = "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json"`,
     and `genesisbench_bundle_manifest_schema = "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json"`
-    as the canonical eleven-command benchmark and registry surface, closed five-class transport contract,
-    strict run/replay record, and deterministic submission bundle.
+    as the canonical fifteen-command benchmark and registry surface, separate capability-minimal
+    Open Agent predeclaration/run boundary, closed five-class Cold Acquisition transport contract,
+    strict run/replay records, and deterministic submission bundle.
   - includes `genesisbench_registry = "docs/spec/GENESISBENCH_REGISTRY_v0.1.json"`,
     `genesisbench_submission_claim_schema = "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json"`,
     `genesisbench_signed_submission_schema = "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json"`,
