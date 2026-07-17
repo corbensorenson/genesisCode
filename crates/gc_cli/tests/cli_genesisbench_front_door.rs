@@ -323,17 +323,35 @@ fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_mo
             .expect("make Open Agent fixture executable");
     }
 
-    let predeclaration = temp.path().join("predeclaration.json");
-    let planned = data(&run_genesis(
+    let campaign = temp.path().join("campaign.json");
+    let campaign_planned = data(&run_genesis(
         &root,
         &artifact,
         &[
             "bench",
-            "agent-plan",
-            "--case",
-            "completion-small",
+            "agent-campaign-plan",
             "--campaign",
             "codex-luna-xhigh-conformance",
+            "--phase",
+            "reality-gate",
+            "--case",
+            "completion-small",
+            "--case",
+            "deployment-small",
+            "--case",
+            "generation-small",
+            "--case",
+            "package-migration-small",
+            "--case",
+            "performance-repair-small",
+            "--case",
+            "policy-minimization-small",
+            "--case",
+            "refactor-small",
+            "--case",
+            "repair-small",
+            "--case",
+            "replay-investigation-small",
             "--runner",
             "codex-cli-hosted",
             "--agent-executable",
@@ -346,6 +364,27 @@ fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_mo
             "xhigh",
             "--timeout-ms",
             "30000",
+            "--hardware-class",
+            "fixture-host",
+            "--out",
+            campaign.to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(campaign_planned["phase"], "reality-gate");
+    assert_eq!(campaign_planned["cases"].as_array().unwrap().len(), 9);
+    assert_eq!(campaign_planned["publication"]["expectedAttemptCount"], 9);
+
+    let predeclaration = temp.path().join("predeclaration.json");
+    let planned = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-plan",
+            "--case",
+            "completion-small",
+            "--campaign-predeclaration",
+            campaign.to_str().unwrap(),
             "--out",
             predeclaration.to_str().unwrap(),
         ],
@@ -363,6 +402,8 @@ fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_mo
         &[
             "bench",
             "agent-run",
+            "--campaign-predeclaration",
+            campaign.to_str().unwrap(),
             "--predeclaration",
             predeclaration.to_str().unwrap(),
             "--agent-executable",
@@ -407,6 +448,55 @@ fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_mo
     assert_eq!(replayed["modelAccessed"], false);
     assert_eq!(replayed["allFieldsValidated"], true);
     assert_eq!(replayed["independentRescoreMatched"], true);
+}
+
+#[test]
+fn retained_luna_campaign_replays_after_current_authorities_advance() {
+    let root = support::repo_root();
+    let temp = tempdir().expect("temporary historical replay root");
+    let artifact = support::copy_repo_toolchain_artifact(temp.path());
+    let campaign = root
+        .join("benchmarks/genesisbench/v0.1/campaigns/codex-luna-xhigh-2026-07-17/reality-gate");
+    let cases = [
+        "completion-small",
+        "deployment-small",
+        "generation-small",
+        "package-migration-small",
+        "performance-repair-small",
+        "policy-minimization-small",
+        "refactor-small",
+        "repair-small",
+        "replay-investigation-small",
+    ];
+    for case in cases {
+        let run = campaign.join("runs").join(case).join("run.json");
+        let validated = data(&run_genesis(
+            &root,
+            &artifact,
+            &["bench", "agent-validate", "--run", run.to_str().unwrap()],
+        ));
+        assert_eq!(validated["valid"], true);
+        assert_eq!(validated["outcome"], "invalid");
+
+        let replayed = data(&run_genesis(
+            &root,
+            &artifact,
+            &["bench", "agent-replay", "--run", run.to_str().unwrap()],
+        ));
+        assert_eq!(replayed["agentAccessed"], false);
+        assert_eq!(replayed["modelAccessed"], false);
+        assert_eq!(replayed["allFieldsValidated"], true);
+        assert!(replayed["independentRescoreMatched"].is_null());
+    }
+
+    let report: Value = serde_json::from_slice(
+        &fs::read(campaign.join("report.json")).expect("read retained campaign report"),
+    )
+    .expect("parse retained campaign report");
+    assert_eq!(report["matrix"]["complete"], true);
+    assert_eq!(report["summary"]["invalid"], 9);
+    assert_eq!(report["summary"]["providerUnavailableForAccount"], true);
+    assert_eq!(report["expansion"]["allowed"], false);
 }
 
 #[test]
@@ -482,5 +572,5 @@ fn generated_authorities_and_all_adapter_controls_are_current() {
     );
     let report: Value = serde_json::from_slice(&output.stdout).expect("parse authority report");
     assert_eq!(report["adapterClasses"], 5);
-    assert_eq!(report["controls"], 40);
+    assert_eq!(report["controls"], 48);
 }

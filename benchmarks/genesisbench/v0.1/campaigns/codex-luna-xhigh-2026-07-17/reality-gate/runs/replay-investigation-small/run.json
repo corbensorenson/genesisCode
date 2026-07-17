@@ -1,0 +1,110 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 6494,
+      "path": "campaign.json",
+      "sha256": "d0b386ac4359eb977251281307a206c808310ebab42a33563b5180fdcc9c9898"
+    },
+    {
+      "bytes": 716,
+      "path": "events.jsonl",
+      "sha256": "f8dc4596eb5cc342e6470e353cfb43bae9f310fbc4a74dd9327e7b5006ffc0e7"
+    },
+    {
+      "bytes": 2648,
+      "path": "predeclaration.json",
+      "sha256": "8cc6ea7a9b1e68a9e626e9736684fb2ac905c26e57c8c835dcb20dab3e715251"
+    },
+    {
+      "bytes": 257,
+      "path": "stderr.txt",
+      "sha256": "ff7fb72181fc36c0d7b8f5ccf36e3d06f2280d38a7e1a6f4b85ac0d719986051"
+    }
+  ],
+  "artifactInventoryIdentitySha256": "746589a608992d0416210521a8e629026c1df11544dd9447d9b8ab133c0ebc22",
+  "attempt": {
+    "elapsedMs": 7830,
+    "environmentPresentNames": [
+      "HOME",
+      "PATH"
+    ],
+    "environmentValuesRecorded": false,
+    "eventCount": 5,
+    "index": 0,
+    "returnCode": 1,
+    "termination": "exited"
+  },
+  "case": {
+    "conditionId": "condition-replay-investigation-context-small-001",
+    "conditionIdentitySha256": "e2b679562c111f9ce5abfd628c11d25cd51054d0379d43a398afcf1a371bd296",
+    "editablePaths": [
+      "finding.json"
+    ],
+    "id": "replay-investigation-small",
+    "lineageId": "lineage-replay-investigation-001",
+    "lineageIdentitySha256": "97a937563e5b7c29f9bf3b696b0209801adf08a1421c1ee5ae4847bd13f71fe4"
+  },
+  "contentIdentitySha256": "06a1452adeb3984411000004dd4c612d34daccdbe4ac25fbc840f0bd783b4ff9",
+  "kind": "genesis/genesisbench-open-agent-run-v0.1",
+  "outcome": "invalid",
+  "predeclarationIdentitySha256": "4727c1113161ee0cf990a9be49c45e26d7fbdb01a98c3bfff3bfc18a4a3323bf",
+  "replay": {
+    "agentAccessAllowed": false,
+    "independentRescoreRequired": false,
+    "modelAccessAllowed": false
+  },
+  "scoreIdentitySha256": null,
+  "version": "0.1.0",
+  "workspace": {
+    "afterInventory": [
+      {
+        "bytes": 59,
+        "path": "caps.toml",
+        "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+      },
+      {
+        "bytes": 22,
+        "path": "data.txt",
+        "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+      },
+      {
+        "bytes": 124,
+        "path": "program.gc",
+        "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+      },
+      {
+        "bytes": 864,
+        "path": "run.gclog",
+        "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+      }
+    ],
+    "afterInventoryStatus": "valid",
+    "beforeInventory": [
+      {
+        "bytes": 59,
+        "path": "caps.toml",
+        "sha256": "88ac82f9db453d69cce5ea6160ee4233a0539dba729fa099f54430974f7fa206"
+      },
+      {
+        "bytes": 22,
+        "path": "data.txt",
+        "sha256": "5fa1f1fa1a3835ff5c28bbf14f17f93885e86296a42e45833cc17c85663ad10c"
+      },
+      {
+        "bytes": 124,
+        "path": "program.gc",
+        "sha256": "c0ba5199dee3ca5324f6cecde4eb0639d8c9bcbe9290e5e5fc6770eea0d26754"
+      },
+      {
+        "bytes": 864,
+        "path": "run.gclog",
+        "sha256": "3dbc70be64079255b95ef648fb8fbbd5320bbe3cec49df5b221718f4e8f1c598"
+      }
+    ],
+    "sourceSnapshotAfterIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "sourceSnapshotBeforeIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "violations": [
+      "nonzero-exit"
+    ]
+  }
+}

@@ -6,6 +6,7 @@
     "attemptPolicy": {"$ref": "#/$defs/attemptPolicy"},
     "authorities": {"$ref": "#/$defs/authorities"},
     "campaignId": {"$ref": "#/$defs/id"},
+    "campaignIdentitySha256": {"$ref": "#/$defs/hash"},
     "capabilities": {"$ref": "#/$defs/capabilities"},
     "case": {"$ref": "#/$defs/case"},
     "contentIdentitySha256": {"$ref": "#/$defs/hash"},
@@ -17,7 +18,7 @@
     "track": {"$ref": "#/$defs/track"},
     "version": {"const": "0.1.0"}
   },
-  "required": ["kind", "version", "campaignId", "case", "authorities", "track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure", "contentIdentitySha256"],
+  "required": ["kind", "version", "campaignId", "campaignIdentitySha256", "case", "authorities", "track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure", "contentIdentitySha256"],
   "title": "GenesisBench Open Agent predeclaration v0.1",
   "type": "object",
   "$defs": {
@@ -68,7 +69,7 @@
     "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$", "type": "string"},
     "runner": {
       "additionalProperties": false,
-      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
+      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
       "required": ["class", "executableSha256", "executableVersion", "invocationProfile", "localProvider"],
       "type": "object"
     },

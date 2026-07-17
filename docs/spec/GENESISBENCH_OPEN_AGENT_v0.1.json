@@ -1,6 +1,6 @@
 {
   "coldAcquisitionAdapterProfileUnchanged": true,
-  "contentIdentitySha256": "d244132ac82a66b93360a6fb4981b90b97d1c343f5be1e728facff8dfe6f5d27",
+  "contentIdentitySha256": "46bc6bf2de09284204e7ed6cc645dd0dc7b021e3dd5a3548e86f39b4b3289486",
   "invocationProfiles": {
     "codex-cli-hosted": {
       "argvPolicy": "fixed-codex-exec-ephemeral-json-workspace-write-one-prompt-v0.1",
@@ -23,16 +23,19 @@
     "maxWorkspaceBytes": 67108864,
     "maxWorkspaceFiles": 4096
   },
-  "purpose": "Execute one disclosed repository-editing agent attempt without broadening the frozen Cold Acquisition adapter profile.",
-  "scaffoldIdentitySha256": "a753b5bfe1d885c2f07f01750361217d64a9b604511a1bd22a5202978076a8ae",
+  "purpose": "Atomically predeclare and execute complete disclosed repository-editing agent campaigns without broadening the frozen Cold Acquisition adapter profile.",
+  "scaffoldIdentitySha256": "d6e77a4c71f6d4cd1e0666d05e82041bcd2f9c559a993ebc02a0e9d3e8f09ce6",
   "securityControls": [
     "agent-and-model-never-accessed-during-replay",
     "all-environment-values-redacted",
+    "atomic-complete-campaign-precommitment",
+    "attempt-membership-and-common-field-binding",
     "candidate-path-closure",
     "exact-executable-digest-and-version",
     "finite-capture-and-wall-time-budgets",
     "frozen-repository-post-run-rehash",
     "immutable-predeclaration-before-execution",
+    "non-selective-campaign-stop-policy",
     "one-attempt-no-resume-no-hidden-retry",
     "process-group-hard-kill-and-reap",
     "provider-network-only-or-loopback-only",

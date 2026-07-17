@@ -1,0 +1,80 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 6494,
+      "path": "campaign.json",
+      "sha256": "d0b386ac4359eb977251281307a206c808310ebab42a33563b5180fdcc9c9898"
+    },
+    {
+      "bytes": 716,
+      "path": "events.jsonl",
+      "sha256": "31063c41640a6a8ac6f82b87cf8cbfb3136f3f61c22d19da1ed63e3915966c5f"
+    },
+    {
+      "bytes": 2613,
+      "path": "predeclaration.json",
+      "sha256": "94785cc63dbab0d6b294a986ba4c5fb7fbe6b7c67d47ae7448f1ad54a9ab25eb"
+    },
+    {
+      "bytes": 257,
+      "path": "stderr.txt",
+      "sha256": "78a63902e17b1067dc03404b6bda3796a4f26817b88de6ce63e26057f756c8aa"
+    }
+  ],
+  "artifactInventoryIdentitySha256": "dce52ae2ab91e23abcd3a273755a41143def327c7438d0a5a0b2275aa7ab05ba",
+  "attempt": {
+    "elapsedMs": 4821,
+    "environmentPresentNames": [
+      "HOME",
+      "PATH"
+    ],
+    "environmentValuesRecorded": false,
+    "eventCount": 5,
+    "index": 0,
+    "returnCode": 1,
+    "termination": "exited"
+  },
+  "case": {
+    "conditionId": "condition-generation-context-small-001",
+    "conditionIdentitySha256": "8e15159f037afe6f776800fea492646c83df05572f3ac126f0a9fef56b2a2f1f",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "generation-small",
+    "lineageId": "lineage-generation-001",
+    "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce"
+  },
+  "contentIdentitySha256": "6b76e762ba5f2aad516935333f729f8e135ae83184ae6665999388188d049d14",
+  "kind": "genesis/genesisbench-open-agent-run-v0.1",
+  "outcome": "invalid",
+  "predeclarationIdentitySha256": "9549138448c35dd98cba91da52cffdce3528f97a0eca93f2fca5acdf919b60b4",
+  "replay": {
+    "agentAccessAllowed": false,
+    "independentRescoreRequired": false,
+    "modelAccessAllowed": false
+  },
+  "scoreIdentitySha256": null,
+  "version": "0.1.0",
+  "workspace": {
+    "afterInventory": [
+      {
+        "bytes": 140,
+        "path": "requirements.md",
+        "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+      }
+    ],
+    "afterInventoryStatus": "valid",
+    "beforeInventory": [
+      {
+        "bytes": 140,
+        "path": "requirements.md",
+        "sha256": "fcf1da0c00650b4ba6f10ca8d9e3304a4d0a343505a35d759029f56cd620fd97"
+      }
+    ],
+    "sourceSnapshotAfterIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "sourceSnapshotBeforeIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "violations": [
+      "nonzero-exit"
+    ]
+  }
+}

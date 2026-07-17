@@ -18,13 +18,22 @@ genesis --json --selfhost-artifact selfhost/toolchain.gc bench run \
   --case CASE --adapter ADAPTER.json --out RUN_DIR \
   [--adapter-executable EXECUTABLE] [--model-artifact MODEL] \
   [--ablation retrieval]
-genesis --json bench agent-plan \
-  --case CASE --campaign CAMPAIGN \
+genesis --json bench agent-campaign-plan \
+  --campaign CAMPAIGN --phase reality-gate \
+  --case completion-small --case deployment-small --case generation-small \
+  --case package-migration-small --case performance-repair-small \
+  --case policy-minimization-small --case refactor-small --case repair-small \
+  --case replay-investigation-small \
   --runner codex-cli-hosted --agent-executable CODEX \
   --model MODEL --model-revision REVISION \
   --reasoning-effort xhigh --timeout-ms 900000 \
-  [--immutable-revision] --out PREDECLARATION.json
+  --hardware-class HARDWARE_CLASS [--immutable-revision] \
+  --out CAMPAIGN.json
+genesis --json bench agent-plan \
+  --case CASE --campaign-predeclaration CAMPAIGN.json \
+  --out PREDECLARATION.json
 genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-run \
+  --campaign-predeclaration CAMPAIGN.json \
   --predeclaration PREDECLARATION.json \
   --agent-executable CODEX --out RUN_DIR
 genesis --json bench agent-validate --run RUN_DIR/run.json
@@ -55,11 +64,11 @@ Front-door v0.1 executes the canonical `retrieval` reference condition only. The
 
 ## Open Agent Harness
 
-The Open Agent extension is a separate content-addressed execution boundary. It does not add a sixth class to `GENESISBENCH_ADAPTERS_v0.1.json`, change Cold Acquisition, or make custom orchestration comparable to the fixed reference scaffold. Its authority is `GENESISBENCH_OPEN_AGENT_v0.1.json`; its recursively closed predeclaration and run contracts are `GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json` and `GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json`.
+The Open Agent extension is a separate content-addressed execution boundary. It does not add a sixth class to `GENESISBENCH_ADAPTERS_v0.1.json`, change Cold Acquisition, or make custom orchestration comparable to the fixed reference scaffold. New campaigns use `GENESISBENCH_OPEN_AGENT_v0.2.json`; the immutable v0.1 authority remains available for historical replay. Its recursively closed campaign, attempt-predeclaration, run, and campaign-report contracts are `GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json`, `GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json`, `GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json`, and `GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json`.
 
-`agent-plan` must run before model inference. It binds the campaign and case, all protocol/suite/snapshot/scaffold identities, exact Codex executable digest and version, requested model and revision, reasoning effort, local model artifact when applicable, one-attempt policy, capabilities, environment-name allowlist, and finite wall-time/output/workspace budgets. It never records environment values. Every harness predeclaration is deterministically `rankEligible: false`; only the independent signed registry may derive ranked admission after verifying provenance, contamination, artifact, cohort, replay, and rescore evidence. Passing `--immutable-revision` is a provenance assertion and is appropriate only when the provider exposes a genuinely immutable revision. A local cohort additionally requires `--model-artifact-sha256` and either `--local-provider lmstudio` or `--local-provider ollama`.
+`agent-campaign-plan` must run before model inference. It atomically binds the complete 9-case reality gate or 27-case public matrix, all protocol/suite/snapshot/scaffold identities, exact Codex executable digest and version, requested model and revision, reasoning effort, local model artifact when applicable, hardware class, secret handling, one-attempt policy, capabilities, environment-name allowlist, finite wall-time/output/workspace budgets, non-selective stop rules, and expected-attempt count. `agent-plan` may only derive an attempt for a case already named by that immutable campaign; the attempt binds the campaign identity and repeats the common fields exactly. Neither contract records environment or secret values. Every harness predeclaration is deterministically `rankEligible: false`; only the independent signed registry may derive ranked admission after verifying provenance, contamination, artifact, cohort, replay, and rescore evidence. Passing `--immutable-revision` is a provenance assertion and is appropriate only when the provider exposes a genuinely immutable revision. A local cohort additionally requires `--model-artifact-sha256` and either `--local-provider lmstudio` or `--local-provider ollama`.
 
-`agent-run` reconstructs the 1,775-file frozen protocol snapshot from the pinned Git commit and verifies every archived byte before execution. The snapshot and copied GenesisCode toolchain live under a read-only input root outside the writable case workspace. The fixed Codex invocation is ephemeral, JSONL, non-resumable, `workspace-write`, approval-free, and one prompt; hosted and loopback-local inference are separate invocation profiles. The process receives only the closed environment-name allowlist. Timeout or capture overflow kills and reaps the complete process group.
+`agent-run` reconstructs the 1,775-file frozen protocol snapshot from the pinned Git commit and verifies every archived byte before execution. The v0.2 process workspace is created outside the repository ancestry so project `AGENTS.md`, skills, configuration, and other ambient instructions cannot be discovered through parent traversal. The snapshot and copied GenesisCode toolchain live under a read-only input root outside the writable case workspace. The fixed Codex invocation is ephemeral, JSONL, non-resumable, `workspace-write`, approval-free, and one prompt; hosted and loopback-local inference are separate invocation profiles. The process receives only the closed environment-name allowlist. Timeout or capture overflow kills and reaps the complete process group. Permission-aware cleanup removes every protected temporary snapshot after its retained evidence is atomically published.
 
 After execution, the harness rechecks frozen source bytes, executable modes, directory topology, and symlink absence. It inventories the case workspace, rejects undeclared paths, non-editable drift, symlinks, malformed events, nonzero exit, timeout, or capture overflow, and scores only a clean candidate. Invalid attempts remain immutable evidence rather than disappearing. `agent-validate` derives the violation set again from retained facts and bytes. `agent-replay` never resolves or invokes the agent executable or model; it validates the complete run and independently rescores the exact retained candidate.
 
@@ -67,19 +76,29 @@ The initial hosted study requested by the project uses Codex CLI with Luna at `x
 
 ```sh
 CODEX=/Applications/ChatGPT.app/Contents/Resources/codex
-genesis --json bench agent-plan \
-  --case completion-small \
-  --campaign codex-luna-xhigh-2026-07 \
+genesis --json bench agent-campaign-plan \
+  --campaign codex-luna-xhigh-2026-07 --phase reality-gate \
+  --case completion-small --case deployment-small --case generation-small \
+  --case package-migration-small --case performance-repair-small \
+  --case policy-minimization-small --case refactor-small --case repair-small \
+  --case replay-investigation-small \
   --runner codex-cli-hosted \
   --agent-executable "$CODEX" \
   --model luna \
   --model-revision provider-alias:luna@2026-07-17 \
   --reasoning-effort xhigh \
   --timeout-ms 900000 \
+  --hardware-class apple-silicon-local \
+  --out predeclarations/campaign.json
+genesis --json bench agent-plan \
+  --case completion-small \
+  --campaign-predeclaration predeclarations/campaign.json \
   --out predeclarations/completion-small.json
 ```
 
 Do not pass `--immutable-revision` for an alias merely to make a run rankable. Campaign expansion starts only after the nine-task-class reality gate passes, and hosted Luna, raw fixed-scaffold models, and local Codex-agent models remain separate cohorts.
+
+The first immutable Luna campaign is retained under `benchmarks/genesisbench/v0.1/campaigns/codex-luna-xhigh-2026-07-17/reality-gate/`. All nine attempts validate and replay, but every attempt is invalid because the ChatGPT-backed Codex service rejected `luna` as unsupported. The campaign report also records the v0.1 ambient skill-discovery defect, forbids 27-condition expansion, and makes no capability claim. v0.2 closes that harness defect without rewriting or retrying the historical attempts.
 
 ## Closed adapters
 

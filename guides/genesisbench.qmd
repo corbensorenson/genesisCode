@@ -25,7 +25,10 @@ The normative authorities are:
 - [Controlled ablations](../docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json)
 - [Reference trace schema](../docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json)
 - [Canonical front door](../docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md)
-- [Open Agent harness](../docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json)
+- [Open Agent harness](../docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json)
+- [Retained Open Agent v0.1 authority](../docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json)
+- [Open Agent campaign schema](../docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json)
+- [Open Agent campaign-report schema](../docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json)
 - [Open Agent predeclaration schema](../docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json)
 - [Open Agent run schema](../docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json)
 - [Closed adapter profile](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.json)
@@ -137,17 +140,26 @@ Predeclare Codex CLI with Luna at `xhigh` before inference. A provider alias is 
 
 ```bash
 CODEX=/Applications/ChatGPT.app/Contents/Resources/codex
-genesis --json bench agent-plan \
-  --case completion-small \
-  --campaign codex-luna-xhigh-2026-07 \
+genesis --json bench agent-campaign-plan \
+  --campaign codex-luna-xhigh-2026-07 --phase reality-gate \
+  --case completion-small --case deployment-small --case generation-small \
+  --case package-migration-small --case performance-repair-small \
+  --case policy-minimization-small --case refactor-small --case repair-small \
+  --case replay-investigation-small \
   --runner codex-cli-hosted \
   --agent-executable "$CODEX" \
   --model luna \
   --model-revision provider-alias:luna@2026-07-17 \
   --reasoning-effort xhigh \
   --timeout-ms 900000 \
+  --hardware-class apple-silicon-local \
+  --out .genesis/bench/predeclarations/campaign.json
+genesis --json bench agent-plan \
+  --case completion-small \
+  --campaign-predeclaration .genesis/bench/predeclarations/campaign.json \
   --out .genesis/bench/predeclarations/completion-small.json
 genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-run \
+  --campaign-predeclaration .genesis/bench/predeclarations/campaign.json \
   --predeclaration .genesis/bench/predeclarations/completion-small.json \
   --agent-executable "$CODEX" \
   --out .genesis/bench/open-agent/completion-small
@@ -157,9 +169,11 @@ genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-replay \
   --run .genesis/bench/open-agent/completion-small/run.json
 ```
 
-The harness reconstructs and byte-checks the frozen source snapshot under a read-only input root. Only the case inputs are writable. One ephemeral JSONL Codex attempt runs with no resume, hidden retry, approval, or additional writable root. The post-run audit rejects source changes, symlinks, extra candidate paths, non-editable drift, malformed events, timeout, capture overflow, or nonzero exit. Replay validates retained evidence and independently rescores without resolving the Codex executable or contacting the model.
+The campaign is one immutable commitment to every reality-gate case, shared model/runtime/capability/resource facts, non-selective stop rules, and the expected attempt count. Each attempt must bind that campaign before execution. The v0.2 harness stages outside the repository ancestry, reconstructs and byte-checks the frozen source snapshot under a read-only input root, and deterministically tears down the protected snapshot after atomically publishing evidence. Only the case inputs are writable. One ephemeral JSONL Codex attempt runs with no resume, hidden retry, approval, or additional writable root. The post-run audit rejects source changes, symlinks, extra candidate paths, non-editable drift, malformed events, timeout, capture overflow, or nonzero exit. Replay validates retained evidence and independently rescores without resolving the Codex executable or contacting the model.
 
 For local comparisons, use `--runner codex-cli-local`, select `--local-provider lmstudio` or `ollama`, and bind `--model-artifact-sha256`. Hosted Luna and each local model/runtime/artifact combination are distinct cohorts. Complete one predeclared small-case reality gate across all nine task classes before spending on the full 27-condition matrix.
+
+The retained July 17 Luna campaign completed all nine expected attempts, and all nine validate and replay. The provider rejected `luna` as unsupported for the ChatGPT-backed Codex account before task execution, so the result is an authentic unranked availability failure, not a GenesisCode capability score. Its report also records that v0.1 discovered a repository skill through parent traversal. The 27-condition expansion is therefore forbidden; v0.2 fixes ancestry isolation and temporary-snapshot cleanup without retrying or rewriting those results.
 
 Bundle and stage the evidence locally:
 
@@ -347,7 +361,7 @@ The retained report binds the benchmark, profile, scoring policy, held-out quali
 
 ## Current boundary
 
-The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, construct-validity and anti-gaming study, scorer, canonical fifteen-command CLI, five closed Cold Acquisition adapters, separate capability-minimal Open Agent harness, strict replay, deterministic run bundles, signed append-only registry, lexicographic static leaderboard, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. Reproducible multi-model campaigns, benchmark card, and methods paper remain R1.4.o.
+The v0.1 protocol, schemas, verifier, four non-combinable tracks, frozen reference agent, eight controlled ablations over nine shared lineages, nine-lineage/27-context public practice suite, predeclared statistical analysis, construct-validity and anti-gaming study, scorer, canonical sixteen-command CLI, five closed Cold Acquisition adapters, separate capability-minimal Open Agent harness, strict replay, deterministic run bundles, signed append-only registry, lexicographic static leaderboard, 90-lineage active temporal epoch, maintained post-release capability-lease overlay, and deterministic eligibility and analysis fixtures exist now. Reproducible multi-model campaigns, benchmark card, and methods paper remain R1.4.o.
 
 Until those gates close, report protocol-conformant local evidence without describing it as a production leaderboard or temporal-clean model comparison.
 
