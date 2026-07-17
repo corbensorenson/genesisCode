@@ -10,6 +10,11 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 REPORT_OUT="$1"
+REPEATS="${GENESIS_GC_REPAIR_UTILITY_REPEATS:-2}"
+[[ "$REPEATS" == "1" || "$REPEATS" == "2" ]] || {
+  echo "gc-repair-utility: GENESIS_GC_REPAIR_UTILITY_REPEATS must be 1 or 2" >&2
+  exit 2
+}
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/genesis-repair-utility.XXXXXX")"
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -35,22 +40,43 @@ SELFHOST_ARTIFACT="$ROOT_DIR/selfhost/toolchain.gc"
   exit 1
 }
 
-for sample in 1 2; do
-  python3 scripts/lib/gc_repair_utility_runner.py \
-    --genesis "$GENESIS_BIN" \
-    --selfhost-artifact "$SELFHOST_ARTIFACT" \
-    --output "$TMP_DIR/report-$sample.json"
-  python3 scripts/lib/gc_repair_utility.py \
-    --check \
-    --report "$TMP_DIR/report-$sample.json"
+declare -a REPLAY_PIDS=()
+for ((sample = 1; sample <= REPEATS; sample++)); do
+  (
+    python3 scripts/lib/gc_repair_utility_runner.py \
+      --genesis "$GENESIS_BIN" \
+      --selfhost-artifact "$SELFHOST_ARTIFACT" \
+      --output "$TMP_DIR/report-$sample.json"
+    python3 scripts/lib/gc_repair_utility.py \
+      --check \
+      --report "$TMP_DIR/report-$sample.json"
+  ) &
+  REPLAY_PIDS+=("$!")
 done
 
-cmp -s "$TMP_DIR/report-1.json" "$TMP_DIR/report-2.json" || {
-  echo "gc-repair-utility: repeated executions were not byte-identical" >&2
-  diff -u "$TMP_DIR/report-1.json" "$TMP_DIR/report-2.json" >&2 || true
+REPLAY_STATUS=0
+for pid in "${REPLAY_PIDS[@]}"; do
+  if ! wait "$pid"; then
+    REPLAY_STATUS=1
+  fi
+done
+if (( REPLAY_STATUS != 0 )); then
+  echo "gc-repair-utility: one or more replay workers failed" >&2
   exit 1
-}
+fi
+
+if [[ "$REPEATS" == "2" ]]; then
+  cmp -s "$TMP_DIR/report-1.json" "$TMP_DIR/report-2.json" || {
+    echo "gc-repair-utility: repeated executions were not byte-identical" >&2
+    diff -u "$TMP_DIR/report-1.json" "$TMP_DIR/report-2.json" >&2 || true
+    exit 1
+  }
+fi
 
 mkdir -p "$(dirname "$REPORT_OUT")"
 cp "$TMP_DIR/report-1.json" "$REPORT_OUT"
-echo "gc-repair-utility: deterministic replay ok"
+if [[ "$REPEATS" == "2" ]]; then
+  echo "gc-repair-utility: deterministic replay ok"
+else
+  echo "gc-repair-utility: staged render complete; replay validation delegated"
+fi

@@ -681,6 +681,11 @@ producer. A second independent updater inventory is forbidden.
 
 Every graph node declares one exact owner ID, direct argv, dependencies, input
 globs, exact output paths, read-only validators, mode, timeout, and disk bound.
+The source file named by direct argv must match that node's input set, and
+dispatcher nodes must declare every child updater, renderer, runner, and
+content authority they read. Generated inputs also require an explicit
+dependency edge when their producer must run first; textual input matching
+alone does not establish execution order.
 Output ownership is globally unique. Every output must also occur in its owner's
 input set so an edited or stale generated file routes back to its producer.
 Tracked generated source is not exempt: the assembled Prelude and its manifest
@@ -699,7 +704,9 @@ not allowed.
 orchestrator. It selects direct input matches and their complete downstream
 closure, creates a detached staging worktree outside the authoritative checkout,
 overlays committed, staged, unstaged, deleted, and non-ignored untracked state,
-then executes direct argv in topological order. A byte snapshot before and after
+clears inherited Cargo target and cache-root provenance so path-specific build
+products remain stage-local, then executes direct argv in topological order. A
+byte snapshot before and after
 each node must differ only at that node's declared outputs. The staged result
 must pass every affected read-only validator before publication. A validator
 never invokes the updater against the authoritative checkout.

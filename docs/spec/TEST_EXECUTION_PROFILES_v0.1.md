@@ -128,10 +128,20 @@ Strict/full profile runtime reports:
   - emits `kind = genesis/test-changed-fast-metrics-v0.1` into a private temporary
     report/history pair by default; retain local E0 timing history only through
     `scripts/update_test_changed_fast_metrics.sh`
-  - default hard budget: 120000ms (`GENESIS_TEST_CHANGED_BUDGET_MS`)
+  - targeted and clean-tree hard budget: 120000ms (`GENESIS_TEST_CHANGED_BUDGET_MS`)
+  - targeted selection is reserved for genuinely narrow impact closures, such as a
+    single leaf gate implementation; Rust/source changes whose crate or direct-gate
+    fan-out exceeds the policy ceilings escalate to `prepush-standard`
+  - automatically escalated `prepush-standard` selections use the existing GB-3
+    480000ms/3 GiB envelope (`GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS`); an explicit
+    `--budget-ms` or `GENESIS_TEST_CHANGED_BUDGET_MS` remains authoritative and is
+    never silently widened
   - measures additional disk as allocated-block growth in the loop's active
-    content-addressed Cargo target; unrelated host allocation and concurrent
-    builds in other cache identities cannot consume the 1 GiB allowance
+    content-addressed Cargo target; isolated generated-authority worktrees keep
+    path-specific Cargo products in their bounded transient stage and reclaim
+    them with that stage. Unrelated host allocation and concurrent builds in
+    other cache identities cannot consume the active 1 GiB or escalated 3 GiB
+    residual allowance
 - Alias wrapper: `scripts/test_fast.sh`
   - defaults to `scripts/test_changed_fast.sh`
   - pass `--full` to run the broad fast suite

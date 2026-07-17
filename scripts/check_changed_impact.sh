@@ -18,6 +18,7 @@ python3 - "$ROOT_DIR" "$TMP_DIR" <<'PY'
 import copy
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -36,6 +37,36 @@ def require(value, message):
 
 def plan(paths):
     return impact.resolve(root, paths, "cargo", metadata_path)
+
+def changed_fast_dry_run(paths, budget=None, env_budget=None):
+    changed = temp / "changed-fast-input.txt"
+    changed.write_text("".join(f"{path}\n" for path in paths), encoding="utf-8")
+    command = [
+        "bash",
+        "scripts/test_changed_fast.sh",
+        "--base",
+        "HEAD",
+        "--runner",
+        "cargo",
+        "--changed-files-from",
+        str(changed),
+        "--dry-run",
+    ]
+    if budget is not None:
+        command.extend(["--budget-ms", str(budget)])
+    environment = None
+    if env_budget is not None:
+        environment = dict(os.environ)
+        environment["GENESIS_TEST_CHANGED_BUDGET_MS"] = str(env_budget)
+    return subprocess.run(
+        command,
+        cwd=root,
+        check=True,
+        env=environment,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    ).stdout
 
 core = plan(["crates/gc_coreform/src/lib.rs"])
 metadata = impact.load_json(metadata_path)
@@ -57,6 +88,39 @@ schema = plan(["docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json"])
 require(schema["mode"] == "profile-fallback" and schema["fallbackProfile"] == "prepush-standard", "schema change did not escalate")
 require(schema["generatedImpacts"] and schema["directGates"], "schema lacks generated/gate mapping")
 controls.append("generated-schema-escalation")
+
+targeted_fixture = "scripts/" + "check_guard_extraction_fixtures.sh"
+targeted_output = changed_fast_dry_run([targeted_fixture])
+require(
+    "mode=targeted" in targeted_output
+    and "budget_subject=changed-file-gate budget_ms=120000 disk_budget_bytes=1073741824" in targeted_output,
+    "narrow targeted changed-fast selection escaped the GB-2 envelope",
+)
+fallback_output = changed_fast_dry_run(["docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json"])
+require(
+    "mode=profile-fallback" in fallback_output
+    and "budget_subject=prepush-standard budget_ms=480000 disk_budget_bytes=3221225472" in fallback_output,
+    "profile fallback did not inherit the GB-3 envelope",
+)
+controls.append("profile-aware-budget-selection")
+
+explicit_output = changed_fast_dry_run(
+    ["docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json"], budget=12345
+)
+explicit_env_output = changed_fast_dry_run(
+    ["docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json"], env_budget=23456
+)
+require(
+    "mode=profile-fallback" in explicit_output
+    and "budget_subject=changed-file-gate budget_ms=12345 disk_budget_bytes=1073741824" in explicit_output,
+    "explicit changed-fast budget was silently widened",
+)
+require(
+    "mode=profile-fallback" in explicit_env_output
+    and "budget_subject=changed-file-gate budget_ms=23456 disk_budget_bytes=1073741824" in explicit_env_output,
+    "changed-fast environment budget was silently widened",
+)
+controls.append("explicit-budget-authority")
 
 unknown = plan(["new-top-level/unknown.asset"])
 require(unknown["mode"] == "profile-fallback" and "unclassified-path" in unknown["fallbackReasons"], "unknown path narrowed coverage")
@@ -128,7 +192,7 @@ else:
     raise SystemExit("changed-impact-contract: duplicate policy key accepted")
 controls.append("duplicate-key-rejection")
 
-require(len(controls) == 10 and len(set(controls)) == 10, "control coverage drift")
+require(len(controls) == 12 and len(set(controls)) == 12, "control coverage drift")
 authorities = [
     "policies/changed_impact_v0.1.json",
     "docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json",

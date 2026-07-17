@@ -27,6 +27,7 @@ AUDIT_REL = "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json"
 LOCK_NAME = "genesis-generated-authority.lock"
 STAGE_SCOPED_ENVIRONMENT = (
     "CARGO_TARGET_DIR",
+    "GENESIS_CARGO_CACHE_ROOT",
     "GENESIS_CARGO_CACHE_RESOLVED",
     "GENESIS_CARGO_CACHE_SCOPE",
     "GENESIS_CARGO_CACHE_KEY_SHA256",
@@ -216,6 +217,11 @@ def validate_graph(root: Path, graph: Mapping[str, Any]) -> list[Mapping[str, An
         inputs = string_list(node["inputs"], f"{node_id}.inputs")
         for input_index, path in enumerate(inputs):
             canonical_path(path, f"{node_id}.inputs[{input_index}]", allow_glob=True)
+        if len(command) >= 2 and command[1].startswith("scripts/"):
+            require(
+                matches(command[1], inputs),
+                f"{node_id} command source is not in its freshness read set: {command[1]}",
+            )
         outputs = string_list(node["outputs"], f"{node_id}.outputs")
         total_outputs += len(outputs)
         for output_index, path in enumerate(outputs):
@@ -654,6 +660,15 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
     rejected("signing-command", lambda g: g["nodes"][0].__setitem__("command", ["genesis", "attest"]))
     rejected("unknown-updater", lambda g: g["excludedEntrypoints"].pop(next(iter(g["excludedEntrypoints"]))))
     rejected("mutation-route-drift", lambda g: g["mutationControls"][0]["expectedNodes"].pop())
+    command_node_index = next(
+        index for index, node in enumerate(graph["nodes"])
+        if len(node["command"]) >= 2 and node["command"][1].startswith("scripts/")
+    )
+    command_source = graph["nodes"][command_node_index]["command"][1]
+    rejected(
+        "undeclared-command-source",
+        lambda g: g["nodes"][command_node_index]["inputs"].remove(command_source),
+    )
     operator_output = next(
         node["outputs"][0] for node in graph["nodes"]
         if node["mode"] == "operator-gated"
@@ -779,7 +794,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 14, "generated-authority self-test inventory drift")
+    require(controls == 15, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 

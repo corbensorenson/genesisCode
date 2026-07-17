@@ -349,13 +349,13 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
+          "sha256": "cce5283bd408b84bfe490f936d0c48e533a1f36cf606b5fcb48bd7d0ff95f62e"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_ai_iteration_slo_report.sh"
       ],
-      "execution_identity_sha256": "dd9235692532edbce242ce53472d2a4b4b5e2a54b8456d0508eb9a47e462e7a6",
+      "execution_identity_sha256": "9cb2246e8b328d9dbffb0f9375ac026f2207ea864ef2bc09c149cf093b6c96f0",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -881,6 +881,7 @@
         "(repo / \"tracked\").write_text(\"two\\n\", encoding=\"utf-8\")",
         "(repo / \"untracked\").write_text(\"new\\n\", encoding=\"utf-8\")",
         "bad_policy.write_text(json.dumps(mutated), encoding=\"utf-8\")",
+        "changed.write_text(\"\".join(f\"{path}\\n\" for path in paths), encoding=\"utf-8\")",
         "duplicate.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
         "repo.mkdir()",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"
@@ -894,7 +895,7 @@
       "execution_helper_invocations": [
         "scripts/lib/cargo_target_dir.sh"
       ],
-      "execution_identity_sha256": "2b171eb0b91ebcc93bb6e3fe4d6edf45fda3280e4d1f44009e6e06dc96af7040",
+      "execution_identity_sha256": "f5bd5d2f7e9ff58c5dfadd886dd2b79fbf9c8914666ef02b1b07cacf5ec984bd",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -905,7 +906,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "9cce9a2dba3b82efc84504233d96f5a6aa078450e214f501ac0394cf793ccc29",
+      "sha256": "c6134f1943ffae3dfc7586b551c43534cf697dae4c2b530dfcdf54014bd05a12",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -914,6 +915,7 @@
         "(repo / \"tracked\").write_text(\"two\\n\", encoding=\"utf-8\")",
         "(repo / \"untracked\").write_text(\"new\\n\", encoding=\"utf-8\")",
         "bad_policy.write_text(json.dumps(mutated), encoding=\"utf-8\")",
+        "changed.write_text(\"\".join(f\"{path}\\n\" for path in paths), encoding=\"utf-8\")",
         "duplicate.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
         "repo.mkdir()",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"
@@ -1014,14 +1016,14 @@
         },
         {
           "path": "scripts/render_gc_repair_utility_report.sh",
-          "sha256": "0ba2fdd9f1be9e4c194017309e00e44ad2718af5dcea54381cc591b9fce5be37"
+          "sha256": "58e09ca71018e8418ce6d7f48f464c78d8b58ef5a1cbb7aea319c620e79cc619"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cli_diagnostics_contract_report.sh",
         "scripts/render_gc_repair_utility_report.sh"
       ],
-      "execution_identity_sha256": "b7c4cc1057320d73290779da0aa1751035b6e7ee67357f5d681d8ddd1c314b66",
+      "execution_identity_sha256": "8d38fed9cf858f5c32561738d2574cf39801e7dcc7372e02cc56fd74e64c77ee",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1068,7 +1070,7 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
+          "sha256": "cce5283bd408b84bfe490f936d0c48e533a1f36cf606b5fcb48bd7d0ff95f62e"
         },
         {
           "path": "scripts/test_shard_workspace.sh",
@@ -1080,7 +1082,7 @@
         "scripts/test_changed_fast.sh",
         "scripts/test_shard_workspace.sh"
       ],
-      "execution_identity_sha256": "3d20b3ed1680f52aa2f040d99e3c41cb48a829d4b907490ae43da9fcfc550a1a",
+      "execution_identity_sha256": "0e7918d4a5ebb98f6a294db8736af9b98e746c92c85a5fc61b8a61f0d507476d",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3135,13 +3137,13 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
+          "sha256": "cce5283bd408b84bfe490f936d0c48e533a1f36cf606b5fcb48bd7d0ff95f62e"
         }
       ],
       "execution_helper_invocations": [
         "scripts/test_changed_fast.sh"
       ],
-      "execution_identity_sha256": "9fdac0f40c85548c596c2bcbd3661a4613abe1c293c541d5a00bf99ca8cf2803",
+      "execution_identity_sha256": "a1e81fdb07a1011a0779be4657d176e77b6cfa28b33c0f5c5c2a908ce45d2539",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5442,7 +5444,7 @@
       "direct_write_candidates": [],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "ffd358668705bc2fb1e731a76e80ad0a06812da8acf501a99ab6fab07c008917",
+      "execution_identity_sha256": "f3b92aaf35262183a268af8fc69e1e4aa5929d33d397c3ea8044680dce5a86ee",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5453,7 +5455,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "b10383c84616bf04fba38f4f9a8ea87d1ed730c60545a7c8fbd2d7867d8e5882",
+      "sha256": "bd5ed5b09e531f6729556c94d4074ea0a2469ee586bff5bd7618ac5c168ff5ea",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []
@@ -5679,7 +5681,7 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "c3726d74cc09c798632c982d0241dafe19b2d54f89a2d734131f092a1cf27e56"
+          "sha256": "cce5283bd408b84bfe490f936d0c48e533a1f36cf606b5fcb48bd7d0ff95f62e"
         },
         {
           "path": "scripts/test_perf_gates.sh",
@@ -5689,7 +5691,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "fff7267a1984826b74efb00aeff8853378d223e7e2b4756b44c3020ec9057855",
+      "execution_identity_sha256": "bf4fe5f8de484f8339db0da13ece4833a506af9bd474b9375566afc929be43a2",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
