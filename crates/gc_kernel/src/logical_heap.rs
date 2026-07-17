@@ -99,6 +99,14 @@ pub(crate) fn charge_active(units: u64) {
     });
 }
 
+pub(crate) fn charge_active_with(units: impl FnOnce() -> u64) {
+    ACTIVE_LEDGERS.with(|active| {
+        if let Some(ledger) = active.borrow().last() {
+            ledger.charge(units());
+        }
+    });
+}
+
 pub(crate) fn data_allocation_units(term: &Term) -> u64 {
     2u64.saturating_add(logical_term_units(term))
 }

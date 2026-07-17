@@ -1,5 +1,4 @@
 use super::*;
-use crate::Shared;
 use std::collections::BTreeMap;
 
 #[path = "eval_prims/text_bytes.rs"]
@@ -409,7 +408,7 @@ pub(crate) fn prim_op(
                         let new_len = m.size().saturating_add(if existed { 0 } else { 1 });
                         ctx.mem_observe_map_len(new_len)?;
                     }
-                    Shared::make_mut(&mut m).insert_mut(key, value);
+                    crate::value::ValueMap::insert_shared(&mut m, key, value);
                     ctx.mem_observe_map_len(m.size())?;
                     Ok(Value::map_shared(m))
                 }
@@ -447,7 +446,7 @@ pub(crate) fn prim_op(
             match (left, right) {
                 (Value::Map(mut out), Value::Map(b)) => {
                     for (k, v) in b.iter() {
-                        Shared::make_mut(&mut out).insert_mut(k.clone(), v.clone());
+                        crate::value::ValueMap::insert_shared(&mut out, k.clone(), v.clone());
                     }
                     ctx.mem_observe_map_len(out.size())?;
                     Ok(Value::map_shared(out))

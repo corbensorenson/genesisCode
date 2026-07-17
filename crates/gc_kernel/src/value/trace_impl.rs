@@ -23,17 +23,13 @@ empty_finalize!(
 
 unsafe impl Trace for ValueMap {
     fn trace(&self, ctx: &mut Context<'_>) {
-        for value in self.0.values() {
-            value.trace(ctx);
-        }
+        self.trace_owners(ctx);
     }
 }
 
 unsafe impl Trace for ValueVector {
     fn trace(&self, ctx: &mut Context<'_>) {
-        match self {
-            Self::Flat(values) => values.trace(ctx),
-        }
+        self.trace_owners(ctx);
     }
 }
 

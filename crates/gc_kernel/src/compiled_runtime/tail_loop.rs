@@ -1,5 +1,6 @@
 use super::super::*;
 use super::eval::eval_cexpr_runtime;
+use super::forward_args::apply_forwarded_owned;
 use crate::Shared;
 
 #[derive(Clone, Copy, Debug)]
@@ -219,7 +220,7 @@ fn eval_expr_borrowed(
             for arg in supplied {
                 values.push(eval_expr_borrowed(ctx, arg, state, temps)?);
             }
-            apply_forwarded(ctx, *op, &values, supplied_indices)
+            apply_forwarded_owned(ctx, *op, values, supplied_indices)
         }
     }
 }
@@ -249,7 +250,7 @@ fn eval_expr_owned(
             for arg in supplied {
                 values.push(eval_expr_owned(ctx, arg, state, temps, uses)?);
             }
-            apply_forwarded(ctx, *op, &values, supplied_indices)
+            apply_forwarded_owned(ctx, *op, values, supplied_indices)
         }
     }
 }
@@ -291,25 +292,6 @@ fn eval_prim_owned(
         values.push(eval_expr_owned(ctx, arg, state, temps, uses)?);
     }
     prim_op(ctx, op, values)
-}
-
-fn apply_forwarded(
-    ctx: &mut EvalCtx,
-    op: PrimOp,
-    supplied: &[Value],
-    indices: &[usize],
-) -> Result<Value, KernelError> {
-    if let [left, right] = indices {
-        return prim_op2(ctx, op, supplied[*left].clone(), supplied[*right].clone());
-    }
-    prim_op(
-        ctx,
-        op,
-        indices
-            .iter()
-            .map(|index| supplied[*index].clone())
-            .collect(),
-    )
 }
 
 fn read_var(

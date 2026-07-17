@@ -18,6 +18,7 @@ Deterministic test execution policy for local iteration and CI.
 | `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 120000` | `<= 2m` |
 | `perf-gate-regressions` | `bash scripts/test_perf_gates.sh` | profile-specific |
 | `kernel-tail-stress` | `bash scripts/test_perf_gates.sh --kernel-tail-stress` | `<= 5m` |
+| `persistent-sharing-stress` | `bash scripts/test_perf_gates.sh --test persistent_sharing_stress` | `<= 2m` |
 | `agent-inner-loop` | `bash scripts/check_upgrade_plan_health.sh --profile agent-inner-loop` | `<= 5m` |
 | `release-full` | `bash scripts/check_upgrade_plan_health.sh --profile release-full` | `<= 30m` |
 | `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 8m` |
@@ -384,6 +385,10 @@ Strict/full profile runtime reports:
     retain the exact small-loop and one-step-short controls.
   - `scripts/check_gc_agent_task_cards.sh` owns the ignored parallel Rust/Python agent-plan
     selector parity stress case; the default suite retains only single-invocation contract tests.
+  - `persistent_sharing_stress` retains 4,097 versions of 4,096-element vectors and maps and exercises
+    equally sized ordered-map updates, retained strings, package dependency graphs, effect logs,
+    and workspace snapshots. The isolated lane enforces a 120,000 ms wall ceiling and 16 MiB
+    canonical-size ceilings; the default suite retains an eight-element non-vacuity control.
   - runs `scripts/check_agent_reference_workflows.sh` as the scored
     agent-capability gauntlet (`genesis/agent-capability-gauntlet-v0.1`) with
     required domain thresholds for service, network/process, raw-network,
