@@ -20,6 +20,7 @@ declare -a TESTS=()
 DEFAULT_TESTS=(
   upgrade_plan_health
   agent_authoring_bundle_guard
+  cli_agent_benchmark_scoring
   pkg_low_semantic_boundary
   guard_extraction_fixtures
   large_workspace_agent_perf
@@ -154,12 +155,27 @@ for test_name in "${TESTS[@]}"; do
   }
 
   echo "test-perf-gates: cargo test -p gc_cli --test ${test_name} -- --ignored --test-threads=1"
+  start_ms="$(genesis_profile_gate_now_ms)"
   cmd=(cargo test -p gc_cli --test "$test_name")
   if [[ -n "$CARGO_PROFILE" ]]; then
     cmd+=(--profile "$CARGO_PROFILE")
   fi
   cmd+=(-- --ignored --test-threads=1)
   "${cmd[@]}"
+  end_ms="$(genesis_profile_gate_now_ms)"
+  elapsed_ms="$((end_ms - start_ms))"
+  if [[ "$test_name" == "cli_agent_benchmark_scoring" ]]; then
+    scoring_budget_ms="${GENESIS_SCORING_MATRIX_BUDGET_MS:-600000}"
+    [[ "$scoring_budget_ms" =~ ^[0-9]+$ && "$scoring_budget_ms" -gt 0 ]] || {
+      echo "test-perf-gates: GENESIS_SCORING_MATRIX_BUDGET_MS must be a positive integer" >&2
+      exit 2
+    }
+    (( elapsed_ms <= scoring_budget_ms )) || {
+      echo "test-perf-gates: scoring matrix exceeded wall budget (${elapsed_ms}ms > ${scoring_budget_ms}ms)" >&2
+      exit 1
+    }
+    echo "test-perf-gates: scoring-matrix ok elapsed_ms=${elapsed_ms} budget_ms=${scoring_budget_ms} scorer_process_timeout_ms=30000"
+  fi
 done
 
 echo "test-perf-gates: ok (${#TESTS[@]} test target(s))"
