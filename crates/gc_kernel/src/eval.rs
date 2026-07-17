@@ -5,6 +5,7 @@ use crate::error::{KernelError, KernelErrorKind};
 use crate::value::{SealId, Value};
 use gc_coreform::{Term, TermOrdKey};
 use num_traits::ToPrimitive;
+use std::sync::Arc;
 
 #[cfg(test)]
 use std::cell::Cell;
@@ -102,6 +103,10 @@ impl StepLimit {
 /// based on observed sizes of CoreForm values during evaluation.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct MemLimits {
+    /// Maximum cumulative logical allocation units in one evaluation session.
+    pub max_alloc_units: Option<u64>,
+    /// Maximum logical units reachable from declared evaluator roots at a safe point.
+    pub max_live_units: Option<u64>,
     /// Maximum total number of `pair/cons` cells allocated during evaluation.
     pub max_pair_cells: Option<u64>,
     /// Maximum observed vector length (applies to vector literals and `vec/push`).
@@ -144,14 +149,17 @@ pub struct EvalCtx {
     pub protocol: Option<ProtocolTokens>,
     pub steps: u64,
     pub step_limit: Option<u64>,
-    pub mem_limits: MemLimits,
+    pub(crate) mem_limits: MemLimits,
     mem_state: MemState,
+    allocation_ledger: Arc<crate::logical_heap::AllocationLedger>,
     coverage: Option<CoverageState>,
     panic_guard_depth: u32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 struct MemState {
+    live_units: u64,
+    max_live_units: u64,
     pair_cells: u64,
     max_vec_len: u64,
     max_map_len: u64,
@@ -161,6 +169,9 @@ struct MemState {
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct MemObservedCounters {
+    pub allocated_units: u64,
+    pub live_units: u64,
+    pub max_live_units: u64,
     pub pair_cells: u64,
     pub max_vec_len: u64,
     pub max_map_len: u64,
@@ -205,6 +216,7 @@ impl EvalCtx {
             step_limit,
             mem_limits: MemLimits::default(),
             mem_state: MemState::default(),
+            allocation_ledger: Arc::new(crate::logical_heap::AllocationLedger::new()),
             coverage: None,
             panic_guard_depth: 0,
         }
@@ -232,6 +244,9 @@ impl EvalCtx {
     ) -> Result<T, KernelError> {
         let outermost = !self.panic_guard_active();
         self.panic_guard_depth = self.panic_guard_depth.saturating_add(1);
+        let _allocation_guard = self.mem_limits.max_alloc_units.map(|_| {
+            crate::logical_heap::ActiveAllocationGuard::enter(self.allocation_ledger.clone())
+        });
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
         self.panic_guard_depth = self.panic_guard_depth.saturating_sub(1);
         if outermost
@@ -242,6 +257,16 @@ impl EvalCtx {
                 KernelErrorKind::Internal,
                 format!("{boundary} cycle collection panicked"),
             ));
+        }
+        if outermost && let Some(limit) = self.allocation_ledger.limit() {
+            let observed = self.allocation_ledger.observed();
+            if observed > limit {
+                return Err(KernelError::memory_limit(
+                    "allocation-units",
+                    observed,
+                    limit,
+                ));
+            }
         }
         match result {
             Ok(result) => result,
@@ -254,9 +279,14 @@ impl EvalCtx {
 
     pub fn set_mem_limits(&mut self, limits: MemLimits) {
         self.mem_limits = limits;
+        self.allocation_ledger.set_limit(limits.max_alloc_units);
     }
 
-    fn mem_enabled(&self) -> bool {
+    pub fn mem_limits(&self) -> MemLimits {
+        self.mem_limits
+    }
+
+    fn mem_shape_enabled(&self) -> bool {
         self.mem_limits.max_pair_cells.is_some()
             || self.mem_limits.max_vec_len.is_some()
             || self.mem_limits.max_map_len.is_some()
@@ -265,7 +295,7 @@ impl EvalCtx {
     }
 
     pub(crate) fn mem_observe_data_term(&mut self, t: &Term) -> Result<(), KernelError> {
-        if !self.mem_enabled() {
+        if !self.mem_shape_enabled() {
             return Ok(());
         }
         // Data terms can be deeply nested; avoid stack overflow while observing.
@@ -306,12 +336,16 @@ impl EvalCtx {
     pub fn reset_counters(&mut self) {
         self.steps = 0;
         self.mem_state = MemState::default();
+        self.allocation_ledger.reset();
     }
 
     pub fn observed_counters(&self) -> EvalObservedCounters {
         EvalObservedCounters {
             steps: self.steps,
             mem: MemObservedCounters {
+                allocated_units: self.allocation_ledger.observed(),
+                live_units: self.mem_state.live_units,
+                max_live_units: self.mem_state.max_live_units,
                 pair_cells: self.mem_state.pair_cells,
                 max_vec_len: self.mem_state.max_vec_len,
                 max_map_len: self.mem_state.max_map_len,
@@ -333,13 +367,7 @@ impl EvalCtx {
         if let Some(max) = limit
             && *slot > max
         {
-            return Err(KernelError::new(
-                KernelErrorKind::MemoryLimit,
-                format!(
-                    "memory limit exceeded: {kind} (observed={}, limit={max})",
-                    *slot
-                ),
-            ));
+            return Err(KernelError::memory_limit(kind, *slot, max));
         }
         Ok(())
     }
@@ -349,12 +377,10 @@ impl EvalCtx {
         if let Some(max) = self.mem_limits.max_pair_cells
             && self.mem_state.pair_cells > max
         {
-            return Err(KernelError::new(
-                KernelErrorKind::MemoryLimit,
-                format!(
-                    "memory limit exceeded: pair-cells (observed={}, limit={max})",
-                    self.mem_state.pair_cells
-                ),
+            return Err(KernelError::memory_limit(
+                "pair-cells",
+                self.mem_state.pair_cells,
+                max,
             ));
         }
         Ok(())
@@ -400,6 +426,82 @@ impl EvalCtx {
         )
     }
 
+    pub(crate) fn mem_observe_live_roots(
+        &mut self,
+        values: &[&Value],
+        environments: &[&Env],
+    ) -> Result<(), KernelError> {
+        let Some(limit) = self.mem_limits.max_live_units else {
+            return Ok(());
+        };
+        let observed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::logical_heap::logical_live_units(values, environments)
+        }))
+        .map_err(|_| {
+            KernelError::new(
+                KernelErrorKind::Internal,
+                "logical live-heap traversal panicked",
+            )
+        })?;
+        self.mem_state.live_units = observed;
+        self.mem_state.max_live_units = self.mem_state.max_live_units.max(observed);
+        if observed > limit {
+            return Err(KernelError::memory_limit("live-units", observed, limit));
+        }
+        Ok(())
+    }
+
+    pub(crate) fn finish_with_live_roots(
+        &mut self,
+        result: Value,
+        environments: &[&Env],
+    ) -> Result<Value, KernelError> {
+        if !self.panic_guard_active() {
+            self.mem_observe_live_roots(&[&result], environments)?;
+        }
+        Ok(result)
+    }
+
+    /// Convert a structured resource-limit error into the reserved, unforgeable ERROR protocol.
+    pub fn seal_resource_error(&self, error: &KernelError) -> Option<Value> {
+        let resource = error.resource_limit.as_ref()?;
+        let token = self.protocol?.error;
+        let context = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":dimension")),
+                    Term::Str(resource.dimension.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":observed")),
+                    Term::Int(resource.observed.into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":limit")),
+                    Term::Int(resource.limit.into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let payload = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":error/code")),
+                    Term::Str("core/resource-exhausted".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":error/message")),
+                    Term::Str(error.msg.clone()),
+                ),
+                (TermOrdKey(Term::symbol(":error/context")), context),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        Some(Value::sealed(token, Value::data(payload)))
+    }
+
     pub fn tick(&mut self) -> Result<(), KernelError> {
         self.steps = self.steps.saturating_add(1);
         if let Some(limit) = self.step_limit
@@ -426,18 +528,20 @@ pub(super) enum EvalOutcome {
 }
 
 pub fn eval_module(ctx: &mut EvalCtx, env: &mut Env, forms: &[Term]) -> Result<Value, KernelError> {
-    ctx.run_panic_guarded("eval_module", |ctx| {
+    let result = ctx.run_panic_guarded("eval_module", |ctx| {
         eval_forms::eval_module(ctx, env, forms)
-    })
+    })?;
+    ctx.finish_with_live_roots(result, &[env])
 }
 
 pub fn eval_term(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
     #[cfg(test)]
     let _depth_guard = EvaluatorDepthGuard::enter();
-    ctx.run_panic_guarded("eval_term", |ctx| {
+    let result = ctx.run_panic_guarded("eval_term", |ctx| {
         // Evaluator is structurally recursive; grow stack as needed.
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
             eval_treewalk::eval_term_impl(ctx, env, term)
         })
-    })
+    })?;
+    ctx.finish_with_live_roots(result, &[env])
 }

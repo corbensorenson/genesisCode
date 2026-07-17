@@ -51,6 +51,29 @@ fn fixture_cli() -> Cli {
 }
 
 #[test]
+fn warm_workers_inherit_logical_memory_limits() {
+    let cli = Cli::parse_from([
+        "genesis",
+        "--max-alloc-units",
+        "123",
+        "--max-live-units",
+        "45",
+        "cli-schema",
+    ]);
+    let inherited = inherited_global_args(&cli, &limits());
+    assert!(
+        inherited
+            .windows(2)
+            .any(|pair| pair == ["--max-alloc-units", "123"])
+    );
+    assert!(
+        inherited
+            .windows(2)
+            .any(|pair| pair == ["--max-live-units", "45"])
+    );
+}
+
+#[test]
 fn idle_eviction_preserves_active_workspace() {
     let mut state = state();
     let stale = Instant::now()

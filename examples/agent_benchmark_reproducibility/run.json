@@ -48,7 +48,7 @@
       "path": "invocation/request.json",
       "role": "request",
       "scope": "bundle",
-      "sha256": "47c1a7a22c2c36f65c5fdc78f4c7016e3c21f4d6b8084898b321a15a7b02b56a"
+      "sha256": "33920f894328c266bd4c4f13fdc498af81005df52ebb72e7bd8a1bf45da5b27e"
     },
     {
       "bytes": 284,
@@ -61,14 +61,14 @@
       "sha256": "97495e4e06e5b4fa0083fb23e37255cce75a5bc3901b1f1575b87242916727fa"
     },
     {
-      "bytes": 1229,
+      "bytes": 1223,
       "key": "bundle:model-effect.gclog",
       "mediaType": "text/plain",
       "mode": "0644",
       "path": "model-effect.gclog",
       "role": "effect-log",
       "scope": "bundle",
-      "sha256": "d7cae6ce60b8f94260b5cb901a210dfab739c276b4092185a239505dfd9f407e"
+      "sha256": "099e33e1bae7951efa42f37a7443b116e0620e8af149158ed9ad9fdf68a0b94b"
     },
     {
       "bytes": 686,
@@ -78,7 +78,7 @@
       "path": "model_effect.gc",
       "role": "context",
       "scope": "bundle",
-      "sha256": "739ddd0a1470bf759d3c7cc7cfa11f843c6db22ca2cdf34aac0b7d8bbeb4e08f"
+      "sha256": "c7114ec4a2c2c1f2fd8b9ed57d6f293ac6cdc92600dc3bcb77f75abee28fa549"
     },
     {
       "bytes": 87,
@@ -138,7 +138,7 @@
       "path": "score.json",
       "role": "score",
       "scope": "bundle",
-      "sha256": "c30616e602d997c69dc39715cc77dd182ddb996325f329013e13ad6fcbd4f132"
+      "sha256": "b54c75235c1c598d33c076a94bf9d1ae8c4a687ed3e11d0a93cfe172bf34304b"
     },
     {
       "bytes": 296,
@@ -148,7 +148,7 @@
       "path": "tool-transcript.jsonl",
       "role": "tool-transcript",
       "scope": "bundle",
-      "sha256": "eab4d3ac60e087e8e1550b2f2ba2a5df74f788cf2d5a81bf62d847f01977d08b"
+      "sha256": "1a17bdd19a98a9f1861002afaf1763f64c1c2a60369d9f12c11eee5aecdbe93b"
     },
     {
       "bytes": 156,
@@ -178,7 +178,7 @@
       "path": "benchmarks/agent_tasks/v0.1/suite.json",
       "role": "authority",
       "scope": "repository",
-      "sha256": "e4abe13fc7613602ce9f13103c027254e8b3e41f64abb85065a022d965b0dc5e"
+      "sha256": "65b2c35ec18d96d6f7da1c0f5806810a20dc90ee6180390a8599f57773c41953"
     },
     {
       "bytes": 8116,
@@ -208,27 +208,27 @@
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
       "role": "authority",
       "scope": "repository",
-      "sha256": "17bfca83fdb3ba7a62e71d51034ffc0d6cd1d2fc86fbc9e24dd3da952ab17381"
+      "sha256": "3e015d9317f24652f0879bdbf46111c8a489add023d22172b48562f0425f6c60"
     },
     {
-      "bytes": 12088,
+      "bytes": 12133,
       "key": "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
       "mediaType": "application/json",
       "mode": "0644",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
       "role": "card",
       "scope": "repository",
-      "sha256": "4fc87566829a7f8c35ca91b238533d0b04cace4d38c295cf21430e63f80b2036"
+      "sha256": "565a9ad6e6287b4d069d5f7cf75dc5d894725308a81a1056520eb2f65f93e1c1"
     },
     {
-      "bytes": 3916,
+      "bytes": 3947,
       "key": "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
       "mediaType": "text/markdown",
       "mode": "0644",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
       "role": "context",
       "scope": "repository",
-      "sha256": "8090ab913f4341722620464cb802d494553921105f375380937faf516e9fdf96"
+      "sha256": "f76309eb7b8fdfeb7260bf90c21ba995b59514e9826d94ae943a3bcd40798fb7"
     },
     {
       "bytes": 2325,
@@ -241,14 +241,14 @@
       "sha256": "4f85f364fe6faba12d8c837ca061811bfc828ac6d5574facafeceb4bef4a4ee3"
     },
     {
-      "bytes": 36175,
+      "bytes": 37264,
       "key": "repository:docs/spec/GC_AGENT_PROFILE_v0.3.json",
       "mediaType": "application/json",
       "mode": "0644",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
       "role": "authority",
       "scope": "repository",
-      "sha256": "a08a2e1e7f179f4793d96141ba59cffa1c3243e7b8c442d7fc22d7bf36c0fb28"
+      "sha256": "c7e6772445aa820d5ac1807ecf7f19afaeb6b632b1599f158dc0d3213545eb60"
     },
     {
       "bytes": 12919,
@@ -258,7 +258,7 @@
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
       "role": "card",
       "scope": "repository",
-      "sha256": "f5579c98acc0d2c98acdd551d577cdf1e5c3b2ac73277933bcb3f3cf2bf8886a"
+      "sha256": "8efc1b1017063e214f87f6a75f097f4d1ed449534b821085197487db1c1d3785"
     },
     {
       "bytes": 1566,
@@ -354,9 +354,9 @@
   "benchmark": {
     "benchmarkId": "GC-AGENT-TASK-BENCHMARK-v0.1",
     "caseId": "generation-small",
-    "caseIdentitySha256": "7826064f06615767eb70797a289a845cd736db39b2b1aafbb3131a96e4585cb7",
+    "caseIdentitySha256": "db7d1a15b7ddc8ba848df1ed93614b450036fe07802cbb5943f09d2032b65010",
     "conditionId": "condition-generation-context-small-001",
-    "conditionIdentitySha256": "006b9cd572abe2a05c2fdbeaee16efc106d454b9bfcdaf4a7df41996ad0fc04a",
+    "conditionIdentitySha256": "e26a750d1dca03e7213c2dd61ebfc0ef9b90a5ccce67d4d0cb55ec1ad5d9390f",
     "contamination": "declared-contaminated",
     "contextTier": "small",
     "heldOutEpochId": null,
@@ -375,7 +375,7 @@
     "selectedAttempt": 0,
     "treeIdentitySha256": "a913bd3ea6c63d39ec0343edcfaecd66ff043e10d03c906a90551a3ca5f22aef"
   },
-  "contentIdentitySha256": "09c617cf92124ba7d7f2954992132ac7ad3d58bfacd897329dc71e0ca52b7014",
+  "contentIdentitySha256": "c25beb25cf63a1778a5f2107b983823bce5ed99c2276d7e8640fa2166056eaea",
   "host": {
     "accelerator": {
       "driverVersion": "15.0",
@@ -473,7 +473,7 @@
         "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
         "bundle:candidate/requirements.md"
       ],
-      "identitySha256": "e9ec11b22afbefd8470efbb96555f9e26d227ed866d03f7154634103dd97bd0e",
+      "identitySha256": "f9b51563fd6ec7a72f7567cb8b76171831e170b05131c6d1fc1fd5fe6dd63766",
       "messages": [
         {
           "artifact": "bundle:prompts/system.md",
@@ -530,7 +530,7 @@
     "artifact": "bundle:score.json",
     "includedModelMetrics": false,
     "qualityScoreBasisPoints": 10000,
-    "scoreIdentitySha256": "773d4a26dd964fda378a66f44910978c178720eec55bde20ea01a409f8b8eb72"
+    "scoreIdentitySha256": "9252dd784fa8b5993be682dd282b5770bf061c2dfcc5b7323227dd64bcce956c"
   },
   "status": "complete",
   "toolProtocol": {

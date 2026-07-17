@@ -15,6 +15,8 @@ pub(super) fn validate_workspace_argv(argv: &[String], root: &Path) -> Result<()
     const SESSION_OWNED_FLAGS: &[&str] = &[
         "--step-limit",
         "--no-step-limit",
+        "--max-alloc-units",
+        "--max-live-units",
         "--max-pair-cells",
         "--max-vec-len",
         "--max-map-len",

@@ -3,6 +3,7 @@ use super::{
     json_canonical_string, parse_sync_set_refs,
 };
 use crate::vcs_helpers::parse_set_ref_spec;
+use crate::warm_request::validate_workspace_argv;
 
 #[test]
 fn parse_set_ref_spec_supports_contract_refs_with_colons() {
@@ -83,4 +84,31 @@ fn non_artifact_bootstrap_mode_is_dev_only() {
     assert!(err.json.message.contains("development-only"));
     enforce_bootstrap_mode_allowed_with_flag(SelfhostBootstrapMode::Embedded, "test", true)
         .expect("embedded bootstrap should be allowed in development mode");
+}
+
+#[test]
+fn logical_memory_flags_parse_and_are_session_owned() {
+    use clap::Parser;
+
+    let cli = super::Cli::parse_from([
+        "genesis",
+        "--max-alloc-units",
+        "123",
+        "--max-live-units",
+        "45",
+        "cli-schema",
+    ]);
+    assert_eq!(cli.max_alloc_units, Some(123));
+    assert_eq!(cli.max_live_units, Some(45));
+
+    for flag in ["--max-alloc-units=1", "--max-live-units", "1"] {
+        let args = if flag == "1" {
+            continue;
+        } else {
+            vec![flag.to_string()]
+        };
+        let error = validate_workspace_argv(&args, std::path::Path::new("."))
+            .expect_err("request must not override a session-owned logical limit");
+        assert_eq!(error.code, "warm/resource-override");
+    }
 }

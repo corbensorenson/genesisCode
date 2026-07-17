@@ -34,6 +34,8 @@ This file defines a package, its modules, dependencies, and required obligations
 - `step_limit` (integer, optional): kernel evaluation step limit for package evaluation/tests
   - If omitted, the v0.2 toolchain default is used.
 - `allow_unlimited` (bool, default `false`): if `true`, permits disabling the step limit via `genesis test --no-step-limit`.
+- `max_alloc_units` (integer, optional): maximum cumulative representation-independent logical allocation units
+- `max_live_units` (integer, optional): maximum logical units reachable from evaluator roots at a safe point
 - `max_pair_cells` (integer, optional): maximum total number of `pair/cons` cells allocated during evaluation
 - `max_vec_len` (integer, optional): maximum observed vector length (vector literals and `vec/push`)
 - `max_map_len` (integer, optional): maximum observed map length (map literals, `map/put`, `map/merge`)
@@ -94,3 +96,5 @@ Each entry:
 - Package evaluation limits are enforced for `genesis test` and `genesis apply-patch`:
   - if `limits.allow_unlimited = false` (default), `--no-step-limit` must be rejected as a manifest policy error
   - the effective step limit is the minimum of the CLI request (if any) and `limits.step_limit` (or the toolchain default when omitted)
+  - each effective memory limit is the minimum of the CLI value and manifest value when both are present; either side may tighten an omitted value
+  - logical unit definitions, safe points, reset behavior, and sealed exhaustion payloads are normative in `docs/spec/VALUE_EFFECT_HASH.md`

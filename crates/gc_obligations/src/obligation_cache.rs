@@ -27,6 +27,14 @@ pub(super) fn mem_limits_term(mem: MemLimits) -> Term {
     Term::Map(
         [
             (
+                TermOrdKey(Term::symbol(":max-alloc-units")),
+                option_u64_term(mem.max_alloc_units),
+            ),
+            (
+                TermOrdKey(Term::symbol(":max-live-units")),
+                option_u64_term(mem.max_live_units),
+            ),
+            (
                 TermOrdKey(Term::symbol(":max-pair-cells")),
                 option_u64_term(mem.max_pair_cells),
             ),

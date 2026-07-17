@@ -272,9 +272,9 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     // reset counters before returning.
     {
         let saved_step_limit = ctx.step_limit;
-        let saved_mem_limits = ctx.mem_limits;
+        let saved_mem_limits = ctx.mem_limits();
         ctx.step_limit = None;
-        ctx.mem_limits = gc_kernel::MemLimits::default();
+        ctx.set_mem_limits(gc_kernel::MemLimits::default());
 
         let prelude_bootstrap_err = match parse_module(prelude_assembled::PRELUDE_SRC) {
             Ok(forms) => match canonicalize_module(forms) {
@@ -288,7 +288,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
         };
 
         ctx.step_limit = saved_step_limit;
-        ctx.mem_limits = saved_mem_limits;
+        ctx.set_mem_limits(saved_mem_limits);
         ctx.reset_counters();
         if let Some(err) = prelude_bootstrap_err {
             env = Env::with_binding(
@@ -360,19 +360,13 @@ fn mk_error_with(ctx: &mut EvalCtx, code: &str, msg: String, at: Option<usize>) 
         TermOrdKey(Term::Symbol(":error/context".to_string())),
         Term::Map(ctxm),
     );
-    Value::Sealed {
-        token: p.error,
-        payload: Box::new(Value::data(Term::Map(m))),
-    }
+    Value::sealed(p.error, Value::data(Term::Map(m)))
 }
 
 fn mk_unhandled(ctx: &mut EvalCtx, msg_term: Term) -> Value {
     let p = proto(ctx);
     let payload = Term::list(vec![Term::Symbol("unhandled".to_string()), msg_term]);
-    Value::Sealed {
-        token: p.unhandled,
-        payload: Box::new(Value::data(payload)),
-    }
+    Value::sealed(p.unhandled, Value::data(payload))
 }
 
 fn sealed_matches(v: &Value, tok: SealId) -> Option<&Value> {

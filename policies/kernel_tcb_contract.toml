@@ -12,6 +12,7 @@ expected_kernel_surface_files = [
   "compiled/trace_impl.rs",
   "compiled_runtime/apply.rs",
   "compiled_runtime/eval.rs",
+  "compiled_runtime/metered.rs",
   "compiled_runtime/mod.rs",
   "compiled_runtime/primitive_forward.rs",
   "compiled_runtime/tail_loop.rs",
@@ -29,6 +30,7 @@ expected_kernel_surface_files = [
   "eval_value_ops.rs",
   "free_vars.rs",
   "lib.rs",
+  "logical_heap.rs",
   "value.rs",
   "value/collections.rs",
   "value/trace_impl.rs",
@@ -44,6 +46,8 @@ required_differential_test_markers = [
   "recursive_module_cycles_are_reclaimed_after_treewalk_and_compiled_roots_retire",
   "indirect_container_cycles_are_reclaimed_across_repeated_sessions",
   "every_cycle_capable_value_edge_participates_in_reclamation",
+  "logical_resource_counters_are_tier_exact_and_resettable",
+  "logical_resource_limits_fail_one_unit_short_with_structured_sealed_context",
 ]
 
 # Production dispatch cannot regain source- or benchmark-shaped execution under
@@ -118,6 +122,23 @@ required_safe_point_markers = [
   "cycle collection panicked",
 ]
 
+[resource_metering]
+required_source_markers = [
+  "max_alloc_units",
+  "max_live_units",
+  "AllocationLedger",
+  "logical_live_units",
+  "core/resource-exhausted",
+  "eval_metered_app_n",
+]
+required_test_markers = [
+  "logical_term_and_constructor_units_are_exact",
+  "live_units_are_alias_representation_independent",
+  "live_units_terminate_on_recursive_environment_cycles",
+  "logical_resource_counters_are_tier_exact_and_resettable",
+  "logical_resource_limits_fail_one_unit_short_with_structured_sealed_context",
+]
+
 [file_roles]
 "compiled.rs" = "optimized-tier"
 "compiled_blob.rs" = "optimized-tier"
@@ -126,6 +147,7 @@ required_safe_point_markers = [
 "compiled/trace_impl.rs" = "optimized-tier"
 "compiled_runtime/apply.rs" = "optimized-tier"
 "compiled_runtime/eval.rs" = "optimized-tier"
+"compiled_runtime/metered.rs" = "optimized-tier"
 "compiled_runtime/mod.rs" = "optimized-tier"
 "compiled_runtime/primitive_forward.rs" = "optimized-tier"
 "compiled_runtime/tail_loop.rs" = "optimized-tier"
@@ -143,6 +165,7 @@ required_safe_point_markers = [
 "eval_value_ops.rs" = "shared-semantics"
 "free_vars.rs" = "reference-semantics"
 "lib.rs" = "tier-bridge"
+"logical_heap.rs" = "shared-semantics"
 "value.rs" = "tier-bridge"
 "value/collections.rs" = "tier-bridge"
 "value/trace_impl.rs" = "tier-bridge"
@@ -169,6 +192,7 @@ optimized-tier = [
 "crates/gc_kernel/src/compiled/trace_impl.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/apply.rs" = 450
 "crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
+"crates/gc_kernel/src/compiled_runtime/metered.rs" = 80
 "crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/primitive_forward.rs" = 180
 "crates/gc_kernel/src/compiled_runtime/tail_loop.rs" = 700
@@ -186,6 +210,7 @@ optimized-tier = [
 "crates/gc_kernel/src/eval_value_ops.rs" = 140
 "crates/gc_kernel/src/free_vars.rs" = 160
 "crates/gc_kernel/src/lib.rs" = 80
+"crates/gc_kernel/src/logical_heap.rs" = 430
 "crates/gc_kernel/src/value.rs" = 720
 "crates/gc_kernel/src/value/collections.rs" = 130
 "crates/gc_kernel/src/value/trace_impl.rs" = 120

@@ -150,6 +150,8 @@ fn resource_cases_fail_at_the_declared_boundary() {
         let limits = &case["limits"];
         let mut ctx = EvalCtx::with_step_limit(None);
         ctx.set_mem_limits(MemLimits {
+            max_alloc_units: limits["maxAllocUnits"].as_u64(),
+            max_live_units: limits["maxLiveUnits"].as_u64(),
             max_pair_cells: limits["maxPairCells"].as_u64(),
             max_vec_len: limits["maxVecLen"].as_u64(),
             max_map_len: limits["maxMapLen"].as_u64(),

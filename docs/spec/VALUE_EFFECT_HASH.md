@@ -97,9 +97,9 @@ buffered cycle candidates and their traced closure exactly according to the pinn
 algorithm. For `V` candidate-reachable traced nodes and `E` traced edges, pause work and temporary
 collector state are `O(V + E)`; no scan of immutable CoreForm or compiler metadata is required.
 Untrusted warm requests execute in isolated, resource-bounded workers, so a bounded request cannot
-monopolize unrelated session work. R2.2.c adds representation-independent logical allocation and
-live-heap ceilings; the collector's physical byte counters and invocation timing are not substitutes
-for those semantic limits.
+monopolize unrelated session work. Representation-independent logical allocation and live-heap
+ceilings are defined below; the collector's physical byte counters and invocation timing are not
+substitutes for those semantic limits.
 
 ### Sharing and mutation
 
@@ -161,16 +161,83 @@ R2.2.f owns complete implementation evidence for these paths.
 
 ### Resource accounting boundary
 
-Current `MemLimits` are deterministic semantic safety valves: total pair cells and maximum observed
-vector, map, bytes, and UTF-8 string lengths. They are not total live-heap accounting and do not
-approximate process RSS. R2.2.c must add logical allocation and live-heap units for every value edge
-and root class without making allocator size, address, collection timing, or host platform part of
-semantics.
+`MemLimits` exposes two graph-wide limits in addition to the existing pair-cell and maximum
+vector/map/bytes/string shape valves:
 
-All execution tiers must charge the same documented logical events. Reclamation may lower a live
-heap counter only when the logical subgraph is unreachable from every declared root. A tier cannot
-avoid a limit by sharing nodes differently, delaying a charge, switching representation, forcing a
-collection, or moving an allocation into host code.
+- `max_alloc_units` bounds cumulative logical allocation units since the last trusted counter reset;
+- `max_live_units` bounds logical units reachable from the declared roots at a safe point.
+
+These counters never approximate process RSS, allocator bytes, collector metadata, compiler IR, or
+host resources. A missing limit disables its traversal/charging path and reports zero for that
+counter. A configured limit is inclusive: `observed == limit` succeeds and `observed > limit` fails.
+All additions saturate at `u64::MAX`, which is itself a valid configured limit rather than an
+unlimited sentinel.
+
+#### Logical unit schedule
+
+One CoreForm node costs one unit. Each pair field, vector element, and map key/value relation costs
+one edge unit. UTF-8 strings and symbols cost one unit per encoded byte, byte strings cost one unit
+per byte, and integers cost one unit per byte in their canonical signed little-endian encoding.
+
+A newly constructed runtime value charges the following cumulative units:
+
+| Value | Allocation units |
+|---|---|
+| `Data(term)` | one value + one term edge + the complete term tree |
+| inline `Int`, `SealToken` | one value |
+| `Vector(values)` | one value + one edge per element |
+| `Map(entries)` | one value + a key edge and key term tree + a value edge per entry |
+| `Closure`, `CompiledClosure` | one value + parameter UTF-8 bytes + body edge/tree + environment edge |
+| `Sealed(payload)` | one value + one payload edge |
+| `NativeFn` | one value + native name UTF-8 bytes + one edge per collected argument |
+| `Contract` | one value + handler and metadata edges + optional prototype edge + override-name bytes and handler edge per override |
+| `EffectProgram` | one value + one result/request edge |
+| `EffectRequest` | one value + operation-name bytes + payload edge/tree + continuation edge |
+
+Cloning a runtime owner or immutable term does not charge a new logical allocation. Creating a new
+language value after copy-on-write or persistent update does charge the applicable constructor row.
+Compiler expressions, coverage tables, inline slots, collector bookkeeping, and physical node
+packing never add units. The compiled tier disables allocation-eliding application plans while any
+semantic memory limit is active, and replays the same curried constructor events as the reference
+tier.
+
+Live traversal begins with one edge unit for each declared root. Every reached runtime `Value`
+occurrence costs one unit and its outgoing edges, metadata bytes, and CoreForm trees use the same
+schedule above. An environment costs one unit, a parent edge when present, and binding-name bytes
+plus one value edge per binding. Tree-walk and compiled closures expose the same semantic
+parameter/body/environment graph; compiled-only lexical layout and module storage do not change the
+charge.
+
+Physical aliases are expanded once per logical incoming path, so replacing two equal values with a
+shared physical owner cannot lower the result. Traversal tracks owner identity only on the active
+path to terminate cycles; the closing edge is charged, but an already-active owner is not expanded
+again. Traversal order, addresses, hash-table layout, reference counts, and collection timing cannot
+change the total.
+
+#### Safe points and failure
+
+Allocation charging is active only inside the outermost public evaluation or value-application
+transaction. Nested evaluator calls and native callbacks contribute to that same cumulative ledger
+without creating extra checkpoints. Allocation exhaustion is checked before the outer boundary
+returns. Live units are then measured from the successful result plus the module/term environment;
+a direct value application declares its result as its boundary root. Runner/session/effect roots are
+owned and bounded by their corresponding outer policies until those subsystems join this graph
+meter.
+
+`reset_counters` is a trusted initialization boundary: it resets steps, shape observations,
+cumulative allocation, current live units, and peak live units together. Tooling uses it after
+Prelude/self-host bootstrap so user budgets do not include trusted initialization.
+
+Exhaustion is an internal `KernelErrorKind::MemoryLimit` carrying the exact dimension, observed
+units, and limit. A language or host boundary converts that structure to the reserved ERROR seal
+with code `core/resource-exhausted` and a context map containing `:dimension`, `:observed`, and
+`:limit`; user code cannot forge recognition because it does not possess the ERROR token. The
+message string is explanatory and is not a routing identifier.
+
+All execution tiers must charge the same documented logical events. A tier cannot avoid a limit by
+sharing nodes differently, delaying a charge, switching representation, forcing collection, or
+moving a language allocation into host code. Physical allocation preflight, recoverable allocator
+failure, and process-level OOM isolation are separate R2.2.d obligations.
 
 ### Cycle-solution acceptance constraints
 

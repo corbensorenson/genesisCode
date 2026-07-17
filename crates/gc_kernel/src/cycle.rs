@@ -51,6 +51,10 @@ impl<T: Trace + 'static> Shared<T> {
     pub(crate) fn as_ptr(&self) -> *const T {
         self.deref()
     }
+
+    pub(crate) fn identity_ptr(&self) -> *const T {
+        self.deref()
+    }
 }
 
 impl<T: Trace + 'static> Clone for Shared<T> {

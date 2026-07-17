@@ -42,6 +42,14 @@ mutations = {
         '  "crate::cycle::collect_cycles",',
         '  "crate::cycle::missing_collect_cycles",',
     ),
+    "missing-resource-source": (
+        '  "logical_live_units",',
+        '  "missing_logical_live_units",',
+    ),
+    "missing-resource-test": (
+        '  "live_units_are_alias_representation_independent",',
+        '  "missing_live_units_are_alias_representation_independent",',
+    ),
 }
 for name, (old, new) in mutations.items():
     if source.count(old) != 1:

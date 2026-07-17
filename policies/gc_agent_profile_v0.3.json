@@ -141,7 +141,9 @@
         "expectedErrorKind": "StepLimit",
         "id": "step-limit",
         "limits": {
+          "maxAllocUnits": null,
           "maxBytesLen": null,
+          "maxLiveUnits": null,
           "maxMapLen": null,
           "maxPairCells": null,
           "maxStringLen": null,
@@ -154,7 +156,9 @@
         "expectedErrorKind": "MemoryLimit",
         "id": "vector-limit",
         "limits": {
+          "maxAllocUnits": null,
           "maxBytesLen": null,
+          "maxLiveUnits": null,
           "maxMapLen": null,
           "maxPairCells": null,
           "maxStringLen": null,
@@ -162,6 +166,36 @@
           "steps": 100
         },
         "source": "[1 2]"
+      },
+      {
+        "expectedErrorKind": "MemoryLimit",
+        "id": "allocation-unit-limit",
+        "limits": {
+          "maxAllocUnits": 0,
+          "maxBytesLen": null,
+          "maxLiveUnits": null,
+          "maxMapLen": null,
+          "maxPairCells": null,
+          "maxStringLen": null,
+          "maxVecLen": null,
+          "steps": 100
+        },
+        "source": "nil"
+      },
+      {
+        "expectedErrorKind": "MemoryLimit",
+        "id": "live-unit-limit",
+        "limits": {
+          "maxAllocUnits": null,
+          "maxBytesLen": null,
+          "maxLiveUnits": 0,
+          "maxMapLen": null,
+          "maxPairCells": null,
+          "maxStringLen": null,
+          "maxVecLen": null,
+          "steps": 100
+        },
+        "source": "nil"
       }
     ]
   },
@@ -396,7 +430,7 @@
     {
       "authorities": [
         {
-          "anchors": ["DEFAULT_STEP_LIMIT", "pub struct MemLimits", "max_pair_cells", "max_string_len"],
+          "anchors": ["DEFAULT_STEP_LIMIT", "pub struct MemLimits", "max_alloc_units", "max_live_units", "max_pair_cells", "max_string_len"],
           "path": "crates/gc_kernel/src/eval.rs"
         },
         {
@@ -412,13 +446,13 @@
       "id": "resource-limits",
       "invariants": [
         "The default kernel step limit is 50000000; package limits may only tighten effective limits unless allow_unlimited is explicitly true.",
-        "Kernel memory limits are deterministic semantic counters rather than host RSS estimates.",
+        "Kernel memory limits are deterministic semantic counters rather than host RSS estimates; allocation/live units follow the normative value-graph schedule.",
         "Effect runtime policy independently bounds operation count and per-op/per-run payload and response bytes."
       ],
       "limitations": ["Wall time, process, network, GPU, disk, and host-bridge limits are host policy concerns and must be explicitly selected; they are not implied by kernel limits."],
       "status": "core",
       "summary": "Deterministic kernel and package budgets plus separately enforced host-effect ceilings.",
-      "surface": ["step_limit", "allow_unlimited", "max_pair_cells", "max_vec_len", "max_map_len", "max_bytes_len", "max_string_len", "max_steps_per_test", "max_effect_entries_per_test", "max_effect_log_bytes_per_test", "max_effect_ops", "max_payload_bytes_per_op", "max_payload_bytes_per_run", "max_response_bytes_per_op", "max_response_bytes_per_run"]
+      "surface": ["step_limit", "allow_unlimited", "max_alloc_units", "max_live_units", "max_pair_cells", "max_vec_len", "max_map_len", "max_bytes_len", "max_string_len", "max_steps_per_test", "max_effect_entries_per_test", "max_effect_log_bytes_per_test", "max_effect_ops", "max_payload_bytes_per_op", "max_payload_bytes_per_run", "max_response_bytes_per_op", "max_response_bytes_per_run"]
     },
     {
       "authorities": [

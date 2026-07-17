@@ -43,6 +43,8 @@ fn effective_mem_limits(manifest: &PackageManifest, cli: MemLimits) -> MemLimits
     }
 
     MemLimits {
+        max_alloc_units: min_opt(cli.max_alloc_units, manifest.limits.max_alloc_units),
+        max_live_units: min_opt(cli.max_live_units, manifest.limits.max_live_units),
         max_pair_cells: min_opt(cli.max_pair_cells, manifest.limits.max_pair_cells),
         max_vec_len: min_opt(cli.max_vec_len, manifest.limits.max_vec_len),
         max_map_len: min_opt(cli.max_map_len, manifest.limits.max_map_len),
@@ -339,3 +341,44 @@ fn selfhost_infer_effects_forms(
     Ok(gc_types::InferredEffects { ops, unknown })
 }
 
+#[cfg(test)]
+mod logical_limit_tests {
+    use super::*;
+
+    #[test]
+    fn logical_memory_limits_resolve_to_the_stricter_policy() {
+        let dir = tempfile::tempdir().unwrap();
+        let package_path = dir.path().join("package.toml");
+        std::fs::write(
+            &package_path,
+            r#"
+schema = 1
+name = "limit-resolution"
+version = "0.0.1"
+modules = []
+obligations = []
+
+[limits]
+max_alloc_units = 80
+max_live_units = 120
+"#,
+        )
+        .unwrap();
+        let manifest = PackageManifest::load(&package_path).unwrap().0;
+
+        let limits = effective_mem_limits(
+            &manifest,
+            MemLimits {
+                max_alloc_units: Some(100),
+                max_live_units: Some(50),
+                ..MemLimits::default()
+            },
+        );
+        assert_eq!(limits.max_alloc_units, Some(80));
+        assert_eq!(limits.max_live_units, Some(50));
+
+        let limits = effective_mem_limits(&manifest, MemLimits::default());
+        assert_eq!(limits.max_alloc_units, Some(80));
+        assert_eq!(limits.max_live_units, Some(120));
+    }
+}

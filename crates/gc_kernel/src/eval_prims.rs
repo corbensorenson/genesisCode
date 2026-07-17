@@ -411,7 +411,7 @@ pub(crate) fn prim_op(
                     }
                     Shared::make_mut(&mut m).insert_mut(key, value);
                     ctx.mem_observe_map_len(m.size())?;
-                    Ok(Value::Map(m))
+                    Ok(Value::map_shared(m))
                 }
                 Value::Data(t) => match t.as_ref() {
                     Term::Map(m) => {
@@ -450,7 +450,7 @@ pub(crate) fn prim_op(
                         Shared::make_mut(&mut out).insert_mut(k.clone(), v.clone());
                     }
                     ctx.mem_observe_map_len(out.size())?;
-                    Ok(Value::Map(out))
+                    Ok(Value::map_shared(out))
                 }
                 (Value::Data(a), Value::Data(b)) => match (a.as_ref(), b.as_ref()) {
                     (Term::Map(a), Term::Map(b)) => {
@@ -593,7 +593,7 @@ pub(crate) fn prim_op(
                         return type_err(ctx, "vec/set index out of range");
                     }
                     if crate::value::ValueVector::set_shared(&mut xs, idx, value) {
-                        Ok(Value::Vector(xs))
+                        Ok(Value::vector_shared(xs))
                     } else {
                         type_err(ctx, "vec/set index out of range")
                     }
@@ -800,7 +800,7 @@ fn prim_vec_push_values(
             let new_len = xs.len().saturating_add(1);
             ctx.mem_observe_vec_len(new_len)?;
             crate::value::ValueVector::push_shared(&mut xs, value);
-            Ok(Value::Vector(xs))
+            Ok(Value::vector_shared(xs))
         }
         Value::Data(t) => match t.as_ref() {
             Term::Vector(xs) => {
@@ -841,10 +841,7 @@ pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelErro
                 .collect(),
             ),
         );
-        return Ok(Value::Sealed {
-            token: p.error,
-            payload: Box::new(Value::data(Term::Map(m))),
-        });
+        return Ok(Value::sealed(p.error, Value::data(Term::Map(m))));
     }
     Err(KernelError::new(KernelErrorKind::Type, msg))
 }

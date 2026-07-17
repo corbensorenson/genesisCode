@@ -1,5 +1,6 @@
 use super::super::*;
 use super::eval::eval_cexpr_runtime;
+use super::metered::eval_metered_app_n;
 use super::primitive_forward::eval_primitive_forward_inline;
 use super::tail_loop::eval_tail_loop_inline;
 use crate::Shared;
@@ -174,6 +175,9 @@ pub(super) fn eval_app_n_runtime(
         ctx.tick()?;
     }
     let callee_value = eval_cexpr_runtime(ctx, caller_env.clone(), callee)?;
+    if ctx.mem_limits != crate::eval::MemLimits::default() {
+        return eval_metered_app_n(ctx, caller_env, callee_value, args);
+    }
     if let Value::CompiledClosure(data) = callee_value {
         if let Some(control) = eval_primitive_forward_inline(ctx, caller_env, data.clone(), args)? {
             return Ok(control);

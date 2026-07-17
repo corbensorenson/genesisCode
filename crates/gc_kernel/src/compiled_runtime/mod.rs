@@ -1,5 +1,6 @@
 mod apply;
 mod eval;
+mod metered;
 mod primitive_forward;
 mod tail_loop;
 

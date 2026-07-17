@@ -16,6 +16,8 @@ fn trusted_bootstrap_budget_is_bounded_and_profile_controlled() {
     let production = trusted_bootstrap_budget();
     assert_eq!(production.profile, "production");
     assert!(production.step_limit > 0);
+    assert!(production.mem_limits.max_alloc_units.is_some());
+    assert!(production.mem_limits.max_live_units.is_some());
     assert!(production.mem_limits.max_pair_cells.is_some());
     assert!(production.mem_limits.max_vec_len.is_some());
     assert!(production.mem_limits.max_map_len.is_some());
@@ -26,6 +28,14 @@ fn trusted_bootstrap_budget_is_bounded_and_profile_controlled() {
     let parity = trusted_bootstrap_budget();
     assert_eq!(parity.profile, "parity-harness");
     assert!(parity.step_limit >= production.step_limit);
+    assert!(
+        parity.mem_limits.max_alloc_units.unwrap_or(0)
+            >= production.mem_limits.max_alloc_units.unwrap_or(0)
+    );
+    assert!(
+        parity.mem_limits.max_live_units.unwrap_or(0)
+            >= production.mem_limits.max_live_units.unwrap_or(0)
+    );
     assert!(
         parity.mem_limits.max_pair_cells.unwrap_or(0)
             >= production.mem_limits.max_pair_cells.unwrap_or(0)

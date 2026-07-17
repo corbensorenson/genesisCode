@@ -32,39 +32,39 @@
       "sha256": "21908dfefecc0fed484d11a81adae889aaeb8e4641d17882bb4a78f9533ccc09"
     },
     {
-      "bytes": 3916,
+      "bytes": 3947,
       "id": "gc-agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
       "role": "card",
-      "sha256": "8090ab913f4341722620464cb802d494553921105f375380937faf516e9fdf96"
+      "sha256": "f76309eb7b8fdfeb7260bf90c21ba995b59514e9826d94ae943a3bcd40798fb7"
     },
     {
-      "bytes": 36175,
+      "bytes": 37264,
       "id": "gc-agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
       "role": "grammar",
-      "sha256": "a08a2e1e7f179f4793d96141ba59cffa1c3243e7b8c442d7fc22d7bf36c0fb28"
+      "sha256": "c7e6772445aa820d5ac1807ecf7f19afaeb6b632b1599f158dc0d3213545eb60"
     },
     {
-      "bytes": 205567,
+      "bytes": 209944,
       "id": "gc-agent-symbol-index",
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
       "role": "profile",
-      "sha256": "788b0aa5b266f39fdaf097601a4342a3a803b0bbb6e0d5d2943af1310d36db4b"
+      "sha256": "553c4f8dfdcafd99267308e83912f9c23bcc4eb70ed4295dff49ef39555f5a36"
     },
     {
       "bytes": 5886,
       "id": "gc-agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
       "role": "card",
-      "sha256": "881959992336aeb24f18c4991e60c2b9bcd803b25f6ddc0b9543078fdaf118d7"
+      "sha256": "3634dea999881bb411aa38d27a46d3f535896ba1e3f7a35f2a8eebc28de15e3a"
     },
     {
       "bytes": 349426,
       "id": "gc-diagnostic-catalog",
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
       "role": "diagnostics",
-      "sha256": "59d89624f63177d2e112d627bdc390bf2576bd8c19fa8ca93c4922e8d1599e95"
+      "sha256": "c5e40dff6bc3e0f7c65e6d3aede73b2ddd2df2681b2b6e49647c4c4f674ea9da"
     },
     {
       "bytes": 3618,
@@ -145,7 +145,7 @@
     "providerMutableFactsTreatment": "recorded-but-not-semantic-input",
     "scaffoldChangePolicy": "new-profile-and-cohort-required"
   },
-  "contentIdentitySha256": "63b2650f78d911cfdd8c1063e4534b87c449e1b84e9046b651f96cd614ed54c9",
+  "contentIdentitySha256": "c96bef092d7a0f21dc873dfe662d402ababae4ff4cf3ac0d9e0b4725dbb6d2e8",
   "grammar": {
     "acceptanceAuthority": "production-parser-and-obligations",
     "authorityArtifactId": "gc-agent-profile",

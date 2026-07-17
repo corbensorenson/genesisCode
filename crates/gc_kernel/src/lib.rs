@@ -4,6 +4,7 @@ mod env;
 mod error;
 mod eval;
 mod free_vars;
+mod logical_heap;
 mod value;
 
 pub use compiled::{
@@ -14,7 +15,7 @@ pub use compiled::{
 };
 pub use cycle::Shared;
 pub use env::{Env, EnvFrame};
-pub use error::{KernelError, KernelErrorKind};
+pub use error::{KernelError, KernelErrorKind, ResourceLimit};
 pub use eval::{
     DEFAULT_STEP_LIMIT, DecisionCoverageCounters, DecisionSample, EvalCtx, EvalObservedCounters,
     EvalState, MemLimits, MemObservedCounters, ProtocolTokens, StepLimit, eval_module, eval_term,

@@ -5,6 +5,14 @@ use thiserror::Error;
 pub struct KernelError {
     pub kind: KernelErrorKind,
     pub msg: String,
+    pub resource_limit: Option<ResourceLimit>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResourceLimit {
+    pub dimension: &'static str,
+    pub observed: u64,
+    pub limit: u64,
 }
 
 impl KernelError {
@@ -12,6 +20,19 @@ impl KernelError {
         Self {
             kind,
             msg: msg.into(),
+            resource_limit: None,
+        }
+    }
+
+    pub fn memory_limit(dimension: &'static str, observed: u64, limit: u64) -> Self {
+        Self {
+            kind: KernelErrorKind::MemoryLimit,
+            msg: format!("memory limit exceeded: {dimension} (observed={observed}, limit={limit})"),
+            resource_limit: Some(ResourceLimit {
+                dimension,
+                observed,
+                limit,
+            }),
         }
     }
 }

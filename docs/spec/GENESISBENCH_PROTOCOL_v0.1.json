@@ -23,22 +23,22 @@
   },
   "authorities": [
     {
-      "bytes": 12088,
+      "bytes": 12133,
       "id": "agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "4fc87566829a7f8c35ca91b238533d0b04cace4d38c295cf21430e63f80b2036"
+      "sha256": "565a9ad6e6287b4d069d5f7cf75dc5d894725308a81a1056520eb2f65f93e1c1"
     },
     {
-      "bytes": 36175,
+      "bytes": 37264,
       "id": "agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "a08a2e1e7f179f4793d96141ba59cffa1c3243e7b8c442d7fc22d7bf36c0fb28"
+      "sha256": "c7e6772445aa820d5ac1807ecf7f19afaeb6b632b1599f158dc0d3213545eb60"
     },
     {
       "bytes": 122581,
       "id": "agent-task-benchmark",
       "path": "benchmarks/agent_tasks/v0.1/suite.json",
-      "sha256": "e4abe13fc7613602ce9f13103c027254e8b3e41f64abb85065a022d965b0dc5e"
+      "sha256": "65b2c35ec18d96d6f7da1c0f5806810a20dc90ee6180390a8599f57773c41953"
     },
     {
       "bytes": 8507,
@@ -56,7 +56,7 @@
       "bytes": 12919,
       "id": "agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "f5579c98acc0d2c98acdd551d577cdf1e5c3b2ac73277933bcb3f3cf2bf8886a"
+      "sha256": "8efc1b1017063e214f87f6a75f097f4d1ed449534b821085197487db1c1d3785"
     },
     {
       "bytes": 8116,
@@ -86,7 +86,7 @@
       "bytes": 4109,
       "id": "benchmark-scoring",
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "17bfca83fdb3ba7a62e71d51034ffc0d6cd1d2fc86fbc9e24dd3da952ab17381"
+      "sha256": "3e015d9317f24652f0879bdbf46111c8a489add023d22172b48562f0425f6c60"
     },
     {
       "bytes": 7019,
@@ -200,7 +200,7 @@
       "bytes": 2423,
       "id": "genesisbench-analysis-plan",
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "99401153f2747b0766854e6899c11eb76509fd1c5e4b696e390a92f17634c4d3"
+      "sha256": "0c8b55cbfbcbdf98025290b0922794b0100494c5cc7c59a789ad28941b9e1ed0"
     },
     {
       "bytes": 4614,
@@ -236,7 +236,7 @@
       "bytes": 16571,
       "id": "genesisbench-construct-report",
       "path": "benchmarks/genesisbench/v0.1/construct-validity/report.json",
-      "sha256": "48b6e1e23e5f97f30c37a1754bb5f9ede3c9e1ca2e46386f7ce2a8c6e3cda773"
+      "sha256": "76779c53a4e4cf49d2716b029c801f4bbb2f639efd64fc90e4e8404447609dba"
     },
     {
       "bytes": 7614,
@@ -344,13 +344,13 @@
       "bytes": 8730,
       "id": "genesisbench-reference-agent",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "4073f444395d3f1c200f0bf4cb2d9ac8f2850a62ab5dc46db5149c9625b8f0ff"
+      "sha256": "7545a5c4dfb980cc5862dd7f163a14d653922880c2ad0bc16770eb3c2308d0f4"
     },
     {
       "bytes": 47673,
       "id": "genesisbench-reference-agent-ablations",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "c063bc7ae00f14624be69e4efeb3c39834e7a0d5685cd655f3cf9457c1af3c9b"
+      "sha256": "7589d4409dd4c35332d815b90a40bf3e8b93e985f8750caed6a912c5c601c8d7"
     },
     {
       "bytes": 4871,
@@ -362,7 +362,7 @@
       "bytes": 5733,
       "id": "genesisbench-reference-agent-plan-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
-      "sha256": "9874623935e02645edab9d285ee8eaa49f1366b7051addf654033af7b3ce32f8"
+      "sha256": "e842ae67ff5c506c09048b159677f8d43a899db43db3d5cdfb81b2c6e547a64e"
     },
     {
       "bytes": 1032,
@@ -386,7 +386,7 @@
       "bytes": 4427,
       "id": "genesisbench-reference-agent-trace-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
-      "sha256": "daa5ead1f05baea3d7aeb281d57f9f23fbef3a05cb2c591db762404212435677"
+      "sha256": "a8bdd860a532aac88a94feb7af2f80e1ad29a3869423e39525291f1a40d41952"
     },
     {
       "bytes": 2212,
@@ -482,7 +482,7 @@
       "bytes": 78248,
       "id": "held-out-evaluation",
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "f9e7c12e18f29a924779f49504d04dbd5b5ccee7cbe085cd347e1d8d792a65d0"
+      "sha256": "e6efad8264d10654fa6b288b7d1fa05c8dadc056fc4f87baf5bb174ccd7d934b"
     },
     {
       "bytes": 13030,
@@ -554,7 +554,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "77e483514f616147e2f7349c82525c2d5ae2ceb6d267908abc25329d9f37edf3",
+  "contentIdentitySha256": "ae4b1d4c7f23fced183adb31877f2eb64a10c2fdf4dbf8d8c5a7d129d406592f",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
@@ -586,7 +586,7 @@
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"
         ],
-        "contextBytes": 276035,
+        "contextBytes": 281532,
         "contextTier": "large",
         "exposure": "closed-artifact-pack",
         "id": "compact-large",
@@ -600,7 +600,7 @@
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/CLI.md"
         ],
-        "contextBytes": 34293,
+        "contextBytes": 34324,
         "contextTier": "medium",
         "exposure": "closed-artifact-pack",
         "id": "compact-medium",
@@ -612,7 +612,7 @@
         "artifacts": [
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md"
         ],
-        "contextBytes": 3916,
+        "contextBytes": 3947,
         "contextTier": "small",
         "exposure": "closed-artifact-pack",
         "id": "compact-small",
