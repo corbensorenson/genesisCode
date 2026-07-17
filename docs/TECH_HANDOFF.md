@@ -217,6 +217,8 @@ New production files require an intentional role and line budget in the same rev
 
 Any optimized-tier change must keep this gate and the broader kernel differential, coverage, artifact-roundtrip, resource, tail, and panic suites green. A future execution tier must define an equally explicit role and differential or translation-validation boundary before becoming a production path.
 
+Production dispatch must not recognize benchmark IDs, exact source symbols, literal values, expected outputs, or workload AST shapes. The retired `compiled_runtime/patterns.rs` path is a governed tombstone and cannot return under another module name. Optimization plans must be derived from documented semantic properties such as resolved lexical identities and primitive opcodes, remain independent of source spelling and benchmark membership, and preserve all observable semantics under source-equivalent rewrites.
+
 ---
 
 ## **5\) Prelude contracts \+ hardened protocol**

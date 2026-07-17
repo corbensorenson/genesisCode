@@ -29,6 +29,11 @@ mutations = {
         "missing_reference_compiled_differential_matrix",
     ),
     "reference-import": ('  "CExpr",', '  "Term",'),
+    "runtime-recognizer": ("  '\"(?:bench|core)/',", "  'eval_cexpr_runtime',"),
+    "retired-path": (
+        '  "compiled_runtime/patterns.rs",',
+        '  "compiled_runtime/apply.rs",',
+    ),
 }
 for name, (old, new) in mutations.items():
     if source.count(old) != 1:

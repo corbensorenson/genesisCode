@@ -15,6 +15,7 @@ REPORT_FILE="${1:?usage: scripts/render_kernel_tcb_contract_report.sh <report.js
 python3 - "$ROOT_DIR" "$POLICY_FILE" "$REPORT_FILE" <<'PY'
 import json
 import pathlib
+import re
 import sys
 root = pathlib.Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(root / "scripts/lib"))
@@ -101,6 +102,32 @@ if (
         "kernel-tcb-contract: required_differential_test_markers must be a non-empty string list"
     )
 
+retired_kernel_paths = policy.get("retired_kernel_paths")
+if (
+    not isinstance(retired_kernel_paths, list)
+    or not retired_kernel_paths
+    or not all(isinstance(x, str) and x for x in retired_kernel_paths)
+):
+    raise SystemExit("kernel-tcb-contract: retired_kernel_paths must be a non-empty string list")
+optimized_runtime_dir = policy.get("optimized_runtime_dir")
+if not isinstance(optimized_runtime_dir, str) or not optimized_runtime_dir:
+    raise SystemExit("kernel-tcb-contract: optimized_runtime_dir must be a non-empty path")
+forbidden_optimized_runtime_patterns = policy.get("forbidden_optimized_runtime_patterns")
+if (
+    not isinstance(forbidden_optimized_runtime_patterns, list)
+    or not forbidden_optimized_runtime_patterns
+    or not all(isinstance(x, str) and x for x in forbidden_optimized_runtime_patterns)
+):
+    raise SystemExit(
+        "kernel-tcb-contract: forbidden_optimized_runtime_patterns must be a non-empty string list"
+    )
+try:
+    compiled_runtime_patterns = [
+        re.compile(pattern) for pattern in forbidden_optimized_runtime_patterns
+    ]
+except re.error as error:
+    raise SystemExit(f"kernel-tcb-contract: invalid optimized runtime pattern: {error}")
+
 line_budgets = policy.get("line_budgets")
 if not isinstance(line_budgets, dict) or not line_budgets:
     raise SystemExit("kernel-tcb-contract: line_budgets must be a non-empty table")
@@ -120,6 +147,26 @@ if missing_surface:
     errors.append("missing-surface-files:" + ",".join(missing_surface))
 if extra_surface:
     errors.append("extra-surface-files:" + ",".join(extra_surface))
+
+present_retired_paths = sorted(
+    rel for rel in retired_kernel_paths if (kernel_src / rel).exists() or rel in expected_set
+)
+if present_retired_paths:
+    errors.append("retired-kernel-paths-present:" + ",".join(present_retired_paths))
+
+optimized_runtime_root = kernel_src / optimized_runtime_dir
+if not optimized_runtime_root.is_dir():
+    errors.append(f"missing-optimized-runtime-dir:{optimized_runtime_dir}")
+optimized_runtime_pattern_rows = []
+for path in sorted(optimized_runtime_root.rglob("*.rs")) if optimized_runtime_root.is_dir() else []:
+    rel = path.relative_to(kernel_src).as_posix()
+    source = path.read_text(encoding="utf-8")
+    matches = [
+        pattern.pattern for pattern in compiled_runtime_patterns if pattern.search(source)
+    ]
+    if matches:
+        errors.append(f"forbidden-optimized-runtime-patterns:{rel}:" + "|".join(matches))
+    optimized_runtime_pattern_rows.append({"path": rel, "matched_patterns": matches})
 
 declared_role_paths = set(file_roles)
 missing_role_paths = sorted(expected_set - declared_role_paths)
@@ -223,6 +270,11 @@ report = {
     "observed_surface_files": observed_files,
     "missing_surface_files": missing_surface,
     "extra_surface_files": extra_surface,
+    "retired_kernel_paths": retired_kernel_paths,
+    "present_retired_paths": present_retired_paths,
+    "optimized_runtime_dir": optimized_runtime_dir,
+    "forbidden_optimized_runtime_patterns": forbidden_optimized_runtime_patterns,
+    "optimized_runtime_pattern_rows": optimized_runtime_pattern_rows,
     "file_roles": role_marker_rows,
     "role_counts": role_counts,
     "missing_role_paths": missing_role_paths,

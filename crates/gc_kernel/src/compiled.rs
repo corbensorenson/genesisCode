@@ -3,8 +3,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
-use num_traits::ToPrimitive;
-
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use crate::eval::{CoverageRunId, EvalCtx, PrimOp, prim, prim_op, prim_op2, type_err};
