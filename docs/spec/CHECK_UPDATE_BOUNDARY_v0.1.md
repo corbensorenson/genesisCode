@@ -704,6 +704,14 @@ each node must differ only at that node's declared outputs. The staged result
 must pass every affected read-only validator before publication. A validator
 never invokes the updater against the authoritative checkout.
 
+Repository file identity is the path, bytes or symlink target, and the mode Git
+can reproduce: regular non-executable (`100644`), regular executable (`100755`),
+or symlink (`120000`). Owner/group/read/write permission differences such as an
+atomic producer's `0600` temporary file versus a clean checkout's `0644` file
+are not repository state and must not make byte-identical output stale. Changes
+to the Git-representable executable bit remain identity changes and are promoted
+and rolled back transactionally.
+
 Publication snapshots all non-output inputs, rejects concurrent source drift,
 and acquires one create-new lock in the Git common directory. Each replacement
 is prepared beside its destination while termination signals are blocked. A

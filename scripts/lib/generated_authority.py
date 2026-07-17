@@ -12,6 +12,7 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -348,8 +349,17 @@ def worktree_changes(stage: Path) -> set[str]:
     return {path for path in tracked | untracked if path}
 
 
+def repository_mode(path: Path) -> int:
+    """Return the mode bits that Git can reproduce in a fresh checkout."""
+    metadata = path.lstat()
+    if stat.S_ISLNK(metadata.st_mode):
+        return 0o120000
+    require(stat.S_ISREG(metadata.st_mode), f"repository identity requires a file: {path}")
+    return 0o100755 if metadata.st_mode & stat.S_IXUSR else 0o100644
+
+
 def file_identity(path: Path) -> str:
-    mode = path.lstat().st_mode & 0o7777
+    mode = repository_mode(path)
     if path.is_symlink():
         payload = f"link:{mode:o}\0".encode("ascii") + os.readlink(path).encode("utf-8")
     else:
@@ -452,10 +462,10 @@ def tree_snapshot(root: Path, excluded_outputs: set[str]) -> str:
             continue
         digest.update(rel.encode("utf-8") + b"\0")
         if path.is_symlink():
-            digest.update(f"link:{path.lstat().st_mode & 0o7777:o}\0".encode("ascii"))
+            digest.update(f"link:{repository_mode(path):o}\0".encode("ascii"))
             digest.update(os.readlink(path).encode("utf-8"))
         else:
-            digest.update(f"file:{path.stat().st_mode & 0o7777:o}\0".encode("ascii"))
+            digest.update(f"file:{repository_mode(path):o}\0".encode("ascii"))
             digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
@@ -689,8 +699,18 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
         for directory in (live, staged):
             (directory / "a").write_bytes(b"old\n")
             (directory / "b").write_bytes(b"old\n")
+        restrictive = live / "restrictive"
+        checkout = staged / "checkout"
+        restrictive.write_bytes(b"same\n")
+        checkout.write_bytes(b"same\n")
+        restrictive.chmod(0o600)
+        checkout.chmod(0o644)
+        require(
+            file_identity(restrictive) == file_identity(checkout),
+            "repository identity included permission bits Git cannot reproduce",
+        )
         (staged / "a").write_bytes(b"new-a\n")
-        (staged / "b").chmod(0o600)
+        (staged / "b").chmod(0o755)
         original_common = common_git_dir
         globals()["common_git_dir"] = lambda _root: base
         try:
@@ -704,7 +724,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
                 raise AuthorityError("self-test expected injected promotion failure")
             os.environ.pop("GENESIS_GENERATED_AUTHORITY_FAIL_AFTER_PROMOTIONS", None)
             require(promote(live, staged, ["a", "b"]) == ["a", "b"], "promotion did not publish both outputs")
-            require((live / "b").stat().st_mode & 0o777 == 0o600, "promotion lost a mode-only output change")
+            require((live / "b").stat().st_mode & 0o777 == 0o755, "promotion lost a Git-representable executable-bit change")
             require(promote(live, staged, ["a", "b"]) == [], "second promotion was not a no-op")
             controls += 1
         finally:
