@@ -3431,18 +3431,19 @@
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
       "direct_write_candidates": [
+        "(temp / f\"{name}.toml\").write_text(source.replace(old, new), encoding=\"utf-8\")",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"
       ],
       "execution_helper_closure": [
         {
           "path": "scripts/render_kernel_tcb_contract_report.sh",
-          "sha256": "b6c4b297d7f0eb0e9c522df1bf6eac421215e7c772207e2ba2c616166c2ba517"
+          "sha256": "ddbd9124f162a62a434517215c82715519fb7b497d46d8b00b664cdecc2fdaa0"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_kernel_tcb_contract_report.sh"
       ],
-      "execution_identity_sha256": "8e66e921d9ffe8d628ebda5bff8964b7fbc551ecced928438117b93dffee7586",
+      "execution_identity_sha256": "3fe9f87b236e7a568626c8769a12aecf2e1002dd9d66d1ce5806985d20708b12",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3453,10 +3454,11 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "368b6412eca3afd005870c6cfd989ac472acb57a75ebb2ef74f0f4b8cb4cc147",
+      "sha256": "e4cd473db9d72cfc2b5c56cdf5c3dfdf16fa094fec0cacedce6dc46c76683a8f",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
+        "(temp / f\"{name}.toml\").write_text(source.replace(old, new), encoding=\"utf-8\")",
         "scripts/render_kernel_tcb_contract_report.sh: report_path.parent.mkdir(parents=True, exist_ok=True)",
         "scripts/render_kernel_tcb_contract_report.sh: report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + \"\\n\", encoding=\"utf-8\")",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"

@@ -4,7 +4,7 @@ Generated intent-selectable context. Card bytes are tokenizer-independent token 
 
 ## Capabilities and effects
 
-Card: capability | Profile: GC-AGENT-v0.3 | Source: sha256:13309542a266aae7b474ecf8e86045ba238ee275a8f7971456af07b326a833ec
+Card: capability | Profile: GC-AGENT-v0.3 | Source: sha256:cf45b52a9edfd8da7d7dc3ec84e5acefdaf3a720e6ea6e8a43eaead230bdb89b
 
 - Declare the minimum operation set and explicit caps allowlist before execution.
 - Treat profile membership as syntax/semantic availability, never capability authority.
@@ -20,7 +20,7 @@ Authorities: docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_effects/src/policy.rs
 
 ## Packages and dependency closure
 
-Card: package | Profile: GC-AGENT-v0.3 | Source: sha256:cd70e8539b1134c5c286c19fd47fe9d9534f1b83598438b5e913b791ec2bf0c4
+Card: package | Profile: GC-AGENT-v0.3 | Source: sha256:f66e348f48de74f36e09d3a1bf72654cce971c9f403065bc47a7251b7a4cfaab
 
 - Use package schema 1 and repository-relative, non-escaping module paths.
 - Pin dependency resolution in genesis.lock v2; never infer or float release inputs.
@@ -36,7 +36,7 @@ Authorities: docs/spec/PACKAGE_TOML.md, crates/gc_pkg/src/manifest.rs, docs/spec
 
 ## Semantic patches
 
-Card: patch | Profile: GC-AGENT-v0.3 | Source: sha256:71fff05a8ace61d6a7f4f8e6bf1368469cc213bc1f4dc826834353e55e6652ca
+Card: patch | Profile: GC-AGENT-v0.3 | Source: sha256:be8e2c373f27ba4db44d819bc8a3d3674dba3611d4f5a0d330c2a1a4a1585faf
 
 - Emit versioned structural patches with intent, provenance, and deterministic operation order.
 - Prefer semantic node IDs and symbol-aware operations over textual replacement.
@@ -55,7 +55,7 @@ Authorities: docs/spec/PATCH_SCHEMA.md, crates/gc_patches/src/lib.rs, docs/spec/
 
 ## Deterministic replay
 
-Card: replay | Profile: GC-AGENT-v0.3 | Source: sha256:b2132b3c02205230dc4990a71dc2182abb535c5dff9e6dcc4d1396207cf8695d
+Card: replay | Profile: GC-AGENT-v0.3 | Source: sha256:73174968f4d8a9a9c9e9cddfabf9f07ed5dd3bbef894228e3cdceb5f094eaf56
 
 - Use effect-log v3 and canonical hashes; compare every serialized fact.
 - Replay performs no external IO and must fail on order, policy, decision, capability, payload, response, or schedule drift.
@@ -70,7 +70,7 @@ Authorities: docs/spec/GCLOG.md, docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_e
 
 ## Testing and obligations
 
-Card: testing | Profile: GC-AGENT-v0.3 | Source: sha256:77b82696c0e0a83370dd9263be0bef8873d439911ed2395c6f286be8705ac004
+Card: testing | Profile: GC-AGENT-v0.3 | Source: sha256:a613e48ff73ecb9dac8cb55d1bed7b2ab4e4cb6360332c79f6ad0f90200d33e3
 
 - Run focused parser/type/eval/obligation checks before broader deterministic profiles.
 - Checks are read-only; only explicit update commands may refresh retained artifacts.
@@ -85,7 +85,7 @@ Authorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES
 
 ## Build and deployment targets
 
-Card: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:20c2857983da9b74fb836c27c4fec14189ef7ae8cf69e8b76e3dc65cd4d009c4
+Card: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:544b8b9d3b80950f02a5f54d46834234de1ea3a0425b1191c87ee8c0606b22be
 
 - Select an explicit web, desktop, service, ios, android, edge, or service-runtime target.
 - Build deterministic bundles with manifest, provenance, policy, and replay identities.
@@ -100,7 +100,7 @@ Authorities: docs/spec/CLI.md, docs/spec/GCPM_JSON_SCHEMAS_v0.1.md, docs/spec/TE
 
 ## Diagnostics and repair
 
-Card: troubleshooting | Profile: GC-AGENT-v0.3 | Source: sha256:44ce5f026adeaff3b0111e5059854c5d4e15b9aefc8d5a100daa12bdfd9ccfdc
+Card: troubleshooting | Profile: GC-AGENT-v0.3 | Source: sha256:840d36b75b0db4ed7d3ff25b53cb57a693d4e228c3594f4c78d1cb834500090c
 
 - Consume structured diagnostic IDs, phases, spans, parameters, and repair hints; never scrape prose.
 - Diagnose contract/schema, policy, replay hash, then runtime/resource failures in that order.

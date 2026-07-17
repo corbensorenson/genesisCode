@@ -43,6 +43,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#normalized-roadmap-workloads` - normative PB-1 through PB-10 source, input, outcome, measurement, availability, and statistical contract.
 - `docs/spec/ROADMAP_WORKLOADS_v0.1.schema.json` - closed schema for the normalized runtime workload authority.
 - `policies/perf/roadmap_workloads_v0.1.json` - content-addressed PB-1 through PB-10 workload and measurement policy.
+- `docs/TECH_HANDOFF.md#45-reference-and-optimized-execution-tiers` - normative reference/shared/bridge/optimized kernel source partition and observable-equivalence contract, enforced by the TCB gate and default differential matrix.
 - `docs/spec/ROADMAP_BASELINE_STATEMENT_v0.1.schema.json` - closed raw-sample, failure-preserving E0 baseline statement schema.
 - `docs/spec/ROADMAP_BASELINE_BUNDLE_v0.1.schema.json` - closed DSSE wrapper schema whose fixture-integrity signature grants no authority.
 - `docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json` - signed, independently verified E0 baseline preserving 120 raw samples and current failures.
