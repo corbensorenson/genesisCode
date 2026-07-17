@@ -42,6 +42,19 @@ def key(result):
 
 def mock_env(cache_root):
     env = dict(os.environ)
+    for name in (
+        "CARGO_TARGET_DIR",
+        "GENESIS_CARGO_CACHE_HIT",
+        "GENESIS_CARGO_CACHE_KEY_SHA256",
+        "GENESIS_CARGO_CACHE_RESOLVED",
+        "GENESIS_CARGO_CACHE_ROOT",
+        "GENESIS_CARGO_CACHE_RUSTC_IDENTITY_JSON",
+        "GENESIS_CARGO_CACHE_SCOPE",
+        "GENESIS_GENERATED_STATE_LEASE_PID",
+        "GENESIS_GENERATED_STATE_LEASE_TOKEN",
+        "GENESIS_GENERATED_STATE_ROOT",
+    ):
+        env.pop(name, None)
     env.update(
         {
             "GENESIS_CARGO_CACHE_ROOT": str(cache_root),
