@@ -372,14 +372,15 @@ pub(crate) fn prim_op(
             let Some(k) = args[1].to_plain_term() else {
                 return type_err(ctx, "map/get expects data key");
             };
+            let key = TermOrdKey(k);
             match &args[0] {
                 Value::Map(m) => Ok(m
-                    .get(&TermOrdKey(k.clone()))
+                    .get(&key)
                     .cloned()
                     .unwrap_or_else(|| Value::data(Term::Nil))),
                 Value::Data(t) => match t.as_ref() {
                     Term::Map(m) => {
-                        let v = m.get(&TermOrdKey(k.clone())).cloned().unwrap_or(Term::Nil);
+                        let v = m.get(&key).cloned().unwrap_or(Term::Nil);
                         Ok(Value::data(v))
                     }
                     _ => type_err(ctx, "map/get expects a map"),
@@ -400,11 +401,17 @@ pub(crate) fn prim_op(
             };
             match map {
                 Value::Map(mut m) => {
-                    let key = TermOrdKey(k.clone());
-                    let existed = m.get(&key).is_some();
-                    let new_len = m.size().saturating_add(if existed { 0 } else { 1 });
-                    ctx.mem_observe_map_len(new_len)?;
+                    let key = TermOrdKey(k);
+                    if ctx
+                        .mem_map_len_limit()
+                        .is_some_and(|limit| m.size() as u64 >= limit)
+                    {
+                        let existed = m.get(&key).is_some();
+                        let new_len = m.size().saturating_add(if existed { 0 } else { 1 });
+                        ctx.mem_observe_map_len(new_len)?;
+                    }
                     Rc::make_mut(&mut m).insert_mut(key, value);
+                    ctx.mem_observe_map_len(m.size())?;
                     Ok(Value::Map(m))
                 }
                 Value::Data(t) => match t.as_ref() {
@@ -412,11 +419,18 @@ pub(crate) fn prim_op(
                         let Some(v) = value.to_plain_term() else {
                             return type_err(ctx, "map/put expects data value when map is data");
                         };
-                        let existed = m.contains_key(&TermOrdKey(k.clone()));
-                        let new_len = m.len().saturating_add(if existed { 0 } else { 1 });
-                        ctx.mem_observe_map_len(new_len)?;
+                        let key = TermOrdKey(k);
+                        if ctx
+                            .mem_map_len_limit()
+                            .is_some_and(|limit| m.len() as u64 >= limit)
+                        {
+                            let existed = m.contains_key(&key);
+                            let new_len = m.len().saturating_add(if existed { 0 } else { 1 });
+                            ctx.mem_observe_map_len(new_len)?;
+                        }
                         let mut out = m.clone();
-                        out.insert(TermOrdKey(k.clone()), v);
+                        out.insert(key, v);
+                        ctx.mem_observe_map_len(out.len())?;
                         Ok(Value::data(Term::Map(out)))
                     }
                     _ => type_err(ctx, "map/put expects a map"),
