@@ -15,10 +15,12 @@ fn is_ignored_dir(name: &str) -> bool {
         name,
         ".git"
             | ".genesis"
+            | ".quarto"
             | "target"
             | "node_modules"
             | ".tmp"
             | ".cargo-install-target"
+            | "_site"
             | "vendor"
     )
 }
@@ -101,6 +103,13 @@ fn bootstrap_archive_is_not_referenced_by_active_code() {
     for p in files {
         let path_s = p.to_string_lossy().to_string();
         if this_file.as_ref().is_some_and(|tf| tf == &path_s) {
+            continue;
+        }
+        let retained_campaign_evidence = p
+            .strip_prefix(&root)
+            .is_ok_and(|relative| relative.starts_with("benchmarks/genesisbench/v0.1/campaigns"));
+        if retained_campaign_evidence {
+            // Transcripts preserve untrusted model output and historical repository listings.
             continue;
         }
         let Some(src) = read_utf8(&p) else {

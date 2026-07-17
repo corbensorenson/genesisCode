@@ -600,6 +600,20 @@ def validate_tool_archive(path: Path, campaign: dict[str, Any]) -> dict[str, Any
     return doc
 
 
+def require_compatible_archive_platform(archive: dict[str, Any]) -> None:
+    archived = archive["platform"]
+    host = {
+        "architecture": platform.machine(),
+        "operatingSystem": platform.system(),
+    }
+    require(
+        archived == host,
+        "archived replay tool is incompatible with this host: "
+        f"archive={archived['operatingSystem']}/{archived['architecture']} "
+        f"host={host['operatingSystem']}/{host['architecture']}",
+    )
+
+
 def archive_snapshot(destination: Path, protocol: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], str]:
     protocol = protocol or load_json(PROTOCOL_PATH)
     rows = source_rows(protocol)
@@ -1102,6 +1116,8 @@ def replay_run(run_path: Path, genesis_bin: Path, selfhost_artifact: Path) -> di
                 archive["selfhostArtifact"]["path"], "archived artifact path",
             )
         if run["replay"]["independentRescoreRequired"]:
+            if archive is not None:
+                require_compatible_archive_platform(archive)
             rescored = gc_agent_scoring.score_candidate(
                 protocol_bound_json(protocol, str(SCORING_PATH.relative_to(ROOT))),
                 run["case"]["id"], run_path.parent / "candidate",
