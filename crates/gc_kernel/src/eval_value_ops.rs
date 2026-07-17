@@ -1,3 +1,6 @@
+use super::EvalCtx;
+use crate::error::KernelError;
+use crate::fallible_alloc::{checked_add, string_with_capacity};
 use crate::value::Value;
 
 pub(super) fn eq_value(a: &Value, b: &Value) -> bool {
@@ -41,8 +44,19 @@ pub(super) fn eq_value(a: &Value, b: &Value) -> bool {
     }
 }
 
-pub(super) fn escape_str(s: &str) -> String {
-    let mut out = String::new();
+pub(super) fn escape_str(ctx: &mut EvalCtx, s: &str) -> Result<String, KernelError> {
+    let mut len = 0;
+    for ch in s.chars() {
+        let width = match ch {
+            '\\' | '"' | '\n' | '\r' | '\t' => 2,
+            c if c.is_control() => 6,
+            c => c.len_utf8(),
+        };
+        len = checked_add(len, width, "coreform/escape-str")?;
+    }
+    ctx.mem_observe_string_len(len)?;
+    let mut out = string_with_capacity(len, "coreform/escape-str")?;
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
     for ch in s.chars() {
         match ch {
             '\\' => out.push_str("\\\\"),
@@ -50,15 +64,32 @@ pub(super) fn escape_str(s: &str) -> String {
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),
-            c if c.is_control() => out.push_str(&format!("\\u{:04X}", c as u32)),
+            c if c.is_control() => {
+                let value = c as u32;
+                out.push_str("\\u");
+                for shift in [12, 8, 4, 0] {
+                    out.push(HEX[((value >> shift) & 0x0f) as usize] as char);
+                }
+            }
             c => out.push(c),
         }
     }
-    out
+    Ok(out)
 }
 
-pub(super) fn escape_bytes(b: &[u8]) -> String {
-    let mut out = String::new();
+pub(super) fn escape_bytes(ctx: &mut EvalCtx, b: &[u8]) -> Result<String, KernelError> {
+    let mut len = 0;
+    for &byte in b {
+        let width = match byte {
+            b'\\' | b'"' | b'\n' | b'\r' | b'\t' => 2,
+            0x20..=0x7E => 1,
+            _ => 4,
+        };
+        len = checked_add(len, width, "coreform/escape-bytes")?;
+    }
+    ctx.mem_observe_string_len(len)?;
+    let mut out = string_with_capacity(len, "coreform/escape-bytes")?;
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
     for &x in b {
         match x {
             b'\\' => out.push_str("\\\\"),
@@ -67,8 +98,12 @@ pub(super) fn escape_bytes(b: &[u8]) -> String {
             b'\r' => out.push_str("\\r"),
             b'\t' => out.push_str("\\t"),
             0x20..=0x7E => out.push(x as char),
-            _ => out.push_str(&format!("\\x{:02X}", x)),
+            _ => {
+                out.push_str("\\x");
+                out.push(HEX[(x >> 4) as usize] as char);
+                out.push(HEX[(x & 0x0f) as usize] as char);
+            }
         }
     }
-    out
+    Ok(out)
 }

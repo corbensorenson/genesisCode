@@ -325,7 +325,7 @@ fn agent_index_emits_expected_schema_and_sources() {
     assert_eq!(
         json.pointer("/data/language_symbol_index/symbol_count")
             .and_then(Value::as_u64),
-        Some(168)
+        Some(170)
     );
     assert_eq!(
         json.pointer("/data/language_symbol_index/unsupported_behavior_count")

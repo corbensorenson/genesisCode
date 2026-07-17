@@ -3,6 +3,7 @@ mod cycle;
 mod env;
 mod error;
 mod eval;
+mod fallible_alloc;
 mod free_vars;
 mod logical_heap;
 mod value;

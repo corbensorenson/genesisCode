@@ -1,4 +1,7 @@
 use super::*;
+use crate::fallible_alloc::{
+    checked_add, checked_mul, clone_str, string_with_capacity, vec_with_capacity,
+};
 
 pub(super) fn dispatch_text_bytes_prim(
     ctx: &mut EvalCtx,
@@ -26,7 +29,7 @@ pub(super) fn dispatch_text_bytes_prim(
                 return type_err(ctx, "sym/to-str expects symbol");
             };
             ctx.mem_observe_string_len(s.len())?;
-            Ok(Value::data(Term::Str(s.clone())))
+            Ok(Value::data(Term::Str(clone_str(s, "sym/to-str")?)))
         }
         PrimOp::SymFromStr => {
             if args.len() != 1 {
@@ -60,7 +63,7 @@ pub(super) fn dispatch_text_bytes_prim(
                 }
             }
             ctx.mem_observe_string_len(s.len())?;
-            Ok(Value::data(Term::Symbol(s.clone())))
+            Ok(Value::data(Term::Symbol(clone_str(s, "sym/from-str")?)))
         }
         PrimOp::StrConcat => {
             if args.len() != 2 {
@@ -72,9 +75,12 @@ pub(super) fn dispatch_text_bytes_prim(
             let Some(Term::Str(b)) = args[1].as_data() else {
                 return type_err(ctx, "str/concat expects strings");
             };
-            let new_len = a.len().saturating_add(b.len());
+            let new_len = checked_add(a.len(), b.len(), "str/concat")?;
             ctx.mem_observe_string_len(new_len)?;
-            Ok(Value::data(Term::Str(format!("{a}{b}"))))
+            let mut out = string_with_capacity(new_len, "str/concat")?;
+            out.push_str(a);
+            out.push_str(b);
+            Ok(Value::data(Term::Str(out)))
         }
         PrimOp::StrLen => {
             if args.len() != 1 {
@@ -92,9 +98,10 @@ pub(super) fn dispatch_text_bytes_prim(
             let Some(Term::Str(s)) = args[0].as_data() else {
                 return type_err(ctx, "str/to-bytes-utf8 expects string");
             };
-            let bytes = Bytes::copy_from_slice(s.as_bytes());
-            ctx.mem_observe_bytes_len(bytes.len())?;
-            Ok(Value::data(Term::Bytes(bytes)))
+            ctx.mem_observe_bytes_len(s.len())?;
+            let mut bytes = vec_with_capacity(s.len(), "str/to-bytes-utf8")?;
+            bytes.extend_from_slice(s.as_bytes());
+            Ok(Value::data(Term::Bytes(Bytes::from(bytes))))
         }
         PrimOp::StrRepeat => {
             if args.len() != 2 {
@@ -110,8 +117,12 @@ pub(super) fn dispatch_text_bytes_prim(
                 Some(x) => x,
                 None => return type_err(ctx, "str/repeat count out of range"),
             };
-            let out = s.repeat(n);
-            ctx.mem_observe_string_len(out.len())?;
+            let out_len = checked_mul(s.len(), n, "str/repeat")?;
+            ctx.mem_observe_string_len(out_len)?;
+            let mut out = string_with_capacity(out_len, "str/repeat")?;
+            for _ in 0..n {
+                out.push_str(s);
+            }
             Ok(Value::data(Term::Str(out)))
         }
         PrimOp::StrJoin => {
@@ -122,24 +133,33 @@ pub(super) fn dispatch_text_bytes_prim(
                 return type_err(ctx, "str/join expects string separator");
             };
 
-            let mut parts: Vec<&str> = Vec::new();
+            let part_count = match &args[0] {
+                Value::Vector(xs) => xs.len(),
+                Value::Data(t) => match t.as_ref() {
+                    Term::Vector(xs) => xs.len(),
+                    _ => return type_err(ctx, "str/join expects vector"),
+                },
+                _ => return type_err(ctx, "str/join expects vector"),
+            };
+            let mut parts = vec_with_capacity(part_count, "str/join parts")?;
+            let mut content_len = 0;
             match &args[0] {
                 Value::Vector(xs) => {
-                    parts.reserve(xs.len());
                     for x in xs.iter() {
                         let Some(Term::Str(s)) = x.as_data() else {
                             return type_err(ctx, "str/join expects vector of strings");
                         };
+                        content_len = checked_add(content_len, s.len(), "str/join")?;
                         parts.push(s.as_str());
                     }
                 }
                 Value::Data(t) => match t.as_ref() {
                     Term::Vector(xs) => {
-                        parts.reserve(xs.len());
                         for x in xs {
                             let Term::Str(s) = x else {
                                 return type_err(ctx, "str/join expects vector of strings");
                             };
+                            content_len = checked_add(content_len, s.len(), "str/join")?;
                             parts.push(s);
                         }
                     }
@@ -147,9 +167,16 @@ pub(super) fn dispatch_text_bytes_prim(
                 },
                 _ => return type_err(ctx, "str/join expects vector"),
             }
-
-            let out = parts.join(sep);
-            ctx.mem_observe_string_len(out.len())?;
+            let separator_len = checked_mul(sep.len(), parts.len().saturating_sub(1), "str/join")?;
+            let out_len = checked_add(content_len, separator_len, "str/join")?;
+            ctx.mem_observe_string_len(out_len)?;
+            let mut out = string_with_capacity(out_len, "str/join")?;
+            for (index, part) in parts.into_iter().enumerate() {
+                if index != 0 {
+                    out.push_str(sep);
+                }
+                out.push_str(part);
+            }
             Ok(Value::data(Term::Str(out)))
         }
         PrimOp::CoreformEscapeStr => {
@@ -159,8 +186,7 @@ pub(super) fn dispatch_text_bytes_prim(
             let Some(Term::Str(s)) = args[0].as_data() else {
                 return type_err(ctx, "coreform/escape-str expects string");
             };
-            let out = escape_str(s);
-            ctx.mem_observe_string_len(out.len())?;
+            let out = escape_str(ctx, s)?;
             Ok(Value::data(Term::Str(out)))
         }
         PrimOp::CoreformEscapeBytes => {
@@ -170,8 +196,7 @@ pub(super) fn dispatch_text_bytes_prim(
             let Some(Term::Bytes(b)) = args[0].as_data() else {
                 return type_err(ctx, "coreform/escape-bytes expects bytes");
             };
-            let out = escape_bytes(b.as_ref());
-            ctx.mem_observe_string_len(out.len())?;
+            let out = escape_bytes(ctx, b.as_ref())?;
             Ok(Value::data(Term::Str(out)))
         }
         PrimOp::BytesLen => {
@@ -243,7 +268,7 @@ pub(super) fn dispatch_text_bytes_prim(
                 Err(_) => return type_err(ctx, "bytes/to-str-utf8 invalid utf8"),
             };
             ctx.mem_observe_string_len(s.len())?;
-            Ok(Value::data(Term::Str(s.to_string())))
+            Ok(Value::data(Term::Str(clone_str(s, "bytes/to-str-utf8")?)))
         }
         PrimOp::IntToStr => {
             if args.len() != 1 {
@@ -264,12 +289,13 @@ pub(super) fn dispatch_text_bytes_prim(
                 return type_err(ctx, "bytes/to-hex expects bytes");
             };
             const LUT: &[u8; 16] = b"0123456789abcdef";
-            let mut out = String::with_capacity(b.len().saturating_mul(2));
+            let out_len = checked_mul(b.len(), 2, "bytes/to-hex")?;
+            ctx.mem_observe_string_len(out_len)?;
+            let mut out = string_with_capacity(out_len, "bytes/to-hex")?;
             for &x in b.as_ref() {
                 out.push(LUT[(x >> 4) as usize] as char);
                 out.push(LUT[(x & 0x0f) as usize] as char);
             }
-            ctx.mem_observe_string_len(out.len())?;
             Ok(Value::data(Term::Str(out)))
         }
         PrimOp::BytesFromHex => {
@@ -291,7 +317,9 @@ pub(super) fn dispatch_text_bytes_prim(
                     _ => None,
                 }
             }
-            let mut out = Vec::with_capacity(bs.len() / 2);
+            let out_len = bs.len() / 2;
+            ctx.mem_observe_bytes_len(out_len)?;
+            let mut out = vec_with_capacity(out_len, "bytes/from-hex")?;
             let mut i = 0usize;
             while i < bs.len() {
                 let Some(hi) = nybble(bs[i]) else {
@@ -303,7 +331,6 @@ pub(super) fn dispatch_text_bytes_prim(
                 out.push((hi << 4) | lo);
                 i = i.saturating_add(2);
             }
-            ctx.mem_observe_bytes_len(out.len())?;
             Ok(Value::data(Term::Bytes(Bytes::from(out))))
         }
         PrimOp::Utf8EncodeCodepoint => {
@@ -351,38 +378,44 @@ pub(super) fn dispatch_text_bytes_prim(
             let Some(Term::Bytes(b)) = args[1].as_data() else {
                 return type_err(ctx, "bytes/concat expects bytes");
             };
-            let new_len = a.len().saturating_add(b.len());
+            let new_len = checked_add(a.len(), b.len(), "bytes/concat")?;
             ctx.mem_observe_bytes_len(new_len)?;
-            let mut out = BytesMut::with_capacity(new_len);
+            let mut out = vec_with_capacity(new_len, "bytes/concat")?;
             out.extend_from_slice(a.as_ref());
             out.extend_from_slice(b.as_ref());
-            Ok(Value::data(Term::Bytes(out.freeze())))
+            Ok(Value::data(Term::Bytes(Bytes::from(out))))
         }
         PrimOp::BytesJoin => {
             if args.len() != 1 {
                 return type_err(ctx, "bytes/join expects 1 arg");
             }
             let mut total_len: usize = 0;
-            let mut parts: Vec<Bytes> = Vec::new();
+            let part_count = match &args[0] {
+                Value::Vector(xs) => xs.len(),
+                Value::Data(t) => match t.as_ref() {
+                    Term::Vector(xs) => xs.len(),
+                    _ => return type_err(ctx, "bytes/join expects vector"),
+                },
+                _ => return type_err(ctx, "bytes/join expects vector"),
+            };
+            let mut parts = vec_with_capacity(part_count, "bytes/join parts")?;
             match &args[0] {
                 Value::Vector(xs) => {
-                    parts.reserve(xs.len());
                     for x in xs.iter() {
                         let Some(Term::Bytes(b)) = x.as_data() else {
                             return type_err(ctx, "bytes/join expects vector of bytes");
                         };
-                        total_len = total_len.saturating_add(b.len());
+                        total_len = checked_add(total_len, b.len(), "bytes/join")?;
                         parts.push(b.clone());
                     }
                 }
                 Value::Data(t) => match t.as_ref() {
                     Term::Vector(xs) => {
-                        parts.reserve(xs.len());
                         for x in xs {
                             let Term::Bytes(b) = x else {
                                 return type_err(ctx, "bytes/join expects vector of bytes");
                             };
-                            total_len = total_len.saturating_add(b.len());
+                            total_len = checked_add(total_len, b.len(), "bytes/join")?;
                             parts.push(b.clone());
                         }
                     }
@@ -391,11 +424,11 @@ pub(super) fn dispatch_text_bytes_prim(
                 _ => return type_err(ctx, "bytes/join expects vector"),
             }
             ctx.mem_observe_bytes_len(total_len)?;
-            let mut out = BytesMut::with_capacity(total_len);
+            let mut out = vec_with_capacity(total_len, "bytes/join")?;
             for p in parts {
                 out.extend_from_slice(p.as_ref());
             }
-            Ok(Value::data(Term::Bytes(out.freeze())))
+            Ok(Value::data(Term::Bytes(Bytes::from(out))))
         }
         _ => Err(KernelError::new(
             KernelErrorKind::Internal,

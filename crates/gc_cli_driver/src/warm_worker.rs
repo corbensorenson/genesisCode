@@ -52,6 +52,11 @@ pub(super) enum WorkerResult {
         request_id: String,
         audit: SessionAudit,
     },
+    Aborted {
+        request_id: String,
+        signal: i32,
+        audit: SessionAudit,
+    },
     Cancelled {
         request_id: String,
         audit: SessionAudit,
