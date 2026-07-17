@@ -298,17 +298,41 @@
       "expectedDurationSeconds": 45,
       "diskBudgetMiB": 64
     },
+    "scripts/check_check_update_boundary.sh": {
+      "kind": "test",
+      "profile": "prepush-standard",
+      "expectedDurationSeconds": 600,
+      "diskBudgetMiB": 2560
+    },
     "scripts/check_gate_manifest.sh": {
       "kind": "static",
       "profile": "local-fast",
       "expectedDurationSeconds": 15,
       "diskBudgetMiB": 64
     },
+    "scripts/check_gcpm_operation_contract_pack.sh": {
+      "kind": "test",
+      "profile": "prepush-standard",
+      "expectedDurationSeconds": 600,
+      "diskBudgetMiB": 4352
+    },
     "scripts/check_no_user_panics_compiler.sh": {
       "kind": "test",
       "profile": "prepush-standard",
       "expectedDurationSeconds": 300,
       "diskBudgetMiB": 3072
+    },
+    "scripts/check_remote_registry_runtime_parity.sh": {
+      "kind": "test",
+      "profile": "prepush-standard",
+      "expectedDurationSeconds": 600,
+      "diskBudgetMiB": 4352
+    },
+    "scripts/check_upgrade_plan_health.sh": {
+      "kind": "test",
+      "profile": "prepush-standard",
+      "expectedDurationSeconds": 600,
+      "diskBudgetMiB": 5120
     }
   }
 }
