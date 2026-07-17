@@ -33,7 +33,16 @@ project:
     - policies/**
     - examples/**
     - benchmarks/agent_tasks/**
-    - benchmarks/genesisbench/**
+    - benchmarks/genesisbench/**/*.json
+    - benchmarks/genesisbench/**/*.jsonl
+    - benchmarks/genesisbench/**/*.gclog
+    - benchmarks/genesisbench/**/*.log
+    - benchmarks/genesisbench/**/*.md
+    - benchmarks/genesisbench/**/*.py
+    - benchmarks/genesisbench/**/*.toml
+    - benchmarks/genesisbench/**/*.txt
+    - benchmarks/genesisbench/v0.1/construct-validity/**/*.gc
+    - benchmarks/genesisbench/v0.1/campaigns/**/runs/**/*.gc
     - genesis.*
     - package.json
     - package-lock.json
