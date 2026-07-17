@@ -53,6 +53,7 @@ mod cmd_agent_lookup;
 mod cmd_agent_plan;
 mod cmd_agent_task_cards;
 mod cmd_bench;
+mod cmd_bench_open_agent;
 mod cmd_commit;
 mod cmd_core;
 mod cmd_debug;

@@ -489,7 +489,7 @@ enum Cmd {
         max_workflows: usize,
     },
 
-    /// Inspect, execute, validate, score, replay, bundle, and submit GenesisBench runs.
+    /// Predeclare, execute, validate, replay, bundle, and publish GenesisBench runs.
     Bench {
         #[command(subcommand)]
         cmd: BenchCmd,

@@ -32,6 +32,73 @@ enum BenchCmd {
         ablation: String,
     },
 
+    /// Freeze one Open Agent campaign binding before any model inference occurs.
+    AgentPlan {
+        /// Public benchmark case identifier.
+        #[arg(long)]
+        case: String,
+        /// Stable campaign identifier shared by the predeclared cohort.
+        #[arg(long)]
+        campaign: String,
+        /// Disclosed Open Agent runner class.
+        #[arg(long, value_parser = ["codex-cli-hosted", "codex-cli-local"])]
+        runner: String,
+        /// Exact Codex CLI executable to digest and version-bind.
+        #[arg(long)]
+        agent_executable: PathBuf,
+        /// Requested provider or local model identifier.
+        #[arg(long)]
+        model: String,
+        /// Disclosed model revision or provider alias observation.
+        #[arg(long)]
+        model_revision: String,
+        /// Assert that the disclosed model revision is immutable.
+        #[arg(long)]
+        immutable_revision: bool,
+        /// Fixed reasoning-effort cohort.
+        #[arg(long, default_value = "xhigh", value_parser = ["low", "medium", "high", "xhigh"])]
+        reasoning_effort: String,
+        /// Hard wall-clock limit for the one agent attempt.
+        #[arg(long, default_value_t = 900_000)]
+        timeout_ms: u64,
+        /// Loopback provider for a local Codex CLI cohort.
+        #[arg(long, value_parser = ["lmstudio", "ollama"])]
+        local_provider: Option<String>,
+        /// SHA-256 of the immutable local model artifact.
+        #[arg(long)]
+        model_artifact_sha256: Option<String>,
+        /// New immutable predeclaration path.
+        #[arg(long)]
+        out: PathBuf,
+    },
+
+    /// Execute exactly one predeclared Open Agent attempt in an isolated workspace.
+    AgentRun {
+        /// Immutable predeclaration produced by `bench agent-plan`.
+        #[arg(long)]
+        predeclaration: PathBuf,
+        /// Exact executable bound by the predeclaration.
+        #[arg(long)]
+        agent_executable: PathBuf,
+        /// New retained run directory. Existing paths are never overwritten.
+        #[arg(long)]
+        out: PathBuf,
+    },
+
+    /// Validate all Open Agent run bindings, transcript facts, and retained bytes.
+    AgentValidate {
+        /// Canonical Open Agent `run.json` path.
+        #[arg(long)]
+        run: PathBuf,
+    },
+
+    /// Replay an Open Agent run without agent or model access and independently rescore it.
+    AgentReplay {
+        /// Canonical Open Agent `run.json` path.
+        #[arg(long)]
+        run: PathBuf,
+    },
+
     /// Validate every field, identity, binding, and artifact byte in a canonical run.
     ValidateRun {
         /// Canonical `run.json` path.

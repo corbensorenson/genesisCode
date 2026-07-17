@@ -537,6 +537,18 @@ pub(super) fn cmd_agent_index(
     });
     for (key, path) in [
         (
+            "genesisbench_open_agent",
+            "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json",
+        ),
+        (
+            "genesisbench_open_agent_predeclaration_schema",
+            "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_open_agent_run_schema",
+            "docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json",
+        ),
+        (
             "genesisbench_baseline_protocol",
             "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
         ),

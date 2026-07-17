@@ -22,8 +22,9 @@ fn run_genesis(root: &Path, artifact: &Path, args: &[&str]) -> Output {
 fn data(output: &Output) -> Value {
     assert!(
         output.status.success(),
-        "command failed: {}",
-        String::from_utf8_lossy(&output.stderr)
+        "command failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
     );
     let envelope: Value = serde_json::from_slice(&output.stdout).expect("parse genesis envelope");
     assert_eq!(envelope["ok"], true);
@@ -135,7 +136,12 @@ fn canonical_front_door_runs_replays_bundles_and_submits_without_adapter_reinvoc
             "deterministic-mock"
         ])
     );
-    assert_eq!(inspected["commands"].as_array().unwrap().len(), 11);
+    assert_eq!(inspected["commands"].as_array().unwrap().len(), 15);
+    assert!(
+        inspected["openAgentHarnessIdentitySha256"]
+            .as_str()
+            .is_some_and(|value| value.len() == 64)
+    );
 
     let external_adapter = temp.path().join("adapter.json");
     let external_executable = temp.path().join("adapter.py");
@@ -292,6 +298,118 @@ fn canonical_front_door_runs_replays_bundles_and_submits_without_adapter_reinvoc
 }
 
 #[test]
+fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_model_access() {
+    let root = support::repo_root();
+    let temp = tempdir().expect("temporary Open Agent root");
+    let artifact = support::copy_repo_toolchain_artifact(temp.path());
+    let fixture = temp.path().join("codex-fixture.py");
+    fs::write(
+        &fixture,
+        concat!(
+            "#!/usr/bin/python3\n",
+            "import json,pathlib,sys\n",
+            "if '--version' in sys.argv:\n",
+            " print('codex-cli 0.0.0-fixture')\n",
+            " raise SystemExit(0)\n",
+            "pathlib.Path('main.gc').write_text('42\\n', encoding='ascii')\n",
+            "print(json.dumps({'type':'turn.completed','fixture':True}, sort_keys=True))\n",
+        ),
+    )
+    .expect("write Open Agent fixture");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&fixture, fs::Permissions::from_mode(0o755))
+            .expect("make Open Agent fixture executable");
+    }
+
+    let predeclaration = temp.path().join("predeclaration.json");
+    let planned = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-plan",
+            "--case",
+            "completion-small",
+            "--campaign",
+            "codex-luna-xhigh-conformance",
+            "--runner",
+            "codex-cli-hosted",
+            "--agent-executable",
+            fixture.to_str().unwrap(),
+            "--model",
+            "luna",
+            "--model-revision",
+            "provider-alias:luna@2026-07-17",
+            "--reasoning-effort",
+            "xhigh",
+            "--timeout-ms",
+            "30000",
+            "--out",
+            predeclaration.to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(planned["track"]["id"], "open-agent");
+    assert_eq!(planned["track"]["rankEligible"], false);
+    assert_eq!(planned["attemptPolicy"]["attempts"], 1);
+    assert_eq!(planned["model"]["requestedId"], "luna");
+    assert_eq!(planned["model"]["reasoningEffort"], "xhigh");
+
+    let run_root = temp.path().join("open-agent-run");
+    let executed = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-run",
+            "--predeclaration",
+            predeclaration.to_str().unwrap(),
+            "--agent-executable",
+            fixture.to_str().unwrap(),
+            "--out",
+            run_root.to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(executed["outcome"], "verified");
+    assert_eq!(executed["workspace"]["violations"], serde_json::json!([]));
+    assert_eq!(executed["attempt"]["index"], 0);
+    assert_eq!(executed["attempt"]["environmentValuesRecorded"], false);
+    assert_eq!(
+        fs::read(run_root.join("candidate/main.gc")).unwrap(),
+        b"42\n"
+    );
+
+    let validated = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-validate",
+            "--run",
+            run_root.join("run.json").to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(validated["valid"], true);
+
+    fs::remove_file(&fixture).expect("remove external agent fixture before replay");
+    let replayed = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-replay",
+            "--run",
+            run_root.join("run.json").to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(replayed["agentAccessed"], false);
+    assert_eq!(replayed["modelAccessed"], false);
+    assert_eq!(replayed["allFieldsValidated"], true);
+    assert_eq!(replayed["independentRescoreMatched"], true);
+}
+
+#[test]
 fn failed_provider_attempt_is_retained_as_replayable_invalid_evidence() {
     let root = support::repo_root();
     let temp = tempdir().expect("temporary benchmark root");
@@ -364,5 +482,5 @@ fn generated_authorities_and_all_adapter_controls_are_current() {
     );
     let report: Value = serde_json::from_slice(&output.stdout).expect("parse authority report");
     assert_eq!(report["adapterClasses"], 5);
-    assert_eq!(report["controls"], 26);
+    assert_eq!(report["controls"], 40);
 }

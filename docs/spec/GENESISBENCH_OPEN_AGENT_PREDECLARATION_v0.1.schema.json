@@ -1,0 +1,82 @@
+{
+  "$id": "https://genesiscode.dev/schemas/genesisbench-open-agent-predeclaration-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attemptPolicy": {"$ref": "#/$defs/attemptPolicy"},
+    "authorities": {"$ref": "#/$defs/authorities"},
+    "campaignId": {"$ref": "#/$defs/id"},
+    "capabilities": {"$ref": "#/$defs/capabilities"},
+    "case": {"$ref": "#/$defs/case"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+    "disclosure": {"$ref": "#/$defs/disclosure"},
+    "kind": {"const": "genesis/genesisbench-open-agent-predeclaration-v0.1"},
+    "limits": {"$ref": "#/$defs/limits"},
+    "model": {"$ref": "#/$defs/model"},
+    "runner": {"$ref": "#/$defs/runner"},
+    "track": {"$ref": "#/$defs/track"},
+    "version": {"const": "0.1.0"}
+  },
+  "required": ["kind", "version", "campaignId", "case", "authorities", "track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure", "contentIdentitySha256"],
+  "title": "GenesisBench Open Agent predeclaration v0.1",
+  "type": "object",
+  "$defs": {
+    "attemptPolicy": {
+      "additionalProperties": false,
+      "properties": {"attempts": {"const": 1}, "hiddenRetriesAllowed": {"const": false}, "resumeAllowed": {"const": false}},
+      "required": ["attempts", "hiddenRetriesAllowed", "resumeAllowed"],
+      "type": "object"
+    },
+    "authorities": {
+      "additionalProperties": false,
+      "properties": {"harnessIdentitySha256": {"$ref": "#/$defs/hash"}, "protocolIdentitySha256": {"$ref": "#/$defs/hash"}, "sourceSnapshotManifestIdentitySha256": {"$ref": "#/$defs/hash"}, "suiteIdentitySha256": {"$ref": "#/$defs/hash"}},
+      "required": ["harnessIdentitySha256", "protocolIdentitySha256", "suiteIdentitySha256", "sourceSnapshotManifestIdentitySha256"],
+      "type": "object"
+    },
+    "capabilities": {
+      "additionalProperties": false,
+      "properties": {"additionalWritableRoots": {"items": false, "maxItems": 0, "type": "array"}, "approvalPolicy": {"const": "never"}, "network": {"enum": ["provider-only", "loopback-provider-only"]}, "repository": {"const": "frozen-read-only"}, "workspace": {"const": "case-input-write-only"}},
+      "required": ["workspace", "repository", "network", "approvalPolicy", "additionalWritableRoots"],
+      "type": "object"
+    },
+    "case": {
+      "additionalProperties": false,
+      "properties": {"conditionId": {"$ref": "#/$defs/id"}, "conditionIdentitySha256": {"$ref": "#/$defs/hash"}, "editablePaths": {"items": {"$ref": "#/$defs/path"}, "minItems": 1, "type": "array", "uniqueItems": true}, "id": {"$ref": "#/$defs/id"}, "lineageId": {"$ref": "#/$defs/id"}, "lineageIdentitySha256": {"$ref": "#/$defs/hash"}},
+      "required": ["id", "lineageId", "lineageIdentitySha256", "conditionId", "conditionIdentitySha256", "editablePaths"],
+      "type": "object"
+    },
+    "disclosure": {
+      "additionalProperties": false,
+      "properties": {"contaminationLabel": {"const": "unknown"}, "environmentNames": {"items": {"type": "string"}, "type": "array", "uniqueItems": true}, "environmentValuesRecorded": {"const": false}, "genesisSpecificTraining": {"const": "unknown"}},
+      "required": ["environmentNames", "environmentValuesRecorded", "genesisSpecificTraining", "contaminationLabel"],
+      "type": "object"
+    },
+    "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "id": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$", "type": "string"},
+    "limits": {
+      "additionalProperties": false,
+      "properties": {"maxStderrBytes": {"minimum": 1, "type": "integer"}, "maxStdoutBytes": {"minimum": 1, "type": "integer"}, "maxWorkspaceBytes": {"minimum": 1, "type": "integer"}, "maxWorkspaceFiles": {"minimum": 1, "type": "integer"}, "timeoutMs": {"maximum": 3600000, "minimum": 1000, "type": "integer"}},
+      "required": ["timeoutMs", "maxStdoutBytes", "maxStderrBytes", "maxWorkspaceFiles", "maxWorkspaceBytes"],
+      "type": "object"
+    },
+    "model": {
+      "additionalProperties": false,
+      "properties": {"artifactSha256": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}, "immutableRevision": {"type": "boolean"}, "reasoningEffort": {"enum": ["low", "medium", "high", "xhigh"]}, "requestedId": {"$ref": "#/$defs/id"}, "revision": {"$ref": "#/$defs/id"}},
+      "required": ["requestedId", "revision", "immutableRevision", "reasoningEffort", "artifactSha256"],
+      "type": "object"
+    },
+    "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$", "type": "string"},
+    "runner": {
+      "additionalProperties": false,
+      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
+      "required": ["class", "executableSha256", "executableVersion", "invocationProfile", "localProvider"],
+      "type": "object"
+    },
+    "track": {
+      "additionalProperties": false,
+      "properties": {"id": {"const": "open-agent"}, "rankEligible": {"type": "boolean"}, "scaffoldClass": {"const": "codex-cli"}, "scaffoldIdentitySha256": {"$ref": "#/$defs/hash"}},
+      "required": ["id", "scaffoldClass", "scaffoldIdentitySha256", "rankEligible"],
+      "type": "object"
+    }
+  }
+}

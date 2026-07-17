@@ -9,6 +9,7 @@ use std::process::Command;
 
 const KIND_BENCH: &str = "genesis/bench-v0.1";
 const DRIVER_REL: &str = "scripts/lib/genesisbench_front_door.py";
+const OPEN_AGENT_DRIVER_REL: &str = "scripts/lib/genesisbench_open_agent.py";
 const REGISTRY_DRIVER_REL: &str = "scripts/lib/genesisbench_registry.py";
 const MAX_CRYPTO_PAYLOAD_BYTES: usize = 16 * 1024 * 1024;
 const ALLOWED_PAYLOAD_TYPES: &[&str] = &[
@@ -28,6 +29,7 @@ fn resolve_repo_root() -> Result<PathBuf, CliError> {
     for start in [cwd, PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")] {
         for candidate in start.ancestors() {
             if candidate.join(DRIVER_REL).is_file()
+                && candidate.join(OPEN_AGENT_DRIVER_REL).is_file()
                 && candidate.join(REGISTRY_DRIVER_REL).is_file()
                 && candidate
                     .join("benchmarks/agent_tasks/v0.1/suite.json")
@@ -44,12 +46,12 @@ fn resolve_repo_root() -> Result<PathBuf, CliError> {
     ))
 }
 
-fn push_path(args: &mut Vec<String>, flag: &str, path: &Path) {
+pub(super) fn push_path(args: &mut Vec<String>, flag: &str, path: &Path) {
     args.push(flag.to_string());
     args.push(path.as_os_str().to_string_lossy().into_owned());
 }
 
-fn runtime_paths(cli: &Cli, context: &str) -> Result<(PathBuf, PathBuf), CliError> {
+pub(super) fn runtime_paths(cli: &Cli, context: &str) -> Result<(PathBuf, PathBuf), CliError> {
     let genesis_bin = std::env::current_exe().map_err(|error| {
         cli_err(
             EX_IO,
@@ -70,6 +72,9 @@ fn runtime_paths(cli: &Cli, context: &str) -> Result<(PathBuf, PathBuf), CliErro
 }
 
 fn driver_args(cli: &Cli, cmd: &BenchCmd) -> Result<(&'static str, Vec<String>), CliError> {
+    if let Some(args) = super::cmd_bench_open_agent::driver_args(cli, cmd)? {
+        return Ok((OPEN_AGENT_DRIVER_REL, args));
+    }
     let mut args = Vec::new();
     let mut driver = DRIVER_REL;
     match cmd {
@@ -234,6 +239,16 @@ fn driver_args(cli: &Cli, cmd: &BenchCmd) -> Result<(&'static str, Vec<String>),
             let (genesis_bin, artifact) = runtime_paths(cli, "bench registry-build")?;
             push_path(&mut args, "--genesis-bin", &genesis_bin);
             push_path(&mut args, "--selfhost-artifact", &artifact);
+        }
+        BenchCmd::AgentPlan { .. }
+        | BenchCmd::AgentRun { .. }
+        | BenchCmd::AgentValidate { .. }
+        | BenchCmd::AgentReplay { .. } => {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "bench/open-agent-dispatch",
+                "Open Agent command reached the fixed-adapter driver",
+            ));
         }
         BenchCmd::CryptoSign { .. } | BenchCmd::CryptoVerify { .. } => {
             return Err(cli_err(

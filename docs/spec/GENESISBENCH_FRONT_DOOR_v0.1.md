@@ -18,6 +18,18 @@ genesis --json --selfhost-artifact selfhost/toolchain.gc bench run \
   --case CASE --adapter ADAPTER.json --out RUN_DIR \
   [--adapter-executable EXECUTABLE] [--model-artifact MODEL] \
   [--ablation retrieval]
+genesis --json bench agent-plan \
+  --case CASE --campaign CAMPAIGN \
+  --runner codex-cli-hosted --agent-executable CODEX \
+  --model MODEL --model-revision REVISION \
+  --reasoning-effort xhigh --timeout-ms 900000 \
+  [--immutable-revision] --out PREDECLARATION.json
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-run \
+  --predeclaration PREDECLARATION.json \
+  --agent-executable CODEX --out RUN_DIR
+genesis --json bench agent-validate --run RUN_DIR/run.json
+genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-replay \
+  --run RUN_DIR/run.json
 genesis --json bench validate-run --run RUN_DIR/run.json
 genesis --json --selfhost-artifact selfhost/toolchain.gc bench score \
   --case CASE --candidate CANDIDATE_DIR [--out SCORE.json]
@@ -40,6 +52,34 @@ genesis --json --selfhost-artifact selfhost/toolchain.gc bench registry-build \
 `run`, `score`, and successful-run `replay` invoke the existing `GC-AGENT-BENCHMARK-SCORING-v0.1` authority with the shipped GenesisCode executable and artifact-only self-host toolchain. `validate-run`, `bundle`, and `submit` do not execute candidate code. `replay` never invokes the model or adapter; it validates every recorded field and byte, then independently rescores only when a score exists.
 
 Front-door v0.1 executes the canonical `retrieval` reference condition only. The other seven ablations remain immutable, predeclared analysis authorities, but are not silently approximated by this runtime; adding their distinct grammar, diagnostic, semantic-patch, and repair behavior requires an explicit front-door protocol revision.
+
+## Open Agent Harness
+
+The Open Agent extension is a separate content-addressed execution boundary. It does not add a sixth class to `GENESISBENCH_ADAPTERS_v0.1.json`, change Cold Acquisition, or make custom orchestration comparable to the fixed reference scaffold. Its authority is `GENESISBENCH_OPEN_AGENT_v0.1.json`; its recursively closed predeclaration and run contracts are `GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json` and `GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json`.
+
+`agent-plan` must run before model inference. It binds the campaign and case, all protocol/suite/snapshot/scaffold identities, exact Codex executable digest and version, requested model and revision, reasoning effort, local model artifact when applicable, one-attempt policy, capabilities, environment-name allowlist, and finite wall-time/output/workspace budgets. It never records environment values. Every harness predeclaration is deterministically `rankEligible: false`; only the independent signed registry may derive ranked admission after verifying provenance, contamination, artifact, cohort, replay, and rescore evidence. Passing `--immutable-revision` is a provenance assertion and is appropriate only when the provider exposes a genuinely immutable revision. A local cohort additionally requires `--model-artifact-sha256` and either `--local-provider lmstudio` or `--local-provider ollama`.
+
+`agent-run` reconstructs the 1,775-file frozen protocol snapshot from the pinned Git commit and verifies every archived byte before execution. The snapshot and copied GenesisCode toolchain live under a read-only input root outside the writable case workspace. The fixed Codex invocation is ephemeral, JSONL, non-resumable, `workspace-write`, approval-free, and one prompt; hosted and loopback-local inference are separate invocation profiles. The process receives only the closed environment-name allowlist. Timeout or capture overflow kills and reaps the complete process group.
+
+After execution, the harness rechecks frozen source bytes, executable modes, directory topology, and symlink absence. It inventories the case workspace, rejects undeclared paths, non-editable drift, symlinks, malformed events, nonzero exit, timeout, or capture overflow, and scores only a clean candidate. Invalid attempts remain immutable evidence rather than disappearing. `agent-validate` derives the violation set again from retained facts and bytes. `agent-replay` never resolves or invokes the agent executable or model; it validates the complete run and independently rescores the exact retained candidate.
+
+The initial hosted study requested by the project uses Codex CLI with Luna at `xhigh`. If `luna` resolves only through a mutable alias, predeclare it honestly:
+
+```sh
+CODEX=/Applications/ChatGPT.app/Contents/Resources/codex
+genesis --json bench agent-plan \
+  --case completion-small \
+  --campaign codex-luna-xhigh-2026-07 \
+  --runner codex-cli-hosted \
+  --agent-executable "$CODEX" \
+  --model luna \
+  --model-revision provider-alias:luna@2026-07-17 \
+  --reasoning-effort xhigh \
+  --timeout-ms 900000 \
+  --out predeclarations/completion-small.json
+```
+
+Do not pass `--immutable-revision` for an alias merely to make a run rankable. Campaign expansion starts only after the nine-task-class reality gate passes, and hosted Luna, raw fixed-scaffold models, and local Codex-agent models remain separate cohorts.
 
 ## Closed adapters
 
@@ -94,8 +134,9 @@ Run the consolidated authority and shipped integration tests:
 
 ```sh
 python3 scripts/lib/genesisbench_front_door.py check --self-test
+python3 scripts/lib/genesisbench_open_agent.py check --self-test
 cargo test -p gc_cli --test cli_genesisbench_front_door
 cargo test -p gc_cli --test cli_genesisbench_registry
 ```
 
-The authority test executes identical vectors through all five classes, hard-kills timeout and cancellation fixtures, and rejects capability, retry, semantic-rewrite, redirect, model, secret, run-metadata, and identity mutations. The integration test exercises the public `genesis bench` surface, deletes the external command adapter before replay, independently rescores, proves byte-identical bundles, submits to an immutable outbox, retains a failed hosted attempt, and rejects candidate tampering.
+The authority test executes identical vectors through all five fixed adapters, then runs 14 Open Agent controls for hidden retries, capability broadening, model-claim forgery, snapshot byte/mode/symlink/topology mutation, malformed events, and descendant survival after timeout. The integration test exercises both public surfaces, deletes external adapter/agent executables before replay, independently rescores, proves byte-identical bundles, submits to an immutable outbox, retains failures, and rejects candidate tampering.

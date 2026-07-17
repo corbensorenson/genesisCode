@@ -75,6 +75,10 @@ fn cli_schema_production_profile_emits_selfhost_only_values() {
     assert_eq!(
         bench_commands,
         vec![
+            "agent-plan",
+            "agent-replay",
+            "agent-run",
+            "agent-validate",
             "bundle",
             "inspect",
             "registry-admit",

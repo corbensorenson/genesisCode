@@ -1,0 +1,44 @@
+{
+  "coldAcquisitionAdapterProfileUnchanged": true,
+  "contentIdentitySha256": "d244132ac82a66b93360a6fb4981b90b97d1c343f5be1e728facff8dfe6f5d27",
+  "invocationProfiles": {
+    "codex-cli-hosted": {
+      "argvPolicy": "fixed-codex-exec-ephemeral-json-workspace-write-one-prompt-v0.1",
+      "id": "codex-cli-hosted-v0.1",
+      "network": "provider-only",
+      "provider": null
+    },
+    "codex-cli-local": {
+      "argvPolicy": "fixed-codex-exec-oss-ephemeral-json-workspace-write-one-prompt-v0.1",
+      "id": "codex-cli-local-v0.1",
+      "network": "loopback-provider-only",
+      "provider": "predeclared-lmstudio-or-ollama"
+    }
+  },
+  "kind": "genesis/genesisbench-open-agent-harness-v0.1",
+  "limits": {
+    "maxStderrBytes": 16777216,
+    "maxStdoutBytes": 16777216,
+    "maxTimeoutMs": 3600000,
+    "maxWorkspaceBytes": 67108864,
+    "maxWorkspaceFiles": 4096
+  },
+  "purpose": "Execute one disclosed repository-editing agent attempt without broadening the frozen Cold Acquisition adapter profile.",
+  "scaffoldIdentitySha256": "a753b5bfe1d885c2f07f01750361217d64a9b604511a1bd22a5202978076a8ae",
+  "securityControls": [
+    "agent-and-model-never-accessed-during-replay",
+    "all-environment-values-redacted",
+    "candidate-path-closure",
+    "exact-executable-digest-and-version",
+    "finite-capture-and-wall-time-budgets",
+    "frozen-repository-post-run-rehash",
+    "immutable-predeclaration-before-execution",
+    "one-attempt-no-resume-no-hidden-retry",
+    "process-group-hard-kill-and-reap",
+    "provider-network-only-or-loopback-only",
+    "read-only-frozen-source-outside-writable-workspace",
+    "strict-jsonl-transcript-validation",
+    "symlink-and-non-regular-file-rejection"
+  ],
+  "version": "0.1.0"
+}
