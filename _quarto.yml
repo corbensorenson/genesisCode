@@ -43,6 +43,8 @@ project:
     - benchmarks/genesisbench/**/*.txt
     - benchmarks/genesisbench/v0.1/construct-validity/**/*.gc
     - benchmarks/genesisbench/v0.1/campaigns/**/runs/**/*.gc
+    - "!benchmarks/genesisbench/**/tools/*.gz"
+    - "!benchmarks/genesisbench/**/tools/toolchain.gc"
     - genesis.*
     - package.json
     - package-lock.json
