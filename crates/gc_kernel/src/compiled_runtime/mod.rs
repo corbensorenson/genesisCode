@@ -1,6 +1,5 @@
 mod apply;
 mod eval;
-mod patterns;
 mod primitive_forward;
 
 pub(crate) use apply::{

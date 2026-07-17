@@ -521,6 +521,76 @@ fn reference_compiled_differential_matrix_covers_semantic_observables() {
 }
 
 #[test]
+fn workload_recognizer_retirement_variants_preserve_semantic_observables() {
+    let variants = [
+        (
+            "direct-counted-vector",
+            r#"
+              (def gather (fn (cursor limit out)
+                (if (prim int/eq? cursor limit)
+                  out
+                  (gather (prim int/add cursor 1) limit (prim vec/push out cursor)))))
+              (gather 0 32 [])
+            "#,
+        ),
+        (
+            "let-rewritten-counted-vector",
+            r#"
+              (def assemble (fn (position stop result)
+                (if (prim int/lt? position stop)
+                  (let ((next (prim int/add position 1))
+                        (extended (prim vec/push result position)))
+                    (assemble next stop extended))
+                  result)))
+              (assemble 0 32 [])
+            "#,
+        ),
+        (
+            "direct-byte-in-bounds",
+            r#"
+              (def byte-at (fn (blob offset)
+                (if (prim int/lt? offset (prim bytes/len blob))
+                  (prim bytes/get blob offset)
+                  nil)))
+              (byte-at b"abc" 1)
+            "#,
+        ),
+        (
+            "branch-rewritten-byte-out-of-bounds",
+            r#"
+              (def read-byte (fn (payload index)
+                (if (prim int/lt? index (prim bytes/len payload))
+                  (prim bytes/get payload index)
+                  nil)))
+              (read-byte b"abc" 9)
+            "#,
+        ),
+    ];
+
+    for (name, source) in variants {
+        let reference = observe_tier(source, false, None, MemLimits::default());
+        let optimized = observe_tier(source, true, None, MemLimits::default());
+        assert_eq!(reference, optimized, "tier divergence in {name}");
+        assert!(
+            reference.result.is_ok(),
+            "variant failed in {name}: {reference:?}"
+        );
+
+        let short_limit = reference.counters.steps.saturating_sub(1);
+        let reference_short = observe_tier(source, false, Some(short_limit), MemLimits::default());
+        let optimized_short = observe_tier(source, true, Some(short_limit), MemLimits::default());
+        assert_eq!(
+            reference_short, optimized_short,
+            "one-step-short divergence in {name}"
+        );
+        assert!(
+            matches!(&reference_short.result, Err((kind, _)) if kind == "step limit exceeded"),
+            "one-step-short control did not fail closed in {name}: {reference_short:?}"
+        );
+    }
+}
+
+#[test]
 fn compiled_eval_matches_treewalk_eval_with_closure_calls() {
     let src = r#"
       (def mkadder (fn (a) (fn (b) (prim int/add a b))))

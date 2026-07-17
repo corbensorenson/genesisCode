@@ -1,6 +1,5 @@
 use super::super::*;
 use super::eval::eval_cexpr_runtime;
-use super::patterns::{eval_byte_get_or_nil_inline, eval_counted_vec_push_loop_inline};
 use super::primitive_forward::eval_primitive_forward_inline;
 
 pub(crate) struct CompiledClosureCall {
@@ -176,13 +175,6 @@ pub(super) fn eval_app_n_runtime(
     if let Value::CompiledClosure(data) = callee_value {
         if let Some(control) = eval_primitive_forward_inline(ctx, caller_env, data.clone(), args)? {
             return Ok(control);
-        }
-        if let Some(value) = eval_byte_get_or_nil_inline(ctx, caller_env, data.clone(), args)? {
-            return Ok(ApplyControl::Value(value));
-        }
-        if let Some(value) = eval_counted_vec_push_loop_inline(ctx, caller_env, data.clone(), args)?
-        {
-            return Ok(ApplyControl::Value(value));
         }
         if let Some(control) =
             eval_compiled_closure_appn_inline(ctx, caller_env, data.clone(), args)?

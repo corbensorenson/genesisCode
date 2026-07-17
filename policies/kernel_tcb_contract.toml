@@ -12,7 +12,6 @@ expected_kernel_surface_files = [
   "compiled_runtime/apply.rs",
   "compiled_runtime/eval.rs",
   "compiled_runtime/mod.rs",
-  "compiled_runtime/patterns.rs",
   "compiled_runtime/primitive_forward.rs",
   "env.rs",
   "env/capture.rs",
@@ -36,6 +35,24 @@ expected_kernel_surface_files = [
 differential_test_file = "crates/gc_kernel/src/tests.rs"
 required_differential_test_markers = [
   "reference_compiled_differential_matrix_covers_semantic_observables",
+  "workload_recognizer_retirement_variants_preserve_semantic_observables",
+]
+
+# Production dispatch cannot regain source- or benchmark-shaped execution under
+# another filename. Retired paths stay absent, and optimized runtime files may
+# not contain benchmark IDs, exact source symbols, literal-value matchers, or
+# helper names that declare structural recognition. General compiler plans are
+# derived from resolved semantic identities instead.
+retired_kernel_paths = [
+  "compiled_runtime/patterns.rs",
+]
+optimized_runtime_dir = "compiled_runtime"
+forbidden_optimized_runtime_patterns = [
+  '"(?:bench|core)/',
+  '"PB-[0-9]+',
+  'Term::Int\s*\(',
+  'fn\s+(?:match|recognize)_[A-Za-z0-9_]*\s*\(',
+  '(?:expected|result)_(?:descriptor|hash|value)',
 ]
 
 # eval.rs must stay as boundary/orchestration; treewalk internals live in eval_treewalk.rs.
@@ -57,7 +74,6 @@ forbidden_eval_markers = [
 "compiled_runtime/apply.rs" = "optimized-tier"
 "compiled_runtime/eval.rs" = "optimized-tier"
 "compiled_runtime/mod.rs" = "optimized-tier"
-"compiled_runtime/patterns.rs" = "optimized-tier"
 "compiled_runtime/primitive_forward.rs" = "optimized-tier"
 "env.rs" = "shared-semantics"
 "env/capture.rs" = "shared-semantics"
@@ -96,7 +112,6 @@ optimized-tier = [
 "crates/gc_kernel/src/compiled_runtime/apply.rs" = 450
 "crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
 "crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
-"crates/gc_kernel/src/compiled_runtime/patterns.rs" = 400
 "crates/gc_kernel/src/compiled_runtime/primitive_forward.rs" = 180
 "crates/gc_kernel/src/env.rs" = 100
 "crates/gc_kernel/src/env/capture.rs" = 60
