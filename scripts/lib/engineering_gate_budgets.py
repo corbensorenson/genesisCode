@@ -182,7 +182,14 @@ def profile_sections(runner_source: str) -> Tuple[str, str, str]:
 
 def check_profiles(policy: Mapping[str, Any], gates: Mapping[str, Mapping[str, Any]]) -> None:
     changed = policy["profileSubjects"]["changedFileScript"]
-    require_source_markers(changed, ["GENESIS_TEST_CHANGED_BUDGET_MS:-120000", "1073741824", "CARGO_NET_OFFLINE"])
+    require_source_markers(changed, [
+        "GENESIS_TEST_CHANGED_BUDGET_MS:-120000",
+        "GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-480000",
+        "1073741824",
+        "3221225472",
+        'BUDGET_SUBJECT="changed-file-gate"',
+        "CARGO_NET_OFFLINE",
+    ])
     runner = policy["profileSubjects"]["profileRunner"]
     runner_source = require_source_markers(runner, ["GENESIS_HEALTH_PREPUSH_BUDGET_MS:-480000", "3221225472", "21474836480", "2700000", "CARGO_GATE_ENTRYPOINTS", 'gate["compilation"]'])
     common_section, prepush_section, release_section = profile_sections(runner_source)

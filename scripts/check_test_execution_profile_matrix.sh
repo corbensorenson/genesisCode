@@ -522,6 +522,11 @@ if ! grep -Fq 'GENESIS_TEST_CHANGED_BUDGET_MS:-120000' "$CHANGED_FAST_SCRIPT"; t
   echo "test-execution-profile-matrix: changed-fast default budget must remain 120000ms (2m)" >&2
   exit 1
 fi
+if ! grep -Fq 'GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-480000' "$CHANGED_FAST_SCRIPT" || \
+   ! grep -Fq 'GENESIS_CHANGED_GATE_FALLBACK_DISK_BUDGET_BYTES=3221225472' "$CHANGED_FAST_SCRIPT"; then
+  echo "test-execution-profile-matrix: changed-fast prepush fallback must use the GB-3 8m/3GiB envelope" >&2
+  exit 1
+fi
 
 if ! grep -Fq 'GENESIS_BUDGET_CHANGED_FAST_MS:-120000' "$DEFAULT_LOOP_SCRIPT"; then
   echo "test-execution-profile-matrix: default iteration workflow budget must remain 120000ms (2m)" >&2

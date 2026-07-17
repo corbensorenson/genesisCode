@@ -15,11 +15,17 @@ RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
 REPORT_PATH=""
 HISTORY_PATH=""
 BUDGET_MS="${GENESIS_TEST_CHANGED_BUDGET_MS:-120000}" # 2 minutes
+FALLBACK_BUDGET_MS="${GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-480000}" # GB-3: 8 minutes
 MIN_HISTORY="${GENESIS_TEST_CHANGED_MIN_HISTORY:-5}"
 FULL_MODE_THRESHOLD="${GENESIS_TEST_CHANGED_FULL_THRESHOLD:-120}"
 STRICT_DISK_MODE="${GENESIS_TEST_CHANGED_STRICT_DISK:-auto}"
 CHANGED_FILES_OVERRIDE="${GENESIS_TEST_CHANGED_FILES_OVERRIDE:-}"
 DRY_RUN=0
+if [[ "${GENESIS_TEST_CHANGED_BUDGET_MS+x}" == "x" ]]; then
+  BUDGET_EXPLICIT=1
+else
+  BUDGET_EXPLICIT=0
+fi
 OUTPUT_TMP_DIR=""
 IMPACT_TMP_DIR=""
 
@@ -42,7 +48,8 @@ Options:
   --runner <name>      auto|cargo|nextest (default: auto)
   --report <path>      explicit metrics report path (must be paired with --history)
   --history <path>     explicit metrics history path (must be paired with --report)
-  --budget-ms <N>      max allowed elapsed ms for this run (default: 120000)
+  --budget-ms <N>      max allowed elapsed ms for this run (default: 120000;
+                       profile fallback: 480000 unless explicitly overridden)
   --min-history <N>    samples required before enforcing history P95 (default: 5)
   --strict-disk <mode> pass through to check_disk_headroom strict mode (auto|0|1)
   --changed-files-from <path>
@@ -73,6 +80,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --budget-ms)
       BUDGET_MS="${2:-}"
+      BUDGET_EXPLICIT=1
       shift 2
       ;;
     --min-history)
@@ -116,6 +124,7 @@ done
   exit 2
 }
 [[ "$BUDGET_MS" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: --budget-ms must be numeric" >&2; exit 2; }
+[[ "$FALLBACK_BUDGET_MS" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS must be numeric" >&2; exit 2; }
 [[ "$MIN_HISTORY" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: --min-history must be numeric" >&2; exit 2; }
 [[ "$FULL_MODE_THRESHOLD" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: GENESIS_TEST_CHANGED_FULL_THRESHOLD must be numeric" >&2; exit 2; }
 
@@ -149,6 +158,7 @@ generated_target_bytes() {
 }
 GENESIS_CHANGED_GATE_START_GENERATED_BYTES="$(generated_target_bytes)"
 GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES=1073741824
+GENESIS_CHANGED_GATE_FALLBACK_DISK_BUDGET_BYTES=3221225472
 export CARGO_NET_OFFLINE=true
 
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-changed-fast" --strict "$STRICT_DISK_MODE"
@@ -249,6 +259,14 @@ while IFS= read -r value; do [[ -n "$value" ]] && COMMANDS+=("$value"); done < <
 echo "test-changed-fast: base=$BASE"
 echo "test-changed-fast: mode=$MODE runner=$RUNNER changed_files=$CHANGED_COUNT commands=${#COMMANDS[@]}"
 
+BUDGET_SUBJECT="changed-file-gate"
+if [[ "$MODE" == "profile-fallback" && "$BUDGET_EXPLICIT" == "0" ]]; then
+  BUDGET_MS="$FALLBACK_BUDGET_MS"
+  GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES="$GENESIS_CHANGED_GATE_FALLBACK_DISK_BUDGET_BYTES"
+  BUDGET_SUBJECT="${FALLBACK_PROFILE:-prepush-standard}"
+fi
+echo "test-changed-fast: budget_subject=$BUDGET_SUBJECT budget_ms=$BUDGET_MS disk_budget_bytes=$GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES"
+
 if (( DRY_RUN == 1 )); then
   printf 'test-changed-fast: changed files:\n'
   printf '  %s\n' "${CHANGED_FILES[@]:-<none>}"
@@ -261,7 +279,9 @@ mkdir -p "$(dirname "$REPORT_PATH")"
 mkdir -p "$(dirname "$HISTORY_PATH")"
 
 # Generated authorities are resolved in an external staging worktree before any
-# selected gate can validate or publish a stale derived view.
+# selected gate can validate or publish a stale derived view. Its path-specific
+# Cargo products remain stage-local and are reclaimed with that worktree rather
+# than contaminating this loop's reusable target and residual disk budget.
 declare -a GENERATED_AUTHORITY_ARGS=(--freshness)
 for path in "${CHANGED_FILES[@]-}"; do
   GENERATED_AUTHORITY_ARGS+=(--path "$path")
@@ -283,9 +303,9 @@ ELAPSED_MS="$(( (GENESIS_CHANGED_GATE_END_NS - GENESIS_CHANGED_GATE_START_NS) / 
 GENESIS_CHANGED_GATE_END_GENERATED_BYTES="$(generated_target_bytes)"
 GENERATED_DISK_DELTA_BYTES="$(( GENESIS_CHANGED_GATE_END_GENERATED_BYTES > GENESIS_CHANGED_GATE_START_GENERATED_BYTES ? GENESIS_CHANGED_GATE_END_GENERATED_BYTES - GENESIS_CHANGED_GATE_START_GENERATED_BYTES : 0 ))"
 
-python3 - "$REPORT_PATH" "$HISTORY_PATH" "$BASE" "$MODE" "$RUNNER" "$CHANGED_COUNT" "$ELAPSED_MS" "$BUDGET_MS" "$MIN_HISTORY" "$STRICT_DISK_MODE" "$IMPACT_SHA256" "${#TARGET_CRATES[@]}" "${#IMPACT_GATES[@]}" "$FALLBACK_PROFILE" "$GENERATED_DISK_DELTA_BYTES" "$GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES" <<'PY'
+python3 - "$REPORT_PATH" "$HISTORY_PATH" "$BASE" "$MODE" "$RUNNER" "$CHANGED_COUNT" "$ELAPSED_MS" "$BUDGET_MS" "$MIN_HISTORY" "$STRICT_DISK_MODE" "$IMPACT_SHA256" "${#TARGET_CRATES[@]}" "${#IMPACT_GATES[@]}" "$FALLBACK_PROFILE" "$GENERATED_DISK_DELTA_BYTES" "$GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES" "$BUDGET_SUBJECT" <<'PY'
 import json, os, statistics, sys, time
-report_path, history_path, base, mode, runner, changed_count_s, elapsed_ms_s, budget_ms_s, min_hist_s, strict_disk_mode, impact_sha256, affected_crates_s, affected_gates_s, fallback_profile, disk_delta_s, disk_budget_s = sys.argv[1:]
+report_path, history_path, base, mode, runner, changed_count_s, elapsed_ms_s, budget_ms_s, min_hist_s, strict_disk_mode, impact_sha256, affected_crates_s, affected_gates_s, fallback_profile, disk_delta_s, disk_budget_s, budget_subject = sys.argv[1:]
 changed_count = int(changed_count_s)
 elapsed_ms = int(elapsed_ms_s)
 budget_ms = int(budget_ms_s)
@@ -300,6 +320,7 @@ entry = {
     "changed_file_count": changed_count,
     "elapsed_ms": elapsed_ms,
     "budget_ms": budget_ms,
+    "budget_subject": budget_subject,
     "disk_strict_mode": strict_disk_mode,
     "generated_disk_delta_bytes": int(disk_delta_s),
     "generated_disk_budget_bytes": int(disk_budget_s),

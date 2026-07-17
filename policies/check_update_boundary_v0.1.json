@@ -623,6 +623,11 @@
         "expectedNodes": [
           "generate/agent-diagnostics",
           "generate/agent-surfaces",
+          "generate/task-benchmarks",
+          "generate/benchmark-analysis",
+          "generate/benchmark-scoring",
+          "generate/held-out-profile",
+          "generate/construct-validity",
           "generate/benchmark-run",
           "generate/benchmark-protocol",
           "generate/agent-corpus",
@@ -636,9 +641,13 @@
         "expectedOutputs": [
           "CHANGELOG.md",
           "ROADMAP.md",
+          "benchmarks/agent_tasks/v0.1/suite.json",
           "benchmarks/diagnostics/repair_utility/v0.1/report.json",
+          "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
+          "benchmarks/genesisbench/v0.1/analysis/report.fixture.json",
           "benchmarks/genesisbench/v0.1/baselines/conformance/evidence.fixture.json",
           "benchmarks/genesisbench/v0.1/baselines/conformance/publication.fixture.json",
+          "benchmarks/genesisbench/v0.1/construct-validity/report.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
           "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
@@ -646,13 +655,16 @@
           "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "docs/program/RELEASE_NOTES_v0.2.0.json",
           "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
           "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
           "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
           "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
           "docs/spec/GENESISBENCH_BASELINE_EVIDENCE_v0.1.schema.json",
           "docs/spec/GENESISBENCH_BASELINE_PREDECLARATION_v0.1.schema.json",
           "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
@@ -705,6 +717,7 @@
         "diskMiB": 32,
         "id": "generate/capability-indices",
         "inputs": [
+          "scripts/update_capability_indices.sh",
           "crates/gc_effects/**",
           "crates/gc_runner/**",
           "prelude/**",
@@ -735,6 +748,7 @@
         "diskMiB": 32,
         "id": "generate/capability-coverage",
         "inputs": [
+          "scripts/update_capability_coverage_audit.sh",
           "docs/spec/HOST_ABI_INDEX_v0.1.json",
           "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
           "docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json",
@@ -765,6 +779,7 @@
         "diskMiB": 64,
         "id": "generate/capability-status",
         "inputs": [
+          "scripts/update_capability_status_views.sh",
           "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
           "scripts/lib/capability_ledger.py",
           "feature_matrix.md",
@@ -800,6 +815,7 @@
         "diskMiB": 4096,
         "id": "generate/agent-profile",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "Cargo.lock",
           "Cargo.toml",
           "crates/**",
@@ -831,6 +847,11 @@
         "diskMiB": 4096,
         "id": "generate/agent-diagnostics",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
+          "scripts/update_gc_diagnostic_catalog.sh",
+          "scripts/update_cli_diagnostic_goldens.sh",
+          "scripts/update_gc_repair_utility_report.sh",
+          "scripts/render_gc_repair_utility_report.sh",
           "crates/gc_cli_driver/**",
           "crates/gc_cli/tests/**",
           "policies/gc_diagnostic_catalog_v0.1.json",
@@ -842,7 +863,8 @@
           "benchmarks/diagnostics/repair_utility/v0.1/report.json",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
-          "scripts/lib/gc_repair_utility.py"
+          "scripts/lib/gc_repair_utility.py",
+          "scripts/lib/gc_repair_utility_runner.py"
         ],
         "mode": "automatic",
         "outputs": [
@@ -870,6 +892,7 @@
         "diskMiB": 4096,
         "id": "generate/agent-surfaces",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "policies/gc_agent_core_card_v0.3.json",
           "policies/gc_agent_task_cards_v0.3.json",
           "policies/gc_agent_symbol_index_v0.3.json",
@@ -918,6 +941,7 @@
         "diskMiB": 4096,
         "id": "generate/canonical-examples",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
           "examples/canonical_language/v0.1/**",
@@ -940,12 +964,18 @@
         ],
         "dependencies": [
           "generate/agent-profile",
-          "generate/canonical-examples"
+          "generate/canonical-examples",
+          "generate/agent-surfaces"
         ],
         "diskMiB": 4096,
         "id": "generate/task-benchmarks",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/CLI.md",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
           "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
           "benchmarks/agent_tasks/v0.1/**",
           "examples/canonical_language/v0.1/**",
@@ -972,6 +1002,7 @@
         "diskMiB": 256,
         "id": "generate/benchmark-analysis",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "benchmarks/agent_tasks/v0.1/suite.json",
           "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
           "benchmarks/genesisbench/v0.1/analysis/observations.fixture.json",
@@ -1029,6 +1060,7 @@
         "diskMiB": 256,
         "id": "generate/benchmark-scoring",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "benchmarks/agent_tasks/v0.1/suite.json",
           "docs/spec/GC_AGENT_PROFILE_v0.3.json",
           "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
@@ -1057,6 +1089,7 @@
         "diskMiB": 4096,
         "id": "generate/construct-validity",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "benchmarks/agent_tasks/v0.1/suite.json",
           "benchmarks/genesisbench/v0.1/construct-validity/**",
           "policies/genesisbench_construct_validity_v0.1.json",
@@ -1087,6 +1120,7 @@
         "diskMiB": 4096,
         "id": "generate/benchmark-run",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "benchmarks/agent_tasks/v0.1/suite.json",
           "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
           "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
@@ -1124,6 +1158,7 @@
         "diskMiB": 256,
         "id": "generate/benchmark-protocol",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
@@ -1155,6 +1190,7 @@
         "diskMiB": 256,
         "id": "generate/agent-corpus",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "docs/spec/GC_AGENT_CORPUS_v0.1.json",
           "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
           "benchmarks/agent_tasks/v0.1/**",
@@ -1203,6 +1239,7 @@
         "diskMiB": 64,
         "id": "generate/evidence-fixture-classification",
         "inputs": [
+          "scripts/update_evidence_fixture_classification.sh",
           "policies/evidence_storage_classes_v0.1.json",
           "docs/program/evidence/**",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
@@ -1226,7 +1263,8 @@
         "diskMiB": 64,
         "id": "generate/check-update-audit",
         "inputs": [
-          "scripts/check_*.sh",
+          "scripts/update_check_update_boundary_audit.sh",
+          "scripts/*.sh",
           "scripts/lib/check_update_boundary.py",
           "policies/check_update_boundary_v0.1.json",
           "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json"
@@ -1257,6 +1295,7 @@
         "diskMiB": 128,
         "id": "generate/gate-manifest",
         "inputs": [
+          "scripts/update_gate_manifest.sh",
           "Cargo.lock",
           "Cargo.toml",
           "README.md",
@@ -1298,6 +1337,7 @@
         "diskMiB": 128,
         "id": "generate/release-surfaces",
         "inputs": [
+          "scripts/update_release_notes.sh",
           "Cargo.toml",
           "Cargo.lock",
           "crates/*/Cargo.toml",
@@ -1355,6 +1395,7 @@
         "diskMiB": 64,
         "id": "generate/roadmap-manifest",
         "inputs": [
+          "scripts/update_roadmap_execution_manifest.sh",
           "ROADMAP.md",
           "policies/roadmap_execution_v0.1.json",
           "docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json",
@@ -1430,6 +1471,7 @@
         "diskMiB": 64,
         "id": "generate/selfhost-review",
         "inputs": [
+          "scripts/update_selfhost_toolchain_review.sh",
           "selfhost/toolchain.gc",
           "selfhost/toolchain_manifest.gc",
           "selfhost/toolchain.freshness.json",
@@ -1455,6 +1497,7 @@
         "diskMiB": 1024,
         "id": "generate/evidence-verifier-vectors",
         "inputs": [
+          "scripts/update_genesis_evidence_verifier_vectors.sh",
           "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
           "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json",
@@ -1597,6 +1640,7 @@
         "diskMiB": 256,
         "id": "generate/benchmark-baselines",
         "inputs": [
+          "scripts/update_agent_authoring_bundle.sh",
           "benchmarks/agent_tasks/v0.1/suite.json",
           "benchmarks/genesisbench/v0.1/baselines/conformance/evidence.fixture.json",
           "benchmarks/genesisbench/v0.1/baselines/conformance/publication.fixture.json",
