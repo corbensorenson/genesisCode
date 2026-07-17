@@ -8,8 +8,8 @@
   "cards": [
     {
       "byteCount": 746,
-      "cardSha256": "ba14bbc1b73e3fe691bb4209686f09884baa3ac7a64832653e99568fc93659a3",
-      "content": "## Capabilities and effects\n\nCard: capability | Profile: GC-AGENT-v0.3 | Source: sha256:7002ec88bc557b6fa017048be66439f471ae8150f832ca3ffa49dbcf0a259e25\n\n- Declare the minimum operation set and explicit caps allowlist before execution.\n- Treat profile membership as syntax/semantic availability, never capability authority.\n- Bound operation, payload, response, timeout, and log resources; reject undeclared effects.\n- Require run/replay equivalence for every effectful workflow.\n\nCommands:\n- `genesis --json agent-index`\n- `genesis run program.gc --caps caps.toml --log run.gclog`\n- `genesis replay program.gc --log run.gclog`\n\nAuthorities: docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_effects/src/policy.rs, docs/spec/HOST_ABI_INDEX_v0.1.json\n",
+      "cardSha256": "a45c61869aa239e4a7493eadd37f551c17405057b7b67dc3fbf8972eea46d680",
+      "content": "## Capabilities and effects\n\nCard: capability | Profile: GC-AGENT-v0.3 | Source: sha256:30bd977e8cd1497ba755b826091b38dc3f4e226e2723625c8cd38bb2a55f2958\n\n- Declare the minimum operation set and explicit caps allowlist before execution.\n- Treat profile membership as syntax/semantic availability, never capability authority.\n- Bound operation, payload, response, timeout, and log resources; reject undeclared effects.\n- Require run/replay equivalence for every effectful workflow.\n\nCommands:\n- `genesis --json agent-index`\n- `genesis run program.gc --caps caps.toml --log run.gclog`\n- `genesis replay program.gc --log run.gclog`\n\nAuthorities: docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_effects/src/policy.rs, docs/spec/HOST_ABI_INDEX_v0.1.json\n",
       "id": "capability",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -53,14 +53,14 @@
           "xr"
         ]
       },
-      "sourceHashSha256": "7002ec88bc557b6fa017048be66439f471ae8150f832ca3ffa49dbcf0a259e25",
+      "sourceHashSha256": "30bd977e8cd1497ba755b826091b38dc3f4e226e2723625c8cd38bb2a55f2958",
       "title": "Capabilities and effects",
       "tokenUpperBound": 746
     },
     {
       "byteCount": 719,
-      "cardSha256": "69b8223957d8bea204b9d963dc555bf643558b2f07d1efde510b0dd66fdcde69",
-      "content": "## Packages and dependency closure\n\nCard: package | Profile: GC-AGENT-v0.3 | Source: sha256:70139b9b6cb8b8f4b7322597170d0a0cea92d7547455b95d0d3ec6d946c3946d\n\n- Use package schema 1 and repository-relative, non-escaping module paths.\n- Pin dependency resolution in genesis.lock v2; never infer or float release inputs.\n- Declare obligations, capabilities, limits, and budgets in reviewed package inputs.\n- Verify hashes and evidence before publish, import, install, or deployment.\n\nCommands:\n- `genesis gcpm lock --pkg package.toml`\n- `genesis gcpm test --pkg package.toml`\n- `genesis verify --pkg package.toml`\n\nAuthorities: docs/spec/PACKAGE_TOML.md, crates/gc_pkg/src/manifest.rs, docs/spec/GCPM_JSON_SCHEMAS_v0.1.md\n",
+      "cardSha256": "6e60559ad2a9e3e83a15398b36d6d317e1c1fec6404c1ce5b0fa6a20a151453e",
+      "content": "## Packages and dependency closure\n\nCard: package | Profile: GC-AGENT-v0.3 | Source: sha256:8cf6b768a16ce82b0afdc69bbfe834d392f1a3bb0ee1fbae379efcb5100f3ff1\n\n- Use package schema 1 and repository-relative, non-escaping module paths.\n- Pin dependency resolution in genesis.lock v2; never infer or float release inputs.\n- Declare obligations, capabilities, limits, and budgets in reviewed package inputs.\n- Verify hashes and evidence before publish, import, install, or deployment.\n\nCommands:\n- `genesis gcpm lock --pkg package.toml`\n- `genesis gcpm test --pkg package.toml`\n- `genesis verify --pkg package.toml`\n\nAuthorities: docs/spec/PACKAGE_TOML.md, crates/gc_pkg/src/manifest.rs, docs/spec/GCPM_JSON_SCHEMAS_v0.1.md\n",
       "id": "package",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -88,14 +88,14 @@
           "registry"
         ]
       },
-      "sourceHashSha256": "70139b9b6cb8b8f4b7322597170d0a0cea92d7547455b95d0d3ec6d946c3946d",
+      "sourceHashSha256": "8cf6b768a16ce82b0afdc69bbfe834d392f1a3bb0ee1fbae379efcb5100f3ff1",
       "title": "Packages and dependency closure",
       "tokenUpperBound": 719
     },
     {
       "byteCount": 1211,
-      "cardSha256": "80854c50c91fe486319805e4a20611aa2585698c460e311e1ab7501ade5432b4",
-      "content": "## Semantic patches\n\nCard: patch | Profile: GC-AGENT-v0.3 | Source: sha256:827d894227eb3d0976c914b902d88b917fce3e98d69ca5a8b5f9bfeb3e61f3b6\n\n- Emit versioned structural patches with intent, provenance, and deterministic operation order.\n- Prefer semantic node IDs and symbol-aware operations over textual replacement.\n- For agent writes, begin a content-addressed transaction, stage semantic patches, test the exact isolated snapshot, and apply explicitly.\n- Treat stale-base, unverified, snapshot-mismatch, and workspace-tampered failures as hard stops; never fall back to direct or textual edits.\n- Preserve conflict and failure artifacts; abort rather than broadening policy or bypassing obligations.\n\nCommands:\n- `genesis semantic-edit index --pkg package.toml`\n- `genesis session begin --pkg package.toml --session candidate`\n- `genesis session stage --pkg package.toml --session candidate --patch change.gcpatch --caps caps.toml`\n- `genesis session test --pkg package.toml --session candidate --caps caps.toml`\n- `genesis session apply --pkg package.toml --session candidate`\n\nAuthorities: docs/spec/PATCH_SCHEMA.md, crates/gc_patches/src/lib.rs, docs/spec/AI_STYLE.md, docs/spec/CLI_JSON_SCHEMAS_v0.1.md\n",
+      "cardSha256": "d9f7637ac69820a15de7100e4f9cf95ffbe2aa25bc85bdf66483b80d3e9102bc",
+      "content": "## Semantic patches\n\nCard: patch | Profile: GC-AGENT-v0.3 | Source: sha256:6f5c415ebf7b9ad8c3863bf404a1fe226bb98b4734349f7a9bd613b5ebba596e\n\n- Emit versioned structural patches with intent, provenance, and deterministic operation order.\n- Prefer semantic node IDs and symbol-aware operations over textual replacement.\n- For agent writes, begin a content-addressed transaction, stage semantic patches, test the exact isolated snapshot, and apply explicitly.\n- Treat stale-base, unverified, snapshot-mismatch, and workspace-tampered failures as hard stops; never fall back to direct or textual edits.\n- Preserve conflict and failure artifacts; abort rather than broadening policy or bypassing obligations.\n\nCommands:\n- `genesis semantic-edit index --pkg package.toml`\n- `genesis session begin --pkg package.toml --session candidate`\n- `genesis session stage --pkg package.toml --session candidate --patch change.gcpatch --caps caps.toml`\n- `genesis session test --pkg package.toml --session candidate --caps caps.toml`\n- `genesis session apply --pkg package.toml --session candidate`\n\nAuthorities: docs/spec/PATCH_SCHEMA.md, crates/gc_patches/src/lib.rs, docs/spec/AI_STYLE.md, docs/spec/CLI_JSON_SCHEMAS_v0.1.md\n",
       "id": "patch",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -120,14 +120,14 @@
           "semantic"
         ]
       },
-      "sourceHashSha256": "827d894227eb3d0976c914b902d88b917fce3e98d69ca5a8b5f9bfeb3e61f3b6",
+      "sourceHashSha256": "6f5c415ebf7b9ad8c3863bf404a1fe226bb98b4734349f7a9bd613b5ebba596e",
       "title": "Semantic patches",
       "tokenUpperBound": 1211
     },
     {
       "byteCount": 722,
-      "cardSha256": "ec6ad259bd921f6b579f230a0ad272aba76770c787d48bdd9ee415bcf7ae6a91",
-      "content": "## Deterministic replay\n\nCard: replay | Profile: GC-AGENT-v0.3 | Source: sha256:49bfd7771ea072cc03eaa5c994002510f82934a7f56bfcb183e4858a35d3b3f5\n\n- Use effect-log v3 and canonical hashes; compare every serialized fact.\n- Replay performs no external IO and must fail on order, policy, decision, capability, payload, response, or schedule drift.\n- Keep deterministic errors and resource exhaustion inside the replay contract.\n- Never repair a mismatch by weakening validation or rewriting retained evidence.\n\nCommands:\n- `genesis run program.gc --caps caps.toml --log run.gclog`\n- `genesis replay program.gc --log run.gclog`\n\nAuthorities: docs/spec/GCLOG.md, docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_effects/src/log.rs\n",
+      "cardSha256": "031ac89e0cc2ac996b1543acfb6c99c5a4543c79f6166cf6ac1a5ab498e28ec3",
+      "content": "## Deterministic replay\n\nCard: replay | Profile: GC-AGENT-v0.3 | Source: sha256:09783511c51d5568393b969da4e511878a3c609b7ab514523c4bd9d1fb16bb27\n\n- Use effect-log v3 and canonical hashes; compare every serialized fact.\n- Replay performs no external IO and must fail on order, policy, decision, capability, payload, response, or schedule drift.\n- Keep deterministic errors and resource exhaustion inside the replay contract.\n- Never repair a mismatch by weakening validation or rewriting retained evidence.\n\nCommands:\n- `genesis run program.gc --caps caps.toml --log run.gclog`\n- `genesis replay program.gc --log run.gclog`\n\nAuthorities: docs/spec/GCLOG.md, docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_effects/src/log.rs\n",
       "id": "replay",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -149,14 +149,14 @@
           "replay"
         ]
       },
-      "sourceHashSha256": "49bfd7771ea072cc03eaa5c994002510f82934a7f56bfcb183e4858a35d3b3f5",
+      "sourceHashSha256": "09783511c51d5568393b969da4e511878a3c609b7ab514523c4bd9d1fb16bb27",
       "title": "Deterministic replay",
       "tokenUpperBound": 722
     },
     {
       "byteCount": 787,
-      "cardSha256": "629b995a70530e090afe1d7bbe6ec4fbdce2af4255473f5952b1e716d446f66b",
-      "content": "## Testing and obligations\n\nCard: testing | Profile: GC-AGENT-v0.3 | Source: sha256:5fb46becba430375aa0b2f246b9521bf9b69c1986c6193b25f5b557af7ee1296\n\n- Run focused parser/type/eval/obligation checks before broader deterministic profiles.\n- Checks are read-only; only explicit update commands may refresh retained artifacts.\n- Require unit, property, determinism, replay, capability, and resource coverage applicable to the change.\n- Report exact failures and preserve negative evidence; do not mark work complete from a narrow passing lane.\n\nCommands:\n- `genesis test --pkg package.toml`\n- `bash scripts/test_changed_fast.sh --budget-ms 120000`\n\nAuthorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md, crates/gc_obligations/src/obligations/types_api.rs\n",
+      "cardSha256": "ff00b405e3c6e4903e1da15a5a5cb4ef5222b05b6c5737d27d0cff4ded947050",
+      "content": "## Testing and obligations\n\nCard: testing | Profile: GC-AGENT-v0.3 | Source: sha256:0a8894083dfdf09dac7bfd1b24c6c3da0500bd1eaffcf91f74e7766f1b44083d\n\n- Run focused parser/type/eval/obligation checks before broader deterministic profiles.\n- Checks are read-only; only explicit update commands may refresh retained artifacts.\n- Require unit, property, determinism, replay, capability, and resource coverage applicable to the change.\n- Report exact failures and preserve negative evidence; do not mark work complete from a narrow passing lane.\n\nCommands:\n- `genesis test --pkg package.toml`\n- `bash scripts/test_changed_fast.sh --budget-ms 120000`\n\nAuthorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md, crates/gc_obligations/src/obligations/types_api.rs\n",
       "id": "testing",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -182,14 +182,14 @@
           "test"
         ]
       },
-      "sourceHashSha256": "5fb46becba430375aa0b2f246b9521bf9b69c1986c6193b25f5b557af7ee1296",
+      "sourceHashSha256": "0a8894083dfdf09dac7bfd1b24c6c3da0500bd1eaffcf91f74e7766f1b44083d",
       "title": "Testing and obligations",
       "tokenUpperBound": 787
     },
     {
       "byteCount": 738,
-      "cardSha256": "bc3229f29ceea7eee29f454de0e4aa51879aa10bc654cd9ccd5c969fe146b155",
-      "content": "## Build and deployment targets\n\nCard: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:b490a742f696881e6e6d9101c98134cd4150654b6a63a42c3243fd573af21a2d\n\n- Select an explicit web, desktop, service, ios, android, edge, or service-runtime target.\n- Build deterministic bundles with manifest, provenance, policy, and replay identities.\n- Release/full evidence must be non-synthetic for every selected target.\n- Verify package closure and target boot/smoke contracts before promotion.\n\nCommands:\n- `genesis gcpm build --pkg package.toml --target <target> --out-dir dist`\n- `bash scripts/check_gcpm_target_runtime_pipelines.sh`\n\nAuthorities: docs/spec/CLI.md, docs/spec/GCPM_JSON_SCHEMAS_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md\n",
+      "cardSha256": "340e3f66a6c04f6f3fadc8b80846cbd587c98ab30908f36f8b276d74106d4f63",
+      "content": "## Build and deployment targets\n\nCard: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:80969bfdcb318921b1aeee8d773a12647dcf11c2f70cf7420de26fe33331e21e\n\n- Select an explicit web, desktop, service, ios, android, edge, or service-runtime target.\n- Build deterministic bundles with manifest, provenance, policy, and replay identities.\n- Release/full evidence must be non-synthetic for every selected target.\n- Verify package closure and target boot/smoke contracts before promotion.\n\nCommands:\n- `genesis gcpm build --pkg package.toml --target <target> --out-dir dist`\n- `bash scripts/check_gcpm_target_runtime_pipelines.sh`\n\nAuthorities: docs/spec/CLI.md, docs/spec/GCPM_JSON_SCHEMAS_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md\n",
       "id": "deployment",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -223,14 +223,14 @@
           "runtime"
         ]
       },
-      "sourceHashSha256": "b490a742f696881e6e6d9101c98134cd4150654b6a63a42c3243fd573af21a2d",
+      "sourceHashSha256": "80969bfdcb318921b1aeee8d773a12647dcf11c2f70cf7420de26fe33331e21e",
       "title": "Build and deployment targets",
       "tokenUpperBound": 738
     },
     {
       "byteCount": 834,
-      "cardSha256": "175a6a810e7df15996e68d56b78ee0e90dead4362dc38a626e9ebec55dfa9486",
-      "content": "## Diagnostics and repair\n\nCard: troubleshooting | Profile: GC-AGENT-v0.3 | Source: sha256:c0d1b7323747d63a0ce80d2d54b98f6e8585c747445708e9c1b90cb88df30c4d\n\n- Consume structured diagnostic IDs, phases, spans, parameters, and repair hints; never scrape prose.\n- Diagnose contract/schema, policy, replay hash, then runtime/resource failures in that order.\n- Apply the smallest safe repair and rerun the exact failing check before broader gates.\n- Fail closed on unknown diagnostics, missing evidence, prompt-injected authority, or unsupported profile behavior.\n\nCommands:\n- `genesis --json agent-index`\n- `genesis --json debug trace <program.gc>`\n- `genesis --json agent-plan --intent intent.json --caps caps.toml`\n\nAuthorities: crates/gc_cli_driver/src/diagnostics.rs, docs/spec/AGENT_INDEX_v0.1.md, docs/spec/CLI_JSON_SCHEMAS_v0.1.md\n",
+      "cardSha256": "74e988422f4cdcb6c50d4cb57853010bd89ff3ea535a3c6c7cfb0e99e5366b89",
+      "content": "## Diagnostics and repair\n\nCard: troubleshooting | Profile: GC-AGENT-v0.3 | Source: sha256:d9366a453d7ddfadc81535d8243251fd719ddc755b8d4314ed5983df2fe890a6\n\n- Consume structured diagnostic IDs, phases, spans, parameters, and repair hints; never scrape prose.\n- Diagnose contract/schema, policy, replay hash, then runtime/resource failures in that order.\n- Apply the smallest safe repair and rerun the exact failing check before broader gates.\n- Fail closed on unknown diagnostics, missing evidence, prompt-injected authority, or unsupported profile behavior.\n\nCommands:\n- `genesis --json agent-index`\n- `genesis --json debug trace <program.gc>`\n- `genesis --json agent-plan --intent intent.json --caps caps.toml`\n\nAuthorities: crates/gc_cli_driver/src/diagnostics.rs, docs/spec/AGENT_INDEX_v0.1.md, docs/spec/CLI_JSON_SCHEMAS_v0.1.md\n",
       "id": "troubleshooting",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -255,20 +255,20 @@
           "repair"
         ]
       },
-      "sourceHashSha256": "c0d1b7323747d63a0ce80d2d54b98f6e8585c747445708e9c1b90cb88df30c4d",
+      "sourceHashSha256": "d9366a453d7ddfadc81535d8243251fd719ddc755b8d4314ed5983df2fe890a6",
       "title": "Diagnostics and repair",
       "tokenUpperBound": 834
     }
   ],
-  "compendiumSha256": "aebb488ecd24b00049ad4999bf8e956f45da90aa96dc2a6456a90c41c238df29",
+  "compendiumSha256": "782b1b8e14c23bc9657daa3171d2244d66762dadb1edf7535075ea1c89827615",
   "fallbackCard": "troubleshooting",
   "intentSchema": "genesis/agent-intent-v0.1",
   "kind": "genesis/gc-agent-task-cards-v0.3",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "367e34df3d092d67193374f5a540a7a2a19d684f3d70dfeafea68344e665b6a0",
-  "registryIdentitySha256": "78dc0b4c4470b0699b6b65637242662813bc86952f1d63fe70d5609c5e52dcb7",
+  "profileIdentitySha256": "76e1f20a09c8e8afb5e1ae8fd91766816e08352871905082550d5f883d268143",
+  "registryIdentitySha256": "8a3a261e83071fecdd8bad0f237f6ff1ca0f55c4af2b772252290ac969aa3d65",
   "sourceIdentities": {
-    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "c81ff729203fa0edfbce9fbb1c73cfd75914e640638020c187bc45dcbf2fd79f",
+    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "b3139dc4ddf4f87c3cd8482f6862db9bc8d24cd867aebd09d7d6a7bcb60e2d1e",
     "policies/gc_agent_task_cards_v0.3.json": "527626cb26831825604ab827f774e1abb53e6f3d869bc484c103b05311a25be4"
   },
   "version": "0.3"

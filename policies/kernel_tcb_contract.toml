@@ -13,6 +13,7 @@ expected_kernel_surface_files = [
   "compiled_runtime/eval.rs",
   "compiled_runtime/mod.rs",
   "compiled_runtime/primitive_forward.rs",
+  "compiled_runtime/tail_loop.rs",
   "env.rs",
   "env/capture.rs",
   "error.rs",
@@ -75,6 +76,7 @@ forbidden_eval_markers = [
 "compiled_runtime/eval.rs" = "optimized-tier"
 "compiled_runtime/mod.rs" = "optimized-tier"
 "compiled_runtime/primitive_forward.rs" = "optimized-tier"
+"compiled_runtime/tail_loop.rs" = "optimized-tier"
 "env.rs" = "shared-semantics"
 "env/capture.rs" = "shared-semantics"
 "error.rs" = "shared-semantics"
@@ -113,6 +115,7 @@ optimized-tier = [
 "crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
 "crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/primitive_forward.rs" = 180
+"crates/gc_kernel/src/compiled_runtime/tail_loop.rs" = 700
 "crates/gc_kernel/src/env.rs" = 100
 "crates/gc_kernel/src/env/capture.rs" = 60
 "crates/gc_kernel/src/error.rs" = 80

@@ -26,6 +26,7 @@ pub(crate) use compiled_runtime::{CompiledClosureCall, apply_compiled_closure};
 pub(crate) use compiled_runtime::{
     appn_native_partial_materializations, primitive_forward_executions,
     reset_appn_native_partial_materializations, reset_primitive_forward_executions,
+    reset_tail_loop_executions, tail_loop_executions,
 };
 
 const COMPILED_MODULE_BLOB_MAGIC: &[u8] = b"GCKM5\0";

@@ -184,7 +184,7 @@ require_doc_pattern() {
 
 require_ci_pattern() {
   local pattern="$1"
-  if ! grep -Fq "$pattern" "$CI"; then
+  if ! grep -Fq -- "$pattern" "$CI"; then
     echo "test-execution-profile-matrix: missing CI profile step in $CI: $pattern" >&2
     exit 1
   fi
@@ -321,8 +321,35 @@ require_doc_pattern 'CHANGELOG.md'
 require_doc_pattern 'docs/spec/VERSIONING_v0.1.md'
 require_doc_pattern 'docs/spec/RELEASE_SMOKE_v0.1.md'
 require_doc_pattern 'scripts/update_test_changed_fast_metrics.sh'
+require_doc_pattern 'Feature branches are validated by the `pull_request` event only'
 
 require_ci_pattern 'Changed-File Fast Loop Budget'
+require_ci_pattern '--dry-run'
+require_ci_pattern 'The standard PR job already executes the full selected gate and test'
+python3 - "$CI" <<'PY'
+import pathlib
+import re
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+if not re.search(
+    r"(?m)^on:\n  push:\n    branches:\n      - main\n  pull_request:\n",
+    source,
+):
+    raise SystemExit(
+        "test-execution-profile-matrix: branch pushes must run only on canonical main; "
+        "pull requests own feature-branch validation"
+    )
+if not re.search(
+    r"(?m)^concurrency:\n"
+    r"  group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n"
+    r"  cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}\n",
+    source,
+):
+    raise SystemExit(
+        "test-execution-profile-matrix: pull-request CI must cancel superseded runs"
+    )
+PY
 require_ci_pattern 'Docs Quickstart Gate'
 require_ci_pattern 'bash scripts/check_docs_quickstart.sh'
 require_ci_pattern 'Ignored Perf Gate Regression Tests'
