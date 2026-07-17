@@ -486,6 +486,7 @@ fi
 for perf_gate_test in \
   crates/gc_cli/tests/upgrade_plan_health.rs \
   crates/gc_cli/tests/agent_authoring_bundle_guard.rs \
+  crates/gc_cli/tests/cli_agent_benchmark_scoring.rs \
   crates/gc_cli/tests/pkg_low_semantic_boundary.rs \
   crates/gc_cli/tests/guard_extraction_fixtures.rs \
   crates/gc_cli/tests/large_workspace_agent_perf.rs \
@@ -499,6 +500,29 @@ for perf_gate_test in \
     exit 1
   fi
 done
+
+for scoring_matrix_test in \
+  public_references_score_perfectly_and_deterministically_with_shipped_binary \
+  scoring_fails_closed_or_penalizes_independent_adversarial_candidates; do
+  if ! grep -B 2 -F "fn ${scoring_matrix_test}" \
+    crates/gc_cli/tests/cli_agent_benchmark_scoring.rs | \
+    grep -Fq '#[ignore = "perf-gate"]'; then
+    echo "test-execution-profile-matrix: scoring matrix ${scoring_matrix_test} must remain in the required serial perf lane" >&2
+    exit 1
+  fi
+done
+if ! grep -Fq 'cli_agent_benchmark_scoring' "$PERF_GATES_SCRIPT" || \
+   ! grep -Fq 'GENESIS_SCORING_MATRIX_BUDGET_MS' "$PERF_GATES_SCRIPT" || \
+   ! grep -Fq 'scorer_process_timeout_ms=30000' "$PERF_GATES_SCRIPT"; then
+  echo "test-execution-profile-matrix: scoring matrix must retain its serial trigger and finite resource envelope" >&2
+  exit 1
+fi
+if grep -B 2 -F 'fn scoring_contract_core_accepts_reference_and_rejects_symlinks_before_execution' \
+  crates/gc_cli/tests/cli_agent_benchmark_scoring.rs | \
+  grep -Fq '#[ignore = "perf-gate"]'; then
+  echo "test-execution-profile-matrix: scoring contract core must remain in the default lane" >&2
+  exit 1
+fi
 
 if ! grep -B 2 -F 'fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env' \
   crates/gc_cli/tests/shell_gate_regressions.rs | grep -Fq '#[ignore = "perf-gate"]'; then

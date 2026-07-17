@@ -83,6 +83,7 @@ fn dimension<'a>(report: &'a Value, id: &str) -> &'a Value {
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn public_references_score_perfectly_and_deterministically_with_shipped_binary() {
     let root = repository_root();
     let suite = suite(&root);
@@ -153,6 +154,7 @@ fn public_references_score_perfectly_and_deterministically_with_shipped_binary()
 }
 
 #[test]
+#[ignore = "perf-gate"]
 fn scoring_fails_closed_or_penalizes_independent_adversarial_candidates() {
     let root = repository_root();
     let suite = suite(&root);
@@ -296,12 +298,19 @@ fn scoring_fails_closed_or_penalizes_independent_adversarial_candidates() {
 
 #[cfg(unix)]
 #[test]
-fn scoring_rejects_symlink_candidates_before_execution() {
+fn scoring_contract_core_accepts_reference_and_rejects_symlinks_before_execution() {
     use std::os::unix::fs::symlink;
 
     let root = repository_root();
     let suite = suite(&root);
     let completion = small_case(&suite, "completion");
+
+    let accepted = tempfile::tempdir().expect("accepted contract-core candidate");
+    copy_reference(&root, completion, accepted.path());
+    let accepted_report = score(&root, completion, accepted.path());
+    assert_eq!(accepted_report["qualityScoreBasisPoints"], 10_000);
+    assert_eq!(accepted_report["validity"]["passed"], true);
+
     let candidate = tempfile::tempdir().expect("symlink candidate");
     let target = candidate.path().join("target.gc");
     fs::write(&target, "(prim int/add 40 2)\n").expect("write symlink target");

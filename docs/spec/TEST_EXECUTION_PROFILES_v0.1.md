@@ -156,6 +156,7 @@ Strict/full profile runtime reports:
   - integration tests that exercise those lanes are marked `#[ignore = "perf-gate"]`.
   - run ignored gate regression tests explicitly with `scripts/test_perf_gates.sh`.
   - `scripts/test_perf_gates.sh` runs ignored targets serially via `cargo test -p gc_cli --test <target> -- --ignored --test-threads=1`, using the declared `root-host` content-addressed Cargo cache scope.
+  - the exhaustive GenesisBench scorer reference/adversarial matrices run only as the required serial `cli_agent_benchmark_scoring` perf target. The default lane retains one accepted-reference execution plus candidate-root and file-symlink rejection. Every scorer child has the scoring contract's `30000ms` hard process-group timeout, and the complete matrix has a `600000ms` measured ceiling configurable only to a positive value through `GENESIS_SCORING_MATRIX_BUDGET_MS`.
 - Prepush strict loop: `scripts/check_upgrade_plan_health.sh --profile prepush-standard`
   - the check executes the aggregate profile with private temporary reports and copied input-only history; it ignores legacy retained-output environment variables and disables persistent gate-result caching.
   - retain profile, history, warmup, and disk-preflight observations only with `scripts/update_upgrade_plan_health_report.sh --profile <profile>`.
