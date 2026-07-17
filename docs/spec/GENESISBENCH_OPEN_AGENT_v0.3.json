@@ -1,0 +1,56 @@
+{
+  "coldAcquisitionAdapterProfileUnchanged": true,
+  "contentIdentitySha256": "753870e0114fe642945d974fb8c230aaaebd53a932291fcc7c77576d29ddeb92",
+  "invocationProfiles": {
+    "codex-cli-hosted": {
+      "argvPolicy": "fixed-codex-exec-ephemeral-json-workspace-write-one-prompt-ancestry-isolated-v0.3",
+      "id": "codex-cli-hosted-v0.3",
+      "network": "provider-only",
+      "provider": null
+    },
+    "codex-cli-local": {
+      "argvPolicy": "fixed-codex-exec-oss-ephemeral-json-workspace-write-one-prompt-ancestry-isolated-v0.3",
+      "id": "codex-cli-local-v0.3",
+      "network": "loopback-provider-only",
+      "provider": "predeclared-lmstudio-or-ollama"
+    }
+  },
+  "kind": "genesis/genesisbench-open-agent-harness-v0.3",
+  "limits": {
+    "maxEventLineBytes": 16777216,
+    "maxStderrBytes": 16777216,
+    "maxStdoutBytes": 16777216,
+    "maxTimeoutMs": 3600000,
+    "maxWorkspaceBytes": 67108864,
+    "maxWorkspaceFiles": 4096
+  },
+  "purpose": "Execute atomically predeclared repository-editing campaigns without broadening Cold Acquisition, while retaining declared output creation, suppressing tool-owned caches, bounding event records, and removing ephemeral stage paths from evidence.",
+  "scaffoldIdentitySha256": "b9d5c12b193428e2f0b3498a1b5441a32732239395e434548ae1d1fdcfdb79fd",
+  "securityControls": [
+    "agent-and-model-never-accessed-during-replay",
+    "all-environment-values-redacted",
+    "ambient-project-instruction-and-skill-discovery-blocked",
+    "ancestry-isolated-process-workspace",
+    "atomic-complete-campaign-precommitment",
+    "attempt-membership-and-common-field-binding",
+    "bounded-large-event-line-validation",
+    "candidate-path-closure",
+    "declared-editable-output-creation-and-retention",
+    "ephemeral-stage-path-normalization",
+    "exact-executable-digest-and-version",
+    "finite-capture-and-wall-time-budgets",
+    "frozen-repository-post-run-rehash",
+    "immutable-predeclaration-before-execution",
+    "non-selective-campaign-stop-policy",
+    "one-attempt-no-resume-no-hidden-retry",
+    "permission-aware-temporary-snapshot-teardown",
+    "predeclared-supplied-tool-digests",
+    "process-group-hard-kill-and-reap",
+    "provider-network-only-or-loopback-only",
+    "read-only-frozen-source-outside-writable-workspace",
+    "strict-jsonl-transcript-validation",
+    "supplied-genesis-tool-cache-disabled",
+    "symlink-and-non-regular-file-rejection"
+  ],
+  "version": "0.3.0"
+}

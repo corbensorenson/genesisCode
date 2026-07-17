@@ -1,0 +1,106 @@
+{
+  "bindings": {
+    "benchmarkContentIdentitySha256": "87bfc24491d9450c3f9bc9d69b2b2d4605ce2f8b57add8e658fcdff9139337d6",
+    "profileSha256": "3bf97d938d59c5e853e6c9ea4cfa8d5140a0d59589f42ba7187048635503ca4c",
+    "scorerContractSha256": "140fa25fbf3b22878569a841deb52b12ed7140b60d397ab58e6bafda2b61079e",
+    "scorerRuntimeSha256": "9a78a2def8f3ac7d14605821004404c1caa0331a5db5d04de2e66daac493db2c",
+    "scoringContentIdentitySha256": "5313abe263de08d2c2a5d1d1294c60fdc0cbe6e08554b4876b084c65f2958b87"
+  },
+  "candidate": {
+    "bytes": 20,
+    "fileCount": 1,
+    "identitySha256": "2ae9f4e3174d31365f4e2fe494c7aaae2ea184f36b4105dbfcc35c8f3aa82647"
+  },
+  "caseId": "completion-small",
+  "contextTier": "small",
+  "dimensions": [
+    {
+      "applicable": true,
+      "id": "semantics",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 3500
+    },
+    {
+      "applicable": false,
+      "id": "obligations",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1200
+    },
+    {
+      "applicable": false,
+      "id": "effects",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1200
+    },
+    {
+      "applicable": true,
+      "id": "patch-minimality",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1500
+    },
+    {
+      "applicable": true,
+      "id": "resource-use",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1300
+    },
+    {
+      "applicable": true,
+      "id": "policy-scope",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1300
+    }
+  ],
+  "kind": "genesis/agent-benchmark-score-v0.1",
+  "modelSpecificMetrics": {
+    "includedInQualityScore": false,
+    "present": false,
+    "recordedBy": "genesis/agent-benchmark-run-v0.1"
+  },
+  "patch": {
+    "candidateUnits": 1033,
+    "changedPaths": [
+      "main.gc"
+    ],
+    "editableScopeOk": true,
+    "expectedChangedPaths": [
+      "main.gc"
+    ],
+    "referenceUnits": 1033
+  },
+  "policy": {
+    "broadenedAuthorities": [],
+    "candidateAuthorityIdentitySha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "referenceAuthorityIdentitySha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "scopeOk": true
+  },
+  "qualityScoreBasisPoints": 10000,
+  "resources": {
+    "candidateGeneratedBytes": 0,
+    "candidateUnits": 597,
+    "limitsSatisfied": true,
+    "referenceGeneratedBytes": 0,
+    "referenceUnits": 597
+  },
+  "scoreIdentitySha256": "77e3f9e542cf8b0cdbea3d92981f155b363899c8605f9894f7175a36185b221e",
+  "scoringId": "GC-AGENT-BENCHMARK-SCORING-v0.1",
+  "taskClass": "completion",
+  "validity": {
+    "failedDimensions": [],
+    "passed": true
+  },
+  "verification": [
+    {
+      "assertionsPassed": 1,
+      "exitCode": 0,
+      "generatedIdentitySha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "id": "execute",
+      "kind": "genesis/eval-v0.2",
+      "ok": true,
+      "outputIdentitySha256": "f7681e2333d90b9605bcf2134e313deaaacbfa6154b9efecb13a2d9f1bd2033e",
+      "passed": true,
+      "resourceUnits": 577
+    }
+  ],
+  "version": "0.1.0"
+}

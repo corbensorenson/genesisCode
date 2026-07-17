@@ -1,0 +1,53 @@
+{
+  "$id": "https://genesiscode.dev/schemas/genesisbench-open-agent-tool-archive-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authorities": {"$ref": "#/$defs/authorities"},
+    "campaignId": {"$ref": "#/$defs/id"},
+    "campaignIdentitySha256": {"$ref": "#/$defs/hash"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+    "genesisExecutable": {
+      "additionalProperties": false,
+      "properties": {
+        "compressedBytes": {"minimum": 1, "type": "integer"},
+        "compressedSha256": {"$ref": "#/$defs/hash"},
+        "compression": {"const": "gzip-mtime-zero-level-9"},
+        "executableVersion": {"minLength": 1, "type": "string"},
+        "path": {"$ref": "#/$defs/path"},
+        "uncompressedBytes": {"minimum": 1, "type": "integer"},
+        "uncompressedSha256": {"$ref": "#/$defs/hash"}
+      },
+      "required": ["path", "compression", "compressedBytes", "compressedSha256", "uncompressedBytes", "uncompressedSha256", "executableVersion"],
+      "type": "object"
+    },
+    "kind": {"const": "genesis/genesisbench-open-agent-tool-archive-v0.1"},
+    "platform": {
+      "additionalProperties": false,
+      "properties": {"architecture": {"$ref": "#/$defs/id"}, "operatingSystem": {"$ref": "#/$defs/id"}},
+      "required": ["architecture", "operatingSystem"],
+      "type": "object"
+    },
+    "selfhostArtifact": {
+      "additionalProperties": false,
+      "properties": {"bytes": {"minimum": 1, "type": "integer"}, "path": {"$ref": "#/$defs/path"}, "sha256": {"$ref": "#/$defs/hash"}},
+      "required": ["path", "bytes", "sha256"],
+      "type": "object"
+    },
+    "version": {"const": "0.1.0"}
+  },
+  "required": ["kind", "version", "campaignId", "campaignIdentitySha256", "authorities", "platform", "genesisExecutable", "selfhostArtifact", "contentIdentitySha256"],
+  "title": "GenesisBench Open Agent tool archive v0.1",
+  "type": "object",
+  "$defs": {
+    "authorities": {
+      "additionalProperties": false,
+      "properties": {"harnessIdentitySha256": {"$ref": "#/$defs/hash"}, "protocolIdentitySha256": {"$ref": "#/$defs/hash"}, "sourceSnapshotManifestIdentitySha256": {"$ref": "#/$defs/hash"}, "suiteIdentitySha256": {"$ref": "#/$defs/hash"}},
+      "required": ["harnessIdentitySha256", "protocolIdentitySha256", "suiteIdentitySha256", "sourceSnapshotManifestIdentitySha256"],
+      "type": "object"
+    },
+    "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "id": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$", "type": "string"},
+    "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$", "type": "string"}
+  }
+}

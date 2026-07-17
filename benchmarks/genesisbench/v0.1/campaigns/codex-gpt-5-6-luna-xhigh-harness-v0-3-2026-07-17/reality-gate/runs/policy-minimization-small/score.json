@@ -1,0 +1,106 @@
+{
+  "bindings": {
+    "benchmarkContentIdentitySha256": "87bfc24491d9450c3f9bc9d69b2b2d4605ce2f8b57add8e658fcdff9139337d6",
+    "profileSha256": "3bf97d938d59c5e853e6c9ea4cfa8d5140a0d59589f42ba7187048635503ca4c",
+    "scorerContractSha256": "140fa25fbf3b22878569a841deb52b12ed7140b60d397ab58e6bafda2b61079e",
+    "scorerRuntimeSha256": "9a78a2def8f3ac7d14605821004404c1caa0331a5db5d04de2e66daac493db2c",
+    "scoringContentIdentitySha256": "5313abe263de08d2c2a5d1d1294c60fdc0cbe6e08554b4876b084c65f2958b87"
+  },
+  "candidate": {
+    "bytes": 205,
+    "fileCount": 3,
+    "identitySha256": "4a7610ca7e004612a0fd2b78af99b18dc5a3f4ce0e24d7e7da1613b7e181ab91"
+  },
+  "caseId": "policy-minimization-small",
+  "contextTier": "small",
+  "dimensions": [
+    {
+      "applicable": true,
+      "id": "semantics",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 3500
+    },
+    {
+      "applicable": false,
+      "id": "obligations",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1200
+    },
+    {
+      "applicable": true,
+      "id": "effects",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1200
+    },
+    {
+      "applicable": true,
+      "id": "patch-minimality",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1500
+    },
+    {
+      "applicable": true,
+      "id": "resource-use",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1300
+    },
+    {
+      "applicable": true,
+      "id": "policy-scope",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1300
+    }
+  ],
+  "kind": "genesis/agent-benchmark-score-v0.1",
+  "modelSpecificMetrics": {
+    "includedInQualityScore": false,
+    "present": false,
+    "recordedBy": "genesis/agent-benchmark-run-v0.1"
+  },
+  "patch": {
+    "candidateUnits": 1074,
+    "changedPaths": [
+      "caps.toml"
+    ],
+    "editableScopeOk": true,
+    "expectedChangedPaths": [
+      "caps.toml"
+    ],
+    "referenceUnits": 1074
+  },
+  "policy": {
+    "broadenedAuthorities": [],
+    "candidateAuthorityIdentitySha256": "0c76222d749632e28b1b90db03a6d2192bede469852e78e4710bc2ff70d66423",
+    "referenceAuthorityIdentitySha256": "0c76222d749632e28b1b90db03a6d2192bede469852e78e4710bc2ff70d66423",
+    "scopeOk": true
+  },
+  "qualityScoreBasisPoints": 10000,
+  "resources": {
+    "candidateGeneratedBytes": 862,
+    "candidateUnits": 1771,
+    "limitsSatisfied": true,
+    "referenceGeneratedBytes": 862,
+    "referenceUnits": 1771
+  },
+  "scoreIdentitySha256": "36089d3749e69f248512a35bdbd43e4c1da3440c581990fbc4aaefe0512567d9",
+  "scoringId": "GC-AGENT-BENCHMARK-SCORING-v0.1",
+  "taskClass": "policy-minimization",
+  "validity": {
+    "failedDimensions": [],
+    "passed": true
+  },
+  "verification": [
+    {
+      "assertionsPassed": 2,
+      "exitCode": 0,
+      "generatedIdentitySha256": "b03cc105224710b9d209c734b3d71742a4b95373d53ab7cbe808d3c5637293a0",
+      "id": "authorized-run",
+      "kind": "genesis/run-v0.2",
+      "ok": true,
+      "outputIdentitySha256": "428a36ba368db8847cdb7c30dab7d05fbdec7aed765829a9c2a5f50e64791842",
+      "passed": true,
+      "resourceUnits": 1566
+    }
+  ],
+  "version": "0.1.0"
+}

@@ -120,11 +120,12 @@
   ],
   "campaignId": "codex-luna-xhigh-2026-07-17",
   "campaignIdentitySha256": "25305ca69d57165c1e86ae27efa3dfb3ebe481158e4d263fa1c610e29f5845ab",
-  "contentIdentitySha256": "92f22940939cec4cc8330b3de2fc914140c8478c3f6731e2252aeda2fea5b670",
+  "contentIdentitySha256": "5a26222d10b1d480f6ea3fa5d6db6b820f2e5fe86fb2d6aa76bbfdfada940ff4",
   "expansion": {
     "allowed": false,
     "reasonCodes": [
       "campaign/harness-defect",
+      "campaign/invalid-attempts",
       "campaign/model-unavailable"
     ]
   },
@@ -135,16 +136,20 @@
     "observedAttempts": 9
   },
   "nonClaims": [
-    "No GenesisCode capability score was observed because the requested model never began task execution.",
-    "The mutable luna alias is not an immutable model identity and this campaign is unranked.",
-    "This Open Agent campaign is not a fixed-scaffold Cold Acquisition result."
+    "This Open Agent campaign is not a fixed-scaffold Cold Acquisition result.",
+    "The provider-observed model revision is not immutable, so this campaign remains unranked.",
+    "No GenesisCode capability score was observed because the requested model never began task execution."
   ],
   "publicationClass": "authentic-unranked-open-agent",
   "summary": {
     "ambientSkillDiscoveryObserved": true,
+    "declaredEditableOutputRejectionObserved": false,
+    "eventLineLimitObserved": false,
     "failed": 0,
     "invalid": 9,
+    "modelExecutionObserved": false,
     "providerUnavailableForAccount": true,
+    "toolCacheContaminationObserved": false,
     "verified": 0
   },
   "version": "0.1.0"

@@ -49,6 +49,7 @@ mod agent_session;
 mod cli_json;
 mod cli_schema;
 mod cmd_agent_index;
+mod cmd_agent_index_open_agent;
 mod cmd_agent_lookup;
 mod cmd_agent_plan;
 mod cmd_agent_task_cards;

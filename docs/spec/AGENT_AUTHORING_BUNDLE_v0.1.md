@@ -25,6 +25,8 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json`
+- `docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json`
+- `docs/spec/GENESISBENCH_OPEN_AGENT_TOOL_ARCHIVE_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json`

@@ -20,6 +20,7 @@
     "secrets": {"$ref": "#/$defs/secrets"},
     "stopPolicy": {"$ref": "#/$defs/stopPolicy"},
     "track": {"$ref": "#/$defs/track"},
+    "tools": {"$ref": "#/$defs/tools"},
     "version": {"const": "0.1.0"}
   },
   "required": ["kind", "version", "campaignId", "phase", "cases", "authorities", "track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure", "stopPolicy", "host", "secrets", "publication", "contentIdentitySha256"],
@@ -85,7 +86,7 @@
     },
     "runner": {
       "additionalProperties": false,
-      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
+      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2", "codex-cli-hosted-v0.3", "codex-cli-local-v0.3"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
       "required": ["class", "executableSha256", "executableVersion", "invocationProfile", "localProvider"],
       "type": "object"
     },
@@ -105,6 +106,12 @@
       "additionalProperties": false,
       "properties": {"id": {"const": "open-agent"}, "rankEligible": {"const": false}, "scaffoldClass": {"const": "codex-cli"}, "scaffoldIdentitySha256": {"$ref": "#/$defs/hash"}},
       "required": ["id", "scaffoldClass", "scaffoldIdentitySha256", "rankEligible"],
+      "type": "object"
+    },
+    "tools": {
+      "additionalProperties": false,
+      "properties": {"genesisExecutableSha256": {"$ref": "#/$defs/hash"}, "selfhostArtifactSha256": {"$ref": "#/$defs/hash"}},
+      "required": ["genesisExecutableSha256", "selfhostArtifactSha256"],
       "type": "object"
     }
   }

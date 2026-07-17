@@ -1,0 +1,1123 @@
+{
+  "analysisPolicy": {
+    "authorityId": "genesisbench-analysis-plan",
+    "clusterKey": "lineageIdentitySha256",
+    "conditionUnit": "conditionId",
+    "crossCohortAggregationAllowed": false,
+    "engineAuthorityId": "genesisbench-analysis-engine",
+    "independentUnit": "lineageId",
+    "observationsSchemaAuthorityId": "genesisbench-observations-schema",
+    "predeclaredAnalysisRequiredForRanking": true,
+    "repeatedConditionsCountAsIndependent": false,
+    "reportSchemaAuthorityId": "genesisbench-analysis-report-schema"
+  },
+  "attemptPolicy": {
+    "allAttemptsRecorded": true,
+    "attemptCountPredeclared": true,
+    "bestOfNRankedAllowed": false,
+    "failedAttemptsPublished": true,
+    "rankedMaxAttempts": 1,
+    "retryBackoff": "none",
+    "selectionRule": "first-and-only-ranked-attempt",
+    "unrankedMaxAttempts": 16
+  },
+  "authorities": [
+    {
+      "bytes": 12133,
+      "id": "agent-core-card",
+      "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+      "sha256": "c270206840cc22491f58cc06f9674c796aa735d68755d0b1c468a6124c88b568"
+    },
+    {
+      "bytes": 37264,
+      "id": "agent-profile",
+      "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+      "sha256": "3bf97d938d59c5e853e6c9ea4cfa8d5140a0d59589f42ba7187048635503ca4c"
+    },
+    {
+      "bytes": 122581,
+      "id": "agent-task-benchmark",
+      "path": "benchmarks/agent_tasks/v0.1/suite.json",
+      "sha256": "3047cc6231016ef54a767f9aa7d4f23e4b3c9f8e7eea8c70617d651b450262b2"
+    },
+    {
+      "bytes": 8507,
+      "id": "agent-task-benchmark-schema",
+      "path": "docs/spec/GC_AGENT_TASK_BENCHMARK_v0.1.schema.json",
+      "sha256": "0a98cf5a5ca4d82d79b69f57c03d7673c140412ef2dff1b90d8d5c98ab71fe46"
+    },
+    {
+      "bytes": 19900,
+      "id": "agent-task-benchmark-validator",
+      "path": "scripts/lib/gc_task_benchmarks.py",
+      "sha256": "64f8a7d01d596e66182c10149da724cd3ffdc58678383543d46cfb8d3cb1cefa"
+    },
+    {
+      "bytes": 12919,
+      "id": "agent-task-cards",
+      "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+      "sha256": "2119ad977c08da4793a3ee363cfbe8e78668e49498b8d1433b1a9b3b683c52ad"
+    },
+    {
+      "bytes": 8116,
+      "id": "benchmark-run-integration-test",
+      "path": "crates/gc_cli/tests/cli_agent_benchmark_run.rs",
+      "sha256": "7e46451325d4f54d018c4b679031dab2f465898ec0fae49e4db8b9db4dfeec71"
+    },
+    {
+      "bytes": 19844,
+      "id": "benchmark-run-schema",
+      "path": "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+      "sha256": "21908dfefecc0fed484d11a81adae889aaeb8e4641d17882bb4a78f9533ccc09"
+    },
+    {
+      "bytes": 45822,
+      "id": "benchmark-run-verifier",
+      "path": "scripts/lib/gc_agent_benchmark_run.py",
+      "sha256": "fb183c7ac55601a0673ff1daee33da07dc76926749a07d471e6b1cccd26f266f"
+    },
+    {
+      "bytes": 6276,
+      "id": "benchmark-score-schema",
+      "path": "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+      "sha256": "3af427864e0449effea1b72aef9bdd0e35c8e643ce35048e66df40a0da7c76b4"
+    },
+    {
+      "bytes": 4109,
+      "id": "benchmark-scoring",
+      "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+      "sha256": "a6857db72b78c12162294e97c4eddb4307517eb6f14cc3ec9f396942b1ead617"
+    },
+    {
+      "bytes": 7019,
+      "id": "benchmark-scoring-schema",
+      "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
+      "sha256": "54fc999a4a039809bffe4e3404f8ffbfd909f2b66839b1a602ec4b09b96ad058"
+    },
+    {
+      "bytes": 1863,
+      "id": "capability-lease-protocol",
+      "path": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+      "sha256": "98a0411761585a06d666dc1b80efc4ae799271d6e7571d066822c7315d832f21"
+    },
+    {
+      "bytes": 2114,
+      "id": "capability-lease-protocol-schema",
+      "path": "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+      "sha256": "8a7f61031861be4e7fcc4ab09ab893d5df69cf76081f6d7f601f72c2b331a48e"
+    },
+    {
+      "bytes": 5822,
+      "id": "capability-lease-protocol-verifier",
+      "path": "scripts/lib/gc_capability_lease.py",
+      "sha256": "b8a3c5698b337d8df0ed682ccfac2e34025ae7cd86306a44a3b4d375e8d03c73"
+    },
+    {
+      "bytes": 20308,
+      "id": "genesis-mcp-catalog-source",
+      "path": "crates/gc_cli_driver/src/mcp/catalog.rs",
+      "sha256": "5b010e5be4da7c69ca8fe867a5a5fa2aa4ee5c0240a0eea1488e0b5ec7b59fa8"
+    },
+    {
+      "bytes": 1566,
+      "id": "genesisbench-adaptation-manifest-schema",
+      "path": "docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json",
+      "sha256": "e2fae2f8e040424bc28720c4da2876a9c58a849fd41742e9152b1505ab53166f"
+    },
+    {
+      "bytes": 610,
+      "id": "genesisbench-adapter-command-fixture",
+      "path": "benchmarks/genesisbench/v0.1/adapters/command_fixture.py",
+      "sha256": "b8ebc1756088abbc1e394db72bdee0acdd380a2a584d05820b9b8365a35f242e"
+    },
+    {
+      "bytes": 1472,
+      "id": "genesisbench-adapter-command-plugin-fixture",
+      "path": "benchmarks/genesisbench/v0.1/adapters/command-plugin.json",
+      "sha256": "fa9f6b00688edd3a0e28cce985997d475663d5c5b06bcce2911fc22e93e87eec"
+    },
+    {
+      "bytes": 1577,
+      "id": "genesisbench-adapter-direct-local-fixture",
+      "path": "benchmarks/genesisbench/v0.1/adapters/direct-local-runtime.json",
+      "sha256": "7eb74e00604f6703d47e471ecb0bf3de0f7554c97aaf95f15b85f6a7bf082ff6"
+    },
+    {
+      "bytes": 1456,
+      "id": "genesisbench-adapter-hosted-fixture",
+      "path": "benchmarks/genesisbench/v0.1/adapters/hosted-api.json",
+      "sha256": "ea3129df7fe5811974ab4963754231f95985602d83aca0fd3e51a8c945c0de9c"
+    },
+    {
+      "bytes": 1487,
+      "id": "genesisbench-adapter-local-openai-fixture",
+      "path": "benchmarks/genesisbench/v0.1/adapters/local-openai-compatible.json",
+      "sha256": "1cb49a6814d4cac316fb2a9d827b3d15a4c0f138673dbec15e12b67b5abd178e"
+    },
+    {
+      "bytes": 1192,
+      "id": "genesisbench-adapter-mock-fixture",
+      "path": "benchmarks/genesisbench/v0.1/adapters/deterministic-mock.json",
+      "sha256": "4205a5c1b93d9a4f180bfb9fc4f0f7a98e92fbad8725a96214cdde799a753cc5"
+    },
+    {
+      "bytes": 8946,
+      "id": "genesisbench-adapter-profile",
+      "path": "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json",
+      "sha256": "88af212d99fdec004dea27048a874449a268a4ddc2704265a8777115ad3077be"
+    },
+    {
+      "bytes": 3530,
+      "id": "genesisbench-adapter-profile-schema",
+      "path": "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json",
+      "sha256": "5b66e691c2a1810d602a098b78693d07d0f51fb6df1e9a620be720482166540a"
+    },
+    {
+      "bytes": 4105,
+      "id": "genesisbench-adapter-request-schema",
+      "path": "docs/spec/GENESISBENCH_ADAPTER_REQUEST_v0.1.schema.json",
+      "sha256": "957d5a06c935b1f986128c48a157ed3b84c98e943c6febac101d6267835563ad"
+    },
+    {
+      "bytes": 6239,
+      "id": "genesisbench-adapter-response-schema",
+      "path": "docs/spec/GENESISBENCH_ADAPTER_RESPONSE_v0.1.schema.json",
+      "sha256": "1d2cd9e69b92cecee46b87b8344bf88567fd5b8543f4a70ec530d981dcc6470c"
+    },
+    {
+      "bytes": 9104,
+      "id": "genesisbench-adapter-schema",
+      "path": "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json",
+      "sha256": "fdadb6008b286dc502b8842826bd4b94e3b7264b14575095f834e6b10ccbdae0"
+    },
+    {
+      "bytes": 25233,
+      "id": "genesisbench-analysis-engine",
+      "path": "scripts/lib/genesisbench_analysis.py",
+      "sha256": "a66e43ad86f5ad9e3b6ae3c9bd5a84773312fbfd0ac47d28ec02131a33c6f32a"
+    },
+    {
+      "bytes": 2423,
+      "id": "genesisbench-analysis-plan",
+      "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
+      "sha256": "5d189f9c8d192424d2f41da32a98b05c0877fa76d3a4411a630b903c6b84b235"
+    },
+    {
+      "bytes": 4614,
+      "id": "genesisbench-analysis-plan-schema",
+      "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
+      "sha256": "22234c0259f8ff4d809156d783653457529f1d21d9bad382b9b95dbc0ba57129"
+    },
+    {
+      "bytes": 6448,
+      "id": "genesisbench-analysis-report-schema",
+      "path": "docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json",
+      "sha256": "3b4e2bb898965d5f872f892569a297acaf8a5329361c8802d99de5bdc7814b99"
+    },
+    {
+      "bytes": 1679,
+      "id": "genesisbench-bundle-manifest-schema",
+      "path": "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
+      "sha256": "af540b84ac2f57c271faaae3e8249de509acf1fe4b5ab42e7413a4932692fd40"
+    },
+    {
+      "bytes": 3449,
+      "id": "genesisbench-construct-integration-test",
+      "path": "crates/gc_cli/tests/cli_genesisbench_construct_validity.rs",
+      "sha256": "e32dc904580e05ae1ededcb0a12b058d8f01b46ea463cf8cfc3ad2b3a6d3cb22"
+    },
+    {
+      "bytes": 2042,
+      "id": "genesisbench-construct-policy",
+      "path": "policies/genesisbench_construct_validity_v0.1.json",
+      "sha256": "46e599503def80b6da9891a9d4235ccc8f1a88f69d82c5bdba7e2cab99533fcf"
+    },
+    {
+      "bytes": 16571,
+      "id": "genesisbench-construct-report",
+      "path": "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+      "sha256": "b3a259dec2ac84c42a66e91296ed75e484838bc024971acb984f14ff3b89e3b8"
+    },
+    {
+      "bytes": 7614,
+      "id": "genesisbench-construct-report-schema",
+      "path": "docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json",
+      "sha256": "b41e6da7f9716157a983657638c75aa8d6ac782d243566846033cb875fc63406"
+    },
+    {
+      "bytes": 29324,
+      "id": "genesisbench-construct-runtime",
+      "path": "scripts/lib/genesisbench_construct_validity.py",
+      "sha256": "8ef750406b50d6ea22fb5c43ce076a7b11d42e1e963446c67d029f3b4f94bb06"
+    },
+    {
+      "bytes": 4137,
+      "id": "genesisbench-contamination-attestation-schema",
+      "path": "docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json",
+      "sha256": "d8f5360a8ebde7d8d7ca5df7225f916074df864dec7e8dd9c77b2a765be10dc5"
+    },
+    {
+      "bytes": 17563,
+      "id": "genesisbench-contamination-classifier",
+      "path": "scripts/lib/genesisbench_contamination.py",
+      "sha256": "a49d284e84bebb382855ec65aa642c0d50c8d78d587ddd648aad25a16ead7716"
+    },
+    {
+      "bytes": 7027,
+      "id": "genesisbench-eligibility-schema",
+      "path": "docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json",
+      "sha256": "cd3519ae22326fa97d193b3c2f4f048c3422aa1e9e7dcdc8ad6cbb054d795144"
+    },
+    {
+      "bytes": 7498,
+      "id": "genesisbench-eligibility-verifier",
+      "path": "scripts/lib/genesisbench_eligibility.py",
+      "sha256": "a5069c7a3c95a21a5ed3e39c01ee639696095d24a69b836ab8e0f542df5df1e5"
+    },
+    {
+      "bytes": 6837,
+      "id": "genesisbench-execution-run-schema",
+      "path": "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json",
+      "sha256": "9bea33234590a9bbb6ade604621d51539cf1db68e2bf0351e01f012784f5d28b"
+    },
+    {
+      "bytes": 19085,
+      "id": "genesisbench-front-door-integration-test",
+      "path": "crates/gc_cli/tests/cli_genesisbench_front_door.rs",
+      "sha256": "6d5426c6ab9bc29839853400397c62d0f0cae97e0a1a4f262d2004f7a8984f12"
+    },
+    {
+      "bytes": 86236,
+      "id": "genesisbench-front-door-runtime",
+      "path": "scripts/lib/genesisbench_front_door.py",
+      "sha256": "902c5b24e7eca471dc21bfd9f8d7f76608e2f5bcc72a0873b0ac34e3ec85efc8"
+    },
+    {
+      "bytes": 16797,
+      "id": "genesisbench-front-door-spec",
+      "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
+      "sha256": "1c976ab2db7aeeae03e48a9ea614bab3bba799fafcc82ccc8e51274f7544e84b"
+    },
+    {
+      "bytes": 1471,
+      "id": "genesisbench-hardware-evidence-schema",
+      "path": "docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json",
+      "sha256": "c32ef46008f9244c5c8b4ca8922f3dadf664909d9a696e0ac21e0ba2ce626b73"
+    },
+    {
+      "bytes": 17712,
+      "id": "genesisbench-integration-test",
+      "path": "crates/gc_cli/tests/cli_agent_index.rs",
+      "sha256": "d3df0cbd6cd19a74ab433361b08a54a085481d5edbbfaecb78a8d2c6ac0e6779"
+    },
+    {
+      "bytes": 43808,
+      "id": "genesisbench-leaderboard-schema",
+      "path": "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
+      "sha256": "7ed78f85992ab6c7cc99f455be5fca01c1d0f6ff6520787b25a4880f2bdcfb93"
+    },
+    {
+      "bytes": 30203,
+      "id": "genesisbench-normative-spec",
+      "path": "guides/genesisbench.qmd",
+      "sha256": "832cc13a66110ca910d35f1195c37420f316fa9605f33032f56df707a9f604dc"
+    },
+    {
+      "bytes": 2328,
+      "id": "genesisbench-observations-schema",
+      "path": "docs/spec/GENESISBENCH_OBSERVATIONS_v0.1.schema.json",
+      "sha256": "c7787583a15f3242b626769b894d0400a6b97d2a5dfd0ec023cb42ab9866ea5f"
+    },
+    {
+      "bytes": 22184,
+      "id": "genesisbench-profile-schema",
+      "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
+      "sha256": "7ba90c818d30e1bc02766eac3ad5eff0b05e3ce916d4792ed4467fff2c0c98f6"
+    },
+    {
+      "bytes": 19761,
+      "id": "genesisbench-protocol-contract",
+      "path": "scripts/lib/genesisbench_protocol_contract.py",
+      "sha256": "573d2f94dc68c091b942f5f97e67f786119d1d71a7a16a21fe8201f0f42425fd"
+    },
+    {
+      "bytes": 8730,
+      "id": "genesisbench-reference-agent",
+      "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+      "sha256": "7c8420f566f29fc58ca7e30b4d8fbc23c661196a0ae1272785dcc05c9c7c1304"
+    },
+    {
+      "bytes": 47673,
+      "id": "genesisbench-reference-agent-ablations",
+      "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+      "sha256": "ac22dc23a67f0274c72607e0b6823c6e59067afd22ef4273aa899a3cb217a597"
+    },
+    {
+      "bytes": 4871,
+      "id": "genesisbench-reference-agent-ablations-schema",
+      "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+      "sha256": "760334fbf3e68ee18ec6aa46cf8b28d9744ea3c008a390db986e6652084c66a1"
+    },
+    {
+      "bytes": 5733,
+      "id": "genesisbench-reference-agent-plan-fixture",
+      "path": "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+      "sha256": "397f3ac14363938d581da0da7aa12249b9183589ae569fdcc4890731a9493c74"
+    },
+    {
+      "bytes": 1032,
+      "id": "genesisbench-reference-agent-retrieval",
+      "path": "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+      "sha256": "4ef01f285f6f8b968107f63988c79abad7096ce3c640269dcfea5e0d2704f628"
+    },
+    {
+      "bytes": 9730,
+      "id": "genesisbench-reference-agent-schema",
+      "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
+      "sha256": "e839917454ab0f5c83ecbffe883996af05bc7dc6802fe401f6cd37d5857bb205"
+    },
+    {
+      "bytes": 1181,
+      "id": "genesisbench-reference-agent-system-prompt",
+      "path": "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+      "sha256": "da637405bebc9bd518d2f0525b21a4e5d45dc883630cc1c1b35ffa18aed0af65"
+    },
+    {
+      "bytes": 4427,
+      "id": "genesisbench-reference-agent-trace-fixture",
+      "path": "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+      "sha256": "3768e8da2b6454ef8ce18ec136bdaab0ba0b95fa25375cf2b1e6aad5aa4541a1"
+    },
+    {
+      "bytes": 2212,
+      "id": "genesisbench-reference-agent-trace-schema",
+      "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+      "sha256": "be49df09f050040221da43d3cba2885323472d433c09615ca2225af6d516ca04"
+    },
+    {
+      "bytes": 35196,
+      "id": "genesisbench-reference-agent-validator",
+      "path": "scripts/lib/genesisbench_reference_agent.py",
+      "sha256": "74b8474a41824cc7fab35557ef83c11d0d73c9c9b8ad8f9092eaab835d1d1fff"
+    },
+    {
+      "bytes": 1767,
+      "id": "genesisbench-registry-authority",
+      "path": "docs/spec/GENESISBENCH_REGISTRY_v0.1.json",
+      "sha256": "cf276c3cb0e0863c494e8a8d15b244ff0516ba6442a0174519ae336406f83402"
+    },
+    {
+      "bytes": 3366,
+      "id": "genesisbench-registry-checkpoint-schema",
+      "path": "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
+      "sha256": "abab627807e8ec698ef9bd5e005efc9d4831b6d18d8e3428af9afab411c36f0d"
+    },
+    {
+      "bytes": 3339,
+      "id": "genesisbench-registry-event-schema",
+      "path": "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
+      "sha256": "6f97ff4279a7c5fd519095d53d7898eb63fa73ba21fce543685b46a5827c4b76"
+    },
+    {
+      "bytes": 17939,
+      "id": "genesisbench-registry-integration-test",
+      "path": "crates/gc_cli/tests/cli_genesisbench_registry.rs",
+      "sha256": "7a48282dfd3d5ac961788bffbb03cac7c7ea2f9df0315876e88e32c4bbd7d1ba"
+    },
+    {
+      "bytes": 4402,
+      "id": "genesisbench-registry-policy-schema",
+      "path": "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json",
+      "sha256": "aa460f77574fa4710f231b219ba1d51adf951b219a93855d32b3279da5a2da04"
+    },
+    {
+      "bytes": 17529,
+      "id": "genesisbench-registry-result-schema",
+      "path": "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json",
+      "sha256": "f79c782a8763306125ec5443e83bb2f93b3e810786e098e1f6bdd4e06a163f7d"
+    },
+    {
+      "bytes": 89945,
+      "id": "genesisbench-registry-runtime",
+      "path": "scripts/lib/genesisbench_registry.py",
+      "sha256": "4769d4c2401fbaaecf0adc70d89a8fff64e7c7643c7d6057232fc0faab0bbe65"
+    },
+    {
+      "bytes": 4782,
+      "id": "genesisbench-run-binding",
+      "path": "scripts/lib/genesisbench_protocol_run.py",
+      "sha256": "7d5293d1a28d2870adec279d1f693d496ec86c0bf61cbbc0bd4d22d2f018e3d5"
+    },
+    {
+      "bytes": 2920,
+      "id": "genesisbench-scaffold-manifest-schema",
+      "path": "docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json",
+      "sha256": "527c402107d7f72f309f451e581be1ec5a4dc81140b329d8e0490ccfb36c9c2e"
+    },
+    {
+      "bytes": 12094,
+      "id": "genesisbench-signed-submission-schema",
+      "path": "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json",
+      "sha256": "f5435f31df34a9d2b4281836c5be502c443a009369ce4be4f1f1fb35306a181a"
+    },
+    {
+      "bytes": 6999,
+      "id": "genesisbench-submission-claim-schema",
+      "path": "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json",
+      "sha256": "3b5e763dd53de6eaae091f1750018c0a636269a06e3fbb39f0556f03484b528a"
+    },
+    {
+      "bytes": 24372,
+      "id": "genesisbench-track-contract",
+      "path": "scripts/lib/genesisbench_tracks.py",
+      "sha256": "b84990e4b57cd7ef097dec5055f9c49e84434c6ae356396c7345f1df0f23183e"
+    },
+    {
+      "bytes": 38703,
+      "id": "genesisbench-verifier",
+      "path": "scripts/lib/genesisbench_protocol.py",
+      "sha256": "053702128f5fb2ebd7eb76cd254ddb4fe6b4c972ead02ceeabc119dcdd8dde18"
+    },
+    {
+      "bytes": 78248,
+      "id": "held-out-evaluation",
+      "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+      "sha256": "d28eae2d483195a34065aaea390cee91b8bf65be10dd7bafd0e9d3af54d6e7f8"
+    },
+    {
+      "bytes": 13030,
+      "id": "held-out-evaluation-schema",
+      "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+      "sha256": "dbc25b471ac55ddd329844f47aacedf6b7c07fe8143b89daa128c3eae6b243ff"
+    },
+    {
+      "bytes": 41746,
+      "id": "held-out-evaluation-verifier",
+      "path": "scripts/lib/gc_held_out_evaluation.py",
+      "sha256": "193086d4d152765ded6c817946804efac3f8632db45ef11ebef60f79b220c916"
+    },
+    {
+      "bytes": 1287,
+      "id": "held-out-private-pack-schema",
+      "path": "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
+      "sha256": "4fb802673b575ec0faf7c4e9587ef0ad6495ce667259a401646a1fba201a1a31"
+    },
+    {
+      "bytes": 2325,
+      "id": "model-runner-effect",
+      "path": "docs/spec/GC_AGENT_MODEL_RUNNER_EFFECT_v0.1.json",
+      "sha256": "4f85f364fe6faba12d8c837ca061811bfc828ac6d5574facafeceb4bef4a4ee3"
+    },
+    {
+      "bytes": 912,
+      "id": "temporal-epoch-audit",
+      "path": "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
+      "sha256": "271f52604ade99259a1ff6bb2ec9d1daefc7fe75ace52d5f3d3ae81475b2c405"
+    }
+  ],
+  "capabilityPolicy": {
+    "agentMayBroaden": false,
+    "authoritySource": "protocol-plus-case-owned-capability-policy",
+    "caseMinimumIsCeiling": true,
+    "defaultDecision": "deny",
+    "effectLogRequired": true,
+    "hardResourceBoundsRequired": true,
+    "policyMinimizationScored": true,
+    "replayRequired": true,
+    "wildcardsAllowed": false
+  },
+  "contaminationPolicy": {
+    "attestationSchemaAuthorityId": "genesisbench-contamination-attestation-schema",
+    "claimMustEqualStrongestSupportedLabel": true,
+    "declaredUncontaminatedRequiresAttestation": true,
+    "defaultLabel": "unknown",
+    "evidenceOrder": [
+      "known-exposure",
+      "temporal-precommitment",
+      "declared-non-exposure",
+      "insufficient-evidence"
+    ],
+    "knownExposureOverridesAll": "declared-contaminated",
+    "labels": [
+      "declared-contaminated",
+      "declared-uncontaminated",
+      "temporal-clean",
+      "unknown"
+    ],
+    "newLanguageImpliesClean": false,
+    "publicReferenceLabel": "declared-contaminated",
+    "temporalCleanEvidence": {
+      "activeUndisclosedEpochRequired": true,
+      "commitmentAndCustodyRequired": true,
+      "modelImmutableReleaseRequired": true,
+      "taskPrecommitAfterModelReleaseRequired": true,
+      "trainingCutoffRequired": true
+    }
+  },
+  "contentIdentitySha256": "b3aee80131ab951586bab2404e8ef52a774d3c8fe64346b0b25511014f6fbe6b",
+  "contextPolicy": {
+    "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
+    "authorityOrder": [
+      "system-policy",
+      "agent-profile",
+      "task-card",
+      "context-pack-or-retrieval-transcript",
+      "task-prompt",
+      "task-inputs"
+    ],
+    "cohortSeparationRequired": true,
+    "completeCaptureRequired": true,
+    "forbiddenPaths": [
+      ".genesis/private/",
+      ".git/",
+      "benchmarks/agent_tasks/v0.1/references/",
+      "docs/program/held-out-disclosures/",
+      "examples/agent_benchmark_reproducibility/candidate/",
+      "examples/agent_benchmark_reproducibility/invocation/model-output.txt"
+    ],
+    "maxArtifactBytes": 1048576,
+    "maxAssembledBytes": 8388608,
+    "modes": [
+      {
+        "artifacts": [
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/CLI.md",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"
+        ],
+        "contextBytes": 281532,
+        "contextTier": "large",
+        "exposure": "closed-artifact-pack",
+        "id": "compact-large",
+        "rankingCohort": "context-compact-large",
+        "retrieval": "none",
+        "sourceComponent": "documentation"
+      },
+      {
+        "artifacts": [
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+          "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+          "docs/spec/CLI.md"
+        ],
+        "contextBytes": 34324,
+        "contextTier": "medium",
+        "exposure": "closed-artifact-pack",
+        "id": "compact-medium",
+        "rankingCohort": "context-compact-medium",
+        "retrieval": "none",
+        "sourceComponent": "documentation"
+      },
+      {
+        "artifacts": [
+          "docs/spec/GC_AGENT_CORE_CARD_v0.3.md"
+        ],
+        "contextBytes": 3947,
+        "contextTier": "small",
+        "exposure": "closed-artifact-pack",
+        "id": "compact-small",
+        "rankingCohort": "context-compact-small",
+        "retrieval": "none",
+        "sourceComponent": "documentation"
+      },
+      {
+        "artifacts": [],
+        "contextBytes": null,
+        "contextTier": null,
+        "exposure": "read-only-content-addressed-retrieval",
+        "id": "repository-readonly",
+        "rankingCohort": "context-repository-readonly",
+        "retrieval": "logged-exact-artifact",
+        "sourceComponent": "repository"
+      }
+    ],
+    "promptMaySelectAuthority": false,
+    "retrievalTranscriptRequired": true
+  },
+  "eligibilityPolicy": {
+    "cohortKeys": [
+      "attempt-policy-identity",
+      "contamination-label",
+      "context-mode",
+      "hardware-class",
+      "interaction-mode",
+      "language-profile-artifact",
+      "protocol-identity",
+      "scaffold-identity",
+      "task-epoch",
+      "task-visibility",
+      "track"
+    ],
+    "decisions": [
+      "invalid",
+      "ranked",
+      "unranked"
+    ],
+    "historicalResultsMutable": false,
+    "invalidReasonCodes": [
+      "authority/mismatch",
+      "capability/broadened",
+      "contamination/overclaim",
+      "context/oracle-leak",
+      "profile/mismatch",
+      "run/invalid",
+      "score/mismatch",
+      "snapshot/mismatch",
+      "track/declaration-mismatch",
+      "track/hardware-class-mismatch",
+      "track/offline-violation",
+      "track/scaffold-mismatch"
+    ],
+    "missingEvidenceDecision": "unranked",
+    "rankedRequirements": [
+      "attempt-policy-exact",
+      "capability-policy-exact",
+      "complete-model-disclosure",
+      "independent-byte-identical-rescore",
+      "non-public-oracle",
+      "profile-and-snapshot-valid",
+      "strongest-contamination-label",
+      "tool-and-context-policy-exact",
+      "track-and-cohort-exact",
+      "valid-closed-run-record"
+    ],
+    "silentSuppressionAllowed": false,
+    "unrankedReasonCodes": [
+      "attempt/multiple",
+      "evidence/incomplete",
+      "model/conformance-fixture",
+      "score/not-independently-rescored",
+      "task/public-reference",
+      "track/admission-not-open",
+      "track/hardware-evidence-incomplete",
+      "track/training-provenance-incomplete",
+      "visibility/practice-only"
+    ]
+  },
+  "kind": "genesis/genesisbench-protocol-v0.1",
+  "modelDisclosurePolicy": {
+    "decodingIntegerEncoded": true,
+    "immutableRevisionRequired": true,
+    "promptRetention": "complete-or-cryptographic-commitment-with-custody",
+    "requiredFields": [
+      "decoding",
+      "model-id",
+      "model-revision",
+      "provider-id",
+      "provider-kind",
+      "prompt-assembly",
+      "runtime",
+      "secret-policy",
+      "tokenizer",
+      "training-cutoff-for-clean-claims",
+      "weights-for-local-models"
+    ],
+    "runtimeRequired": true,
+    "secretsForbidden": true,
+    "tokenizerRequired": true,
+    "trainingCutoffRequiredForCleanClaims": true,
+    "unknownProvenanceDefault": "unknown",
+    "weightsRequiredForLocal": true
+  },
+  "protocolId": "GenesisBench-v0.1",
+  "scoringPolicy": {
+    "authorityId": "benchmark-scoring",
+    "deterministicArtifactScoringRequired": true,
+    "dimensionBreakdownPublished": true,
+    "independentRescoreRequiredForRanking": true,
+    "invalidScoreBasisPoints": 0,
+    "judgeModelPreferenceIncluded": false,
+    "modelMetricsIncluded": false,
+    "qualityScaleBasisPoints": 10000,
+    "scoreIdentityRequired": true
+  },
+  "selfHosting": {
+    "absolutePathsAllowed": false,
+    "canonicalOutput": "ascii-json-sorted-keys-newline",
+    "commands": [
+      {
+        "argv": [
+          "python3",
+          "scripts/lib/genesisbench_protocol.py",
+          "--check"
+        ],
+        "id": "check-profile"
+      },
+      {
+        "argv": [
+          "python3",
+          "scripts/lib/gc_held_out_evaluation.py",
+          "--check",
+          "--self-test"
+        ],
+        "id": "check-temporal-epoch"
+      },
+      {
+        "argv": [
+          "python3",
+          "scripts/lib/genesisbench_protocol.py",
+          "--check",
+          "--run",
+          "RUN.json",
+          "--attestation",
+          "ATTESTATION.json",
+          "--json"
+        ],
+        "id": "classify-run"
+      },
+      {
+        "argv": [
+          "python3",
+          "scripts/lib/gc_agent_benchmark_run.py",
+          "--check",
+          "--run",
+          "RUN.json"
+        ],
+        "id": "validate-run"
+      },
+      {
+        "argv": [
+          "python3",
+          "scripts/lib/gc_agent_scoring.py",
+          "--score",
+          "--case",
+          "CASE",
+          "--candidate",
+          "CANDIDATE",
+          "--genesis-bin",
+          "GENESIS",
+          "--selfhost-artifact",
+          "ARTIFACT"
+        ],
+        "id": "rescore"
+      },
+      {
+        "argv": [
+          "python3",
+          "scripts/lib/genesisbench_analysis.py",
+          "--check"
+        ],
+        "id": "analyze"
+      }
+    ],
+    "eligibilitySchemaAuthorityId": "genesisbench-eligibility-schema",
+    "mandatoryDependencies": [
+      "git",
+      "python3"
+    ],
+    "networkRequired": false,
+    "updateDuringCheckAllowed": false
+  },
+  "sourceSnapshot": {
+    "artifactCount": 1775,
+    "bytes": 17263055,
+    "commitSha1": "861a28957f03fb32d359fb6309ca828e5ed281a0",
+    "committedAt": "2026-07-15T19:56:25-05:00",
+    "completeTree": true,
+    "components": [
+      {
+        "artifactCount": 63,
+        "bytes": 727362,
+        "excludePrefixes": [
+          "benchmarks/agent_tasks/v0.1/references/"
+        ],
+        "id": "benchmark",
+        "identitySha256": "00d8e33387c66cb7bcccaf491380ff3bd021eb6630615f36721628688c360cbe",
+        "includeExact": [
+          "docs/spec/GC_AGENT_BENCHMARK_RUN_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORE_v0.1.schema.json",
+          "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
+          "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
+          "docs/spec/GC_AGENT_HELD_OUT_PRIVATE_PACK_v0.1.schema.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.json",
+          "docs/spec/GC_CAPABILITY_LEASE_PROTOCOL_v0.1.schema.json",
+          "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
+          "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json",
+          "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_ADAPTER_REQUEST_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_ADAPTER_RESPONSE_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REGISTRY_v0.1.json",
+          "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_SIGNED_SUBMISSION_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REGISTRY_POLICY_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REGISTRY_RESULT_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REGISTRY_EVENT_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_REGISTRY_CHECKPOINT_v0.1.schema.json",
+          "docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json",
+          "policies/genesisbench_construct_validity_v0.1.json",
+          "docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json",
+          "benchmarks/genesisbench/v0.1/construct-validity/report.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
+          "benchmarks/genesisbench/v0.1/reference-agent/system.md",
+          "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
+          "scripts/lib/genesisbench_reference_agent.py",
+          "scripts/lib/genesisbench_front_door.py",
+          "scripts/lib/genesisbench_registry.py",
+          "scripts/lib/genesisbench_construct_validity.py"
+        ],
+        "includePrefixes": [
+          "benchmarks/agent_tasks/v0.1/",
+          "benchmarks/genesisbench/v0.1/adapters/",
+          "benchmarks/genesisbench/v0.1/construct-validity/"
+        ]
+      },
+      {
+        "artifactCount": 301,
+        "bytes": 4101229,
+        "excludePrefixes": [
+          "docs/program/held-out-disclosures/"
+        ],
+        "id": "documentation",
+        "identitySha256": "3a9822814d3f17fd30fb09049e952eb0b6d99c74c173908eec0f7e2679ad16f6",
+        "includeExact": [
+          "README.md",
+          "llms.txt"
+        ],
+        "includePrefixes": [
+          "docs/",
+          "guides/",
+          "learn/",
+          "reference/"
+        ]
+      },
+      {
+        "artifactCount": 693,
+        "bytes": 7839676,
+        "excludePrefixes": [],
+        "id": "runtime",
+        "identitySha256": "d6c7db8bc5c77b2432af0224b211c421aa76e274706e2302364e705fbd0d9cdb",
+        "includeExact": [
+          "Cargo.lock",
+          "Cargo.toml",
+          "genesis.lock",
+          "rust-toolchain.toml"
+        ],
+        "includePrefixes": [
+          "crates/",
+          "prelude/",
+          "selfhost/"
+        ]
+      }
+    ],
+    "manifestAlgorithm": "sha256-canonical-json-path-mode-type-bytes-content-sha256-v0.1",
+    "manifestIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "objectFormat": "git-sha1-plus-complete-content-sha256-manifest",
+    "repositoryUrl": "https://github.com/corbensorenson/genesisCode.git",
+    "treeSha1": "e58c48aac51026af4895265fa7736ac167ab8ca4"
+  },
+  "status": "active",
+  "taskVisibilityPolicy": {
+    "activeHeldOutEpochId": "epoch-2026-07-b",
+    "classes": [
+      {
+        "allowedContaminationLabels": [
+          "declared-contaminated",
+          "declared-uncontaminated",
+          "unknown"
+        ],
+        "id": "held-out-commitment",
+        "oracleExposure": "commitment-only",
+        "rankedAllowed": true,
+        "split": "held-out"
+      },
+      {
+        "allowedContaminationLabels": [
+          "declared-contaminated",
+          "declared-uncontaminated",
+          "unknown"
+        ],
+        "id": "public-anchor-hidden-oracle",
+        "oracleExposure": "hidden",
+        "rankedAllowed": true,
+        "split": "public-test"
+      },
+      {
+        "allowedContaminationLabels": [
+          "declared-contaminated"
+        ],
+        "id": "public-development-reference",
+        "oracleExposure": "public-development-reference",
+        "rankedAllowed": false,
+        "split": "public-test"
+      },
+      {
+        "allowedContaminationLabels": [
+          "temporal-clean"
+        ],
+        "id": "temporal-held-out",
+        "oracleExposure": "commitment-only",
+        "rankedAllowed": true,
+        "split": "held-out"
+      }
+    ],
+    "heldOutAuthorityId": "held-out-evaluation",
+    "mixedEpochAggregationAllowed": false,
+    "oracleAccessByModelAllowed": false,
+    "publicBenchmarkAuthorityId": "agent-task-benchmark",
+    "visibilityRecordedBeforeInvocation": true
+  },
+  "toolPolicy": {
+    "allowedInteractionModes": [
+      "artifact-response-v0.1",
+      "genesis-mcp-2025-11-25"
+    ],
+    "allowedTools": [
+      "apply-patch",
+      "build",
+      "check",
+      "diff",
+      "explain",
+      "format",
+      "get-card",
+      "package",
+      "parse",
+      "replay",
+      "run",
+      "search-symbol",
+      "session-abort",
+      "session-apply",
+      "session-begin",
+      "session-stage",
+      "session-status",
+      "session-test",
+      "test",
+      "verify"
+    ],
+    "ambientFilesystemAllowed": false,
+    "ambientNetworkAllowed": false,
+    "arbitraryShellAllowed": false,
+    "catalogAuthorityId": "genesis-mcp-catalog-source",
+    "completeTranscriptRequired": true,
+    "interfaceId": "genesis/mcp-interface-v0.1",
+    "mcpProtocolVersion": "2025-11-25",
+    "providerControlChannel": "separate-from-candidate-tool-authority",
+    "toolErrorsRecorded": true,
+    "transport": "bounded-stdio-json-rpc"
+  },
+  "trackPolicy": {
+    "adaptationManifestSchemaAuthorityId": "genesisbench-adaptation-manifest-schema",
+    "cohortIdentityAlgorithm": "sha256-canonical-json-v0.1",
+    "cohortKeys": [
+      "attempt-policy-identity",
+      "contamination-label",
+      "context-mode",
+      "hardware-class",
+      "interaction-mode",
+      "language-profile-artifact",
+      "protocol-identity",
+      "scaffold-identity",
+      "task-epoch",
+      "task-visibility",
+      "track"
+    ],
+    "comparisonRule": "same-track-and-content-addressed-cohort-only",
+    "crossTrackRankingAllowed": false,
+    "fixedReferenceAblationAuthorityId": "genesisbench-reference-agent-ablations",
+    "fixedReferenceProfileAuthorityId": "genesisbench-reference-agent",
+    "fixedReferenceProfileSchemaAuthorityId": "genesisbench-reference-agent-schema",
+    "fixedReferenceTraceSchemaAuthorityId": "genesisbench-reference-agent-trace-schema",
+    "hardwareClasses": [
+      {
+        "id": "embedded-s",
+        "maxCombinedResidentBytes": 4294967296
+      },
+      {
+        "id": "embedded-m",
+        "maxCombinedResidentBytes": 17179869184
+      },
+      {
+        "id": "embedded-l",
+        "maxCombinedResidentBytes": 68719476736
+      }
+    ],
+    "hardwareEvidenceRequiredForRanking": true,
+    "hardwareEvidenceSchemaAuthorityId": "genesisbench-hardware-evidence-schema",
+    "hardwareFootprintBasis": "peak-combined-model-and-runtime-resident-bytes",
+    "hardwareMembershipRule": "smallest-class-whose-bound-covers-combined-resident-bytes",
+    "kind": "genesis/genesisbench-track-policy-v0.1",
+    "rawScaffoldedAdaptedAndLocalAggregatesMayMix": false,
+    "resourceCeilingsSharedAcrossTracks": true,
+    "scaffoldManifestSchemaAuthorityId": "genesisbench-scaffold-manifest-schema",
+    "tracks": [
+      {
+        "genesisSpecificTraining": [
+          "none"
+        ],
+        "id": "cold-acquisition",
+        "inferenceModes": [
+          "local-offline",
+          "remote-disclosed"
+        ],
+        "purpose": "headline-model-comparison",
+        "rankedAdmissionOpen": true,
+        "scaffoldClasses": [
+          "fixed-reference"
+        ]
+      },
+      {
+        "genesisSpecificTraining": [
+          "declared-public",
+          "none",
+          "unknown"
+        ],
+        "id": "embedded-local",
+        "inferenceModes": [
+          "local-offline"
+        ],
+        "purpose": "self-hosted-local-appliance",
+        "rankedAdmissionOpen": true,
+        "scaffoldClasses": [
+          "disclosed-custom",
+          "fixed-reference"
+        ]
+      },
+      {
+        "genesisSpecificTraining": [
+          "declared-public"
+        ],
+        "id": "genesis-adapted",
+        "inferenceModes": [
+          "local-offline",
+          "remote-disclosed"
+        ],
+        "purpose": "lineage-audited-public-adaptation",
+        "rankedAdmissionOpen": true,
+        "scaffoldClasses": [
+          "disclosed-custom",
+          "fixed-reference"
+        ]
+      },
+      {
+        "genesisSpecificTraining": [
+          "none",
+          "unknown"
+        ],
+        "id": "open-agent",
+        "inferenceModes": [
+          "local-offline",
+          "remote-disclosed"
+        ],
+        "purpose": "disclosed-retrieval-and-orchestration",
+        "rankedAdmissionOpen": true,
+        "scaffoldClasses": [
+          "disclosed-custom",
+          "fixed-reference"
+        ]
+      }
+    ],
+    "version": "0.1.0"
+  },
+  "version": "0.1.0"
+}

@@ -496,7 +496,138 @@ fn retained_luna_campaign_replays_after_current_authorities_advance() {
     assert_eq!(report["matrix"]["complete"], true);
     assert_eq!(report["summary"]["invalid"], 9);
     assert_eq!(report["summary"]["providerUnavailableForAccount"], true);
+    assert_eq!(report["summary"]["modelExecutionObserved"], false);
     assert_eq!(report["expansion"]["allowed"], false);
+}
+
+#[test]
+fn retained_available_luna_campaign_replays_with_typed_harness_defects() {
+    let root = support::repo_root();
+    let temp = tempdir().expect("temporary historical Luna replay root");
+    let artifact = support::copy_repo_toolchain_artifact(temp.path());
+    let campaign = root.join(
+        "benchmarks/genesisbench/v0.1/campaigns/\
+         codex-gpt-5-6-luna-xhigh-2026-07-17/reality-gate",
+    );
+    let cases = [
+        "completion-small",
+        "deployment-small",
+        "generation-small",
+        "package-migration-small",
+        "performance-repair-small",
+        "policy-minimization-small",
+        "refactor-small",
+        "repair-small",
+        "replay-investigation-small",
+    ];
+    for case in cases {
+        let run = campaign.join("runs").join(case).join("run.json");
+        let validated = data(&run_genesis(
+            &root,
+            &artifact,
+            &["bench", "agent-validate", "--run", run.to_str().unwrap()],
+        ));
+        let expected = if case == "package-migration-small" {
+            "verified"
+        } else {
+            "invalid"
+        };
+        assert_eq!(validated["outcome"], expected);
+
+        let replayed = data(&run_genesis(
+            &root,
+            &artifact,
+            &["bench", "agent-replay", "--run", run.to_str().unwrap()],
+        ));
+        assert_eq!(replayed["agentAccessed"], false);
+        assert_eq!(replayed["modelAccessed"], false);
+        assert_eq!(replayed["allFieldsValidated"], true);
+        if case == "package-migration-small" {
+            assert_eq!(replayed["independentRescoreMatched"], true);
+        } else {
+            assert!(replayed["independentRescoreMatched"].is_null());
+        }
+    }
+
+    let report: Value = serde_json::from_slice(
+        &fs::read(campaign.join("report.json")).expect("read available Luna report"),
+    )
+    .expect("parse available Luna report");
+    assert_eq!(report["summary"]["verified"], 1);
+    assert_eq!(report["summary"]["invalid"], 8);
+    assert_eq!(report["summary"]["modelExecutionObserved"], true);
+    assert_eq!(report["summary"]["toolCacheContaminationObserved"], true);
+    assert_eq!(
+        report["summary"]["declaredEditableOutputRejectionObserved"],
+        true
+    );
+    assert_eq!(report["summary"]["eventLineLimitObserved"], true);
+    assert_eq!(report["expansion"]["allowed"], false);
+    assert_eq!(
+        report["expansion"]["reasonCodes"],
+        serde_json::json!(["campaign/harness-defect", "campaign/invalid-attempts"])
+    );
+}
+
+#[test]
+fn retained_v3_luna_reality_gate_is_closed_and_harness_clean() {
+    let root = support::repo_root();
+    let temp = tempdir().expect("temporary v0.3 Luna validation root");
+    let artifact = support::copy_repo_toolchain_artifact(temp.path());
+    let campaign = root.join(
+        "benchmarks/genesisbench/v0.1/campaigns/\
+         codex-gpt-5-6-luna-xhigh-harness-v0-3-2026-07-17/reality-gate",
+    );
+    let cases = [
+        "completion-small",
+        "deployment-small",
+        "generation-small",
+        "package-migration-small",
+        "performance-repair-small",
+        "policy-minimization-small",
+        "refactor-small",
+        "repair-small",
+        "replay-investigation-small",
+    ];
+    for case in cases {
+        let run = campaign.join("runs").join(case).join("run.json");
+        let validated = data(&run_genesis(
+            &root,
+            &artifact,
+            &["bench", "agent-validate", "--run", run.to_str().unwrap()],
+        ));
+        let expected = if case == "deployment-small" {
+            "invalid"
+        } else {
+            "verified"
+        };
+        assert_eq!(validated["outcome"], expected);
+    }
+
+    let report: Value = serde_json::from_slice(
+        &fs::read(campaign.join("report.json")).expect("read v0.3 Luna report"),
+    )
+    .expect("parse v0.3 Luna report");
+    assert_eq!(report["summary"]["verified"], 8);
+    assert_eq!(report["summary"]["invalid"], 1);
+    assert_eq!(report["summary"]["ambientSkillDiscoveryObserved"], false);
+    assert_eq!(report["summary"]["toolCacheContaminationObserved"], false);
+    assert_eq!(
+        report["summary"]["declaredEditableOutputRejectionObserved"],
+        false
+    );
+    assert_eq!(report["summary"]["eventLineLimitObserved"], false);
+    assert_eq!(report["expansion"]["allowed"], false);
+    let deployment = report["attempts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|attempt| attempt["caseId"] == "deployment-small")
+        .expect("deployment attempt");
+    assert_eq!(
+        deployment["failureCodes"],
+        serde_json::json!(["model/noneditable-input-drift"])
+    );
 }
 
 #[test]
@@ -572,5 +703,5 @@ fn generated_authorities_and_all_adapter_controls_are_current() {
     );
     let report: Value = serde_json::from_slice(&output.stdout).expect("parse authority report");
     assert_eq!(report["adapterClasses"], 5);
-    assert_eq!(report["controls"], 48);
+    assert_eq!(report["controls"], 54);
 }

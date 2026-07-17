@@ -1,0 +1,129 @@
+{
+  "attempts": [
+    {
+      "caseId": "completion-small",
+      "elapsedMs": 34893,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "60338fe82a5f868f3a5478a8bf9aec4bec3c867779b468fd8170db85ce8254dd",
+      "validationPassed": true
+    },
+    {
+      "caseId": "deployment-small",
+      "elapsedMs": 124686,
+      "failureCodes": [
+        "model/noneditable-input-drift"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "4022c70ff1719857de883c5afd6b36b1ee5bdf7007a99daddb3f28cd57c0127e",
+      "validationPassed": true
+    },
+    {
+      "caseId": "generation-small",
+      "elapsedMs": 47136,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "1564388377776c2848bb5c06b32aeb397bf87163af41ab0d23f3b40983a842b5",
+      "validationPassed": true
+    },
+    {
+      "caseId": "package-migration-small",
+      "elapsedMs": 99047,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "cb89f87603c6b480ee3dc748c80db4d21567aea3db4bfd9959928f89d999391b",
+      "validationPassed": true
+    },
+    {
+      "caseId": "performance-repair-small",
+      "elapsedMs": 86901,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "41694fa5c17e8d9eb025d806b51e502cf7e94b7d1d3b3a1c4b8b23f266f49318",
+      "validationPassed": true
+    },
+    {
+      "caseId": "policy-minimization-small",
+      "elapsedMs": 58449,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "685aef68be6db2282d2c0fc2cb9cc14384318ea0321dc35d3ee5588774e9e144",
+      "validationPassed": true
+    },
+    {
+      "caseId": "refactor-small",
+      "elapsedMs": 48840,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "547f2edb3aed702582c79b5e3af6fa8e49c6543cdbe79d9681c81a123570a6e4",
+      "validationPassed": true
+    },
+    {
+      "caseId": "repair-small",
+      "elapsedMs": 61247,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "2d14e7921881d812557bd7f12326571a7394f84c87c0f5cb62b4c533e224995e",
+      "validationPassed": true
+    },
+    {
+      "caseId": "replay-investigation-small",
+      "elapsedMs": 108310,
+      "failureCodes": [],
+      "independentRescoreMatched": true,
+      "outcome": "verified",
+      "replayPassed": true,
+      "runIdentitySha256": "c5e60cf728919f849ae55b8c181feda78befb58fd18303240171fc5545f49d59",
+      "validationPassed": true
+    }
+  ],
+  "campaignId": "codex-gpt-5-6-luna-xhigh-harness-v0-3-2026-07-17",
+  "campaignIdentitySha256": "51384c9c9e3d786f56720cb082f1d4f3bd7b42cffea469fd6aeab29149decd9e",
+  "contentIdentitySha256": "3886173cf3cf0dd85d492dcbf231b0dec04b4dd3b94b944b2796bc156ba81a77",
+  "expansion": {
+    "allowed": false,
+    "reasonCodes": [
+      "campaign/invalid-attempts"
+    ]
+  },
+  "kind": "genesis/genesisbench-open-agent-campaign-report-v0.1",
+  "matrix": {
+    "complete": true,
+    "expectedAttempts": 9,
+    "observedAttempts": 9
+  },
+  "nonClaims": [
+    "This Open Agent campaign is not a fixed-scaffold Cold Acquisition result.",
+    "The provider-observed model revision is not immutable, so this campaign remains unranked.",
+    "Verified per-case outcomes do not establish aggregate capability while any predeclared attempt remains invalid."
+  ],
+  "publicationClass": "authentic-unranked-open-agent",
+  "summary": {
+    "ambientSkillDiscoveryObserved": false,
+    "declaredEditableOutputRejectionObserved": false,
+    "eventLineLimitObserved": false,
+    "failed": 0,
+    "invalid": 1,
+    "modelExecutionObserved": true,
+    "providerUnavailableForAccount": false,
+    "toolCacheContaminationObserved": false,
+    "verified": 8
+  },
+  "version": "0.1.0"
+}

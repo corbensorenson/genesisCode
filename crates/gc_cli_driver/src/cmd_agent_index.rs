@@ -535,19 +535,8 @@ pub(super) fn cmd_agent_index(
         "write_genesiscode_skill_distribution": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
         "selfhost_symbol_ownership": "docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.md",
     });
+    cmd_agent_index_open_agent::insert_docs(&mut docs);
     for (key, path) in [
-        (
-            "genesisbench_open_agent",
-            "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json",
-        ),
-        (
-            "genesisbench_open_agent_predeclaration_schema",
-            "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json",
-        ),
-        (
-            "genesisbench_open_agent_run_schema",
-            "docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json",
-        ),
         (
             "genesisbench_baseline_protocol",
             "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",

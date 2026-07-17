@@ -1,5 +1,5 @@
 {
-  "contentIdentitySha256": "ec35f62453af67f9a4ce8d7b11b7a54eb4a9fc80ef902a01b1ea5499403818b0",
+  "contentIdentitySha256": "c4e4887e2345599601dcb290ca71b8e676aabc3fbcefa1a9b2fd1d6af1cacab8",
   "corpusId": "GC-AGENT-CORPUS-v0.1",
   "entries": [
     {
@@ -49,7 +49,7 @@
         {
           "path": "examples/agent_benchmark_reproducibility/invocation/request.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "262eb149cfad440d96ef3b0b89c8db87f88b47eb602ba78d0e4494ed27ceea43",
+          "sha256": "fed21d62c04a638a343dca779243d9f098112184ea2ab9cb0bafbe0d08b4e075",
           "spdx": "Apache-2.0"
         },
         {
@@ -61,13 +61,13 @@
         {
           "path": "examples/agent_benchmark_reproducibility/model-effect.gclog",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "68c1e1ff8860693cb9657456acd56bde801342ecaeb732f092f7eff2922e8d77",
+          "sha256": "9113f47ea6e20b50d00cfa01d7ccc964287b4ba5df4d6ac655cff9748f68c1ac",
           "spdx": "Apache-2.0"
         },
         {
           "path": "examples/agent_benchmark_reproducibility/model_effect.gc",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "11aababd94a5229927e521e5584400a50fd63e34411ae70bb43936f4c3eb7f6d",
+          "sha256": "fa71d5c0c36458948e2a21d69b47943671f87e6de70933ee9d7779c54b26e268",
           "spdx": "Apache-2.0"
         },
         {
@@ -97,19 +97,19 @@
         {
           "path": "examples/agent_benchmark_reproducibility/run.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "9ed42e1e39c5dfdb030425bd9f5725a83dcb0d17f33807cc1094f52f9651fb9e",
+          "sha256": "ced177aa1388dc506d486d062acbe7c3ac12145a51738791e4e47334636d2185",
           "spdx": "Apache-2.0"
         },
         {
           "path": "examples/agent_benchmark_reproducibility/score.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "73decf61b52712c9034262202329030ab8c5f2da333700a01afcfebc81f2e874",
+          "sha256": "d21180499a4b0c8c281ccbd3ff40877ed084797d2d639574c208479c3bea02cd",
           "spdx": "Apache-2.0"
         },
         {
           "path": "examples/agent_benchmark_reproducibility/tool-transcript.jsonl",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "c8abdef45cd7392db45e24145ebaf1832697cb95e6a0a53947bbe9cd365ac06f",
+          "sha256": "371014b727d137b10dcb3b0ef1d7684f66090254f101fb5dd8a702504cfc6f35",
           "spdx": "Apache-2.0"
         },
         {
@@ -143,7 +143,7 @@
           "replay",
           "reproducibility"
         ],
-        "contextBytes": 103091,
+        "contextBytes": 103090,
         "level": "adversarial"
       },
       "generator": {
@@ -183,7 +183,7 @@
         {
           "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "a6857db72b78c12162294e97c4eddb4307517eb6f14cc3ec9f396942b1ead617",
+          "sha256": "94d4d47bdd20b303d3e2197bf456717e2722bfd26c7ad7dc3aca6a1b110340d7",
           "spdx": "Apache-2.0"
         },
         {
@@ -195,7 +195,7 @@
         {
           "path": "scripts/lib/gc_agent_scoring.py",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "9a78a2def8f3ac7d14605821004404c1caa0331a5db5d04de2e66daac493db2c",
+          "sha256": "62f05ec74235c9b705a140ececafc0ea147eb2867e56f6f4209d1e82aef4265b",
           "spdx": "Apache-2.0"
         },
         {
@@ -219,7 +219,7 @@
           "resource-use",
           "semantics"
         ],
-        "contextBytes": 87511,
+        "contextBytes": 87586,
         "level": "adversarial"
       },
       "generator": {
@@ -475,7 +475,7 @@
         {
           "path": "benchmarks/agent_tasks/v0.1/suite.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "3047cc6231016ef54a767f9aa7d4f23e4b3c9f8e7eea8c70617d651b450262b2",
+          "sha256": "2edec3f63c44bdeeec9b75adb70008fdf809006dba760dab5240533a087c493b",
           "spdx": "Apache-2.0"
         },
         {
@@ -804,7 +804,7 @@
         {
           "path": "examples/canonical_language/v0.1/suite.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "d27350398c4061ccbf6aac12d1c82217849758f8d11297a75b8d62f0b071256c",
+          "sha256": "860f697ac3ecf7f57e491415fc7acdd5173604e701b2dc5f87029ce28cf92e63",
           "spdx": "Apache-2.0"
         }
       ],
@@ -1000,7 +1000,7 @@
         {
           "path": "benchmarks/genesisbench/v0.1/construct-validity/report.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "b3a259dec2ac84c42a66e91296ed75e484838bc024971acb984f14ff3b89e3b8",
+          "sha256": "277aca324878c8e84411a5b66cfbc2a796e476d6e10b6f74949b9454846033cf",
           "spdx": "Apache-2.0"
         },
         {
@@ -1113,19 +1113,19 @@
         {
           "path": "benchmarks/genesisbench/v0.1/contamination.fixture.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "d160e8496f4cd0a0b41a9d8d600b41628fba93d15d08f11926808fad4743886b",
+          "sha256": "3b9cb199e42d0b61a90fff264a59856ca1be63dadc4efc92fc5fa7c8bb48fb3a",
           "spdx": "Apache-2.0"
         },
         {
           "path": "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "f1a6c52a372431cf21dd3da98bfb3fc3e131770132731d109fed5c3c82431338",
+          "sha256": "b0e126005c0277cfe729929e87bd054b5afb00d8c4bfaff3b8e380fd2e7dcd4a",
           "spdx": "Apache-2.0"
         },
         {
           "path": "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "397f3ac14363938d581da0da7aa12249b9183589ae569fdcc4890731a9493c74",
+          "sha256": "bfa61d26248663b85eb382f8c88836ac3b239ec189ec270726279ded588aa72a",
           "spdx": "Apache-2.0"
         },
         {
@@ -1143,7 +1143,7 @@
         {
           "path": "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "3768e8da2b6454ef8ce18ec136bdaab0ba0b95fa25375cf2b1e6aad5aa4541a1",
+          "sha256": "9665a185a464df42c84afccf62a7e2c2b0c401cc14e8acaa04599473c20a29d7",
           "spdx": "Apache-2.0"
         },
         {
@@ -1155,7 +1155,7 @@
         {
           "path": "crates/gc_cli/tests/cli_genesisbench_front_door.rs",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "6d5426c6ab9bc29839853400397c62d0f0cae97e0a1a4f262d2004f7a8984f12",
+          "sha256": "7ccdd5a19f686900e6f58cdb3a6f3444e660560e6c5ec23e6b3f21ea6cfada17",
           "spdx": "Apache-2.0"
         },
         {
@@ -1227,7 +1227,7 @@
         {
           "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "1c976ab2db7aeeae03e48a9ea614bab3bba799fafcc82ccc8e51274f7544e84b",
+          "sha256": "134f078a2f06a8a612191befcb15c50db955d4b75157a36f3f5d1fd6c888c69c",
           "spdx": "Apache-2.0"
         },
         {
@@ -1239,7 +1239,7 @@
         {
           "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "ccaf327d7731b68de04733caa3535030bde4b235d030ee6621436c9d1e4fc8e1",
+          "sha256": "b26c25ec78771ddcb98338af6a0dbda00828404d661aadb70fc845fa06c1ced3",
           "spdx": "Apache-2.0"
         },
         {
@@ -1251,7 +1251,7 @@
         {
           "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "ac22dc23a67f0274c72607e0b6823c6e59067afd22ef4273aa899a3cb217a597",
+          "sha256": "3cfc7ece6e3dea0c9f9fe8b725e873e190dd179aa1800a9a99b176abfbcc40cf",
           "spdx": "Apache-2.0"
         },
         {
@@ -1269,7 +1269,7 @@
         {
           "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "7c8420f566f29fc58ca7e30b4d8fbc23c661196a0ae1272785dcc05c9c7c1304",
+          "sha256": "c9c23f011da62c9405755a31db1e25d4b8ffe05730068097e1a4aa6aa029ab91",
           "spdx": "Apache-2.0"
         },
         {
@@ -1323,7 +1323,7 @@
         {
           "path": "guides/genesisbench.qmd",
           "provenance": "genesiscode-repository-authored",
-          "sha256": "832cc13a66110ca910d35f1195c37420f316fa9605f33032f56df707a9f604dc",
+          "sha256": "5160c8e8616cc6609a25df7f037634b4fe65f706d208d58beae8494ad259aa94",
           "spdx": "Apache-2.0"
         },
         {
@@ -1387,7 +1387,7 @@
           "replay-without-reinvocation",
           "self-hostable-benchmark"
         ],
-        "contextBytes": 732782,
+        "contextBytes": 739231,
         "level": "adversarial"
       },
       "generator": {
@@ -1566,7 +1566,7 @@
   "profile": {
     "id": "GC-AGENT-v0.3",
     "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-    "sha256": "3bf97d938d59c5e853e6c9ea4cfa8d5140a0d59589f42ba7187048635503ca4c"
+    "sha256": "d81589be2139a7e515b29c5225c66713635025d89f64cb727b9cbb17cba4d5a8"
   },
   "sourcePolicy": {
     "provenanceKinds": [

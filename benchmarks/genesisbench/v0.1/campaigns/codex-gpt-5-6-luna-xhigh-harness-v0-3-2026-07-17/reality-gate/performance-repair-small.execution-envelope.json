@@ -1,0 +1,90 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 6868,
+      "path": "campaign.json",
+      "sha256": "6558965f77ec0877e241391c6c34ba919e80cae9294693f5738c9844d73caa0b"
+    },
+    {
+      "bytes": 5,
+      "path": "candidate/main.gc",
+      "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
+    },
+    {
+      "bytes": 142086,
+      "path": "events.jsonl",
+      "sha256": "9c97abb0ea3fa6d1fbdbde1ce792902ef7174b1624d0226fd0492fd669191eee"
+    },
+    {
+      "bytes": 3011,
+      "path": "predeclaration.json",
+      "sha256": "e8af3caecd130ffb136e38c14042212254bc2e82cbba01eb5cf1b537212526fc"
+    },
+    {
+      "bytes": 3115,
+      "path": "score.json",
+      "sha256": "f4f4ebc5afcd6eece77cc4a9c946c0ca41c02e414004bf4f23d950b1baedb3b6"
+    },
+    {
+      "bytes": 295,
+      "path": "stderr.txt",
+      "sha256": "ab4a89c1d13c55309307e6fdc2a2b266e3d7d93332be2fb1dbecc5dda710461c"
+    }
+  ],
+  "artifactInventoryIdentitySha256": "f75d5331607b868b08778385f592524f7586e16da780afc883c7ef739e706d47",
+  "attempt": {
+    "elapsedMs": 86901,
+    "environmentPresentNames": [
+      "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE",
+      "HOME",
+      "NO_COLOR",
+      "PATH"
+    ],
+    "environmentValuesRecorded": false,
+    "eventCount": 29,
+    "index": 0,
+    "returnCode": 0,
+    "termination": "exited"
+  },
+  "case": {
+    "conditionId": "condition-performance-repair-context-small-001",
+    "conditionIdentitySha256": "421224c616af272633c4b35fb1dcfb21642ee97613e54f39b944b18ab25d0779",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "performance-repair-small",
+    "lineageId": "lineage-performance-repair-001",
+    "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d"
+  },
+  "contentIdentitySha256": "41694fa5c17e8d9eb025d806b51e502cf7e94b7d1d3b3a1c4b8b23f266f49318",
+  "kind": "genesis/genesisbench-open-agent-run-v0.1",
+  "outcome": "verified",
+  "predeclarationIdentitySha256": "4f1b59b437a49bf870286145881f9f3bdb294ff39888ad534b03317e49167ff5",
+  "replay": {
+    "agentAccessAllowed": false,
+    "independentRescoreRequired": true,
+    "modelAccessAllowed": false
+  },
+  "scoreIdentitySha256": "890938c2cbd50709f4b1ab28d33a18fc08943fe712567b17fb2dcdf2d6943e1e",
+  "version": "0.1.0",
+  "workspace": {
+    "afterInventory": [
+      {
+        "bytes": 5,
+        "path": "main.gc",
+        "sha256": "a82da06df2e8b6f6db88f38375189ce0a5ad63030970f671fc82f5dbfd6f30da"
+      }
+    ],
+    "afterInventoryStatus": "valid",
+    "beforeInventory": [
+      {
+        "bytes": 293,
+        "path": "main.gc",
+        "sha256": "6bb26b42f43c9c6bc7b111965fbd879bae58b254ae9cafccd5d47d888271f1ac"
+      }
+    ],
+    "sourceSnapshotAfterIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "sourceSnapshotBeforeIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "violations": []
+  }
+}

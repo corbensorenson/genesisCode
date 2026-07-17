@@ -1,0 +1,85 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 6574,
+      "path": "campaign.json",
+      "sha256": "ad7db7508b2e87077198c0b6765ab80bcbb8c3b8fb8e92bd1de6b81ec65cac42"
+    },
+    {
+      "bytes": 103912,
+      "path": "events.jsonl",
+      "sha256": "7c8ac63e5b16656168bb84f82f6b87e5eec221fa8a44bba76e711bc52701d0bf"
+    },
+    {
+      "bytes": 2687,
+      "path": "predeclaration.json",
+      "sha256": "75d3910728304b6d79f08014337332a80a014f901d420cc3705a8fdcbb703314"
+    },
+    {
+      "bytes": 39,
+      "path": "stderr.txt",
+      "sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+    }
+  ],
+  "artifactInventoryIdentitySha256": "b5a19521d8c2da4cbf56035d01cd736cb7099828be3bc356a2d4550fc7169314",
+  "attempt": {
+    "elapsedMs": 60704,
+    "environmentPresentNames": [
+      "HOME",
+      "PATH"
+    ],
+    "environmentValuesRecorded": false,
+    "eventCount": 35,
+    "index": 0,
+    "returnCode": 0,
+    "termination": "exited"
+  },
+  "case": {
+    "conditionId": "condition-refactor-context-small-001",
+    "conditionIdentitySha256": "d86aaff67789a2a51b679a1751b87ddfae09d575a82ae9bd5ff1f659fa5ef468",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "refactor-small",
+    "lineageId": "lineage-refactor-001",
+    "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4"
+  },
+  "contentIdentitySha256": "2366996b4d63827f808e549285ee822daf1824d33337f8a15f77518056f28269",
+  "kind": "genesis/genesisbench-open-agent-run-v0.1",
+  "outcome": "invalid",
+  "predeclarationIdentitySha256": "e5e241dbdabb1b9e0dc8f95a817618fda9f60fdad4dbee7f64a80c4368a84979",
+  "replay": {
+    "agentAccessAllowed": false,
+    "independentRescoreRequired": false,
+    "modelAccessAllowed": false
+  },
+  "scoreIdentitySha256": null,
+  "version": "0.1.0",
+  "workspace": {
+    "afterInventory": [
+      {
+        "bytes": 1523130,
+        "path": ".genesis/cache/selfhost_compiled_v1/7664f4b983294a4f9a8fc015768d0c8fb4538c89dfeb5e6c45ec66f0043a5f63.bin",
+        "sha256": "1145073f65dbdf317ec4ddd4f02c2c8022aff47d88fd5bd5ae3f0f04657dee27"
+      },
+      {
+        "bytes": 20,
+        "path": "main.gc",
+        "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+      }
+    ],
+    "afterInventoryStatus": "valid",
+    "beforeInventory": [
+      {
+        "bytes": 54,
+        "path": "main.gc",
+        "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+      }
+    ],
+    "sourceSnapshotAfterIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "sourceSnapshotBeforeIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "violations": [
+      "workspace-path-drift"
+    ]
+  }
+}
