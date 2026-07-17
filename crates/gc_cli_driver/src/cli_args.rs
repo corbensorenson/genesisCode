@@ -786,6 +786,7 @@ impl FmtEngine {
 }
 
 include!("cli_args/command_groups.rs");
+include!("cli_args/sync_registry_cmd.rs");
 
 include!("cli_args/pkg_cmd.rs");
 include!("cli_args/policy_gc_vcs_cmd.rs");
