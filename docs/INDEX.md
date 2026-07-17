@@ -245,6 +245,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - Kernel/evaluator/contracts:
   - `docs/spec/SEALS_DISPATCH_REPLAY.md`
   - `docs/spec/DETERMINISM.md`
+  - `docs/spec/VALUE_EFFECT_HASH.md` - normative runtime value graph, ownership, sharing, recursive-cycle, lifetime, host-handle boundary, logical-memory, and stable value/effect hashing contract.
   - `docs/spec/TYPES.md`
   - `docs/spec/MODULE_SCOPE.md`
 - Tooling/CLI/project manager:

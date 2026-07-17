@@ -48,7 +48,7 @@
       "path": "invocation/request.json",
       "role": "request",
       "scope": "bundle",
-      "sha256": "07421b45452acba1071cb1de9805cacfec1d6e83ba92ae3c5481c4883c70af00"
+      "sha256": "2c8cb0442f82387ce0c6dd43532d0da28f65001e0325e865ab5418a4c868a612"
     },
     {
       "bytes": 284,
@@ -61,14 +61,14 @@
       "sha256": "97495e4e06e5b4fa0083fb23e37255cce75a5bc3901b1f1575b87242916727fa"
     },
     {
-      "bytes": 1250,
+      "bytes": 1203,
       "key": "bundle:model-effect.gclog",
       "mediaType": "text/plain",
       "mode": "0644",
       "path": "model-effect.gclog",
       "role": "effect-log",
       "scope": "bundle",
-      "sha256": "8067176e7f30e90cb9e98d1c9f9692a8935f4ec4157239b5d67978505de17908"
+      "sha256": "5a00a222dca958e6de5f47c127c29e54fd0e71118f85c9efe5930f57b6073bae"
     },
     {
       "bytes": 686,
@@ -78,7 +78,7 @@
       "path": "model_effect.gc",
       "role": "context",
       "scope": "bundle",
-      "sha256": "beddf968a64720b29ddb56ef69761d5078d57461cfd9e0651c8c41755081c5ae"
+      "sha256": "948c506f22483b9b0a86737a02d3da97d8498ad4c9e60c9cfc75f8ca05079b4c"
     },
     {
       "bytes": 87,
@@ -138,7 +138,7 @@
       "path": "score.json",
       "role": "score",
       "scope": "bundle",
-      "sha256": "36e6ae3530ba92d1e37b8cf8c8502ecad34ff33f3bcc3ffd1102459d465f0dfd"
+      "sha256": "0cf4fb419dfcf1423a946f46d0240f567da5a010ee223020229332733e3784ef"
     },
     {
       "bytes": 296,
@@ -148,7 +148,7 @@
       "path": "tool-transcript.jsonl",
       "role": "tool-transcript",
       "scope": "bundle",
-      "sha256": "c2ef9a73b226f727d8ef6ad5e746043a740b340fe559d8f73c4c03a678ccc899"
+      "sha256": "bccdbef6cf8246c5709ec4ddb5c6641d08778520082a4a6bdd9bdb065e23d98c"
     },
     {
       "bytes": 156,
@@ -178,7 +178,7 @@
       "path": "benchmarks/agent_tasks/v0.1/suite.json",
       "role": "authority",
       "scope": "repository",
-      "sha256": "68fa39eddc7db4a74a7e84012d1b70102e0c5be6da82ca7fd765285ad8bd38d0"
+      "sha256": "081903761844789368bb79ed677b89a21977639c8a6b4d79f6e8c9c9022941a1"
     },
     {
       "bytes": 8116,
@@ -208,7 +208,7 @@
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
       "role": "authority",
       "scope": "repository",
-      "sha256": "3fc173ce3f70ac4f5e73e98245684293f8b4c148b9ed087cd86986447d3998fd"
+      "sha256": "fdd75ce23551518e050766461c29a1c7f9fa3cf7e99635748841482f9f6fc12a"
     },
     {
       "bytes": 12088,
@@ -258,7 +258,7 @@
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
       "role": "card",
       "scope": "repository",
-      "sha256": "c149144d594a356162039d06b0b2948e1aa070ef20e51f1abc9aaee8815fcb77"
+      "sha256": "f3de232af0e51df7c5f35ed91293b615153481b2bdcaee17dd2e9b0296c4f3a5"
     },
     {
       "bytes": 1566,
@@ -375,7 +375,7 @@
     "selectedAttempt": 0,
     "treeIdentitySha256": "a913bd3ea6c63d39ec0343edcfaecd66ff043e10d03c906a90551a3ca5f22aef"
   },
-  "contentIdentitySha256": "d0b2f75a9e975b9397423a84a0c81d8323830d6ad9130d1cfd25d219fbe5c79f",
+  "contentIdentitySha256": "caadea3add74738de7ae0e0309b306f27d74a834f988f328ce192884c19848bf",
   "host": {
     "accelerator": {
       "driverVersion": "15.0",
@@ -473,7 +473,7 @@
         "repository:docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
         "bundle:candidate/requirements.md"
       ],
-      "identitySha256": "75d96cb8bb14d665efff9b2de336ede088f28a7476fccda35ab3bf116c2f95ff",
+      "identitySha256": "3107ea287a66f55c8cf6f439a92fa53b55c62cd88a263ec0d20b7792c2f45470",
       "messages": [
         {
           "artifact": "bundle:prompts/system.md",
@@ -530,7 +530,7 @@
     "artifact": "bundle:score.json",
     "includedModelMetrics": false,
     "qualityScoreBasisPoints": 10000,
-    "scoreIdentitySha256": "91902fc034d4ab04634da988bafcce647ec7f8391d6861d62b3d06eee46c6b47"
+    "scoreIdentitySha256": "d75315490ca21e86b62ef6ae7250c584abe965501d1797dd56da653be5328895"
   },
   "status": "complete",
   "toolProtocol": {
