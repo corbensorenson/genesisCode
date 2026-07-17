@@ -27,5 +27,5 @@ Pure evaluation is deterministic. Filesystem, time, network, process, and LLM wo
 Negative examples are valid syntax that must fail at the named semantic/resource boundary.
 Compatibility: agentProfile=GC-AGENT-v0.3 cliEnvelope=genesis/error-v0.2 coreformProfile=genesis/coreform/v0.2 diagnostics=genesis/diagnostics-schema-v1 effectLog=genesis/effect-log/v3 genesisLock=2 gpk=2 hashProfile=genesis/hash-profile/gcv0.2-blake3 languageProfile=genesis/language-profile/v0.2 packageManifest=1 releaseTrain=0.2.0 v1ReleaseClaim=reserved-not-stable valueEffectHashProfile=genesis/value-effect-hash/v0.2
 Unsupported classes: experimental-syntax host-only-operation unavailable-target nondeterministic-facility out-of-profile-capability
-Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=367e34df3d092d67193374f5a540a7a2a19d684f3d70dfeafea68344e665b6a0
+Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=76e1f20a09c8e8afb5e1ae8fd91766816e08352871905082550d5f883d268143
 Verify: bash scripts/check_gc_agent_core_card.sh

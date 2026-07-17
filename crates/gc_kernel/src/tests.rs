@@ -8,6 +8,7 @@ use std::rc::Rc;
 use crate::compiled::{
     appn_native_partial_materializations, primitive_forward_executions,
     reset_appn_native_partial_materializations, reset_primitive_forward_executions,
+    reset_tail_loop_executions, tail_loop_executions,
 };
 use crate::eval::PrimOp;
 use crate::eval::{evaluator_max_call_depth, reset_evaluator_max_call_depth};
@@ -525,6 +526,7 @@ fn workload_recognizer_retirement_variants_preserve_semantic_observables() {
     let variants = [
         (
             "direct-counted-vector",
+            true,
             r#"
               (def gather (fn (cursor limit out)
                 (if (prim int/eq? cursor limit)
@@ -535,6 +537,7 @@ fn workload_recognizer_retirement_variants_preserve_semantic_observables() {
         ),
         (
             "let-rewritten-counted-vector",
+            true,
             r#"
               (def assemble (fn (position stop result)
                 (if (prim int/lt? position stop)
@@ -546,7 +549,23 @@ fn workload_recognizer_retirement_variants_preserve_semantic_observables() {
             "#,
         ),
         (
+            "shared-accumulator-branch",
+            true,
+            r#"
+              (def preserve (fn (position stop current previous)
+                (if (prim int/lt? position stop)
+                  (preserve
+                    (prim int/add position 1)
+                    stop
+                    (prim vec/push current position)
+                    current)
+                  previous)))
+              (preserve 0 4 [] [])
+            "#,
+        ),
+        (
             "direct-byte-in-bounds",
+            false,
             r#"
               (def byte-at (fn (blob offset)
                 (if (prim int/lt? offset (prim bytes/len blob))
@@ -557,6 +576,7 @@ fn workload_recognizer_retirement_variants_preserve_semantic_observables() {
         ),
         (
             "branch-rewritten-byte-out-of-bounds",
+            false,
             r#"
               (def read-byte (fn (payload index)
                 (if (prim int/lt? index (prim bytes/len payload))
@@ -567,16 +587,23 @@ fn workload_recognizer_retirement_variants_preserve_semantic_observables() {
         ),
     ];
 
-    for (name, source) in variants {
+    for (name, accelerated, source) in variants {
         let reference = observe_tier(source, false, None, MemLimits::default());
+        reset_tail_loop_executions();
         let optimized = observe_tier(source, true, None, MemLimits::default());
         assert_eq!(reference, optimized, "tier divergence in {name}");
         assert!(
             reference.result.is_ok(),
             "variant failed in {name}: {reference:?}"
         );
+        assert_eq!(
+            tail_loop_executions(),
+            usize::from(accelerated),
+            "semantics-derived loop-plan selection drifted in {name}"
+        );
 
         let short_limit = reference.counters.steps.saturating_sub(1);
+        reset_tail_loop_executions();
         let reference_short = observe_tier(source, false, Some(short_limit), MemLimits::default());
         let optimized_short = observe_tier(source, true, Some(short_limit), MemLimits::default());
         assert_eq!(
@@ -586,6 +613,11 @@ fn workload_recognizer_retirement_variants_preserve_semantic_observables() {
         assert!(
             matches!(&reference_short.result, Err((kind, _)) if kind == "step limit exceeded"),
             "one-step-short control did not fail closed in {name}: {reference_short:?}"
+        );
+        assert_eq!(
+            tail_loop_executions(),
+            0,
+            "resource-limited execution must retain the ordinary evaluator in {name}"
         );
     }
 }

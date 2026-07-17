@@ -219,6 +219,8 @@ Any optimized-tier change must keep this gate and the broader kernel differentia
 
 Production dispatch must not recognize benchmark IDs, exact source symbols, literal values, expected outputs, or workload AST shapes. The retired `compiled_runtime/patterns.rs` path is a governed tombstone and cannot return under another module name. Optimization plans must be derived from documented semantic properties such as resolved lexical identities and primitive opcodes, remain independent of source spelling and benchmark membership, and preserve all observable semantics under source-equivalent rewrites.
 
+The compiled tail-loop plan is one such semantics-derived optimization. It accepts only a fully applied curried closure whose final body is a conditional with at least one tail call resolved to the same module-closure identity. Its expression subset is constants, resolved local slots, direct primitive opcodes, and closures independently proven to forward arguments to a primitive opcode; sequential `let` and `begin` control are lowered without changing source-order evaluation. Static source-node charges preserve exact step counts. Per-branch last-use counts may move a value from a dead loop-state slot, but repeated or cross-state uses clone it so persistent aliases remain observable. Any step limit, non-default memory limit, coverage run, unsupported form, unresolved callable, arity mismatch, or failed proof selects the ordinary compiled evaluator before arguments are consumed. The plan carries no source names, benchmark IDs, literal-value predicates, expected result material, or result cache.
+
 ---
 
 ## **5\) Prelude contracts \+ hardened protocol**

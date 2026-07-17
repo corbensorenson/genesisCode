@@ -2,6 +2,8 @@ name: ci
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
     inputs:
@@ -26,6 +28,10 @@ on:
         type: string
   schedule:
     - cron: "0 8 * * *"
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -316,7 +322,15 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE="${{ github.event.pull_request.base.sha }}"
           fi
-          if [[ -n "$BASE" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # The standard PR job already executes the full selected gate and test
+            # surface. Validate impact planning without repeating that cold work.
+            bash scripts/test_changed_fast.sh \
+              --base "$BASE" \
+              --runner nextest \
+              --min-history 1 \
+              --dry-run
+          elif [[ -n "$BASE" ]]; then
             bash scripts/test_changed_fast.sh --base "$BASE" --runner nextest --min-history 1
           else
             bash scripts/test_changed_fast.sh --runner nextest --min-history 1

@@ -60,6 +60,18 @@ impl PrimitiveForwardPlan {
             args: forwarded.into_boxed_slice(),
         })
     }
+
+    pub(super) fn op(&self) -> PrimOp {
+        self.op
+    }
+
+    pub(super) fn arity(&self) -> usize {
+        self.arity
+    }
+
+    pub(super) fn supplied_indices(&self) -> impl ExactSizeIterator<Item = usize> + '_ {
+        self.args.iter().map(|arg| arg.supplied_index)
+    }
 }
 
 pub(super) fn eval_primitive_forward_inline(

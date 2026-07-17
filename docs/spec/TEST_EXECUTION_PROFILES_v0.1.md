@@ -343,6 +343,16 @@ Strict/full profile runtime reports:
 
 ## CI Profiles
 
+- Feature branches are validated by the `pull_request` event only; direct `push`
+  validation is restricted to canonical `main`. Pull-request runs share one
+  concurrency group per pull request and cancel superseded commits, preventing
+  duplicate cold-cache work without narrowing the selected gates. The resulting
+  `main` push still runs the independent post-merge `fast` profile.
+- Standard pull-request CI runs the changed-impact planner with `--dry-run`
+  because the same job executes generated-authority checks, lint, and the full
+  test surface directly. This prevents a second disposable-worktree compilation
+  from being mistaken for an iteration regression. Scheduled/manual `full` runs
+  and post-merge `fast` runs retain measured changed-loop execution.
 - `fast`: runs `scripts/test_changed_fast.sh` (default local/CI fast path)
 - `standard|full`:
   - installs nextest

@@ -1,6 +1,7 @@
 use super::super::*;
 use super::eval::eval_cexpr_runtime;
 use super::primitive_forward::eval_primitive_forward_inline;
+use super::tail_loop::eval_tail_loop_inline;
 
 pub(crate) struct CompiledClosureCall {
     pub(crate) external_env: Env,
@@ -175,6 +176,9 @@ pub(super) fn eval_app_n_runtime(
     if let Value::CompiledClosure(data) = callee_value {
         if let Some(control) = eval_primitive_forward_inline(ctx, caller_env, data.clone(), args)? {
             return Ok(control);
+        }
+        if let Some(value) = eval_tail_loop_inline(ctx, caller_env, data.clone(), args)? {
+            return Ok(ApplyControl::Value(value));
         }
         if let Some(control) =
             eval_compiled_closure_appn_inline(ctx, caller_env, data.clone(), args)?
