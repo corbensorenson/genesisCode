@@ -1,0 +1,90 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 6868,
+      "path": "campaign.json",
+      "sha256": "6558965f77ec0877e241391c6c34ba919e80cae9294693f5738c9844d73caa0b"
+    },
+    {
+      "bytes": 20,
+      "path": "candidate/main.gc",
+      "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+    },
+    {
+      "bytes": 66097,
+      "path": "events.jsonl",
+      "sha256": "51e077852dfd23cd8b839f6c9d535e1ef406c7bd31f4c7974a9196e1ecd84015"
+    },
+    {
+      "bytes": 2981,
+      "path": "predeclaration.json",
+      "sha256": "a2a7e02689ec6e14bf6a0e60f265888719ad6bd72f919b67bc9b31dd1e8aee5f"
+    },
+    {
+      "bytes": 3087,
+      "path": "score.json",
+      "sha256": "2896b46521bd8063902c7565bd6ef082eb3c16004058b4bd49eea5e72f73789a"
+    },
+    {
+      "bytes": 39,
+      "path": "stderr.txt",
+      "sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+    }
+  ],
+  "artifactInventoryIdentitySha256": "026976a264a1fd748b34ffd91f545a35f6c0bf82140d5a96485cae43975fc5c6",
+  "attempt": {
+    "elapsedMs": 48840,
+    "environmentPresentNames": [
+      "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE",
+      "HOME",
+      "NO_COLOR",
+      "PATH"
+    ],
+    "environmentValuesRecorded": false,
+    "eventCount": 22,
+    "index": 0,
+    "returnCode": 0,
+    "termination": "exited"
+  },
+  "case": {
+    "conditionId": "condition-refactor-context-small-001",
+    "conditionIdentitySha256": "d86aaff67789a2a51b679a1751b87ddfae09d575a82ae9bd5ff1f659fa5ef468",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "refactor-small",
+    "lineageId": "lineage-refactor-001",
+    "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4"
+  },
+  "contentIdentitySha256": "547f2edb3aed702582c79b5e3af6fa8e49c6543cdbe79d9681c81a123570a6e4",
+  "kind": "genesis/genesisbench-open-agent-run-v0.1",
+  "outcome": "verified",
+  "predeclarationIdentitySha256": "7e99af17e05b732ea9dba2b2355031303ad6ab90137bd978dc0f49ef0e5385ca",
+  "replay": {
+    "agentAccessAllowed": false,
+    "independentRescoreRequired": true,
+    "modelAccessAllowed": false
+  },
+  "scoreIdentitySha256": "6733cd9899a683c6273e13c16b9b2dcc961490b183cc1a8591643e0970f88221",
+  "version": "0.1.0",
+  "workspace": {
+    "afterInventory": [
+      {
+        "bytes": 20,
+        "path": "main.gc",
+        "sha256": "090c414a10639379e4264fecc5c23b0bd53cec9d3f64b8aff8b956375457e553"
+      }
+    ],
+    "afterInventoryStatus": "valid",
+    "beforeInventory": [
+      {
+        "bytes": 54,
+        "path": "main.gc",
+        "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+      }
+    ],
+    "sourceSnapshotAfterIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "sourceSnapshotBeforeIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "violations": []
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "attemptPolicy": {
+    "attempts": 1,
+    "hiddenRetriesAllowed": false,
+    "resumeAllowed": false
+  },
+  "authorities": {
+    "harnessIdentitySha256": "bc48a20115581cebc5dbde857924945c1f8258b60e419b48c498e94f33f961a2",
+    "protocolIdentitySha256": "b3aee80131ab951586bab2404e8ef52a774d3c8fe64346b0b25511014f6fbe6b",
+    "sourceSnapshotManifestIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "suiteIdentitySha256": "87bfc24491d9450c3f9bc9d69b2b2d4605ce2f8b57add8e658fcdff9139337d6"
+  },
+  "campaignId": "codex-gpt-5-6-luna-xhigh-2026-07-17",
+  "campaignIdentitySha256": "cfd21db5f34dd0ddc9c94acf308f8b947debba427f842cdce88ba99323cb626b",
+  "capabilities": {
+    "additionalWritableRoots": [],
+    "approvalPolicy": "never",
+    "network": "provider-only",
+    "repository": "frozen-read-only",
+    "workspace": "case-input-write-only"
+  },
+  "case": {
+    "conditionId": "condition-refactor-context-small-001",
+    "conditionIdentitySha256": "d86aaff67789a2a51b679a1751b87ddfae09d575a82ae9bd5ff1f659fa5ef468",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "refactor-small",
+    "lineageId": "lineage-refactor-001",
+    "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4"
+  },
+  "contentIdentitySha256": "e5e241dbdabb1b9e0dc8f95a817618fda9f60fdad4dbee7f64a80c4368a84979",
+  "disclosure": {
+    "contaminationLabel": "unknown",
+    "environmentNames": [
+      "CODEX_HOME",
+      "HOME",
+      "HTTPS_PROXY",
+      "HTTP_PROXY",
+      "NO_PROXY",
+      "PATH",
+      "SSL_CERT_DIR",
+      "SSL_CERT_FILE"
+    ],
+    "environmentValuesRecorded": false,
+    "genesisSpecificTraining": "unknown"
+  },
+  "kind": "genesis/genesisbench-open-agent-predeclaration-v0.1",
+  "limits": {
+    "maxStderrBytes": 16777216,
+    "maxStdoutBytes": 16777216,
+    "maxWorkspaceBytes": 67108864,
+    "maxWorkspaceFiles": 4096,
+    "timeoutMs": 900000
+  },
+  "model": {
+    "artifactSha256": null,
+    "immutableRevision": false,
+    "reasoningEffort": "xhigh",
+    "requestedId": "gpt-5.6-luna",
+    "revision": "provider-catalog:gpt-5.6-luna@cc403f4ece54a61b2c71970cbee9f2ecd35bf50e8c388d55850e0e4156bda693"
+  },
+  "runner": {
+    "class": "codex-cli-hosted",
+    "executableSha256": "a2bc3f63b0d7ce5c065ae070e16d964fa71192bf6ceb8da82d2315227d55a6bf",
+    "executableVersion": "codex-cli 0.145.0-alpha.18",
+    "invocationProfile": "codex-cli-hosted-v0.2",
+    "localProvider": null
+  },
+  "track": {
+    "id": "open-agent",
+    "rankEligible": false,
+    "scaffoldClass": "codex-cli",
+    "scaffoldIdentitySha256": "d66fb3f506ea454fdef175cc631175744479434b321c3a021aa1aa923faa992b"
+  },
+  "version": "0.1.0"
+}

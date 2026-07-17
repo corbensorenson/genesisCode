@@ -9,7 +9,7 @@
         "properties": {
           "caseId": {"$ref": "#/$defs/id"},
           "elapsedMs": {"minimum": 0, "type": "integer"},
-          "failureCodes": {"items": {"enum": ["harness/ambient-skill-discovery", "model/unavailable-for-account"]}, "type": "array", "uniqueItems": true},
+          "failureCodes": {"items": {"enum": ["harness/ambient-skill-discovery", "harness/declared-editable-output-rejected", "harness/event-line-limit-exceeded", "harness/malformed-event-transcript", "harness/noneditable-input-drift", "harness/repository-integrity", "harness/tool-cache-path-contamination", "harness/workspace-invalid", "harness/workspace-path-drift", "model/invalid-unclassified", "model/noneditable-input-drift", "model/nonzero-exit", "model/unavailable-for-account", "model/undeclared-output", "resource/capture-limit", "resource/timeout", "semantic/incorrect"]}, "type": "array", "uniqueItems": true},
           "independentRescoreMatched": {"type": ["boolean", "null"]},
           "outcome": {"enum": ["verified", "failed", "invalid"]},
           "replayPassed": {"const": true},
@@ -30,7 +30,7 @@
       "additionalProperties": false,
       "properties": {
         "allowed": {"type": "boolean"},
-        "reasonCodes": {"items": {"enum": ["campaign/harness-defect", "campaign/model-unavailable"]}, "type": "array", "uniqueItems": true}
+        "reasonCodes": {"items": {"enum": ["campaign/harness-defect", "campaign/incomplete-matrix", "campaign/invalid-attempts", "campaign/model-unavailable"]}, "type": "array", "uniqueItems": true}
       },
       "required": ["allowed", "reasonCodes"],
       "type": "object"
@@ -46,8 +46,8 @@
     "publicationClass": {"const": "authentic-unranked-open-agent"},
     "summary": {
       "additionalProperties": false,
-      "properties": {"ambientSkillDiscoveryObserved": {"type": "boolean"}, "failed": {"minimum": 0, "type": "integer"}, "invalid": {"minimum": 0, "type": "integer"}, "providerUnavailableForAccount": {"type": "boolean"}, "verified": {"minimum": 0, "type": "integer"}},
-      "required": ["verified", "failed", "invalid", "providerUnavailableForAccount", "ambientSkillDiscoveryObserved"],
+      "properties": {"ambientSkillDiscoveryObserved": {"type": "boolean"}, "declaredEditableOutputRejectionObserved": {"type": "boolean"}, "eventLineLimitObserved": {"type": "boolean"}, "failed": {"minimum": 0, "type": "integer"}, "invalid": {"minimum": 0, "type": "integer"}, "modelExecutionObserved": {"type": "boolean"}, "providerUnavailableForAccount": {"type": "boolean"}, "toolCacheContaminationObserved": {"type": "boolean"}, "verified": {"minimum": 0, "type": "integer"}},
+      "required": ["verified", "failed", "invalid", "providerUnavailableForAccount", "ambientSkillDiscoveryObserved", "modelExecutionObserved", "toolCacheContaminationObserved", "declaredEditableOutputRejectionObserved", "eventLineLimitObserved"],
       "type": "object"
     },
     "version": {"const": "0.1.0"}

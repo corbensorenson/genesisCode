@@ -1,0 +1,7 @@
+Reading additional input from stdin...
+2026-07-17T15:25:26.362301Z ERROR codex_core::tools::router: error=exec_command failed for `/bin/zsh -lc "rm -rf .genesis dist
+python3 -m json.tool deployment.json >/dev/null
+printf 'deployment bytes: '; wc -c < deployment.json
+printf 'deployment sha256: '; shasum -a 256 deployment.json
+printf '%s\\n' 'remaining files:'
+find . -maxdepth 2 -type f -print | sort"`: CreateProcess { message: "Rejected(\"`/bin/zsh -lc \\\"rm -rf .genesis dist\\npython3 -m json.tool deployment.json >/dev/null\\nprintf 'deployment bytes: '; wc -c < deployment.json\\nprintf 'deployment sha256: '; shasum -a 256 deployment.json\\nprintf '%s\\\\\\\\n' 'remaining files:'\\nfind . -maxdepth 2 -type f -print | sort\\\"` rejected: rm -f style commands are not permitted. Use a safer approach\")" }

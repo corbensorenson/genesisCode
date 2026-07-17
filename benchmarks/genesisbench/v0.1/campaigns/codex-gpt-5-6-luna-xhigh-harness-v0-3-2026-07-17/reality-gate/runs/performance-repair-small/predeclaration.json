@@ -1,0 +1,83 @@
+{
+  "attemptPolicy": {
+    "attempts": 1,
+    "hiddenRetriesAllowed": false,
+    "resumeAllowed": false
+  },
+  "authorities": {
+    "harnessIdentitySha256": "753870e0114fe642945d974fb8c230aaaebd53a932291fcc7c77576d29ddeb92",
+    "protocolIdentitySha256": "b3aee80131ab951586bab2404e8ef52a774d3c8fe64346b0b25511014f6fbe6b",
+    "sourceSnapshotManifestIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "suiteIdentitySha256": "87bfc24491d9450c3f9bc9d69b2b2d4605ce2f8b57add8e658fcdff9139337d6"
+  },
+  "campaignId": "codex-gpt-5-6-luna-xhigh-harness-v0-3-2026-07-17",
+  "campaignIdentitySha256": "51384c9c9e3d786f56720cb082f1d4f3bd7b42cffea469fd6aeab29149decd9e",
+  "capabilities": {
+    "additionalWritableRoots": [],
+    "approvalPolicy": "never",
+    "network": "provider-only",
+    "repository": "frozen-read-only",
+    "workspace": "case-input-write-only"
+  },
+  "case": {
+    "conditionId": "condition-performance-repair-context-small-001",
+    "conditionIdentitySha256": "421224c616af272633c4b35fb1dcfb21642ee97613e54f39b944b18ab25d0779",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "performance-repair-small",
+    "lineageId": "lineage-performance-repair-001",
+    "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d"
+  },
+  "contentIdentitySha256": "4f1b59b437a49bf870286145881f9f3bdb294ff39888ad534b03317e49167ff5",
+  "disclosure": {
+    "contaminationLabel": "unknown",
+    "environmentNames": [
+      "CODEX_HOME",
+      "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE",
+      "HOME",
+      "HTTPS_PROXY",
+      "HTTP_PROXY",
+      "NO_COLOR",
+      "NO_PROXY",
+      "PATH",
+      "SSL_CERT_DIR",
+      "SSL_CERT_FILE"
+    ],
+    "environmentValuesRecorded": false,
+    "genesisSpecificTraining": "unknown"
+  },
+  "kind": "genesis/genesisbench-open-agent-predeclaration-v0.1",
+  "limits": {
+    "maxStderrBytes": 16777216,
+    "maxStdoutBytes": 16777216,
+    "maxWorkspaceBytes": 67108864,
+    "maxWorkspaceFiles": 4096,
+    "timeoutMs": 900000
+  },
+  "model": {
+    "artifactSha256": null,
+    "immutableRevision": false,
+    "reasoningEffort": "xhigh",
+    "requestedId": "gpt-5.6-luna",
+    "revision": "provider-catalog:gpt-5.6-luna@11ccc6515efd917a10fc471bc39d84b8adb6b00ee897a06a2ed9ba3183fecbaf"
+  },
+  "runner": {
+    "class": "codex-cli-hosted",
+    "executableSha256": "a2bc3f63b0d7ce5c065ae070e16d964fa71192bf6ceb8da82d2315227d55a6bf",
+    "executableVersion": "codex-cli 0.145.0-alpha.18",
+    "invocationProfile": "codex-cli-hosted-v0.3",
+    "localProvider": null
+  },
+  "tools": {
+    "genesisExecutableSha256": "9245dd725f59b3ba29af779aee53c0d9bd4e68b3b8bfe3c2c1a5975ea32f6639",
+    "selfhostArtifactSha256": "9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54"
+  },
+  "track": {
+    "id": "open-agent",
+    "rankEligible": false,
+    "scaffoldClass": "codex-cli",
+    "scaffoldIdentitySha256": "b9d5c12b193428e2f0b3498a1b5441a32732239395e434548ae1d1fdcfdb79fd"
+  },
+  "version": "0.1.0"
+}

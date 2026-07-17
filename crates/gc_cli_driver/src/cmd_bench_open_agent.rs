@@ -32,6 +32,10 @@ pub(super) fn driver_args(cli: &Cli, cmd: &BenchCmd) -> Result<Option<Vec<String
                 args.extend(["--case".to_string(), case_id.clone()]);
             }
             cmd_bench::push_path(&mut args, "--agent-executable", agent_executable);
+            let (genesis_bin, artifact) =
+                cmd_bench::runtime_paths(cli, "bench agent-campaign-plan")?;
+            cmd_bench::push_path(&mut args, "--genesis-bin", &genesis_bin);
+            cmd_bench::push_path(&mut args, "--selfhost-artifact", &artifact);
             args.extend([
                 "--model".to_string(),
                 model.clone(),

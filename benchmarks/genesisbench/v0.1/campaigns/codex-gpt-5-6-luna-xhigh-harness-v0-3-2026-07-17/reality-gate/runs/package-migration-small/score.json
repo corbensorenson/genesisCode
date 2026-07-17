@@ -1,0 +1,117 @@
+{
+  "bindings": {
+    "benchmarkContentIdentitySha256": "87bfc24491d9450c3f9bc9d69b2b2d4605ce2f8b57add8e658fcdff9139337d6",
+    "profileSha256": "3bf97d938d59c5e853e6c9ea4cfa8d5140a0d59589f42ba7187048635503ca4c",
+    "scorerContractSha256": "140fa25fbf3b22878569a841deb52b12ed7140b60d397ab58e6bafda2b61079e",
+    "scorerRuntimeSha256": "9a78a2def8f3ac7d14605821004404c1caa0331a5db5d04de2e66daac493db2c",
+    "scoringContentIdentitySha256": "5313abe263de08d2c2a5d1d1294c60fdc0cbe6e08554b4876b084c65f2958b87"
+  },
+  "candidate": {
+    "bytes": 369,
+    "fileCount": 2,
+    "identitySha256": "d5db741809da11ceae7ac4b70bad5815f43a9d24e9bb8cae04a2a61d3b7371b3"
+  },
+  "caseId": "package-migration-small",
+  "contextTier": "small",
+  "dimensions": [
+    {
+      "applicable": true,
+      "id": "semantics",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 3500
+    },
+    {
+      "applicable": true,
+      "id": "obligations",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1200
+    },
+    {
+      "applicable": false,
+      "id": "effects",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1200
+    },
+    {
+      "applicable": true,
+      "id": "patch-minimality",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1500
+    },
+    {
+      "applicable": true,
+      "id": "resource-use",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1300
+    },
+    {
+      "applicable": true,
+      "id": "policy-scope",
+      "scoreBasisPoints": 10000,
+      "weightBasisPoints": 1300
+    }
+  ],
+  "kind": "genesis/agent-benchmark-score-v0.1",
+  "modelSpecificMetrics": {
+    "includedInQualityScore": false,
+    "present": false,
+    "recordedBy": "genesis/agent-benchmark-run-v0.1"
+  },
+  "patch": {
+    "candidateUnits": 1262,
+    "changedPaths": [
+      "case.toml"
+    ],
+    "editableScopeOk": true,
+    "expectedChangedPaths": [
+      "case.toml"
+    ],
+    "referenceUnits": 1262
+  },
+  "policy": {
+    "broadenedAuthorities": [],
+    "candidateAuthorityIdentitySha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "referenceAuthorityIdentitySha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "scopeOk": true
+  },
+  "qualityScoreBasisPoints": 10000,
+  "resources": {
+    "candidateGeneratedBytes": 0,
+    "candidateUnits": 2152,
+    "limitsSatisfied": true,
+    "referenceGeneratedBytes": 0,
+    "referenceUnits": 2152
+  },
+  "scoreIdentitySha256": "fcf5c4a1d8b73c7946cea85c9fdcf9a6606813f6ec4244fd5d1101152d041a40",
+  "scoringId": "GC-AGENT-BENCHMARK-SCORING-v0.1",
+  "taskClass": "package-migration",
+  "validity": {
+    "failedDimensions": [],
+    "passed": true
+  },
+  "verification": [
+    {
+      "assertionsPassed": 1,
+      "exitCode": 0,
+      "generatedIdentitySha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "id": "artifact-contract",
+      "kind": "genesis/artifact-contract-v0.1",
+      "ok": true,
+      "outputIdentitySha256": "e3e55de42e1a5cd892270829233a39fe155939296dee36d6bfde3ce9fcfd75df",
+      "passed": true,
+      "resourceUnits": 87
+    },
+    {
+      "assertionsPassed": 1,
+      "exitCode": 0,
+      "generatedIdentitySha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "id": "typecheck",
+      "kind": "genesis/typecheck-v0.2",
+      "ok": true,
+      "outputIdentitySha256": "01c81d0ca7ca5b074d2e9e7fe7ac4fee8b27f7128c1c87fe37dfc5f55cce2216",
+      "passed": true,
+      "resourceUnits": 1696
+    }
+  ],
+  "version": "0.1.0"
+}

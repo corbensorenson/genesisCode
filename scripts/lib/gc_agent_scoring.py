@@ -624,6 +624,8 @@ def score_candidate(
     candidate_root: Path,
     genesis_bin: Path,
     selfhost_artifact: Path,
+    *,
+    suite_document: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     require(genesis_bin.is_file() and not genesis_bin.is_symlink(), "genesis binary is unavailable")
     require(
@@ -637,7 +639,7 @@ def score_candidate(
         "candidate root must be a regular non-symlink directory",
     )
     candidate_root = candidate_root.resolve(strict=True)
-    suite = load_json(BENCHMARK)
+    suite = suite_document or load_json(BENCHMARK)
     case = next((row for row in suite["cases"] if row["id"] == case_id), None)
     require(case is not None, f"unknown benchmark case: {case_id}")
     policy = next(row for row in scoring["taskPolicies"] if row["taskClass"] == case["taskClass"])

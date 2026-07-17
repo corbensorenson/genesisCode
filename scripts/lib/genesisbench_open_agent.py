@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import gzip
 import hashlib
 import json
 import os
@@ -27,11 +28,15 @@ import genesisbench_protocol
 
 
 ROOT = Path(__file__).resolve().parents[2]
-AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json"
-LEGACY_AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json"
+AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json"
+LEGACY_AUTHORITY_PATHS = (
+    ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json",
+    ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json",
+)
 PREDECLARATION_SCHEMA_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json"
 CAMPAIGN_SCHEMA_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json"
 RUN_SCHEMA_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json"
+TOOL_ARCHIVE_SCHEMA_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_TOOL_ARCHIVE_v0.1.schema.json"
 SUITE_PATH = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
 PROTOCOL_PATH = ROOT / "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"
 SCORING_PATH = ROOT / "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json"
@@ -42,6 +47,7 @@ KIND_CAMPAIGN = "genesis/genesisbench-open-agent-campaign-v0.1"
 KIND_RUN = "genesis/genesisbench-open-agent-run-v0.1"
 KIND_AUTHORITY = "genesis/genesisbench-open-agent-harness-v0.1"
 KIND_AUTHORITY_V2 = "genesis/genesisbench-open-agent-harness-v0.2"
+KIND_AUTHORITY_V3 = "genesis/genesisbench-open-agent-harness-v0.3"
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$")
 REL_RE = re.compile(r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]{1,512}$")
@@ -56,6 +62,10 @@ ALLOWED_ENVIRONMENT = tuple(sorted((
     "SSL_CERT_FILE",
     "SSL_CERT_DIR",
 )))
+V3_FIXED_ENVIRONMENT = {
+    "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE": "1",
+    "NO_COLOR": "1",
+}
 
 
 class OpenAgentError(RuntimeError):
@@ -155,6 +165,32 @@ def protocol_authority(identity: str) -> dict[str, Any]:
     return value
 
 
+def protocol_bound_json(protocol: dict[str, Any], relative_path: str) -> dict[str, Any]:
+    row = next(
+        (item for item in protocol["authorities"] if item["path"] == relative_path),
+        None,
+    )
+    require(row is not None, f"protocol does not bind authority: {relative_path}")
+    current = ROOT / relative_path
+    payload = current.read_bytes() if current.is_file() and sha256_file(current) == row["sha256"] else None
+    archived = AUTHORITY_ARCHIVE_ROOT / "documents" / f"{row['sha256']}.json"
+    if payload is None and archived.is_file():
+        payload = archived.read_bytes()
+    if payload is None:
+        commit = protocol["sourceSnapshot"]["commitSha1"]
+        result = subprocess.run(
+            ["git", "show", f"{commit}:{relative_path}"], cwd=ROOT,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+        require(result.returncode == 0, f"frozen authority is unavailable: {relative_path}")
+        payload = result.stdout
+    require(len(payload) == row["bytes"], f"frozen authority byte count drift: {relative_path}")
+    require(sha256_bytes(payload) == row["sha256"], f"frozen authority digest drift: {relative_path}")
+    value = json.loads(payload)
+    require(isinstance(value, dict), f"frozen authority must be an object: {relative_path}")
+    return value
+
+
 def suite_and_case(case_id: str, suite: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     suite = suite or load_json(SUITE_PATH)
     case = next((row for row in suite["cases"] if row["id"] == case_id), None)
@@ -163,12 +199,34 @@ def suite_and_case(case_id: str, suite: dict[str, Any] | None = None) -> tuple[d
 
 
 def authority(identity: str | None = None) -> dict[str, Any]:
-    documents = [load_json(path) for path in (AUTHORITY_PATH, LEGACY_AUTHORITY_PATH)]
+    documents = [load_json(path) for path in (AUTHORITY_PATH, *LEGACY_AUTHORITY_PATHS)]
     if identity is None:
         return documents[0]
     match = next((document for document in documents if document["contentIdentitySha256"] == identity), None)
     require(match is not None, "unknown Open Agent harness authority")
     return match
+
+
+def is_v3_harness(harness: dict[str, Any]) -> bool:
+    return harness["version"] == "0.3.0"
+
+
+def declared_environment_names(harness: dict[str, Any]) -> list[str]:
+    names = set(ALLOWED_ENVIRONMENT)
+    if is_v3_harness(harness):
+        names.update(V3_FIXED_ENVIRONMENT)
+    return sorted(names)
+
+
+def event_line_limit(harness: dict[str, Any]) -> int:
+    return harness["limits"].get("maxEventLineBytes", 1024 * 1024)
+
+
+def expected_workspace_paths(case: dict[str, Any], harness: dict[str, Any]) -> set[str]:
+    paths = {row["path"] for row in case["inputFiles"]}
+    if is_v3_harness(harness):
+        paths.update(case["editablePaths"])
+    return paths
 
 
 def source_rows(protocol: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -222,8 +280,11 @@ def common_predeclaration_fields(
     *, runner_class: str, executable: Path, model_id: str, model_revision: str,
     immutable_revision: bool, reasoning_effort: str, timeout_ms: int,
     local_provider: str | None, model_artifact_sha256: str | None,
+    genesis_bin: Path, selfhost_artifact: Path,
 ) -> dict[str, Any]:
     executable = regular_file(executable, "agent executable")
+    genesis_bin = regular_file(genesis_bin, "GenesisCode executable")
+    selfhost_artifact = regular_file(selfhost_artifact, "self-host artifact")
     harness = authority()
     require(runner_class in {"codex-cli-hosted", "codex-cli-local"}, "unsupported Open Agent runner class")
     require(reasoning_effort in {"low", "medium", "high", "xhigh"}, "unsupported reasoning effort")
@@ -235,7 +296,7 @@ def common_predeclaration_fields(
     else:
         require(local_provider is None and model_artifact_sha256 is None, "hosted runner cannot declare local provider material")
         network_mode = "provider-only"
-    return {
+    common = {
         "track": {
             "id": "open-agent",
             "scaffoldClass": "codex-cli",
@@ -272,12 +333,18 @@ def common_predeclaration_fields(
             "maxWorkspaceBytes": harness["limits"]["maxWorkspaceBytes"],
         },
         "disclosure": {
-            "environmentNames": list(ALLOWED_ENVIRONMENT),
+            "environmentNames": declared_environment_names(harness),
             "environmentValuesRecorded": False,
             "genesisSpecificTraining": "unknown",
             "contaminationLabel": "unknown",
         },
     }
+    if is_v3_harness(harness):
+        common["tools"] = {
+            "genesisExecutableSha256": sha256_file(genesis_bin),
+            "selfhostArtifactSha256": sha256_file(selfhost_artifact),
+        }
+    return common
 
 
 def build_campaign(
@@ -285,6 +352,7 @@ def build_campaign(
     executable: Path, model_id: str, model_revision: str, immutable_revision: bool,
     reasoning_effort: str, timeout_ms: int, local_provider: str | None,
     model_artifact_sha256: str | None, hardware_class: str,
+    genesis_bin: Path, selfhost_artifact: Path,
 ) -> dict[str, Any]:
     suite = load_json(SUITE_PATH)
     protocol = load_json(PROTOCOL_PATH)
@@ -297,6 +365,7 @@ def build_campaign(
         model_revision=model_revision, immutable_revision=immutable_revision,
         reasoning_effort=reasoning_effort, timeout_ms=timeout_ms,
         local_provider=local_provider, model_artifact_sha256=model_artifact_sha256,
+        genesis_bin=genesis_bin, selfhost_artifact=selfhost_artifact,
     )
     document = {
         "kind": KIND_CAMPAIGN,
@@ -343,6 +412,11 @@ def validate_campaign(document: Any) -> dict[str, Any]:
         "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure",
         "stopPolicy", "host", "secrets", "publication", "contentIdentitySha256",
     }
+    require(isinstance(document, dict), "Open Agent campaign must be an object")
+    harness_identity = document.get("authorities", {}).get("harnessIdentitySha256")
+    harness = authority(harness_identity)
+    if is_v3_harness(harness):
+        top.add("tools")
     doc = closed(document, top, "Open Agent campaign")
     require(doc["kind"] == KIND_CAMPAIGN and doc["version"] == "0.1.0", "campaign kind/version drift")
     safe_id(doc["campaignId"], "campaign id")
@@ -352,7 +426,7 @@ def validate_campaign(document: Any) -> dict[str, Any]:
     expected_cases = [case_binding(next(case for case in suite["cases"] if case["id"] == case_id)) for case_id in expected_ids]
     require(doc["cases"] == expected_cases, "campaign case bindings drift")
     protocol = protocol_authority(authority_binding["protocolIdentitySha256"])
-    harness = authority(authority_binding["harnessIdentitySha256"])
+    require(harness["contentIdentitySha256"] == authority_binding["harnessIdentitySha256"], "campaign harness binding drift")
     require(doc["authorities"] == {
         "harnessIdentitySha256": harness["contentIdentitySha256"],
         "protocolIdentitySha256": protocol["contentIdentitySha256"],
@@ -385,6 +459,9 @@ def build_predeclaration(
     protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
     harness = authority(campaign["authorities"]["harnessIdentitySha256"])
     require(case_binding(case) in campaign["cases"], "case is not predeclared by campaign")
+    common_fields = ["track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"]
+    if is_v3_harness(harness):
+        common_fields.append("tools")
     document = {
         "kind": KIND_PREDECLARATION,
         "version": "0.1.0",
@@ -397,9 +474,7 @@ def build_predeclaration(
             "suiteIdentitySha256": suite["contentIdentitySha256"],
             "sourceSnapshotManifestIdentitySha256": protocol["sourceSnapshot"]["manifestIdentitySha256"],
         },
-        **{field: copy.deepcopy(campaign[field]) for field in (
-            "track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure",
-        )},
+        **{field: copy.deepcopy(campaign[field]) for field in common_fields},
         "contentIdentitySha256": "",
     }
     return identified(document)
@@ -437,26 +512,37 @@ def validate_common_fields(doc: dict[str, Any], harness: dict[str, Any] | None =
     for field in ("maxStdoutBytes", "maxStderrBytes", "maxWorkspaceFiles", "maxWorkspaceBytes"):
         require(limits[field] == harness["limits"][field], f"{field} limit drift")
     require(doc["disclosure"] == {
-        "environmentNames": list(ALLOWED_ENVIRONMENT), "environmentValuesRecorded": False,
+        "environmentNames": declared_environment_names(harness), "environmentValuesRecorded": False,
         "genesisSpecificTraining": "unknown", "contaminationLabel": "unknown",
     }, "disclosure drift")
+    if is_v3_harness(harness):
+        tools = closed(
+            doc["tools"], {"genesisExecutableSha256", "selfhostArtifactSha256"},
+            "supplied tool binding",
+        )
+        require(
+            all(SHA_RE.fullmatch(tools[field] or "") is not None for field in tools),
+            "invalid supplied tool digest",
+        )
 
 
 def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str, Any]:
+    campaign = validate_campaign(campaign)
+    harness = authority(campaign["authorities"]["harnessIdentitySha256"])
     top = {
         "kind", "version", "campaignId", "campaignIdentitySha256", "case", "authorities", "track", "runner",
         "model", "attemptPolicy", "capabilities", "limits", "disclosure", "contentIdentitySha256",
     }
+    if is_v3_harness(harness):
+        top.add("tools")
     doc = closed(document, top, "Open Agent predeclaration")
     require(doc["kind"] == KIND_PREDECLARATION and doc["version"] == "0.1.0", "predeclaration kind/version drift")
-    campaign = validate_campaign(campaign)
     require(doc["campaignId"] == campaign["campaignId"] and doc["campaignIdentitySha256"] == campaign["contentIdentitySha256"], "attempt campaign binding drift")
     suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
     suite, case = suite_and_case(doc["case"].get("id"), suite)
     require(doc["case"] == case_binding(case), "case binding drift")
     require(doc["case"] in campaign["cases"], "attempt case is absent from campaign")
     protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
-    harness = authority(campaign["authorities"]["harnessIdentitySha256"])
     require(doc["authorities"] == {
         "harnessIdentitySha256": harness["contentIdentitySha256"],
         "protocolIdentitySha256": protocol["contentIdentitySha256"],
@@ -464,8 +550,52 @@ def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str
         "sourceSnapshotManifestIdentitySha256": protocol["sourceSnapshot"]["manifestIdentitySha256"],
     }, "predeclaration authority binding drift")
     validate_common_fields(doc, harness)
-    for field in ("track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"):
+    common_fields = ["track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"]
+    if is_v3_harness(harness):
+        common_fields.append("tools")
+    for field in common_fields:
         require(doc[field] == campaign[field], f"attempt {field} differs from campaign")
+    validate_identity(doc)
+    return doc
+
+
+def validate_tool_archive(path: Path, campaign: dict[str, Any]) -> dict[str, Any]:
+    campaign = validate_campaign(campaign)
+    doc = closed(load_json(path), {
+        "kind", "version", "campaignId", "campaignIdentitySha256", "authorities",
+        "platform", "genesisExecutable", "selfhostArtifact", "contentIdentitySha256",
+    }, "Open Agent tool archive")
+    require(
+        doc["kind"] == "genesis/genesisbench-open-agent-tool-archive-v0.1"
+        and doc["version"] == "0.1.0",
+        "tool archive kind/version drift",
+    )
+    require(doc["campaignId"] == campaign["campaignId"], "tool archive campaign id drift")
+    require(doc["campaignIdentitySha256"] == campaign["contentIdentitySha256"], "tool archive campaign identity drift")
+    require(doc["authorities"] == campaign["authorities"], "tool archive authority binding drift")
+    closed(doc["platform"], {"architecture", "operatingSystem"}, "tool archive platform")
+    executable = closed(doc["genesisExecutable"], {
+        "path", "compression", "compressedBytes", "compressedSha256", "uncompressedBytes",
+        "uncompressedSha256", "executableVersion",
+    }, "archived Genesis executable")
+    artifact = closed(
+        doc["selfhostArtifact"], {"path", "bytes", "sha256"}, "archived self-host artifact",
+    )
+    require(executable["compression"] == "gzip-mtime-zero-level-9", "tool archive compression drift")
+    compressed_path = path.parent.parent / safe_relative(executable["path"], "archived executable path")
+    artifact_path = path.parent.parent / safe_relative(artifact["path"], "archived artifact path")
+    require(compressed_path.is_file() and not compressed_path.is_symlink(), "archived executable is unavailable")
+    require(artifact_path.is_file() and not artifact_path.is_symlink(), "archived self-host artifact is unavailable")
+    require(compressed_path.stat().st_size == executable["compressedBytes"], "archived executable byte count drift")
+    require(sha256_file(compressed_path) == executable["compressedSha256"], "archived executable digest drift")
+    raw = gzip.decompress(compressed_path.read_bytes())
+    require(len(raw) == executable["uncompressedBytes"], "uncompressed executable byte count drift")
+    require(sha256_bytes(raw) == executable["uncompressedSha256"], "uncompressed executable digest drift")
+    require(artifact_path.stat().st_size == artifact["bytes"], "archived artifact byte count drift")
+    require(sha256_file(artifact_path) == artifact["sha256"], "archived artifact digest drift")
+    if is_v3_harness(authority(campaign["authorities"]["harnessIdentitySha256"])):
+        require(executable["uncompressedSha256"] == campaign["tools"]["genesisExecutableSha256"], "archived executable campaign binding drift")
+        require(artifact["sha256"] == campaign["tools"]["selfhostArtifactSha256"], "archived artifact campaign binding drift")
     validate_identity(doc)
     return doc
 
@@ -612,7 +742,7 @@ def invocation(predeclaration: dict[str, Any], prompt: str) -> list[str]:
     return args
 
 
-def sanitized_environment() -> tuple[dict[str, str], list[str]]:
+def sanitized_environment(harness: dict[str, Any]) -> tuple[dict[str, str], list[str]]:
     environment: dict[str, str] = {}
     present = []
     for name in ALLOWED_ENVIRONMENT:
@@ -621,8 +751,12 @@ def sanitized_environment() -> tuple[dict[str, str], list[str]]:
             environment[name] = value
             present.append(name)
     environment.setdefault("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
-    environment["NO_COLOR"] = "1"
-    return environment, present
+    if is_v3_harness(harness):
+        environment.update(V3_FIXED_ENVIRONMENT)
+        present.extend(V3_FIXED_ENVIRONMENT)
+    else:
+        environment["NO_COLOR"] = "1"
+    return environment, sorted(set(present))
 
 
 def terminate_group(process: subprocess.Popen[bytes]) -> None:
@@ -659,8 +793,9 @@ def isolated_stage() -> Path:
 def run_process(
     executable: Path, args: list[str], cwd: Path, timeout_ms: int,
     stdout_path: Path, stderr_path: Path, max_stdout: int, max_stderr: int,
+    harness: dict[str, Any],
 ) -> tuple[int | None, str, int, list[str]]:
-    environment, present = sanitized_environment()
+    environment, present = sanitized_environment(harness)
     started = time.monotonic_ns()
     with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
         process = subprocess.Popen(
@@ -685,12 +820,12 @@ def run_process(
     return return_code, reason, elapsed_ms, present
 
 
-def validate_jsonl(path: Path) -> tuple[bool, int]:
+def validate_jsonl(path: Path, max_line_bytes: int = 1024 * 1024) -> tuple[bool, int]:
     count = 0
     try:
         with path.open("rb") as stream:
             for raw in stream:
-                require(len(raw) <= 1024 * 1024, "agent event exceeds line limit")
+                require(len(raw) <= max_line_bytes, "agent event exceeds line limit")
                 if not raw.strip():
                     continue
                 value = json.loads(raw)
@@ -702,15 +837,27 @@ def validate_jsonl(path: Path) -> tuple[bool, int]:
     return count > 0, count
 
 
-def copy_candidate(workspace: Path, candidate: Path, case: dict[str, Any]) -> None:
+def copy_candidate(
+    workspace: Path, candidate: Path, case: dict[str, Any], harness: dict[str, Any],
+) -> None:
     candidate.mkdir()
-    for row in case["inputFiles"]:
-        relative = safe_relative(row["path"], "candidate path")
+    for path in sorted(expected_workspace_paths(case, harness)):
+        relative = safe_relative(path, "candidate path")
         source = workspace.joinpath(*relative.parts)
         require(source.is_file() and not source.is_symlink(), "candidate file is unavailable")
         target = candidate.joinpath(*relative.parts)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
+
+
+def normalize_retained_stage_paths(paths: tuple[Path, ...], stage: Path) -> None:
+    replacement = b"$GENESISBENCH_STAGE"
+    spellings = {str(stage).encode("utf-8"), os.path.realpath(stage).encode("utf-8")}
+    for path in paths:
+        payload = path.read_bytes()
+        for spelling in spellings:
+            payload = payload.replace(spelling, replacement)
+        path.write_bytes(payload)
 
 
 def run_agent(
@@ -725,6 +872,10 @@ def run_agent(
     selfhost_artifact = regular_file(selfhost_artifact, "self-host artifact")
     require(sha256_file(executable) == predeclaration["runner"]["executableSha256"], "agent executable digest mismatch")
     require(executable_version(executable) == predeclaration["runner"]["executableVersion"], "agent executable version mismatch")
+    harness = authority(campaign["authorities"]["harnessIdentitySha256"])
+    if is_v3_harness(harness):
+        require(sha256_file(genesis_bin) == predeclaration["tools"]["genesisExecutableSha256"], "GenesisCode executable digest mismatch")
+        require(sha256_file(selfhost_artifact) == predeclaration["tools"]["selfhostArtifactSha256"], "self-host artifact digest mismatch")
     suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
     _, case = suite_and_case(predeclaration["case"]["id"], suite)
     protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
@@ -750,8 +901,10 @@ def run_agent(
         return_code, termination, elapsed_ms, present_names = run_process(
             executable, args, workspace, predeclaration["limits"]["timeoutMs"],
             stdout_path, stderr_path, predeclaration["limits"]["maxStdoutBytes"],
-            predeclaration["limits"]["maxStderrBytes"],
+            predeclaration["limits"]["maxStderrBytes"], harness,
         )
+        if is_v3_harness(harness):
+            normalize_retained_stage_paths((stdout_path, stderr_path), stage)
         violations: list[str] = []
         try:
             repository_identity = validate_snapshot_root(repository, snapshot_rows)
@@ -762,7 +915,7 @@ def run_agent(
                 workspace, max_files=predeclaration["limits"]["maxWorkspaceFiles"],
                 max_bytes=predeclaration["limits"]["maxWorkspaceBytes"],
             )
-            expected_paths = {row["path"] for row in case["inputFiles"]}
+            expected_paths = expected_workspace_paths(case, harness)
             actual_paths = {row["path"] for row in after_workspace}
             if actual_paths != expected_paths:
                 violations.append("workspace-path-drift")
@@ -775,7 +928,7 @@ def run_agent(
             after_workspace = []; workspace_inventory_status = "invalid"; violations.append("workspace-invalid")
         else:
             workspace_inventory_status = "valid"
-        transcript_valid, event_count = validate_jsonl(stdout_path)
+        transcript_valid, event_count = validate_jsonl(stdout_path, event_line_limit(harness))
         if not transcript_valid:
             violations.append("malformed-event-transcript")
         if termination != "exited":
@@ -785,9 +938,11 @@ def run_agent(
         violations = sorted(set(violations))
         score_doc = None
         if not violations:
-            copy_candidate(workspace, retained / "candidate", case)
+            copy_candidate(workspace, retained / "candidate", case, harness)
             score_doc = gc_agent_scoring.score_candidate(
-                load_json(SCORING_PATH), case["id"], retained / "candidate", genesis_bin, selfhost_artifact,
+                protocol_bound_json(protocol, str(SCORING_PATH.relative_to(ROOT))),
+                case["id"], retained / "candidate", genesis_bin, selfhost_artifact,
+                suite_document=suite,
             )
             write_json(retained / "score.json", score_doc)
         artifact_rows = inventory(retained, max_files=4096, max_bytes=128 * 1024 * 1024)
@@ -842,6 +997,7 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
     root = run_path.parent
     campaign = validate_campaign(load_json(root / "campaign.json"))
     predeclaration = validate_predeclaration(load_json(root / "predeclaration.json"), campaign)
+    harness = authority(campaign["authorities"]["harnessIdentitySha256"])
     require(run["predeclarationIdentitySha256"] == predeclaration["contentIdentitySha256"], "run predeclaration binding drift")
     suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
     _, case = suite_and_case(run["case"].get("id"), suite)
@@ -850,7 +1006,10 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
     require(attempt["index"] == 0 and attempt["termination"] in {"exited", "timeout", "capture-limit"}, "invalid attempt facts")
     require(attempt["environmentValuesRecorded"] is False, "environment values must never be recorded")
     require(attempt["environmentPresentNames"] == sorted(set(attempt["environmentPresentNames"])), "environment names must be sorted and unique")
-    require(set(attempt["environmentPresentNames"]).issubset(ALLOWED_ENVIRONMENT), "undeclared environment name")
+    require(
+        set(attempt["environmentPresentNames"]).issubset(declared_environment_names(harness)),
+        "undeclared environment name",
+    )
     workspace = closed(run["workspace"], {"beforeInventory", "afterInventory", "afterInventoryStatus", "sourceSnapshotBeforeIdentitySha256", "sourceSnapshotAfterIdentitySha256", "violations"}, "workspace evidence")
     protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
     expected_snapshot = protocol["sourceSnapshot"]["manifestIdentitySha256"]
@@ -871,7 +1030,7 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
         require(after_rows == [], "invalid workspace inventory must be empty")
         derived_violations.append("workspace-invalid")
     else:
-        expected_paths = {row["path"] for row in expected_before}
+        expected_paths = expected_workspace_paths(case, harness)
         after_by_path = {row["path"]: row for row in after_rows}
         if set(after_by_path) != expected_paths:
             derived_violations.append("workspace-path-drift")
@@ -905,7 +1064,9 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
                 inventory(root / "candidate", max_files=4096, max_bytes=64 * 1024 * 1024) == after_rows,
                 "retained candidate differs from observed workspace",
             )
-        valid_jsonl, event_count = validate_jsonl(root / "events.jsonl")
+        valid_jsonl, event_count = validate_jsonl(
+            root / "events.jsonl", event_line_limit(harness),
+        )
         require(valid_jsonl == ("malformed-event-transcript" not in workspace["violations"]), "transcript validity drift")
         require(event_count == attempt["eventCount"], "event count drift")
         if not valid_jsonl:
@@ -916,14 +1077,38 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
 
 def replay_run(run_path: Path, genesis_bin: Path, selfhost_artifact: Path) -> dict[str, Any]:
     run = validate_run(run_path, check_files=True)
+    campaign = validate_campaign(load_json(run_path.parent / "campaign.json"))
+    harness = authority(campaign["authorities"]["harnessIdentitySha256"])
+    protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
+    suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
+    genesis_bin = regular_file(genesis_bin, "GenesisCode executable")
+    selfhost_artifact = regular_file(selfhost_artifact, "self-host artifact")
+    archive_path = run_path.parents[2] / "tools" / "archive.json"
+    archive = validate_tool_archive(archive_path, campaign) if archive_path.is_file() else None
+    if archive is None and is_v3_harness(harness):
+        require(sha256_file(genesis_bin) == campaign["tools"]["genesisExecutableSha256"], "replay GenesisCode executable digest mismatch")
+        require(sha256_file(selfhost_artifact) == campaign["tools"]["selfhostArtifactSha256"], "replay self-host artifact digest mismatch")
     matched = None
-    if run["replay"]["independentRescoreRequired"]:
-        rescored = gc_agent_scoring.score_candidate(
-            load_json(SCORING_PATH), run["case"]["id"], run_path.parent / "candidate",
-            regular_file(genesis_bin, "GenesisCode executable"), regular_file(selfhost_artifact, "self-host artifact"),
-        )
-        matched = rescored == load_json(run_path.parent / "score.json")
-        require(matched, "independent Open Agent rescore mismatch")
+    with tempfile.TemporaryDirectory(prefix="genesisbench-replay-tools-") as temporary:
+        if archive is not None:
+            archive_root = archive_path.parent.parent
+            compressed = archive_root / safe_relative(
+                archive["genesisExecutable"]["path"], "archived executable path",
+            )
+            genesis_bin = Path(temporary) / "genesis"
+            genesis_bin.write_bytes(gzip.decompress(compressed.read_bytes()))
+            genesis_bin.chmod(0o500)
+            selfhost_artifact = archive_root / safe_relative(
+                archive["selfhostArtifact"]["path"], "archived artifact path",
+            )
+        if run["replay"]["independentRescoreRequired"]:
+            rescored = gc_agent_scoring.score_candidate(
+                protocol_bound_json(protocol, str(SCORING_PATH.relative_to(ROOT))),
+                run["case"]["id"], run_path.parent / "candidate",
+                genesis_bin, selfhost_artifact, suite_document=suite,
+            )
+            matched = rescored == load_json(run_path.parent / "score.json")
+            require(matched, "independent Open Agent rescore mismatch")
     return {
         "kind": "genesis/genesisbench-open-agent-replay-v0.1",
         "runIdentitySha256": run["contentIdentitySha256"],
@@ -935,16 +1120,21 @@ def replay_run(run_path: Path, genesis_bin: Path, selfhost_artifact: Path) -> di
 
 
 def validate_authorities() -> dict[str, Any]:
-    documents = [authority(), load_json(LEGACY_AUTHORITY_PATH)]
-    require([doc["version"] for doc in documents] == ["0.2.0", "0.1.0"], "Open Agent authority order drift")
+    documents = [authority(), *(load_json(path) for path in LEGACY_AUTHORITY_PATHS)]
+    require([doc["version"] for doc in documents] == ["0.3.0", "0.2.0", "0.1.0"], "Open Agent authority order drift")
     for doc in documents:
         closed(doc, {"kind", "version", "purpose", "coldAcquisitionAdapterProfileUnchanged", "scaffoldIdentitySha256", "invocationProfiles", "limits", "securityControls", "contentIdentitySha256"}, "Open Agent authority")
-        require((doc["kind"], doc["version"]) in {(KIND_AUTHORITY, "0.1.0"), (KIND_AUTHORITY_V2, "0.2.0")}, "Open Agent authority kind/version drift")
+        require((doc["kind"], doc["version"]) in {
+            (KIND_AUTHORITY, "0.1.0"), (KIND_AUTHORITY_V2, "0.2.0"),
+            (KIND_AUTHORITY_V3, "0.3.0"),
+        }, "Open Agent authority kind/version drift")
         require(doc["coldAcquisitionAdapterProfileUnchanged"] is True, "Open Agent authority silently broadens Cold Acquisition adapters")
         require(set(doc["invocationProfiles"]) == {"codex-cli-hosted", "codex-cli-local"}, "Open Agent invocation profile drift")
         require(doc["securityControls"] == sorted(set(doc["securityControls"])), "security controls must be sorted and unique")
+        if is_v3_harness(doc):
+            require(doc["limits"]["maxEventLineBytes"] == MAX_CAPTURE_BYTES, "v0.3 event line limit drift")
         validate_identity(doc)
-    for path in (CAMPAIGN_SCHEMA_PATH, PREDECLARATION_SCHEMA_PATH, RUN_SCHEMA_PATH):
+    for path in (CAMPAIGN_SCHEMA_PATH, PREDECLARATION_SCHEMA_PATH, RUN_SCHEMA_PATH, TOOL_ARCHIVE_SCHEMA_PATH):
         schema = load_json(path)
         require(schema["$schema"] == "https://json-schema.org/draft/2020-12/schema", "Open Agent schema draft drift")
         require(schema["additionalProperties"] is False, "Open Agent schema must be closed")
@@ -974,6 +1164,7 @@ def self_test() -> int:
             model_id="fixture", model_revision="fixture-revision", immutable_revision=False,
             reasoning_effort="xhigh", timeout_ms=1_000, local_provider=None,
             model_artifact_sha256=None, hardware_class="fixture-host",
+            genesis_bin=fixture, selfhost_artifact=fixture,
         )
         validate_campaign(campaign)
 
@@ -999,6 +1190,35 @@ def self_test() -> int:
         baseline = build_predeclaration(case_id="completion-small", campaign=campaign)
         validate_predeclaration(baseline, campaign)
 
+        _, output_case = suite_and_case("generation-small", suite)
+        output_workspace = temp / "output-workspace"
+        materialize_case(output_case, output_workspace)
+        (output_workspace / "main.gc").write_text("42\n", encoding="ascii")
+        output_rows = inventory(output_workspace, max_files=16, max_bytes=1024)
+        require(
+            {row["path"] for row in output_rows} == expected_workspace_paths(output_case, authority()),
+            "declared editable output was not admitted",
+        )
+        output_candidate = temp / "output-candidate"
+        copy_candidate(output_workspace, output_candidate, output_case, authority())
+        require((output_candidate / "main.gc").read_bytes() == b"42\n", "declared output was not retained")
+        controls += 1
+
+        archived_protocol_path = (
+            AUTHORITY_ARCHIVE_ROOT / "protocols" /
+            "b3aee80131ab951586bab2404e8ef52a774d3c8fe64346b0b25511014f6fbe6b.json"
+        )
+        if archived_protocol_path.is_file():
+            archived_scoring = protocol_bound_json(
+                load_json(archived_protocol_path), str(SCORING_PATH.relative_to(ROOT)),
+            )
+            require(
+                archived_scoring["contentIdentitySha256"] ==
+                "5313abe263de08d2c2a5d1d1294c60fdc0cbe6e08554b4876b084c65f2958b87",
+                "historical scoring authority resolution drift",
+            )
+            controls += 1
+
         mutations = [
             lambda d: d["attemptPolicy"].__setitem__("attempts", 2),
             lambda d: d["attemptPolicy"].__setitem__("hiddenRetriesAllowed", True),
@@ -1006,6 +1226,7 @@ def self_test() -> int:
             lambda d: d["capabilities"].__setitem__("network", "unrestricted"),
             lambda d: d["runner"].__setitem__("executableSha256", "forged"),
             lambda d: d["model"].__setitem__("artifactSha256", "0" * 64),
+            lambda d: d["tools"].__setitem__("genesisExecutableSha256", "0" * 64),
             lambda d: d["track"].__setitem__("rankEligible", True),
             lambda d: d.__setitem__("contentIdentitySha256", "0" * 64),
         ]
@@ -1071,6 +1292,24 @@ def self_test() -> int:
         require(validate_jsonl(malformed_events)[0] is False, "malformed event transcript accepted")
         controls += 1
 
+        large_events = temp / "large.jsonl"
+        large_events.write_bytes(canonical_bytes({"payload": "x" * (1024 * 1024)}) + b"\n")
+        require(validate_jsonl(large_events)[0] is False, "historical event limit accepted oversized line")
+        require(validate_jsonl(large_events, MAX_CAPTURE_BYTES) == (True, 1), "v0.3 event limit rejected bounded line")
+        controls += 1
+
+        environment, present = sanitized_environment(authority())
+        require(environment["GENESIS_SELFHOST_COMPILED_CACHE_DISABLE"] == "1", "Genesis cache was not disabled")
+        require(set(V3_FIXED_ENVIRONMENT).issubset(present), "fixed environment disclosure drift")
+        controls += 1
+
+        retained = temp / "retained-paths.jsonl"
+        retained.write_text(json.dumps({"cwd": str(temp)}) + "\n", encoding="ascii")
+        normalize_retained_stage_paths((retained,), temp)
+        require(str(temp).encode("utf-8") not in retained.read_bytes(), "ephemeral stage path leaked")
+        require(validate_jsonl(retained) == (True, 1), "path normalization damaged JSONL")
+        controls += 1
+
         marker = temp / "descendant-survived"
         timeout_fixture = temp / "timeout.py"
         timeout_fixture.write_text(
@@ -1086,7 +1325,7 @@ def self_test() -> int:
         timeout_fixture.chmod(0o755)
         stdout = temp / "timeout.stdout"; stderr = temp / "timeout.stderr"
         return_code, reason, _, _ = run_process(
-            timeout_fixture, [], temp, 200, stdout, stderr, 1024, 1024,
+            timeout_fixture, [], temp, 200, stdout, stderr, 1024, 1024, authority(),
         )
         require(reason == "timeout" and return_code is not None, "timeout fixture did not terminate")
         time.sleep(1.2)
@@ -1122,6 +1361,7 @@ def parser() -> argparse.ArgumentParser:
     campaign.add_argument("--reasoning-effort", default="xhigh", choices=["low", "medium", "high", "xhigh"])
     campaign.add_argument("--timeout-ms", type=int, default=900_000); campaign.add_argument("--local-provider", choices=["lmstudio", "ollama"])
     campaign.add_argument("--model-artifact-sha256"); campaign.add_argument("--hardware-class", required=True); campaign.add_argument("--out", required=True, type=Path)
+    campaign.add_argument("--genesis-bin", required=True, type=Path); campaign.add_argument("--selfhost-artifact", required=True, type=Path)
     plan = modes.add_parser("plan"); plan.add_argument("--case", required=True)
     plan.add_argument("--campaign-predeclaration", required=True, type=Path); plan.add_argument("--out", required=True, type=Path)
     run = modes.add_parser("run"); run.add_argument("--campaign-predeclaration", required=True, type=Path); run.add_argument("--predeclaration", required=True, type=Path); run.add_argument("--out", required=True, type=Path)
@@ -1145,6 +1385,7 @@ def main() -> int:
             immutable_revision=args.immutable_revision, reasoning_effort=args.reasoning_effort,
             timeout_ms=args.timeout_ms, local_provider=args.local_provider,
             model_artifact_sha256=args.model_artifact_sha256, hardware_class=args.hardware_class,
+            genesis_bin=args.genesis_bin, selfhost_artifact=args.selfhost_artifact,
         )
         write_json(args.out, result)
     elif args.command == "plan":

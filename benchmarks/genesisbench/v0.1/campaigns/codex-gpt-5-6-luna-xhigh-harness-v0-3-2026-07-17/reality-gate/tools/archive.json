@@ -1,0 +1,31 @@
+{
+  "authorities": {
+    "harnessIdentitySha256": "753870e0114fe642945d974fb8c230aaaebd53a932291fcc7c77576d29ddeb92",
+    "protocolIdentitySha256": "b3aee80131ab951586bab2404e8ef52a774d3c8fe64346b0b25511014f6fbe6b",
+    "sourceSnapshotManifestIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "suiteIdentitySha256": "87bfc24491d9450c3f9bc9d69b2b2d4605ce2f8b57add8e658fcdff9139337d6"
+  },
+  "campaignId": "codex-gpt-5-6-luna-xhigh-harness-v0-3-2026-07-17",
+  "campaignIdentitySha256": "51384c9c9e3d786f56720cb082f1d4f3bd7b42cffea469fd6aeab29149decd9e",
+  "contentIdentitySha256": "10d2f1b4522997bba0289fb9ca5e2839a6bd4de0e198132a25d3f953ee3b71b8",
+  "genesisExecutable": {
+    "compressedBytes": 20830379,
+    "compressedSha256": "91c6f2591806b0bfbf6598409061810be291231f6ec1a3b4d94f98274268f96b",
+    "compression": "gzip-mtime-zero-level-9",
+    "executableVersion": "genesis 0.2.0",
+    "path": "tools/genesis.arm64-darwin.gz",
+    "uncompressedBytes": 75983512,
+    "uncompressedSha256": "9245dd725f59b3ba29af779aee53c0d9bd4e68b3b8bfe3c2c1a5975ea32f6639"
+  },
+  "kind": "genesis/genesisbench-open-agent-tool-archive-v0.1",
+  "platform": {
+    "architecture": "arm64",
+    "operatingSystem": "Darwin"
+  },
+  "selfhostArtifact": {
+    "bytes": 602110,
+    "path": "tools/toolchain.gc",
+    "sha256": "9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54"
+  },
+  "version": "0.1.0"
+}
