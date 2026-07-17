@@ -12,6 +12,7 @@ expected_kernel_surface_files = [
   "compiled/trace_impl.rs",
   "compiled_runtime/apply.rs",
   "compiled_runtime/eval.rs",
+  "compiled_runtime/forward_args.rs",
   "compiled_runtime/metered.rs",
   "compiled_runtime/mod.rs",
   "compiled_runtime/primitive_forward.rs",
@@ -34,6 +35,8 @@ expected_kernel_surface_files = [
   "logical_heap.rs",
   "value.rs",
   "value/collections.rs",
+  "value/collections/map.rs",
+  "value/collections/vector.rs",
   "value/trace_impl.rs",
 ]
 
@@ -52,6 +55,7 @@ required_differential_test_markers = [
   "compiled_blob_declared_counts_are_bounded_by_remaining_input",
   "bulk_output_limits_preflight_before_construction_in_both_tiers",
   "fallible_bulk_allocation_rejects_capacity_overflow_without_panicking",
+  "persistent_update_chains_have_bounded_path_copy_amplification",
 ]
 
 # Production dispatch cannot regain source- or benchmark-shaped execution under
@@ -110,6 +114,8 @@ required_trace_markers = [
   "unsafe impl Trace for Value",
   "unsafe impl Trace for ValueMap",
   "unsafe impl Trace for ValueVector",
+  "unsafe impl Trace for MapNode",
+  "unsafe impl Trace for VectorNode",
   "unsafe impl Trace for ClosureData",
   "unsafe impl Trace for CompiledClosureData",
   "unsafe impl Trace for NativeFn",
@@ -153,6 +159,7 @@ required_test_markers = [
 "compiled/trace_impl.rs" = "optimized-tier"
 "compiled_runtime/apply.rs" = "optimized-tier"
 "compiled_runtime/eval.rs" = "optimized-tier"
+"compiled_runtime/forward_args.rs" = "optimized-tier"
 "compiled_runtime/metered.rs" = "optimized-tier"
 "compiled_runtime/mod.rs" = "optimized-tier"
 "compiled_runtime/primitive_forward.rs" = "optimized-tier"
@@ -175,6 +182,8 @@ required_test_markers = [
 "logical_heap.rs" = "shared-semantics"
 "value.rs" = "tier-bridge"
 "value/collections.rs" = "tier-bridge"
+"value/collections/map.rs" = "tier-bridge"
+"value/collections/vector.rs" = "tier-bridge"
 "value/trace_impl.rs" = "tier-bridge"
 
 [forbidden_role_markers]
@@ -199,6 +208,7 @@ optimized-tier = [
 "crates/gc_kernel/src/compiled/trace_impl.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/apply.rs" = 450
 "crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
+"crates/gc_kernel/src/compiled_runtime/forward_args.rs" = 90
 "crates/gc_kernel/src/compiled_runtime/metered.rs" = 80
 "crates/gc_kernel/src/compiled_runtime/mod.rs" = 30
 "crates/gc_kernel/src/compiled_runtime/primitive_forward.rs" = 180
@@ -221,4 +231,6 @@ optimized-tier = [
 "crates/gc_kernel/src/logical_heap.rs" = 430
 "crates/gc_kernel/src/value.rs" = 720
 "crates/gc_kernel/src/value/collections.rs" = 130
+"crates/gc_kernel/src/value/collections/map.rs" = 420
+"crates/gc_kernel/src/value/collections/vector.rs" = 300
 "crates/gc_kernel/src/value/trace_impl.rs" = 120

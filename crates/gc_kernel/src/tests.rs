@@ -252,8 +252,8 @@ fn value_layout_snapshot_documents_r1_5_baseline() {
     // representation drift is intentional and reviewed.
     assert_eq!(size_of::<Value>(), 24);
     assert_eq!(size_of::<Term>(), 40);
-    assert_eq!(size_of::<ValueVector>(), 24);
-    assert_eq!(size_of::<ValueMap>(), 24);
+    assert_eq!(size_of::<ValueVector>(), 16);
+    assert_eq!(size_of::<ValueMap>(), 32);
     assert_eq!(size_of::<Sym>(), 16);
     assert_eq!(size_of::<NativeFn>(), 56);
     assert_eq!(size_of::<Contract>(), 144);
@@ -2257,6 +2257,89 @@ fn persistent_collection_hashes_match_treewalk_and_compiled() {
 
     assert_eq!(tree.debug_repr(), compiled.debug_repr());
     assert_eq!(value_hash(&tree), value_hash(&compiled));
+}
+
+#[test]
+fn persistent_update_chains_have_bounded_path_copy_amplification() {
+    const BASE_LEN: usize = 4_096;
+    const RETAINED_UPDATES: usize = 1_024;
+
+    let base_vector = ValueVector::from_iter(
+        (0..BASE_LEN).map(|index| Value::data(Term::Int(BigInt::from(index)))),
+    );
+    let mut current_vector = crate::Shared::new(base_vector);
+    let original_vector = current_vector.clone();
+    let mut retained_vectors = vec![current_vector.clone()];
+    for update in 0..RETAINED_UPDATES {
+        let mut next = current_vector.clone();
+        assert!(ValueVector::set_shared(
+            &mut next,
+            BASE_LEN / 2,
+            Value::data(Term::Int(BigInt::from(BASE_LEN + update))),
+        ));
+        retained_vectors.push(next.clone());
+        current_vector = next;
+    }
+    assert!(matches!(
+        original_vector.get(BASE_LEN / 2).and_then(Value::as_data),
+        Some(Term::Int(value)) if value == &BigInt::from(BASE_LEN / 2)
+    ));
+    assert!(matches!(
+        current_vector.get(BASE_LEN / 2).and_then(Value::as_data),
+        Some(Term::Int(value)) if value == &BigInt::from(BASE_LEN + RETAINED_UPDATES - 1)
+    ));
+    let mut vector_nodes = BTreeSet::new();
+    for version in &retained_vectors {
+        version.collect_node_identities(&mut vector_nodes);
+    }
+    assert!(
+        vector_nodes.len() <= 300 + RETAINED_UPDATES * 20,
+        "retained vector versions copied too much structure: {} nodes",
+        vector_nodes.len()
+    );
+
+    let mut base_map = ValueMap::new();
+    for index in 0..BASE_LEN {
+        base_map.insert_mut(
+            gc_coreform::TermOrdKey(Term::Int(BigInt::from(index))),
+            Value::data(Term::Int(BigInt::from(index))),
+        );
+    }
+    let mut current_map = crate::Shared::new(base_map);
+    let original_map = current_map.clone();
+    let retained_key = gc_coreform::TermOrdKey(Term::Int(BigInt::from(BASE_LEN / 2)));
+    let mut retained_maps = vec![current_map.clone()];
+    for update in 0..RETAINED_UPDATES {
+        let mut next = current_map.clone();
+        ValueMap::insert_shared(
+            &mut next,
+            retained_key.clone(),
+            Value::data(Term::Int(BigInt::from(BASE_LEN + update))),
+        );
+        retained_maps.push(next.clone());
+        current_map = next;
+    }
+    assert!(matches!(
+        original_map.get(&retained_key).and_then(Value::as_data),
+        Some(Term::Int(value)) if value == &BigInt::from(BASE_LEN / 2)
+    ));
+    assert!(matches!(
+        current_map.get(&retained_key).and_then(Value::as_data),
+        Some(Term::Int(value)) if value == &BigInt::from(BASE_LEN + RETAINED_UPDATES - 1)
+    ));
+    let mut map_nodes = BTreeSet::new();
+    for version in &retained_maps {
+        version.collect_node_identities(&mut map_nodes);
+    }
+    assert!(
+        map_nodes.len() >= RETAINED_UPDATES,
+        "retained map stress never entered the persistent representation"
+    );
+    assert!(
+        map_nodes.len() <= BASE_LEN + RETAINED_UPDATES * 20,
+        "retained map versions copied too much structure: {} nodes",
+        map_nodes.len()
+    );
 }
 
 #[test]

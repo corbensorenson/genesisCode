@@ -38,9 +38,9 @@ The v0.2 value variants and their logical outgoing edges are:
 
 The Rust v0.2 implementation places every allocation that can transitively own a runtime `Value`
 behind the trace-aware `Shared<T>` abstraction. `Shared<T>` currently uses the pinned `rust-cc`
-collector with automatic collection and user finalization disabled. Vectors and ordered maps own
-their elements directly beneath one `Shared<T>` node and preserve immutable alias semantics through
-copy-on-write mutation. Ordinary `Rc` remains only for immutable CoreForm terms and symbol text;
+collector with automatic collection and user finalization disabled. Vectors and ordered maps use
+trace-aware persistent nodes plus bounded copy-on-write transients as specified below. Ordinary
+`Rc` remains only for immutable CoreForm terms and symbol text;
 `Arc` remains only for immutable compiler expressions, coverage tables, and optimization metadata.
 These Rust types are not part of the language contract. A tracing heap, arena, bytecode VM, or
 target runtime may represent the same logical graph differently if observable behavior, hashes,
@@ -112,6 +112,31 @@ The only v0.2 interior mutation that participates in language evaluation is cont
 initialization and revision tracking. It exists to implement top-level recursion and forward
 definitions. User code cannot obtain the module table, mutate a captured frame, install a value into
 an arbitrary slot, or observe its address or reference count.
+
+### Persistent collection bounds
+
+The Rust v0.2 vector is a balanced sequence tree with at most 32 values per leaf. A retained point
+update copies only the root-to-leaf path; append mutates a unique path or creates a bounded number
+of balanced path nodes. Across `U` retained updates of a vector with `N` elements, physical node
+growth is `O(N / 32 + U log N)`, not `O(U * N)`. Indexing and iteration remain ordered by source
+position, and physical tree shape cannot affect equality, printing, hashing, or serialization.
+
+The Rust v0.2 ordered map uses a bounded transient-to-persistent transition. A small or uniquely
+owned map uses the standard ordered transient representation. The first update to aliased storage
+with at least 4,096 entries freezes it once into sorted 32-way pages; subsequent retained updates
+copy only one page path. Below that boundary, a copy can contain at most 4,096 entries. Thus no
+single retained update copies an unbounded flat map, and `U` retained updates after freezing grow
+physical storage by `O(N / 32 + U log_32 N)` pages. Page occupancy, freeze timing, and insertion
+history remain unobservable; iteration is always canonical CoreForm key order and merge remains
+right-biased.
+
+These bounds are implementation constraints, not new language-visible limits. The conformance
+suite retains 1,025 versions of 4,096-element collections while counting distinct physical nodes,
+and the isolated composite lane retains 4,097 versions at the map transition boundary while also
+exercising bounded strings, package graphs, effect logs, and workspace snapshots. A zero-node or
+flat-copy-only map result is a test failure rather than acceptable vacuous evidence. Other runtimes
+may use HAMTs, RRB trees, arenas, or equivalent representations if they prove no weaker asymptotic
+retained-root bound and preserve every semantic observation.
 
 ## Lifetime and Reclamation
 

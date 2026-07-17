@@ -30,6 +30,7 @@ DEFAULT_TESTS=(
   ai_iteration_slo_regression
   default_iteration_workflow
   shell_gate_regressions
+  persistent_sharing_stress
 )
 
 usage() {
@@ -175,6 +176,17 @@ for test_name in "${TESTS[@]}"; do
       exit 1
     }
     echo "test-perf-gates: scoring-matrix ok elapsed_ms=${elapsed_ms} budget_ms=${scoring_budget_ms} scorer_process_timeout_ms=30000"
+  elif [[ "$test_name" == "persistent_sharing_stress" ]]; then
+    sharing_budget_ms="${GENESIS_PERSISTENT_SHARING_STRESS_BUDGET_MS:-120000}"
+    [[ "$sharing_budget_ms" =~ ^[0-9]+$ && "$sharing_budget_ms" -gt 0 ]] || {
+      echo "test-perf-gates: GENESIS_PERSISTENT_SHARING_STRESS_BUDGET_MS must be a positive integer" >&2
+      exit 2
+    }
+    (( elapsed_ms <= sharing_budget_ms )) || {
+      echo "test-perf-gates: persistent sharing stress exceeded wall budget (${elapsed_ms}ms > ${sharing_budget_ms}ms)" >&2
+      exit 1
+    }
+    echo "test-perf-gates: persistent-sharing ok cardinality_per_domain=4096 retained_collection_versions=4097 max_serialized_bytes=16777216 elapsed_ms=${elapsed_ms} budget_ms=${sharing_budget_ms}"
   fi
 done
 

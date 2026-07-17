@@ -213,7 +213,9 @@ impl Apply for Value {
 
 impl Value {
     pub fn data(term: Term) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::data_allocation_units(&term));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::data_allocation_units(&term)
+        });
         Self::Data(Rc::new(term))
     }
 
@@ -223,33 +225,37 @@ impl Value {
     }
 
     pub fn vector(xs: ValueVector) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::vector_allocation_units(xs.len()));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::vector_allocation_units(xs.len())
+        });
         Self::Vector(Shared::new(xs))
     }
 
     pub fn vector_shared(xs: Shared<ValueVector>) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::vector_allocation_units(xs.len()));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::vector_allocation_units(xs.len())
+        });
         Self::Vector(xs)
     }
 
     pub fn map(m: ValueMap) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::map_allocation_units(
-            m.iter().map(|(key, _)| key),
-        ));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::map_allocation_units(m.iter().map(|(key, _)| key))
+        });
         Self::Map(Shared::new(m))
     }
 
     pub fn map_shared(m: Shared<ValueMap>) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::map_allocation_units(
-            m.iter().map(|(key, _)| key),
-        ));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::map_allocation_units(m.iter().map(|(key, _)| key))
+        });
         Self::Map(m)
     }
 
     pub fn closure(param: String, body: Term, env: Env) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::closure_allocation_units(
-            &param, &body,
-        ));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::closure_allocation_units(&param, &body)
+        });
         Self::Closure(Shared::new(ClosureData {
             param: Rc::<str>::from(param),
             body,
@@ -266,9 +272,9 @@ impl Value {
         module_env: Option<crate::compiled::CompiledModuleCells>,
         primitive_forward_plan: Option<std::sync::Arc<crate::compiled::PrimitiveForwardPlan>>,
     ) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::closure_allocation_units(
-            &param, &body,
-        ));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::closure_allocation_units(&param, &body)
+        });
         Self::CompiledClosure(Shared::new(CompiledClosureData {
             param: Rc::<str>::from(param),
             body,
@@ -281,17 +287,16 @@ impl Value {
     }
 
     pub fn native_fn(f: NativeFn) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::native_allocation_units(
-            f.name,
-            f.collected.len(),
-        ));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::native_allocation_units(f.name, f.collected.len())
+        });
         Self::NativeFn(Shared::new(f))
     }
 
     pub fn effect_request(r: EffectRequest) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::effect_request_allocation_units(
-            &r.op, &r.payload,
-        ));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::effect_request_allocation_units(&r.op, &r.payload)
+        });
         Self::EffectRequest(Shared::new(r))
     }
 
@@ -309,9 +314,9 @@ impl Value {
     }
 
     pub fn contract(contract: Contract) -> Self {
-        crate::logical_heap::charge_active(crate::logical_heap::contract_allocation_units(
-            &contract,
-        ));
+        crate::logical_heap::charge_active_with(|| {
+            crate::logical_heap::contract_allocation_units(&contract)
+        });
         Self::Contract(Shared::new(contract))
     }
 
