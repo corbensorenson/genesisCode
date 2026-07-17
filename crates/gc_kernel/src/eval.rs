@@ -368,6 +368,10 @@ impl EvalCtx {
         )
     }
 
+    pub(crate) fn mem_map_len_limit(&self) -> Option<u64> {
+        self.mem_limits.max_map_len
+    }
+
     pub(crate) fn mem_observe_bytes_len(&mut self, len: usize) -> Result<(), KernelError> {
         Self::mem_observe_max(
             "bytes-len",

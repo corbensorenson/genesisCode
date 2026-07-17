@@ -41,6 +41,27 @@ Design note:
 - Map key ordering is canonicalized by CoreForm term ordering; do not invent ad-hoc order rules in
   libraries.
 
+Normative update and observation contract:
+
+- Maps and vectors are persistent values. `map/put`, `map/merge`, `vec/push`, and `vec/set` return
+  a new logical value and never change any previously observable alias. An implementation may
+  mutate uniquely owned storage or structurally share immutable nodes; sharing and representation
+  are not observable language behavior.
+- `map/put` replaces an equal key without changing length. `map/merge left right` is right-biased:
+  every key present in `right` has `right`'s value in the result. Missing `map/get` returns `nil`.
+- Map equality, printing, hashing, and `map/entries` observe entries in the total CoreForm key order
+  defined by `COREFORM_CANON_HASH.md`, independent of insertion order, update history, tree shape,
+  evaluator tier, or structural sharing. Keys must be data-compatible terms. `map/entries` also
+  requires data-compatible values because its result is CoreForm data.
+- Vector indices are zero-based integers. `vec/set` preserves length and reports an out-of-range
+  index through the stable sealed error protocol; `vec/push` appends exactly one element.
+- Collection length limits apply to the logical result. Replacing an existing map key or vector
+  element remains valid at the configured length limit; an operation whose result would exceed a
+  limit fails without publishing a partial value.
+- General collection implementations, not source- or benchmark-shaped recognizers, must satisfy
+  the active PB-4/PB-5 workload contracts. Performance changes must preserve this contract under
+  adversarial key tags, insertion permutations, shared branches, replacements, and merges.
+
 ### `core/vec::*` (persistent vectors)
 
 Required utilities:

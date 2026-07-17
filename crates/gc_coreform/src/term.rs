@@ -57,11 +57,6 @@ fn tag(t: &Term) -> u8 {
 }
 
 fn cmp_term(a: &Term, b: &Term) -> Ordering {
-    // Term ordering is structurally recursive; grow stack as needed to avoid overflow on deep terms.
-    stacker::maybe_grow(32 * 1024, 8 * 1024 * 1024, || cmp_term_impl(a, b))
-}
-
-fn cmp_term_impl(a: &Term, b: &Term) -> Ordering {
     let ta = tag(a);
     let tb = tag(b);
     match ta.cmp(&tb) {
@@ -76,6 +71,14 @@ fn cmp_term_impl(a: &Term, b: &Term) -> Ordering {
         (Term::Str(x), Term::Str(y)) => x.cmp(y),
         (Term::Bytes(x), Term::Bytes(y)) => x.as_ref().cmp(y.as_ref()),
         (Term::Symbol(x), Term::Symbol(y)) => x.cmp(y),
+        // Compound ordering remains stack-safe without charging atomic map keys
+        // for stack-growth setup on every tree comparison.
+        _ => stacker::maybe_grow(32 * 1024, 8 * 1024 * 1024, || cmp_compound(a, b)),
+    }
+}
+
+fn cmp_compound(a: &Term, b: &Term) -> Ordering {
+    match (a, b) {
         (Term::Pair(ax, ad), Term::Pair(bx, bd)) => {
             let c1 = cmp_term(ax, bx);
             if c1 != Ordering::Equal {

@@ -1,7 +1,9 @@
 use crate::{
-    FixedDecimal, Term, canonicalize_module, hash_term, parse_module, parse_term, print_module,
-    print_term, print_term_compact,
+    FixedDecimal, Term, TermOrdKey, canonicalize_module, hash_term, parse_module, parse_term,
+    print_module, print_term, print_term_compact,
 };
+use bytes::Bytes;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[test]
@@ -75,6 +77,54 @@ fn deep_nesting_parse_print_roundtrip_is_stable() {
     let t2 = parse_term(&s1).expect("parse printed deep term");
     let s2 = print_term(&t2);
     assert_eq!(s1, s2);
+}
+
+#[test]
+fn term_key_order_covers_every_tag_and_compound_shape() {
+    let mut one_entry = BTreeMap::new();
+    one_entry.insert(TermOrdKey(Term::Nil), Term::Nil);
+    let ordered = vec![
+        Term::Nil,
+        Term::Bool(false),
+        Term::Bool(true),
+        Term::Int((-1).into()),
+        Term::Int(0.into()),
+        Term::Str("a".to_string()),
+        Term::Str("b".to_string()),
+        Term::Bytes(Bytes::from_static(b"a")),
+        Term::Bytes(Bytes::from_static(b"b")),
+        Term::symbol("a"),
+        Term::symbol("b"),
+        Term::Pair(Box::new(Term::Nil), Box::new(Term::Nil)),
+        Term::Pair(Box::new(Term::Nil), Box::new(Term::Bool(false))),
+        Term::Vector(vec![]),
+        Term::Vector(vec![Term::Nil]),
+        Term::Map(BTreeMap::new()),
+        Term::Map(one_entry),
+    ];
+
+    for (left_index, left) in ordered.iter().enumerate() {
+        assert_eq!(TermOrdKey(left.clone()), TermOrdKey(left.clone()));
+        for right in &ordered[left_index + 1..] {
+            assert!(
+                TermOrdKey(left.clone()) < TermOrdKey(right.clone()),
+                "{} must sort before {}",
+                print_term(left),
+                print_term(right)
+            );
+        }
+    }
+}
+
+#[test]
+fn deeply_nested_compound_keys_compare_without_losing_total_order() {
+    let mut left = Term::Nil;
+    let mut right = Term::Bool(false);
+    for _ in 0..2048 {
+        left = Term::Pair(Box::new(Term::Nil), Box::new(left));
+        right = Term::Pair(Box::new(Term::Nil), Box::new(right));
+    }
+    assert!(TermOrdKey(left) < TermOrdKey(right));
 }
 
 #[test]

@@ -1586,6 +1586,130 @@ fn persistent_map_ops_preserve_term_ordered_observation() {
 }
 
 #[test]
+fn persistent_map_updates_preserve_branches_and_merge_right_bias() {
+    let forms = parse_module(
+        r#"
+      (def base {:z 0 :same 1})
+      (def branch-a (prim map/put base (quote :a) 2))
+      (def branch-b (prim map/put base (quote :b) 3))
+      (def replaced (prim map/put branch-a (quote :same) 9))
+      (def merged (prim map/merge branch-a {:same 7 :b 3}))
+      {:base base :branch-a branch-a :branch-b branch-b :merged merged :replaced replaced}
+    "#,
+    )
+    .unwrap();
+
+    let mut tree_ctx = EvalCtx::new();
+    let mut tree_env = Env::empty();
+    let tree = eval_module(&mut tree_ctx, &mut tree_env, &forms).unwrap();
+    let mut compiled_ctx = EvalCtx::new();
+    let mut compiled_env = Env::empty();
+    let compiled = eval_module_compiled(&mut compiled_ctx, &mut compiled_env, &forms).unwrap();
+
+    let expected = concat!(
+        "{:base {:same 1 :z 0} ",
+        ":branch-a {:a 2 :same 1 :z 0} ",
+        ":branch-b {:b 3 :same 1 :z 0} ",
+        ":merged {:a 2 :b 3 :same 7 :z 0} ",
+        ":replaced {:a 2 :same 9 :z 0}}"
+    );
+    assert_eq!(tree.debug_repr(), expected);
+    assert_eq!(compiled.debug_repr(), expected);
+    assert_eq!(value_hash(&tree), value_hash(&compiled));
+}
+
+#[test]
+fn persistent_map_hash_and_shape_ignore_insertion_permutation() {
+    let keys = [
+        "nil",
+        "false",
+        "-1",
+        r#""s""#,
+        r#"b"\\x01""#,
+        "(quote :sym)",
+        "(quote (a b))",
+        "[1]",
+        "{}",
+    ];
+    let build = |order: &[usize]| {
+        order.iter().copied().fold("{}".to_string(), |map, index| {
+            format!("(prim map/put {map} {} {index})", keys[index])
+        })
+    };
+    let ascending_order: Vec<_> = (0..keys.len()).collect();
+    let descending_order: Vec<_> = (0..keys.len()).rev().collect();
+    let ascending = parse_module(&build(&ascending_order)).unwrap();
+    let descending = parse_module(&build(&descending_order)).unwrap();
+
+    let evaluate = |forms: &[Term], compiled: bool| {
+        let mut ctx = EvalCtx::new();
+        let mut env = Env::empty();
+        if compiled {
+            eval_module_compiled(&mut ctx, &mut env, forms).unwrap()
+        } else {
+            eval_module(&mut ctx, &mut env, forms).unwrap()
+        }
+    };
+    let asc_tree = evaluate(&ascending, false);
+    let desc_tree = evaluate(&descending, false);
+    let asc_compiled = evaluate(&ascending, true);
+    let desc_compiled = evaluate(&descending, true);
+
+    assert_eq!(asc_tree.debug_repr(), desc_tree.debug_repr());
+    let expected_hash = value_hash(&asc_tree);
+    assert_eq!(value_hash(&desc_tree), expected_hash);
+    assert_eq!(value_hash(&asc_compiled), expected_hash);
+    assert_eq!(value_hash(&desc_compiled), expected_hash);
+}
+
+#[test]
+fn map_replacement_at_length_limit_succeeds_but_growth_fails() {
+    let evaluate = |source: &str, compiled: bool| {
+        let forms = parse_module(source).unwrap();
+        let mut ctx = EvalCtx::new();
+        ctx.set_mem_limits(MemLimits {
+            max_map_len: Some(1),
+            ..MemLimits::default()
+        });
+        let mut env = Env::empty();
+        if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &forms)
+        } else {
+            eval_module(&mut ctx, &mut env, &forms)
+        }
+    };
+
+    for compiled in [false, true] {
+        let replaced = evaluate("(prim map/put {:a 1} (quote :a) 2)", compiled).unwrap();
+        assert_eq!(replaced.debug_repr(), "{:a 2}");
+
+        let error = evaluate("(prim map/put {:a 1} (quote :b) 2)", compiled).unwrap_err();
+        assert!(
+            matches!(error.kind, KernelErrorKind::MemoryLimit),
+            "{error}"
+        );
+        assert!(error.msg.contains("map-len"), "{error}");
+    }
+}
+
+#[test]
+fn map_fast_growth_path_preserves_observed_length_counters() {
+    let forms =
+        parse_module("(prim map/put (prim map/put (prim map/put {} 1 1) 2 2) 3 3)").unwrap();
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        let mut env = Env::empty();
+        let result = if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &forms).unwrap()
+        } else {
+            eval_module(&mut ctx, &mut env, &forms).unwrap()
+        };
+        assert_eq!(result.debug_repr(), "{1 1 2 2 3 3}");
+        assert_eq!(ctx.observed_counters().mem.max_map_len, 3);
+    }
+}
+
+#[test]
 fn persistent_collection_hashes_match_treewalk_and_compiled() {
     let forms = parse_module(
         r#"
