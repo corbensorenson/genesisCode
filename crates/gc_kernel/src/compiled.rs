@@ -1,14 +1,13 @@
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
-use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
+use crate::Shared;
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use crate::eval::{CoverageRunId, EvalCtx, PrimOp, prim, prim_op, prim_op2, type_err};
 use crate::value::{NativeFn, Value};
 use gc_coreform::{Term, TermOrdKey};
-
 #[path = "compiled_blob.rs"]
 mod compiled_blob;
 #[path = "compiled_compile.rs"]
@@ -19,6 +18,8 @@ mod compiled_coverage;
 mod compiled_runtime;
 #[cfg(test)]
 mod tests;
+#[path = "compiled/trace_impl.rs"]
+mod trace_impl;
 
 pub(crate) use compiled_runtime::PrimitiveForwardPlan;
 pub(crate) use compiled_runtime::{CompiledClosureCall, apply_compiled_closure};
@@ -131,11 +132,11 @@ impl CompiledCoverageSites {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledLexicalEnv(Rc<[Option<Value>]>);
+pub struct CompiledLexicalEnv(Shared<Vec<Option<Value>>>);
 
 impl CompiledLexicalEnv {
     fn empty() -> Self {
-        Self(Rc::from(Vec::<Option<Value>>::new().into_boxed_slice()))
+        Self(Shared::new(Vec::new()))
     }
 
     fn get(&self, depth: u16, slot: u16) -> Option<Value> {
@@ -146,7 +147,7 @@ impl CompiledLexicalEnv {
     }
 
     fn from_slots(slots: Vec<Option<Value>>) -> Self {
-        Self(Rc::from(slots.into_boxed_slice()))
+        Self(Shared::new(slots))
     }
 
     #[cfg(test)]
@@ -161,11 +162,11 @@ impl CompiledLexicalEnv {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledModuleCells(Rc<RefCell<Vec<Option<Value>>>>);
+pub struct CompiledModuleCells(Shared<RefCell<Vec<Option<Value>>>>);
 
 impl CompiledModuleCells {
     fn new(len: usize) -> Self {
-        Self(Rc::new(RefCell::new(vec![None; len])))
+        Self(Shared::new(RefCell::new(vec![None; len])))
     }
 
     fn empty() -> Self {
@@ -196,7 +197,7 @@ impl CompiledModuleCells {
 #[derive(Clone, Debug)]
 struct RuntimeEnv {
     lexical: CompiledLexicalEnv,
-    inline_slots: Rc<Vec<Value>>,
+    inline_slots: Shared<Vec<Value>>,
     module: CompiledModuleCells,
     external: Env,
     coverage_sites: Arc<CompiledCoverageSites>,
@@ -212,7 +213,7 @@ impl RuntimeEnv {
     ) -> Self {
         Self {
             lexical: CompiledLexicalEnv::empty(),
-            inline_slots: Rc::new(Vec::new()),
+            inline_slots: Shared::new(Vec::new()),
             module,
             external,
             coverage_sites,
@@ -226,12 +227,12 @@ impl RuntimeEnv {
     }
 
     fn with_slots(mut self, values_oldest_to_newest: Vec<Value>) -> Self {
-        Rc::make_mut(&mut self.inline_slots).extend(values_oldest_to_newest);
+        Shared::make_mut(&mut self.inline_slots).extend(values_oldest_to_newest);
         self
     }
 
     fn push_slot(&mut self, value: Value) {
-        Rc::make_mut(&mut self.inline_slots).push(value);
+        Shared::make_mut(&mut self.inline_slots).push(value);
     }
 
     fn with_slot_and_external(mut self, name: &str, value: Value) -> Self {

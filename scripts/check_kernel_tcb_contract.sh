@@ -34,6 +34,14 @@ mutations = {
         '  "compiled_runtime/patterns.rs",',
         '  "compiled_runtime/apply.rs",',
     ),
+    "missing-cycle-owner": (
+        '  "Vector(Shared<ValueVector>)",',
+        '  "Vector(Rc<ValueVector>)",',
+    ),
+    "missing-cycle-safe-point": (
+        '  "crate::cycle::collect_cycles",',
+        '  "crate::cycle::missing_collect_cycles",',
+    ),
 }
 for name, (old, new) in mutations.items():
     if source.count(old) != 1:

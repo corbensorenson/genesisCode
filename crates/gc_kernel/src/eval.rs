@@ -230,9 +230,19 @@ impl EvalCtx {
         boundary: &'static str,
         f: impl FnOnce(&mut Self) -> Result<T, KernelError>,
     ) -> Result<T, KernelError> {
+        let outermost = !self.panic_guard_active();
         self.panic_guard_depth = self.panic_guard_depth.saturating_add(1);
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
         self.panic_guard_depth = self.panic_guard_depth.saturating_sub(1);
+        if outermost
+            && std::panic::catch_unwind(std::panic::AssertUnwindSafe(crate::cycle::collect_cycles))
+                .is_err()
+        {
+            return Err(KernelError::new(
+                KernelErrorKind::Internal,
+                format!("{boundary} cycle collection panicked"),
+            ));
+        }
         match result {
             Ok(result) => result,
             Err(_) => Err(KernelError::new(

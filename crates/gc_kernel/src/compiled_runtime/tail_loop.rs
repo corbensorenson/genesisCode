@@ -1,5 +1,6 @@
 use super::super::*;
 use super::eval::eval_cexpr_runtime;
+use crate::Shared;
 
 #[derive(Clone, Copy, Debug)]
 enum PlanVar {
@@ -66,7 +67,7 @@ enum ControlResult {
 }
 
 struct Lowerer<'a> {
-    closure: &'a Rc<crate::value::CompiledClosureData>,
+    closure: &'a Shared<crate::value::CompiledClosureData>,
     arity: usize,
     next_temp: usize,
 }
@@ -74,7 +75,7 @@ struct Lowerer<'a> {
 pub(super) fn eval_tail_loop_inline(
     ctx: &mut EvalCtx,
     caller_env: &RuntimeEnv,
-    closure: Rc<crate::value::CompiledClosureData>,
+    closure: Shared<crate::value::CompiledClosureData>,
     args: &[Arc<CExpr>],
 ) -> Result<Option<Value>, KernelError> {
     if ctx.step_limit.is_some()
@@ -382,7 +383,7 @@ fn charge_steps(ctx: &mut EvalCtx, steps: u64) {
 }
 
 impl TailLoopPlan {
-    fn lower(closure: &Rc<crate::value::CompiledClosureData>) -> Option<Self> {
+    fn lower(closure: &Shared<crate::value::CompiledClosureData>) -> Option<Self> {
         let mut arity = 1usize;
         let mut body = closure.body_c.inner();
         while let CExpr::FnUnary {
@@ -656,7 +657,7 @@ impl Lowerer<'_> {
         let Value::CompiledClosure(target) = module.get(*slot)? else {
             return None;
         };
-        if !Rc::ptr_eq(&target, self.closure) || args.len() != self.arity {
+        if !Shared::ptr_eq(&target, self.closure) || args.len() != self.arity {
             return None;
         }
         let (args, child_steps) = self.lower_args(args, vars)?;

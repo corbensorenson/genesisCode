@@ -1,12 +1,11 @@
 use std::collections::BTreeMap;
-use std::rc::Rc;
 
 use blake3::Hasher;
 
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
 use gc_kernel::{
     Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError, KernelErrorKind,
-    NativeFn, ProtocolTokens, SealId, Value, ValueMap, value_hash,
+    NativeFn, ProtocolTokens, SealId, Shared, Value, ValueMap, value_hash,
 };
 
 mod prelude_assembled {

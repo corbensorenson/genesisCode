@@ -50,7 +50,7 @@ wasm-encoder = "0.245"
 wasmi = "1.0"
 sha2 = "0.10"
 semver = "1"
-rpds = "1.2.1"
+rust-cc = { version = "=0.6.2", default-features = false, features = ["std", "weak-ptrs"] }
 url = "2"
 
 [profile.test]

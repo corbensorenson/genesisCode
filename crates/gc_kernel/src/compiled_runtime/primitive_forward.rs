@@ -4,6 +4,7 @@ use super::apply::{
     eval_app_n_callable_runtime,
 };
 use super::eval::eval_cexpr_runtime;
+use crate::Shared;
 
 #[derive(Clone, Debug)]
 pub(crate) struct PrimitiveForwardPlan {
@@ -77,7 +78,7 @@ impl PrimitiveForwardPlan {
 pub(super) fn eval_primitive_forward_inline(
     ctx: &mut EvalCtx,
     caller_env: &RuntimeEnv,
-    data: Rc<crate::value::CompiledClosureData>,
+    data: Shared<crate::value::CompiledClosureData>,
     args: &[Arc<CExpr>],
 ) -> Result<Option<ApplyControl>, KernelError> {
     let Some(plan) = data.primitive_forward_plan.as_ref() else {

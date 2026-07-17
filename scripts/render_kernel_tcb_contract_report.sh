@@ -132,7 +132,73 @@ line_budgets = policy.get("line_budgets")
 if not isinstance(line_budgets, dict) or not line_budgets:
     raise SystemExit("kernel-tcb-contract: line_budgets must be a non-empty table")
 
+cycle_ownership = policy.get("cycle_ownership")
+if not isinstance(cycle_ownership, dict):
+    raise SystemExit("kernel-tcb-contract: cycle_ownership must be a table")
+kernel_manifest = cycle_ownership.get("kernel_manifest")
+forbidden_manifest_markers = cycle_ownership.get("forbidden_manifest_markers")
+ordinary_rc_allowed_files = cycle_ownership.get("ordinary_rc_allowed_files")
+ordinary_rc_expected_token_count = cycle_ownership.get("ordinary_rc_expected_token_count")
+ordinary_rc_required_markers = cycle_ownership.get("ordinary_rc_required_markers")
+required_owner_markers = cycle_ownership.get("required_owner_markers")
+required_trace_markers = cycle_ownership.get("required_trace_markers")
+required_safe_point_markers = cycle_ownership.get("required_safe_point_markers")
+for label, values in {
+    "forbidden_manifest_markers": forbidden_manifest_markers,
+    "ordinary_rc_allowed_files": ordinary_rc_allowed_files,
+    "ordinary_rc_required_markers": ordinary_rc_required_markers,
+    "required_owner_markers": required_owner_markers,
+    "required_trace_markers": required_trace_markers,
+    "required_safe_point_markers": required_safe_point_markers,
+}.items():
+    if not isinstance(values, list) or not values or not all(isinstance(x, str) and x for x in values):
+        raise SystemExit(f"kernel-tcb-contract: cycle_ownership.{label} must be a non-empty string list")
+if not isinstance(kernel_manifest, str) or not kernel_manifest:
+    raise SystemExit("kernel-tcb-contract: cycle_ownership.kernel_manifest must be a path")
+if not isinstance(ordinary_rc_expected_token_count, int) or ordinary_rc_expected_token_count < 0:
+    raise SystemExit("kernel-tcb-contract: ordinary_rc_expected_token_count must be non-negative")
+
 errors: list[str] = []
+
+production_sources = {
+    rel: (kernel_src / rel).read_text(encoding="utf-8")
+    for rel in expected_set
+    if (kernel_src / rel).is_file()
+}
+combined_production_source = "\n".join(production_sources.values())
+manifest_path = root / kernel_manifest
+manifest_source = manifest_path.read_text(encoding="utf-8") if manifest_path.is_file() else ""
+if not manifest_path.is_file():
+    errors.append(f"missing-kernel-manifest:{kernel_manifest}")
+present_manifest_markers = [m for m in forbidden_manifest_markers if m in manifest_source]
+if present_manifest_markers:
+    errors.append("forbidden-kernel-manifest-markers:" + "|".join(present_manifest_markers))
+
+rc_token_rows = {}
+for rel, source in production_sources.items():
+    count = len(re.findall(r"\bRc\b", source))
+    if count:
+        rc_token_rows[rel] = count
+unexpected_rc_files = sorted(set(rc_token_rows) - set(ordinary_rc_allowed_files))
+if unexpected_rc_files:
+    errors.append("ordinary-rc-outside-allowlist:" + ",".join(unexpected_rc_files))
+observed_rc_count = sum(rc_token_rows.values())
+if observed_rc_count != ordinary_rc_expected_token_count:
+    errors.append(
+        f"ordinary-rc-token-count:{observed_rc_count}!={ordinary_rc_expected_token_count}"
+    )
+missing_rc_markers = [m for m in ordinary_rc_required_markers if m not in combined_production_source]
+missing_owner_markers = [m for m in required_owner_markers if m not in combined_production_source]
+missing_trace_markers = [m for m in required_trace_markers if m not in combined_production_source]
+missing_safe_point_markers = [m for m in required_safe_point_markers if m not in combined_production_source]
+if missing_rc_markers:
+    errors.append("missing-ordinary-rc-markers:" + "|".join(missing_rc_markers))
+if missing_owner_markers:
+    errors.append("missing-cycle-owner-markers:" + "|".join(missing_owner_markers))
+if missing_trace_markers:
+    errors.append("missing-cycle-trace-markers:" + "|".join(missing_trace_markers))
+if missing_safe_point_markers:
+    errors.append("missing-cycle-safe-point-markers:" + "|".join(missing_safe_point_markers))
 
 # Surface file set enforcement.
 observed_files = sorted(
@@ -290,6 +356,16 @@ report = {
     "forbidden_eval_markers": forbidden_eval_markers,
     "missing_required_markers": missing_required_markers,
     "present_forbidden_markers": present_forbidden_markers,
+    "cycle_ownership": {
+        "kernel_manifest": kernel_manifest,
+        "present_forbidden_manifest_markers": present_manifest_markers,
+        "ordinary_rc_token_rows": rc_token_rows,
+        "ordinary_rc_expected_token_count": ordinary_rc_expected_token_count,
+        "missing_ordinary_rc_markers": missing_rc_markers,
+        "missing_owner_markers": missing_owner_markers,
+        "missing_trace_markers": missing_trace_markers,
+        "missing_safe_point_markers": missing_safe_point_markers,
+    },
 }
 report_path.parent.mkdir(parents=True, exist_ok=True)
 report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

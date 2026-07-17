@@ -36,9 +36,14 @@ The v0.2 value variants and their logical outgoing edges are:
 | `EffectProgram` | pure result or sealed request | inherits contained reachability |
 | `EffectRequest` | immutable CoreForm payload and continuation | the continuation can reach a module cycle |
 
-The Rust v0.2 implementation uses `Rc`, `Arc`, `Box`, and persistent collection nodes for many of
-these edges. Those types are not part of the language contract. A tracing heap, arena, bytecode VM,
-or target runtime may represent the same logical graph differently if observable behavior, hashes,
+The Rust v0.2 implementation places every allocation that can transitively own a runtime `Value`
+behind the trace-aware `Shared<T>` abstraction. `Shared<T>` currently uses the pinned `rust-cc`
+collector with automatic collection and user finalization disabled. Vectors and ordered maps own
+their elements directly beneath one `Shared<T>` node and preserve immutable alias semantics through
+copy-on-write mutation. Ordinary `Rc` remains only for immutable CoreForm terms and symbol text;
+`Arc` remains only for immutable compiler expressions, coverage tables, and optimization metadata.
+These Rust types are not part of the language contract. A tracing heap, arena, bytecode VM, or
+target runtime may represent the same logical graph differently if observable behavior, hashes,
 resource charges, and reclamation requirements remain equal.
 
 ### Environments and closure capture
@@ -70,11 +75,31 @@ The cycle may be indirect. For example, a module cell can own a vector, map, sea
 native partial application, or effect continuation that eventually owns a closure pointing back to
 the module. Cycle handling therefore cannot special-case only a direct function binding.
 
-The v0.2 `Rc` representation does not reclaim every unreachable recursive-module cycle. This is an
-explicit implementation gap, not accepted release behavior. `ROADMAP.md` R2.2.b owns the cycle
-solution and R2.2.e owns retained-root and persistent-sharing stress. A conforming long-lived runtime
-must reclaim an unreachable cycle without requiring user action, process exit, a hidden source
-restriction, or nondeterministic finalizer behavior.
+The v0.2 Rust runtime traces all logical edges listed above and reclaims unreachable direct and
+indirect recursive-module cycles. It does not special-case function bindings: the reclamation corpus
+routes cycles through vectors, maps, sealed payloads, native partials, every contract edge, pure and
+perform effect programs, and effect continuations. `ROADMAP.md` R2.2.e separately owns retained-root
+and adversarial sharing bounds. Every conforming target runtime must provide equivalent reclamation
+without requiring user action, process exit, a hidden source restriction, or nondeterministic
+finalizer behavior.
+
+### Collection safe points and work
+
+The Rust collector runs explicitly after the outermost evaluator or value-application boundary has
+unwound all internal borrows. Caller-owned inputs, environments, and a successful returned value
+remain roots at that point. The same safe point runs after explicit errors and caught panics so a
+failed request cannot indefinitely retain cycles. Nested evaluator calls and native callbacks never
+collect independently. A collector panic is caught by the same boundary and becomes an explicit
+`KernelErrorKind::Internal`; it cannot unwind through the public evaluation API.
+
+Automatic allocation-triggered collection is disabled. Each safe point examines the collector's
+buffered cycle candidates and their traced closure exactly according to the pinned collector
+algorithm. For `V` candidate-reachable traced nodes and `E` traced edges, pause work and temporary
+collector state are `O(V + E)`; no scan of immutable CoreForm or compiler metadata is required.
+Untrusted warm requests execute in isolated, resource-bounded workers, so a bounded request cannot
+monopolize unrelated session work. R2.2.c adds representation-independent logical allocation and
+live-heap ceilings; the collector's physical byte counters and invocation timing are not substitutes
+for those semantic limits.
 
 ### Sharing and mutation
 
@@ -164,8 +189,8 @@ deterministic design. It is acceptable only if all of the following hold:
    shipped.
 7. Malformed, exhausted, or adversarial graphs return sealed or explicit bounded errors; user input
    cannot panic or terminate the daemon.
-8. The implementation publishes maximum pause/work bounds or uses isolation where a single bounded
-   request could otherwise starve unrelated work.
+8. The implementation publishes pause/work bounds and uses isolation where a single bounded request
+   could otherwise starve unrelated work.
 
 This contract deliberately separates graph definition from cycle implementation. Hash cycle
 breaking makes hashing total; it does not reclaim memory and cannot be cited as cycle-collection

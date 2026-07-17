@@ -5,114 +5,22 @@ use std::sync::Arc;
 #[cfg(not(debug_assertions))]
 use std::sync::OnceLock;
 
-use blake3::Hasher;
-
+use crate::Shared;
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
+use blake3::Hasher;
 use gc_coreform::{HASH_DOMAIN_PREFIX, Term, TermOrdKey, hash_term, print_term};
 
+mod collections;
 #[cfg(test)]
 mod tests;
+mod trace_impl;
+
+pub use collections::{ValueMap, ValueVector};
 
 pub const VALUE_EFFECT_HASH_PROFILE_ID: &str = "genesis/value-effect-hash/v0.2";
 
-pub type ValueMap = rpds::RedBlackTreeMap<TermOrdKey, Value>;
 pub type Sym = Rc<str>;
-
-#[derive(Clone, Debug)]
-pub enum ValueVector {
-    Flat(Vec<Value>),
-    Persistent(rpds::Vector<Value>),
-}
-
-impl ValueVector {
-    pub fn new() -> Self {
-        Self::Flat(Vec::new())
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            Self::Flat(xs) => xs.len(),
-            Self::Persistent(xs) => xs.len(),
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn get(&self, idx: usize) -> Option<&Value> {
-        match self {
-            Self::Flat(xs) => xs.get(idx),
-            Self::Persistent(xs) => xs.get(idx),
-        }
-    }
-
-    pub fn iter(&self) -> Box<dyn Iterator<Item = &Value> + '_> {
-        match self {
-            Self::Flat(xs) => Box::new(xs.iter()),
-            Self::Persistent(xs) => Box::new(xs.iter()),
-        }
-    }
-
-    pub fn push_rc(xs: &mut Rc<Self>, value: Value) {
-        if Rc::strong_count(xs) == 1 {
-            match Rc::make_mut(xs) {
-                Self::Flat(vec) => vec.push(value),
-                Self::Persistent(vec) => vec.push_back_mut(value),
-            }
-            return;
-        }
-        let mut persistent = xs.as_ref().to_persistent();
-        persistent.push_back_mut(value);
-        *xs = Rc::new(Self::Persistent(persistent));
-    }
-
-    pub fn set_rc(xs: &mut Rc<Self>, idx: usize, value: Value) -> bool {
-        if idx >= xs.len() {
-            return false;
-        }
-        if Rc::strong_count(xs) == 1 {
-            match Rc::make_mut(xs) {
-                Self::Flat(vec) => {
-                    vec[idx] = value;
-                    true
-                }
-                Self::Persistent(vec) => vec.set_mut(idx, value),
-            }
-        } else {
-            let mut persistent = xs.as_ref().to_persistent();
-            let ok = persistent.set_mut(idx, value);
-            *xs = Rc::new(Self::Persistent(persistent));
-            ok
-        }
-    }
-
-    fn to_persistent(&self) -> rpds::Vector<Value> {
-        match self {
-            Self::Persistent(xs) => xs.clone(),
-            Self::Flat(xs) => {
-                let mut out = rpds::Vector::new();
-                for x in xs {
-                    out.push_back_mut(x.clone());
-                }
-                out
-            }
-        }
-    }
-}
-
-impl Default for ValueVector {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl FromIterator<Value> for ValueVector {
-    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
-        Self::Flat(iter.into_iter().collect())
-    }
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SealId(pub u64);
@@ -151,21 +59,21 @@ impl CompiledExpr {
 pub enum Value {
     Data(Rc<Term>),
     Int(i64),
-    Vector(Rc<ValueVector>),
-    Map(Rc<ValueMap>),
-    Closure(Rc<ClosureData>),
+    Vector(Shared<ValueVector>),
+    Map(Shared<ValueMap>),
+    Closure(Shared<ClosureData>),
     /// A compiled closure stores its original `body` term (for stable hashing/logging) and a
     /// compiled expression for faster evaluation.
-    CompiledClosure(Rc<CompiledClosureData>),
+    CompiledClosure(Shared<CompiledClosureData>),
     SealToken(SealId),
     Sealed {
         token: SealId,
         payload: Box<Value>,
     },
-    NativeFn(Rc<NativeFn>),
-    Contract(Rc<Contract>),
+    NativeFn(Shared<NativeFn>),
+    Contract(Shared<Contract>),
     EffectProgram(Box<EffectProgram>),
-    EffectRequest(Rc<EffectRequest>),
+    EffectRequest(Shared<EffectRequest>),
 }
 
 #[derive(Clone, Debug)]
@@ -271,7 +179,7 @@ fn native_per_call_panic_guard_enabled() -> bool {
 #[derive(Clone, Debug)]
 pub struct Contract {
     pub handler: Value,
-    pub proto: Option<Rc<Contract>>,
+    pub proto: Option<Shared<Contract>>,
     pub meta: Value,
     pub overrides: BTreeMap<String, Value>,
     pub shape_id: [u8; 32],
@@ -311,15 +219,15 @@ impl Value {
     }
 
     pub fn vector(xs: ValueVector) -> Self {
-        Self::Vector(Rc::new(xs))
+        Self::Vector(Shared::new(xs))
     }
 
     pub fn map(m: ValueMap) -> Self {
-        Self::Map(Rc::new(m))
+        Self::Map(Shared::new(m))
     }
 
     pub fn closure(param: String, body: Term, env: Env) -> Self {
-        Self::Closure(Rc::new(ClosureData {
+        Self::Closure(Shared::new(ClosureData {
             param: Rc::<str>::from(param),
             body,
             env,
@@ -335,7 +243,7 @@ impl Value {
         module_env: Option<crate::compiled::CompiledModuleCells>,
         primitive_forward_plan: Option<std::sync::Arc<crate::compiled::PrimitiveForwardPlan>>,
     ) -> Self {
-        Self::CompiledClosure(Rc::new(CompiledClosureData {
+        Self::CompiledClosure(Shared::new(CompiledClosureData {
             param: Rc::<str>::from(param),
             body,
             body_c,
@@ -347,11 +255,11 @@ impl Value {
     }
 
     pub fn native_fn(f: NativeFn) -> Self {
-        Self::NativeFn(Rc::new(f))
+        Self::NativeFn(Shared::new(f))
     }
 
     pub fn effect_request(r: EffectRequest) -> Self {
-        Self::EffectRequest(Rc::new(r))
+        Self::EffectRequest(Shared::new(r))
     }
 
     fn apply_inner(self, ctx: &mut crate::eval::EvalCtx, arg: Value) -> Result<Value, KernelError> {

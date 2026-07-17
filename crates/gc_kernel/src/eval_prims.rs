@@ -1,7 +1,6 @@
-use std::collections::BTreeMap;
-use std::rc::Rc;
-
 use super::*;
+use crate::Shared;
+use std::collections::BTreeMap;
 
 #[path = "eval_prims/text_bytes.rs"]
 mod text_bytes;
@@ -410,7 +409,7 @@ pub(crate) fn prim_op(
                         let new_len = m.size().saturating_add(if existed { 0 } else { 1 });
                         ctx.mem_observe_map_len(new_len)?;
                     }
-                    Rc::make_mut(&mut m).insert_mut(key, value);
+                    Shared::make_mut(&mut m).insert_mut(key, value);
                     ctx.mem_observe_map_len(m.size())?;
                     Ok(Value::Map(m))
                 }
@@ -448,7 +447,7 @@ pub(crate) fn prim_op(
             match (left, right) {
                 (Value::Map(mut out), Value::Map(b)) => {
                     for (k, v) in b.iter() {
-                        Rc::make_mut(&mut out).insert_mut(k.clone(), v.clone());
+                        Shared::make_mut(&mut out).insert_mut(k.clone(), v.clone());
                     }
                     ctx.mem_observe_map_len(out.size())?;
                     Ok(Value::Map(out))
@@ -593,7 +592,7 @@ pub(crate) fn prim_op(
                     if idx >= xs.len() {
                         return type_err(ctx, "vec/set index out of range");
                     }
-                    if crate::value::ValueVector::set_rc(&mut xs, idx, value) {
+                    if crate::value::ValueVector::set_shared(&mut xs, idx, value) {
                         Ok(Value::Vector(xs))
                     } else {
                         type_err(ctx, "vec/set index out of range")
@@ -800,7 +799,7 @@ fn prim_vec_push_values(
         Value::Vector(mut xs) => {
             let new_len = xs.len().saturating_add(1);
             ctx.mem_observe_vec_len(new_len)?;
-            crate::value::ValueVector::push_rc(&mut xs, value);
+            crate::value::ValueVector::push_shared(&mut xs, value);
             Ok(Value::Vector(xs))
         }
         Value::Data(t) => match t.as_ref() {
