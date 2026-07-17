@@ -1,4 +1,4 @@
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};

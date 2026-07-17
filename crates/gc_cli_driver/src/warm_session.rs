@@ -124,6 +124,7 @@ fn handle_worker_result(
         | WorkerResult::CommandError { request_id, .. }
         | WorkerResult::WorkspaceError { request_id, .. }
         | WorkerResult::Crashed { request_id, .. }
+        | WorkerResult::Aborted { request_id, .. }
         | WorkerResult::Cancelled { request_id, .. }
         | WorkerResult::ResourceExceeded { request_id, .. } => request_id,
     };
@@ -141,6 +142,7 @@ fn handle_worker_result(
         WorkerResult::Completed { audit, .. }
         | WorkerResult::CommandError { audit, .. }
         | WorkerResult::Crashed { audit, .. }
+        | WorkerResult::Aborted { audit, .. }
         | WorkerResult::Cancelled { audit, .. }
         | WorkerResult::ResourceExceeded { audit, .. } => Some(audit.as_json()),
         WorkerResult::WorkspaceError { audit, .. } => audit.as_ref().map(SessionAudit::as_json),
@@ -276,6 +278,22 @@ fn handle_worker_result(
             state.workspaces.clear();
             state.seen_ids.clear();
             Ok(())
+        }
+        WorkerResult::Aborted { signal, audit, .. } => {
+            state.crash_count = state.crash_count.saturating_add(1);
+            state.protocol_error(
+                Some(running.id),
+                "warm/worker-abort",
+                "isolated worker terminated abnormally; the daemon remains available",
+                true,
+                json!({
+                    "accepted_index": running.accepted_index,
+                    "daemon_available": true,
+                    "signal": signal,
+                    "audit": audit.as_json(),
+                }),
+                0,
+            )
         }
         WorkerResult::Cancelled { audit, .. } => {
             state.cancelled_requests = state.cancelled_requests.saturating_add(1);

@@ -345,6 +345,7 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
         | WorkerResult::CommandError { request_id, .. }
         | WorkerResult::WorkspaceError { request_id, .. }
         | WorkerResult::Crashed { request_id, .. }
+        | WorkerResult::Aborted { request_id, .. }
         | WorkerResult::Cancelled { request_id, .. }
         | WorkerResult::ResourceExceeded { request_id, .. } => request_id,
     };
@@ -363,6 +364,7 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
         WorkerResult::Completed { audit, .. }
         | WorkerResult::CommandError { audit, .. }
         | WorkerResult::Crashed { audit, .. }
+        | WorkerResult::Aborted { audit, .. }
         | WorkerResult::Cancelled { audit, .. }
         | WorkerResult::ResourceExceeded { audit, .. } => Some(audit.as_json()),
         WorkerResult::WorkspaceError { audit, .. } => audit.as_ref().map(SessionAudit::as_json),
@@ -432,6 +434,17 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
             -32603,
             "tool worker terminated unexpectedly",
             Some(json!({"audit": audit.as_json()})),
+            config,
+        ),
+        WorkerResult::Aborted { signal, audit, .. } => rpc_error(
+            running.id,
+            -32008,
+            "isolated tool worker terminated abnormally; the server remains available",
+            Some(json!({
+                "server_available": true,
+                "signal": signal,
+                "audit": audit.as_json(),
+            })),
             config,
         ),
         WorkerResult::Cancelled { audit, .. } => {

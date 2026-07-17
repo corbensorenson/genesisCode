@@ -258,7 +258,11 @@ observed by an embedding runtime) uses `genesis/warm-session-v0.2`.
    workspace and ID bindings, and requires a new `initialize`. A contained
    worker panic performs the same generation reset, emits
    `warm/worker-crash`, and fails queued requests as
-   `warm/worker-restarted` rather than replaying uncertain work.
+   `warm/worker-restarted` rather than replaying uncertain work. A fatal signal
+   in a native isolated worker instead emits retryable `warm/worker-abort` with
+   the signal and `worker-signal-contained` audit. Because that process cannot
+   mutate daemon memory, initialization, workspace bindings, generation, and
+   later queued requests remain valid.
 6. `shutdown`, EOF, input failure, and disconnect stop admission. At most
    `max_drain_requests`, including the active request, remain eligible to run;
    excess accepted requests receive `warm/drain-bounded`. The retained set has
@@ -285,6 +289,10 @@ observed by an embedding runtime) uses `genesis/warm-session-v0.2`.
   CPU, resident memory, and process count are sampled recursively across the
   complete process tree, including host-bridge descendants that create their
   own process groups.
+- Kernel bulk strings, byte buffers, temporary join tables, and compiled-blob
+  collections preflight checked capacities and reserve fallibly. Residual
+  allocator aborts that cannot become a Rust error are contained by the native
+  worker boundary; WASI explicitly does not claim this protection.
 - `genesis/agent-session-audit-v0.1` records the limit-set BLAKE3 identity,
   worker profile, observed wall/CPU/output/effects/disk/peak-memory/peak-process
   values, enforcement mechanisms, termination mode, and exceeded dimension.

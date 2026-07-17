@@ -21,6 +21,7 @@ expected_kernel_surface_files = [
   "env/capture.rs",
   "error.rs",
   "eval.rs",
+  "fallible_alloc.rs",
   "eval_coverage.rs",
   "eval_decimal_ops.rs",
   "eval_forms.rs",
@@ -48,6 +49,9 @@ required_differential_test_markers = [
   "every_cycle_capable_value_edge_participates_in_reclamation",
   "logical_resource_counters_are_tier_exact_and_resettable",
   "logical_resource_limits_fail_one_unit_short_with_structured_sealed_context",
+  "compiled_blob_declared_counts_are_bounded_by_remaining_input",
+  "bulk_output_limits_preflight_before_construction_in_both_tiers",
+  "fallible_bulk_allocation_rejects_capacity_overflow_without_panicking",
 ]
 
 # Production dispatch cannot regain source- or benchmark-shaped execution under
@@ -130,6 +134,8 @@ required_source_markers = [
   "logical_live_units",
   "core/resource-exhausted",
   "eval_metered_app_n",
+  "try_reserve_exact",
+  "host allocation failed",
 ]
 required_test_markers = [
   "logical_term_and_constructor_units_are_exact",
@@ -156,6 +162,7 @@ required_test_markers = [
 "env/capture.rs" = "shared-semantics"
 "error.rs" = "shared-semantics"
 "eval.rs" = "shared-semantics"
+"fallible_alloc.rs" = "shared-semantics"
 "eval_coverage.rs" = "shared-semantics"
 "eval_decimal_ops.rs" = "shared-semantics"
 "eval_forms.rs" = "reference-semantics"
@@ -201,6 +208,7 @@ optimized-tier = [
 "crates/gc_kernel/src/env/capture.rs" = 60
 "crates/gc_kernel/src/error.rs" = 80
 "crates/gc_kernel/src/eval.rs" = 550
+"crates/gc_kernel/src/fallible_alloc.rs" = 70
 "crates/gc_kernel/src/eval_coverage.rs" = 430
 "crates/gc_kernel/src/eval_treewalk.rs" = 260
 "crates/gc_kernel/src/eval_forms.rs" = 320

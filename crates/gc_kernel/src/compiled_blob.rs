@@ -2,6 +2,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::error::{KernelError, KernelErrorKind};
 use crate::eval::PrimOp;
+use crate::fallible_alloc::{clone_str, vec_with_capacity};
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 
 use super::{
@@ -49,16 +50,16 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
             "compiled module blob magic mismatch",
         ));
     }
-    let module_names_len = cur.read_u32()? as usize;
-    let mut module_names = Vec::with_capacity(module_names_len);
+    let module_names_len = cur.read_count(4, "module names")?;
+    let mut module_names = vec_with_capacity(module_names_len, "compiled module names")?;
     for _ in 0..module_names_len {
         module_names.push(cur.read_str()?);
     }
     let statement_sites = cur.read_str_vec()?;
     let decision_sites = cur.read_str_vec()?;
-    let forms_len = cur.read_u32()? as usize;
+    let forms_len = cur.read_count(1, "forms")?;
     let mut interner = SymbolInterner::default();
-    let mut forms = Vec::with_capacity(forms_len);
+    let mut forms = vec_with_capacity(forms_len, "compiled module forms")?;
     for _ in 0..forms_len {
         let tag = cur.read_u8()?;
         match tag {
@@ -326,6 +327,21 @@ impl<'a> DecodeCursor<'a> {
         Ok(u16::from_le_bytes(buf))
     }
 
+    fn read_count(
+        &mut self,
+        minimum_item_bytes: usize,
+        field: &'static str,
+    ) -> Result<usize, KernelError> {
+        let count = self.read_u32()? as usize;
+        if count > self.remaining() / minimum_item_bytes {
+            return Err(KernelError::new(
+                KernelErrorKind::Internal,
+                format!("compiled module blob {field} count exceeds remaining input"),
+            ));
+        }
+        Ok(count)
+    }
+
     fn read_bytes(&mut self) -> Result<&'a [u8], KernelError> {
         let n = self.read_u32()? as usize;
         self.read_exact(n)
@@ -339,12 +355,12 @@ impl<'a> DecodeCursor<'a> {
                 format!("compiled module blob invalid utf-8: {e}"),
             )
         })?;
-        Ok(s.to_string())
+        clone_str(s, "compiled module string")
     }
 
     fn read_str_vec(&mut self) -> Result<Vec<String>, KernelError> {
-        let n = self.read_u32()? as usize;
-        let mut out = Vec::with_capacity(n);
+        let n = self.read_count(4, "string vector")?;
+        let mut out = vec_with_capacity(n, "compiled string vector")?;
         for _ in 0..n {
             out.push(self.read_str()?);
         }
@@ -382,16 +398,16 @@ fn decode_cexpr(
             }
         }
         2 => {
-            let n = cur.read_u32()? as usize;
-            let mut items = Vec::with_capacity(n);
+            let n = cur.read_count(4, "vector items")?;
+            let mut items = vec_with_capacity(n, "compiled vector items")?;
             for _ in 0..n {
                 items.push(cur.read_term()?);
             }
             CExpr::Vector(items)
         }
         3 => {
-            let n = cur.read_u32()? as usize;
-            let mut entries = Vec::with_capacity(n);
+            let n = cur.read_count(5, "map entries")?;
+            let mut entries = vec_with_capacity(n, "compiled map entries")?;
             for _ in 0..n {
                 let key = TermOrdKey(cur.read_term()?);
                 let val = decode_cexpr(cur, interner)?;
@@ -407,16 +423,16 @@ fn decode_cexpr(
             else_expr: decode_cexpr(cur, interner)?,
         },
         6 => {
-            let n = cur.read_u32()? as usize;
-            let mut items = Vec::with_capacity(n);
+            let n = cur.read_count(1, "begin expressions")?;
+            let mut items = vec_with_capacity(n, "compiled begin expressions")?;
             for _ in 0..n {
                 items.push(decode_cexpr(cur, interner)?);
             }
             CExpr::Begin(items)
         }
         7 => {
-            let n = cur.read_u32()? as usize;
-            let mut bindings = Vec::with_capacity(n);
+            let n = cur.read_count(5, "let bindings")?;
+            let mut bindings = vec_with_capacity(n, "compiled let bindings")?;
             for _ in 0..n {
                 let name = cur.read_str()?;
                 let rhs = decode_cexpr(cur, interner)?;
@@ -439,8 +455,8 @@ fn decode_cexpr(
         }
         9 => {
             let op = cur.read_str()?;
-            let n = cur.read_u32()? as usize;
-            let mut args = Vec::with_capacity(n);
+            let n = cur.read_count(1, "primitive arguments")?;
+            let mut args = vec_with_capacity(n, "compiled primitive arguments")?;
             for _ in 0..n {
                 args.push(decode_cexpr(cur, interner)?);
             }
@@ -457,8 +473,8 @@ fn decode_cexpr(
         14 => {
             let extra_app_ticks = cur.read_u32()?;
             let callee = decode_cexpr(cur, interner)?;
-            let n = cur.read_u32()? as usize;
-            let mut args = Vec::with_capacity(n);
+            let n = cur.read_count(1, "call arguments")?;
+            let mut args = vec_with_capacity(n, "compiled call arguments")?;
             for _ in 0..n {
                 args.push(decode_cexpr(cur, interner)?);
             }

@@ -384,16 +384,13 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
         }
     };
     #[cfg(unix)]
-    let file_size_signal = {
+    let (worker_signal, file_size_signal) = {
         use std::os::unix::process::ExitStatusExt;
-        status
-            .as_ref()
-            .ok()
-            .and_then(ExitStatusExt::signal)
-            .is_some_and(|signal| signal == libc::SIGXFSZ)
+        let signal = status.as_ref().ok().and_then(ExitStatusExt::signal);
+        (signal, signal.is_some_and(|value| value == libc::SIGXFSZ))
     };
     #[cfg(not(unix))]
-    let file_size_signal = false;
+    let (worker_signal, file_size_signal) = (None, false);
     let _ = kill_process_tree(process_id);
     let stdout = stdout.join().unwrap_or(CapturedPipe {
         bytes: Vec::new(),
@@ -432,6 +429,10 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
         exceeded = Some("disk");
         termination = "resource-rejected";
     }
+    let aborted_signal = exceeded.is_none().then_some(worker_signal).flatten();
+    if aborted_signal.is_some() {
+        termination = "worker-signal-contained";
+    }
     let result = status
         .map_err(|_| {
             cli_err(
@@ -458,6 +459,13 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
             request_id,
             resource,
             command_envelope,
+            audit,
+        };
+    }
+    if let Some(signal) = aborted_signal {
+        return WorkerResult::Aborted {
+            request_id,
+            signal,
             audit,
         };
     }

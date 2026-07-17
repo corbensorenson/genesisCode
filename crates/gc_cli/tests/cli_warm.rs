@@ -583,6 +583,75 @@ time.sleep(5)'
     assert_native_audit(heap, td.path());
 }
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[test]
+fn warm_v02_contains_aborted_worker_and_runs_the_next_request() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let td = tempfile::tempdir().unwrap();
+    fs::write(td.path().join("quick.gc"), "(prim int/add 20 22)\n").unwrap();
+    fs::write(
+        td.path().join("abort.gc"),
+        "(def prog (((core/process::spawn \"echo\") []) {}))\nprog\n",
+    )
+    .unwrap();
+    fs::write(
+        td.path().join("abort.toml"),
+        r#"
+allow = ["sys/process::spawn"]
+[op."sys/process::spawn"]
+allow_programs = ["echo"]
+base_dir = "."
+bridge_cmd = "abort_bridge.sh"
+max_bytes = 4096
+"#,
+    )
+    .unwrap();
+    fs::write(
+        td.path().join("abort_bridge.sh"),
+        "#!/bin/sh\nkill -KILL \"$PPID\"\nsleep 5\n",
+    )
+    .unwrap();
+    let mut permissions = fs::metadata(td.path().join("abort_bridge.sh"))
+        .unwrap()
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(td.path().join("abort_bridge.sh"), permissions).unwrap();
+
+    let output = run_warm(
+        td.path(),
+        &[
+            initialize("init"),
+            execute(
+                "abort",
+                "ws",
+                ".",
+                &["run", "abort.gc", "--caps", "abort.toml"],
+            ),
+            execute("healthy", "ws", ".", &["eval", "quick.gc"]),
+            control("stop", "shutdown"),
+        ],
+        &["--max-wall-ms", "30000", "--max-processes", "4"],
+    );
+
+    let aborted = terminal(&output, "abort");
+    assert_eq!(aborted["error"]["code"], "warm/worker-abort");
+    assert_eq!(aborted["error"]["retryable"], true);
+    assert_eq!(aborted["error"]["details"]["daemon_available"], true);
+    assert_eq!(aborted["error"]["details"]["signal"], 9);
+    assert_eq!(
+        terminal_audit(aborted)["termination"],
+        "worker-signal-contained"
+    );
+    assert_native_audit(aborted, td.path());
+
+    let healthy = terminal(&output, "healthy");
+    assert_eq!(healthy["ok"], true, "daemon did not recover: {healthy}");
+    assert_eq!(healthy["status"], "completed");
+    assert_eq!(healthy["meta"]["generation"], 0);
+    assert_eq!(healthy["meta"]["crash_count"], 1);
+}
+
 #[test]
 fn warm_v02_eof_terminalizes_every_accepted_request_with_a_bounded_drain() {
     let td = tempfile::tempdir().unwrap();

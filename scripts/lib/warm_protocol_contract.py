@@ -76,6 +76,7 @@ REQUIRED_ERROR_CODES = {
     "warm/resource-override",
     "warm/restart-busy",
     "warm/session-limit",
+    "warm/worker-abort",
     "warm/worker-crash",
     "warm/worker-launch",
     "warm/worker-restarted",
@@ -93,6 +94,7 @@ REQUIRED_TESTS = {
     "warm_v02_restart_requires_renegotiation",
     "warm_v02_rejects_request_resource_overrides_before_admission",
     "warm_v02_hard_limits_kill_and_reap_native_workers_with_audits",
+    "warm_v02_contains_aborted_worker_and_runs_the_next_request",
     "warm_v02_eof_terminalizes_every_accepted_request_with_a_bounded_drain",
     "warm_v02_enforces_steps_effects_processes_and_disk_with_exact_evidence",
 }
@@ -400,6 +402,7 @@ def validate_authorities() -> None:
         "wasi-inline-v0.1",
         "process-tree-kill-and-reap",
         "resource-killed-and-reaped",
+        "worker-signal-contained",
         "genesis/agent-session-audit-v0.1",
         "max_drain_requests",
         "drain_timeout",

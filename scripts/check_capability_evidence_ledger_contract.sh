@@ -125,8 +125,8 @@ run_tool --update --ledger "$LEDGER" >/dev/null
 
 python3 scripts/lib/roadmap_evidence.py --check >/dev/null
 roadmap_identity_count="$(python3 scripts/lib/roadmap_evidence.py --print | wc -l | tr -d ' ')"
-[[ "$roadmap_identity_count" == "55" ]] || {
-  echo "capability-evidence-ledger-contract: expected 55 roadmap identities, got $roadmap_identity_count" >&2
+[[ "$roadmap_identity_count" == "56" ]] || {
+  echo "capability-evidence-ledger-contract: expected 56 roadmap identities, got $roadmap_identity_count" >&2
   exit 1
 }
 cp ROADMAP.md "$TMP_DIR/roadmap-stale.md"

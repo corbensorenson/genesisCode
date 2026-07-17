@@ -1248,6 +1248,18 @@ fn compiled_module_blob_roundtrip_preserves_behavior() {
 }
 
 #[test]
+fn compiled_blob_declared_counts_are_bounded_by_remaining_input() {
+    let mut blob = b"GCKM5\0".to_vec();
+    blob.extend_from_slice(&u32::MAX.to_le_bytes());
+    let error = decode_compiled_module_blob(&blob).unwrap_err();
+    assert!(matches!(error.kind, KernelErrorKind::Internal), "{error}");
+    assert!(
+        error.msg.contains("count exceeds remaining input"),
+        "{error}"
+    );
+}
+
+#[test]
 fn compiled_unknown_prim_preserves_argument_eval_order_and_blob_roundtrip() {
     let forms = parse_module("(prim does/not-exist missing)").unwrap();
 
@@ -1712,6 +1724,45 @@ fn memory_limit_on_string_len_is_a_kernel_error() {
     let e = eval_module(&mut ctx, &mut env, &forms).unwrap_err();
     assert!(matches!(e.kind, KernelErrorKind::MemoryLimit), "{e}");
     assert!(e.msg.contains("string-len"), "msg={}", e.msg);
+}
+
+#[test]
+fn bulk_output_limits_preflight_before_construction_in_both_tiers() {
+    let forms = parse_module(r#"(prim str/repeat "abc" 3)"#).unwrap();
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        ctx.set_mem_limits(MemLimits {
+            max_string_len: Some(8),
+            ..MemLimits::default()
+        });
+        let mut env = Env::empty();
+        let error = if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &forms)
+        } else {
+            eval_module(&mut ctx, &mut env, &forms)
+        }
+        .unwrap_err();
+        assert_eq!(
+            error.resource_limit,
+            Some(crate::ResourceLimit {
+                dimension: "string-len",
+                observed: 9,
+                limit: 8,
+            })
+        );
+    }
+}
+
+#[test]
+fn fallible_bulk_allocation_rejects_capacity_overflow_without_panicking() {
+    let error = crate::fallible_alloc::vec_with_capacity::<u8>(usize::MAX, "test")
+        .expect_err("capacity overflow must be recoverable");
+    assert!(
+        matches!(error.kind, KernelErrorKind::MemoryLimit),
+        "{error}"
+    );
+    assert!(error.resource_limit.is_none());
+    assert!(error.msg.contains("host allocation failed"), "{error}");
 }
 
 #[test]

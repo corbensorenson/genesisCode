@@ -236,8 +236,24 @@ message string is explanatory and is not a routing identifier.
 
 All execution tiers must charge the same documented logical events. A tier cannot avoid a limit by
 sharing nodes differently, delaying a charge, switching representation, forcing collection, or
-moving a language allocation into host code. Physical allocation preflight, recoverable allocator
-failure, and process-level OOM isolation are separate R2.2.d obligations.
+moving a language allocation into host code.
+
+#### Physical allocation failure
+
+User-sized bulk outputs compute their exact byte or element capacity with checked arithmetic, apply
+the semantic shape limit, and only then use a fallible host reservation. Compiled-module decoding
+also rejects declared collection counts that cannot fit the remaining input before reserving. A
+failed reservation returns an explicit `KernelErrorKind::MemoryLimit`; it has no fabricated
+`:limit`, because the host allocator does not expose a deterministic numeric ceiling. Small fixed
+runtime allocations and third-party allocator internals can still abort rather than return a Rust
+error, so this is not represented as a universal in-process OOM guarantee.
+
+Long-lived native macOS/Linux services therefore execute every untrusted command in a separately
+reapable process tree. A residual allocator abort or external fatal signal terminates only that
+worker, produces a `worker-signal-contained` audit and typed request failure, and leaves the daemon
+initialized for subsequent work. Resource-monitor kills remain classified by their measured
+dimension. WASI's inline worker profile cannot provide process OOM isolation and must continue to
+advertise that weaker boundary rather than claiming parity.
 
 ### Cycle-solution acceptance constraints
 
