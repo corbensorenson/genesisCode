@@ -1,0 +1,100 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 6494,
+      "path": "campaign.json",
+      "sha256": "d0b386ac4359eb977251281307a206c808310ebab42a33563b5180fdcc9c9898"
+    },
+    {
+      "bytes": 716,
+      "path": "events.jsonl",
+      "sha256": "35b5d336ca2208cb57a6fa7222a92efab98e56ece7e668e0b54473bab9f4f125"
+    },
+    {
+      "bytes": 2621,
+      "path": "predeclaration.json",
+      "sha256": "88d640f6378143dd487f88e4c546594344ce13a975b343905b16a7f09311159b"
+    },
+    {
+      "bytes": 257,
+      "path": "stderr.txt",
+      "sha256": "978e564c3e0765022c3b00f79b93d85b2e11707644440e8289e9e7b0b6224c32"
+    }
+  ],
+  "artifactInventoryIdentitySha256": "ddc0c00995acf46933060c890aee3f4db74ae8baa1b6bb405e9a696c17e2eacc",
+  "attempt": {
+    "elapsedMs": 4489,
+    "environmentPresentNames": [
+      "HOME",
+      "PATH"
+    ],
+    "environmentValuesRecorded": false,
+    "eventCount": 5,
+    "index": 0,
+    "returnCode": 1,
+    "termination": "exited"
+  },
+  "case": {
+    "conditionId": "condition-deployment-context-small-001",
+    "conditionIdentitySha256": "240d9c03b77b68d98cc1e96446db079eb6229a034baf6614c3c8c92e210877bf",
+    "editablePaths": [
+      "deployment.json"
+    ],
+    "id": "deployment-small",
+    "lineageId": "lineage-deployment-001",
+    "lineageIdentitySha256": "42ad1f5ace80cc77926d1c5a96408b7c4e0eb1041a16dbe5d9eaeee56aa75494"
+  },
+  "contentIdentitySha256": "3eff64ece07e2028c741fc3ca943c388cddcd6f1803bafe9122079e28125f0a8",
+  "kind": "genesis/genesisbench-open-agent-run-v0.1",
+  "outcome": "invalid",
+  "predeclarationIdentitySha256": "99434e3e7e556cac7f8da6c1a5aeaf2aedc119e09466e5be1b11070a643df3d1",
+  "replay": {
+    "agentAccessAllowed": false,
+    "independentRescoreRequired": false,
+    "modelAccessAllowed": false
+  },
+  "scoreIdentitySha256": null,
+  "version": "0.1.0",
+  "workspace": {
+    "afterInventory": [
+      {
+        "bytes": 11,
+        "path": "caps.toml",
+        "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+      },
+      {
+        "bytes": 59,
+        "path": "lib.gc",
+        "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+      },
+      {
+        "bytes": 119,
+        "path": "package.toml",
+        "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+      }
+    ],
+    "afterInventoryStatus": "valid",
+    "beforeInventory": [
+      {
+        "bytes": 11,
+        "path": "caps.toml",
+        "sha256": "e751eec7013b20311108e97441b4d83ddb3aacb3edf96d905edf481f52a42b14"
+      },
+      {
+        "bytes": 59,
+        "path": "lib.gc",
+        "sha256": "59e37500a00e29c312e75a188e5ea1611ae9de2a35f8e7733eecc163d35f9afc"
+      },
+      {
+        "bytes": 119,
+        "path": "package.toml",
+        "sha256": "fa7bae8e3a04373c6f56f7340f85bb67c423455097669d50263102734d69ad96"
+      }
+    ],
+    "sourceSnapshotAfterIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "sourceSnapshotBeforeIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "violations": [
+      "nonzero-exit"
+    ]
+  }
+}

@@ -8,6 +8,7 @@ import copy
 import hashlib
 import json
 import os
+import platform
 import re
 import shutil
 import signal
@@ -21,20 +22,26 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 import gc_agent_scoring
+import gc_task_benchmarks
 import genesisbench_protocol
 
 
 ROOT = Path(__file__).resolve().parents[2]
-AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json"
+AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json"
+LEGACY_AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json"
 PREDECLARATION_SCHEMA_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json"
+CAMPAIGN_SCHEMA_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json"
 RUN_SCHEMA_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json"
 SUITE_PATH = ROOT / "benchmarks/agent_tasks/v0.1/suite.json"
 PROTOCOL_PATH = ROOT / "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json"
 SCORING_PATH = ROOT / "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json"
+AUTHORITY_ARCHIVE_ROOT = ROOT / "benchmarks/genesisbench/v0.1/authority-archive"
 
 KIND_PREDECLARATION = "genesis/genesisbench-open-agent-predeclaration-v0.1"
+KIND_CAMPAIGN = "genesis/genesisbench-open-agent-campaign-v0.1"
 KIND_RUN = "genesis/genesisbench-open-agent-run-v0.1"
 KIND_AUTHORITY = "genesis/genesisbench-open-agent-harness-v0.1"
+KIND_AUTHORITY_V2 = "genesis/genesisbench-open-agent-harness-v0.2"
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$")
 REL_RE = re.compile(r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]{1,512}$")
@@ -128,19 +135,45 @@ def regular_file(path: Path, label: str) -> Path:
     return path.resolve(strict=True)
 
 
-def suite_and_case(case_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    suite = load_json(SUITE_PATH)
+def identified_authority(current: Path, archive: Path, identity: str) -> dict[str, Any]:
+    value = load_json(current)
+    if value.get("contentIdentitySha256") != identity:
+        value = load_json(archive / f"{identity}.json")
+    require(value.get("contentIdentitySha256") == identity, "authority archive identity drift")
+    return value
+
+
+def suite_authority(identity: str) -> dict[str, Any]:
+    value = identified_authority(SUITE_PATH, AUTHORITY_ARCHIVE_ROOT / "suites", identity)
+    require(gc_task_benchmarks.identity(value) == identity, "suite authority content identity drift")
+    return value
+
+
+def protocol_authority(identity: str) -> dict[str, Any]:
+    value = identified_authority(PROTOCOL_PATH, AUTHORITY_ARCHIVE_ROOT / "protocols", identity)
+    require(genesisbench_protocol.content_identity(value) == identity, "protocol authority content identity drift")
+    return value
+
+
+def suite_and_case(case_id: str, suite: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+    suite = suite or load_json(SUITE_PATH)
     case = next((row for row in suite["cases"] if row["id"] == case_id), None)
     require(case is not None, f"unknown benchmark case: {case_id}")
     return suite, case
 
 
-def authority() -> dict[str, Any]:
-    return load_json(AUTHORITY_PATH)
+def authority(identity: str | None = None) -> dict[str, Any]:
+    documents = [load_json(path) for path in (AUTHORITY_PATH, LEGACY_AUTHORITY_PATH)]
+    if identity is None:
+        return documents[0]
+    match = next((document for document in documents if document["contentIdentitySha256"] == identity), None)
+    require(match is not None, "unknown Open Agent harness authority")
+    return match
 
 
-def source_rows() -> list[dict[str, Any]]:
-    return genesisbench_protocol.tree_rows(genesisbench_protocol.SNAPSHOT_COMMIT)
+def source_rows(protocol: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    commit = (protocol or load_json(PROTOCOL_PATH))["sourceSnapshot"]["commitSha1"]
+    return genesisbench_protocol.tree_rows(commit)
 
 
 def rows_identity(rows: list[dict[str, Any]]) -> str:
@@ -175,15 +208,22 @@ def executable_version(executable: Path) -> str:
     return version
 
 
-def build_predeclaration(
-    *, case_id: str, campaign_id: str, runner_class: str, executable: Path,
-    model_id: str, model_revision: str, immutable_revision: bool,
-    reasoning_effort: str, timeout_ms: int, local_provider: str | None,
-    model_artifact_sha256: str | None,
+def campaign_case_ids(suite: dict[str, Any], phase: str) -> list[str]:
+    if phase == "reality-gate":
+        expected = [f"{task_class}-small" for task_class in suite["taskClasses"]]
+    elif phase == "full-public":
+        expected = [case["id"] for case in suite["cases"]]
+    else:
+        raise OpenAgentError("unsupported Open Agent campaign phase")
+    return sorted(expected)
+
+
+def common_predeclaration_fields(
+    *, runner_class: str, executable: Path, model_id: str, model_revision: str,
+    immutable_revision: bool, reasoning_effort: str, timeout_ms: int,
+    local_provider: str | None, model_artifact_sha256: str | None,
 ) -> dict[str, Any]:
     executable = regular_file(executable, "agent executable")
-    suite, case = suite_and_case(case_id)
-    protocol = load_json(PROTOCOL_PATH)
     harness = authority()
     require(runner_class in {"codex-cli-hosted", "codex-cli-local"}, "unsupported Open Agent runner class")
     require(reasoning_effort in {"low", "medium", "high", "xhigh"}, "unsupported reasoning effort")
@@ -195,17 +235,7 @@ def build_predeclaration(
     else:
         require(local_provider is None and model_artifact_sha256 is None, "hosted runner cannot declare local provider material")
         network_mode = "provider-only"
-    document = {
-        "kind": KIND_PREDECLARATION,
-        "version": "0.1.0",
-        "campaignId": safe_id(campaign_id, "campaign id"),
-        "case": case_binding(case),
-        "authorities": {
-            "harnessIdentitySha256": harness["contentIdentitySha256"],
-            "protocolIdentitySha256": protocol["contentIdentitySha256"],
-            "suiteIdentitySha256": suite["contentIdentitySha256"],
-            "sourceSnapshotManifestIdentitySha256": protocol["sourceSnapshot"]["manifestIdentitySha256"],
-        },
+    return {
         "track": {
             "id": "open-agent",
             "scaffoldClass": "codex-cli",
@@ -247,29 +277,136 @@ def build_predeclaration(
             "genesisSpecificTraining": "unknown",
             "contaminationLabel": "unknown",
         },
+    }
+
+
+def build_campaign(
+    *, campaign_id: str, phase: str, case_ids: list[str], runner_class: str,
+    executable: Path, model_id: str, model_revision: str, immutable_revision: bool,
+    reasoning_effort: str, timeout_ms: int, local_provider: str | None,
+    model_artifact_sha256: str | None, hardware_class: str,
+) -> dict[str, Any]:
+    suite = load_json(SUITE_PATH)
+    protocol = load_json(PROTOCOL_PATH)
+    harness = authority()
+    expected_ids = campaign_case_ids(suite, phase)
+    require(sorted(case_ids) == expected_ids and len(case_ids) == len(set(case_ids)), "campaign case matrix is incomplete or non-canonical")
+    cases = [case_binding(next(case for case in suite["cases"] if case["id"] == case_id)) for case_id in expected_ids]
+    common = common_predeclaration_fields(
+        runner_class=runner_class, executable=executable, model_id=model_id,
+        model_revision=model_revision, immutable_revision=immutable_revision,
+        reasoning_effort=reasoning_effort, timeout_ms=timeout_ms,
+        local_provider=local_provider, model_artifact_sha256=model_artifact_sha256,
+    )
+    document = {
+        "kind": KIND_CAMPAIGN,
+        "version": "0.1.0",
+        "campaignId": safe_id(campaign_id, "campaign id"),
+        "phase": phase,
+        "cases": cases,
+        "authorities": {
+            "harnessIdentitySha256": harness["contentIdentitySha256"],
+            "protocolIdentitySha256": protocol["contentIdentitySha256"],
+            "suiteIdentitySha256": suite["contentIdentitySha256"],
+            "sourceSnapshotManifestIdentitySha256": protocol["sourceSnapshot"]["manifestIdentitySha256"],
+        },
+        **common,
+        "stopPolicy": {
+            "executeEveryPredeclaredCase": True,
+            "stopOnModelFailure": False,
+            "stopOnInvalidAttempt": False,
+            "expansionRequiresCompleteValidationAndReplay": True,
+        },
+        "host": {
+            "hardwareClass": safe_id(hardware_class, "hardware class"),
+            "architecture": safe_id(platform.machine(), "host architecture"),
+            "operatingSystem": safe_id(platform.system(), "host operating system"),
+        },
+        "secrets": {
+            "source": "codex-auth-store",
+            "valuesRecorded": False,
+            "forwardedToWorkspace": False,
+        },
+        "publication": {
+            "class": "authentic-unranked-open-agent",
+            "missingImmutableModelIdentityForcesUnranked": True,
+            "expectedAttemptCount": len(cases),
+        },
         "contentIdentitySha256": "",
     }
     return identified(document)
 
 
-def validate_predeclaration(document: Any) -> dict[str, Any]:
+def validate_campaign(document: Any) -> dict[str, Any]:
     top = {
-        "kind", "version", "campaignId", "case", "authorities", "track", "runner",
-        "model", "attemptPolicy", "capabilities", "limits", "disclosure", "contentIdentitySha256",
+        "kind", "version", "campaignId", "phase", "cases", "authorities", "track",
+        "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure",
+        "stopPolicy", "host", "secrets", "publication", "contentIdentitySha256",
     }
-    doc = closed(document, top, "Open Agent predeclaration")
-    require(doc["kind"] == KIND_PREDECLARATION and doc["version"] == "0.1.0", "predeclaration kind/version drift")
+    doc = closed(document, top, "Open Agent campaign")
+    require(doc["kind"] == KIND_CAMPAIGN and doc["version"] == "0.1.0", "campaign kind/version drift")
     safe_id(doc["campaignId"], "campaign id")
-    suite, case = suite_and_case(doc["case"].get("id"))
-    require(doc["case"] == case_binding(case), "case binding drift")
-    protocol = load_json(PROTOCOL_PATH)
-    harness = authority()
+    authority_binding = closed(doc["authorities"], {"harnessIdentitySha256", "protocolIdentitySha256", "suiteIdentitySha256", "sourceSnapshotManifestIdentitySha256"}, "campaign authorities")
+    suite = suite_authority(authority_binding["suiteIdentitySha256"])
+    expected_ids = campaign_case_ids(suite, doc["phase"])
+    expected_cases = [case_binding(next(case for case in suite["cases"] if case["id"] == case_id)) for case_id in expected_ids]
+    require(doc["cases"] == expected_cases, "campaign case bindings drift")
+    protocol = protocol_authority(authority_binding["protocolIdentitySha256"])
+    harness = authority(authority_binding["harnessIdentitySha256"])
     require(doc["authorities"] == {
         "harnessIdentitySha256": harness["contentIdentitySha256"],
         "protocolIdentitySha256": protocol["contentIdentitySha256"],
         "suiteIdentitySha256": suite["contentIdentitySha256"],
         "sourceSnapshotManifestIdentitySha256": protocol["sourceSnapshot"]["manifestIdentitySha256"],
-    }, "predeclaration authority binding drift")
+    }, "campaign authority binding drift")
+    validate_common_fields(doc, harness)
+    require(doc["stopPolicy"] == {
+        "executeEveryPredeclaredCase": True, "stopOnModelFailure": False,
+        "stopOnInvalidAttempt": False, "expansionRequiresCompleteValidationAndReplay": True,
+    }, "campaign stop policy drift")
+    host = closed(doc["host"], {"hardwareClass", "architecture", "operatingSystem"}, "campaign host")
+    for field in host: safe_id(host[field], f"host {field}")
+    require(doc["secrets"] == {"source": "codex-auth-store", "valuesRecorded": False, "forwardedToWorkspace": False}, "campaign secret policy drift")
+    require(doc["publication"] == {
+        "class": "authentic-unranked-open-agent",
+        "missingImmutableModelIdentityForcesUnranked": True,
+        "expectedAttemptCount": len(expected_cases),
+    }, "campaign publication policy drift")
+    validate_identity(doc)
+    return doc
+
+
+def build_predeclaration(
+    *, case_id: str, campaign: dict[str, Any],
+) -> dict[str, Any]:
+    campaign = validate_campaign(campaign)
+    suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
+    suite, case = suite_and_case(case_id, suite)
+    protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
+    harness = authority(campaign["authorities"]["harnessIdentitySha256"])
+    require(case_binding(case) in campaign["cases"], "case is not predeclared by campaign")
+    document = {
+        "kind": KIND_PREDECLARATION,
+        "version": "0.1.0",
+        "campaignId": campaign["campaignId"],
+        "campaignIdentitySha256": campaign["contentIdentitySha256"],
+        "case": case_binding(case),
+        "authorities": {
+            "harnessIdentitySha256": harness["contentIdentitySha256"],
+            "protocolIdentitySha256": protocol["contentIdentitySha256"],
+            "suiteIdentitySha256": suite["contentIdentitySha256"],
+            "sourceSnapshotManifestIdentitySha256": protocol["sourceSnapshot"]["manifestIdentitySha256"],
+        },
+        **{field: copy.deepcopy(campaign[field]) for field in (
+            "track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure",
+        )},
+        "contentIdentitySha256": "",
+    }
+    return identified(document)
+
+
+def validate_common_fields(doc: dict[str, Any], harness: dict[str, Any] | None = None) -> None:
+    harness = harness or authority()
     runner = closed(doc["runner"], {"class", "executableSha256", "executableVersion", "invocationProfile", "localProvider"}, "runner")
     require(runner["class"] in harness["invocationProfiles"], "unknown runner class")
     require(runner["invocationProfile"] == harness["invocationProfiles"][runner["class"]]["id"], "invocation profile drift")
@@ -303,15 +440,42 @@ def validate_predeclaration(document: Any) -> dict[str, Any]:
         "environmentNames": list(ALLOWED_ENVIRONMENT), "environmentValuesRecorded": False,
         "genesisSpecificTraining": "unknown", "contaminationLabel": "unknown",
     }, "disclosure drift")
+
+
+def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str, Any]:
+    top = {
+        "kind", "version", "campaignId", "campaignIdentitySha256", "case", "authorities", "track", "runner",
+        "model", "attemptPolicy", "capabilities", "limits", "disclosure", "contentIdentitySha256",
+    }
+    doc = closed(document, top, "Open Agent predeclaration")
+    require(doc["kind"] == KIND_PREDECLARATION and doc["version"] == "0.1.0", "predeclaration kind/version drift")
+    campaign = validate_campaign(campaign)
+    require(doc["campaignId"] == campaign["campaignId"] and doc["campaignIdentitySha256"] == campaign["contentIdentitySha256"], "attempt campaign binding drift")
+    suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
+    suite, case = suite_and_case(doc["case"].get("id"), suite)
+    require(doc["case"] == case_binding(case), "case binding drift")
+    require(doc["case"] in campaign["cases"], "attempt case is absent from campaign")
+    protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
+    harness = authority(campaign["authorities"]["harnessIdentitySha256"])
+    require(doc["authorities"] == {
+        "harnessIdentitySha256": harness["contentIdentitySha256"],
+        "protocolIdentitySha256": protocol["contentIdentitySha256"],
+        "suiteIdentitySha256": suite["contentIdentitySha256"],
+        "sourceSnapshotManifestIdentitySha256": protocol["sourceSnapshot"]["manifestIdentitySha256"],
+    }, "predeclaration authority binding drift")
+    validate_common_fields(doc, harness)
+    for field in ("track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"):
+        require(doc[field] == campaign[field], f"attempt {field} differs from campaign")
     validate_identity(doc)
     return doc
 
 
-def archive_snapshot(destination: Path) -> tuple[list[dict[str, Any]], str]:
-    rows = source_rows()
+def archive_snapshot(destination: Path, protocol: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], str]:
+    protocol = protocol or load_json(PROTOCOL_PATH)
+    rows = source_rows(protocol)
     destination.mkdir(parents=True)
     archive = subprocess.run(
-        ["git", "archive", "--format=tar", genesisbench_protocol.SNAPSHOT_COMMIT],
+        ["git", "archive", "--format=tar", protocol["sourceSnapshot"]["commitSha1"]],
         cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
     )
     require(archive.returncode == 0, "cannot materialize frozen source snapshot")
@@ -474,6 +638,24 @@ def terminate_group(process: subprocess.Popen[bytes]) -> None:
     process.wait()
 
 
+def remove_tree(path: Path) -> None:
+    if not path.exists():
+        return
+    for root, directories, _ in os.walk(path):
+        os.chmod(root, stat.S_IRWXU)
+        for name in directories:
+            directory = Path(root) / name
+            if not directory.is_symlink():
+                os.chmod(directory, stat.S_IRWXU)
+    shutil.rmtree(path)
+
+
+def isolated_stage() -> Path:
+    stage = Path(tempfile.mkdtemp(prefix="genesisbench-open-agent-")).resolve()
+    require(ROOT.resolve() not in stage.parents and stage not in ROOT.resolve().parents, "agent stage is not ancestry-isolated")
+    return stage
+
+
 def run_process(
     executable: Path, args: list[str], cwd: Path, timeout_ms: int,
     stdout_path: Path, stderr_path: Path, max_stdout: int, max_stderr: int,
@@ -532,30 +714,36 @@ def copy_candidate(workspace: Path, candidate: Path, case: dict[str, Any]) -> No
 
 
 def run_agent(
-    predeclaration_path: Path, out: Path, executable: Path,
+    campaign_path: Path, predeclaration_path: Path, out: Path, executable: Path,
     genesis_bin: Path, selfhost_artifact: Path,
 ) -> dict[str, Any]:
     require(not out.exists(), "Open Agent run output already exists")
-    predeclaration = validate_predeclaration(load_json(predeclaration_path))
+    campaign = validate_campaign(load_json(campaign_path))
+    predeclaration = validate_predeclaration(load_json(predeclaration_path), campaign)
     executable = regular_file(executable, "agent executable")
     genesis_bin = regular_file(genesis_bin, "GenesisCode executable")
     selfhost_artifact = regular_file(selfhost_artifact, "self-host artifact")
     require(sha256_file(executable) == predeclaration["runner"]["executableSha256"], "agent executable digest mismatch")
     require(executable_version(executable) == predeclaration["runner"]["executableVersion"], "agent executable version mismatch")
-    _, case = suite_and_case(predeclaration["case"]["id"])
+    suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
+    _, case = suite_and_case(predeclaration["case"]["id"], suite)
+    protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
     out.parent.mkdir(parents=True, exist_ok=True)
-    stage = Path(tempfile.mkdtemp(prefix="genesisbench-open-agent-", dir=out.parent.resolve()))
+    # Keep the process cwd outside the repository ancestry so project instructions
+    # and skills cannot enter an otherwise isolated campaign through discovery.
+    stage = isolated_stage()
     retained = stage / "retained"; retained.mkdir()
     input_root = stage / "input"; input_root.mkdir()
     repository = input_root / "repository"
     workspace = stage / "workspace"
     tools = input_root / "tools"; tools.mkdir()
     try:
-        snapshot_rows, snapshot_identity = archive_snapshot(repository)
+        snapshot_rows, snapshot_identity = archive_snapshot(repository, protocol)
         before_workspace = materialize_case(case, workspace)
         shutil.copyfile(genesis_bin, tools / "genesis"); (tools / "genesis").chmod(0o555)
         shutil.copyfile(selfhost_artifact, tools / "toolchain.gc"); (tools / "toolchain.gc").chmod(0o444)
         tools.chmod(0o555); input_root.chmod(0o555)
+        write_json(retained / "campaign.json", campaign)
         write_json(retained / "predeclaration.json", predeclaration)
         stdout_path = retained / "events.jsonl"; stderr_path = retained / "stderr.txt"
         args = invocation(predeclaration, prompt_for(case))
@@ -628,14 +816,17 @@ def run_agent(
             "contentIdentitySha256": "",
         })
         write_json(retained / "run.json", run)
-        retained.rename(out)
+        publish_stage = Path(tempfile.mkdtemp(prefix=f".{out.name}-", dir=out.parent.resolve()))
+        remove_tree(publish_stage)
+        shutil.copytree(retained, publish_stage)
+        publish_stage.rename(out)
         return run
     except BaseException:
-        shutil.rmtree(stage, ignore_errors=True)
+        remove_tree(stage)
         raise
     finally:
         if stage.exists():
-            shutil.rmtree(stage, ignore_errors=True)
+            remove_tree(stage)
 
 
 def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
@@ -649,9 +840,11 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
     require(run["kind"] == KIND_RUN and run["version"] == "0.1.0", "Open Agent run kind/version drift")
     validate_identity(run)
     root = run_path.parent
-    predeclaration = validate_predeclaration(load_json(root / "predeclaration.json"))
+    campaign = validate_campaign(load_json(root / "campaign.json"))
+    predeclaration = validate_predeclaration(load_json(root / "predeclaration.json"), campaign)
     require(run["predeclarationIdentitySha256"] == predeclaration["contentIdentitySha256"], "run predeclaration binding drift")
-    _, case = suite_and_case(run["case"].get("id"))
+    suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
+    _, case = suite_and_case(run["case"].get("id"), suite)
     require(run["case"] == case_binding(case) == predeclaration["case"], "run case binding drift")
     attempt = closed(run["attempt"], {"index", "returnCode", "termination", "elapsedMs", "eventCount", "environmentPresentNames", "environmentValuesRecorded"}, "attempt")
     require(attempt["index"] == 0 and attempt["termination"] in {"exited", "timeout", "capture-limit"}, "invalid attempt facts")
@@ -659,7 +852,7 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
     require(attempt["environmentPresentNames"] == sorted(set(attempt["environmentPresentNames"])), "environment names must be sorted and unique")
     require(set(attempt["environmentPresentNames"]).issubset(ALLOWED_ENVIRONMENT), "undeclared environment name")
     workspace = closed(run["workspace"], {"beforeInventory", "afterInventory", "afterInventoryStatus", "sourceSnapshotBeforeIdentitySha256", "sourceSnapshotAfterIdentitySha256", "violations"}, "workspace evidence")
-    protocol = load_json(PROTOCOL_PATH)
+    protocol = protocol_authority(campaign["authorities"]["protocolIdentitySha256"])
     expected_snapshot = protocol["sourceSnapshot"]["manifestIdentitySha256"]
     require(workspace["sourceSnapshotBeforeIdentitySha256"] == expected_snapshot, "source snapshot before identity drift")
     require(workspace["violations"] == sorted(set(workspace["violations"])), "workspace violations must be sorted and unique")
@@ -742,18 +935,20 @@ def replay_run(run_path: Path, genesis_bin: Path, selfhost_artifact: Path) -> di
 
 
 def validate_authorities() -> dict[str, Any]:
-    doc = authority()
-    closed(doc, {"kind", "version", "purpose", "coldAcquisitionAdapterProfileUnchanged", "scaffoldIdentitySha256", "invocationProfiles", "limits", "securityControls", "contentIdentitySha256"}, "Open Agent authority")
-    require(doc["kind"] == KIND_AUTHORITY and doc["version"] == "0.1.0", "Open Agent authority kind/version drift")
-    require(doc["coldAcquisitionAdapterProfileUnchanged"] is True, "Open Agent authority silently broadens Cold Acquisition adapters")
-    require(set(doc["invocationProfiles"]) == {"codex-cli-hosted", "codex-cli-local"}, "Open Agent invocation profile drift")
-    require(doc["securityControls"] == sorted(set(doc["securityControls"])), "security controls must be sorted and unique")
-    validate_identity(doc)
-    for path in (PREDECLARATION_SCHEMA_PATH, RUN_SCHEMA_PATH):
+    documents = [authority(), load_json(LEGACY_AUTHORITY_PATH)]
+    require([doc["version"] for doc in documents] == ["0.2.0", "0.1.0"], "Open Agent authority order drift")
+    for doc in documents:
+        closed(doc, {"kind", "version", "purpose", "coldAcquisitionAdapterProfileUnchanged", "scaffoldIdentitySha256", "invocationProfiles", "limits", "securityControls", "contentIdentitySha256"}, "Open Agent authority")
+        require((doc["kind"], doc["version"]) in {(KIND_AUTHORITY, "0.1.0"), (KIND_AUTHORITY_V2, "0.2.0")}, "Open Agent authority kind/version drift")
+        require(doc["coldAcquisitionAdapterProfileUnchanged"] is True, "Open Agent authority silently broadens Cold Acquisition adapters")
+        require(set(doc["invocationProfiles"]) == {"codex-cli-hosted", "codex-cli-local"}, "Open Agent invocation profile drift")
+        require(doc["securityControls"] == sorted(set(doc["securityControls"])), "security controls must be sorted and unique")
+        validate_identity(doc)
+    for path in (CAMPAIGN_SCHEMA_PATH, PREDECLARATION_SCHEMA_PATH, RUN_SCHEMA_PATH):
         schema = load_json(path)
         require(schema["$schema"] == "https://json-schema.org/draft/2020-12/schema", "Open Agent schema draft drift")
         require(schema["additionalProperties"] is False, "Open Agent schema must be closed")
-    return doc
+    return documents[0]
 
 
 def self_test() -> int:
@@ -771,14 +966,38 @@ def self_test() -> int:
             encoding="ascii",
         )
         fixture.chmod(0o755)
-        baseline = build_predeclaration(
-            case_id="completion-small", campaign_id="conformance-v0.1",
+        suite = load_json(SUITE_PATH)
+        campaign = build_campaign(
+            campaign_id="conformance-v0.1", phase="reality-gate",
+            case_ids=campaign_case_ids(suite, "reality-gate"),
             runner_class="codex-cli-hosted", executable=fixture,
             model_id="fixture", model_revision="fixture-revision", immutable_revision=False,
             reasoning_effort="xhigh", timeout_ms=1_000, local_provider=None,
-            model_artifact_sha256=None,
+            model_artifact_sha256=None, hardware_class="fixture-host",
         )
-        validate_predeclaration(baseline)
+        validate_campaign(campaign)
+
+        campaign_mutations = [
+            (lambda d: d["cases"].pop(), True),
+            (lambda d: d["model"].__setitem__("requestedId", "post-hoc-model"), False),
+            (lambda d: d["stopPolicy"].__setitem__("stopOnModelFailure", True), True),
+            (lambda d: d["publication"].__setitem__("expectedAttemptCount", 8), True),
+            (lambda d: d.__setitem__("contentIdentitySha256", "0" * 64), False),
+        ]
+        for mutate, reseal in campaign_mutations:
+            candidate = copy.deepcopy(campaign)
+            mutate(candidate)
+            if reseal:
+                candidate = identified(candidate)
+            try:
+                validate_campaign(candidate)
+            except (OpenAgentError, KeyError, TypeError):
+                controls += 1
+            else:
+                raise OpenAgentError("negative campaign control accepted")
+
+        baseline = build_predeclaration(case_id="completion-small", campaign=campaign)
+        validate_predeclaration(baseline, campaign)
 
         mutations = [
             lambda d: d["attemptPolicy"].__setitem__("attempts", 2),
@@ -796,7 +1015,7 @@ def self_test() -> int:
             if candidate["contentIdentitySha256"] != "0" * 64:
                 candidate = identified(candidate)
             try:
-                validate_predeclaration(candidate)
+                validate_predeclaration(candidate, campaign)
             except (OpenAgentError, KeyError, TypeError):
                 controls += 1
             else:
@@ -873,6 +1092,21 @@ def self_test() -> int:
         time.sleep(1.2)
         require(not marker.exists(), "timeout descendant survived process-group kill")
         controls += 1
+
+        readonly = temp / "readonly-cleanup"
+        (readonly / "nested").mkdir(parents=True)
+        (readonly / "nested" / "payload").write_text("fixture", encoding="ascii")
+        external = temp / "external-cleanup-target"; external.mkdir(); external.chmod(0o500)
+        (readonly / "nested" / "external-link").symlink_to(external, target_is_directory=True)
+        (readonly / "nested" / "payload").chmod(0o444)
+        (readonly / "nested").chmod(0o555); readonly.chmod(0o555)
+        remove_tree(readonly)
+        require(not readonly.exists(), "read-only snapshot cleanup leaked")
+        require(stat.S_IMODE(external.stat().st_mode) == 0o500, "cleanup followed an external symlink")
+        external.chmod(0o700); external.rmdir()
+        stage = isolated_stage(); remove_tree(stage)
+        require(not stage.exists(), "ancestry-isolated stage cleanup leaked")
+        controls += 3
     return controls
 
 
@@ -880,15 +1114,17 @@ def parser() -> argparse.ArgumentParser:
     out = argparse.ArgumentParser(description=__doc__)
     modes = out.add_subparsers(dest="command", required=True)
     check = modes.add_parser("check"); check.add_argument("--self-test", action="store_true")
-    plan = modes.add_parser("plan")
-    plan.add_argument("--case", required=True); plan.add_argument("--campaign", required=True)
-    plan.add_argument("--runner", required=True, choices=["codex-cli-hosted", "codex-cli-local"])
-    plan.add_argument("--agent-executable", required=True, type=Path); plan.add_argument("--model", required=True)
-    plan.add_argument("--model-revision", required=True); plan.add_argument("--immutable-revision", action="store_true")
-    plan.add_argument("--reasoning-effort", default="xhigh", choices=["low", "medium", "high", "xhigh"])
-    plan.add_argument("--timeout-ms", type=int, default=900_000); plan.add_argument("--local-provider", choices=["lmstudio", "ollama"])
-    plan.add_argument("--model-artifact-sha256"); plan.add_argument("--out", required=True, type=Path)
-    run = modes.add_parser("run"); run.add_argument("--predeclaration", required=True, type=Path); run.add_argument("--out", required=True, type=Path)
+    campaign = modes.add_parser("campaign-plan")
+    campaign.add_argument("--campaign", required=True); campaign.add_argument("--phase", required=True, choices=["reality-gate", "full-public"])
+    campaign.add_argument("--case", required=True, action="append"); campaign.add_argument("--runner", required=True, choices=["codex-cli-hosted", "codex-cli-local"])
+    campaign.add_argument("--agent-executable", required=True, type=Path); campaign.add_argument("--model", required=True)
+    campaign.add_argument("--model-revision", required=True); campaign.add_argument("--immutable-revision", action="store_true")
+    campaign.add_argument("--reasoning-effort", default="xhigh", choices=["low", "medium", "high", "xhigh"])
+    campaign.add_argument("--timeout-ms", type=int, default=900_000); campaign.add_argument("--local-provider", choices=["lmstudio", "ollama"])
+    campaign.add_argument("--model-artifact-sha256"); campaign.add_argument("--hardware-class", required=True); campaign.add_argument("--out", required=True, type=Path)
+    plan = modes.add_parser("plan"); plan.add_argument("--case", required=True)
+    plan.add_argument("--campaign-predeclaration", required=True, type=Path); plan.add_argument("--out", required=True, type=Path)
+    run = modes.add_parser("run"); run.add_argument("--campaign-predeclaration", required=True, type=Path); run.add_argument("--predeclaration", required=True, type=Path); run.add_argument("--out", required=True, type=Path)
     run.add_argument("--agent-executable", required=True, type=Path); run.add_argument("--genesis-bin", required=True, type=Path); run.add_argument("--selfhost-artifact", required=True, type=Path)
     validate = modes.add_parser("validate"); validate.add_argument("--run", required=True, type=Path)
     replay = modes.add_parser("replay"); replay.add_argument("--run", required=True, type=Path); replay.add_argument("--genesis-bin", required=True, type=Path); replay.add_argument("--selfhost-artifact", required=True, type=Path)
@@ -901,18 +1137,23 @@ def main() -> int:
         doc = validate_authorities()
         controls = self_test() if args.self_test else 0
         result = {"kind": "genesis/genesisbench-open-agent-check-v0.1", "authorityIdentitySha256": doc["contentIdentitySha256"], "controls": controls}
-    elif args.command == "plan":
+    elif args.command == "campaign-plan":
         require(not args.out.exists(), "predeclaration output already exists")
-        result = build_predeclaration(
-            case_id=args.case, campaign_id=args.campaign, runner_class=args.runner,
+        result = build_campaign(
+            campaign_id=args.campaign, phase=args.phase, case_ids=args.case, runner_class=args.runner,
             executable=args.agent_executable, model_id=args.model, model_revision=args.model_revision,
             immutable_revision=args.immutable_revision, reasoning_effort=args.reasoning_effort,
             timeout_ms=args.timeout_ms, local_provider=args.local_provider,
-            model_artifact_sha256=args.model_artifact_sha256,
+            model_artifact_sha256=args.model_artifact_sha256, hardware_class=args.hardware_class,
         )
         write_json(args.out, result)
+    elif args.command == "plan":
+        require(not args.out.exists(), "predeclaration output already exists")
+        campaign = validate_campaign(load_json(args.campaign_predeclaration))
+        result = build_predeclaration(case_id=args.case, campaign=campaign)
+        write_json(args.out, result)
     elif args.command == "run":
-        result = run_agent(args.predeclaration, args.out, args.agent_executable, args.genesis_bin, args.selfhost_artifact)
+        result = run_agent(args.campaign_predeclaration, args.predeclaration, args.out, args.agent_executable, args.genesis_bin, args.selfhost_artifact)
     elif args.command == "validate":
         run = validate_run(args.run, check_files=True)
         result = {"kind": "genesis/genesisbench-open-agent-validation-v0.1", "valid": True, "runIdentitySha256": run["contentIdentitySha256"], "outcome": run["outcome"]}

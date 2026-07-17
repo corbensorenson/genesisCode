@@ -24,6 +24,9 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GENESISBENCH_REFERENCE_AGENT_TRACE_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json`
+- `docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json`
+- `docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json`
+- `docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_ADAPTERS_v0.1.json`
@@ -111,6 +114,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `scripts/lib/genesisbench_reference_agent.py`
 - `scripts/lib/genesisbench_front_door.py`
 - `scripts/lib/genesisbench_open_agent.py`
+- `scripts/lib/genesisbench_open_agent_report.py`
 - `scripts/lib/genesisbench_registry.py`
 - `scripts/lib/genesisbench_baselines.py`
 - `scripts/lib/genesisbench_construct_validity.py`

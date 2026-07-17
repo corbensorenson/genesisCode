@@ -1,0 +1,151 @@
+{
+  "attempts": [
+    {
+      "caseId": "completion-small",
+      "elapsedMs": 4081,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "2d7cef92896f76270e2e8000e81b9cbce18dd38e6b68a9edaf00f8f047d36513",
+      "validationPassed": true
+    },
+    {
+      "caseId": "deployment-small",
+      "elapsedMs": 4489,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "3eff64ece07e2028c741fc3ca943c388cddcd6f1803bafe9122079e28125f0a8",
+      "validationPassed": true
+    },
+    {
+      "caseId": "generation-small",
+      "elapsedMs": 4821,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "6b76e762ba5f2aad516935333f729f8e135ae83184ae6665999388188d049d14",
+      "validationPassed": true
+    },
+    {
+      "caseId": "package-migration-small",
+      "elapsedMs": 4704,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "a6ef5afe94a03bf41aae4095703e473e53a8ab20e7d79f022ed3648a1e1732f3",
+      "validationPassed": true
+    },
+    {
+      "caseId": "performance-repair-small",
+      "elapsedMs": 4466,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "23c35058a2f47663b74adef030fe499d1102d3317a428214d64f7268dd5ddd0e",
+      "validationPassed": true
+    },
+    {
+      "caseId": "policy-minimization-small",
+      "elapsedMs": 4715,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "6521ec0b1bd44637337465f1b9d82fb0124ff649fd97b44cbd0c951dbcd844e1",
+      "validationPassed": true
+    },
+    {
+      "caseId": "refactor-small",
+      "elapsedMs": 4520,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "4105661b25f3bcfd182020b2839044bad62f2c6cd4934ddf0c51af2cae0f514a",
+      "validationPassed": true
+    },
+    {
+      "caseId": "repair-small",
+      "elapsedMs": 26237,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "bf8a97ef5ee4be6d06f3406ee1a20c34c66e62335f4cd6ee447405912086a45a",
+      "validationPassed": true
+    },
+    {
+      "caseId": "replay-investigation-small",
+      "elapsedMs": 7830,
+      "failureCodes": [
+        "harness/ambient-skill-discovery",
+        "model/unavailable-for-account"
+      ],
+      "independentRescoreMatched": null,
+      "outcome": "invalid",
+      "replayPassed": true,
+      "runIdentitySha256": "06a1452adeb3984411000004dd4c612d34daccdbe4ac25fbc840f0bd783b4ff9",
+      "validationPassed": true
+    }
+  ],
+  "campaignId": "codex-luna-xhigh-2026-07-17",
+  "campaignIdentitySha256": "25305ca69d57165c1e86ae27efa3dfb3ebe481158e4d263fa1c610e29f5845ab",
+  "contentIdentitySha256": "92f22940939cec4cc8330b3de2fc914140c8478c3f6731e2252aeda2fea5b670",
+  "expansion": {
+    "allowed": false,
+    "reasonCodes": [
+      "campaign/harness-defect",
+      "campaign/model-unavailable"
+    ]
+  },
+  "kind": "genesis/genesisbench-open-agent-campaign-report-v0.1",
+  "matrix": {
+    "complete": true,
+    "expectedAttempts": 9,
+    "observedAttempts": 9
+  },
+  "nonClaims": [
+    "No GenesisCode capability score was observed because the requested model never began task execution.",
+    "The mutable luna alias is not an immutable model identity and this campaign is unranked.",
+    "This Open Agent campaign is not a fixed-scaffold Cold Acquisition result."
+  ],
+  "publicationClass": "authentic-unranked-open-agent",
+  "summary": {
+    "ambientSkillDiscoveryObserved": true,
+    "failed": 0,
+    "invalid": 9,
+    "providerUnavailableForAccount": true,
+    "verified": 0
+  },
+  "version": "0.1.0"
+}

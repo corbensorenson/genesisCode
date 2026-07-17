@@ -32,14 +32,17 @@ enum BenchCmd {
         ablation: String,
     },
 
-    /// Freeze one Open Agent campaign binding before any model inference occurs.
-    AgentPlan {
-        /// Public benchmark case identifier.
-        #[arg(long)]
-        case: String,
-        /// Stable campaign identifier shared by the predeclared cohort.
+    /// Atomically freeze an Open Agent campaign before any model sees a task.
+    AgentCampaignPlan {
+        /// Stable campaign identifier for the complete attempt matrix.
         #[arg(long)]
         campaign: String,
+        /// Fixed campaign phase and corresponding complete public case matrix.
+        #[arg(long, value_parser = ["reality-gate", "full-public"])]
+        phase: String,
+        /// Every public case in the phase. Repeat once per case.
+        #[arg(long, required = true)]
+        case: Vec<String>,
         /// Disclosed Open Agent runner class.
         #[arg(long, value_parser = ["codex-cli-hosted", "codex-cli-local"])]
         runner: String,
@@ -67,13 +70,32 @@ enum BenchCmd {
         /// SHA-256 of the immutable local model artifact.
         #[arg(long)]
         model_artifact_sha256: Option<String>,
-        /// New immutable predeclaration path.
+        /// Predeclared host hardware cohort.
+        #[arg(long)]
+        hardware_class: String,
+        /// New immutable campaign predeclaration path.
+        #[arg(long)]
+        out: PathBuf,
+    },
+
+    /// Derive one case attempt from an immutable Open Agent campaign.
+    AgentPlan {
+        /// Public benchmark case identifier already named by the campaign.
+        #[arg(long)]
+        case: String,
+        /// Immutable campaign predeclaration produced by `bench agent-campaign-plan`.
+        #[arg(long)]
+        campaign_predeclaration: PathBuf,
+        /// New immutable attempt predeclaration path.
         #[arg(long)]
         out: PathBuf,
     },
 
     /// Execute exactly one predeclared Open Agent attempt in an isolated workspace.
     AgentRun {
+        /// Immutable campaign predeclaration that owns this attempt.
+        #[arg(long)]
+        campaign_predeclaration: PathBuf,
         /// Immutable predeclaration produced by `bench agent-plan`.
         #[arg(long)]
         predeclaration: PathBuf,

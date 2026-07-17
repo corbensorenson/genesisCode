@@ -1,0 +1,62 @@
+{
+  "$id": "https://genesiscode.dev/schemas/genesisbench-open-agent-campaign-report-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attempts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "caseId": {"$ref": "#/$defs/id"},
+          "elapsedMs": {"minimum": 0, "type": "integer"},
+          "failureCodes": {"items": {"enum": ["harness/ambient-skill-discovery", "model/unavailable-for-account"]}, "type": "array", "uniqueItems": true},
+          "independentRescoreMatched": {"type": ["boolean", "null"]},
+          "outcome": {"enum": ["verified", "failed", "invalid"]},
+          "replayPassed": {"const": true},
+          "runIdentitySha256": {"$ref": "#/$defs/hash"},
+          "validationPassed": {"const": true}
+        },
+        "required": ["caseId", "runIdentitySha256", "outcome", "elapsedMs", "validationPassed", "replayPassed", "independentRescoreMatched", "failureCodes"],
+        "type": "object"
+      },
+      "maxItems": 27,
+      "minItems": 9,
+      "type": "array"
+    },
+    "campaignId": {"$ref": "#/$defs/id"},
+    "campaignIdentitySha256": {"$ref": "#/$defs/hash"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+    "expansion": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed": {"type": "boolean"},
+        "reasonCodes": {"items": {"enum": ["campaign/harness-defect", "campaign/model-unavailable"]}, "type": "array", "uniqueItems": true}
+      },
+      "required": ["allowed", "reasonCodes"],
+      "type": "object"
+    },
+    "kind": {"const": "genesis/genesisbench-open-agent-campaign-report-v0.1"},
+    "matrix": {
+      "additionalProperties": false,
+      "properties": {"complete": {"type": "boolean"}, "expectedAttempts": {"enum": [9, 27]}, "observedAttempts": {"maximum": 27, "minimum": 0, "type": "integer"}},
+      "required": ["expectedAttempts", "observedAttempts", "complete"],
+      "type": "object"
+    },
+    "nonClaims": {"items": {"minLength": 1, "type": "string"}, "minItems": 1, "type": "array", "uniqueItems": true},
+    "publicationClass": {"const": "authentic-unranked-open-agent"},
+    "summary": {
+      "additionalProperties": false,
+      "properties": {"ambientSkillDiscoveryObserved": {"type": "boolean"}, "failed": {"minimum": 0, "type": "integer"}, "invalid": {"minimum": 0, "type": "integer"}, "providerUnavailableForAccount": {"type": "boolean"}, "verified": {"minimum": 0, "type": "integer"}},
+      "required": ["verified", "failed", "invalid", "providerUnavailableForAccount", "ambientSkillDiscoveryObserved"],
+      "type": "object"
+    },
+    "version": {"const": "0.1.0"}
+  },
+  "required": ["kind", "version", "campaignId", "campaignIdentitySha256", "publicationClass", "matrix", "attempts", "summary", "expansion", "nonClaims", "contentIdentitySha256"],
+  "title": "GenesisBench Open Agent campaign report v0.1",
+  "type": "object",
+  "$defs": {
+    "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "id": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$", "type": "string"}
+  }
+}

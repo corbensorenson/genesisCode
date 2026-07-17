@@ -3,9 +3,10 @@ use super::*;
 pub(super) fn driver_args(cli: &Cli, cmd: &BenchCmd) -> Result<Option<Vec<String>>, CliError> {
     let mut args = Vec::new();
     match cmd {
-        BenchCmd::AgentPlan {
-            case,
+        BenchCmd::AgentCampaignPlan {
             campaign,
+            phase,
+            case,
             runner,
             agent_executable,
             model,
@@ -15,17 +16,21 @@ pub(super) fn driver_args(cli: &Cli, cmd: &BenchCmd) -> Result<Option<Vec<String
             timeout_ms,
             local_provider,
             model_artifact_sha256,
+            hardware_class,
             out,
         } => {
             args.extend([
-                "plan".to_string(),
-                "--case".to_string(),
-                case.clone(),
+                "campaign-plan".to_string(),
                 "--campaign".to_string(),
                 campaign.clone(),
+                "--phase".to_string(),
+                phase.clone(),
                 "--runner".to_string(),
                 runner.clone(),
             ]);
+            for case_id in case {
+                args.extend(["--case".to_string(), case_id.clone()]);
+            }
             cmd_bench::push_path(&mut args, "--agent-executable", agent_executable);
             args.extend([
                 "--model".to_string(),
@@ -46,14 +51,34 @@ pub(super) fn driver_args(cli: &Cli, cmd: &BenchCmd) -> Result<Option<Vec<String
             if let Some(digest) = model_artifact_sha256 {
                 args.extend(["--model-artifact-sha256".to_string(), digest.clone()]);
             }
+            args.extend(["--hardware-class".to_string(), hardware_class.clone()]);
+            cmd_bench::push_path(&mut args, "--out", out);
+        }
+        BenchCmd::AgentPlan {
+            case,
+            campaign_predeclaration,
+            out,
+        } => {
+            args.extend(["plan".to_string(), "--case".to_string(), case.clone()]);
+            cmd_bench::push_path(
+                &mut args,
+                "--campaign-predeclaration",
+                campaign_predeclaration,
+            );
             cmd_bench::push_path(&mut args, "--out", out);
         }
         BenchCmd::AgentRun {
+            campaign_predeclaration,
             predeclaration,
             agent_executable,
             out,
         } => {
             args.push("run".to_string());
+            cmd_bench::push_path(
+                &mut args,
+                "--campaign-predeclaration",
+                campaign_predeclaration,
+            );
             cmd_bench::push_path(&mut args, "--predeclaration", predeclaration);
             cmd_bench::push_path(&mut args, "--agent-executable", agent_executable);
             cmd_bench::push_path(&mut args, "--out", out);

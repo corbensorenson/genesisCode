@@ -1,0 +1,80 @@
+{
+  "artifactInventory": [
+    {
+      "bytes": 6494,
+      "path": "campaign.json",
+      "sha256": "d0b386ac4359eb977251281307a206c808310ebab42a33563b5180fdcc9c9898"
+    },
+    {
+      "bytes": 716,
+      "path": "events.jsonl",
+      "sha256": "7879d8b5c0aa64254a7b22c1bb4e946eb6f1274878f9d6a90cb487e9a4328f14"
+    },
+    {
+      "bytes": 2607,
+      "path": "predeclaration.json",
+      "sha256": "cc5e30f7055a00260fc4edbe7490b5280370d91149d6a0befd4957290bba6fe4"
+    },
+    {
+      "bytes": 257,
+      "path": "stderr.txt",
+      "sha256": "a71894595fd09752e7047c7bbed145256c897ec759279485ae19ff07760471d4"
+    }
+  ],
+  "artifactInventoryIdentitySha256": "fcec10bff22ef6c9f71e8ca6ccd8a35b1d7517eb80b95b05d5d3ef9d81b9404a",
+  "attempt": {
+    "elapsedMs": 4520,
+    "environmentPresentNames": [
+      "HOME",
+      "PATH"
+    ],
+    "environmentValuesRecorded": false,
+    "eventCount": 5,
+    "index": 0,
+    "returnCode": 1,
+    "termination": "exited"
+  },
+  "case": {
+    "conditionId": "condition-refactor-context-small-001",
+    "conditionIdentitySha256": "cd7e1ae98fdc31fa116584e5d56c026c3a306b6e97ce13d28ad1b7cfaa933ccf",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "refactor-small",
+    "lineageId": "lineage-refactor-001",
+    "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4"
+  },
+  "contentIdentitySha256": "4105661b25f3bcfd182020b2839044bad62f2c6cd4934ddf0c51af2cae0f514a",
+  "kind": "genesis/genesisbench-open-agent-run-v0.1",
+  "outcome": "invalid",
+  "predeclarationIdentitySha256": "bd1ea1efb7ce17201a781da7f16c00c2b13dd5e8cc3e41e1520bc8a0929addbe",
+  "replay": {
+    "agentAccessAllowed": false,
+    "independentRescoreRequired": false,
+    "modelAccessAllowed": false
+  },
+  "scoreIdentitySha256": null,
+  "version": "0.1.0",
+  "workspace": {
+    "afterInventory": [
+      {
+        "bytes": 54,
+        "path": "main.gc",
+        "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+      }
+    ],
+    "afterInventoryStatus": "valid",
+    "beforeInventory": [
+      {
+        "bytes": 54,
+        "path": "main.gc",
+        "sha256": "33188a539ea46bc6e4cb0f40f94de2cf6f33332b89db96acc387df029ed848ba"
+      }
+    ],
+    "sourceSnapshotAfterIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "sourceSnapshotBeforeIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "violations": [
+      "nonzero-exit"
+    ]
+  }
+}

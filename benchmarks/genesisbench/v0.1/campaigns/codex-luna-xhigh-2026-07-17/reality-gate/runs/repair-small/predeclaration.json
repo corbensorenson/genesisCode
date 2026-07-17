@@ -1,0 +1,77 @@
+{
+  "attemptPolicy": {
+    "attempts": 1,
+    "hiddenRetriesAllowed": false,
+    "resumeAllowed": false
+  },
+  "authorities": {
+    "harnessIdentitySha256": "46bc6bf2de09284204e7ed6cc645dd0dc7b021e3dd5a3548e86f39b4b3289486",
+    "protocolIdentitySha256": "3e3f6bb83df77a9b051c8e6070195987986e6e3cee51d5f38f4bafd3eaee3005",
+    "sourceSnapshotManifestIdentitySha256": "1475632bbfefc77287e4e0de9482e21830b9389aec5c1480914ec2b59b7cf8c0",
+    "suiteIdentitySha256": "16336c0a9114e110cf4849fb8b4a089e2c7bf02dafff2922fa08f96e42abcfe1"
+  },
+  "campaignId": "codex-luna-xhigh-2026-07-17",
+  "campaignIdentitySha256": "25305ca69d57165c1e86ae27efa3dfb3ebe481158e4d263fa1c610e29f5845ab",
+  "capabilities": {
+    "additionalWritableRoots": [],
+    "approvalPolicy": "never",
+    "network": "provider-only",
+    "repository": "frozen-read-only",
+    "workspace": "case-input-write-only"
+  },
+  "case": {
+    "conditionId": "condition-repair-context-small-001",
+    "conditionIdentitySha256": "b5bab45ee7ea6ced904b3543bf1abd3589af552528390b22c07cb22da2bcff3f",
+    "editablePaths": [
+      "main.gc"
+    ],
+    "id": "repair-small",
+    "lineageId": "lineage-repair-001",
+    "lineageIdentitySha256": "1055a6c836a7d6a7919f8fca4b3e3df5f5506a042ab0bef400301dd0526f57d1"
+  },
+  "contentIdentitySha256": "bb3e7ae2a1e6735db2cc1b70a43dce1f1c340ba2882746ced7ed02019f62424c",
+  "disclosure": {
+    "contaminationLabel": "unknown",
+    "environmentNames": [
+      "CODEX_HOME",
+      "HOME",
+      "HTTPS_PROXY",
+      "HTTP_PROXY",
+      "NO_PROXY",
+      "PATH",
+      "SSL_CERT_DIR",
+      "SSL_CERT_FILE"
+    ],
+    "environmentValuesRecorded": false,
+    "genesisSpecificTraining": "unknown"
+  },
+  "kind": "genesis/genesisbench-open-agent-predeclaration-v0.1",
+  "limits": {
+    "maxStderrBytes": 16777216,
+    "maxStdoutBytes": 16777216,
+    "maxWorkspaceBytes": 67108864,
+    "maxWorkspaceFiles": 4096,
+    "timeoutMs": 900000
+  },
+  "model": {
+    "artifactSha256": null,
+    "immutableRevision": false,
+    "reasoningEffort": "xhigh",
+    "requestedId": "luna",
+    "revision": "provider-alias:luna@2026-07-17"
+  },
+  "runner": {
+    "class": "codex-cli-hosted",
+    "executableSha256": "a2bc3f63b0d7ce5c065ae070e16d964fa71192bf6ceb8da82d2315227d55a6bf",
+    "executableVersion": "codex-cli 0.145.0-alpha.18",
+    "invocationProfile": "codex-cli-hosted-v0.1",
+    "localProvider": null
+  },
+  "track": {
+    "id": "open-agent",
+    "rankEligible": false,
+    "scaffoldClass": "codex-cli",
+    "scaffoldIdentitySha256": "d6e77a4c71f6d4cd1e0666d05e82041bcd2f9c559a993ebc02a0e9d3e8f09ce6"
+  },
+  "version": "0.1.0"
+}

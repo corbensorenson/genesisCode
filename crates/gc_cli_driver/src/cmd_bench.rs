@@ -240,7 +240,8 @@ fn driver_args(cli: &Cli, cmd: &BenchCmd) -> Result<(&'static str, Vec<String>),
             push_path(&mut args, "--genesis-bin", &genesis_bin);
             push_path(&mut args, "--selfhost-artifact", &artifact);
         }
-        BenchCmd::AgentPlan { .. }
+        BenchCmd::AgentCampaignPlan { .. }
+        | BenchCmd::AgentPlan { .. }
         | BenchCmd::AgentRun { .. }
         | BenchCmd::AgentValidate { .. }
         | BenchCmd::AgentReplay { .. } => {

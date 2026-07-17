@@ -112,6 +112,9 @@ genesis --json agent-index --diagnostic <exact-code>
     lineages, and the complete no-hidden-work trajectory contract.
   - includes `genesisbench_front_door = "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md"`,
     `genesisbench_open_agent = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json"`,
+    `genesisbench_open_agent_v0_2 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json"`,
+    `genesisbench_open_agent_campaign_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json"`,
+    `genesisbench_open_agent_campaign_report_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json"`,
     `genesisbench_open_agent_predeclaration_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json"`,
     `genesisbench_open_agent_run_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json"`,
     `genesisbench_adapters = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json"`,
@@ -119,8 +122,8 @@ genesis --json agent-index --diagnostic <exact-code>
     `genesisbench_adapter_schema = "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json"`,
     `genesisbench_execution_run_schema = "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json"`,
     and `genesisbench_bundle_manifest_schema = "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json"`
-    as the canonical fifteen-command benchmark and registry surface, separate capability-minimal
-    Open Agent predeclaration/run boundary, closed five-class Cold Acquisition transport contract,
+    as the canonical sixteen-command benchmark and registry surface, separate capability-minimal
+    Open Agent campaign/predeclaration/run/report boundary with retained v0.1 replay and ancestry-isolated v0.2 execution, closed five-class Cold Acquisition transport contract,
     strict run/replay records, and deterministic submission bundle.
   - includes `genesisbench_registry = "docs/spec/GENESISBENCH_REGISTRY_v0.1.json"`,
     `genesisbench_submission_claim_schema = "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json"`,
