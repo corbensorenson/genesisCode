@@ -751,9 +751,8 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         .expect("required aggregate job after local workspace contract");
     let local_workspace = &workflow[local_workspace_job..required_aggregate_job];
     assert!(
-        workflow[..local_workspace_job]
-            .find("- name: Local Workspace Test Contract (CI unset)")
-            .is_none()
+        !workflow[..local_workspace_job]
+            .contains("- name: Local Workspace Test Contract (CI unset)")
             && local_workspace.contains("runs-on: ubuntu-latest")
             && local_workspace.contains("fetch-depth: 0")
             && local_workspace.contains("Local Workspace Disk Headroom")
