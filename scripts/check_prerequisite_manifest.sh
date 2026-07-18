@@ -15,7 +15,8 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 snapshot_contract() {
   python3 - "$MANIFEST" "$SCHEMA" "$IMPLEMENTATION" \
-    rust-toolchain.toml package.json package-lock.json .github/workflows/ci.yml <<'PY'
+    rust-toolchain.toml package.json package-lock.json .github/workflows/ci.yml \
+    scripts/install_wasi_sdk.sh <<'PY'
 from hashlib import sha256
 from pathlib import Path
 import json
@@ -105,4 +106,4 @@ after="$(snapshot_contract)"
   exit 1
 }
 
-echo "prerequisite-manifest-contract: ok (profiles=9 platforms=4 tools=27 negative_controls=7 check_mode=read_only)"
+echo "prerequisite-manifest-contract: ok (profiles=9 platforms=4 tools=28 negative_controls=7 check_mode=read_only)"

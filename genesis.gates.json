@@ -9,7 +9,7 @@
       "executionIdentitySha256": "6b160e526fe0bd7f20fbb04210af0d03f9b37fef656de70c04bb136529f7871d",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "cf853832e6ebea9b813f1186e23fc2b5b124b2459b5e79610c36af2fbc2ee13b",
+      "inputIdentitySha256": "d4dae734b5625b5d4b7a46058321e1ac8003d979d6a9b4ccf3e29aea05413682",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -710,7 +710,7 @@
       "executionIdentitySha256": "d425a18f129b895d3f818429bcd96ae135a76d392b70deb989ce6d2844ed0650",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1361,6 +1361,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -2065,7 +2066,7 @@
       "executionIdentitySha256": "9cc5aa3304c46361ec8f6c9ca849abd798d5aa6816fa2acffe7db4607da80dc0",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2716,6 +2717,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -3053,7 +3055,7 @@
       "executionIdentitySha256": "242ca8460da231b46767e4964fbc3b6656b93e244ae9007a53943df8349af97e",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "2c228b4b4785e6aaf97e4b7fd82414c41a1d42b1a91c77bf239c3f3738389d6d",
+      "inputIdentitySha256": "e9143fb46fff115e9d4c871bf2f18922dd3ebbafa0ce6104552f61c24a54afc3",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3133,7 +3135,7 @@
       "executionIdentitySha256": "413a261bef8019890d3ecef40d7030e2af4ef612abb636f6c69bf63078766212",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3784,6 +3786,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -4076,7 +4079,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4727,6 +4730,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -5007,7 +5011,7 @@
       "executionIdentitySha256": "99c191c4c9b7ef17b69f7e760ef2bef19c4e69870273570caf00706579702648",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "54d34302375cec2f64cb6eea9dee76d5d34787212a1b4d388c7d8f18aeb31aff",
+      "inputIdentitySha256": "4f093cb4474d84082167b1e8d5ab4cbb6b21a0178bc35d65b86c53b3181a428a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5096,7 +5100,7 @@
       "executionIdentitySha256": "5d7fcca0e4a1109fa79c1d828aa09ebefb4eb1bd2cb1cd143f819300fc4a8cca",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5747,6 +5751,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -6322,7 +6327,7 @@
       "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "1b81af270da662d9042ff739bf121dd61a6fcb3b5483aac4bff34a8e0a7ff009",
+      "inputIdentitySha256": "4772fb86b5015a8b070ba348949945e292e9d05ef2941bd97b37f5776619204a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6406,7 +6411,7 @@
       "executionIdentitySha256": "b76d99cec379d2550ae5c258f43bbe188f709a60e021c0e9f570ef041c128b4b",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "d24c18f36d8e466124e983f059a7ba37b5e306bfd2943dfc1419499235d9feac",
+      "inputIdentitySha256": "efcb0349cfdad356731fd1bf461ee00422f292563b035ff4c2062f330a10c18a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -6599,7 +6604,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7250,6 +7255,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -7875,7 +7881,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "edfe0de261a9f7d730825374ecd689ae0988c779bb65edf12195bf7a0b29d62d",
+      "inputIdentitySha256": "7c15adac9ddaa5e8ee4178bd255b69572924879225ff585ec51f3981cc5a30a0",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8108,7 +8114,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "a1816b520d4f5371a9bf73c5dd50f9f8e525f44c2b9927aded3a298fc367eb2e",
+      "inputIdentitySha256": "6c870893ed5917cfa58aa77c77685912e30788a9426bffadd809746374a54cb9",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8173,7 +8179,7 @@
       "executionIdentitySha256": "bb0f9dc73bdea6da6f719477b5fecbd454c85b1ef233ab8ab02970964d507f33",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8824,6 +8830,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -9100,7 +9107,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "cf853832e6ebea9b813f1186e23fc2b5b124b2459b5e79610c36af2fbc2ee13b",
+      "inputIdentitySha256": "d4dae734b5625b5d4b7a46058321e1ac8003d979d6a9b4ccf3e29aea05413682",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9357,7 +9364,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "cf853832e6ebea9b813f1186e23fc2b5b124b2459b5e79610c36af2fbc2ee13b",
+      "inputIdentitySha256": "d4dae734b5625b5d4b7a46058321e1ac8003d979d6a9b4ccf3e29aea05413682",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9614,7 +9621,7 @@
       "executionIdentitySha256": "09ccbdaf204f565c2bca87bb239f1e4e529497f7ff1a50c3e999396a593cbce7",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "cf853832e6ebea9b813f1186e23fc2b5b124b2459b5e79610c36af2fbc2ee13b",
+      "inputIdentitySha256": "d4dae734b5625b5d4b7a46058321e1ac8003d979d6a9b4ccf3e29aea05413682",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9871,7 +9878,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "cf853832e6ebea9b813f1186e23fc2b5b124b2459b5e79610c36af2fbc2ee13b",
+      "inputIdentitySha256": "d4dae734b5625b5d4b7a46058321e1ac8003d979d6a9b4ccf3e29aea05413682",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10182,7 +10189,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "6771c1f62a2094abf60549ef52f84461b8e20e534239193a0998d44dfaebc1ae",
+      "inputIdentitySha256": "36e088c2b17b316bb32c30d678680c7d7b9d56b20d24b03807585d31c794abc2",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10319,7 +10326,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -10970,6 +10977,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -11888,7 +11896,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12539,6 +12547,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -12819,7 +12828,7 @@
       "executionIdentitySha256": "4cd05e00f81a932dd2ffbebf1e8a7a76bc6247080f66de016584124c8bf89c15",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "d417fc0532a7cb14a6b031be1e3a7b9470bf729af2afa5fff06041712247af68",
+      "inputIdentitySha256": "fabff8e2d0ac5bc6bbc56ed681d03e30b8a843b69a9e0d00c4e6fdb66b9d7f35",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -12971,7 +12980,7 @@
       "executionIdentitySha256": "b5a5877112d47b1cd04e2b00c868b18e79a5d2572677ca2682ca66137324f9b1",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13622,6 +13631,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -14386,7 +14396,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -15037,6 +15047,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -15608,7 +15619,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -16259,6 +16270,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -16532,10 +16544,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_prerequisite_manifest.sh",
-      "executionIdentitySha256": "09fbe73c9f091c294ac7605c135705578d4f872f4f840242f7eb264bc84437b0",
+      "executionIdentitySha256": "9313b74c7e3af1b28620f1c58ab538fb0de623ed2e04aa85a14967336ece2a16",
       "expectedDurationSeconds": 15,
       "id": "gate/prerequisite-manifest",
-      "inputIdentitySha256": "a4f39b339d61b2af92fe9e5d940bff0646eddf0068d41d447fef202e0b45df67",
+      "inputIdentitySha256": "3dc0a3ed2639e83775c5f968eaeb5bb8e4ac1eae6f7682de9161b7cbadd4cd75",
       "inputs": {
         "paths": [
           "docs/spec/PREREQUISITES_v0.1.schema.json",
@@ -16543,6 +16555,7 @@
           "rust-toolchain.toml",
           "scripts/check_prerequisite_manifest.sh",
           "scripts/genesis_prerequisites.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/prerequisite_manifest.py"
         ],
         "sets": [
@@ -16572,7 +16585,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "5816c4acd1eb7e39c18e96aeb74002fe5ac13c877f5ee9b5a688a99dd9ac45de",
+      "sourceSha256": "94032f5fc575b04652175f5ac0687aba7ccd5a9c26d5793b599a94cb8f1a6c5b",
       "tools": [
         "bash",
         "git",
@@ -16791,7 +16804,7 @@
       "executionIdentitySha256": "bf94a23c0d0681c59f3ca677dfd4c6152ed3f56b7844e22062e8329c48f19dfa",
       "expectedDurationSeconds": 15,
       "id": "gate/reference-host-profiles",
-      "inputIdentitySha256": "e795091a058a29bbff0b5ca8812d8c5ede15f044ab81bb733f152ae99dce0dc7",
+      "inputIdentitySha256": "38e22d073f0ea222863960da2e940a3efd774382efa3a8b51b1b5da6d046b7c5",
       "inputs": {
         "paths": [
           "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -17694,7 +17707,7 @@
       "executionIdentitySha256": "ac4b5fec017efd7499a1c2a5a8b563dd57fe8c25f27743afa74b4334989b5463",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "475b1cd671810c1df29ba21901fb55b9e1cee65302915c2c529627990518a038",
+      "inputIdentitySha256": "9ec7f5fa2588905509ced21979b6d61c822a7579dd623b14519ad9f9614f51cc",
       "inputs": {
         "paths": [
           "crates/gc_cli/src/main.rs",
@@ -18603,7 +18616,7 @@
       "executionIdentitySha256": "472d565d2676ab005a6230156eed5d5dc2e98fcb3ee503206c0cc2fdacaf306a",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19254,6 +19267,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -19644,7 +19658,7 @@
       "executionIdentitySha256": "95d9e688a74b93b5a7cd06d32cb2e1bf3e9dbed66cafddb3a78225df52b2dfc4",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "9090c65f0b5186c73991678efb2665fae192532f2ddbba591cb56e0e88586013",
+      "inputIdentitySha256": "283ddd86d00adbfc324fadf2d126ce4148510575396011510ea8ee1b2530f523",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20295,6 +20309,7 @@
           "scripts/generate_capability_indices.py",
           "scripts/genesis_prerequisites.sh",
           "scripts/gpu_device_runtime_deterministic.sh",
+          "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
@@ -20694,7 +20709,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "c55b52084cfd78f8930a75f1a26f69b88736835bb9907493bb30854db419e27f",
+      "inputIdentitySha256": "f16a4b3f6189824a0d9bace1de4f1d0f3411786e4cea381d7adff5a6ae9c678b",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -20765,7 +20780,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "432e032eb86d82b2f969e16d3ace34f6e6f68cca914f358446f7999e63943afd",
+      "inputIdentitySha256": "362e659b66b6b07a6f58dab3f7090e75f4cd024574e3824c475a1922b717e6b0",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20856,7 +20871,7 @@
       "executionIdentitySha256": "d9b4fcf075af51ebd5bb1e2f2e57e31eaa5be6de51d2e2851cf20dff0cc1b5d5",
       "expectedDurationSeconds": 600,
       "id": "gate/warm-protocol-contract",
-      "inputIdentitySha256": "16aaa890a130693de9d3e52676e2abaea1c250ebc33ff7cc86bc96ff88b9a128",
+      "inputIdentitySha256": "30f1317705a1c43fe147a63510ff3b6ea65e044deda48734f8dd663111066175",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21015,7 +21030,7 @@
       "executionIdentitySha256": "fac716fb1bf3d09ace84753889af7cb4a0aae230ddead596059ff262d80f89dd",
       "expectedDurationSeconds": 15,
       "id": "gate/webxr-browser-conformance",
-      "inputIdentitySha256": "1b236a6bce626a47e7e315bff2283bba4b9568989dfce13e4144a693f8c73f49",
+      "inputIdentitySha256": "5bd382422288e4aa9c772ad616af97ef4458f61e89b912d11a25bf95ed81e7ff",
       "inputs": {
         "paths": [
           "genesis.prerequisites.json",
@@ -21067,7 +21082,7 @@
       "executionIdentitySha256": "636bdfe583f7a448ca4b753cf1b86d9881543dc71ed6f3e64f98beb55bc4e76e",
       "expectedDurationSeconds": 15,
       "id": "gate/webxr-browser-conformance-lane",
-      "inputIdentitySha256": "605c3634640b3bc0f3a079ccdfddd9b5a3f233f2dc4ffc651e10b75cfcc6c6b8",
+      "inputIdentitySha256": "62dcc7ebc4b6698026401d567d3a7bce70c0fb3aeeac9e8ec205ba5402c5ff55",
       "inputs": {
         "paths": [
           "genesis.prerequisites.json",
@@ -21119,7 +21134,7 @@
       "executionIdentitySha256": "eaa4b0231722b1533de9a3a6cc7bcdc46851f0c26fc8157a30582de173b3e99b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "8371adee1c2933c13e48a3bf33d051c539eebea085d38909268922f392eb9122",
+      "inputIdentitySha256": "ab2942d2df9cc6565604b142c38e6669e30de3f5fe2bfa6862c789ea006d8f0f",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21243,7 +21258,7 @@
       "executionIdentitySha256": "4266b100069f929eab37aa86eab8f862d2b13ab9f3876e438da1fed9cef06ab4",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "8884e8f165ccd3bfb882b1d5cfd4177aaea436f5b0761da72baec7a9bfc918d4",
+      "inputIdentitySha256": "38f63fab3de46b6b65ead4cd8d08d897cc975390f2e25920db49e76588509e80",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21519,11 +21534,11 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "bf6f832ad77aed3ce02703f670c543fbbcaf3880a2f74fcf8a1bbb72daf653d4"
+        "sha256": "be0e3123a2c92199449a84c896a1317e1335cf94a637ee119daf33d20507ff5b"
       },
       {
         "path": "genesis.prerequisites.json",
-        "sha256": "d257a7fdaeeeedb2aa578e130fa77af5a7d45a04f1e73c39f1b3b36a797223af"
+        "sha256": "6c1ea1b68d0888a369bae86a1c1161529f8d06e68d676fff529c712a43986d9a"
       },
       {
         "path": "policies/gates_v0.1.json",

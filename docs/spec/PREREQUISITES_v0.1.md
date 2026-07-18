@@ -41,7 +41,7 @@ The diagnostic never runs an installer, package manager mutation, `rustup target
 | `core` | Bash, Python, Git, Rust/Cargo/rustfmt/Clippy | yes | Default local build/check profile; nextest, jq, and ShellCheck are optional |
 | `ci` | core plus exact nextest, cargo-deny, jq | yes | Standard CI and supply-chain profile |
 | `web` | Node/npm, locked Playwright, wasm-bindgen, `wasm32-unknown-unknown` | yes | Node, browser, Web, and WebXR lanes |
-| `wasi` | Wasmtime and `wasm32-wasip1` | yes | Current WASI Preview 1 CLI parity lane |
+| `wasi` | WASI SDK 33.0, Wasmtime, and `wasm32-wasip1` | yes | Preview 1 CLI parity, including Rust crates with native C dependencies |
 | `formal` | Lean and Lake | no | R7 mechanized semantics/proofs; may run independently of native builds |
 | `fuzz` | cargo-fuzz and compatible Clang | yes | R7 fuzz/property campaigns; excludes Windows until a qualified backend is declared |
 | `apple-device` | Xcode and xcrun | yes | Darwin only; ios-deploy/libimobiledevice are optional physical-device helpers |
@@ -53,6 +53,7 @@ A profile declares its supported platform IDs. Selecting a profile on an undecla
 ## Version policy
 
 - Rust stage0 is exact `1.90.0`; Cargo and both installed WebAssembly targets must belong to that toolchain. rustfmt and Clippy are exact component versions.
+- WASI SDK is exact `33.0`. Its official platform archive is SHA-256 verified by `scripts/install_wasi_sdk.sh`; `WASI_SDK_PATH`, `WASI_SYSROOT`, and target-specific Cargo C compiler variables must identify the same extracted SDK. The Rust target alone is insufficient for crates such as bundled SQLite that compile C sources.
 - Python is `>=3.9.0 <4.0.0`; repository helpers must remain valid on Python 3.9 and cannot assume `tomllib`.
 - Bash is `>=3.2.0 <6.0.0`, preserving the macOS system Bash floor. Scripts cannot require Bash 4-only features without advancing this profile.
 - Node is `>=22.0.0 <23.0.0`, npm is `>=10.0.0 <11.0.0`, Playwright is exact `1.58.2`, and wasm-bindgen CLI is exact `0.2.108`.

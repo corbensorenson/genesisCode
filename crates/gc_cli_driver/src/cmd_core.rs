@@ -437,7 +437,7 @@ pub(super) fn default_log_path(op: &str) -> PathBuf {
     let _ = std::fs::create_dir_all(&dir);
     let stamp = format!(
         "{}-{}",
-        std::process::id(),
+        crate::platform_process_id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()

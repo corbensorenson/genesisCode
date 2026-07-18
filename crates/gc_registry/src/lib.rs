@@ -25,6 +25,16 @@ pub use server::{
     HttpRegistryServerConfig, HttpRegistryServerHandle, spawn_http_file_registry_server,
 };
 
+#[cfg(not(target_os = "wasi"))]
+fn platform_process_id() -> u32 {
+    std::process::id()
+}
+
+#[cfg(target_os = "wasi")]
+fn platform_process_id() -> u32 {
+    0
+}
+
 include!("registry/types_and_client.rs");
 include!("registry/client_impl/mod.rs");
 include!("registry/remote_helpers.rs");

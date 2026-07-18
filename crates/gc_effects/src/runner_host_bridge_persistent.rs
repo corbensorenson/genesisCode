@@ -1,3 +1,4 @@
+#[cfg(not(target_os = "wasi"))]
 use super::*;
 
 #[cfg(not(target_os = "wasi"))]

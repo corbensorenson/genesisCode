@@ -68,9 +68,12 @@ impl EvidenceStore {
         // - tolerate races where another writer wins
         let mut tmp_i: u64 = 0;
         let tmp_path = loop {
-            let cand = self
-                .root
-                .join(format!(".tmp-{}-{}-{}", hex, std::process::id(), tmp_i));
+            let cand = self.root.join(format!(
+                ".tmp-{}-{}-{}",
+                hex,
+                crate::platform_process_id(),
+                tmp_i
+            ));
             tmp_i = tmp_i.saturating_add(1);
             match OpenOptions::new().write(true).create_new(true).open(&cand) {
                 Ok(mut f) => {

@@ -217,7 +217,11 @@ impl RefsDb {
         let dir = self.path.parent().unwrap_or_else(|| Path::new("."));
         let mut tmp_i: u64 = 0;
         let tmp_path = loop {
-            let cand = dir.join(format!(".tmp-refs-{}-{}", std::process::id(), tmp_i));
+            let cand = dir.join(format!(
+                ".tmp-refs-{}-{}",
+                crate::platform_process_id(),
+                tmp_i
+            ));
             tmp_i = tmp_i.saturating_add(1);
             match OpenOptions::new().write(true).create_new(true).open(&cand) {
                 Ok(mut f) => {

@@ -401,7 +401,12 @@ pub(super) fn write_cached_test_result(
 
     let mut i: u64 = 0;
     let tmp = loop {
-        let cand = dir.join(format!(".tmp-{}-{}-{}", key, std::process::id(), i));
+        let cand = dir.join(format!(
+            ".tmp-{}-{}-{}",
+            key,
+            crate::platform_process_id(),
+            i
+        ));
         i = i.saturating_add(1);
         match std::fs::OpenOptions::new()
             .write(true)
@@ -433,7 +438,11 @@ pub(super) fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), Obl
     let path = genesis_dir.join("last_acceptance");
     let mut i: u64 = 0;
     let tmp = loop {
-        let cand = genesis_dir.join(format!(".tmp-last_acceptance-{}-{}", std::process::id(), i));
+        let cand = genesis_dir.join(format!(
+            ".tmp-last_acceptance-{}-{}",
+            crate::platform_process_id(),
+            i
+        ));
         i = i.saturating_add(1);
         match std::fs::OpenOptions::new()
             .write(true)

@@ -62,45 +62,57 @@ pub(crate) fn call_host_bridge(
     pol: Option<&OpPolicy>,
 ) -> Result<Term, BridgeError> {
     let max_bytes = runner_host_bridge_policy::bridge_max_bytes(pol, family)?;
-    let transport = runner_host_bridge_policy::bridge_transport(pol, family)?;
     if runner_host_bridge_policy::wasi_bridge_profile_enabled(pol) {
         return runner_host_bridge_wasi::run_wasi_bridge_profile(
             family, op, payload, pol, max_bytes,
         );
     }
 
-    let Some(cmd_raw) = runner_host_bridge_policy::bridge_cmd(pol) else {
-        return Err(BridgeError {
-            code: format!("{family}/bridge-required"),
-            message: format!("{op} requires `{}` in caps.toml op policy", "bridge_cmd"),
-        });
-    };
-    let base_dir = effective_base_dir(pol).map_err(|e| BridgeError {
-        code: format!("{family}/bridge-path"),
-        message: e.to_string(),
-    })?;
-    let cmd_path = sandbox_path_read(&base_dir, &cmd_raw).map_err(|e| BridgeError {
-        code: format!("{family}/bridge-path"),
-        message: e.to_string(),
-    })?;
-    runner_host_bridge_policy::enforce_bridge_identity(family, &cmd_raw, &cmd_path, pol)?;
-    let args = runner_host_bridge_policy::bridge_args(pol);
-    let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
-    #[cfg(not(target_os = "wasi"))]
-    if timeout_ms.is_some() && !hard_process_tree_termination_supported() {
-        return Err(BridgeError {
-            code: format!("{family}/bridge-policy"),
-            message: "timeout_ms requires platform process-tree termination support".to_string(),
-        });
-    }
-    match transport {
-        runner_host_bridge_policy::BridgeTransport::SpawnPerOp => run_bridge_process(
-            family, op, payload, &base_dir, &cmd_path, &args, timeout_ms, max_bytes,
+    #[cfg(target_os = "wasi")]
+    return Err(BridgeError {
+        code: format!("{family}/bridge-profile-required"),
+        message: format!(
+            "{op} requires the deny-by-default WASI bridge profile; process bridges are unavailable"
         ),
-        runner_host_bridge_policy::BridgeTransport::PersistentStdio => {
-            runner_host_bridge_persistent::run_bridge_process_persistent(
+    });
+
+    #[cfg(not(target_os = "wasi"))]
+    {
+        let transport = runner_host_bridge_policy::bridge_transport(pol, family)?;
+        let Some(cmd_raw) = runner_host_bridge_policy::bridge_cmd(pol) else {
+            return Err(BridgeError {
+                code: format!("{family}/bridge-required"),
+                message: format!("{op} requires `{}` in caps.toml op policy", "bridge_cmd"),
+            });
+        };
+        let base_dir = effective_base_dir(pol).map_err(|e| BridgeError {
+            code: format!("{family}/bridge-path"),
+            message: e.to_string(),
+        })?;
+        let cmd_path = sandbox_path_read(&base_dir, &cmd_raw).map_err(|e| BridgeError {
+            code: format!("{family}/bridge-path"),
+            message: e.to_string(),
+        })?;
+        runner_host_bridge_policy::enforce_bridge_identity(family, &cmd_raw, &cmd_path, pol)?;
+        let args = runner_host_bridge_policy::bridge_args(pol);
+        let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
+        #[cfg(not(target_os = "wasi"))]
+        if timeout_ms.is_some() && !hard_process_tree_termination_supported() {
+            return Err(BridgeError {
+                code: format!("{family}/bridge-policy"),
+                message: "timeout_ms requires platform process-tree termination support"
+                    .to_string(),
+            });
+        }
+        match transport {
+            runner_host_bridge_policy::BridgeTransport::SpawnPerOp => run_bridge_process(
                 family, op, payload, &base_dir, &cmd_path, &args, timeout_ms, max_bytes,
-            )
+            ),
+            runner_host_bridge_policy::BridgeTransport::PersistentStdio => {
+                runner_host_bridge_persistent::run_bridge_process_persistent(
+                    family, op, payload, &base_dir, &cmd_path, &args, timeout_ms, max_bytes,
+                )
+            }
         }
     }
 }

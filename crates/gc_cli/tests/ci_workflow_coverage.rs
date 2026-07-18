@@ -130,6 +130,30 @@ fn ci_fetches_locked_evidence_dependencies_before_offline_baseline_guard() {
 }
 
 #[test]
+fn ci_provisions_verified_wasi_sdk_before_native_dependency_build() {
+    let root = repo_root();
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
+    let install = ci
+        .find("- name: Install Verified WASI SDK")
+        .expect("verified WASI SDK installation step");
+    let build = ci
+        .find("- name: WASI Build + Smoke (genesis_wasi.wasm)")
+        .expect("WASI build and smoke step");
+
+    assert!(
+        install < build,
+        "WASI SDK must be installed before the WASI build"
+    );
+    let install_step = &ci[install..build];
+    assert!(ci.contains("wasi-sdk-33.0-x86_64-linux-sha256-0ba8b5bfaeb2adf3f29bab5841d76cf5318ab8e1642ea195f88baba1abd47bce"));
+    assert!(install_step.contains("bash scripts/install_wasi_sdk.sh \\"));
+    assert!(install_step.contains("--install-base \"$RUNNER_TOOL_CACHE/genesis/wasi-sdk\""));
+    assert!(install_step.contains("--github-env \"$GITHUB_ENV\""));
+    assert!(ci[build..].contains("bash scripts/install_wasi_sdk.sh --version"));
+}
+
+#[test]
 fn ci_has_gpu_device_microbench_lane() {
     let root = repo_root();
     let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))

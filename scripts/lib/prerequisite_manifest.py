@@ -31,6 +31,7 @@ PROBE_KINDS = {"command-version", "command-presence", "node-package", "rustup-ta
 SAFE_COMMANDS = {
     ("adb", "version"),
     ("bash", "--version"),
+    ("bash", "scripts/install_wasi_sdk.sh", "--version"),
     ("cargo", "--version"),
     ("cargo", "clippy", "--version"),
     ("cargo-deny", "--version"),
@@ -64,9 +65,9 @@ EXPECTED_PROFILE_TOOLS = {
     "ci": ({"bash", "cargo", "cargo-deny", "cargo-nextest", "clippy", "git", "jq", "python", "rustc", "rustfmt"}, set()),
     "core": ({"bash", "cargo", "clippy", "git", "python", "rustc", "rustfmt"}, {"cargo-nextest", "jq", "shellcheck"}),
     "formal": ({"git", "lake", "lean"}, set()),
-    "full": ({"bash", "cargo", "cargo-deny", "cargo-nextest", "clippy", "git", "jq", "lake", "lean", "node", "npm", "playwright", "python", "rust-target-wasm32-unknown-unknown", "rust-target-wasm32-wasip1", "rustc", "rustfmt", "wasm-bindgen", "wasmtime"}, {"shellcheck"}),
+    "full": ({"bash", "cargo", "cargo-deny", "cargo-nextest", "clippy", "git", "jq", "lake", "lean", "node", "npm", "playwright", "python", "rust-target-wasm32-unknown-unknown", "rust-target-wasm32-wasip1", "rustc", "rustfmt", "wasi-sdk", "wasm-bindgen", "wasmtime"}, {"shellcheck"}),
     "fuzz": ({"cargo", "cargo-fuzz", "clang", "rustc"}, {"cargo-nextest"}),
-    "wasi": ({"bash", "cargo", "python", "rust-target-wasm32-wasip1", "rustc", "wasmtime"}, set()),
+    "wasi": ({"bash", "cargo", "python", "rust-target-wasm32-wasip1", "rustc", "wasi-sdk", "wasmtime"}, set()),
     "web": ({"bash", "cargo", "node", "npm", "playwright", "python", "rust-target-wasm32-unknown-unknown", "rustc", "wasm-bindgen"}, set()),
 }
 
@@ -414,6 +415,13 @@ def validate_source_pins(manifest: Mapping[str, Any]) -> None:
     for pin in required_workflow_pins:
         if pin not in workflow:
             raise PrerequisiteError("CI workflow is missing prerequisite pin: %s" % pin)
+
+    wasi_installer = (ROOT / "scripts/install_wasi_sdk.sh").read_text(encoding="utf-8")
+    wasi_sdk_version = exact_tool_version(manifest, "wasi-sdk")
+    if 'readonly WASI_SDK_VERSION="%s"' % wasi_sdk_version not in wasi_installer:
+        raise PrerequisiteError("WASI SDK prerequisite does not match the verified installer")
+    if "wasi-sdk-%s-x86_64-linux-sha256-" % wasi_sdk_version not in workflow:
+        raise PrerequisiteError("CI workflow is missing the WASI SDK cache version pin")
 
     schema = load_json(SCHEMA_PATH)
     if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema" or schema.get("$id") != "https://genesiscode.dev/schemas/prerequisite-manifest-v0.1.json":

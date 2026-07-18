@@ -1,7 +1,9 @@
+#[cfg(not(target_os = "wasi"))]
 use sha2::{Digest, Sha256};
 
 use super::*;
 
+#[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum BridgeTransport {
     SpawnPerOp,
@@ -16,12 +18,14 @@ pub(crate) fn wasi_bridge_profile_enabled(pol: Option<&OpPolicy>) -> bool {
             .unwrap_or(false)
 }
 
+#[cfg(not(target_os = "wasi"))]
 pub(crate) fn bridge_cmd(pol: Option<&OpPolicy>) -> Option<String> {
     pol.and_then(|p| p.extra.get("bridge_cmd"))
         .and_then(|v| v.as_str())
         .map(ToString::to_string)
 }
 
+#[cfg(not(target_os = "wasi"))]
 pub(crate) fn bridge_args(pol: Option<&OpPolicy>) -> Vec<String> {
     pol.and_then(|p| p.extra.get("bridge_args"))
         .and_then(|v| v.as_array())
@@ -33,6 +37,7 @@ pub(crate) fn bridge_args(pol: Option<&OpPolicy>) -> Vec<String> {
         .unwrap_or_default()
 }
 
+#[cfg(not(target_os = "wasi"))]
 pub(crate) fn bridge_transport(
     pol: Option<&OpPolicy>,
     family: &str,
@@ -55,6 +60,7 @@ pub(crate) fn bridge_transport(
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 pub(super) fn normalize_sha256_hex(raw: &str) -> Option<String> {
     let trimmed = raw.trim();
     let hex = trimmed
@@ -67,6 +73,7 @@ pub(super) fn normalize_sha256_hex(raw: &str) -> Option<String> {
     Some(hex.to_ascii_lowercase())
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn bridge_cmd_allowlist(
     pol: Option<&OpPolicy>,
     family: &str,
@@ -100,6 +107,7 @@ fn bridge_cmd_allowlist(
     Ok(Some(out))
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn bridge_cmd_sha256(pol: Option<&OpPolicy>, family: &str) -> Result<Option<String>, BridgeError> {
     let Some(raw) = pol
         .and_then(|p| p.extra.get("bridge_cmd_sha256"))
@@ -118,6 +126,7 @@ fn bridge_cmd_sha256(pol: Option<&OpPolicy>, family: &str) -> Result<Option<Stri
     Ok(Some(hex))
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn bridge_cmd_matches_allowlist(
     cmd_raw: &str,
     cmd_path: &std::path::Path,
@@ -131,6 +140,7 @@ fn bridge_cmd_matches_allowlist(
     })
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn file_sha256_hex(path: &std::path::Path) -> Result<String, std::io::Error> {
     use std::io::Read as _;
 
@@ -147,6 +157,7 @@ fn file_sha256_hex(path: &std::path::Path) -> Result<String, std::io::Error> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+#[cfg(not(target_os = "wasi"))]
 pub(crate) fn enforce_bridge_identity(
     family: &str,
     cmd_raw: &str,

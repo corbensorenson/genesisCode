@@ -84,6 +84,20 @@ jobs:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown, wasm32-wasip1
 
+      - name: Cache WASI SDK
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/genesis/wasi-sdk
+          key: wasi-sdk-33.0-x86_64-linux-sha256-0ba8b5bfaeb2adf3f29bab5841d76cf5318ab8e1642ea195f88baba1abd47bce
+
+      - name: Install Verified WASI SDK
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: |
+          bash scripts/install_wasi_sdk.sh \
+            --install-base "$RUNNER_TOOL_CACHE/genesis/wasi-sdk" \
+            --github-env "$GITHUB_ENV"
+
       - name: Resolve Cargo Cache
         shell: bash
         run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
@@ -502,6 +516,7 @@ jobs:
       - name: WASI Build + Smoke (genesis_wasi.wasm)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: |
+          bash scripts/install_wasi_sdk.sh --version
           source scripts/lib/cargo_target_dir.sh
           genesis_configure_cargo_target_dir "$PWD" ci-wasi-build root-wasi
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release

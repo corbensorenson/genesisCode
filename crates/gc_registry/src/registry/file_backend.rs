@@ -226,13 +226,21 @@ fn file_atomic_write(path: &Path, bytes: &[u8]) -> Result<(), RegistryError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| RegistryError::Http(format!("mkdir: {e}")))?;
     }
-    let tmp = path.with_extension(format!("tmp-{}", std::process::id()));
-    let mut f = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(&tmp)
-        .map_err(|e| RegistryError::Http(format!("write tmp: {e}")))?;
+    let mut sequence = 0u64;
+    let (tmp, mut f) = loop {
+        let candidate = path.with_extension(format!(
+            "tmp-{}-{sequence}",
+            crate::platform_process_id()
+        ));
+        sequence = sequence.saturating_add(1);
+        match OpenOptions::new().write(true).create_new(true).open(&candidate) {
+            Ok(file) => break (candidate, file),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(RegistryError::Http(format!("write tmp: {error}")));
+            }
+        }
+    };
     f.write_all(bytes)
         .map_err(|e| RegistryError::Http(format!("write tmp: {e}")))?;
     f.sync_all()

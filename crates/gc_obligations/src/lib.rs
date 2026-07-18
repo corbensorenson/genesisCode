@@ -56,6 +56,16 @@ pub use crate::transparency::{
 pub use crate::verify::{PackageVerifyResult, verify_package, verify_package_with_policy};
 pub use gc_pkg::{DepEntry, ModuleEntry, PackageManifest};
 
+#[cfg(not(target_os = "wasi"))]
+pub(crate) fn platform_process_id() -> u32 {
+    std::process::id()
+}
+
+#[cfg(target_os = "wasi")]
+pub(crate) fn platform_process_id() -> u32 {
+    0
+}
+
 include!("obligations/types_api.rs");
 include!("obligations/frontend_module_ops.rs");
 include!("obligations/manifest_hashing.rs");

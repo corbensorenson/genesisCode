@@ -3,12 +3,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
+#[cfg(not(target_os = "wasi"))]
 use std::thread;
 use std::time::Instant;
 
 use super::*;
 use crate::session_resources::{SessionAudit, SessionResourceLimits};
 
+#[cfg_attr(target_os = "wasi", allow(dead_code))]
 pub(super) struct WorkerJob {
     pub(super) request_id: String,
     pub(super) cli: Cli,
@@ -31,6 +33,7 @@ impl WorkerControl {
 }
 
 #[derive(Debug)]
+#[cfg_attr(target_os = "wasi", allow(dead_code))]
 pub(super) enum WorkerResult {
     Completed {
         request_id: String,
@@ -204,6 +207,14 @@ pub(super) fn spawn_worker(
     _sender: Sender<WorkerResult>,
 ) -> Result<WorkerControl, String> {
     Err("native session isolation requires killable process-tree support".to_string())
+}
+
+#[cfg(target_os = "wasi")]
+pub(super) fn spawn_worker(
+    _job: WorkerJob,
+    _sender: Sender<WorkerResult>,
+) -> Result<WorkerControl, String> {
+    Err("WASI sessions execute through the bounded inline worker".to_string())
 }
 
 pub(super) fn run_worker_inline(job: WorkerJob) -> WorkerResult {

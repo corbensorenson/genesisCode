@@ -555,7 +555,7 @@ fn io_probe_store_root() -> PathBuf {
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     std::env::temp_dir().join(format!(
         "genesis-runtime-profile-store-{}-{id}",
-        std::process::id()
+        crate::platform_process_id()
     ))
 }
 
