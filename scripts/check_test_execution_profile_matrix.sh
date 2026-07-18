@@ -359,6 +359,52 @@ require_ci_pattern 'GENESIS_HEALTH_PROFILE=dev-fast'
 require_ci_pattern 'GENESIS_HEALTH_PROFILE=release-full bash scripts/test_perf_gates.sh'
 require_ci_pattern 'Local Workspace Test Contract (CI unset)'
 require_ci_pattern 'env -u CI cargo test --workspace --profile selfhost-strict'
+python3 - "$CI" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+job_start = source.find("  local_workspace_test_contract:\n")
+aggregate_start = source.find("  test:\n", job_start)
+aggregate_end = source.find("  pr_strict_equivalence_gate:\n", aggregate_start)
+if min(job_start, aggregate_start, aggregate_end) < 0:
+    raise SystemExit(
+        "test-execution-profile-matrix: isolated local-workspace or required aggregate job is missing"
+    )
+if source.count("- name: Local Workspace Test Contract (CI unset)") != 1:
+    raise SystemExit(
+        "test-execution-profile-matrix: CI-unset workspace contract must have one authoritative lane"
+    )
+local = source[job_start:aggregate_start]
+aggregate = source[aggregate_start:aggregate_end]
+for required in (
+    "runs-on: ubuntu-latest",
+    "Local Workspace Disk Headroom",
+    "--min-kb 10485760 --strict 1",
+    "cargo fetch --locked",
+    "env -u CI cargo test --workspace --profile selfhost-strict --locked --offline",
+):
+    if required not in local:
+        raise SystemExit(
+            f"test-execution-profile-matrix: isolated local-workspace job is missing {required!r}"
+        )
+if "Playwright" in local or "test_perf_gates.sh" in local:
+    raise SystemExit(
+        "test-execution-profile-matrix: isolated local-workspace job accumulates unrelated heavy artifacts"
+    )
+for required in (
+    "if: ${{ always() }}",
+    "- test_suite",
+    "- local_workspace_test_contract",
+    "TEST_SUITE_RESULT: ${{ needs.test_suite.result }}",
+    "LOCAL_WORKSPACE_RESULT: ${{ needs.local_workspace_test_contract.result }}",
+    "Required CI Aggregate",
+):
+    if required not in aggregate:
+        raise SystemExit(
+            f"test-execution-profile-matrix: protected test aggregate is missing {required!r}"
+        )
+PY
 require_ci_pattern 'Selfhost Refactor Guard'
 require_ci_pattern 'Selfhost Strict Smoke (Native + WASI CLI)'
 require_ci_pattern 'Selfhost Strict Golden (Native + WASI CLI)'

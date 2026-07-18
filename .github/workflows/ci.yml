@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
+  test_suite:
     runs-on: ubuntu-latest
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
@@ -363,10 +363,6 @@ jobs:
               bash scripts/test_perf_gates.sh
           fi
 
-      - name: Local Workspace Test Contract (CI unset)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: env -u CI cargo test --workspace --profile selfhost-strict
-
       - name: Upload Test Shard Artifacts
         if: ${{ always() && env.GENESIS_TEST_SHARDS_TOTAL != '1' }}
         uses: actions/upload-artifact@v4
@@ -489,6 +485,63 @@ jobs:
           genesis_configure_cargo_target_dir "$PWD" ci-wasi-build root-wasi
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
           bash scripts/wasi_smoke.sh "$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
+
+  local_workspace_test_contract:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile != 'fast') }}
+    runs-on: ubuntu-latest
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Local Workspace Disk Headroom
+        run: bash scripts/check_disk_headroom.sh --path "$PWD" --context "local-workspace-test-contract" --min-kb 10485760 --strict 1
+
+      - name: Fetch Locked Workspace Dependencies
+        run: cargo fetch --locked
+
+      - name: Local Workspace Test Contract (CI unset)
+        run: env -u CI cargo test --workspace --profile selfhost-strict --locked --offline
+
+  test:
+    if: ${{ always() }}
+    needs:
+      - test_suite
+      - local_workspace_test_contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Required CI Aggregate
+        env:
+          TEST_SUITE_RESULT: ${{ needs.test_suite.result }}
+          LOCAL_WORKSPACE_RESULT: ${{ needs.local_workspace_test_contract.result }}
+          LOCAL_WORKSPACE_REQUIRED: ${{ (github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile != 'fast')) && '1' || '0' }}
+        run: |
+          [[ "$TEST_SUITE_RESULT" == "success" ]] || {
+            echo "test_suite result: $TEST_SUITE_RESULT" >&2
+            exit 1
+          }
+          if [[ "$LOCAL_WORKSPACE_REQUIRED" == "1" ]]; then
+            [[ "$LOCAL_WORKSPACE_RESULT" == "success" ]] || {
+              echo "required local_workspace_test_contract result: $LOCAL_WORKSPACE_RESULT" >&2
+              exit 1
+            }
+          else
+            [[ "$LOCAL_WORKSPACE_RESULT" == "skipped" || "$LOCAL_WORKSPACE_RESULT" == "success" ]] || {
+              echo "optional local_workspace_test_contract result: $LOCAL_WORKSPACE_RESULT" >&2
+              exit 1
+            }
+          fi
 
   pr_strict_equivalence_gate:
     if: ${{ github.event_name == 'pull_request' }}

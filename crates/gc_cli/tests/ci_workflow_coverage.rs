@@ -53,6 +53,56 @@ fn workspace_test_step_holds_a_live_cargo_cache_lease() {
 }
 
 #[test]
+fn local_workspace_contract_has_an_isolated_hosted_job() {
+    let root = repo_root();
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
+    let job_start = ci
+        .find("  local_workspace_test_contract:")
+        .expect("isolated local workspace contract job");
+    let job_end = ci[job_start..]
+        .find("  test:\n")
+        .map(|offset| job_start + offset)
+        .expect("job following local workspace contract");
+    let body = &ci[job_start..job_end];
+
+    assert_eq!(
+        ci.matches("- name: Local Workspace Test Contract (CI unset)")
+            .count(),
+        1,
+        "CI-unset workspace contract must have one authoritative lane"
+    );
+    assert!(body.contains("runs-on: ubuntu-latest"));
+    assert!(body.contains("Local Workspace Disk Headroom"));
+    assert!(body.contains("--min-kb 10485760 --strict 1"));
+    assert!(body.contains("cargo fetch --locked"));
+    assert!(
+        body.contains(
+            "env -u CI cargo test --workspace --profile selfhost-strict --locked --offline"
+        )
+    );
+    assert!(
+        !body.contains("Playwright") && !body.contains("test_perf_gates.sh"),
+        "isolated contract job must not accumulate browser or performance artifacts"
+    );
+
+    let aggregate_end = ci[job_end..]
+        .find("  pr_strict_equivalence_gate:")
+        .map(|offset| job_end + offset)
+        .expect("job following required aggregate");
+    let aggregate = &ci[job_end..aggregate_end];
+    assert!(aggregate.contains("if: ${{ always() }}"));
+    assert!(aggregate.contains("- test_suite"));
+    assert!(aggregate.contains("- local_workspace_test_contract"));
+    assert!(aggregate.contains("TEST_SUITE_RESULT: ${{ needs.test_suite.result }}"));
+    assert!(
+        aggregate
+            .contains("LOCAL_WORKSPACE_RESULT: ${{ needs.local_workspace_test_contract.result }}")
+    );
+    assert!(aggregate.contains("Required CI Aggregate"));
+}
+
+#[test]
 fn ci_fetches_locked_evidence_dependencies_before_offline_baseline_guard() {
     let root = repo_root();
     let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
