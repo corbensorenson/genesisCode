@@ -96,6 +96,13 @@ Strict/full profile runtime reports:
   - history: `.genesis/perf/agent_capability_gauntlet_history.jsonl`
   - baseline seed history: `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
   - enforced by `scripts/check_agent_reference_workflows.sh` with per-workflow fail-closed minimum-history + p95/regression budgets (native and parity wasi lanes).
+  - hosted standard/full CI provisions the report and history once with
+    `scripts/update_agent_reference_workflows_report.sh`, then persists scenario
+    and generative reports before artifact upload. Standard CI records a declared
+    single-native-profile generative cohort with secondary parity disabled; full
+    CI first runs `scripts/update_agent_workflow_runtime_parity_report.sh` and
+    requires the resulting native/WASI pair for generative validation. Reports
+    from these unlike runtime-profile cohorts never share ranking or baselines.
 - `agent-inner-loop` health lane
   - report: `.genesis/perf/upgrade_plan_health_agent_inner_loop_report.json`
   - history: `.genesis/perf/upgrade_plan_health_agent_inner_loop_history.jsonl`

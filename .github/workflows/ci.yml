@@ -406,6 +406,36 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/update_gpu_compute_runtime_profile_report.sh
 
+      - name: Selfhost Strict Smoke (Native + WASI CLI)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/selfhost_strict_smoke.sh
+
+      - name: Agent Capability Gauntlet (Selfhost-Only)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: |
+          bash scripts/update_agent_reference_workflows_report.sh
+          if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
+            bash scripts/update_agent_workflow_runtime_parity_report.sh
+          fi
+
+      - name: Agent End-to-End Scenario Perf Gate
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/update_agent_scenario_perf_report.sh
+
+      - name: Agent Generative Workload Gate
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: |
+          if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
+            GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_native_report.json \
+              GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT=.genesis/perf/agent_capability_gauntlet_wasi_report.json \
+              GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 \
+              bash scripts/update_agent_generative_workloads_report.sh
+          else
+            GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_report.json \
+              GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=0 \
+              bash scripts/update_agent_generative_workloads_report.sh
+          fi
+
       - name: Upload Perf Trend Artifacts
         if: ${{ always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') }}
         uses: actions/upload-artifact@v4
@@ -415,22 +445,6 @@ jobs:
             .genesis/perf/*.json
             .genesis/perf/*.jsonl
           if-no-files-found: warn
-
-      - name: Selfhost Strict Smoke (Native + WASI CLI)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/selfhost_strict_smoke.sh
-
-      - name: Agent Capability Gauntlet (Selfhost-Only)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_agent_reference_workflows.sh
-
-      - name: Agent End-to-End Scenario Perf Gate
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_agent_scenario_perf.sh
-
-      - name: Agent Generative Workload Gate
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/check_agent_generative_workloads.sh
 
       - name: Selfhost Strict Golden (Native + WASI CLI)
         if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}

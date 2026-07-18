@@ -759,6 +759,32 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
                 == 2,
         "standard hosted CI may declare bounded jitter, but full CI must retain the local AI-loop target"
     );
+    let agent_gauntlet = workflow
+        .find("- name: Agent Capability Gauntlet (Selfhost-Only)")
+        .expect("agent capability gauntlet lane");
+    let agent_scenario = workflow
+        .find("- name: Agent End-to-End Scenario Perf Gate")
+        .expect("agent scenario performance lane");
+    let agent_generative = workflow
+        .find("- name: Agent Generative Workload Gate")
+        .expect("agent generative workload lane");
+    let perf_upload = workflow
+        .find("- name: Upload Perf Trend Artifacts")
+        .expect("performance evidence upload lane");
+    let agent_lane = &workflow[agent_gauntlet..perf_upload];
+    assert!(
+        agent_gauntlet < agent_scenario
+            && agent_scenario < agent_generative
+            && agent_generative < perf_upload
+            && agent_lane.contains("bash scripts/update_agent_reference_workflows_report.sh")
+            && agent_lane.contains("bash scripts/update_agent_workflow_runtime_parity_report.sh")
+            && agent_lane.contains("bash scripts/update_agent_scenario_perf_report.sh")
+            && agent_lane.contains("GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1")
+            && agent_lane.contains("GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=0")
+            && agent_lane.contains("bash scripts/update_agent_generative_workloads_report.sh")
+            && !agent_lane.contains("bash scripts/check_agent_reference_workflows.sh"),
+        "CI must provision and retain gauntlet, scenario, parity, and generative evidence in dependency order"
+    );
     let local_workspace_job = workflow
         .find("  local_workspace_test_contract:")
         .expect("isolated local workspace contract job");
