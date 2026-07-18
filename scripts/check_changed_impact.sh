@@ -112,13 +112,13 @@ explicit_env_output = changed_fast_dry_run(
 )
 require(
     "mode=profile-fallback" in explicit_output
-    and "budget_subject=changed-file-gate budget_ms=12345 disk_budget_bytes=1073741824" in explicit_output,
-    "explicit changed-fast budget was silently widened",
+    and "budget_subject=prepush-standard budget_ms=12345 disk_budget_bytes=3221225472" in explicit_output,
+    "explicit changed-fast duration or fallback disk envelope drifted",
 )
 require(
     "mode=profile-fallback" in explicit_env_output
-    and "budget_subject=changed-file-gate budget_ms=23456 disk_budget_bytes=1073741824" in explicit_env_output,
-    "changed-fast environment budget was silently widened",
+    and "budget_subject=prepush-standard budget_ms=23456 disk_budget_bytes=3221225472" in explicit_env_output,
+    "changed-fast environment duration or fallback disk envelope drifted",
 )
 controls.append("explicit-budget-authority")
 
