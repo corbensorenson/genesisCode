@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 import gzip
 import hashlib
@@ -28,8 +29,9 @@ import genesisbench_protocol
 
 
 ROOT = Path(__file__).resolve().parents[2]
-AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json"
+AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json"
 LEGACY_AUTHORITY_PATHS = (
+    ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json",
     ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json",
     ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json",
 )
@@ -48,6 +50,7 @@ KIND_RUN = "genesis/genesisbench-open-agent-run-v0.1"
 KIND_AUTHORITY = "genesis/genesisbench-open-agent-harness-v0.1"
 KIND_AUTHORITY_V2 = "genesis/genesisbench-open-agent-harness-v0.2"
 KIND_AUTHORITY_V3 = "genesis/genesisbench-open-agent-harness-v0.3"
+KIND_AUTHORITY_V4 = "genesis/genesisbench-open-agent-harness-v0.4"
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$")
 REL_RE = re.compile(r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]{1,512}$")
@@ -66,6 +69,73 @@ V3_FIXED_ENVIRONMENT = {
     "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE": "1",
     "NO_COLOR": "1",
 }
+IMPLEMENTATION_ENTRYPOINTS = (
+    "scripts/lib/genesisbench_open_agent.py",
+    "scripts/lib/genesisbench_open_agent_report.py",
+)
+IMPLEMENTATION_PATHS = (
+    "scripts/lib/gc_agent_benchmark_run.py",
+    "scripts/lib/gc_agent_scoring.py",
+    "scripts/lib/gc_agent_scoring_contract.py",
+    "scripts/lib/gc_task_benchmarks.py",
+    "scripts/lib/genesisbench_contamination.py",
+    "scripts/lib/genesisbench_eligibility.py",
+    "scripts/lib/genesisbench_open_agent.py",
+    "scripts/lib/genesisbench_open_agent_report.py",
+    "scripts/lib/genesisbench_protocol.py",
+    "scripts/lib/genesisbench_protocol_contract.py",
+    "scripts/lib/genesisbench_protocol_run.py",
+    "scripts/lib/genesisbench_reference_agent.py",
+    "scripts/lib/genesisbench_tracks.py",
+)
+V4_PURPOSE = (
+    "Execute atomically predeclared repository-editing campaigns with a transitively "
+    "content-bound harness and byte-complete evidence for every safely inventoried "
+    "invalid workspace, without broadening Cold Acquisition."
+)
+V4_INVOCATION_PROFILES = {
+    "codex-cli-hosted": {
+        "argvPolicy": "fixed-codex-exec-ephemeral-json-workspace-write-one-prompt-ancestry-isolated-v0.4",
+        "id": "codex-cli-hosted-v0.4",
+        "network": "provider-only",
+        "provider": None,
+    },
+    "codex-cli-local": {
+        "argvPolicy": "fixed-codex-exec-oss-ephemeral-json-workspace-write-one-prompt-ancestry-isolated-v0.4",
+        "id": "codex-cli-local-v0.4",
+        "network": "loopback-provider-only",
+        "provider": "predeclared-lmstudio-or-ollama",
+    },
+}
+V4_SECURITY_CONTROLS = sorted((
+    "agent-and-model-never-accessed-during-replay",
+    "all-environment-values-redacted",
+    "ambient-project-instruction-and-skill-discovery-blocked",
+    "ancestry-isolated-process-workspace",
+    "atomic-complete-campaign-precommitment",
+    "attempt-membership-and-common-field-binding",
+    "bounded-large-event-line-validation",
+    "candidate-path-closure",
+    "complete-transitive-local-implementation-binding",
+    "declared-editable-output-creation-and-retention",
+    "ephemeral-stage-path-normalization",
+    "exact-executable-digest-and-version",
+    "finite-capture-and-wall-time-budgets",
+    "frozen-repository-post-run-rehash",
+    "immutable-predeclaration-before-execution",
+    "inventory-valid-invalid-workspace-payload-retention",
+    "non-selective-campaign-stop-policy",
+    "observed-workspace-byte-parity-validation",
+    "one-attempt-no-resume-no-hidden-retry",
+    "permission-aware-temporary-snapshot-teardown",
+    "predeclared-supplied-tool-digests",
+    "process-group-hard-kill-and-reap",
+    "provider-network-only-or-loopback-only",
+    "read-only-frozen-source-outside-writable-workspace",
+    "strict-jsonl-transcript-validation",
+    "supplied-genesis-tool-cache-disabled",
+    "symlink-and-non-regular-file-rejection",
+))
 
 
 class OpenAgentError(RuntimeError):
@@ -207,13 +277,118 @@ def authority(identity: str | None = None) -> dict[str, Any]:
     return match
 
 
-def is_v3_harness(harness: dict[str, Any]) -> bool:
-    return harness["version"] == "0.3.0"
+def harness_minor_version(harness: dict[str, Any]) -> int:
+    match = re.fullmatch(r"0\.([0-9]+)\.0", harness["version"])
+    require(match is not None, "invalid Open Agent harness version")
+    return int(match.group(1))
+
+
+def is_v3_or_later_harness(harness: dict[str, Any]) -> bool:
+    return harness_minor_version(harness) >= 3
+
+
+def is_v4_harness(harness: dict[str, Any]) -> bool:
+    return harness["version"] == "0.4.0"
+
+
+def implementation_rows() -> list[dict[str, Any]]:
+    rows = []
+    for relative in IMPLEMENTATION_PATHS:
+        path = regular_file(ROOT / relative, "Open Agent implementation file")
+        rows.append({"path": relative, "bytes": path.stat().st_size, "sha256": sha256_file(path)})
+    return rows
+
+
+def discovered_implementation_paths() -> tuple[str, ...]:
+    scripts_root = ROOT / "scripts/lib"
+    pending = [Path(path).name for path in IMPLEMENTATION_ENTRYPOINTS]
+    seen: set[str] = set()
+    while pending:
+        name = pending.pop()
+        if name in seen:
+            continue
+        source = regular_file(scripts_root / name, "Open Agent implementation closure file")
+        seen.add(name)
+        tree = ast.parse(source.read_text(encoding="ascii"), filename=name)
+        for node in ast.walk(tree):
+            modules: list[str] = []
+            if isinstance(node, ast.Import):
+                modules = [alias.name.split(".")[0] for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module.split(".")[0]]
+            for module in modules:
+                candidate = f"{module}.py"
+                if (scripts_root / candidate).is_file() and candidate not in seen:
+                    pending.append(candidate)
+    return tuple(sorted(f"scripts/lib/{name}" for name in seen))
+
+
+def validate_implementation_binding(document: Any, *, check_files: bool) -> dict[str, Any]:
+    binding = closed(
+        document,
+        {"entrypoints", "files", "identitySha256"},
+        "Open Agent implementation binding",
+    )
+    require(binding["entrypoints"] == list(IMPLEMENTATION_ENTRYPOINTS), "implementation entrypoint drift")
+    require(isinstance(binding["files"], list), "implementation files must be an array")
+    rows = []
+    for index, raw in enumerate(binding["files"]):
+        row = closed(raw, {"path", "bytes", "sha256"}, f"implementation file[{index}]")
+        safe_relative(row["path"], "implementation path")
+        require(isinstance(row["bytes"], int) and row["bytes"] > 0, "invalid implementation byte count")
+        require(isinstance(row["sha256"], str) and SHA_RE.fullmatch(row["sha256"]) is not None, "invalid implementation digest")
+        rows.append(row)
+    require([row["path"] for row in rows] == list(IMPLEMENTATION_PATHS), "implementation file closure drift")
+    require(binding["identitySha256"] == sha256_bytes(canonical_bytes(rows)), "implementation identity drift")
+    if check_files:
+        require(discovered_implementation_paths() == IMPLEMENTATION_PATHS, "unbound local implementation import")
+        require(rows == implementation_rows(), "Open Agent implementation bytes drift")
+    return binding
+
+
+def v4_scaffold_identity(harness: dict[str, Any]) -> str:
+    material = {
+        "kind": "genesis/genesisbench-open-agent-scaffold-v0.4",
+        "implementationIdentitySha256": harness["implementation"]["identitySha256"],
+        "invocationProfiles": harness["invocationProfiles"],
+        "fixedEnvironment": V3_FIXED_ENVIRONMENT,
+        "promptPolicy": "one-fixed-task-prompt-frozen-repository-one-writable-workspace-v0.4",
+    }
+    return sha256_bytes(canonical_bytes(material))
+
+
+def render_v4_authority() -> dict[str, Any]:
+    files = implementation_rows()
+    document = {
+        "coldAcquisitionAdapterProfileUnchanged": True,
+        "contentIdentitySha256": "",
+        "implementation": {
+            "entrypoints": list(IMPLEMENTATION_ENTRYPOINTS),
+            "files": files,
+            "identitySha256": sha256_bytes(canonical_bytes(files)),
+        },
+        "invocationProfiles": copy.deepcopy(V4_INVOCATION_PROFILES),
+        "kind": KIND_AUTHORITY_V4,
+        "limits": {
+            "maxEventLineBytes": MAX_CAPTURE_BYTES,
+            "maxStderrBytes": MAX_CAPTURE_BYTES,
+            "maxStdoutBytes": MAX_CAPTURE_BYTES,
+            "maxTimeoutMs": 3_600_000,
+            "maxWorkspaceBytes": 64 * 1024 * 1024,
+            "maxWorkspaceFiles": 4_096,
+        },
+        "purpose": V4_PURPOSE,
+        "scaffoldIdentitySha256": "",
+        "securityControls": V4_SECURITY_CONTROLS,
+        "version": "0.4.0",
+    }
+    document["scaffoldIdentitySha256"] = v4_scaffold_identity(document)
+    return identified(document)
 
 
 def declared_environment_names(harness: dict[str, Any]) -> list[str]:
     names = set(ALLOWED_ENVIRONMENT)
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         names.update(V3_FIXED_ENVIRONMENT)
     return sorted(names)
 
@@ -224,7 +399,7 @@ def event_line_limit(harness: dict[str, Any]) -> int:
 
 def expected_workspace_paths(case: dict[str, Any], harness: dict[str, Any]) -> set[str]:
     paths = {row["path"] for row in case["inputFiles"]}
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         paths.update(case["editablePaths"])
     return paths
 
@@ -339,7 +514,7 @@ def common_predeclaration_fields(
             "contaminationLabel": "unknown",
         },
     }
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         common["tools"] = {
             "genesisExecutableSha256": sha256_file(genesis_bin),
             "selfhostArtifactSha256": sha256_file(selfhost_artifact),
@@ -357,6 +532,8 @@ def build_campaign(
     suite = load_json(SUITE_PATH)
     protocol = load_json(PROTOCOL_PATH)
     harness = authority()
+    if is_v4_harness(harness):
+        validate_implementation_binding(harness["implementation"], check_files=True)
     expected_ids = campaign_case_ids(suite, phase)
     require(sorted(case_ids) == expected_ids and len(case_ids) == len(set(case_ids)), "campaign case matrix is incomplete or non-canonical")
     cases = [case_binding(next(case for case in suite["cases"] if case["id"] == case_id)) for case_id in expected_ids]
@@ -415,7 +592,7 @@ def validate_campaign(document: Any) -> dict[str, Any]:
     require(isinstance(document, dict), "Open Agent campaign must be an object")
     harness_identity = document.get("authorities", {}).get("harnessIdentitySha256")
     harness = authority(harness_identity)
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         top.add("tools")
     doc = closed(document, top, "Open Agent campaign")
     require(doc["kind"] == KIND_CAMPAIGN and doc["version"] == "0.1.0", "campaign kind/version drift")
@@ -460,7 +637,7 @@ def build_predeclaration(
     harness = authority(campaign["authorities"]["harnessIdentitySha256"])
     require(case_binding(case) in campaign["cases"], "case is not predeclared by campaign")
     common_fields = ["track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"]
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         common_fields.append("tools")
     document = {
         "kind": KIND_PREDECLARATION,
@@ -515,7 +692,7 @@ def validate_common_fields(doc: dict[str, Any], harness: dict[str, Any] | None =
         "environmentNames": declared_environment_names(harness), "environmentValuesRecorded": False,
         "genesisSpecificTraining": "unknown", "contaminationLabel": "unknown",
     }, "disclosure drift")
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         tools = closed(
             doc["tools"], {"genesisExecutableSha256", "selfhostArtifactSha256"},
             "supplied tool binding",
@@ -533,7 +710,7 @@ def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str
         "kind", "version", "campaignId", "campaignIdentitySha256", "case", "authorities", "track", "runner",
         "model", "attemptPolicy", "capabilities", "limits", "disclosure", "contentIdentitySha256",
     }
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         top.add("tools")
     doc = closed(document, top, "Open Agent predeclaration")
     require(doc["kind"] == KIND_PREDECLARATION and doc["version"] == "0.1.0", "predeclaration kind/version drift")
@@ -551,7 +728,7 @@ def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str
     }, "predeclaration authority binding drift")
     validate_common_fields(doc, harness)
     common_fields = ["track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"]
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         common_fields.append("tools")
     for field in common_fields:
         require(doc[field] == campaign[field], f"attempt {field} differs from campaign")
@@ -593,7 +770,7 @@ def validate_tool_archive(path: Path, campaign: dict[str, Any]) -> dict[str, Any
     require(sha256_bytes(raw) == executable["uncompressedSha256"], "uncompressed executable digest drift")
     require(artifact_path.stat().st_size == artifact["bytes"], "archived artifact byte count drift")
     require(sha256_file(artifact_path) == artifact["sha256"], "archived artifact digest drift")
-    if is_v3_harness(authority(campaign["authorities"]["harnessIdentitySha256"])):
+    if is_v3_or_later_harness(authority(campaign["authorities"]["harnessIdentitySha256"])):
         require(executable["uncompressedSha256"] == campaign["tools"]["genesisExecutableSha256"], "archived executable campaign binding drift")
         require(artifact["sha256"] == campaign["tools"]["selfhostArtifactSha256"], "archived artifact campaign binding drift")
     validate_identity(doc)
@@ -765,7 +942,7 @@ def sanitized_environment(harness: dict[str, Any]) -> tuple[dict[str, str], list
             environment[name] = value
             present.append(name)
     environment.setdefault("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
-    if is_v3_harness(harness):
+    if is_v3_or_later_harness(harness):
         environment.update(V3_FIXED_ENVIRONMENT)
         present.extend(V3_FIXED_ENVIRONMENT)
     else:
@@ -864,6 +1041,27 @@ def copy_candidate(
         shutil.copyfile(source, target)
 
 
+def copy_inventory_payload(
+    workspace: Path, payload_root: Path, rows: list[dict[str, Any]],
+) -> None:
+    payload_root.mkdir()
+    for row in rows:
+        relative = safe_relative(row["path"], "observed workspace path")
+        source = workspace.joinpath(*relative.parts)
+        require(source.is_file() and not source.is_symlink(), "observed workspace file is unavailable")
+        require(
+            source.stat().st_size == row["bytes"] and sha256_file(source) == row["sha256"],
+            "observed workspace changed after inventory",
+        )
+        target = payload_root.joinpath(*relative.parts)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    require(
+        inventory(payload_root, max_files=4096, max_bytes=128 * 1024 * 1024) == rows,
+        "observed workspace retention drift",
+    )
+
+
 def normalize_retained_stage_paths(paths: tuple[Path, ...], stage: Path) -> None:
     replacement = b"$GENESISBENCH_STAGE"
     spellings = {str(stage).encode("utf-8"), os.path.realpath(stage).encode("utf-8")}
@@ -887,7 +1085,13 @@ def run_agent(
     require(sha256_file(executable) == predeclaration["runner"]["executableSha256"], "agent executable digest mismatch")
     require(executable_version(executable) == predeclaration["runner"]["executableVersion"], "agent executable version mismatch")
     harness = authority(campaign["authorities"]["harnessIdentitySha256"])
-    if is_v3_harness(harness):
+    if is_v4_harness(harness):
+        require(
+            harness["contentIdentitySha256"] == authority()["contentIdentitySha256"],
+            "v0.4 campaign execution requires the active harness authority",
+        )
+        validate_implementation_binding(harness["implementation"], check_files=True)
+    if is_v3_or_later_harness(harness):
         require(sha256_file(genesis_bin) == predeclaration["tools"]["genesisExecutableSha256"], "GenesisCode executable digest mismatch")
         require(sha256_file(selfhost_artifact) == predeclaration["tools"]["selfhostArtifactSha256"], "self-host artifact digest mismatch")
     suite = suite_authority(campaign["authorities"]["suiteIdentitySha256"])
@@ -917,7 +1121,7 @@ def run_agent(
             stdout_path, stderr_path, predeclaration["limits"]["maxStdoutBytes"],
             predeclaration["limits"]["maxStderrBytes"], harness,
         )
-        if is_v3_harness(harness):
+        if is_v3_or_later_harness(harness):
             normalize_retained_stage_paths((stdout_path, stderr_path), stage)
         violations: list[str] = []
         try:
@@ -951,6 +1155,8 @@ def run_agent(
             violations.append("nonzero-exit")
         violations = sorted(set(violations))
         score_doc = None
+        if violations and workspace_inventory_status == "valid" and is_v4_harness(harness):
+            copy_inventory_payload(workspace, retained / "observed-workspace", after_workspace)
         if not violations:
             copy_candidate(workspace, retained / "candidate", case, harness)
             score_doc = gc_agent_scoring.score_candidate(
@@ -1078,6 +1284,15 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
                 inventory(root / "candidate", max_files=4096, max_bytes=64 * 1024 * 1024) == after_rows,
                 "retained candidate differs from observed workspace",
             )
+        observed_root = root / "observed-workspace"
+        if is_v4_harness(harness) and run["outcome"] == "invalid" and workspace["afterInventoryStatus"] == "valid":
+            require(observed_root.is_dir() and not observed_root.is_symlink(), "invalid run lacks observed workspace payload")
+            require(
+                inventory(observed_root, max_files=4096, max_bytes=128 * 1024 * 1024) == after_rows,
+                "retained observed workspace differs from recorded inventory",
+            )
+        else:
+            require(not observed_root.exists(), "unexpected observed workspace payload")
         valid_jsonl, event_count = validate_jsonl(
             root / "events.jsonl", event_line_limit(harness),
         )
@@ -1099,7 +1314,7 @@ def replay_run(run_path: Path, genesis_bin: Path, selfhost_artifact: Path) -> di
     selfhost_artifact = regular_file(selfhost_artifact, "self-host artifact")
     archive_path = run_path.parents[2] / "tools" / "archive.json"
     archive = validate_tool_archive(archive_path, campaign) if archive_path.is_file() else None
-    if archive is None and is_v3_harness(harness):
+    if archive is None and is_v3_or_later_harness(harness):
         require(sha256_file(genesis_bin) == campaign["tools"]["genesisExecutableSha256"], "replay GenesisCode executable digest mismatch")
         require(sha256_file(selfhost_artifact) == campaign["tools"]["selfhostArtifactSha256"], "replay self-host artifact digest mismatch")
     matched = None
@@ -1137,18 +1352,28 @@ def replay_run(run_path: Path, genesis_bin: Path, selfhost_artifact: Path) -> di
 
 def validate_authorities() -> dict[str, Any]:
     documents = [authority(), *(load_json(path) for path in LEGACY_AUTHORITY_PATHS)]
-    require([doc["version"] for doc in documents] == ["0.3.0", "0.2.0", "0.1.0"], "Open Agent authority order drift")
+    require(
+        [doc["version"] for doc in documents] == ["0.4.0", "0.3.0", "0.2.0", "0.1.0"],
+        "Open Agent authority order drift",
+    )
     for doc in documents:
-        closed(doc, {"kind", "version", "purpose", "coldAcquisitionAdapterProfileUnchanged", "scaffoldIdentitySha256", "invocationProfiles", "limits", "securityControls", "contentIdentitySha256"}, "Open Agent authority")
+        fields = {"kind", "version", "purpose", "coldAcquisitionAdapterProfileUnchanged", "scaffoldIdentitySha256", "invocationProfiles", "limits", "securityControls", "contentIdentitySha256"}
+        if is_v4_harness(doc):
+            fields.add("implementation")
+        closed(doc, fields, "Open Agent authority")
         require((doc["kind"], doc["version"]) in {
             (KIND_AUTHORITY, "0.1.0"), (KIND_AUTHORITY_V2, "0.2.0"),
-            (KIND_AUTHORITY_V3, "0.3.0"),
+            (KIND_AUTHORITY_V3, "0.3.0"), (KIND_AUTHORITY_V4, "0.4.0"),
         }, "Open Agent authority kind/version drift")
         require(doc["coldAcquisitionAdapterProfileUnchanged"] is True, "Open Agent authority silently broadens Cold Acquisition adapters")
         require(set(doc["invocationProfiles"]) == {"codex-cli-hosted", "codex-cli-local"}, "Open Agent invocation profile drift")
         require(doc["securityControls"] == sorted(set(doc["securityControls"])), "security controls must be sorted and unique")
-        if is_v3_harness(doc):
-            require(doc["limits"]["maxEventLineBytes"] == MAX_CAPTURE_BYTES, "v0.3 event line limit drift")
+        if is_v3_or_later_harness(doc):
+            require(doc["limits"]["maxEventLineBytes"] == MAX_CAPTURE_BYTES, "v0.3+ event line limit drift")
+        if is_v4_harness(doc):
+            validate_implementation_binding(doc["implementation"], check_files=True)
+            require(doc["scaffoldIdentitySha256"] == v4_scaffold_identity(doc), "v0.4 scaffold identity drift")
+            require(doc == render_v4_authority(), "v0.4 rendered authority is stale")
         validate_identity(doc)
     for path in (CAMPAIGN_SCHEMA_PATH, PREDECLARATION_SCHEMA_PATH, RUN_SCHEMA_PATH, TOOL_ARCHIVE_SCHEMA_PATH):
         schema = load_json(path)
@@ -1183,6 +1408,26 @@ def self_test() -> int:
             genesis_bin=fixture, selfhost_artifact=fixture,
         )
         validate_campaign(campaign)
+
+        implementation = copy.deepcopy(authority()["implementation"])
+        implementation["files"][0]["sha256"] = "0" * 64
+        implementation["identitySha256"] = sha256_bytes(canonical_bytes(implementation["files"]))
+        try:
+            validate_implementation_binding(implementation, check_files=True)
+        except OpenAgentError:
+            controls += 1
+        else:
+            raise OpenAgentError("implementation byte substitution accepted")
+
+        implementation = copy.deepcopy(authority()["implementation"])
+        implementation["files"].pop()
+        implementation["identitySha256"] = sha256_bytes(canonical_bytes(implementation["files"]))
+        try:
+            validate_implementation_binding(implementation, check_files=False)
+        except OpenAgentError:
+            controls += 1
+        else:
+            raise OpenAgentError("incomplete implementation closure accepted")
 
         campaign_mutations = [
             (lambda d: d["cases"].pop(), True),
@@ -1219,6 +1464,26 @@ def self_test() -> int:
         copy_candidate(output_workspace, output_candidate, output_case, authority())
         require((output_candidate / "main.gc").read_bytes() == b"42\n", "declared output was not retained")
         controls += 1
+
+        _, invalid_case = suite_and_case("deployment-small", suite)
+        invalid_workspace = temp / "invalid-workspace"
+        materialize_case(invalid_case, invalid_workspace)
+        (invalid_workspace / "deployment.json").write_text("{}\n", encoding="ascii")
+        with (invalid_workspace / "package.toml").open("a", encoding="ascii") as stream:
+            stream.write("# drift\n")
+        invalid_rows = inventory(invalid_workspace, max_files=16, max_bytes=4096)
+        observed = temp / "observed-workspace"
+        copy_inventory_payload(invalid_workspace, observed, invalid_rows)
+        require(
+            inventory(observed, max_files=16, max_bytes=4096) == invalid_rows,
+            "invalid workspace payload was not retained",
+        )
+        (observed / "package.toml").write_text("tampered\n", encoding="ascii")
+        require(
+            inventory(observed, max_files=16, max_bytes=4096) != invalid_rows,
+            "observed workspace tamper was not detected",
+        )
+        controls += 2
 
         archived_protocol_path = (
             AUTHORITY_ARCHIVE_ROOT / "protocols" /
@@ -1369,6 +1634,7 @@ def parser() -> argparse.ArgumentParser:
     out = argparse.ArgumentParser(description=__doc__)
     modes = out.add_subparsers(dest="command", required=True)
     check = modes.add_parser("check"); check.add_argument("--self-test", action="store_true")
+    modes.add_parser("render-authority")
     campaign = modes.add_parser("campaign-plan")
     campaign.add_argument("--campaign", required=True); campaign.add_argument("--phase", required=True, choices=["reality-gate", "full-public"])
     campaign.add_argument("--case", required=True, action="append"); campaign.add_argument("--runner", required=True, choices=["codex-cli-hosted", "codex-cli-local"])
@@ -1393,6 +1659,8 @@ def main() -> int:
         doc = validate_authorities()
         controls = self_test() if args.self_test else 0
         result = {"kind": "genesis/genesisbench-open-agent-check-v0.1", "authorityIdentitySha256": doc["contentIdentitySha256"], "controls": controls}
+    elif args.command == "render-authority":
+        result = render_v4_authority()
     elif args.command == "campaign-plan":
         require(not args.out.exists(), "predeclaration output already exists")
         result = build_campaign(

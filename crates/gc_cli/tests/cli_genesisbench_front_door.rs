@@ -311,7 +311,12 @@ fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_mo
             "if '--version' in sys.argv:\n",
             " print('codex-cli 0.0.0-fixture')\n",
             " raise SystemExit(0)\n",
-            "pathlib.Path('main.gc').write_text('42\\n', encoding='ascii')\n",
+            "if pathlib.Path('package.toml').exists():\n",
+            " pathlib.Path('deployment.json').write_text('{}\\n', encoding='ascii')\n",
+            " with pathlib.Path('package.toml').open('a', encoding='ascii') as stream:\n",
+            "  stream.write('# noneditable drift\\n')\n",
+            "else:\n",
+            " pathlib.Path('main.gc').write_text('42\\n', encoding='ascii')\n",
             "print(json.dumps({'type':'turn.completed','fixture':True}, sort_keys=True))\n",
         ),
     )
@@ -433,6 +438,67 @@ fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_mo
     ));
     assert_eq!(validated["valid"], true);
 
+    let invalid_predeclaration = temp.path().join("invalid-predeclaration.json");
+    let invalid_planned = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-plan",
+            "--case",
+            "deployment-small",
+            "--campaign-predeclaration",
+            campaign.to_str().unwrap(),
+            "--out",
+            invalid_predeclaration.to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(invalid_planned["case"]["id"], "deployment-small");
+
+    let invalid_root = temp.path().join("invalid-open-agent-run");
+    let invalid = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-run",
+            "--campaign-predeclaration",
+            campaign.to_str().unwrap(),
+            "--predeclaration",
+            invalid_predeclaration.to_str().unwrap(),
+            "--agent-executable",
+            fixture.to_str().unwrap(),
+            "--out",
+            invalid_root.to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(invalid["outcome"], "invalid");
+    assert_eq!(
+        invalid["workspace"]["violations"],
+        serde_json::json!(["noneditable-input-drift"])
+    );
+    assert!(!invalid_root.join("candidate").exists());
+    assert_eq!(
+        fs::read(invalid_root.join("observed-workspace/deployment.json")).unwrap(),
+        b"{}\n"
+    );
+    assert!(
+        fs::read_to_string(invalid_root.join("observed-workspace/package.toml"))
+            .unwrap()
+            .ends_with("# noneditable drift\n")
+    );
+    let invalid_validated = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-validate",
+            "--run",
+            invalid_root.join("run.json").to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(invalid_validated["valid"], true);
+
     fs::remove_file(&fixture).expect("remove external agent fixture before replay");
     let replayed = data(&run_genesis(
         &root,
@@ -448,6 +514,43 @@ fn open_agent_campaign_is_predeclared_isolated_validated_and_replayed_without_mo
     assert_eq!(replayed["modelAccessed"], false);
     assert_eq!(replayed["allFieldsValidated"], true);
     assert_eq!(replayed["independentRescoreMatched"], true);
+
+    let invalid_replayed = data(&run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-replay",
+            "--run",
+            invalid_root.join("run.json").to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(invalid_replayed["agentAccessed"], false);
+    assert_eq!(invalid_replayed["modelAccessed"], false);
+    assert_eq!(invalid_replayed["allFieldsValidated"], true);
+    assert!(invalid_replayed["independentRescoreMatched"].is_null());
+
+    let tampered_invalid = temp.path().join("tampered-invalid-open-agent-run");
+    copy_tree(&invalid_root, &tampered_invalid);
+    fs::write(
+        tampered_invalid.join("observed-workspace/package.toml"),
+        "tampered\n",
+    )
+    .expect("tamper observed invalid workspace");
+    let rejected = run_genesis(
+        &root,
+        &artifact,
+        &[
+            "bench",
+            "agent-validate",
+            "--run",
+            tampered_invalid.join("run.json").to_str().unwrap(),
+        ],
+    );
+    assert!(
+        !rejected.status.success(),
+        "tampered invalid workspace payload must fail closed"
+    );
 }
 
 #[test]
@@ -715,5 +818,5 @@ fn generated_authorities_and_all_adapter_controls_are_current() {
     );
     let report: Value = serde_json::from_slice(&output.stdout).expect("parse authority report");
     assert_eq!(report["adapterClasses"], 5);
-    assert_eq!(report["controls"], 54);
+    assert_eq!(report["controls"], 58);
 }

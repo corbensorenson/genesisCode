@@ -1,0 +1,133 @@
+{
+  "coldAcquisitionAdapterProfileUnchanged": true,
+  "contentIdentitySha256": "af050173b445687c2c0b5aec81a7ec39d5da147255e907fe8d8bcaede4685e3a",
+  "implementation": {
+    "entrypoints": [
+      "scripts/lib/genesisbench_open_agent.py",
+      "scripts/lib/genesisbench_open_agent_report.py"
+    ],
+    "files": [
+      {
+        "bytes": 45822,
+        "path": "scripts/lib/gc_agent_benchmark_run.py",
+        "sha256": "fb183c7ac55601a0673ff1daee33da07dc76926749a07d471e6b1cccd26f266f"
+      },
+      {
+        "bytes": 37591,
+        "path": "scripts/lib/gc_agent_scoring.py",
+        "sha256": "62f05ec74235c9b705a140ececafc0ea147eb2867e56f6f4209d1e82aef4265b"
+      },
+      {
+        "bytes": 19020,
+        "path": "scripts/lib/gc_agent_scoring_contract.py",
+        "sha256": "140fa25fbf3b22878569a841deb52b12ed7140b60d397ab58e6bafda2b61079e"
+      },
+      {
+        "bytes": 19900,
+        "path": "scripts/lib/gc_task_benchmarks.py",
+        "sha256": "64f8a7d01d596e66182c10149da724cd3ffdc58678383543d46cfb8d3cb1cefa"
+      },
+      {
+        "bytes": 17563,
+        "path": "scripts/lib/genesisbench_contamination.py",
+        "sha256": "a49d284e84bebb382855ec65aa642c0d50c8d78d587ddd648aad25a16ead7716"
+      },
+      {
+        "bytes": 7498,
+        "path": "scripts/lib/genesisbench_eligibility.py",
+        "sha256": "a5069c7a3c95a21a5ed3e39c01ee639696095d24a69b836ab8e0f542df5df1e5"
+      },
+      {
+        "bytes": 86772,
+        "path": "scripts/lib/genesisbench_open_agent.py",
+        "sha256": "1e3f0fa59f4f0bc317e0a8836492c3c968de415a136cf060238cd47b768f380b"
+      },
+      {
+        "bytes": 10669,
+        "path": "scripts/lib/genesisbench_open_agent_report.py",
+        "sha256": "00fe83ddc9e301e35fdd7afe0b20ce562561b25fe828d5f95f669cec867c7a78"
+      },
+      {
+        "bytes": 38703,
+        "path": "scripts/lib/genesisbench_protocol.py",
+        "sha256": "053702128f5fb2ebd7eb76cd254ddb4fe6b4c972ead02ceeabc119dcdd8dde18"
+      },
+      {
+        "bytes": 19761,
+        "path": "scripts/lib/genesisbench_protocol_contract.py",
+        "sha256": "573d2f94dc68c091b942f5f97e67f786119d1d71a7a16a21fe8201f0f42425fd"
+      },
+      {
+        "bytes": 4782,
+        "path": "scripts/lib/genesisbench_protocol_run.py",
+        "sha256": "7d5293d1a28d2870adec279d1f693d496ec86c0bf61cbbc0bd4d22d2f018e3d5"
+      },
+      {
+        "bytes": 35196,
+        "path": "scripts/lib/genesisbench_reference_agent.py",
+        "sha256": "74b8474a41824cc7fab35557ef83c11d0d73c9c9b8ad8f9092eaab835d1d1fff"
+      },
+      {
+        "bytes": 24372,
+        "path": "scripts/lib/genesisbench_tracks.py",
+        "sha256": "b84990e4b57cd7ef097dec5055f9c49e84434c6ae356396c7345f1df0f23183e"
+      }
+    ],
+    "identitySha256": "8bad26805b97254cac7dee13e07fde83c44c8da89b3acaf7f4fd2d291f695abd"
+  },
+  "invocationProfiles": {
+    "codex-cli-hosted": {
+      "argvPolicy": "fixed-codex-exec-ephemeral-json-workspace-write-one-prompt-ancestry-isolated-v0.4",
+      "id": "codex-cli-hosted-v0.4",
+      "network": "provider-only",
+      "provider": null
+    },
+    "codex-cli-local": {
+      "argvPolicy": "fixed-codex-exec-oss-ephemeral-json-workspace-write-one-prompt-ancestry-isolated-v0.4",
+      "id": "codex-cli-local-v0.4",
+      "network": "loopback-provider-only",
+      "provider": "predeclared-lmstudio-or-ollama"
+    }
+  },
+  "kind": "genesis/genesisbench-open-agent-harness-v0.4",
+  "limits": {
+    "maxEventLineBytes": 16777216,
+    "maxStderrBytes": 16777216,
+    "maxStdoutBytes": 16777216,
+    "maxTimeoutMs": 3600000,
+    "maxWorkspaceBytes": 67108864,
+    "maxWorkspaceFiles": 4096
+  },
+  "purpose": "Execute atomically predeclared repository-editing campaigns with a transitively content-bound harness and byte-complete evidence for every safely inventoried invalid workspace, without broadening Cold Acquisition.",
+  "scaffoldIdentitySha256": "e990663373e5763b4583e238d9b1ba45d297ce84bfe9956905478824ea41479a",
+  "securityControls": [
+    "agent-and-model-never-accessed-during-replay",
+    "all-environment-values-redacted",
+    "ambient-project-instruction-and-skill-discovery-blocked",
+    "ancestry-isolated-process-workspace",
+    "atomic-complete-campaign-precommitment",
+    "attempt-membership-and-common-field-binding",
+    "bounded-large-event-line-validation",
+    "candidate-path-closure",
+    "complete-transitive-local-implementation-binding",
+    "declared-editable-output-creation-and-retention",
+    "ephemeral-stage-path-normalization",
+    "exact-executable-digest-and-version",
+    "finite-capture-and-wall-time-budgets",
+    "frozen-repository-post-run-rehash",
+    "immutable-predeclaration-before-execution",
+    "inventory-valid-invalid-workspace-payload-retention",
+    "non-selective-campaign-stop-policy",
+    "observed-workspace-byte-parity-validation",
+    "one-attempt-no-resume-no-hidden-retry",
+    "permission-aware-temporary-snapshot-teardown",
+    "predeclared-supplied-tool-digests",
+    "process-group-hard-kill-and-reap",
+    "provider-network-only-or-loopback-only",
+    "read-only-frozen-source-outside-writable-workspace",
+    "strict-jsonl-transcript-validation",
+    "supplied-genesis-tool-cache-disabled",
+    "symlink-and-non-regular-file-rejection"
+  ],
+  "version": "0.4.0"
+}

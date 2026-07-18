@@ -36,35 +36,35 @@
       "id": "gc-agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
       "role": "card",
-      "sha256": "454d7920d7e68f5eca8752f3c56a5193ee2910baade6c911c3cb10b76d0e8a2c"
+      "sha256": "abf82aced00d8eff7f8378cdbd0195894d4b674a57edf657ebbed82c35cd2047"
     },
     {
       "bytes": 37264,
       "id": "gc-agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
       "role": "grammar",
-      "sha256": "d81589be2139a7e515b29c5225c66713635025d89f64cb727b9cbb17cba4d5a8"
+      "sha256": "c0f97a28c8023b94f84cfec49aa112793605ba0c61d4cacf984917a29ac1e5f1"
     },
     {
       "bytes": 209944,
       "id": "gc-agent-symbol-index",
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
       "role": "profile",
-      "sha256": "aca0e3fa8fc58fab133fc6ef0028bdee1a919452b8eaaaf941b8feb1ed2a7134"
+      "sha256": "3d72150a55ca0d561f6ee55a2670455adf7bf4819e7c2c460f8a31cd1193c192"
     },
     {
       "bytes": 5886,
       "id": "gc-agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
       "role": "card",
-      "sha256": "ebfee7788e452b51567bbe921da7e36e5efee7ed0373f0c02fde7de8cc4a19be"
+      "sha256": "169a33b34c4a27606800276c36abfad1080ec4281f954110f32c4b3aa3e3d05e"
     },
     {
       "bytes": 351387,
       "id": "gc-diagnostic-catalog",
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
       "role": "diagnostics",
-      "sha256": "24e2107566368784bf8a7c7e629e2a06d6843f5d617123c02229be8cf83ebaac"
+      "sha256": "7a51cad0bf5ff84a3dd2bf9df1ff9ab55a24e8b104b1f510177da3caafae2aae"
     },
     {
       "bytes": 3618,
@@ -145,7 +145,7 @@
     "providerMutableFactsTreatment": "recorded-but-not-semantic-input",
     "scaffoldChangePolicy": "new-profile-and-cohort-required"
   },
-  "contentIdentitySha256": "18a46ace23f31de990365f6a9f12ce7c54e4fbc4de0ddc88036b41dd8c263d05",
+  "contentIdentitySha256": "0015ae228787a36bc698a62b6e5dad6dedb313bfce16b090a3bcd96dc6da48d7",
   "grammar": {
     "acceptanceAuthority": "production-parser-and-obligations",
     "authorityArtifactId": "gc-agent-profile",

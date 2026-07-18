@@ -70,7 +70,7 @@
     "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$", "type": "string"},
     "runner": {
       "additionalProperties": false,
-      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2", "codex-cli-hosted-v0.3", "codex-cli-local-v0.3"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
+      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2", "codex-cli-hosted-v0.3", "codex-cli-local-v0.3", "codex-cli-hosted-v0.4", "codex-cli-local-v0.4"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
       "required": ["class", "executableSha256", "executableVersion", "invocationProfile", "localProvider"],
       "type": "object"
     },

@@ -230,6 +230,7 @@ required_included = [
     "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json",
+    "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json",

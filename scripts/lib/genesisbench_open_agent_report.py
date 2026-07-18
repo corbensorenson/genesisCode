@@ -58,7 +58,7 @@ def classify(run_root: Path, run: dict[str, Any], events: list[dict[str, Any]]) 
     codes: list[str] = []
     campaign = open_agent.validate_campaign(open_agent.load_json(run_root / "campaign.json"))
     harness = open_agent.authority(campaign["authorities"]["harnessIdentitySha256"])
-    current_harness = open_agent.is_v3_harness(harness)
+    current_harness = open_agent.is_v3_or_later_harness(harness)
     messages = provider_messages(events)
     unavailable = any(
         "not supported when using Codex" in message
@@ -119,7 +119,7 @@ def classify(run_root: Path, run: dict[str, Any], events: list[dict[str, Any]]) 
 def build(campaign_path: Path, runs: Path, genesis_bin: Path, selfhost_artifact: Path) -> dict[str, Any]:
     campaign = open_agent.validate_campaign(open_agent.load_json(campaign_path))
     harness = open_agent.authority(campaign["authorities"]["harnessIdentitySha256"])
-    if open_agent.is_v3_harness(harness):
+    if open_agent.is_v3_or_later_harness(harness):
         open_agent.validate_tool_archive(campaign_path.parent / "tools" / "archive.json", campaign)
     attempts = []
     execution_by_case: dict[str, bool] = {}

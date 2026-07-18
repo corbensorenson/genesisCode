@@ -111,9 +111,10 @@ genesis --json agent-index --diagnostic <exact-code>
     as the frozen Cold Acquisition scaffold, its eight paired ablations over nine shared
     lineages, and the complete no-hidden-work trajectory contract.
   - includes `genesisbench_front_door = "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md"`,
-    `genesisbench_open_agent = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json"`,
+    `genesisbench_open_agent = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json"`,
     `genesisbench_open_agent_v0_1 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json"`,
     `genesisbench_open_agent_v0_2 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json"`,
+    `genesisbench_open_agent_v0_3 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json"`,
     `genesisbench_open_agent_campaign_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json"`,
     `genesisbench_open_agent_campaign_report_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json"`,
     `genesisbench_open_agent_predeclaration_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json"`,
