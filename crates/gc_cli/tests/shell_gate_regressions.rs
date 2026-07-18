@@ -721,6 +721,18 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
                 == 3,
         "standard and full release profiles must provision the declared browser runtime"
     );
+    let local_workspace = workflow
+        .find("- name: Local Workspace Test Contract (CI unset)")
+        .expect("local workspace contract lane");
+    let perf_lane = &workflow[perf_tests..local_workspace];
+    assert!(
+        perf_lane.contains("if [[ \"$GENESIS_CI_PROFILE\" == \"full\" ]]")
+            && perf_lane
+                .contains("GENESIS_HEALTH_PROFILE=release-full bash scripts/test_perf_gates.sh")
+            && perf_lane
+                .contains("GENESIS_HEALTH_PROFILE=dev-fast bash scripts/test_perf_gates.sh"),
+        "standard CI must run the serial perf suite without claiming release-full; full CI must retain strict release qualification"
+    );
     assert!(
         parity.contains("GENESIS_AGENT_REFERENCE_WORKFLOWS_TMPDIR=\"$lane_tmp_root\"")
             && parity.contains("$PARITY_TMP_ROOT/native")

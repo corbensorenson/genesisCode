@@ -352,7 +352,12 @@ jobs:
 
       - name: Ignored Perf Gate Regression Tests
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        run: bash scripts/test_perf_gates.sh
+        run: |
+          if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
+            GENESIS_HEALTH_PROFILE=release-full bash scripts/test_perf_gates.sh
+          else
+            GENESIS_HEALTH_PROFILE=dev-fast bash scripts/test_perf_gates.sh
+          fi
 
       - name: Local Workspace Test Contract (CI unset)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
