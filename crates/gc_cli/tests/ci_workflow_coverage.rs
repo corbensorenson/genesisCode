@@ -73,6 +73,7 @@ fn local_workspace_contract_has_an_isolated_hosted_job() {
         "CI-unset workspace contract must have one authoritative lane"
     );
     assert!(body.contains("runs-on: ubuntu-latest"));
+    assert!(body.contains("fetch-depth: 0"));
     assert!(body.contains("Local Workspace Disk Headroom"));
     assert!(body.contains("--min-kb 10485760 --strict 1"));
     assert!(body.contains("cargo fetch --locked"));

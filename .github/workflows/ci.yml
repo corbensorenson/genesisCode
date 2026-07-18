@@ -493,6 +493,9 @@ jobs:
       GENESIS_ALLOW_RUST_ENGINE: "0"
     steps:
       - uses: actions/checkout@v4
+        # GenesisBench resolves frozen parent snapshots during workspace tests.
+        with:
+          fetch-depth: 0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master

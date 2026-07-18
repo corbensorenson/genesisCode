@@ -755,6 +755,7 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             .find("- name: Local Workspace Test Contract (CI unset)")
             .is_none()
             && local_workspace.contains("runs-on: ubuntu-latest")
+            && local_workspace.contains("fetch-depth: 0")
             && local_workspace.contains("Local Workspace Disk Headroom")
             && local_workspace.contains("--min-kb 10485760 --strict 1")
             && local_workspace.contains("cargo fetch --locked")
