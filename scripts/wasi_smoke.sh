@@ -30,6 +30,12 @@ genesis_configure_cargo_target_dir \
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+SELFHOST_ARTIFACT="$TMP_DIR/selfhost-toolchain.gc"
+cp selfhost/toolchain.gc "$SELFHOST_ARTIFACT"
+WASI=(
+  wasmtime --dir . --dir "$TMP_DIR" "$WASM_BIN"
+  --selfhost-artifact "$SELFHOST_ARTIFACT"
+)
 
 cp tests/spec/coreform/app_sugar.in.gc "$TMP_DIR/in.gc"
 cp tests/spec/coreform/app_sugar.out.gc "$TMP_DIR/out.gc"
@@ -37,7 +43,7 @@ cp tests/spec/coreform/app_sugar.in.gc "$TMP_DIR/in2.gc"
 
 # fmt --check must fail on non-canonical input.
 set +e
-wasmtime --dir "$TMP_DIR" "$WASM_BIN" fmt "$TMP_DIR/in.gc" --check >/dev/null 2>&1
+"${WASI[@]}" fmt "$TMP_DIR/in.gc" --check >/dev/null 2>&1
 CODE=$?
 set -e
 if [[ "$CODE" -ne 11 ]]; then
@@ -47,7 +53,7 @@ fi
 
 # fmt --check must also fail on non-canonical input when using the self-host engine.
 set +e
-wasmtime --dir "$TMP_DIR" "$WASM_BIN" fmt "$TMP_DIR/in2.gc" --check --engine selfhost >/dev/null 2>&1
+"${WASI[@]}" fmt "$TMP_DIR/in2.gc" --check --engine selfhost >/dev/null 2>&1
 CODE=$?
 set -e
 if [[ "$CODE" -ne 11 ]]; then
@@ -56,16 +62,16 @@ if [[ "$CODE" -ne 11 ]]; then
 fi
 
 # fmt should rewrite to canonical output.
-wasmtime --dir "$TMP_DIR" "$WASM_BIN" fmt "$TMP_DIR/in.gc" >/dev/null
+"${WASI[@]}" fmt "$TMP_DIR/in.gc" >/dev/null
 diff -u "$TMP_DIR/out.gc" "$TMP_DIR/in.gc" >/dev/null
 
 # fmt should rewrite to canonical output with the self-host engine as well.
-wasmtime --dir "$TMP_DIR" "$WASM_BIN" fmt "$TMP_DIR/in2.gc" --engine selfhost >/dev/null
+"${WASI[@]}" fmt "$TMP_DIR/in2.gc" --engine selfhost >/dev/null
 diff -u "$TMP_DIR/out.gc" "$TMP_DIR/in2.gc" >/dev/null
 
 # vcs hash should match native genesis for the same file.
 NATIVE_HASH="$(cargo run -p gc_cli --quiet -- vcs hash --in tests/spec/coreform/map_order.in.gc | tr -d '\n')"
-WASI_HASH="$(wasmtime --dir . "$WASM_BIN" vcs hash --in tests/spec/coreform/map_order.in.gc | tr -d '\n')"
+WASI_HASH="$("${WASI[@]}" vcs hash --in tests/spec/coreform/map_order.in.gc | tr -d '\n')"
 if [[ "$NATIVE_HASH" != "$WASI_HASH" ]]; then
   echo "hash mismatch native=$NATIVE_HASH wasi=$WASI_HASH" >&2
   exit 1
@@ -77,7 +83,7 @@ cat >"$TMP_DIR/eval.gc" <<'GC'
 m::x
 GC
 NATIVE_EVAL="$(cargo run -p gc_cli --quiet -- eval "$TMP_DIR/eval.gc" | tr -d '\n')"
-WASI_EVAL="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" eval "$TMP_DIR/eval.gc" | tr -d '\n')"
+WASI_EVAL="$("${WASI[@]}" eval "$TMP_DIR/eval.gc" | tr -d '\n')"
 if [[ "$NATIVE_EVAL" != "$WASI_EVAL" ]]; then
   echo "eval mismatch native=$NATIVE_EVAL wasi=$WASI_EVAL" >&2
   exit 1
@@ -105,14 +111,14 @@ prog
 GC
 
 NATIVE_RUN="$(cargo run -p gc_cli --quiet -- run "$TMP_DIR/run.gc" --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/native.gclog" | tr -d '\n')"
-WASI_RUN="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" run "$TMP_DIR/run.gc" --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.gclog" | tr -d '\n')"
+WASI_RUN="$("${WASI[@]}" run "$TMP_DIR/run.gc" --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.gclog" | tr -d '\n')"
 if [[ "$NATIVE_RUN" != "$WASI_RUN" ]]; then
   echo "run mismatch native=$NATIVE_RUN wasi=$WASI_RUN" >&2
   exit 1
 fi
 
 NATIVE_REPLAY="$(cargo run -p gc_cli --quiet -- replay "$TMP_DIR/run.gc" --log "$TMP_DIR/native.gclog" | tr -d '\n')"
-WASI_REPLAY="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" replay "$TMP_DIR/run.gc" --log "$TMP_DIR/wasi.gclog" | tr -d '\n')"
+WASI_REPLAY="$("${WASI[@]}" replay "$TMP_DIR/run.gc" --log "$TMP_DIR/wasi.gclog" | tr -d '\n')"
 if [[ "$NATIVE_REPLAY" != "$WASI_REPLAY" ]]; then
   echo "replay mismatch native=$NATIVE_REPLAY wasi=$WASI_REPLAY" >&2
   exit 1
@@ -155,14 +161,14 @@ cat >"$TMP_DIR/policy.gc" <<'GC'
 GC
 
 POLICY_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-store-put.gclog" put --in "$TMP_DIR/policy.gc" | tr -d '\n')"
-POLICY_H_WASI="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-store-put.gclog" put --in "$TMP_DIR/policy.gc" | tr -d '\n')"
+POLICY_H_WASI="$("${WASI[@]}" store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-store-put.gclog" put --in "$TMP_DIR/policy.gc" | tr -d '\n')"
 if [[ "$POLICY_H_NATIVE" != "$POLICY_H_WASI" ]]; then
   echo "store put hash mismatch native=$POLICY_H_NATIVE wasi=$POLICY_H_WASI" >&2
   exit 1
 fi
 
 NATIVE_POLICY_TERM="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-store-get.gclog" get "$POLICY_H_NATIVE" | tr -d '\n')"
-WASI_POLICY_TERM="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-store-get.gclog" get "$POLICY_H_NATIVE" | tr -d '\n')"
+WASI_POLICY_TERM="$("${WASI[@]}" store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-store-get.gclog" get "$POLICY_H_NATIVE" | tr -d '\n')"
 if [[ "$NATIVE_POLICY_TERM" != "$WASI_POLICY_TERM" ]]; then
   echo "store get mismatch native=$NATIVE_POLICY_TERM wasi=$WASI_POLICY_TERM" >&2
   exit 1
@@ -191,7 +197,7 @@ GC
 COMMIT_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-commit-put.gclog" put --in "$TMP_DIR/commit.gc" | tr -d '\n')"
 
 # refs set via WASI, read via native.
-WASI_SET="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-set.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" | tr -d '\n')"
+WASI_SET="$("${WASI[@]}" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-set.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" | tr -d '\n')"
 if [[ "$WASI_SET" != "$COMMIT_H_NATIVE" ]]; then
   echo "refs set output mismatch wasi=$WASI_SET expected=$COMMIT_H_NATIVE" >&2
   exit 1
@@ -207,7 +213,7 @@ fi
 set +e
 cargo run -p gc_cli --quiet -- refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-refs-cas.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" --expected-old nil >/dev/null 2>&1
 N_CODE=$?
-wasmtime --dir "$TMP_DIR" "$WASM_BIN" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-cas.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" --expected-old nil >/dev/null 2>&1
+"${WASI[@]}" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-cas.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" --expected-old nil >/dev/null 2>&1
 W_CODE=$?
 set -e
 if [[ "$N_CODE" -ne 20 || "$W_CODE" -ne 20 ]]; then
@@ -217,7 +223,7 @@ fi
 
 # delete via native, read via WASI.
 cargo run -p gc_cli --quiet -- refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-refs-del.gclog" delete "refs/heads/dev" --policy "$POLICY_H_NATIVE" >/dev/null
-WASI_GET_AFTER_DEL="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-get2.gclog" get "refs/heads/dev" | tr -d '\n')"
+WASI_GET_AFTER_DEL="$("${WASI[@]}" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-get2.gclog" get "refs/heads/dev" | tr -d '\n')"
 if [[ "$WASI_GET_AFTER_DEL" != "nil" ]]; then
   echo "refs get after delete mismatch wasi=$WASI_GET_AFTER_DEL expected=nil" >&2
   exit 1
@@ -233,15 +239,15 @@ allow = [
   "core/refs::list",
   "core/refs::set",
   "core/refs::delete",
-  "core/pkg::init",
-  "core/pkg::add",
-  "core/pkg::lock",
-  "core/pkg::install",
-  "core/pkg::verify",
-  "core/pkg::list",
-  "core/pkg::info",
-  "core/gpk::export",
-  "core/gpk::import"
+  "core/pkg-low::init",
+  "core/pkg-low::add",
+  "core/pkg-low::save-lock",
+  "core/pkg-low::load-lock",
+  "core/pkg-low::lock",
+  "core/pkg-low::install",
+  "core/pkg-low::verify",
+  "core/pkg-low::list",
+  "core/pkg-low::info"
 ]
 
 [store]
@@ -250,31 +256,31 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/pkg::init"]
+[op."core/pkg-low::init"]
 base_dir = "."
 
-[op."core/pkg::add"]
+[op."core/pkg-low::add"]
 base_dir = "."
 
-[op."core/pkg::lock"]
+[op."core/pkg-low::save-lock"]
 base_dir = "."
 
-[op."core/pkg::install"]
+[op."core/pkg-low::load-lock"]
 base_dir = "."
 
-[op."core/pkg::verify"]
+[op."core/pkg-low::lock"]
 base_dir = "."
 
-[op."core/pkg::list"]
+[op."core/pkg-low::install"]
 base_dir = "."
 
-[op."core/pkg::info"]
+[op."core/pkg-low::verify"]
 base_dir = "."
 
-[op."core/gpk::export"]
+[op."core/pkg-low::list"]
 base_dir = "."
 
-[op."core/gpk::import"]
+[op."core/pkg-low::info"]
 base_dir = "."
 TOML
 
@@ -291,14 +297,14 @@ cat >"$TMP_DIR/snap.gc" <<'GC'
 GC
 
 SNAP_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-snap-put.gclog" put --in "$TMP_DIR/snap.gc" | tr -d '\n')"
-SNAP_H_WASI="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" store --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-snap-put.gclog" put --in "$TMP_DIR/snap.gc" | tr -d '\n')"
+SNAP_H_WASI="$("${WASI[@]}" store --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-snap-put.gclog" put --in "$TMP_DIR/snap.gc" | tr -d '\n')"
 if [[ "$SNAP_H_NATIVE" != "$SNAP_H_WASI" ]]; then
   echo "snapshot hash mismatch native=$SNAP_H_NATIVE wasi=$SNAP_H_WASI" >&2
   exit 1
 fi
 
 N_INIT="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-init.gclog" init --workspace "wasi-smoke" --lock genesis.lock | tr -d '\n')"
-W_INIT="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-init.gclog" init --workspace "wasi-smoke" --lock genesis.lock | tr -d '\n')"
+W_INIT="$("${WASI[@]}" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-init.gclog" init --workspace "wasi-smoke" --lock genesis.lock | tr -d '\n')"
 if [[ "$N_INIT" != "$W_INIT" ]]; then
   echo "pkg init mismatch native=$N_INIT wasi=$W_INIT" >&2
   exit 1
@@ -306,21 +312,21 @@ fi
 
 SPEC="mini@snapshot:$SNAP_H_NATIVE"
 N_ADD="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-add.gclog" add "$SPEC" --lock genesis.lock --update-policy manual | tr -d '\n')"
-W_ADD="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-add.gclog" add "$SPEC" --lock genesis.lock --update-policy manual | tr -d '\n')"
+W_ADD="$("${WASI[@]}" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-add.gclog" add "$SPEC" --lock genesis.lock --update-policy manual | tr -d '\n')"
 if [[ "$N_ADD" != "$W_ADD" ]]; then
   echo "pkg add mismatch native=$N_ADD wasi=$W_ADD" >&2
   exit 1
 fi
 
 N_LOCK="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-lock.gclog" lock --lock genesis.lock | tr -d '\n')"
-W_LOCK="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-lock.gclog" lock --lock genesis.lock | tr -d '\n')"
+W_LOCK="$("${WASI[@]}" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-lock.gclog" lock --lock genesis.lock | tr -d '\n')"
 if [[ "$N_LOCK" != "$W_LOCK" ]]; then
   echo "pkg lock mismatch native=$N_LOCK wasi=$W_LOCK" >&2
   exit 1
 fi
 
 N_INSTALL="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-install.gclog" install --lock genesis.lock --frozen | tr -d '\n')"
-W_INSTALL="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-install.gclog" install --lock genesis.lock --frozen | tr -d '\n')"
+W_INSTALL="$("${WASI[@]}" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-install.gclog" install --lock genesis.lock --frozen | tr -d '\n')"
 if [[ "$N_INSTALL" != "$W_INSTALL" ]]; then
   echo "pkg install mismatch native=$N_INSTALL wasi=$W_INSTALL" >&2
   exit 1
@@ -329,14 +335,14 @@ fi
 # pack/test should work under WASI and match native for the same package fixture (no ambient nondeterminism).
 cp -R tests/spec/pkg_basic "$TMP_DIR/pkg_basic"
 N_PACK="$(cargo run -p gc_cli --quiet -- pack --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
-W_PACK="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pack --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
+W_PACK="$("${WASI[@]}" pack --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
 if [[ "$N_PACK" != "$W_PACK" ]]; then
   echo "pack mismatch native=$N_PACK wasi=$W_PACK" >&2
   exit 1
 fi
 
 N_TEST="$(cargo run -p gc_cli --quiet -- test --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
-W_TEST="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" test --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
+W_TEST="$("${WASI[@]}" test --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
 if [[ "$N_TEST" != "$W_TEST" ]]; then
   echo "test mismatch native=$N_TEST wasi=$W_TEST" >&2
   exit 1

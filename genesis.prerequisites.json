@@ -124,6 +124,7 @@
         "rust-target-wasm32-wasip1",
         "rustc",
         "rustfmt",
+        "wasi-sdk",
         "wasm-bindgen",
         "wasmtime"
       ],
@@ -164,6 +165,7 @@
         "python",
         "rust-target-wasm32-wasip1",
         "rustc",
+        "wasi-sdk",
         "wasmtime"
       ],
       "platformIds": [
@@ -662,6 +664,23 @@
       },
       "purpose": "Optional shell static analysis",
       "source": "developer/CI hygiene"
+    },
+    {
+      "constraint": {
+        "exact": "33.0"
+      },
+      "id": "wasi-sdk",
+      "probe": {
+        "argv": [
+          "bash",
+          "scripts/install_wasi_sdk.sh",
+          "--version"
+        ],
+        "kind": "command-version",
+        "versionRegex": "wasi-sdk ([0-9]+(?:\\.[0-9]+){0,2})"
+      },
+      "purpose": "Pinned WASI C/C++ compiler and libc sysroot for native dependencies",
+      "source": "scripts/install_wasi_sdk.sh"
     },
     {
       "constraint": {

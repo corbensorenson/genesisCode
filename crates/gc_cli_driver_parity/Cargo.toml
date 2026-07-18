@@ -39,10 +39,6 @@ aes-gcm = "0.10"
 chacha20poly1305 = "0.10"
 rusqlite = { version = "0.31", features = ["bundled"] }
 sha1 = "0.10"
-fs2 = "0.4"
-
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
 
 # local
 gc_coreform = { path = "../gc_coreform" }
@@ -56,6 +52,12 @@ gc_opt = { path = "../gc_opt" }
 gc_vcs = { path = "../gc_vcs" }
 gc_pkg = { path = "../gc_pkg" }
 gc_registry = { path = "../gc_registry" }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(not(target_os = "wasi"))'.dependencies]
+fs2 = "0.4"
 
 [dev-dependencies]
 serde_json.workspace = true

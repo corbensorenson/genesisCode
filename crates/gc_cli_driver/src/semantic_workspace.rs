@@ -401,7 +401,7 @@ pub(super) fn cmd_semantic_edit_apply_plan(
 
     let patch_path = std::env::temp_dir().join(format!(
         "genesis-semantic-edit-apply-plan-{}-{}.gcpatch",
-        std::process::id(),
+        crate::platform_process_id(),
         patch_hash
     ));
     std::fs::write(&patch_path, format!("{patch_coreform}\n"))

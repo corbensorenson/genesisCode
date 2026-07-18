@@ -30,47 +30,55 @@ fn cmd_registry_serve(
             "--max-chunk-bytes must be greater than 0",
         ));
     }
-    if matches!(flavor, Flavor::Wasi) {
+    #[cfg(target_os = "wasi")]
+    {
+        let _ = (flavor, addr);
         return cmd_registry_serve_wasi_file_contract(cli, root, max_chunk_bytes, max_requests);
     }
 
-    let cfg = gc_registry::HttpRegistryServerConfig {
-        addr: addr.to_string(),
-        root: root.to_path_buf(),
-        max_chunk_bytes,
-        max_requests,
-    };
-    let handle = gc_registry::spawn_http_file_registry_server(cfg)
-        .map_err(|e| cli_err(EX_INTERNAL, "registry/serve", format!("{e}")))?;
+    #[cfg(not(target_os = "wasi"))]
+    {
+        if matches!(flavor, Flavor::Wasi) {
+            return cmd_registry_serve_wasi_file_contract(cli, root, max_chunk_bytes, max_requests);
+        }
+        let cfg = gc_registry::HttpRegistryServerConfig {
+            addr: addr.to_string(),
+            root: root.to_path_buf(),
+            max_chunk_bytes,
+            max_requests,
+        };
+        let handle = gc_registry::spawn_http_file_registry_server(cfg)
+            .map_err(|e| cli_err(EX_INTERNAL, "registry/serve", format!("{e}")))?;
 
-    let bound_addr = handle.bound_addr().to_string();
-    // Blocking serve loop. For tests/use-cases that need deterministic completion, pass
-    // --max-requests so the server exits after N handled requests.
-    handle
-        .join()
-        .map_err(|e| cli_err(EX_INTERNAL, "registry/serve", format!("{e}")))?;
+        let bound_addr = handle.bound_addr().to_string();
+        // Blocking serve loop. For tests/use-cases that need deterministic completion, pass
+        // --max-requests so the server exits after N handled requests.
+        handle
+            .join()
+            .map_err(|e| cli_err(EX_INTERNAL, "registry/serve", format!("{e}")))?;
 
-    let env = JsonEnvelope {
-        ok: true,
-        kind: "genesis/registry-serve-v0.1",
-        data: Some(serde_json::json!({
-            "bound_addr": bound_addr,
-            "root": root.display().to_string(),
-            "max_chunk_bytes": max_chunk_bytes,
-            "max_requests": max_requests,
-            "status": "stopped",
-        })),
-        error: None,
-    };
-    Ok(CmdOut {
-        exit_code: EX_OK,
-        stdout: if cli.json {
-            String::new()
-        } else {
-            format!("registry serve stopped {bound_addr}\n")
-        },
-        json: json_envelope_value(env)?,
-    })
+        let env = JsonEnvelope {
+            ok: true,
+            kind: "genesis/registry-serve-v0.1",
+            data: Some(serde_json::json!({
+                "bound_addr": bound_addr,
+                "root": root.display().to_string(),
+                "max_chunk_bytes": max_chunk_bytes,
+                "max_requests": max_requests,
+                "status": "stopped",
+            })),
+            error: None,
+        };
+        Ok(CmdOut {
+            exit_code: EX_OK,
+            stdout: if cli.json {
+                String::new()
+            } else {
+                format!("registry serve stopped {bound_addr}\n")
+            },
+            json: json_envelope_value(env)?,
+        })
+    }
 }
 
 fn cmd_registry_serve_wasi_file_contract(

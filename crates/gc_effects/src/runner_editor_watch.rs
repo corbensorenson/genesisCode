@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+#[cfg(not(target_os = "wasi"))]
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -19,10 +21,10 @@ struct NotifyWatchBackend {
     rx: std::sync::mpsc::Receiver<Result<notify::Event, notify::Error>>,
 }
 
+#[cfg(not(target_os = "wasi"))]
 #[derive(Debug)]
 enum WatchBackend {
     Polling,
-    #[cfg(not(target_os = "wasi"))]
     Incremental(NotifyWatchBackend),
 }
 
@@ -33,6 +35,7 @@ pub(super) struct WatchState {
     logical_root: Option<String>,
     root_canon: PathBuf,
     snapshot: BTreeMap<String, FileStamp>,
+    #[cfg(not(target_os = "wasi"))]
     backend: WatchBackend,
 }
 
@@ -55,6 +58,7 @@ pub(super) fn watch_state_new(root: &str, globs: Vec<String>) -> Result<WatchSta
 
     let logical_root = normalized_logical_root(root);
     let snapshot = scan_watch_snapshot(&root_canon, logical_root.as_deref(), &globs)?;
+    #[cfg(not(target_os = "wasi"))]
     let backend = make_watch_backend(&root_canon);
 
     Ok(WatchState {
@@ -63,6 +67,7 @@ pub(super) fn watch_state_new(root: &str, globs: Vec<String>) -> Result<WatchSta
         logical_root,
         root_canon,
         snapshot,
+        #[cfg(not(target_os = "wasi"))]
         backend,
     })
 }
@@ -114,12 +119,10 @@ fn normalized_logical_root(root: &str) -> Option<String> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn make_watch_backend(root_canon: &Path) -> WatchBackend {
-    #[cfg(not(target_os = "wasi"))]
-    {
-        if let Ok(backend) = try_make_incremental_backend(root_canon) {
-            return WatchBackend::Incremental(backend);
-        }
+    if let Ok(backend) = try_make_incremental_backend(root_canon) {
+        return WatchBackend::Incremental(backend);
     }
     WatchBackend::Polling
 }
@@ -351,6 +354,7 @@ fn apply_incremental_delta(
     events
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn rel_slash_under_root(root_canon: &Path, abs: &Path) -> Option<String> {
     let rel = abs.strip_prefix(root_canon).ok()?;
     Some(path_to_slash(rel))
@@ -366,6 +370,7 @@ fn logical_from_rel(logical_root: Option<&str>, rel_slash: &str) -> String {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn abs_path_for_logical(root_canon: &Path, logical_root: Option<&str>, logical: &str) -> PathBuf {
     let rel = match logical_root {
         Some(prefix) if !prefix.is_empty() => logical

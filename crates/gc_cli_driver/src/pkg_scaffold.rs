@@ -469,12 +469,28 @@ fn write_scaffold_file(path: &Path, bytes: &[u8], force: bool) -> Result<(), Str
 
 fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let pid = std::process::id();
-    let tmp = parent.join(format!(
-        ".{}.tmp-{pid}",
-        path.file_name().and_then(|s| s.to_str()).unwrap_or("write")
-    ));
-    std::fs::write(&tmp, bytes)?;
+    let mut sequence = 0u64;
+    let tmp = loop {
+        let candidate = parent.join(format!(
+            ".{}.tmp-{}-{sequence}",
+            path.file_name().and_then(|s| s.to_str()).unwrap_or("write"),
+            crate::platform_process_id()
+        ));
+        sequence = sequence.saturating_add(1);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(mut file) => {
+                use std::io::Write as _;
+                file.write_all(bytes)?;
+                break candidate;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    };
     std::fs::rename(&tmp, path)
 }
 

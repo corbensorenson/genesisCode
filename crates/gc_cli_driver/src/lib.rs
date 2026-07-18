@@ -129,6 +129,16 @@ use cmd_registry::cmd_registry;
 use cmd_security_ops::*;
 use cmd_selfhost::*;
 use cmd_source::*;
+
+#[cfg(not(target_os = "wasi"))]
+fn platform_process_id() -> u32 {
+    std::process::id()
+}
+
+#[cfg(target_os = "wasi")]
+fn platform_process_id() -> u32 {
+    0
+}
 use cmd_store::cmd_store;
 use cmd_sync::cmd_sync;
 use cmd_vcs::cmd_vcs;

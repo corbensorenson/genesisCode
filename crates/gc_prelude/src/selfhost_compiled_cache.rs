@@ -204,7 +204,7 @@ pub(super) fn write_compiled_cache(
         let cand = dir.join(format!(
             ".tmp-{}-{}-{}",
             hex32(artifact_h),
-            std::process::id(),
+            cache_process_id(),
             i
         ));
         i = i.saturating_add(1);
@@ -230,6 +230,16 @@ pub(super) fn write_compiled_cache(
         let _ = d.sync_all();
     }
     Ok(())
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn cache_process_id() -> u32 {
+    std::process::id()
+}
+
+#[cfg(target_os = "wasi")]
+fn cache_process_id() -> u32 {
+    0
 }
 
 #[cfg(test)]

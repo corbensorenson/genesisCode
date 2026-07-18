@@ -38,6 +38,16 @@ pub use crate::refs::{RefEntry, RefsDb, SetResult};
 pub use crate::runner::{RunResult, replay, replay_with_store, run};
 pub use crate::store::ArtifactStore;
 
+#[cfg(not(target_os = "wasi"))]
+pub(crate) fn platform_process_id() -> u32 {
+    std::process::id()
+}
+
+#[cfg(target_os = "wasi")]
+pub(crate) fn platform_process_id() -> u32 {
+    0
+}
+
 pub fn set_force_wasi_remote_profile(enabled: bool) {
     runner::set_force_wasi_remote_profile(enabled);
 }

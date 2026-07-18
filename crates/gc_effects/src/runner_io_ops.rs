@@ -1,6 +1,8 @@
 use std::io::Read;
 #[cfg(unix)]
 use std::io::Write;
+#[cfg(target_os = "wasi")]
+use std::path::Component;
 use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey};
@@ -133,28 +135,124 @@ pub(crate) fn effective_base_dir(pol: Option<&OpPolicy>) -> Result<PathBuf, Effe
     if let Some(pol) = pol
         && let Some(base) = &pol.base_dir
     {
+        #[cfg(target_os = "wasi")]
+        return lexical_normalize(base);
+        #[cfg(not(target_os = "wasi"))]
         return Ok(std::fs::canonicalize(base).unwrap_or_else(|_| base.clone()));
     }
     let cwd = std::env::current_dir()?;
+    #[cfg(target_os = "wasi")]
+    return lexical_normalize(&cwd);
+    #[cfg(not(target_os = "wasi"))]
     Ok(std::fs::canonicalize(&cwd).unwrap_or(cwd))
 }
 
-pub(crate) fn sandbox_path_read(base_dir: &Path, input: &str) -> Result<PathBuf, EffectsError> {
+#[cfg(target_os = "wasi")]
+fn lexical_normalize(path: &Path) -> Result<PathBuf, EffectsError> {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
+            Component::RootDir => normalized.push(component.as_os_str()),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !normalized.pop() {
+                    return Err(EffectsError::Log(format!(
+                        "path escapes lexical root: {}",
+                        path.display()
+                    )));
+                }
+            }
+            Component::Normal(part) => normalized.push(part),
+        }
+    }
+    Ok(normalized)
+}
+
+#[cfg(target_os = "wasi")]
+fn wasi_sandbox_path(
+    base_dir: &Path,
+    input: &str,
+    allow_missing: bool,
+) -> Result<PathBuf, EffectsError> {
+    let base = lexical_normalize(base_dir)?;
     let candidate = Path::new(input);
     let full = if candidate.is_absolute() {
-        candidate.to_path_buf()
+        if !base.is_absolute() {
+            return Err(EffectsError::Log(format!(
+                "absolute path requires an absolute base_dir: {}",
+                candidate.display()
+            )));
+        }
+        lexical_normalize(candidate)?
     } else {
-        base_dir.join(candidate)
+        if candidate
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+        {
+            return Err(EffectsError::Log(format!(
+                "path contains forbidden parent traversal: {}",
+                candidate.display()
+            )));
+        }
+        lexical_normalize(&base.join(candidate))?
     };
-    let canon = std::fs::canonicalize(&full)
-        .map_err(|e| EffectsError::Log(format!("read path invalid `{}`: {e}", full.display())))?;
-    if !canon.starts_with(base_dir) {
+    if !full.starts_with(&base) {
         return Err(EffectsError::Log(format!(
-            "read path escapes base_dir: {}",
-            canon.display()
+            "path escapes base_dir: {}",
+            full.display()
         )));
     }
-    Ok(canon)
+
+    let relative = full
+        .strip_prefix(&base)
+        .map_err(|_| EffectsError::Log(format!("path escapes base_dir: {}", full.display())))?;
+    let mut current = base.clone();
+    for component in relative.components() {
+        current.push(component.as_os_str());
+        match std::fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(EffectsError::Log(format!(
+                    "path traverses a forbidden symlink: {}",
+                    current.display()
+                )));
+            }
+            Ok(_) => {}
+            Err(error) if allow_missing && error.kind() == std::io::ErrorKind::NotFound => break,
+            Err(error) => {
+                return Err(EffectsError::Log(format!(
+                    "path metadata invalid `{}`: {error}",
+                    current.display()
+                )));
+            }
+        }
+    }
+    Ok(full)
+}
+
+pub(crate) fn sandbox_path_read(base_dir: &Path, input: &str) -> Result<PathBuf, EffectsError> {
+    #[cfg(target_os = "wasi")]
+    return wasi_sandbox_path(base_dir, input, false);
+
+    #[cfg(not(target_os = "wasi"))]
+    {
+        let candidate = Path::new(input);
+        let full = if candidate.is_absolute() {
+            candidate.to_path_buf()
+        } else {
+            base_dir.join(candidate)
+        };
+        let canon = std::fs::canonicalize(&full).map_err(|e| {
+            EffectsError::Log(format!("read path invalid `{}`: {e}", full.display()))
+        })?;
+        if !canon.starts_with(base_dir) {
+            return Err(EffectsError::Log(format!(
+                "read path escapes base_dir: {}",
+                canon.display()
+            )));
+        }
+        Ok(canon)
+    }
 }
 
 pub(crate) fn sandbox_path_write(
@@ -162,30 +260,47 @@ pub(crate) fn sandbox_path_write(
     input: &str,
     create_dirs: bool,
 ) -> Result<PathBuf, EffectsError> {
-    let candidate = Path::new(input);
-    let joined = if candidate.is_absolute() {
-        candidate.to_path_buf()
-    } else {
-        base_dir.join(candidate)
-    };
-
-    if let Some(parent) = joined.parent() {
-        if create_dirs {
+    #[cfg(target_os = "wasi")]
+    {
+        let joined = wasi_sandbox_path(base_dir, input, true)?;
+        if let Some(parent) = joined.parent()
+            && create_dirs
+        {
             std::fs::create_dir_all(parent).map_err(|e| {
                 EffectsError::Log(format!("create dir `{}` failed: {e}", parent.display()))
             })?;
+            wasi_sandbox_path(base_dir, input, true)?;
         }
-        let parent_canon = std::fs::canonicalize(parent).map_err(|e| {
-            EffectsError::Log(format!("write parent invalid `{}`: {e}", parent.display()))
-        })?;
-        if !parent_canon.starts_with(base_dir) {
-            return Err(EffectsError::Log(format!(
-                "write path escapes base_dir: {}",
-                parent_canon.display()
-            )));
-        }
+        return Ok(joined);
     }
-    Ok(joined)
+
+    #[cfg(not(target_os = "wasi"))]
+    {
+        let candidate = Path::new(input);
+        let joined = if candidate.is_absolute() {
+            candidate.to_path_buf()
+        } else {
+            base_dir.join(candidate)
+        };
+
+        if let Some(parent) = joined.parent() {
+            if create_dirs {
+                std::fs::create_dir_all(parent).map_err(|e| {
+                    EffectsError::Log(format!("create dir `{}` failed: {e}", parent.display()))
+                })?;
+            }
+            let parent_canon = std::fs::canonicalize(parent).map_err(|e| {
+                EffectsError::Log(format!("write parent invalid `{}`: {e}", parent.display()))
+            })?;
+            if !parent_canon.starts_with(base_dir) {
+                return Err(EffectsError::Log(format!(
+                    "write path escapes base_dir: {}",
+                    parent_canon.display()
+                )));
+            }
+        }
+        Ok(joined)
+    }
 }
 
 pub(crate) fn atomic_write_text(path: &Path, bytes: &[u8]) -> Result<(), std::io::Error> {
@@ -194,12 +309,29 @@ pub(crate) fn atomic_write_text(path: &Path, bytes: &[u8]) -> Result<(), std::io
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."));
     std::fs::create_dir_all(&parent)?;
-    let tmp = parent.join(format!(
-        ".{}.{}.tmp",
-        path.file_name().and_then(|s| s.to_str()).unwrap_or("out"),
-        std::process::id()
-    ));
-    std::fs::write(&tmp, bytes)?;
+    let mut sequence = 0u64;
+    let tmp = loop {
+        let candidate = parent.join(format!(
+            ".{}.{}.{}.tmp",
+            path.file_name().and_then(|s| s.to_str()).unwrap_or("out"),
+            crate::platform_process_id(),
+            sequence
+        ));
+        sequence = sequence.saturating_add(1);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(mut file) => {
+                use std::io::Write as _;
+                file.write_all(bytes)?;
+                break candidate;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    };
     std::fs::rename(&tmp, path)?;
     Ok(())
 }
@@ -236,32 +368,49 @@ pub(crate) fn sandbox_path_allow_missing(
     input: &str,
     create_dirs: bool,
 ) -> Result<PathBuf, EffectsError> {
-    let candidate = Path::new(input);
-    let full = if candidate.is_absolute() {
-        candidate.to_path_buf()
-    } else {
-        base_dir.join(candidate)
-    };
-    if full.exists() {
-        return sandbox_path_read(base_dir, &full.to_string_lossy());
-    }
-    if let Some(parent) = full.parent() {
-        if create_dirs {
+    #[cfg(target_os = "wasi")]
+    {
+        let full = wasi_sandbox_path(base_dir, input, true)?;
+        if let Some(parent) = full.parent()
+            && create_dirs
+        {
             std::fs::create_dir_all(parent).map_err(|e| {
                 EffectsError::Log(format!("create dir `{}` failed: {e}", parent.display()))
             })?;
+            wasi_sandbox_path(base_dir, input, true)?;
         }
-        let canon_parent = std::fs::canonicalize(parent).map_err(|e| {
-            EffectsError::Log(format!("path parent invalid `{}`: {e}", parent.display()))
-        })?;
-        if !canon_parent.starts_with(base_dir) {
-            return Err(EffectsError::Log(format!(
-                "path escapes base_dir: {}",
-                canon_parent.display()
-            )));
-        }
+        return Ok(full);
     }
-    Ok(full)
+
+    #[cfg(not(target_os = "wasi"))]
+    {
+        let candidate = Path::new(input);
+        let full = if candidate.is_absolute() {
+            candidate.to_path_buf()
+        } else {
+            base_dir.join(candidate)
+        };
+        if full.exists() {
+            return sandbox_path_read(base_dir, &full.to_string_lossy());
+        }
+        if let Some(parent) = full.parent() {
+            if create_dirs {
+                std::fs::create_dir_all(parent).map_err(|e| {
+                    EffectsError::Log(format!("create dir `{}` failed: {e}", parent.display()))
+                })?;
+            }
+            let canon_parent = std::fs::canonicalize(parent).map_err(|e| {
+                EffectsError::Log(format!("path parent invalid `{}`: {e}", parent.display()))
+            })?;
+            if !canon_parent.starts_with(base_dir) {
+                return Err(EffectsError::Log(format!(
+                    "path escapes base_dir: {}",
+                    canon_parent.display()
+                )));
+            }
+        }
+        Ok(full)
+    }
 }
 
 #[cfg(test)]

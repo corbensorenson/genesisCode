@@ -10,6 +10,7 @@ use aes_gcm::aead::{AeadInPlace, KeyInit};
 use base64ct::{Base64, Encoding};
 use chacha20poly1305::ChaCha20Poly1305;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+#[cfg(not(target_os = "wasi"))]
 use fs2::FileExt;
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use hkdf::Hkdf;
@@ -302,18 +303,82 @@ fn state_root() -> Result<PathBuf, String> {
     Ok(root)
 }
 
+struct CounterLock {
+    #[cfg(not(target_os = "wasi"))]
+    file: std::fs::File,
+    marker_file: Option<std::fs::File>,
+    marker_path: PathBuf,
+}
+
+impl CounterLock {
+    fn acquire(path: &Path) -> Result<Self, String> {
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let file = std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .read(true)
+                .write(true)
+                .open(path)
+                .map_err(|e| e.to_string())?;
+            file.lock_exclusive().map_err(|e| e.to_string())?;
+            let (marker_path, marker_file) = acquire_counter_marker(path)?;
+            Ok(Self {
+                file,
+                marker_file: Some(marker_file),
+                marker_path,
+            })
+        }
+
+        #[cfg(target_os = "wasi")]
+        {
+            let (marker_path, marker_file) = acquire_counter_marker(path)?;
+            Ok(Self {
+                marker_file: Some(marker_file),
+                marker_path,
+            })
+        }
+    }
+}
+
+fn acquire_counter_marker(path: &Path) -> Result<(PathBuf, std::fs::File), String> {
+    let mut marker_name = path.as_os_str().to_os_string();
+    marker_name.push(".exclusive");
+    let marker_path = PathBuf::from(marker_name);
+    const RETRIES: u32 = 1_000;
+    for _ in 0..RETRIES {
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&marker_path)
+        {
+            Ok(file) => return Ok((marker_path, file)),
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(err) => return Err(err.to_string()),
+        }
+    }
+    Err(format!("counter lock busy: {}", path.display()))
+}
+
+impl Drop for CounterLock {
+    fn drop(&mut self) {
+        drop(self.marker_file.take());
+        let _ = std::fs::remove_file(&self.marker_path);
+
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let _ = FileExt::unlock(&self.file);
+        }
+    }
+}
+
 fn next_counter(name: &str) -> Result<u64, String> {
     let root = state_root()?;
     let counter_dir = root.join("counters");
     std::fs::create_dir_all(&counter_dir).map_err(|e| e.to_string())?;
-    let lock = std::fs::OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(counter_dir.join(format!("{name}.lock")))
-        .map_err(|e| e.to_string())?;
-    lock.lock_exclusive().map_err(|e| e.to_string())?;
+    let _lock = CounterLock::acquire(&counter_dir.join(format!("{name}.lock")))?;
     let path = counter_dir.join(format!("{name}.txt"));
     let current = match std::fs::read_to_string(&path) {
         Ok(src) => src.trim().parse::<u64>().unwrap_or(0),
@@ -321,7 +386,6 @@ fn next_counter(name: &str) -> Result<u64, String> {
     };
     let next = current.saturating_add(1);
     std::fs::write(&path, format!("{next}\n")).map_err(|e| e.to_string())?;
-    FileExt::unlock(&lock).map_err(|e| e.to_string())?;
     Ok(next)
 }
 
@@ -1002,6 +1066,7 @@ fn process_record_path(id: &str) -> Result<PathBuf, String> {
     Ok(process_record_dir()?.join(format!("{id}.json")))
 }
 
+#[cfg(unix)]
 fn process_runtime_dir(id: &str) -> Result<PathBuf, String> {
     let dir = process_record_dir()?.join("runtime").join(id);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;

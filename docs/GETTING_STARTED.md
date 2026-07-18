@@ -77,6 +77,8 @@ Export a shallow bundle and import it back into the local store (idempotent):
 Build the WASI bootstrap CLI:
 
 ```sh
+# genesis-doc-skip: downloads the checksum-pinned optional SDK and exports its build environment
+eval "$(bash scripts/install_wasi_sdk.sh --print-shell-env)"
 # genesis-doc-skip: requires optional wasm32-wasip1 target installation
 rustup target add wasm32-wasip1
 cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
