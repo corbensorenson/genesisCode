@@ -379,6 +379,7 @@ local = source[job_start:aggregate_start]
 aggregate = source[aggregate_start:aggregate_end]
 for required in (
     "runs-on: ubuntu-latest",
+    "fetch-depth: 0",
     "Local Workspace Disk Headroom",
     "--min-kb 10485760 --strict 1",
     "cargo fetch --locked",
