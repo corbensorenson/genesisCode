@@ -602,6 +602,8 @@ fn upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open() {
 #[test]
 fn release_health_provisions_evidence_before_parallel_consumers() {
     let root = repo_root();
+    let workflow = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
     let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
         .expect("read render_upgrade_plan_health_report.sh");
     let bundle = fs::read_to_string(root.join("scripts/render_health_profile_evidence_bundle.sh"))
@@ -689,6 +691,35 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         webxr.contains("GENESIS_WEBXR_NODE_BIN")
             && webxr.contains("Node.js 22.x is required by genesis.prerequisites.json"),
         "WebXR release evidence must resolve the declared Node.js 22 toolchain"
+    );
+    let node_setup = workflow
+        .find("- name: Install Node (Release Evidence + WASM)")
+        .expect("release evidence Node setup");
+    let playwright_deps = workflow
+        .find("- name: Install JS Deps (Playwright Release Evidence)")
+        .expect("release evidence Playwright package setup");
+    let chromium_setup = workflow
+        .find("- name: Install Playwright Chromium (Release Evidence)")
+        .expect("release evidence Chromium setup");
+    let perf_tests = workflow
+        .find("- name: Ignored Perf Gate Regression Tests")
+        .expect("ignored performance regression lane");
+    assert!(
+        node_setup < playwright_deps
+            && playwright_deps < chromium_setup
+            && chromium_setup < perf_tests,
+        "Node, Playwright, and Chromium must be available before release evidence runs"
+    );
+    let browser_setup = &workflow[node_setup..perf_tests];
+    assert!(
+        browser_setup.contains("node-version: 22")
+            && browser_setup.contains("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci")
+            && browser_setup.contains("npx playwright install --with-deps chromium")
+            && browser_setup
+                .matches("GENESIS_CI_PROFILE == 'standard'")
+                .count()
+                == 3,
+        "standard and full release profiles must provision the declared browser runtime"
     );
     assert!(
         parity.contains("GENESIS_AGENT_REFERENCE_WORKFLOWS_TMPDIR=\"$lane_tmp_root\"")

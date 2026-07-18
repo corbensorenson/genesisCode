@@ -336,6 +336,20 @@ jobs:
             bash scripts/test_changed_fast.sh --runner nextest --min-history 1
           fi
 
+      - name: Install Node (Release Evidence + WASM)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install JS Deps (Playwright Release Evidence)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
+
+      - name: Install Playwright Chromium (Release Evidence)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: npx playwright install --with-deps chromium
+
       - name: Ignored Perf Gate Regression Tests
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/test_perf_gates.sh
@@ -417,12 +431,6 @@ jobs:
           genesis_configure_cargo_target_dir "$PWD" ci-wasm-build root-wasm
           cargo build -p gc_wasm --target wasm32-unknown-unknown
 
-      - name: Install Node
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Prepare Content-Addressed Dependency Mirror
         if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
         run: |
@@ -452,14 +460,6 @@ jobs:
       - name: Full Cross-Host Runtime Budget Gate
         if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
         run: bash scripts/update_full_cross_host_profile_budget_report.sh
-
-      - name: Install JS Deps (Playwright)
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
-        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
-
-      - name: Install Playwright Chromium
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
-        run: npx playwright install --with-deps chromium
 
       - name: WASM Bindings (Web) + Headless Browser Smoke
         if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
