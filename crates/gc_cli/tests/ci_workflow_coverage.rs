@@ -283,8 +283,8 @@ fn ci_deduplicates_pr_strict_equivalence_and_enforces_gc_source_budget() {
         "ci workflow must enforce generative agent workload validation gate"
     );
     assert!(
-        ci.contains("bash scripts/check_agent_generative_workloads.sh"),
-        "ci workflow must run generative agent workload validation script"
+        ci.contains("bash scripts/update_agent_generative_workloads_report.sh"),
+        "ci workflow must validate and retain the generative agent workload report"
     );
     assert!(
         ci.contains("env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request'"),
