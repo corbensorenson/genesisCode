@@ -31,5 +31,8 @@ require_pattern "webxr_browser_conformance:" "missing webxr browser conformance 
 require_pattern "github.event_name == 'pull_request'" "webxr lane must run on pull_request events"
 require_pattern "bash scripts/update_webxr_browser_conformance_report.sh" "missing explicit webxr browser conformance producer invocation"
 require_pattern "webxr-browser-conformance-artifacts" "missing webxr browser conformance artifact upload"
+require_pattern "Install Node (Release Evidence + WASM)" "release evidence must provision Node before the performance lane"
+require_pattern "Install JS Deps (Playwright Release Evidence)" "release evidence must provision Playwright before the performance lane"
+require_pattern "Install Playwright Chromium (Release Evidence)" "release evidence must provision Chromium before the performance lane"
 
 echo "webxr-browser-conformance-lane: ok"
