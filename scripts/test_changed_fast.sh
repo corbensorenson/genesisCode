@@ -260,10 +260,12 @@ echo "test-changed-fast: base=$BASE"
 echo "test-changed-fast: mode=$MODE runner=$RUNNER changed_files=$CHANGED_COUNT commands=${#COMMANDS[@]}"
 
 BUDGET_SUBJECT="changed-file-gate"
-if [[ "$MODE" == "profile-fallback" && "$BUDGET_EXPLICIT" == "0" ]]; then
-  BUDGET_MS="$FALLBACK_BUDGET_MS"
+if [[ "$MODE" == "profile-fallback" ]]; then
   GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES="$GENESIS_CHANGED_GATE_FALLBACK_DISK_BUDGET_BYTES"
   BUDGET_SUBJECT="${FALLBACK_PROFILE:-prepush-standard}"
+  if [[ "$BUDGET_EXPLICIT" == "0" ]]; then
+    BUDGET_MS="$FALLBACK_BUDGET_MS"
+  fi
 fi
 echo "test-changed-fast: budget_subject=$BUDGET_SUBJECT budget_ms=$BUDGET_MS disk_budget_bytes=$GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES"
 
