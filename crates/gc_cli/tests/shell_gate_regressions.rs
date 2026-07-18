@@ -742,6 +742,23 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             && perf_lane.contains("bash scripts/test_perf_gates.sh"),
         "standard CI must declare its cold dev-fast envelope without claiming release-full; full CI must retain strict release qualification"
     );
+    let ai_slo = workflow
+        .find("- name: AI Iteration SLO")
+        .expect("AI iteration SLO lane");
+    let ai_stress = workflow[ai_slo..]
+        .find("- name: AI Stress Suite")
+        .map(|offset| ai_slo + offset)
+        .expect("AI stress lane after iteration SLO");
+    let ai_slo_lane = &workflow[ai_slo..ai_stress];
+    assert!(
+        ai_slo_lane.contains("if [[ \"$GENESIS_CI_PROFILE\" == \"full\" ]]")
+            && ai_slo_lane.contains("GENESIS_BUDGET_CHANGED_FAST_MS=20000")
+            && ai_slo_lane
+                .matches("bash scripts/update_ai_iteration_slo_report.sh")
+                .count()
+                == 2,
+        "standard hosted CI may declare bounded jitter, but full CI must retain the local AI-loop target"
+    );
     let local_workspace_job = workflow
         .find("  local_workspace_test_contract:")
         .expect("isolated local workspace contract job");
