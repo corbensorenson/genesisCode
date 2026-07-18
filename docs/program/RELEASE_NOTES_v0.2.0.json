@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "e53c3101855836dabd2ebed9631df6a7edb8605e98bbb5e2a107a9ee5ee69b15",
+  "contentIdentitySha256": "ab21a3ded78eafe070359e75632b3598840cfb17838641605bd66e3697247819",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -2589,7 +2589,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_evidence_adversarial_matrix.sh",
-          "executionIdentitySha256": "c997bb99c9fba64e7e9ab993fe6abfbcb8ed09caadbec8fd56b78123d6d587e9",
+          "executionIdentitySha256": "df940b7d4d257b3ae67ea03d471d9adff372c77948ba2eace67eb6724cb0040e",
           "gateId": "gate/evidence-adversarial-matrix",
           "kind": "test",
           "networkMode": "deny",
@@ -2598,7 +2598,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_genesis_evidence_verifier.sh",
-          "executionIdentitySha256": "442351cbfd11495e922b3ebb5e46b4ec9b2050d37a1fbc46bf224bdb25b44fce",
+          "executionIdentitySha256": "306605408348dfd5d3d8dcb2bd2ccc36f5acf9145ff266ce0dd0109840b15ae9",
           "gateId": "gate/genesis-evidence-verifier",
           "kind": "test",
           "networkMode": "deny",
@@ -2616,7 +2616,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_no_user_panics_compiler.sh",
-          "executionIdentitySha256": "838c30e5ca71b65bc510148613edb76f98f0867fa95af910bcf3f3282304a7ec",
+          "executionIdentitySha256": "d8e1db277383038068fcbff74d03c0ca37b90514089ab49898f7fe7d9c3a5631",
           "gateId": "gate/no-user-panics-compiler",
           "kind": "test",
           "networkMode": "deny",
@@ -2625,7 +2625,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_release_smoke.sh",
-          "executionIdentitySha256": "c59c9164fcc916fc8d61251191cdc71a6a10d69a8ba4569f47fee59fccbbe5b7",
+          "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
           "gateId": "gate/release-smoke",
           "kind": "release-only",
           "networkMode": "deny",
@@ -2643,7 +2643,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_supply_chain.sh",
-          "executionIdentitySha256": "db7b2229f872da6a14ab9c64687e229fd178ae2872a60ce0ddbb03b06d1eb8cd",
+          "executionIdentitySha256": "1b8238b4729d2d38e8e227aa7a987f0a30f864a689511d80eb0494af56165fc7",
           "gateId": "gate/supply-chain",
           "kind": "release-only",
           "networkMode": "deny",
@@ -2652,7 +2652,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_versioning_release_hygiene.sh",
-          "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
+          "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
           "gateId": "gate/versioning-release-hygiene",
           "kind": "release-only",
           "networkMode": "deny",

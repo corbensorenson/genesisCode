@@ -27,10 +27,55 @@ genesis_clear_resolved_cargo_target_dir() {
   unset GENESIS_CARGO_CACHE_SCOPE
   unset GENESIS_CARGO_CACHE_KEY_SHA256
   unset GENESIS_CARGO_CACHE_HIT
+  unset GENESIS_CARGO_CACHE_EPHEMERAL
   unset GENESIS_CARGO_CACHE_RUSTC_IDENTITY_JSON
   unset GENESIS_GENERATED_STATE_ROOT
   unset GENESIS_GENERATED_STATE_LEASE_PID
   unset GENESIS_GENERATED_STATE_LEASE_TOKEN
+}
+
+# Configure a disposable Cargo target constrained to a caller-owned directory.
+genesis_configure_ephemeral_cargo_target_dir() {
+  if [[ "$#" -ne 3 ]]; then
+    echo "ephemeral cargo target helper requires <context> <target> <containment-root>" >&2
+    return 2
+  fi
+  local context="$1"
+  local requested_target="$2"
+  local containment_root="$3"
+  local resolved_target=""
+
+  resolved_target="$(python3 - "$context" "$requested_target" "$containment_root" <<'PY'
+import pathlib
+import sys
+
+context = sys.argv[1]
+requested = pathlib.Path(sys.argv[2])
+root = pathlib.Path(sys.argv[3]).resolve(strict=True)
+if not root.is_dir():
+    raise SystemExit(f"{context}: ephemeral containment root must be a directory")
+if not requested.is_absolute():
+    raise SystemExit(f"{context}: ephemeral target must be an absolute path")
+target = requested.resolve(strict=False)
+if target.parent != root:
+    raise SystemExit(
+        f"{context}: ephemeral target must be a direct child of the report directory"
+    )
+if target.exists():
+    raise SystemExit(f"{context}: ephemeral target must not already exist")
+print(target)
+PY
+)" || return
+
+  genesis_clear_resolved_cargo_target_dir "$context" || return
+  CARGO_TARGET_DIR="$resolved_target"
+  export CARGO_TARGET_DIR
+  export GENESIS_CARGO_CACHE_RESOLVED=1
+  export GENESIS_CARGO_CACHE_SCOPE=ephemeral
+  export GENESIS_CARGO_CACHE_HIT=0
+  export GENESIS_CARGO_CACHE_EPHEMERAL=1
+  mkdir -p "$CARGO_TARGET_DIR" || return
+  echo "${context}: cargo-cache scope=ephemeral target=${CARGO_TARGET_DIR} cleanup=caller"
 }
 
 genesis_configure_cargo_target_dir() {

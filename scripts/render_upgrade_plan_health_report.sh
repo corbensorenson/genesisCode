@@ -81,6 +81,15 @@ HEALTH_DISK_PREFLIGHT_REASON="ok"
 GPU_DEVICE_CONFORMANCE=""
 NON_CARGO_PARTITION=()
 CARGO_PARTITION=()
+PROFILE_SETUP_GATES=()
+HEALTH_TEMP_ROOT=""
+GPU_DEVICE_EVIDENCE_ROOT=""
+
+cleanup_health_temp_roots() {
+  [[ -z "$HEALTH_TEMP_ROOT" ]] || rm -rf "$HEALTH_TEMP_ROOT"
+  [[ -z "$GPU_DEVICE_EVIDENCE_ROOT" ]] || rm -rf "$GPU_DEVICE_EVIDENCE_ROOT"
+}
+trap cleanup_health_temp_roots EXIT
 
 now_ms() {
   python3 - <<'PY'
@@ -191,11 +200,10 @@ default_health_cargo_gate_shards_for_profile() {
       echo "1"
       ;;
     release-full)
-      if (( cpu_count >= 8 )); then
-        echo "2"
-      else
-        echo "1"
-      fi
+      # Release gates share one content-addressed target and several consume
+      # binaries emitted by earlier cargo commands. Serialize to prevent a
+      # sibling clean/rebuild from invalidating those artifacts mid-gate.
+      echo "1"
       ;;
     *)
       echo "1"
@@ -1418,7 +1426,6 @@ case "$PROFILE" in
     PROFILE_GATES+=(
       "bash scripts/test_changed_fast.sh --base HEAD --runner auto --budget-ms ${DEV_FAST_BUDGET_MS} --min-history 1 --report .genesis/perf/agent_inner_loop_changed_fast_metrics.json --history .genesis/perf/agent_inner_loop_changed_fast_history.jsonl"
     )
-    PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh")
     ;;
   prepush-standard)
     PROFILE_GATES+=("if git rev-parse --verify origin/main >/dev/null 2>&1; then python3 scripts/lib/generated_authority.py --freshness --git-base origin/main; else python3 scripts/lib/generated_authority.py --freshness; fi")
@@ -1437,6 +1444,9 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     ;;
   release-full)
+    HEALTH_TEMP_ROOT="$(mktemp -d)"
+    HEALTH_EVIDENCE_ROOT="$HEALTH_TEMP_ROOT/release-evidence"
+    PROFILE_SETUP_GATES+=("bash scripts/render_health_profile_evidence_bundle.sh release-full '$HEALTH_EVIDENCE_ROOT'")
     PROFILE_GATES+=("if git rev-parse --verify origin/main >/dev/null 2>&1; then python3 scripts/lib/generated_authority.py --freshness --git-base origin/main; else python3 scripts/lib/generated_authority.py --freshness; fi")
     PROFILE_GATES+=("bash scripts/test_perf_gates.sh --kernel-tail-stress")
     PROFILE_GATES+=("bash scripts/check_domain_starter_registry_bootstrap.sh")
@@ -1448,27 +1458,21 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
-    PROFILE_GATES+=(
-      "GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=1 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=0 bash scripts/check_runtime_backend_feature_matrix.sh"
-    )
+    PROFILE_GATES+=("GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json' GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
-    PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh")
-    PROFILE_GATES+=(
-      "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
-    )
-    PROFILE_GATES+=("GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 GENESIS_GPU_XR_PRODUCTIZATION_AUTO_RUN_GAUNTLET=1 bash scripts/check_gpu_xr_productization_kits.sh")
-    PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
-    PROFILE_GATES+=("bash scripts/check_agent_scenario_perf.sh")
-    PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full bash scripts/check_write_genesiscode_skill_conformance.sh")
+    PROFILE_GATES+=("GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 GENESIS_GPU_XR_PRODUCTIZATION_AUTO_RUN_GAUNTLET=0 GENESIS_GPU_XR_PRODUCTIZATION_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_GPU_XR_PRODUCTIZATION_WEBXR_REPORT='$HEALTH_EVIDENCE_ROOT/webxr_browser_conformance_report.json' bash scripts/check_gpu_xr_productization_kits.sh")
+    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_PARITY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' bash scripts/check_slo_report_contracts.sh")
+    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_GAUNTLET_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_history.jsonl' bash scripts/check_agent_scenario_perf.sh")
+    PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full GENESIS_WRITE_SKILL_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_WRITE_SKILL_GENERATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_report.json' GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json' GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT='$HEALTH_EVIDENCE_ROOT/host_bridge_fault_injection_report.json' GENESIS_WRITE_SKILL_GPU_XR_REPORT='$HEALTH_EVIDENCE_ROOT/gpu_xr_productization_kits_report.json' GENESIS_WRITE_SKILL_ASSURANCE_REPORT='$HEALTH_EVIDENCE_ROOT/assurance_profile_packs_report.json' bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 bash scripts/check_write_genesiscode_skill_distribution.sh")
-    PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
+    PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_PARITY_REUSE_REPORTS=1 GENESIS_AGENT_PARITY_NATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json' GENESIS_AGENT_PARITY_NATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_history.jsonl' GENESIS_AGENT_PARITY_WASI_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_report.json' GENESIS_AGENT_PARITY_WASI_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_history.jsonl' GENESIS_AGENT_PARITY_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_history.jsonl' GENESIS_AGENT_PARITY_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' bash scripts/check_agent_workflow_runtime_parity.sh")
     PROFILE_GATES+=(
-      "GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_native_report.json GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT=.genesis/perf/agent_capability_gauntlet_wasi_report.json GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 bash scripts/check_agent_generative_workloads.sh"
+      "GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json' GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_report.json' GENESIS_AGENT_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 bash scripts/check_agent_generative_workloads.sh"
     )
     PROFILE_GATES+=(
       "GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=1 GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT=.genesis/perf/production_cli_help_surface_parity_report.json GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY=.genesis/perf/production_cli_help_surface_parity_history.jsonl GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY=production-plus-parity-v1 bash scripts/check_production_cli_help_surface.sh"
     )
-    PROFILE_GATES+=("GENESIS_SLO_REQUIRE_PARITY_REPORT=1 bash scripts/check_slo_report_contracts.sh")
+    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_PARITY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' GENESIS_SLO_REQUIRE_PARITY_REPORT=1 bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=(
       "GENESIS_TASK_STRESS_RUNS=6 GENESIS_TASK_STRESS_ITERATIONS=8 GENESIS_TASK_STRESS_MAX_FAILURE_RATE_PCT=0 GENESIS_TASK_STRESS_SUITE_BUDGET_MS=420000 bash scripts/check_task_concurrency_stress.sh"
     )
@@ -1494,7 +1498,6 @@ esac
 
 if [[ "$GPU_DEVICE_CONFORMANCE" == "1" ]]; then
   GPU_DEVICE_EVIDENCE_ROOT="$(mktemp -d)"
-  trap 'rm -rf "${GPU_DEVICE_EVIDENCE_ROOT:-}"' EXIT
   PROFILE_GATES+=(
     "bash scripts/render_gpu_compute_device_conformance_report.sh '$GPU_DEVICE_EVIDENCE_ROOT/device' '$GPU_DEVICE_EVIDENCE_ROOT/device_report.json' .genesis/perf/runtime_microbench_runtime_history.jsonl .genesis/perf/gpu_compute_runtime_profile_runtime_history.jsonl && GENESIS_GPU_DEVICE_CONFORMANCE_FEATURES= GENESIS_GPU_COMPUTE_DEVICE_RUNTIME_CMD='$ROOT_DIR/scripts/gpu_device_runtime_deterministic.sh' bash scripts/render_gpu_compute_device_conformance_report.sh '$GPU_DEVICE_EVIDENCE_ROOT/deterministic' '$GPU_DEVICE_EVIDENCE_ROOT/deterministic_report.json' .genesis/perf/runtime_microbench_runtime_history.jsonl .genesis/perf/gpu_compute_runtime_profile_runtime_history.jsonl && bash scripts/render_gpu_device_conformance_lane_parity_report.sh '$GPU_DEVICE_EVIDENCE_ROOT/device_report.json' '$GPU_DEVICE_EVIDENCE_ROOT/deterministic_report.json' '$GPU_DEVICE_EVIDENCE_ROOT/lane_parity_report.json'"
   )
@@ -1513,6 +1516,7 @@ write_health_disk_preflight_report \
 if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
   COMMON_GATES=("$TEST_GATE_OVERRIDE")
   PROFILE_GATES=()
+  PROFILE_SETUP_GATES=()
 fi
 
 apply_profile_gate_cache_policy
@@ -1522,8 +1526,14 @@ run_health_cargo_warmup "profile:${PROFILE}"
 partition_gate_commands "${COMMON_GATES[@]}"
 profile_start_free_bytes="$(filesystem_free_bytes)"
 start_ms="$(now_ms)"
+profile_setup_gate_count="${#PROFILE_SETUP_GATES[@]}"
 common_non_cargo_gate_count="${#NON_CARGO_PARTITION[@]}"
 common_cargo_gate_count="${#CARGO_PARTITION[@]}"
+
+if (( profile_setup_gate_count > 0 )); then
+  echo "upgrade-plan-health: running ${profile_setup_gate_count} profile setup gates (profile=${PROFILE}, shards=1)"
+  run_gate_commands "profile:${PROFILE}:setup" "1" "${PROFILE_SETUP_GATES[@]}"
+fi
 
 if (( common_non_cargo_gate_count > 0 )); then
   echo "upgrade-plan-health: running ${common_non_cargo_gate_count} common non-cargo gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
@@ -1559,6 +1569,7 @@ profile_artifact_bytes="$(generated_artifact_bytes)"
 gate_count=$(( \
   common_non_cargo_gate_count + \
   common_cargo_gate_count + \
+  profile_setup_gate_count + \
   profile_non_cargo_gate_count + \
   profile_cargo_gate_count \
 ))

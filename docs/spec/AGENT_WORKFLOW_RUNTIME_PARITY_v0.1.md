@@ -20,10 +20,16 @@ This is a strict parity gate, not a smoke test.
 
 ## Inputs
 
-For a fresh run, the parity renderer executes the reference-workflow renderer twice in parallel:
+For a fresh run, the parity renderer executes the reference-workflow renderer twice in sequence:
 
 1. native lane (`runtime_profile = "native"`)
 2. wasi lane (`runtime_profile = "wasi-wasm-host-bridge"`)
+
+Each lane receives a distinct temporary root. Sequential execution is normative because
+this gate compares semantic runtime behavior and per-workflow timing against fixed
+baselines; simultaneous lanes would let cross-runtime CPU or I/O contention change the
+verdict. Concurrent-load behavior is qualified independently by the task-concurrency,
+host-bridge fault-injection, and AI stress gates.
 
 Reference workflow set includes browser-runtime, XR runtime, and deployment lanes, so
 parity checks cover all platform runtime additions automatically via shared gauntlet inputs.

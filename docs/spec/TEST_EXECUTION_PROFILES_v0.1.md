@@ -85,6 +85,7 @@ Strict/full profile runtime reports:
   - history: `.genesis/perf/agent_scenario_perf_history.jsonl`
   - baseline seed history: `policies/perf/agent_scenario_perf_seed_history.jsonl`
   - enforced by `scripts/check_agent_scenario_perf.sh` from gauntlet component durations (service + durable-data + gfx-loop + network-process) with median + p95 + regression gates and fail-closed minimum-history enforcement.
+  - every scenario seed is derived from, and checked against, the same four components in `policies/perf/agent_capability_gauntlet_seed_history.jsonl`; duplicated baseline drift fails closed.
 - `agent-generative-workloads` mutation lane
   - report: `.genesis/perf/agent_generative_workloads_report.json`
   - history: `.genesis/perf/agent_generative_workloads_history.jsonl`
@@ -168,6 +169,17 @@ Strict/full profile runtime reports:
   - gate scheduler partitions cargo-backed commands from non-cargo commands and runs cargo lanes
     with dedicated shard control (`GENESIS_HEALTH_CARGO_GATE_SHARDS`, default `1`) to avoid
     lock contention while preserving full gate coverage.
+  - `release-full` first runs `scripts/render_health_profile_evidence_bundle.sh` as a serialized
+    setup gate, before common gates can expand shared build caches. It renders gauntlet,
+    native/WASI parity, generative, runtime-backend, host-bridge,
+    WebXR/GPU-XR, and assurance reports under one private temporary root, validates their kinds and
+    `ok` states into a hash manifest, and binds every parallel consumer to those explicit paths.
+    Untracked `.genesis/perf` reports are never release inputs; targeted gate overrides skip setup.
+    The governed runtime-backend check entrypoint validates its bundle-local prebuilt report
+    against the direct-sibling bundle manifest, release profile, kind, and SHA-256 before avoiding
+    a repeated compilation matrix.
+    WebXR evidence resolves Node.js 22.x as declared by `genesis.prerequisites.json`;
+    `GENESIS_WEBXR_NODE_BIN` may select an explicit compatible executable.
   - defaults profile gates to serial execution (`GENESIS_HEALTH_PROFILE_SHARDS=1`) to reduce
     cargo build-lock contention while preserving full gate coverage
   - deterministic heavy-gate cache policy for warm loops:
@@ -271,6 +283,11 @@ Strict/full profile runtime reports:
   - runs `scripts/check_full_selfhost_cutover_profile.sh` in read-only mode against
     explicitly produced prerequisite evidence.
   - enforces explicit closure-contract verification from `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`.
+  - is the only health profile that claims complete cutover. `agent-inner-loop`,
+    `prepush-standard`, and the current `release-full` profile retain the common strict
+    self-host boundary, dashboard, readiness, production-frontend-isolation, and parity gates,
+    but cannot consume retained workstation reports or imply that the later cutover milestone
+    is already complete.
 
 ### AI Iteration SLO Contention Policy
 

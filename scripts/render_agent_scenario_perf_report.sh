@@ -14,6 +14,7 @@ SCENARIO_HISTORY="$2"
 GAUNTLET_REPORT="$3"
 GAUNTLET_HISTORY="$4"
 BASELINE_HISTORY="${GENESIS_AGENT_SCENARIO_BASELINE_HISTORY:-policies/perf/agent_scenario_perf_seed_history.jsonl}"
+GAUNTLET_BASELINE_HISTORY="${GENESIS_AGENT_SCENARIO_GAUNTLET_BASELINE_HISTORY:-policies/perf/agent_capability_gauntlet_seed_history.jsonl}"
 SCENARIO_NAME="${GENESIS_AGENT_SCENARIO_NAME:-service-data-gfx-network}"
 REQUIRED_WORKFLOWS_CSV="${GENESIS_AGENT_SCENARIO_WORKFLOWS:-agent_service_workflow,agent_durable_data_workflow,agent_long_running_gfx_loop_workflow,agent_network_process_workflow}"
 MEDIAN_BUDGET_MS="${GENESIS_AGENT_SCENARIO_MEDIAN_BUDGET_MS:-600000}"
@@ -27,6 +28,7 @@ python3 - \
   "$GAUNTLET_REPORT" \
   "$GAUNTLET_HISTORY" \
   "$BASELINE_HISTORY" \
+  "$GAUNTLET_BASELINE_HISTORY" \
   "$SCENARIO_REPORT" \
   "$SCENARIO_HISTORY" \
   "$SCENARIO_NAME" \
@@ -38,6 +40,7 @@ python3 - \
   "$REGRESSION_PERCENT" \
   "$CONTENTION_WARN_PERCENT" <<'PY'
 import datetime as dt
+import hashlib
 import json
 import math
 import pathlib
@@ -48,6 +51,7 @@ import sys
     gauntlet_report_path,
     gauntlet_history_path,
     baseline_history_path,
+    gauntlet_baseline_history_path,
     scenario_report_path,
     scenario_history_path,
     scenario_name,
@@ -125,6 +129,38 @@ def load_baseline_scenario_samples(
     return samples
 
 
+def derive_gauntlet_scenario_samples(
+    path: pathlib.Path,
+    *,
+    expected_runtime_profile: str,
+    workflow_names: list[str],
+) -> list[int]:
+    if not path.exists():
+        return []
+    samples: list[int] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("kind") != "genesis/agent-capability-gauntlet-v0.1":
+            continue
+        if entry.get("runtime_profile") != expected_runtime_profile:
+            continue
+        durations = entry.get("workflow_durations_ms")
+        if not isinstance(durations, dict):
+            continue
+        if any(not isinstance(durations.get(name), int) for name in workflow_names):
+            continue
+        samples.append(sum(int(durations[name]) for name in workflow_names))
+    return samples
+
+
 gauntlet_report_file = pathlib.Path(gauntlet_report_path)
 if not gauntlet_report_file.exists():
     raise SystemExit(
@@ -180,6 +216,23 @@ if baseline_history_file.exists():
 elif require_min_history:
     raise SystemExit(
         f"agent-scenario-perf: baseline history file missing: {baseline_history_file}"
+    )
+
+gauntlet_baseline_history_file = pathlib.Path(gauntlet_baseline_history_path)
+derived_baseline_samples = derive_gauntlet_scenario_samples(
+    gauntlet_baseline_history_file,
+    expected_runtime_profile=runtime_profile,
+    workflow_names=required_workflows,
+)
+if require_min_history and not gauntlet_baseline_history_file.exists():
+    raise SystemExit(
+        "agent-scenario-perf: gauntlet baseline history file missing: "
+        f"{gauntlet_baseline_history_file}"
+    )
+if baseline_seed_samples != derived_baseline_samples:
+    raise SystemExit(
+        "agent-scenario-perf: scenario seed drift from gauntlet baseline: "
+        f"scenario={baseline_seed_samples} derived={derived_baseline_samples}"
     )
 
 gauntlet_history_file = pathlib.Path(gauntlet_history_path)
@@ -270,6 +323,10 @@ scenario_report = {
     "gauntlet_report": str(gauntlet_report_file),
     "gauntlet_history": str(gauntlet_history_file),
     "baseline_history": str(baseline_history_file),
+    "baseline_gauntlet_history": str(gauntlet_baseline_history_file),
+    "baseline_gauntlet_history_sha256": hashlib.sha256(
+        gauntlet_baseline_history_file.read_bytes()
+    ).hexdigest(),
     "timestamp_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
 }
 

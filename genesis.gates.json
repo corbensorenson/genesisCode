@@ -9,7 +9,7 @@
       "executionIdentitySha256": "6b160e526fe0bd7f20fbb04210af0d03f9b37fef656de70c04bb136529f7871d",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "ecba882aaf88f323f8c628278f2c71e57dd4f2b8dc4df5ee5c9a07b263fe3df4",
+      "inputIdentitySha256": "53c9aad4646edc628aa0dad4a5e856165415d301413945924132eff2020f0603",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -262,7 +262,7 @@
       "executionIdentitySha256": "639c20da77191db919a996c61988dce723bce97db6985d3eb0c4dd5f1b14463b",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "65e051e2bf892bd162acfc44d88b0b81a9718928734c65a61240b2e12eab4854",
+      "inputIdentitySha256": "54cb0076289aa87375eb5ed666e400a464959ffc85b2427b380bcce2162cb769",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -405,10 +405,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_agent_reference_workflows.sh",
-      "executionIdentitySha256": "17d1094066aaad0630486d7aa8bb0cfc7e8e96ab33bf852f421c332cba448a3d",
+      "executionIdentitySha256": "0de7f236be628bf4b97ab1d48d7d0dea335f4115cb574e5ebfe7c31e4002b612",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "b11ca6f972afbd68ddcd1412042fe8d5e86cc5cc94df3f2c21ec8a458bdd5d55",
+      "inputIdentitySha256": "edbcd34257d5959d87fa1857a1eaa15702f5e5c1554f7590862a681facb4474b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -504,10 +504,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_agent_scenario_perf.sh",
-      "executionIdentitySha256": "ebaeb8bee2622c6d78c259035ccc309b2da0f1bf8e53825e71ec4e8ad3fe64e0",
+      "executionIdentitySha256": "0eb22a0f3a9579301e4d14eb7319c50c3cc3abd28569487a28485a9f58b11b11",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "cd020917aafe111384c28ac1a620863646609be83830bb8bde96eeaaa32b0cf8",
+      "inputIdentitySha256": "24204cf6f84f1e40a3ec69de5aebc4add60795e17918811c499be5f2520f2385",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -605,10 +605,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_agent_workflow_runtime_parity.sh",
-      "executionIdentitySha256": "c56e453f1432bdf62c7dd23b2978e4dd68b124c23e7f754e9ddc3f1cc835229e",
+      "executionIdentitySha256": "f1fd02ded37b4d24e45476389532eeda14850118da19eaeb6d0d94cf99c3ea10",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "9515d6b21cfd9cf29787c571431b8b683ee7ab0ddc6b5984cff72bf6939df481",
+      "inputIdentitySha256": "c659de8387828f899a791878d0d8077e431dc6a7ea81a607b9e40128cf2d50e5",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -707,10 +707,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_ai_iteration_slo.sh",
-      "executionIdentitySha256": "275bf0ba1c50b1f11d936d0e0dd5a80f8ff0010e8b2b7f9214d901da68a9a8db",
+      "executionIdentitySha256": "589808d917d9653a79c3407ca2c291fc81d10fd9b885a2b628912493686b047f",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1466,6 +1466,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -1639,10 +1640,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_ai_stress_suite.sh",
-      "executionIdentitySha256": "b1c3765338f20b050950edc18cd4de2d9a755250824d798464302c792e5b016c",
+      "executionIdentitySha256": "dc8c3972ea84e9fc83764032aa4462865a7749042942cb3e1007b0a0f640d4d1",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-stress-suite",
-      "inputIdentitySha256": "a90cf1642dff8a4a56cef8b77a7e6594d6c24c9253a2368e78a9131717b957a1",
+      "inputIdentitySha256": "22fdc544ee8b6585fffca24392cae66001c94be012647f09f698117c5b7cfe7f",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -1811,10 +1812,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_backend_starter_workflows.sh",
-      "executionIdentitySha256": "e6a0fa2e091c98244f5b909f6a3b5c3d6a33e009f338f5105a37452e1a1e282b",
+      "executionIdentitySha256": "687ed492d01041e91cbcb820d10aeca8eee9d0cea6552f2ab82fb078d88c8c1d",
       "expectedDurationSeconds": 600,
       "id": "gate/backend-starter-workflows",
-      "inputIdentitySha256": "c29257adbe4b9b88c5b81766e85e1b444836ec5c8bca9fa8394974fa37d0dd4b",
+      "inputIdentitySha256": "a1c9ece9c1cf8de14e1eb6d3bd72ef33625ee098d6e437ddb95687f212a8f333",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -1874,10 +1875,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_bootstrap_retirement_gate.sh",
-      "executionIdentitySha256": "440124b9284eee5f97ffc63026cb2d99c006aa0680e2fcc865d9a9fd960fa5c4",
+      "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "422019430b186c74baccf388716663889d33f923f1301dd2278a202638c71de8",
+      "inputIdentitySha256": "6a546ae25ac1ae50badd4e433e54d178cd27c7d240d79038fd7cf39f87dbe263",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2063,7 +2064,7 @@
       "executionIdentitySha256": "9cc5aa3304c46361ec8f6c9ca849abd798d5aa6816fa2acffe7db4607da80dc0",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2819,6 +2820,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -3049,7 +3051,7 @@
       "executionIdentitySha256": "242ca8460da231b46767e4964fbc3b6656b93e244ae9007a53943df8349af97e",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "7796c5bb25af2e82daa5cb54e778f38db128b87f90d6134a59806a58a51251dd",
+      "inputIdentitySha256": "1a4fde259f3b84e8a06c795fe893e632295acb7bf44e80b05eba95e694accd45",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3126,10 +3128,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_changed_impact.sh",
-      "executionIdentitySha256": "f5bd5d2f7e9ff58c5dfadd886dd2b79fbf9c8914666ef02b1b07cacf5ec984bd",
+      "executionIdentitySha256": "06ce5cbf4cc6c499ba9669527234944e84b762be001af3469809b262ec5d1f83",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3885,6 +3887,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -4070,7 +4073,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4826,6 +4829,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -4996,10 +5000,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_cli_diagnostics_contract.sh",
-      "executionIdentitySha256": "8d38fed9cf858f5c32561738d2574cf39801e7dcc7372e02cc56fd74e64c77ee",
+      "executionIdentitySha256": "99c191c4c9b7ef17b69f7e760ef2bef19c4e69870273570caf00706579702648",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "01c94a57b20ed2b5f627b43d4770770fa2f630301fca0ec649d6254a279309a4",
+      "inputIdentitySha256": "54d34302375cec2f64cb6eea9dee76d5d34787212a1b4d388c7d8f18aeb31aff",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5085,10 +5089,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_default_iteration_workflow.sh",
-      "executionIdentitySha256": "4ad5c2853006ac3296b006fb56eddbf50f4c78edecd1aeb6256c1719b49306a6",
+      "executionIdentitySha256": "9f3020fd48c48b59a479a774c578f7ad9eafd3b232598bc068815cb5f1aee4db",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5844,6 +5848,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -6312,7 +6317,7 @@
       "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "09999e797ff5f775dd7684a4b0f2c5ef0c0388e071062402ae5ed8246a66060d",
+      "inputIdentitySha256": "ecb8f71fa381a9eb228596cc90e7346fb33b1605d70e46dbc5802d8b910a68fc",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6396,7 +6401,7 @@
       "executionIdentitySha256": "b76d99cec379d2550ae5c258f43bbe188f709a60e021c0e9f570ef041c128b4b",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "a0905a328cf8a5fe5a88d4d0e466d8f8ce090a93c9146d2bd396229413cd6d2d",
+      "inputIdentitySha256": "d24c18f36d8e466124e983f059a7ba37b5e306bfd2943dfc1419499235d9feac",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -6520,10 +6525,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_domain_starter_registry_bootstrap.sh",
-      "executionIdentitySha256": "ad9a3f20fccc21c23250ba9233fd9d28a789770f868849c8625219398b6961f7",
+      "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "0f46716ca8944f6e6bca7c4c1ea71b2a5febfca86c651e0837d130fec0943926",
+      "inputIdentitySha256": "4a2f46496b139240151b82d464a69990f33845b2847f04ca576079a57978fa2a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -6589,7 +6594,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7345,6 +7350,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -7511,10 +7517,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_evidence_adversarial_matrix.sh",
-      "executionIdentitySha256": "c997bb99c9fba64e7e9ab993fe6abfbcb8ed09caadbec8fd56b78123d6d587e9",
+      "executionIdentitySha256": "df940b7d4d257b3ae67ea03d471d9adff372c77948ba2eace67eb6724cb0040e",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-adversarial-matrix",
-      "inputIdentitySha256": "1b2b2a5ae3e9184a044411e8a8b748de01a331f42cb5c743be05775e33b1b399",
+      "inputIdentitySha256": "0fbf08e9cdd49d4b0e5b75a6812908ba19b143bf1a65689103170fd5aede5b5c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7586,10 +7592,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_evidence_storage_classes.sh",
-      "executionIdentitySha256": "bfd33a3c7d9ac36252fcdec123b9aa1ece15debab0c1f5136d190469b1080000",
+      "executionIdentitySha256": "f1819ef0549b700487acbb2fc0a57164a28bedb8ba5f95d482d4ed92f377eeef",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-storage-classes",
-      "inputIdentitySha256": "15f68c7e6cfd5af2b9b937227e6ebb76f8f384362d8ce43c1ce649835244b5e1",
+      "inputIdentitySha256": "e83f92ec705beb5656b7147b4e3fa5f292eecb408263f7004c072027e0e6a67b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7723,10 +7729,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_foundation_stdlib_conformance.sh",
-      "executionIdentitySha256": "cb3fe525e4e9587da10e6af02bc81d2c1d96f0b6463ab018c6483da1a7e71f2a",
+      "executionIdentitySha256": "369dec1c4ce9c66ecd7f2a44bc738555302296e56acbe6e7794df456e94ba1d0",
       "expectedDurationSeconds": 600,
       "id": "gate/foundation-stdlib-conformance",
-      "inputIdentitySha256": "d105ade2f158da9c82929a7dc3be75dfcad1cca548bb7575767d8c6f914faea8",
+      "inputIdentitySha256": "145ec05e273619d8885020e886f8292c7f3d84a76fe3111a04508dc1506857d7",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7791,7 +7797,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "2297673604cc08a2beb95d0dbdac3b9d0d9274e7e49f2e75565e3fd8b7ff8818",
+      "inputIdentitySha256": "b0c2c1742c3d5d5204b07a308a847d87e40f7d8e1fc667f8bdfc650487e61dad",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7863,7 +7869,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "a2ab3c538748ff27939a60989d640023b0778a90025216b66a382d5b292ede1a",
+      "inputIdentitySha256": "edfe0de261a9f7d730825374ecd689ae0988c779bb65edf12195bf7a0b29d62d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8028,10 +8034,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_fuzz_differential_hardening.sh",
-      "executionIdentitySha256": "d557f1218fcc8a16e5967fd9ac3acb1a6a3076d200e1b34b49607f6248630432",
+      "executionIdentitySha256": "f3c4be39bf5a3ce7de45d7de286adb4d40f4fc2e613acf0df6f44511946a5564",
       "expectedDurationSeconds": 600,
       "id": "gate/fuzz-differential-hardening",
-      "inputIdentitySha256": "2fa5b72d9f52cf03cb0d14630d818f2e9876411b6c66b9f120f7126cf0b12f59",
+      "inputIdentitySha256": "3a0acc28d468c7cfe0bd1cec56fc2c9bdc6879489fcb1065b05974f67c629089",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8096,7 +8102,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "438caa8602fb33379e0d786bb6933cedafa4197c2ce6a64a218aeb03eeaa062c",
+      "inputIdentitySha256": "fa5e29e56bdd3942131e99289c5638f27f7b3e19719cc9bf03f393c25a9b1fb2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8161,7 +8167,7 @@
       "executionIdentitySha256": "bb0f9dc73bdea6da6f719477b5fecbd454c85b1ef233ab8ab02970964d507f33",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8917,6 +8923,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -9083,10 +9090,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gc_agent_core_card.sh",
-      "executionIdentitySha256": "50eb4b58b61771fb7cb538c515679e4cc7bb4aa029bc7310c2ee3f0f878d49e4",
+      "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "ecba882aaf88f323f8c628278f2c71e57dd4f2b8dc4df5ee5c9a07b263fe3df4",
+      "inputIdentitySha256": "53c9aad4646edc628aa0dad4a5e856165415d301413945924132eff2020f0603",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9340,10 +9347,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gc_agent_profile.sh",
-      "executionIdentitySha256": "a812ebf8fa8cccd881ae7a086e32fba0ca92ab771e962981673c4e6b8dba9a57",
+      "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "ecba882aaf88f323f8c628278f2c71e57dd4f2b8dc4df5ee5c9a07b263fe3df4",
+      "inputIdentitySha256": "53c9aad4646edc628aa0dad4a5e856165415d301413945924132eff2020f0603",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9597,10 +9604,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gc_agent_symbol_index.sh",
-      "executionIdentitySha256": "c02349c3de13ce4d23a5055db6cf4733394985bc6b1a1e171097fb92ce380b6c",
+      "executionIdentitySha256": "09ccbdaf204f565c2bca87bb239f1e4e529497f7ff1a50c3e999396a593cbce7",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "ecba882aaf88f323f8c628278f2c71e57dd4f2b8dc4df5ee5c9a07b263fe3df4",
+      "inputIdentitySha256": "53c9aad4646edc628aa0dad4a5e856165415d301413945924132eff2020f0603",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9854,10 +9861,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gc_agent_task_cards.sh",
-      "executionIdentitySha256": "a91cd6f95c52b2419d89ce9ddaead7eb32afefb4fde12122f9111bc9f2027599",
+      "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "ecba882aaf88f323f8c628278f2c71e57dd4f2b8dc4df5ee5c9a07b263fe3df4",
+      "inputIdentitySha256": "53c9aad4646edc628aa0dad4a5e856165415d301413945924132eff2020f0603",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10168,7 +10175,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "f94c95d0bd0a7baf1976ba87327acfaf65925c90991e6745d44ebc46ff65a1b0",
+      "inputIdentitySha256": "6771c1f62a2094abf60549ef52f84461b8e20e534239193a0998d44dfaebc1ae",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10235,10 +10242,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gcpm_target_runtime_pipelines.sh",
-      "executionIdentitySha256": "abb2e664d5c3f901a129eebdcd4b7e72921a6036231ce688c1336e62ed532e23",
+      "executionIdentitySha256": "89a60e63bf3dd27cc182f69b82ee76575e8512613638e2eccd8d1529325aa3ce",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-target-runtime-pipelines",
-      "inputIdentitySha256": "71fcf37a41c361dc2e3bb0d3f4d3291c0ec11b1634d3a7c38c651b304c3cb0c3",
+      "inputIdentitySha256": "a98aed4f5f2448242d8e89b28c51090e83a0715b3d6f14d7a2ed75fafdd7ef18",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10305,7 +10312,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11061,6 +11068,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -11282,10 +11290,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_genesis_evidence_verifier.sh",
-      "executionIdentitySha256": "442351cbfd11495e922b3ebb5e46b4ec9b2050d37a1fbc46bf224bdb25b44fce",
+      "executionIdentitySha256": "306605408348dfd5d3d8dcb2bd2ccc36f5acf9145ff266ce0dd0109840b15ae9",
       "expectedDurationSeconds": 600,
       "id": "gate/genesis-evidence-verifier",
-      "inputIdentitySha256": "d9bb19e56515b4c87695aa20abc65c535e8ef5720d5553923e50ded42829cd7c",
+      "inputIdentitySha256": "680b6ccb5aa41c5f2f2de33ef32ae99865ebd408a6ae0054d30c01aff79d85a1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11406,10 +11414,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_gfx_runtime_profile.sh",
-      "executionIdentitySha256": "85bfe3e67a3516e43a601ebb36c8edb5416f8b712b23ae35f5c852dfc1f656a2",
+      "executionIdentitySha256": "7972c3efbac37816d1f5e3ca14532db17796739a68e95c8a590b126191d2a594",
       "expectedDurationSeconds": 900,
       "id": "gate/gfx-runtime-profile",
-      "inputIdentitySha256": "c9b06c21c24327f7fd12c0b8f56c62c5e1d4f4de88602e24c00c13002a033827",
+      "inputIdentitySha256": "302ad8b989973a19e202809141abab5edde00881c6d425218f7c0b47e0053a7d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11473,10 +11481,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gpu_compute_device_conformance.sh",
-      "executionIdentitySha256": "4114aa27c427d0a98f21984bed2119f8c7317a667a93498c4e555a1392269dac",
+      "executionIdentitySha256": "24239065fa25638a77942996f8ca28eb8b6f64530e407346c5cb5dfb440dd1c6",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-compute-device-conformance",
-      "inputIdentitySha256": "f527831044813166b5ca1aee34c0525046e72e5ba0bd42cafda704e01fe4e621",
+      "inputIdentitySha256": "59ce7ac8bc525c2332059e1deb5291b6e9520d7a28876552ef8ba175bb05cbc7",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11545,10 +11553,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gpu_compute_runtime_profile.sh",
-      "executionIdentitySha256": "1fb61fa0e18020a98fe9bcb363545862de5c3b3ec64feb04cb957ee4f772d794",
+      "executionIdentitySha256": "6fc60e397ee532144dcc4fdc96e3ad453c10758b1289d742f093ae67f413e4b4",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-compute-runtime-profile",
-      "inputIdentitySha256": "6e2fec89c5122090d59c8fedd3e00ec81afbaf028da6dab5e71a8edeec23d63e",
+      "inputIdentitySha256": "89b6ed2b95cd28ff5fe1ae41a2077eacf69266c9a6d5daa6584b2ff3f82fd830",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11618,7 +11626,7 @@
       "executionIdentitySha256": "a17975450bf8bc3c83a3ae9724330cf8498a6ae3d0ec517cf28d4973ebb2c722",
       "expectedDurationSeconds": 15,
       "id": "gate/gpu-conformance-lane-matrix",
-      "inputIdentitySha256": "d38994a98e7f21a10177848c71cef3fc2e2399cd5fe166500b318ecb07af8bc1",
+      "inputIdentitySha256": "953705c4523d61faf8a3db6924931e63a14b210aa749a7fa6e26d79bd1bf12b1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11788,10 +11796,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_gpu_gfx_headroom_conformance.sh",
-      "executionIdentitySha256": "21b2378831bd994e0e71c4cb5417c1649bc3c906a1dba7d4f96c7e36264ae3cc",
+      "executionIdentitySha256": "571e9fbc0fbb41c51e8092a2f938808cc125232fe1021a2b3f21cbe0a4ba55a5",
       "expectedDurationSeconds": 900,
       "id": "gate/gpu-gfx-headroom-conformance",
-      "inputIdentitySha256": "0f2bd2ba01b65e194f71536456fdfb232d7d594c4a87f551366d443ce29398ea",
+      "inputIdentitySha256": "9b4c7d439b5449a35d58a9dd8c7d578ee7a0b744b175e939b0e5c2104701822e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11872,7 +11880,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12628,6 +12636,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -12798,10 +12807,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_gpu_xr_productization_kits.sh",
-      "executionIdentitySha256": "a7eeeb74d6d54df25737510192ee0d70df66bf7e554660c6c1f8bef4a69ebf4a",
+      "executionIdentitySha256": "4cd05e00f81a932dd2ffbebf1e8a7a76bc6247080f66de016584124c8bf89c15",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "cf042eded4af138b835a84faf48c2bce3cd97184d07f61d0000cefa3f92f852d",
+      "inputIdentitySha256": "cfa8990467e4b43fc046c673abf0d9209b5d3045542c795fc610c3862bd4821a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -12838,6 +12847,7 @@
           "examples/agent_time_control_workflow/workflow.sh",
           "examples/agent_ui_app_stack_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow.sh",
+          "genesis.prerequisites.json",
           "policies/cargo_cache_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/generated_state_v0.1.json",
@@ -12949,10 +12959,10 @@
       ],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_green_front_door.sh",
-      "executionIdentitySha256": "79d56136a0fddb9063227bd223d8f01ae16c046aebe943f8b9a3c2fb93b99eb4",
+      "executionIdentitySha256": "c696525e2b5c896e0369bb40d2f24eea0bd10da5b0d47a2f36147935e9e0a1a0",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13708,6 +13718,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -13929,10 +13940,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_host_abi_conformance.sh",
-      "executionIdentitySha256": "860c4fd9f989f4f833ea54099378dd3b354ecad28b5b105cd18bc0fb39578de0",
+      "executionIdentitySha256": "6466f307236f05e28ff3f1dd3b3e1715c59366428c614be4555b07b7e876cc25",
       "expectedDurationSeconds": 600,
       "id": "gate/host-abi-conformance",
-      "inputIdentitySha256": "a44f50d5a106e9607eb728ca48d2da542c13a8b305982b838e58042234d00f06",
+      "inputIdentitySha256": "848f6ffcd625fa9b8b839ed8c97aa3bc3f6dd60fc62945924364bd7d1b1bb124",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -14051,10 +14062,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_host_bridge_fault_injection.sh",
-      "executionIdentitySha256": "210846d88875c52bfcbaed1915213d81ef0812c54ba9d8ba6432bb60c2a740f1",
+      "executionIdentitySha256": "99a9aa597a679a1bc67c85c341fd05cad7b1040f496a985baf59ad3c53b90b80",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "406c53a0ebbc798c6c7e6ac7acab7ca8f0e4eb7bdfb66d1113b3bd314e28f35b",
+      "inputIdentitySha256": "e824753733862d1ae7bb25ec4d7d9e2390f6c3ae5382dfc857509471c19548b1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -14114,10 +14125,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_hot_path_budgets.sh",
-      "executionIdentitySha256": "5237124a55911edff029538a0b761f81dc9be29c1432c79d63b12d8f92730aa5",
+      "executionIdentitySha256": "05300562e2b0cb900ba3e760c4551bfcafa84c0ded06cbf6fa20b79c0b5bb39d",
       "expectedDurationSeconds": 900,
       "id": "gate/hot-path-budgets",
-      "inputIdentitySha256": "06346c90cbfc0a6eb98cf0b5beacdf7de9193e6fbedc888a1dc0a85c3892a8d4",
+      "inputIdentitySha256": "80f75b2ad830a3bf6e9bfc1c26684c54b88da801f46a8be54162f662d4ed0d49",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -14241,10 +14252,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_large_workspace_agent_perf.sh",
-      "executionIdentitySha256": "fe7e1d5ff1a75a4b64d363e3c6b9bbbad6af6e4afe331dda71f0211d3b93a4ed",
+      "executionIdentitySha256": "11dcb18ddf3b101266b5d31f2a011f8efc2273a082339cac79cc76bef5a88407",
       "expectedDurationSeconds": 900,
       "id": "gate/large-workspace-agent-perf",
-      "inputIdentitySha256": "74fef91395cbc7d8774756311be1c0ba79da5b4155445682f0d465d5bbb22b9f",
+      "inputIdentitySha256": "abaabdff1e8babcad09ed754f6d95e96cc0815a5855fbbe1396a6edeb7ad037d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -14365,7 +14376,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -15121,6 +15132,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -15287,10 +15299,10 @@
       "dependencies": [],
       "diskBudgetMiB": 3072,
       "entrypoint": "scripts/check_no_user_panics_compiler.sh",
-      "executionIdentitySha256": "838c30e5ca71b65bc510148613edb76f98f0867fa95af910bcf3f3282304a7ec",
+      "executionIdentitySha256": "d8e1db277383038068fcbff74d03c0ca37b90514089ab49898f7fe7d9c3a5631",
       "expectedDurationSeconds": 300,
       "id": "gate/no-user-panics-compiler",
-      "inputIdentitySha256": "a3b0fa4cb1e6ac6230cc33d3bfef8dd25b34b4f79e35e34b089248a5458d475e",
+      "inputIdentitySha256": "7fc54b1f3970b4d0ba3af9ee6b4ae9d932cdbd0e99c682a113f7de0383bcf40a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -15401,10 +15413,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_perf_budgets.sh",
-      "executionIdentitySha256": "b345788edd56e45b86a71217b312c270df3332ea72148ef8898a5ab5a18ee562",
+      "executionIdentitySha256": "388075c094ad38a4e063ba523bb70d80abd66c4b0bcfb93d97d35c93d119dd93",
       "expectedDurationSeconds": 900,
       "id": "gate/perf-budgets",
-      "inputIdentitySha256": "ca9ec3fadbacda3c410b5227ef1a026a2278a7b2cf2cfaa7d3a1c6177018e811",
+      "inputIdentitySha256": "e87bbf8e2da618171899cfe968959c9b41fd321279e6306277e1ed05e68f1006",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -15585,7 +15597,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -16341,6 +16353,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -16561,10 +16574,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_production_cli_help_surface.sh",
-      "executionIdentitySha256": "a369dee7cd86efca54bcdb76bab7d9d3865d5e7fa652f80de422fcbfacc1025c",
+      "executionIdentitySha256": "a1d6ae9c63559d057ddc4689832ad5286a384ab1933d0458352746dd6902329a",
       "expectedDurationSeconds": 1800,
       "id": "gate/production-cli-help-surface",
-      "inputIdentitySha256": "227320a46ccb978d348446c96fb1b1aa6a461c4e245936e102b4a910b686c17a",
+      "inputIdentitySha256": "5252b9c3beb6c7aae8a55bc92babd4ddaa008f84f7c84dbfe37a199ae42efd4b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16632,10 +16645,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_production_cli_parse_surface.sh",
-      "executionIdentitySha256": "6ab2752a827abc218d4e341706989426f3c6f47350547f279d7f805f89b939dc",
+      "executionIdentitySha256": "5e6e80eb4e4f6c787c1e144d4c179ba95de28b9e1cfc60e144e0e06e2ae732dc",
       "expectedDurationSeconds": 1800,
       "id": "gate/production-cli-parse-surface",
-      "inputIdentitySha256": "ec109d7f1913bdb9f152f543271026fc8cc088bfa4ff56f1b3740bfd6ba5f833",
+      "inputIdentitySha256": "5289f182ee1b5fb1cc42f41967336aec57e20850b49cd172f06722c6d13a3c74",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16826,7 +16839,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "5aa81e46ee656bccd872f3b0e4ac13cf1543857aa3fb2d682025bd4314ea8d5e",
+      "inputIdentitySha256": "4bf390aea2b5acedd73f15a6c91a5de83d78645b5aece59c535a97e4eb984e66",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -16886,10 +16899,10 @@
       ],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_release_smoke.sh",
-      "executionIdentitySha256": "c59c9164fcc916fc8d61251191cdc71a6a10d69a8ba4569f47fee59fccbbe5b7",
+      "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "1cba41819892fdbe6e000592003c48ba9636adaf80eb39d517a64e4c69c650ea",
+      "inputIdentitySha256": "63b467307a0b16ad40287df9517824cd608b629e4b45bb49ada544725569dfe0",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -16964,10 +16977,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4352,
       "entrypoint": "scripts/check_remote_registry_runtime_parity.sh",
-      "executionIdentitySha256": "2223776b2b87ce6cef7717f47182edc16632a252d7edcab71d4e7ca43720a0ae",
+      "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "574c6a4311b108a4f79303dc7e624e836b5b1c4327aa418d1aaebe20e5daf448",
+      "inputIdentitySha256": "c7196b05a3e31075a941590186f4e5e8743afeba139dc2a504a9bc900eae6016",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17028,10 +17041,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_roadmap_baseline.sh",
-      "executionIdentitySha256": "f3072ed125d47fa84990eea51420eff5e8de990da1c19ea677a80cdc559cb8a3",
+      "executionIdentitySha256": "c67d34d8fa0d26cdac159125af00a1d6d4a744670b69c37f95f8354c0305918d",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "c4f3c904943d3e96342749b6309a6604a16b9cbdbea235107123c673dc5f617b",
+      "inputIdentitySha256": "2ac9f05063daca09382366a4bfba4703d0a8bb16bcfcf31837157f740b374c0d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17336,10 +17349,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_runtime_backend_feature_matrix.sh",
-      "executionIdentitySha256": "411acdd8ff5bcb6baa8ec2df73ce5794c6a409f52a405654eb8794d0c28715b3",
+      "executionIdentitySha256": "0742da9d20ca75cb0f56e002f06d02c0450af3f277aaf824e984cfa5719677a8",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "3fe42deabf8f595fcbd9d786399116d1026f7d694592c714c49fe0bf9ac4cb8c",
+      "inputIdentitySha256": "553dfbd76947b35d920ea022b5d659066ecabb8694f6adac0ea2b4b0af1415ba",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17388,7 +17401,7 @@
         "maxShards": 1,
         "mode": "none"
       },
-      "sourceSha256": "3eda8e129b7f4df3269de37490c27de6ccc905d8db21cc2dd475d844fd79077c",
+      "sourceSha256": "f1b2425c1097432302038fc225a466676a323b3d61ca9203c29d7c7073203c38",
       "tools": [
         "bash",
         "cargo",
@@ -17403,10 +17416,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_runtime_microbench_budgets.sh",
-      "executionIdentitySha256": "b8a91a6b094e77ff72ffd3489e8b331ad69c584bdf7e8cf6c76c35d7da64cced",
+      "executionIdentitySha256": "dc25d3a3da8b1ee786b963d05f4c1b84ead45a05f4a7b5b9f9628e3f7e12d573",
       "expectedDurationSeconds": 900,
       "id": "gate/runtime-microbench-budgets",
-      "inputIdentitySha256": "9ab6953085a809970464623f70fd2fe7adf3d3d609a57092916d9ff8a35a3f0b",
+      "inputIdentitySha256": "7c6d7a4dbdff213a75958ac8b503299fd61b612f50587e8e535482c2bfc035ee",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17474,10 +17487,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_runtime_workload_budgets.sh",
-      "executionIdentitySha256": "53c650c1b1df8a3497ec0b5ed898a514663fa574531eb27e107bfb9849cfe8b1",
+      "executionIdentitySha256": "83d7dcb48cd39e1d161ad38a609cc7ac2408398c3ecab34bede8a08ab4144db7",
       "expectedDurationSeconds": 900,
       "id": "gate/runtime-workload-budgets",
-      "inputIdentitySha256": "38369e19f60c26ace62264abc84ea8ea4bbc937bdbaf009dde6dfbd84bfaf3e2",
+      "inputIdentitySha256": "ad728e1d70f9e34c520d90690e88476cb7aa97d79a607803fc1402daa4c8eb98",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17593,10 +17606,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_artifact_fresh.sh",
-      "executionIdentitySha256": "609ed6b14b6c7fe42ac8b22ae0803b37077bbd432cd5d9e8f282dbedd5a0308a",
+      "executionIdentitySha256": "31a709e63915720b5c2578efcd4bd8b0a78b4a6c02f9b2960b7a22eff7d7ac73",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "62798289aa09be79a95311932c2adfbf2a56b563503786440b9bd03aba6dd478",
+      "inputIdentitySha256": "cf89ff9b0ffca26a9eaf0f8b3d937f3bb02c5734b29e367f2886e6fc24357885",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17724,10 +17737,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_dashboard_fresh.sh",
-      "executionIdentitySha256": "cd7f7c55184feca444293d3e3b66e16787d9423c3cc698d70ec8502fab9c243e",
+      "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "7442f7639a93ba14e1b65dc957990225179b8dad7189ccd36fb40c61e0dd3917",
+      "inputIdentitySha256": "26a5334e9843e324827b10c1c7b8f8338c451882795b4da9b29ba1898df2416b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17899,10 +17912,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_readiness_scorecard.sh",
-      "executionIdentitySha256": "3c59f5563f401456f832527d25ae39cadc599c6b657cf1dc5db78ca809057f48",
+      "executionIdentitySha256": "a75bef0c8614f9c2aef9d2bf07db0eb53ff40e153aea48f4e697466d4566dac0",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "bf1304faa6c894b3dee30e589b34f61218691b673775426673700d1fa30c3740",
+      "inputIdentitySha256": "73a8f324e87bb637f144a56f650823d334c1c1be92571ec95a0dd107c8662dce",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -18087,10 +18100,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_symbol_ownership.sh",
-      "executionIdentitySha256": "5692535f549231d6f04f489d0264b95b1ff1a54e6bf4f08be1915664a2669fab",
+      "executionIdentitySha256": "2267ce93b50fd79d51d2986a05c59a871e0bba7d8586850d442df8b18020be8e",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-symbol-ownership",
-      "inputIdentitySha256": "cc7a7189f1428dc5f4c60cf3822d91ad58ea97bb65140499b067dd107a8e46eb",
+      "inputIdentitySha256": "c1946cb0cfbd5934832ca74c5e685ec5415bf8311f34fb2c7ea686ad7359354c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -18155,7 +18168,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "77c4301aa039d6881fe73d8d76b99069ceaf0c1ac2e5757f1eef55f3ac69a1c9",
+      "inputIdentitySha256": "8cd3b79723650f90fd40a31d74398cc4064a7518a2f914bde37f8866e32f2a3a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -18426,10 +18439,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_supply_chain.sh",
-      "executionIdentitySha256": "db7b2229f872da6a14ab9c64687e229fd178ae2872a60ce0ddbb03b06d1eb8cd",
+      "executionIdentitySha256": "1b8238b4729d2d38e8e227aa7a987f0a30f864a689511d80eb0494af56165fc7",
       "expectedDurationSeconds": 1800,
       "id": "gate/supply-chain",
-      "inputIdentitySha256": "69c9427b595884b32fab14ffbd4dcd172a172d1cc80aaf78c97b1a7934fbc2b7",
+      "inputIdentitySha256": "b44f6b9f44f8ef071acca7bf5df3018d961c03b32e33d2016f0d5b6dcdaa0363",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -18490,10 +18503,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_task_concurrency_stress.sh",
-      "executionIdentitySha256": "7d5022818a20f8a4cfc7b4e9e71d29986f8bae2dd1b819cc27e93a30d3928a37",
+      "executionIdentitySha256": "f73ba180441ea65e9b9ae08bae08669623919ff88a37bffa67c0f0b1f29ce54d",
       "expectedDurationSeconds": 900,
       "id": "gate/task-concurrency-stress",
-      "inputIdentitySha256": "3ed2047d4423639aadb22ca7e97d11b954f0b5e80f89afe031789b5186777696",
+      "inputIdentitySha256": "3c1fc3ef4f90e2c30b430be94cd7ff828f7ef79541aca8bda9d0128479607e51",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -18578,7 +18591,7 @@
       "executionIdentitySha256": "a8b7cf18f43dda8ef1a3ed6de4427e9080a9cf09e57ebddc7e43f48d4a952251",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19334,6 +19347,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -19614,10 +19628,10 @@
       "dependencies": [],
       "diskBudgetMiB": 5120,
       "entrypoint": "scripts/check_upgrade_plan_health.sh",
-      "executionIdentitySha256": "e8e757de48045fced1221b3fc7473cd73b04a83a8967e06cefb864cae08db557",
+      "executionIdentitySha256": "bbeead5624ce4e8f5e5746a4eceaf1aea16e54cd9df974fd8c36f095f8c1bbfd",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "6587ea67b7c23dd9b9c9e74eaa9c6a83c046896e47acb225882a0440194896a2",
+      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20373,6 +20387,7 @@
           "scripts/render_gpu_device_conformance_matrix_report.sh",
           "scripts/render_gpu_gfx_headroom_conformance_report.sh",
           "scripts/render_gpu_xr_productization_kits_report.sh",
+          "scripts/render_health_profile_evidence_bundle.sh",
           "scripts/render_host_api_evolution_contract_report.sh",
           "scripts/render_host_bridge_fault_injection_report.sh",
           "scripts/render_hot_path_budgets_report.sh",
@@ -20535,6 +20550,7 @@
         "cargo",
         "cargo-nextest",
         "git",
+        "node",
         "python",
         "rustc"
       ]
@@ -20597,10 +20613,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_vcs_selfhost_contract.sh",
-      "executionIdentitySha256": "49adf72ab65f7da07d9047502fc19aadf07eb6260c2ab3f4f2751dc0d99430d5",
+      "executionIdentitySha256": "ee98150995cf06d1154b98f37201d1e633fcbc1a82171a3ab4834069bfaed5bc",
       "expectedDurationSeconds": 600,
       "id": "gate/vcs-selfhost-contract",
-      "inputIdentitySha256": "2eb55916911d8805f118ddef645a3033c4ba48267c2e20cd08fc5ef85eb4b481",
+      "inputIdentitySha256": "f697a9f04683006344127aed38bc214e50929118fdd39db34bef12e05eff42ca",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20732,10 +20748,10 @@
       ],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_versioning_release_hygiene.sh",
-      "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
+      "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "722e2d0e5bc7c16773848ce246f668313f717c5fe4cbe8d61d5faa4e684d968c",
+      "inputIdentitySha256": "432e032eb86d82b2f969e16d3ace34f6e6f68cca914f358446f7999e63943afd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20823,10 +20839,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_warm_protocol_contract.sh",
-      "executionIdentitySha256": "7776fbff6af0152abcde15ca471eef469d27deb238543e64f800053e54e71ee0",
+      "executionIdentitySha256": "d9b4fcf075af51ebd5bb1e2f2e57e31eaa5be6de51d2e2851cf20dff0cc1b5d5",
       "expectedDurationSeconds": 600,
       "id": "gate/warm-protocol-contract",
-      "inputIdentitySha256": "4d233d7368b5c1cff8b6923f19926f3f38b03f8257fd7904a903b67168eb5f6d",
+      "inputIdentitySha256": "16aaa890a130693de9d3e52676e2abaea1c250ebc33ff7cc86bc96ff88b9a128",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20917,10 +20933,10 @@
       "dependencies": [],
       "diskBudgetMiB": 8192,
       "entrypoint": "scripts/check_wasm_production_surface.sh",
-      "executionIdentitySha256": "9765dbd927657766085f5eff0aa963b8fefc264912bd2d7eb116bc5c29eaaad7",
+      "executionIdentitySha256": "5371ef5a491e4639734b532de910f8f955d8cb1dc4eab7aa2e781e399d67cad5",
       "expectedDurationSeconds": 1800,
       "id": "gate/wasm-production-surface",
-      "inputIdentitySha256": "12442beaa7dd1abfccab5e80728e388b26d5a7ad803fdca7204c9a045b11a6c3",
+      "inputIdentitySha256": "d08d860504bbacd957d0d2d32ec5a4d31d36c4f9166ea4f94937c882df3e2e51",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20982,12 +20998,13 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_webxr_browser_conformance.sh",
-      "executionIdentitySha256": "c03f2b0d84c339789e748b1d2e4ca58c3b5b16d47773a7439d81d1c58bace221",
+      "executionIdentitySha256": "fac716fb1bf3d09ace84753889af7cb4a0aae230ddead596059ff262d80f89dd",
       "expectedDurationSeconds": 15,
       "id": "gate/webxr-browser-conformance",
-      "inputIdentitySha256": "196b1074cd06d8de53346d1286d2ac0e643c251a430bd7dcb919523a70893ab0",
+      "inputIdentitySha256": "1b236a6bce626a47e7e315bff2283bba4b9568989dfce13e4144a693f8c73f49",
       "inputs": {
         "paths": [
+          "genesis.prerequisites.json",
           "scripts/check_webxr_browser_conformance.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/webxr_browser_conformance.mjs"
@@ -21036,9 +21053,10 @@
       "executionIdentitySha256": "e58c64fe2ff5007a59094e507df7fa0ae22396111572e830899d04a4b48f1317",
       "expectedDurationSeconds": 15,
       "id": "gate/webxr-browser-conformance-lane",
-      "inputIdentitySha256": "301a5fc35734205ef88f35f9c931a4f242649d9898cb1e3a3bdd2fc2e4af531b",
+      "inputIdentitySha256": "9a41850f3dea8c11f389421513cc3b8fd6157f68e2b40cfa442f081958f1a95b",
       "inputs": {
         "paths": [
+          "genesis.prerequisites.json",
           "scripts/check_webxr_browser_conformance_lane.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/update_webxr_browser_conformance_report.sh",
@@ -21087,7 +21105,7 @@
       "executionIdentitySha256": "eaa4b0231722b1533de9a3a6cc7bcdc46851f0c26fc8157a30582de173b3e99b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "9877516140e16f50913ba1bdc5fe103c6aeab099cca2b8d8955d7aa346c247a9",
+      "inputIdentitySha256": "44e3f1af24549cc81e4a79b2861554b2dd0ac01b7bbb8e41579a96905c3302bf",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21126,6 +21144,7 @@
           "examples/agent_time_control_workflow/workflow.sh",
           "examples/agent_ui_app_stack_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow.sh",
+          "genesis.prerequisites.json",
           "policies/assurance/profile_packs.toml",
           "policies/cargo_cache_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
@@ -21210,7 +21229,7 @@
       "executionIdentitySha256": "4266b100069f929eab37aa86eab8f862d2b13ab9f3876e438da1fed9cef06ab4",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "26314f542b08e16a25a7bb3ca8cb23670157921e80ab6f1b5303314a556277e6",
+      "inputIdentitySha256": "b78cf7a71c38d4184015b6c2ea016dc5f9949fb19497dd508487af29e878c8c4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21249,6 +21268,7 @@
           "examples/agent_time_control_workflow/workflow.sh",
           "examples/agent_ui_app_stack_workflow/workflow.sh",
           "examples/agent_xr_runtime_workflow/workflow.sh",
+          "genesis.prerequisites.json",
           "policies/assurance/profile_packs.toml",
           "policies/cargo_cache_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
@@ -21337,7 +21357,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "c9cb54c8e5fa4ea7ee44f8ce6e76630ee0e562ac9c176c2a80f6c85140bd424e",
+      "inputIdentitySha256": "abaa2cd6077eaf51d1ef80eeec1e38a64dba5dc0b3a0f1bda4c4b9b83ad5cd97",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -21485,7 +21505,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "a42ac33a8ce97d64b420108bf2d85468f317fa5fc3787118e32bc7e0f0fb0563"
+        "sha256": "c92e580ad80e640d1928d0dd60ccc7c6abf3ddf26bdf806ea42cf1c090453f58"
       },
       {
         "path": "genesis.prerequisites.json",
@@ -21493,7 +21513,7 @@
       },
       {
         "path": "policies/gates_v0.1.json",
-        "sha256": "bce0ec9ef42d7192e3886fb66bb8811499f5a4b1a8fd17e936a2982a225c45e8"
+        "sha256": "878084d087fe82d7be97dc78359c1b37e263159c67d704880d6cf09422c4b576"
       }
     ],
     "governanceBudget": {
@@ -21501,19 +21521,19 @@
         "checkEntrypoints": 125,
         "declaredDiskMiB": 425472,
         "declaredDurationSeconds": 63420,
-        "renderEntrypoints": 58,
+        "renderEntrypoints": 59,
         "updateEntrypoints": 79
       },
       "ceilings": {
         "checkEntrypoints": 124,
-        "renderEntrypoints": 58,
+        "renderEntrypoints": 59,
         "updateEntrypoints": 78
       },
       "current": {
         "checkEntrypoints": 124,
         "declaredDiskMiB": 421376,
         "declaredDurationSeconds": 62850,
-        "renderEntrypoints": 58,
+        "renderEntrypoints": 59,
         "updateEntrypoints": 78
       },
       "delta": {

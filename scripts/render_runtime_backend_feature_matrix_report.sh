@@ -14,6 +14,8 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 REPORT_OUT="$1"
 HISTORY_OUT="$2"
 HISTORY_INPUT="$3"
+EPHEMERAL_TARGET_REQUEST="${GENESIS_RUNTIME_BACKEND_MATRIX_EPHEMERAL_TARGET_DIR:-}"
+EPHEMERAL_TARGET_DIR=""
 DISK_MIN_FREE_KB="${GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB:-2097152}"
 DISK_STRICT_MODE="${GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE:-auto}"
 AUTO_RECLAIM="${GENESIS_RUNTIME_BACKEND_MATRIX_AUTO_RECLAIM:-0}"
@@ -29,6 +31,9 @@ STAGE_AUTO_RECLAIM="${GENESIS_RUNTIME_BACKEND_MATRIX_STAGE_AUTO_RECLAIM:-0}"
 TMP_DIR="$(mktemp -d)"
 STAGE_FILE="$TMP_DIR/stages.tsv"
 cleanup() {
+  if [[ -n "$EPHEMERAL_TARGET_DIR" ]]; then
+    rm -rf "$EPHEMERAL_TARGET_DIR"
+  fi
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -74,11 +79,20 @@ bash scripts/check_disk_headroom.sh \
   --strict "$DISK_STRICT_MODE"
 export CARGO_PROFILE_DEV_DEBUG="$MATRIX_DEV_DEBUG"
 export CARGO_INCREMENTAL="$MATRIX_INCREMENTAL"
-genesis_clear_resolved_cargo_target_dir "runtime-backend-feature-matrix"
-genesis_configure_cargo_target_dir \
-  "$ROOT_DIR" \
-  "runtime-backend-feature-matrix" \
-  root-host
+if [[ -n "$EPHEMERAL_TARGET_REQUEST" ]]; then
+  mkdir -p "$(dirname "$REPORT_OUT")"
+  genesis_configure_ephemeral_cargo_target_dir \
+    "runtime-backend-feature-matrix" \
+    "$EPHEMERAL_TARGET_REQUEST" \
+    "$(dirname "$REPORT_OUT")"
+  EPHEMERAL_TARGET_DIR="$CARGO_TARGET_DIR"
+else
+  genesis_clear_resolved_cargo_target_dir "runtime-backend-feature-matrix"
+  genesis_configure_cargo_target_dir \
+    "$ROOT_DIR" \
+    "runtime-backend-feature-matrix" \
+    root-host
+fi
 
 now_ms() {
   python3 - <<'PY'
