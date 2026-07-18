@@ -5,10 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
-genesis_configure_cargo_target_dir \
-  "$ROOT_DIR" \
-  "test-changed-fast" \
-  root-host
 
 BASE_REF="${GENESIS_CHANGED_BASE:-}"
 RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
@@ -141,12 +137,6 @@ else
   REPORT_DISPLAY="$REPORT_PATH"
 fi
 
-# GB-2 covers the complete changed-file gate, including impact planning and disk preflight.
-GENESIS_CHANGED_GATE_START_NS="$(python3 - <<'PY'
-import time
-print(time.time_ns())
-PY
-)"
 generated_target_bytes() {
   if [[ ! -e "$CARGO_TARGET_DIR" ]]; then
     printf '0\n'
@@ -156,12 +146,16 @@ generated_target_bytes() {
   # high-cardinality cache. This loop owns exactly one content-addressed target.
   du -sk "$CARGO_TARGET_DIR" | awk '{ print $1 * 1024 }'
 }
-GENESIS_CHANGED_GATE_START_GENERATED_BYTES="$(generated_target_bytes)"
 GENESIS_CHANGED_GATE_DISK_BUDGET_BYTES=1073741824
 GENESIS_CHANGED_GATE_FALLBACK_DISK_BUDGET_BYTES=3221225472
-export CARGO_NET_OFFLINE=true
-
-bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-changed-fast" --strict "$STRICT_DISK_MODE"
+if (( DRY_RUN == 0 )); then
+  # GB-2 covers the complete changed-file gate, including impact planning.
+  GENESIS_CHANGED_GATE_START_NS="$(python3 - <<'PY'
+import time
+print(time.time_ns())
+PY
+)"
+fi
 
 resolve_base_ref() {
   if [[ -n "$BASE_REF" ]]; then
@@ -276,6 +270,16 @@ if (( DRY_RUN == 1 )); then
   printf '  %s\n' "${COMMANDS[@]}"
   exit 0
 fi
+
+# Dry-run planning must not admit, lease, or reclaim a Cargo target.
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "test-changed-fast" \
+  root-host
+GENESIS_CHANGED_GATE_START_GENERATED_BYTES="$(generated_target_bytes)"
+export CARGO_NET_OFFLINE=true
+
+bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-changed-fast" --strict "$STRICT_DISK_MODE"
 
 mkdir -p "$(dirname "$REPORT_PATH")"
 mkdir -p "$(dirname "$HISTORY_PATH")"

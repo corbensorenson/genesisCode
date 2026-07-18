@@ -408,6 +408,8 @@ fn changed_fast_supports_explicit_strict_disk_mode() {
 #[test]
 fn changed_fast_ambiguous_governance_change_escalates_without_empty_package_arg() {
     let root = repo_root();
+    let temp = tempfile::tempdir().expect("create changed-fast dry-run fixture");
+    let sentinel_target = temp.path().join("sentinel-target");
     let changed_fast = fs::read_to_string(root.join("scripts/test_changed_fast.sh"))
         .expect("read test_changed_fast.sh");
     assert!(
@@ -423,6 +425,8 @@ fn changed_fast_ambiguous_governance_change_escalates_without_empty_package_arg(
              GENESIS_TEST_CHANGED_FILES_OVERRIDE=$'scripts/check_doc_hygiene.sh\\ndocs/INDEX.md' \
              bash scripts/test_changed_fast.sh --dry-run",
         )
+        .env("CARGO_TARGET_DIR", &sentinel_target)
+        .env_remove("GENESIS_CARGO_CACHE_RESOLVED")
         .current_dir(&root)
         .output()
         .expect("run test_changed_fast dry-run with non-crate override");
@@ -444,6 +448,10 @@ fn changed_fast_ambiguous_governance_change_escalates_without_empty_package_arg(
     assert!(
         stdout.contains("bash scripts/test_fast_full.sh"),
         "ambiguous governance impact must escalate to the full fast profile: {stdout}"
+    );
+    assert!(
+        !sentinel_target.exists(),
+        "changed-fast dry-run must not materialize or reclaim Cargo targets"
     );
 }
 
