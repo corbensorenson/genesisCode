@@ -30,6 +30,7 @@ DEFAULT_TESTS=(
   ai_iteration_slo_regression
   default_iteration_workflow
   shell_gate_regressions
+  changed_fast_perf_regressions
   persistent_sharing_stress
 )
 
