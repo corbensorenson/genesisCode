@@ -166,7 +166,7 @@ update_benchmark_run() {
 }
 
 update_protocol_fixtures() {
-  atomic_render docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json \
+  atomic_render docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json \
     python3 scripts/lib/genesisbench_open_agent.py render-authority
   python3 scripts/lib/genesisbench_protocol.py --refresh-profile
   python3 scripts/lib/genesisbench_protocol.py --refresh-fixtures

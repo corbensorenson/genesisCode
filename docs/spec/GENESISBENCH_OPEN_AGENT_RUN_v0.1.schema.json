@@ -74,7 +74,7 @@
         "beforeInventory": {"items": {"$ref": "#/$defs/artifact"}, "type": "array"},
         "sourceSnapshotAfterIdentitySha256": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
         "sourceSnapshotBeforeIdentitySha256": {"$ref": "#/$defs/hash"},
-        "violations": {"items": {"enum": ["capture-limit", "malformed-event-transcript", "noneditable-input-drift", "nonzero-exit", "repository-invalid", "timeout", "workspace-invalid", "workspace-path-drift"]}, "type": "array", "uniqueItems": true}
+        "violations": {"items": {"enum": ["capture-limit", "malformed-event-transcript", "noneditable-input-drift", "nonzero-exit", "provider-no-request", "provider-policy-rejection", "repository-invalid", "timeout", "workspace-invalid", "workspace-path-drift"]}, "type": "array", "uniqueItems": true}
       },
       "required": ["beforeInventory", "afterInventory", "afterInventoryStatus", "sourceSnapshotBeforeIdentitySha256", "sourceSnapshotAfterIdentitySha256", "violations"],
       "type": "object"

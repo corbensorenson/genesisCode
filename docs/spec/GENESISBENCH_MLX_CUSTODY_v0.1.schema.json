@@ -1,0 +1,139 @@
+{
+  "$id": "https://genesiscode.dev/schemas/genesisbench-mlx-custody-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter": {"$ref": "#/$defs/adapter"},
+    "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+    "inventoryIdentitySha256": {"$ref": "#/$defs/hash"},
+    "isolation": {"$ref": "#/$defs/isolation"},
+    "kind": {"const": "genesis/genesisbench-mlx-custody-v0.1"},
+    "license": {"$ref": "#/$defs/license"},
+    "model": {"$ref": "#/$defs/model"},
+    "policy": {"$ref": "#/$defs/policy"},
+    "preselectionIdentitySha256": {"$ref": "#/$defs/hash"},
+    "runtime": {"$ref": "#/$defs/runtime"},
+    "version": {"const": "0.1.0"}
+  },
+  "required": ["adapter", "contentIdentitySha256", "inventoryIdentitySha256", "isolation", "kind", "license", "model", "policy", "preselectionIdentitySha256", "runtime", "version"],
+  "title": "GenesisBench MLX custody manifest v0.1",
+  "type": "object",
+  "$defs": {
+    "adapter": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {"items": {"$ref": "#/$defs/file"}, "maxItems": 16, "minItems": 1, "type": "array"},
+        "identitySha256": {"$ref": "#/$defs/hash"},
+        "protocol": {"const": "responses-to-mlx-chat-completions-v0.1"}
+      },
+      "required": ["files", "identitySha256", "protocol"],
+      "type": "object"
+    },
+    "distribution": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {"items": {"$ref": "#/$defs/file"}, "maxItems": 20000, "minItems": 1, "type": "array"},
+        "name": {"$ref": "#/$defs/id"},
+        "version": {"$ref": "#/$defs/id"}
+      },
+      "required": ["files", "name", "version"],
+      "type": "object"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"maximum": 2097152, "minimum": 1, "type": "integer"},
+        "path": {"$ref": "#/$defs/path"},
+        "role": {"$ref": "#/$defs/id"},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "sourceRepository": {"$ref": "#/$defs/repository"},
+        "sourceRevision": {"$ref": "#/$defs/id"},
+        "sourceUrl": {"maxLength": 2048, "pattern": "^https://huggingface\\.co/", "type": "string"}
+      },
+      "required": ["bytes", "path", "role", "sha256", "sourceRepository", "sourceRevision", "sourceUrl"],
+      "type": "object"
+    },
+    "file": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"minimum": 0, "type": "integer"},
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/hash"}
+      },
+      "required": ["bytes", "path", "sha256"],
+      "type": "object"
+    },
+    "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "id": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$", "type": "string"},
+    "isolation": {
+      "additionalProperties": false,
+      "properties": {
+        "acceleratorPolicy": {"const": "apple-metal-system-graphics"},
+        "backend": {"const": "darwin-sandbox-exec-v0.1"},
+        "failClosedOnUnsupportedHost": {"const": true},
+        "modelRootForwardedToAgent": {"const": false},
+        "network": {"const": "two-exact-loopback-ports-no-other-network"},
+        "readPolicy": {"const": "closed-system-runtime-model-stage-roots"},
+        "writePolicy": {"const": "closed-ephemeral-stage-roots"}
+      },
+      "required": ["acceleratorPolicy", "backend", "failClosedOnUnsupportedHost", "modelRootForwardedToAgent", "network", "readPolicy", "writePolicy"],
+      "type": "object"
+    },
+    "license": {
+      "additionalProperties": false,
+      "properties": {
+        "benchmarkUseCompatible": {"const": true},
+        "evidence": {"items": {"$ref": "#/$defs/evidence"}, "maxItems": 2, "minItems": 2, "type": "array"},
+        "id": {"$ref": "#/$defs/id"}
+      },
+      "required": ["benchmarkUseCompatible", "evidence", "id"],
+      "type": "object"
+    },
+    "model": {
+      "additionalProperties": false,
+      "properties": {
+        "artifactIdentitySha256": {"$ref": "#/$defs/hash"},
+        "bytes": {"minimum": 1, "type": "integer"},
+        "fileCount": {"minimum": 1, "type": "integer"},
+        "files": {"items": {"$ref": "#/$defs/file"}, "maxItems": 4096, "minItems": 1, "type": "array"},
+        "id": {"$ref": "#/$defs/id"},
+        "repository": {"$ref": "#/$defs/repository"},
+        "revision": {"$ref": "#/$defs/id"},
+        "role": {"enum": ["smallest-adapter-viable", "strongest-host-fit"]}
+      },
+      "required": ["artifactIdentitySha256", "bytes", "fileCount", "files", "id", "repository", "revision", "role"],
+      "type": "object"
+    },
+    "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._+@/-]{1,768}$", "type": "string"},
+    "policy": {
+      "additionalProperties": false,
+      "properties": {
+        "authorizationHeadersAllowed": {"const": false},
+        "hiddenRetriesAllowed": {"const": false},
+        "maxBackendRequestsPerAgentTurn": {"const": 1},
+        "serverFallbackAllowed": {"const": false},
+        "streamRetries": {"const": 0},
+        "trustRemoteCodeAllowed": {"const": false},
+        "webSearchAllowed": {"const": false}
+      },
+      "required": ["authorizationHeadersAllowed", "hiddenRetriesAllowed", "maxBackendRequestsPerAgentTurn", "serverFallbackAllowed", "streamRetries", "trustRemoteCodeAllowed", "webSearchAllowed"],
+      "type": "object"
+    },
+    "repository": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._/@+-]{0,191}$", "type": "string"},
+    "runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"minimum": 1, "type": "integer"},
+        "distributions": {"items": {"$ref": "#/$defs/distribution"}, "maxItems": 512, "minItems": 2, "type": "array"},
+        "executableSha256": {"$ref": "#/$defs/hash"},
+        "fileCount": {"maximum": 20000, "minimum": 1, "type": "integer"},
+        "implementation": {"$ref": "#/$defs/id"},
+        "pythonVersion": {"$ref": "#/$defs/id"},
+        "runtimeIdentitySha256": {"$ref": "#/$defs/hash"},
+        "totalDistributionBytes": {"maximum": 4294967296, "minimum": 1, "type": "integer"}
+      },
+      "required": ["bytes", "distributions", "executableSha256", "fileCount", "implementation", "pythonVersion", "runtimeIdentitySha256", "totalDistributionBytes"],
+      "type": "object"
+    }
+  }
+}
