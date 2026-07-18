@@ -27,6 +27,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json`
+- `docs/spec/GENESISBENCH_LOCAL_MODELS_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_TOOL_ARCHIVE_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json`
@@ -89,6 +90,8 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `examples/canonical_language/v0.1/suite.json`
 - `benchmarks/agent_tasks/v0.1/suite.json`
 - `benchmarks/genesisbench/v0.1/README.md`
+- `benchmarks/genesisbench/v0.1/local-models/preselection.json`
+- `benchmarks/genesisbench/v0.1/local-models/inventory.json`
 - `benchmarks/genesisbench/v0.1/contamination.fixture.json`
 - `benchmarks/genesisbench/v0.1/eligibility.fixture.json`
 - `benchmarks/genesisbench/v0.1/reference-agent/retrieval.json`
@@ -118,6 +121,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `scripts/lib/genesisbench_front_door.py`
 - `scripts/lib/genesisbench_open_agent.py`
 - `scripts/lib/genesisbench_open_agent_report.py`
+- `scripts/lib/genesisbench_local_models.py`
 - `scripts/lib/genesisbench_registry.py`
 - `scripts/lib/genesisbench_baselines.py`
 - `scripts/lib/genesisbench_construct_validity.py`
@@ -153,6 +157,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - Use `genesisbench-reference-agent-v0.1` unchanged for Cold Acquisition. Its system prompt, typed assembly, integer-only retrieval, one-agent/no-provider-tool policy, semantic transaction loop, finite budgets, and complete trace contract are content-addressed. Compare its eight ablations only as predeclared within-lineage pairs across the same nine lineages; 72 condition cells are not 72 independent samples. Validate or compile a plan with `python3 scripts/lib/genesisbench_reference_agent.py --check --self-test` or `--plan --case <id> --ablation <id>`.
 - Execute transport-neutral benchmark runs only through `genesis bench`. Validate the closed five-class adapter profile with `python3 scripts/lib/genesisbench_front_door.py check --self-test`; retain failed attempts, never retry invisibly, replay without model or adapter access, and use deterministic `.gcbundle` plus local immutable outbox submission. An execution bundle is not ranked until R1.4.m independently validates, rescores, signs, and binds track, contamination, cohort, and submitter evidence.
 - Predeclare repository-editing systems through `genesis bench agent-plan` before inference and execute them only through the content-addressed Open Agent harness. Keep Codex CLI Luna `xhigh`, Codex-over-local-runtime, fixed-scaffold raw models, and adapted systems in separate cohorts. Never call a mutable provider alias immutable, never omit a local model artifact digest, and never promote an Open Agent run whose frozen repository, workspace closure, one-attempt policy, process-group kill, transcript, or model-free replay evidence fails.
+- Before any local-model quality observation, validate the score-blind candidate selection, exact revision-pinned top-level artifact inventory, retained license/model-card evidence, adapter compatibility, and no-download/no-mutation claim with `python3 scripts/lib/genesisbench_local_models.py --check --self-test`. Reverify the unavailable-for-replay bytes against explicitly bound local roots before execution; this preselection authority is not a benchmark run, score, or release claim.
 - Declare exactly one content-addressed GenesisBench track. Use `cold-acquisition` only for an unadapted model under the fixed reference scaffold, `open-agent` for disclosed custom orchestration without claimed adaptation, `genesis-adapted` only with a public lineage-manifest identity, and `embedded-local` only with offline inference plus measured or hard-enforced combined model/runtime memory evidence. Never compare or aggregate across track, scaffold, profile, epoch, context/tool, attempt-policy, or hardware-class cohort keys.
 - Analyze results only through `GENESISBENCH_ANALYSIS_PLAN_v0.1` and `scripts/lib/genesisbench_analysis.py`. Use one primary condition per lineage, keep repeated-condition summaries clustered by lineage, publish solved/unsolved/invalid/abstained/missing denominators, Wilson uncertainty, paired exact effects, and Holm correction, and emit `indeterminate` rather than unsupported pairwise decimal ranks. Public conformance observations are always unranked and cannot trigger saturation.
 - Run real-model baselines only from a locked `GENESISBENCH_BASELINE_PREDECLARATION_v0.1` under `GENESISBENCH_BASELINE_PROTOCOL_v0.1`. Complete the nine-task-class reality gate before matrix expansion, bind the matrix predeclaration to that authentic publication, preserve every expected attempt or explicit missing cell, validate authentic closed bundles under one evidence root, report pass@1 separately from bounded pass@k, choose potential teachers per task class from exact verified bundle trajectories, and never let a synthetic fixture satisfy the gate or let cost improve rank.

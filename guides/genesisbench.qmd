@@ -31,6 +31,7 @@ The normative authorities are:
 - [Open Agent campaign-report schema](../docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json)
 - [Open Agent predeclaration schema](../docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json)
 - [Open Agent run schema](../docs/spec/GENESISBENCH_OPEN_AGENT_RUN_v0.1.schema.json)
+- [Local-model preselection and inventory schema](../docs/spec/GENESISBENCH_LOCAL_MODELS_v0.1.schema.json)
 - [Closed adapter profile](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.json)
 - [Closed adapter-profile schema](../docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json)
 - [Execution-run schema](../docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json)
@@ -171,7 +172,15 @@ genesis --json --selfhost-artifact selfhost/toolchain.gc bench agent-replay \
 
 The campaign is one immutable commitment to every reality-gate case, shared model/runtime/capability/resource facts, non-selective stop rules, and the expected attempt count. Each attempt must bind that campaign before execution. The v0.2 harness stages outside the repository ancestry, reconstructs and byte-checks the frozen source snapshot under a read-only input root, and deterministically tears down the protected snapshot after atomically publishing evidence. Only the case inputs are writable. One ephemeral JSONL Codex attempt runs with no resume, hidden retry, approval, or additional writable root. The post-run audit rejects source changes, symlinks, extra candidate paths, non-editable drift, malformed events, timeout, capture overflow, or nonzero exit. Replay validates retained evidence and independently rescores without resolving the Codex executable or contacting the model.
 
-For local comparisons, use `--runner codex-cli-local`, select `--local-provider lmstudio` or `ollama`, and bind `--model-artifact-sha256`. Hosted Luna and each local model/runtime/artifact combination are distinct cohorts. Complete one predeclared small-case reality gate across all nine task classes before spending on the full 27-condition matrix.
+The retained v0.4 schema can describe `lmstudio` or `ollama`, but local score-producing use is currently prohibited. A July 18 readiness audit proved that Codex's LM Studio path attempted provider-managed download instead of consuming the preselected offline MLX snapshot; an unisolated custom provider received ambient ChatGPT authorization and retried a failing request five times; and the inner `workspace-write` sandbox does not prove read isolation from unrelated host files. These are harness defects, not model failures. Do not disguise an MLX endpoint as LM Studio or publish a local result from v0.4.
+
+The score-blind preselection is still reproducible:
+
+```bash
+python3 scripts/lib/genesisbench_local_models.py --check --self-test
+```
+
+It binds five cached snapshots and revision-pinned license/model-card evidence, selecting Apache-2.0 Qwen3 4B 4-bit and Qwen3 8B 4-bit before any quality score. Local execution waits for the successor authority to provide a byte-bound Responses-to-MLX adapter, auth-free ephemeral homes, zero transport retries, disabled ambient web/multi-agent/plugin surfaces, exact observed scaffold binding, an outer filesystem/network allowlist, and hard adapter/model-server cancellation and reaping. Each model/runtime/artifact/scaffold/hardware combination remains a distinct cohort, and each must complete one nine-class reality gate before any 27-condition expansion.
 
 The retained July 17 Luna campaign completed all nine expected attempts, and all nine validate and replay. The provider rejected `luna` as unsupported for the ChatGPT-backed Codex account before task execution, so the result is an authentic unranked availability failure, not a GenesisCode capability score. Its report also records that v0.1 discovered a repository skill through parent traversal. The 27-condition expansion is therefore forbidden; v0.2 fixes ancestry isolation and temporary-snapshot cleanup without retrying or rewriting those results.
 

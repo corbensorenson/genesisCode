@@ -2,3 +2,6 @@
 # add noise for AI-agent editing loops. Keep source-of-truth files reviewable instead.
 selfhost/toolchain.gc -diff
 prelude/prelude.gc -diff
+
+# Retained third-party cards and licenses are content-addressed verbatim evidence.
+benchmarks/genesisbench/v0.1/local-models/upstream/** -text -diff

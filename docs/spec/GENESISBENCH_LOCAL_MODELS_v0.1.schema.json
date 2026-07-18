@@ -1,0 +1,196 @@
+{
+  "$defs": {
+    "candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "adapterCompatible": {"type": "boolean"},
+        "evidence": {
+          "items": {"$ref": "#/$defs/evidence"},
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "format": {"$ref": "#/$defs/id"},
+        "id": {"$ref": "#/$defs/id"},
+        "license": {
+          "additionalProperties": false,
+          "properties": {
+            "benchmarkUseCompatible": {"type": "boolean"},
+            "id": {"$ref": "#/$defs/id"}
+          },
+          "required": ["benchmarkUseCompatible", "id"],
+          "type": "object"
+        },
+        "parameterClass": {"$ref": "#/$defs/id"},
+        "repository": {"$ref": "#/$defs/id"},
+        "revision": {"$ref": "#/$defs/id"},
+        "selection": {
+          "additionalProperties": false,
+          "properties": {
+            "reasonCodes": {
+              "items": {"$ref": "#/$defs/id"},
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "role": {
+              "enum": [null, "smallest-adapter-viable", "strongest-host-fit"]
+            },
+            "status": {"enum": ["not-selected", "selected"]}
+          },
+          "required": ["reasonCodes", "role", "status"],
+          "type": "object"
+        },
+        "trustRemoteCode": {"type": "boolean"}
+      },
+      "required": [
+        "adapterCompatible",
+        "evidence",
+        "format",
+        "id",
+        "license",
+        "parameterClass",
+        "repository",
+        "revision",
+        "selection",
+        "trustRemoteCode"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"maximum": 2097152, "minimum": 1, "type": "integer"},
+        "path": {"$ref": "#/$defs/path"},
+        "role": {"enum": ["base-license", "quantized-model-card"]},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "sourceRepository": {"$ref": "#/$defs/id"},
+        "sourceRevision": {"$ref": "#/$defs/id"},
+        "sourceUrl": {
+          "pattern": "^https://huggingface[.]co/",
+          "type": "string"
+        }
+      },
+      "required": ["bytes", "path", "role", "sha256", "sourceRepository", "sourceRevision", "sourceUrl"],
+      "type": "object"
+    },
+    "file": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"minimum": 0, "type": "integer"},
+        "path": {
+          "maxLength": 255,
+          "minLength": 1,
+          "pattern": "^[^/\\\\]+$",
+          "type": "string"
+        },
+        "sha256": {"$ref": "#/$defs/hash"}
+      },
+      "required": ["bytes", "path", "sha256"],
+      "type": "object"
+    },
+    "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "id": {
+      "maxLength": 192,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@+-]*$",
+      "type": "string"
+    },
+    "inventory": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {"$ref": "#/$defs/inventoryCandidate"},
+          "minItems": 2,
+          "type": "array"
+        },
+        "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+        "kind": {"const": "genesis/genesisbench-local-model-inventory-v0.1"},
+        "preselectionIdentitySha256": {"$ref": "#/$defs/hash"},
+        "version": {"const": "0.1.0"}
+      },
+      "required": ["candidates", "contentIdentitySha256", "kind", "preselectionIdentitySha256", "version"],
+      "type": "object"
+    },
+    "inventoryCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "artifactIdentitySha256": {"$ref": "#/$defs/hash"},
+        "bytes": {"minimum": 1, "type": "integer"},
+        "fileCount": {"minimum": 1, "type": "integer"},
+        "files": {"items": {"$ref": "#/$defs/file"}, "minItems": 1, "type": "array"},
+        "id": {"$ref": "#/$defs/id"},
+        "revision": {"$ref": "#/$defs/id"}
+      },
+      "required": ["artifactIdentitySha256", "bytes", "fileCount", "files", "id", "revision"],
+      "type": "object"
+    },
+    "path": {
+      "maxLength": 512,
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)[.][.](?:/|$))[A-Za-z0-9._/-]+$",
+      "type": "string"
+    },
+    "preselection": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {"$ref": "#/$defs/candidate"},
+          "minItems": 2,
+          "type": "array"
+        },
+        "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+        "host": {
+          "additionalProperties": false,
+          "properties": {
+            "architecture": {"$ref": "#/$defs/id"},
+            "hardwareClass": {"$ref": "#/$defs/id"},
+            "memoryBytes": {"minimum": 1, "type": "integer"},
+            "operatingSystem": {"$ref": "#/$defs/id"}
+          },
+          "required": ["architecture", "hardwareClass", "memoryBytes", "operatingSystem"],
+          "type": "object"
+        },
+        "kind": {"const": "genesis/genesisbench-local-model-preselection-v0.1"},
+        "policy": {
+          "additionalProperties": false,
+          "properties": {
+            "adapter": {"const": "offline-mlx-responses-v0.1"},
+            "qualityScoresObservedBeforeSelection": {"const": false},
+            "requiredRoles": {
+              "items": {"enum": ["smallest-adapter-viable", "strongest-host-fit"]},
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "serverFallbackAllowed": {"const": false},
+            "trustRemoteCodeAllowed": {"const": false},
+            "weightsDownloadedOrMutatedDuringSelection": {"const": false}
+          },
+          "required": [
+            "adapter",
+            "qualityScoresObservedBeforeSelection",
+            "requiredRoles",
+            "serverFallbackAllowed",
+            "trustRemoteCodeAllowed",
+            "weightsDownloadedOrMutatedDuringSelection"
+          ],
+          "type": "object"
+        },
+        "purpose": {"minLength": 1, "type": "string"},
+        "version": {"const": "0.1.0"}
+      },
+      "required": ["candidates", "contentIdentitySha256", "host", "kind", "policy", "purpose", "version"],
+      "type": "object"
+    }
+  },
+  "$id": "https://genesiscode.dev/schemas/genesisbench-local-models-v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {"$ref": "#/$defs/preselection"},
+    {"$ref": "#/$defs/inventory"}
+  ],
+  "title": "GenesisBench local model preselection and artifact inventory",
+  "version": "0.1.0"
+}

@@ -538,6 +538,18 @@ pub(super) fn cmd_agent_index(
     cmd_agent_index_open_agent::insert_docs(&mut docs);
     for (key, path) in [
         (
+            "genesisbench_local_models_schema",
+            "docs/spec/GENESISBENCH_LOCAL_MODELS_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_local_model_preselection",
+            "benchmarks/genesisbench/v0.1/local-models/preselection.json",
+        ),
+        (
+            "genesisbench_local_model_inventory",
+            "benchmarks/genesisbench/v0.1/local-models/inventory.json",
+        ),
+        (
             "genesisbench_baseline_protocol",
             "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
         ),

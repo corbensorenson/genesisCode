@@ -89,6 +89,8 @@ run_parallel 11 gc-agent-profile \
   bash -c 'python3 scripts/lib/gc_agent_profile.py --check && python3 scripts/lib/gc_agent_profile.py --self-test'
 run_parallel 12 genesisbench-construct-validity \
   python3 scripts/lib/genesisbench_construct_validity.py --check --self-test
+run_parallel 13 genesisbench-local-models \
+  python3 scripts/lib/genesisbench_local_models.py --check --self-test
 
 parallel_status=0
 for index in "${!parallel_pids[@]}"; do
@@ -231,6 +233,7 @@ required_included = [
     "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json",
+    "docs/spec/GENESISBENCH_LOCAL_MODELS_v0.1.schema.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json",
     "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json",
@@ -291,6 +294,8 @@ required_included = [
     "examples/canonical_language/v0.1/suite.json",
     "benchmarks/agent_tasks/v0.1/suite.json",
     "benchmarks/genesisbench/v0.1/README.md",
+    "benchmarks/genesisbench/v0.1/local-models/preselection.json",
+    "benchmarks/genesisbench/v0.1/local-models/inventory.json",
     "benchmarks/genesisbench/v0.1/contamination.fixture.json",
     "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
     "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
@@ -320,6 +325,7 @@ required_included = [
     "scripts/lib/genesisbench_front_door.py",
     "scripts/lib/genesisbench_open_agent.py",
     "scripts/lib/genesisbench_open_agent_report.py",
+    "scripts/lib/genesisbench_local_models.py",
     "scripts/lib/genesisbench_registry.py",
     "scripts/lib/genesisbench_baselines.py",
     "scripts/lib/gc_held_out_evaluation.py",

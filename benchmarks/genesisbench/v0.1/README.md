@@ -23,3 +23,11 @@ The report counts missing, invalid, abstained, solved, and unsolved cells exactl
 ```sh
 python3 scripts/lib/genesisbench_construct_validity.py --check --self-test
 ```
+
+`local-models/` is the score-blind R1.4.o preselection boundary. It records all five generation snapshots found on the benchmark host, retains exact revision-pinned model cards and base licenses, and selects Qwen3 4B 4-bit and Qwen3 8B 4-bit as the smallest adapter-viable and strongest host-fit classes before any GenesisBench quality score. `inventory.json` contains no host paths or weights; it binds every local snapshot file by name, byte count, and SHA-256. Validate retained evidence in public CI with:
+
+```sh
+python3 scripts/lib/genesisbench_local_models.py --check --self-test
+```
+
+Before local execution, use `--verify-local` with one explicit `ID=SNAPSHOT_ROOT` binding for every candidate. This proves the machine still has the exact preselected bytes. It does not make a campaign valid by itself: local scoring remains prohibited until the successor Open Agent boundary supplies an auth-free custom provider, zero transport retries, an exact Responses-to-MLX adapter/runtime closure, an outer read/write/network sandbox, a closed observed tool scaffold, and hard adapter/model-server teardown.

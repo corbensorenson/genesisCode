@@ -1,0 +1,229 @@
+{
+  "candidates": [
+    {
+      "adapterCompatible": true,
+      "evidence": [
+        {
+          "bytes": 7712,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/llama-3-2-3b/LICENSE.txt",
+          "role": "base-license",
+          "sha256": "0b4284c1f87029e67654c7953afa16279961632cf73dcfe33374c4c2f298fa35",
+          "sourceRepository": "meta-llama/Llama-3.2-3B-Instruct",
+          "sourceRevision": "0cb88a4f764b7a12671c53f0838cd831a0843b95",
+          "sourceUrl": "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct/resolve/0cb88a4f764b7a12671c53f0838cd831a0843b95/LICENSE.txt"
+        },
+        {
+          "bytes": 16295,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/llama-3-2-3b-4bit/README.md",
+          "role": "quantized-model-card",
+          "sha256": "0e0634c181c7ce3bb40c98d533e3c633025725a66fddf084fa3abbdd08607d13",
+          "sourceRepository": "mlx-community/Llama-3.2-3B-Instruct-4bit",
+          "sourceRevision": "7f0dc925e0d0afb0322d96f9255cfddf2ba5636e",
+          "sourceUrl": "https://huggingface.co/mlx-community/Llama-3.2-3B-Instruct-4bit/resolve/7f0dc925e0d0afb0322d96f9255cfddf2ba5636e/README.md"
+        }
+      ],
+      "format": "mlx-safetensors-4bit",
+      "id": "llama-3.2-3b-instruct-4bit",
+      "license": {
+        "benchmarkUseCompatible": true,
+        "id": "Llama-3.2"
+      },
+      "parameterClass": "3B",
+      "repository": "mlx-community/Llama-3.2-3B-Instruct-4bit",
+      "revision": "7f0dc925e0d0afb0322d96f9255cfddf2ba5636e",
+      "selection": {
+        "reasonCodes": [
+          "more-restrictive-license-than-apache-peer"
+        ],
+        "role": null,
+        "status": "not-selected"
+      },
+      "trustRemoteCode": false
+    },
+    {
+      "adapterCompatible": false,
+      "evidence": [
+        {
+          "bytes": 1084,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/phi-4-mini/LICENSE",
+          "role": "base-license",
+          "sha256": "fa8235e5b48faca34e3ca98cf4f694ef08bd216d28b58071a1f85b1d50cb814d",
+          "sourceRepository": "microsoft/Phi-4-mini-instruct",
+          "sourceRevision": "cfbefacb99257ffa30c83adab238a50856ac3083",
+          "sourceUrl": "https://huggingface.co/microsoft/Phi-4-mini-instruct/resolve/cfbefacb99257ffa30c83adab238a50856ac3083/LICENSE"
+        },
+        {
+          "bytes": 1179,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/phi-4-mini-4bit/README.md",
+          "role": "quantized-model-card",
+          "sha256": "712f2599b4ce2fe8515382b4d8131112083f106a34f09419776979fc78126ca5",
+          "sourceRepository": "mlx-community/Phi-4-mini-instruct-4bit",
+          "sourceRevision": "ac1c269cb4222a4e136a3d09edad301056c1f36a",
+          "sourceUrl": "https://huggingface.co/mlx-community/Phi-4-mini-instruct-4bit/resolve/ac1c269cb4222a4e136a3d09edad301056c1f36a/README.md"
+        }
+      ],
+      "format": "mlx-safetensors-4bit",
+      "id": "phi-4-mini-instruct-4bit",
+      "license": {
+        "benchmarkUseCompatible": true,
+        "id": "MIT"
+      },
+      "parameterClass": "3.8B",
+      "repository": "mlx-community/Phi-4-mini-instruct-4bit",
+      "revision": "ac1c269cb4222a4e136a3d09edad301056c1f36a",
+      "selection": {
+        "reasonCodes": [
+          "executable-repository-code",
+          "no-remote-code-policy"
+        ],
+        "role": null,
+        "status": "not-selected"
+      },
+      "trustRemoteCode": true
+    },
+    {
+      "adapterCompatible": false,
+      "evidence": [
+        {
+          "bytes": 11343,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/qwen2-5-coder-0-5b/LICENSE",
+          "role": "base-license",
+          "sha256": "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+          "sourceRepository": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+          "sourceRevision": "ea3f2471cf1b1f0db85067f1ef93848e38e88c25",
+          "sourceUrl": "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct/resolve/ea3f2471cf1b1f0db85067f1ef93848e38e88c25/LICENSE"
+        },
+        {
+          "bytes": 5023,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/qwen2-5-coder-0-5b/README.md",
+          "role": "quantized-model-card",
+          "sha256": "50cd33dcab1f7b9d206d4691df527a419cfddadd0c4648b8d9bffd5a1b7a032d",
+          "sourceRepository": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+          "sourceRevision": "ea3f2471cf1b1f0db85067f1ef93848e38e88c25",
+          "sourceUrl": "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct/resolve/ea3f2471cf1b1f0db85067f1ef93848e38e88c25/README.md"
+        }
+      ],
+      "format": "transformers-safetensors-bfloat16",
+      "id": "qwen2.5-coder-0.5b-instruct",
+      "license": {
+        "benchmarkUseCompatible": true,
+        "id": "Apache-2.0"
+      },
+      "parameterClass": "0.5B",
+      "repository": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+      "revision": "ea3f2471cf1b1f0db85067f1ef93848e38e88c25",
+      "selection": {
+        "reasonCodes": [
+          "not-mlx-layout",
+          "selected-adapter-incompatible"
+        ],
+        "role": null,
+        "status": "not-selected"
+      },
+      "trustRemoteCode": false
+    },
+    {
+      "adapterCompatible": true,
+      "evidence": [
+        {
+          "bytes": 11343,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/qwen3-4b/LICENSE",
+          "role": "base-license",
+          "sha256": "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+          "sourceRepository": "Qwen/Qwen3-4B",
+          "sourceRevision": "1cfa9a7208912126459214e8b04321603b3df60c",
+          "sourceUrl": "https://huggingface.co/Qwen/Qwen3-4B/resolve/1cfa9a7208912126459214e8b04321603b3df60c/LICENSE"
+        },
+        {
+          "bytes": 857,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/qwen3-4b-4bit/README.md",
+          "role": "quantized-model-card",
+          "sha256": "ebb2aa24b01914a5eb2e04bbd7395cb6e740df6adc413047f83d9c01ca273ec3",
+          "sourceRepository": "mlx-community/Qwen3-4B-4bit",
+          "sourceRevision": "4dcb3d101c2a062e5c1d4bb173588c54ea6c4d25",
+          "sourceUrl": "https://huggingface.co/mlx-community/Qwen3-4B-4bit/resolve/4dcb3d101c2a062e5c1d4bb173588c54ea6c4d25/README.md"
+        }
+      ],
+      "format": "mlx-safetensors-4bit",
+      "id": "qwen3-4b-4bit",
+      "license": {
+        "benchmarkUseCompatible": true,
+        "id": "Apache-2.0"
+      },
+      "parameterClass": "4B",
+      "repository": "mlx-community/Qwen3-4B-4bit",
+      "revision": "4dcb3d101c2a062e5c1d4bb173588c54ea6c4d25",
+      "selection": {
+        "reasonCodes": [
+          "apache-2.0",
+          "smallest-compatible-mlx-snapshot"
+        ],
+        "role": "smallest-adapter-viable",
+        "status": "selected"
+      },
+      "trustRemoteCode": false
+    },
+    {
+      "adapterCompatible": true,
+      "evidence": [
+        {
+          "bytes": 11343,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/qwen3-8b/LICENSE",
+          "role": "base-license",
+          "sha256": "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+          "sourceRepository": "Qwen/Qwen3-8B",
+          "sourceRevision": "b968826d9c46dd6066d109eabc6255188de91218",
+          "sourceUrl": "https://huggingface.co/Qwen/Qwen3-8B/resolve/b968826d9c46dd6066d109eabc6255188de91218/LICENSE"
+        },
+        {
+          "bytes": 857,
+          "path": "benchmarks/genesisbench/v0.1/local-models/upstream/qwen3-8b-4bit/README.md",
+          "role": "quantized-model-card",
+          "sha256": "a0cd248b30da7a23710c9290fe42ca83a84dc06593978877b1e5b32f9bd33aaf",
+          "sourceRepository": "mlx-community/Qwen3-8B-4bit",
+          "sourceRevision": "545dc4251c05440727734bcd94334791f6ab0192",
+          "sourceUrl": "https://huggingface.co/mlx-community/Qwen3-8B-4bit/resolve/545dc4251c05440727734bcd94334791f6ab0192/README.md"
+        }
+      ],
+      "format": "mlx-safetensors-4bit",
+      "id": "qwen3-8b-4bit",
+      "license": {
+        "benchmarkUseCompatible": true,
+        "id": "Apache-2.0"
+      },
+      "parameterClass": "8B",
+      "repository": "mlx-community/Qwen3-8B-4bit",
+      "revision": "545dc4251c05440727734bcd94334791f6ab0192",
+      "selection": {
+        "reasonCodes": [
+          "apache-2.0",
+          "largest-host-fit-mlx-snapshot"
+        ],
+        "role": "strongest-host-fit",
+        "status": "selected"
+      },
+      "trustRemoteCode": false
+    }
+  ],
+  "contentIdentitySha256": "60023b24b49c221bf184167631aab4a86f7ee646a9f558567d2ba102d6e8e7d4",
+  "host": {
+    "architecture": "arm64",
+    "hardwareClass": "MacBookPro17.1-AppleM1-16GiB",
+    "memoryBytes": 17179869184,
+    "operatingSystem": "Darwin"
+  },
+  "kind": "genesis/genesisbench-local-model-preselection-v0.1",
+  "policy": {
+    "adapter": "offline-mlx-responses-v0.1",
+    "qualityScoresObservedBeforeSelection": false,
+    "requiredRoles": [
+      "smallest-adapter-viable",
+      "strongest-host-fit"
+    ],
+    "serverFallbackAllowed": false,
+    "trustRemoteCodeAllowed": false,
+    "weightsDownloadedOrMutatedDuringSelection": false
+  },
+  "purpose": "Score-blind selection of the smallest adapter-viable and strongest host-fit local GenesisBench model classes.",
+  "version": "0.1.0"
+}

@@ -192,6 +192,26 @@ fn agent_index_emits_expected_schema_and_sources() {
             .and_then(Value::as_str),
         Some("docs/spec/AGENT_INDEX_v0.1.md#agent-plan-v01")
     );
+    for (key, path) in [
+        (
+            "genesisbench_local_models_schema",
+            "docs/spec/GENESISBENCH_LOCAL_MODELS_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_local_model_preselection",
+            "benchmarks/genesisbench/v0.1/local-models/preselection.json",
+        ),
+        (
+            "genesisbench_local_model_inventory",
+            "benchmarks/genesisbench/v0.1/local-models/inventory.json",
+        ),
+    ] {
+        assert_eq!(
+            json.pointer(&format!("/data/docs/{key}"))
+                .and_then(Value::as_str),
+            Some(path),
+        );
+    }
     assert_eq!(
         json.pointer("/data/docs/gc_agent_corpus")
             .and_then(Value::as_str),
