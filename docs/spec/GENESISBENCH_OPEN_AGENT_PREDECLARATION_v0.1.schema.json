@@ -10,6 +10,7 @@
     "capabilities": {"$ref": "#/$defs/capabilities"},
     "case": {"$ref": "#/$defs/case"},
     "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+    "custody": {"$ref": "#/$defs/custody"},
     "disclosure": {"$ref": "#/$defs/disclosure"},
     "kind": {"const": "genesis/genesisbench-open-agent-predeclaration-v0.1"},
     "limits": {"$ref": "#/$defs/limits"},
@@ -53,6 +54,12 @@
       "required": ["environmentNames", "environmentValuesRecorded", "genesisSpecificTraining", "contaminationLabel"],
       "type": "object"
     },
+    "custody": {
+      "additionalProperties": false,
+      "properties": {"adapterIdentitySha256": {"$ref": "#/$defs/hash"}, "inventoryIdentitySha256": {"$ref": "#/$defs/hash"}, "manifestIdentitySha256": {"$ref": "#/$defs/hash"}, "preselectionIdentitySha256": {"$ref": "#/$defs/hash"}, "runtimeIdentitySha256": {"$ref": "#/$defs/hash"}},
+      "required": ["adapterIdentitySha256", "inventoryIdentitySha256", "manifestIdentitySha256", "preselectionIdentitySha256", "runtimeIdentitySha256"],
+      "type": "object"
+    },
     "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
     "id": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$", "type": "string"},
     "limits": {
@@ -70,7 +77,7 @@
     "path": {"pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$", "type": "string"},
     "runner": {
       "additionalProperties": false,
-      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2", "codex-cli-hosted-v0.3", "codex-cli-local-v0.3", "codex-cli-hosted-v0.4", "codex-cli-local-v0.4"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
+      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2", "codex-cli-hosted-v0.3", "codex-cli-local-v0.3", "codex-cli-hosted-v0.4", "codex-cli-local-v0.4", "codex-cli-hosted-v0.5", "codex-cli-local-v0.5"]}, "localProvider": {"enum": [null, "lmstudio", "ollama", "mlx-responses"]}},
       "required": ["class", "executableSha256", "executableVersion", "invocationProfile", "localProvider"],
       "type": "object"
     },

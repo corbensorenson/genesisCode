@@ -9,6 +9,7 @@
     "capabilities": {"$ref": "#/$defs/capabilities"},
     "cases": {"items": {"$ref": "#/$defs/case"}, "minItems": 9, "maxItems": 27, "type": "array", "uniqueItems": true},
     "contentIdentitySha256": {"$ref": "#/$defs/hash"},
+    "custody": {"$ref": "#/$defs/custody"},
     "disclosure": {"$ref": "#/$defs/disclosure"},
     "host": {"$ref": "#/$defs/host"},
     "kind": {"const": "genesis/genesisbench-open-agent-campaign-v0.1"},
@@ -57,6 +58,12 @@
       "required": ["environmentNames", "environmentValuesRecorded", "genesisSpecificTraining", "contaminationLabel"],
       "type": "object"
     },
+    "custody": {
+      "additionalProperties": false,
+      "properties": {"adapterIdentitySha256": {"$ref": "#/$defs/hash"}, "inventoryIdentitySha256": {"$ref": "#/$defs/hash"}, "manifestIdentitySha256": {"$ref": "#/$defs/hash"}, "preselectionIdentitySha256": {"$ref": "#/$defs/hash"}, "runtimeIdentitySha256": {"$ref": "#/$defs/hash"}},
+      "required": ["adapterIdentitySha256", "inventoryIdentitySha256", "manifestIdentitySha256", "preselectionIdentitySha256", "runtimeIdentitySha256"],
+      "type": "object"
+    },
     "hash": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
     "host": {
       "additionalProperties": false,
@@ -86,13 +93,13 @@
     },
     "runner": {
       "additionalProperties": false,
-      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2", "codex-cli-hosted-v0.3", "codex-cli-local-v0.3", "codex-cli-hosted-v0.4", "codex-cli-local-v0.4"]}, "localProvider": {"enum": [null, "lmstudio", "ollama"]}},
+      "properties": {"class": {"enum": ["codex-cli-hosted", "codex-cli-local"]}, "executableSha256": {"$ref": "#/$defs/hash"}, "executableVersion": {"maxLength": 512, "minLength": 1, "type": "string"}, "invocationProfile": {"enum": ["codex-cli-hosted-v0.1", "codex-cli-local-v0.1", "codex-cli-hosted-v0.2", "codex-cli-local-v0.2", "codex-cli-hosted-v0.3", "codex-cli-local-v0.3", "codex-cli-hosted-v0.4", "codex-cli-local-v0.4", "codex-cli-hosted-v0.5", "codex-cli-local-v0.5"]}, "localProvider": {"enum": [null, "lmstudio", "ollama", "mlx-responses"]}},
       "required": ["class", "executableSha256", "executableVersion", "invocationProfile", "localProvider"],
       "type": "object"
     },
     "secrets": {
       "additionalProperties": false,
-      "properties": {"forwardedToWorkspace": {"const": false}, "source": {"const": "codex-auth-store"}, "valuesRecorded": {"const": false}},
+      "properties": {"forwardedToWorkspace": {"const": false}, "source": {"enum": ["codex-auth-store", "none-auth-free-homes"]}, "valuesRecorded": {"const": false}},
       "required": ["source", "valuesRecorded", "forwardedToWorkspace"],
       "type": "object"
     },

@@ -205,6 +205,22 @@ fn agent_index_emits_expected_schema_and_sources() {
             "genesisbench_local_model_inventory",
             "benchmarks/genesisbench/v0.1/local-models/inventory.json",
         ),
+        (
+            "genesisbench_local_model_custody_qwen3_4b",
+            "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json",
+        ),
+        (
+            "genesisbench_open_agent",
+            "docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json",
+        ),
+        (
+            "genesisbench_open_agent_v0_4",
+            "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json",
+        ),
+        (
+            "genesisbench_mlx_custody_schema",
+            "docs/spec/GENESISBENCH_MLX_CUSTODY_v0.1.schema.json",
+        ),
     ] {
         assert_eq!(
             json.pointer(&format!("/data/docs/{key}"))

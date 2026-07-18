@@ -2,7 +2,7 @@ pub(super) fn insert_docs(docs: &mut serde_json::Value) {
     for (key, path) in [
         (
             "genesisbench_open_agent",
-            "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json",
+            "docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json",
         ),
         (
             "genesisbench_open_agent_v0_1",
@@ -15,6 +15,18 @@ pub(super) fn insert_docs(docs: &mut serde_json::Value) {
         (
             "genesisbench_open_agent_v0_3",
             "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json",
+        ),
+        (
+            "genesisbench_open_agent_v0_4",
+            "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json",
+        ),
+        (
+            "genesisbench_mlx_custody_schema",
+            "docs/spec/GENESISBENCH_MLX_CUSTODY_v0.1.schema.json",
+        ),
+        (
+            "genesisbench_local_model_custody_qwen3_4b",
+            "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json",
         ),
         (
             "genesisbench_open_agent_campaign_schema",
