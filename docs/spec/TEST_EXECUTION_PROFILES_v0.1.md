@@ -318,6 +318,10 @@ Strict/full profile runtime reports:
   median-per-run metrics to reduce host contention noise. Baseline rows are
   scoped by report kind, build mode/profile/target, and the exact budget map;
   samples from unlike build profiles cannot tighten or relax another profile.
+- The local and `full` release `changed_fast_ms` target remains 15000ms. Hosted
+  `standard` CI declares a 20000ms contention envelope through
+  `GENESIS_BUDGET_CHANGED_FAST_MS`; this does not alter the local/full target,
+  and its reports cannot share baseline rows with the 15000ms budget map.
 
 ### Performance Evidence Lifecycle
 

@@ -6,7 +6,7 @@
       "failedDimensions": [],
       "id": "alternative-completion",
       "qualityScoreBasisPoints": 9973,
-      "scoreIdentitySha256": "93e119b7b4c3e0a76a9705071bf16af6179d9be9b68f9aee9c0171684d29b12a",
+      "scoreIdentitySha256": "64d3625f3ee7a1217382983556363ea8511c66479455b86f6ce559f3ff836d16",
       "taskClass": "completion",
       "valid": true
     },
@@ -16,7 +16,7 @@
       "failedDimensions": [],
       "id": "alternative-deployment",
       "qualityScoreBasisPoints": 9977,
-      "scoreIdentitySha256": "e428aac4e58c702780347abca3f3ddaf03dfcc433fba63fd4d8024f6373004a2",
+      "scoreIdentitySha256": "2ec5591214c2212505ded25597dd930eb2ff102b27e3a84a1d1e040db5617fce",
       "taskClass": "deployment",
       "valid": true
     },
@@ -26,7 +26,7 @@
       "failedDimensions": [],
       "id": "alternative-generation",
       "qualityScoreBasisPoints": 9893,
-      "scoreIdentitySha256": "f77591bc97020328a8fde7c3cd04586b5831bbd42f99e8e3f2e0f8c979512b4a",
+      "scoreIdentitySha256": "f0a706b3fa884abc6cd44c21423a5572b314ecf1bdd1aec9b71af969c85c8041",
       "taskClass": "generation",
       "valid": true
     },
@@ -36,7 +36,7 @@
       "failedDimensions": [],
       "id": "alternative-package-migration",
       "qualityScoreBasisPoints": 9784,
-      "scoreIdentitySha256": "a691f9c8c7ff490ccbd4d9211347cf00eaecb079ed98b643031e4c8b019ceb69",
+      "scoreIdentitySha256": "230984dc48e9e9aa03313f92136a0a33cbabc6ee058e420c76813a53480fde26",
       "taskClass": "package-migration",
       "valid": true
     },
@@ -46,7 +46,7 @@
       "failedDimensions": [],
       "id": "alternative-performance-repair",
       "qualityScoreBasisPoints": 9932,
-      "scoreIdentitySha256": "9e6300f79afd73774f3474c510060a6c9a8c25b516daa9f751bd12b06679f9de",
+      "scoreIdentitySha256": "82a783ef7ee56e5b9c97a2af38826d0b36221f3d9bd619e6fe493faf966bbbd9",
       "taskClass": "performance-repair",
       "valid": true
     },
@@ -56,7 +56,7 @@
       "failedDimensions": [],
       "id": "alternative-policy-minimization",
       "qualityScoreBasisPoints": 9853,
-      "scoreIdentitySha256": "6fc4a3d8be4ec3da73b6116532be7569000e2cf722d5010b0bb7d554c5489f83",
+      "scoreIdentitySha256": "3f1f80beef8d79e0d4eafe2940754b916dad6dbdb7d1587e0260901478051ebd",
       "taskClass": "policy-minimization",
       "valid": true
     },
@@ -66,7 +66,7 @@
       "failedDimensions": [],
       "id": "alternative-refactor",
       "qualityScoreBasisPoints": 9995,
-      "scoreIdentitySha256": "52bbc428aac447473e142ff650d7cd6117433fb641ec5eff75df1dcbd6f2ae37",
+      "scoreIdentitySha256": "df3ca7788b7c332e3fc4002466422dbda44baef85de88c138c2bcefdfee2bf72",
       "taskClass": "refactor",
       "valid": true
     },
@@ -76,7 +76,7 @@
       "failedDimensions": [],
       "id": "alternative-repair",
       "qualityScoreBasisPoints": 9671,
-      "scoreIdentitySha256": "af83d320a73d87e684da7205ace2e8506e8e2dc8ff9ae069d29ff61b4af95f52",
+      "scoreIdentitySha256": "1d1209bb5cc03f6ed8c99d96e868016955d91ce9ab72d626d5bd32c01c2650bf",
       "taskClass": "repair",
       "valid": true
     },
@@ -86,7 +86,7 @@
       "failedDimensions": [],
       "id": "alternative-replay-investigation",
       "qualityScoreBasisPoints": 9970,
-      "scoreIdentitySha256": "bc0b70b1e4afad8fa5a30efced53e1265480c2d82ee488269ed03650efe52814",
+      "scoreIdentitySha256": "e750b624a35b4c3398bd8588249490a9e2a4c4c4bd2eb982e9497ebc370fc5a0",
       "taskClass": "replay-investigation",
       "valid": true
     }
@@ -107,15 +107,15 @@
     ]
   },
   "bindings": {
-    "benchmarkIdentitySha256": "0bcf3ab6dca097189787e59e9cb472ef8031c04ad9b9f5cb6d6878fa70622272",
+    "benchmarkIdentitySha256": "4371918421fe4c0bcef64102f7d75ff8c05fb291a5d37c4b6a24bb70b1abe4b5",
     "heldOutIdentitySha256": "f3bd950dbf05390a02970f423d24d722bfbeb46c30537a30d06a57683e7820e4",
     "policySha256": "46e599503def80b6da9891a9d4235ccc8f1a88f69d82c5bdba7e2cab99533fcf",
     "profileSha256": "d81589be2139a7e515b29c5225c66713635025d89f64cb727b9cbb17cba4d5a8",
     "scorerRuntimeSha256": "62f05ec74235c9b705a140ececafc0ea147eb2867e56f6f4209d1e82aef4265b",
-    "scoringIdentitySha256": "007a784c17e280ab3b4127aebd91996a281bdd0e3df0f50ec11d6222dfbd34af",
+    "scoringIdentitySha256": "f9452a68b692b902253627453037166d360177f80f08b823968cfc55ecaded52",
     "studyRuntimeSha256": "8ef750406b50d6ea22fb5c43ce076a7b11d42e1e963446c67d029f3b4f94bb06"
   },
-  "contentIdentitySha256": "a34357d564f8c74032b2f3e1b2836e22d5d5c19bc8f90ce2fac68255bf052b84",
+  "contentIdentitySha256": "be55ea98be932bf16ee66dc16adb47d2ab686575e3434619d67e630fd7c40789",
   "coverage": [
     {
       "construct": "diagnostic-recovery",
@@ -341,7 +341,7 @@
       ],
       "id": "negative-completion",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "998bf181d53ba6289f022b53ef0ed7cbd3ab6ca1ff9fcb845bdbb55d17955e82",
+      "scoreIdentitySha256": "1b4d43c0d9834fdb259ccb4c410e298a84b4f871fded4322bc4b79dd9b6aec2b",
       "taskClass": "completion",
       "valid": false
     },
@@ -353,7 +353,7 @@
       ],
       "id": "negative-deployment",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "677430ef8b1b4309b228f18738042b2e8bde4f6f337c80b31f5ff0bde3dfe459",
+      "scoreIdentitySha256": "2db2a7ce52b897e7006e9da6021f3cc454ce69277703fd4159293a93e16910aa",
       "taskClass": "deployment",
       "valid": false
     },
@@ -365,7 +365,7 @@
       ],
       "id": "negative-generation",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "d974b594e9a3a0f71998cbcd0624dd9f4961d1ff62fef388606f217de84a2879",
+      "scoreIdentitySha256": "c44e101dba8116c6f1c885c2a252c7b2517025fda0db1ff895bec5689bee2b41",
       "taskClass": "generation",
       "valid": false
     },
@@ -377,7 +377,7 @@
       ],
       "id": "negative-package-migration",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "5d43becd177efafefa5e67f1955f6a3305c3f09fe1900836e01750db1101011f",
+      "scoreIdentitySha256": "ebc9aaf7d909c71aeb801fc1e2de978c6cb6287385e251ef1328d6a4f8b8eb1b",
       "taskClass": "package-migration",
       "valid": false
     },
@@ -389,7 +389,7 @@
       ],
       "id": "negative-performance-repair",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "009cbbd4f9312dd25435ac76b098a41843d8240f9975006aa0080e5d1fccb47a",
+      "scoreIdentitySha256": "da9a24dc7c63b29a30fddbfe277e75a60d454d80a974d9263921a2721f04d2b9",
       "taskClass": "performance-repair",
       "valid": false
     },
@@ -401,7 +401,7 @@
       ],
       "id": "negative-policy-minimization",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "919df0f481dad28f5ee20aceab0130665dbcad7d45c6647b40baabe393a9d2d2",
+      "scoreIdentitySha256": "8bdb5d415f6995cd553c103db648702ed0def3835171583af730b831606741c4",
       "taskClass": "policy-minimization",
       "valid": false
     },
@@ -413,7 +413,7 @@
       ],
       "id": "negative-refactor",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "e413a2d24398e268eff910c584bb7d82f5f70fe2359e6f115c4ca75528bf4ce3",
+      "scoreIdentitySha256": "6dfeabc4ef52a3b379a2e32045a7694a00f1a002322d3d0fe4a7851fea7f76b9",
       "taskClass": "refactor",
       "valid": false
     },
@@ -425,7 +425,7 @@
       ],
       "id": "negative-repair",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "ded367b3b512a238eb236b52150d070437143dcb22298f18484d9272c6f01399",
+      "scoreIdentitySha256": "490329527c0defc5792229a09808c65bc7769b2f781feae556830aafa8bb30fb",
       "taskClass": "repair",
       "valid": false
     },
@@ -437,7 +437,7 @@
       ],
       "id": "negative-replay-investigation",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "185d447ecd5d1a28b0b1870c1331193df6db54656606d60212aaa3aceddbcd17",
+      "scoreIdentitySha256": "3f5fe01830b39559e06cb883863bf5ff3eec76209caf3abccd50d377384fa09c",
       "taskClass": "replay-investigation",
       "valid": false
     }
