@@ -11,6 +11,7 @@ fi
 
 OUT="$1"
 TIMEOUT_MS="${GENESIS_WEBXR_BROWSER_CONFORMANCE_TIMEOUT_MS:-8000}"
+NODE_BIN="${GENESIS_WEBXR_NODE_BIN:-}"
 
 [[ "$TIMEOUT_MS" =~ ^[0-9]+$ && "$TIMEOUT_MS" -gt 0 ]] || {
   echo "webxr-browser-conformance: GENESIS_WEBXR_BROWSER_CONFORMANCE_TIMEOUT_MS must be positive integer" >&2
@@ -18,10 +19,47 @@ TIMEOUT_MS="${GENESIS_WEBXR_BROWSER_CONFORMANCE_TIMEOUT_MS:-8000}"
 }
 
 mkdir -p "$(dirname "$OUT")"
+
+node_22_binary() {
+  local candidate="$1"
+  local resolved version major
+  resolved="$(command -v "$candidate" 2>/dev/null || true)"
+  [[ -n "$resolved" && -x "$resolved" ]] || return 1
+  version="$("$resolved" --version 2>/dev/null || true)"
+  major="${version#v}"
+  major="${major%%.*}"
+  [[ "$major" == "22" ]] || return 1
+  printf '%s\n' "$resolved"
+}
+
+if [[ -n "$NODE_BIN" ]]; then
+  NODE_BIN="$(node_22_binary "$NODE_BIN")" || {
+    echo "webxr-browser-conformance: GENESIS_WEBXR_NODE_BIN must resolve to Node.js 22.x" >&2
+    exit 2
+  }
+else
+  for candidate in \
+    node \
+    node22 \
+    /opt/homebrew/opt/node@22/bin/node \
+    /usr/local/opt/node@22/bin/node \
+    "$HOME"/.nvm/versions/node/v22*/bin/node; do
+    if NODE_BIN="$(node_22_binary "$candidate")"; then
+      break
+    fi
+    NODE_BIN=""
+  done
+  if [[ -z "$NODE_BIN" ]]; then
+    echo "webxr-browser-conformance: Node.js 22.x is required by genesis.prerequisites.json" >&2
+    exit 2
+  fi
+fi
+
+echo "webxr-browser-conformance: node=$NODE_BIN version=$("$NODE_BIN" --version)"
 echo "webxr-browser-conformance: running browser-native WebXR conformance lane"
 GENESIS_WEBXR_BROWSER_CONFORMANCE_OUT="$OUT" \
 GENESIS_WEBXR_BROWSER_CONFORMANCE_TIMEOUT_MS="$TIMEOUT_MS" \
-node scripts/webxr_browser_conformance.mjs
+"$NODE_BIN" scripts/webxr_browser_conformance.mjs
 
 python3 - "$OUT" <<'PY'
 import json

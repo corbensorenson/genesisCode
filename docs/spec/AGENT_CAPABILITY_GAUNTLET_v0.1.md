@@ -99,6 +99,7 @@ If any required domain misses its minimum success threshold, the script exits no
 - `GENESIS_AGENT_GAUNTLET_BASELINE_HISTORY` default `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
 - `GENESIS_AGENT_GAUNTLET_REQUIRE_MIN_HISTORY` fail-closed on insufficient per-workflow history (default `1`)
 - `GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT` per-workflow regression budget over baseline p95 (default `25`)
+- `GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS` fixed process-jitter allowance used with the percentage budget (default `500`; hermetic release bundle `1500`)
 
 ## Confidence Lanes
 

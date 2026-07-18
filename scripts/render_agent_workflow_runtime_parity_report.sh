@@ -40,6 +40,11 @@ BUDGET_MS="${GENESIS_AGENT_PARITY_BUDGET_MS:-900000}"
 P95_MIN_SAMPLES="${GENESIS_AGENT_PARITY_P95_MIN_SAMPLES:-8}"
 INPUT_MAX_AGE_SEC="${GENESIS_AGENT_PARITY_INPUT_MAX_AGE_SEC:-21600}"
 REUSE_REPORTS="${GENESIS_AGENT_PARITY_REUSE_REPORTS:-1}"
+PARITY_TMP_ROOT="$(mktemp -d)"
+cleanup() {
+  rm -rf "$PARITY_TMP_ROOT"
+}
+trap cleanup EXIT
 
 if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
   echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_BUDGET_MS must be a positive integer" >&2
@@ -81,9 +86,11 @@ run_gauntlet_lane() {
   local lane_report="$3"
   local lane_history="$4"
   local lane_history_input="$5"
+  local lane_tmp_root="$6"
   GENESIS_BIN="$lane_bin" \
   GENESIS_AGENT_GAUNTLET_PROFILE="$GAUNTLET_PROFILE" \
   GENESIS_AGENT_GAUNTLET_RUNTIME_PROFILE="$runtime_profile" \
+  GENESIS_AGENT_REFERENCE_WORKFLOWS_TMPDIR="$lane_tmp_root" \
   bash scripts/render_agent_reference_workflows_report.sh \
     "$lane_report" \
     "$lane_history" \
@@ -158,17 +165,27 @@ if [[ "$can_reuse_reports" -eq 1 ]]; then
 else
   NATIVE_REPORT="$NATIVE_REPORT_OUT"
   WASI_REPORT="$WASI_REPORT_OUT"
-  run_gauntlet_lane "$NATIVE_BIN" "native" "$NATIVE_REPORT_OUT" "$NATIVE_HISTORY_OUT" "$NATIVE_HISTORY_INPUT" &
-  native_pid=$!
-  run_gauntlet_lane "$WASI_BIN" "wasi-wasm-host-bridge" "$WASI_REPORT_OUT" "$WASI_HISTORY_OUT" "$WASI_HISTORY_INPUT" &
-  wasi_pid=$!
-
   lane_failures=0
-  if ! wait "$native_pid"; then
+  # Parity is a semantic comparison, not a contention benchmark. Sequential
+  # lanes prevent one runtime's load from changing the other's timing verdict;
+  # dedicated stress gates own concurrent-load coverage.
+  if ! run_gauntlet_lane \
+    "$NATIVE_BIN" \
+    "native" \
+    "$NATIVE_REPORT_OUT" \
+    "$NATIVE_HISTORY_OUT" \
+    "$NATIVE_HISTORY_INPUT" \
+    "$PARITY_TMP_ROOT/native"; then
     echo "agent-workflow-runtime-parity: native lane failed" >&2
     lane_failures=1
   fi
-  if ! wait "$wasi_pid"; then
+  if ! run_gauntlet_lane \
+    "$WASI_BIN" \
+    "wasi-wasm-host-bridge" \
+    "$WASI_REPORT_OUT" \
+    "$WASI_HISTORY_OUT" \
+    "$WASI_HISTORY_INPUT" \
+    "$PARITY_TMP_ROOT/wasi"; then
     echo "agent-workflow-runtime-parity: wasi lane failed" >&2
     lane_failures=1
   fi

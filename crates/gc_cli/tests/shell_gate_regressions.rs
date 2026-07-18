@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -121,6 +122,10 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         slo.contains("GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK"),
         "ai-iteration slo script must expose gcpm lock stabilization retries control"
+    );
+    assert!(
+        scenario.contains("scenario seed drift from gauntlet baseline"),
+        "scenario baselines must fail closed when duplicated gauntlet seed totals drift"
     );
     assert!(
         micro.contains("CARGO_PROFILE=\"${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}\""),
@@ -346,7 +351,16 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     );
     assert!(
         health.contains("check_full_selfhost_cutover_profile.sh"),
-        "release/full selfhost lanes must validate full-selfhost cutover profile contract"
+        "the dedicated full-selfhost lane must validate the cutover profile contract"
+    );
+    assert_eq!(
+        health
+            .matches(
+                "GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh"
+            )
+            .count(),
+        1,
+        "full-selfhost cutover validation must remain exclusive to its dedicated profile"
     );
     assert!(
         health.contains("GENESIS_HEALTH_PREPUSH_BUDGET_MS:-480000"),
@@ -583,6 +597,187 @@ fn upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open() {
         "expected CI enforcement message when backlog is open\nstdout:\n{}",
         stdout
     );
+}
+
+#[test]
+fn release_health_provisions_evidence_before_parallel_consumers() {
+    let root = repo_root();
+    let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
+        .expect("read render_upgrade_plan_health_report.sh");
+    let bundle = fs::read_to_string(root.join("scripts/render_health_profile_evidence_bundle.sh"))
+        .expect("read render_health_profile_evidence_bundle.sh");
+    let webxr = fs::read_to_string(root.join("scripts/render_webxr_browser_conformance_report.sh"))
+        .expect("read render_webxr_browser_conformance_report.sh");
+    let parity =
+        fs::read_to_string(root.join("scripts/render_agent_workflow_runtime_parity_report.sh"))
+            .expect("read render_agent_workflow_runtime_parity_report.sh");
+
+    let setup_run = health
+        .find("run_gate_commands \"profile:${PROFILE}:setup\"")
+        .expect("release evidence setup execution");
+    let common_run = health
+        .find("run_gate_commands \"common-non-cargo\"")
+        .expect("common gate execution");
+    let profile_partition = health
+        .find("partition_gate_commands \"${PROFILE_GATES[@]}\"")
+        .expect("profile gate partition");
+    assert!(
+        setup_run < common_run && setup_run < profile_partition,
+        "release evidence must be complete before common gates grow caches or profile consumers run"
+    );
+    for required in [
+        "GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json'",
+        "GENESIS_AGENT_PARITY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json'",
+        "GENESIS_WRITE_SKILL_GENERATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_report.json'",
+        "GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json'",
+        "GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT='$HEALTH_EVIDENCE_ROOT/host_bridge_fault_injection_report.json'",
+        "GENESIS_WRITE_SKILL_GPU_XR_REPORT='$HEALTH_EVIDENCE_ROOT/gpu_xr_productization_kits_report.json'",
+        "GENESIS_WRITE_SKILL_ASSURANCE_REPORT='$HEALTH_EVIDENCE_ROOT/assurance_profile_packs_report.json'",
+        "GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json'",
+        "GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json'",
+    ] {
+        assert!(
+            health.contains(required),
+            "missing explicit evidence binding: {required}"
+        );
+    }
+    assert!(
+        bundle.contains("baseline-inputs"),
+        "bundle must isolate optional history inputs from ambient workstation state"
+    );
+    assert!(
+        bundle.contains("genesis/health-profile-evidence-bundle-v0.1"),
+        "bundle must emit a validated evidence manifest"
+    );
+    assert!(
+        bundle.contains("GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS=1500"),
+        "bundle must tolerate bounded cold-process jitter without weakening p95 ceilings"
+    );
+    assert!(
+        bundle.contains(
+            "GENESIS_RUNTIME_BACKEND_MATRIX_EPHEMERAL_TARGET_DIR=\"$OUTPUT_ROOT/runtime-backend-target\""
+        ),
+        "bundle must keep disposable runtime-matrix compiler output inside its private root"
+    );
+    let runtime_matrix =
+        fs::read_to_string(root.join("scripts/render_runtime_backend_feature_matrix_report.sh"))
+            .expect("read render_runtime_backend_feature_matrix_report.sh");
+    let runtime_matrix_check =
+        fs::read_to_string(root.join("scripts/check_runtime_backend_feature_matrix.sh"))
+            .expect("read check_runtime_backend_feature_matrix.sh");
+    let cargo_target_helper = fs::read_to_string(root.join("scripts/lib/cargo_target_dir.sh"))
+        .expect("read cargo_target_dir.sh");
+    assert!(
+        runtime_matrix.contains("genesis_configure_ephemeral_cargo_target_dir")
+            && runtime_matrix.contains("rm -rf \"$EPHEMERAL_TARGET_DIR\"")
+            && cargo_target_helper.contains("target.parent != root")
+            && cargo_target_helper.contains("ephemeral target must not already exist"),
+        "ephemeral runtime-matrix targets must be contained and removed on every exit"
+    );
+    assert!(
+        runtime_matrix_check.contains("GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST")
+            && runtime_matrix_check
+                .contains("prebuilt report and manifest must be direct siblings")
+            && runtime_matrix_check.contains("prebuilt report hash mismatch"),
+        "prebuilt runtime-matrix reports must be path- and hash-bound to the release manifest"
+    );
+    assert!(
+        health.contains("Release gates share one content-addressed target and several consume"),
+        "release cargo gates must remain serialized because they share emitted artifacts"
+    );
+    assert!(
+        webxr.contains("GENESIS_WEBXR_NODE_BIN")
+            && webxr.contains("Node.js 22.x is required by genesis.prerequisites.json"),
+        "WebXR release evidence must resolve the declared Node.js 22 toolchain"
+    );
+    assert!(
+        parity.contains("GENESIS_AGENT_REFERENCE_WORKFLOWS_TMPDIR=\"$lane_tmp_root\"")
+            && parity.contains("$PARITY_TMP_ROOT/native")
+            && parity.contains("$PARITY_TMP_ROOT/wasi")
+            && !parity.contains("native_pid=$!")
+            && !parity.contains("wasi_pid=$!"),
+        "semantic parity lanes must be isolated and sequential, not timing-contended"
+    );
+}
+
+#[test]
+fn runtime_backend_ephemeral_target_rejects_paths_outside_report_root() {
+    let root = repo_root();
+    let temp = tempfile::tempdir().expect("create runtime-matrix target fixture");
+    let report_root = temp.path().join("evidence");
+    fs::create_dir_all(&report_root).expect("create evidence fixture root");
+    let outside = temp.path().join("outside-target");
+    let output = Command::new("bash")
+        .arg(root.join("scripts/render_runtime_backend_feature_matrix_report.sh"))
+        .arg(report_root.join("report.json"))
+        .arg(report_root.join("history.jsonl"))
+        .arg(report_root.join("baseline.jsonl"))
+        .env(
+            "GENESIS_RUNTIME_BACKEND_MATRIX_EPHEMERAL_TARGET_DIR",
+            &outside,
+        )
+        .current_dir(&root)
+        .output()
+        .expect("run runtime-matrix target containment rejection");
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("ephemeral target must be a direct child of the report directory"),
+        "runtime matrix must explain the containment violation"
+    );
+    assert!(
+        !outside.exists(),
+        "rejected runtime-matrix target must never be materialized"
+    );
+}
+
+#[test]
+fn runtime_backend_prebuilt_report_requires_matching_release_manifest() {
+    let root = repo_root();
+    let temp = tempfile::tempdir().expect("create prebuilt runtime-matrix fixture");
+    let report = temp
+        .path()
+        .join("runtime_backend_feature_matrix_report.json");
+    let manifest = temp.path().join("manifest.json");
+    let report_bytes = b"{\"kind\":\"genesis/runtime-backend-feature-matrix-v0.1\",\"ok\":true}\n";
+    fs::write(&report, report_bytes).expect("write prebuilt runtime-matrix report");
+    let report_hash = format!("{:x}", Sha256::digest(report_bytes));
+    fs::write(
+        &manifest,
+        format!(
+            "{{\"evidence\":{{\"runtime_backend_feature_matrix_report.json\":{{\"kind\":\"genesis/runtime-backend-feature-matrix-v0.1\",\"sha256\":\"{report_hash}\"}}}},\"kind\":\"genesis/health-profile-evidence-bundle-v0.1\",\"ok\":true,\"profile\":\"release-full\"}}\n"
+        ),
+    )
+    .expect("write prebuilt evidence manifest");
+
+    let run = |manifest_path: Option<&Path>| {
+        let mut command = Command::new("bash");
+        command
+            .arg(root.join("scripts/check_runtime_backend_feature_matrix.sh"))
+            .env("GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT", &report)
+            .current_dir(&root);
+        if let Some(path) = manifest_path {
+            command.env("GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST", path);
+        }
+        command.output().expect("run prebuilt runtime-matrix check")
+    };
+
+    assert!(run(Some(&manifest)).status.success());
+    let missing_manifest = run(None);
+    assert_eq!(missing_manifest.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&missing_manifest.stderr)
+            .contains("prebuilt report requires GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST")
+    );
+
+    fs::write(
+        &report,
+        b"{\"kind\":\"genesis/runtime-backend-feature-matrix-v0.1\",\"ok\":true,\"tampered\":true}\n",
+    )
+    .expect("tamper prebuilt runtime-matrix report");
+    let tampered = run(Some(&manifest));
+    assert_eq!(tampered.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&tampered.stderr).contains("prebuilt report hash mismatch"));
 }
 
 #[test]
