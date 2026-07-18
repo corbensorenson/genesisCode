@@ -2,20 +2,20 @@
   "adapter": {
     "files": [
       {
-        "bytes": 26747,
+        "bytes": 26971,
         "path": "scripts/lib/genesisbench_mlx_custody.py",
-        "sha256": "853f66ba479cdc73e6ebc586a17ba4d08024fe7ca57fd4679736db8d7fda5a42"
+        "sha256": "d6243100515f4b4364c3de9e026028f1779c905e18a6965895dcfaca3022ca3f"
       },
       {
-        "bytes": 34765,
+        "bytes": 34905,
         "path": "scripts/lib/genesisbench_mlx_responses.py",
-        "sha256": "01ddbd2c6b52c9294c5d7b78a87eb71791a0edf09aab56c0583dab9665e1ff1a"
+        "sha256": "edbb94385c8c2b24c06e2db047a6d0d95ea001454d74a6c01469301b783b1db6"
       }
     ],
-    "identitySha256": "cbde1b8d3c432809f7819067e7d1b33ec95e807b09324f3330002fc566190126",
+    "identitySha256": "6df9d01eebac073ef7d345a3d283a34ec9b169420b1188e13b4e0f1efcaab085",
     "protocol": "responses-to-mlx-chat-completions-v0.1"
   },
-  "contentIdentitySha256": "cfefac5c7e93702af470c3dcef9310c2112f949043a4c6eb3b57bf497896c200",
+  "contentIdentitySha256": "689343f45427dc85a816891017d3134bfa597839e4f7cbe09a68b1df1f8c9b5e",
   "inventoryIdentitySha256": "63576667d1c807a7b1976319f5b0b78a98404ae418ef09219f936cab699b83d9",
   "isolation": {
     "acceleratorPolicy": "apple-metal-system-graphics",
@@ -111,6 +111,7 @@
     "authorizationHeadersAllowed": false,
     "hiddenRetriesAllowed": false,
     "maxBackendRequestsPerAgentTurn": 1,
+    "reasoningTranslation": "codex-low-to-qwen-thinking-disabled-v0.1",
     "serverFallbackAllowed": false,
     "streamRetries": 0,
     "trustRemoteCodeAllowed": false,

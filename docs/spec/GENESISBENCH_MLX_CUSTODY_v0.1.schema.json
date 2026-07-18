@@ -111,12 +111,13 @@
         "authorizationHeadersAllowed": {"const": false},
         "hiddenRetriesAllowed": {"const": false},
         "maxBackendRequestsPerAgentTurn": {"const": 1},
+        "reasoningTranslation": {"const": "codex-low-to-qwen-thinking-disabled-v0.1"},
         "serverFallbackAllowed": {"const": false},
         "streamRetries": {"const": 0},
         "trustRemoteCodeAllowed": {"const": false},
         "webSearchAllowed": {"const": false}
       },
-      "required": ["authorizationHeadersAllowed", "hiddenRetriesAllowed", "maxBackendRequestsPerAgentTurn", "serverFallbackAllowed", "streamRetries", "trustRemoteCodeAllowed", "webSearchAllowed"],
+      "required": ["authorizationHeadersAllowed", "hiddenRetriesAllowed", "maxBackendRequestsPerAgentTurn", "reasoningTranslation", "serverFallbackAllowed", "streamRetries", "trustRemoteCodeAllowed", "webSearchAllowed"],
       "type": "object"
     },
     "repository": {"pattern": "^[A-Za-z0-9][A-Za-z0-9._/@+-]{0,191}$", "type": "string"},

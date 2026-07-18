@@ -258,6 +258,7 @@ def capture(model_id: str, model_root: Path, python: Path) -> dict[str, Any]:
             "authorizationHeadersAllowed": False,
             "hiddenRetriesAllowed": False,
             "maxBackendRequestsPerAgentTurn": 1,
+            "reasoningTranslation": "codex-low-to-qwen-thinking-disabled-v0.1",
             "serverFallbackAllowed": False,
             "streamRetries": 0,
             "trustRemoteCodeAllowed": False,
@@ -311,7 +312,8 @@ def validate(document: Any, *, check_local: bool = False, model_root: Path | Non
     }, "isolation policy drift")
     require(doc["policy"] == {
         "authorizationHeadersAllowed": False, "hiddenRetriesAllowed": False,
-        "maxBackendRequestsPerAgentTurn": 1, "serverFallbackAllowed": False, "streamRetries": 0,
+        "maxBackendRequestsPerAgentTurn": 1, "reasoningTranslation": "codex-low-to-qwen-thinking-disabled-v0.1",
+        "serverFallbackAllowed": False, "streamRetries": 0,
         "trustRemoteCodeAllowed": False, "webSearchAllowed": False,
     }, "local execution policy drift")
     runtime = closed(doc["runtime"], {"bytes", "distributions", "executableSha256", "fileCount", "implementation", "pythonVersion", "runtimeIdentitySha256", "totalDistributionBytes"}, "runtime")
@@ -455,7 +457,7 @@ def capture_fixture() -> dict[str, Any]:
         "kind": KIND,
         "license": {"benchmarkUseCompatible": candidate["license"]["benchmarkUseCompatible"], "evidence": candidate["evidence"], "id": candidate["license"]["id"]},
         "model": {**artifact, "repository": candidate["repository"], "role": candidate["selection"]["role"]},
-        "policy": {"authorizationHeadersAllowed": False, "hiddenRetriesAllowed": False, "maxBackendRequestsPerAgentTurn": 1, "serverFallbackAllowed": False, "streamRetries": 0, "trustRemoteCodeAllowed": False, "webSearchAllowed": False},
+        "policy": {"authorizationHeadersAllowed": False, "hiddenRetriesAllowed": False, "maxBackendRequestsPerAgentTurn": 1, "reasoningTranslation": "codex-low-to-qwen-thinking-disabled-v0.1", "serverFallbackAllowed": False, "streamRetries": 0, "trustRemoteCodeAllowed": False, "webSearchAllowed": False},
         "preselectionIdentitySha256": plan["contentIdentitySha256"],
         "runtime": {"bytes": 1, "distributions": distributions, "executableSha256": sha256_bytes(b"python"), "fileCount": 2, "implementation": "CPython", "pythonVersion": "0.0.0", "runtimeIdentitySha256": rows_identity(distributions), "totalDistributionBytes": 2},
         "version": "0.1.0",

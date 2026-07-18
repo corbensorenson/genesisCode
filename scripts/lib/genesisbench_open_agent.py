@@ -460,6 +460,7 @@ def v5_local_execution() -> dict[str, Any]:
         "acceleratorPolicy": "apple-metal-system-graphics",
         "isolationBackend": "darwin-sandbox-exec-v0.1",
         "providerProtocol": "responses-to-mlx-chat-completions-v0.1",
+        "reasoningTranslation": "codex-low-to-qwen-thinking-disabled-v0.1",
         "requestRetries": 0,
         "streamRetries": 0,
     }
@@ -594,6 +595,8 @@ def common_predeclaration_fields(
         allowed_providers = {"mlx-responses"} if is_v5_harness(harness) else {"lmstudio", "ollama"}
         require(local_provider in allowed_providers, "local runner requires a supported provider")
         require(model_artifact_sha256 is not None and SHA_RE.fullmatch(model_artifact_sha256) is not None, "local runner requires a model artifact digest")
+        if is_v5_harness(harness):
+            require(reasoning_effort == "low", "v0.5 local execution requires the disclosed non-thinking low-reasoning policy")
         network_mode = "loopback-provider-only"
     else:
         require(local_provider is None and model_artifact_sha256 is None and custody_manifest is None, "hosted runner cannot declare local provider material")
@@ -817,6 +820,8 @@ def validate_common_fields(doc: dict[str, Any], harness: dict[str, Any] | None =
         allowed_providers = {"mlx-responses"} if is_v5_harness(harness) else {"lmstudio", "ollama"}
         require(runner["localProvider"] in allowed_providers, "invalid local provider")
         require(SHA_RE.fullmatch(model["artifactSha256"] or "") is not None, "local model artifact is unbound")
+        if is_v5_harness(harness):
+            require(model["reasoningEffort"] == "low", "v0.5 local reasoning policy drift")
         expected_network = "loopback-provider-only"
     else:
         require(runner["localProvider"] is None and model["artifactSha256"] is None, "hosted runner contains local bindings")
@@ -1879,7 +1884,7 @@ def self_test() -> int:
             case_ids=campaign_case_ids(suite, "reality-gate"),
             runner_class="codex-cli-local", executable=fixture,
             model_id=custody["model"]["id"], model_revision=custody["model"]["revision"],
-            immutable_revision=True, reasoning_effort="xhigh", timeout_ms=1_000,
+            immutable_revision=True, reasoning_effort="low", timeout_ms=1_000,
             local_provider="mlx-responses",
             model_artifact_sha256=custody["model"]["artifactIdentitySha256"],
             hardware_class="fixture-apple-silicon", genesis_bin=fixture,
@@ -1891,6 +1896,7 @@ def self_test() -> int:
             lambda d: d["custody"].__setitem__("manifestIdentitySha256", "0" * 64),
             lambda d: d["runner"].__setitem__("localProvider", "ollama"),
             lambda d: d["disclosure"].__setitem__("secretSource", "ambient-env"),
+            lambda d: d["model"].__setitem__("reasoningEffort", "xhigh"),
         )
         for mutate in local_mutations:
             candidate = copy.deepcopy(local_predeclaration); mutate(candidate); candidate = identified(candidate)
