@@ -518,9 +518,15 @@ jobs:
         run: |
           bash scripts/install_wasi_sdk.sh --version
           source scripts/lib/cargo_target_dir.sh
+          genesis_configure_cargo_target_dir "$PWD" ci-wasi-smoke-native root-host
+          cargo build -p gc_cli --bin genesis --locked --offline
+          native_smoke_bin="$RUNNER_TEMP/genesis-wasi-smoke-native"
+          cp "$CARGO_TARGET_DIR/debug/genesis" "$native_smoke_bin"
+          chmod 0755 "$native_smoke_bin"
           genesis_configure_cargo_target_dir "$PWD" ci-wasi-build root-wasi
-          cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
-          bash scripts/wasi_smoke.sh "$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
+          cargo build -p gc_wasi_cli --target wasm32-wasip1 --release --locked --offline
+          GENESIS_WASI_SMOKE_NATIVE_BIN="$native_smoke_bin" \
+            bash scripts/wasi_smoke.sh "$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
 
   local_workspace_test_contract:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile != 'fast') }}

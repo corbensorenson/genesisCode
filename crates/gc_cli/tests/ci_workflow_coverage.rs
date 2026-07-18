@@ -151,6 +151,31 @@ fn ci_provisions_verified_wasi_sdk_before_native_dependency_build() {
     assert!(install_step.contains("--install-base \"$RUNNER_TOOL_CACHE/genesis/wasi-sdk\""));
     assert!(install_step.contains("--github-env \"$GITHUB_ENV\""));
     assert!(ci[build..].contains("bash scripts/install_wasi_sdk.sh --version"));
+
+    let wasi_step = &ci[build..];
+    let native_scope = wasi_step
+        .find("ci-wasi-smoke-native root-host")
+        .expect("native smoke cache scope");
+    let native_build = wasi_step
+        .find("cargo build -p gc_cli --bin genesis --locked --offline")
+        .expect("locked offline native smoke build");
+    let native_copy = wasi_step
+        .find("cp \"$CARGO_TARGET_DIR/debug/genesis\" \"$native_smoke_bin\"")
+        .expect("native smoke binary copy");
+    let wasi_scope = wasi_step
+        .find("ci-wasi-build root-wasi")
+        .expect("WASI cache scope");
+    let wasi_build = wasi_step
+        .find("cargo build -p gc_wasi_cli --target wasm32-wasip1 --release --locked --offline")
+        .expect("locked offline WASI build");
+    let smoke = wasi_step
+        .find("GENESIS_WASI_SMOKE_NATIVE_BIN=\"$native_smoke_bin\"")
+        .expect("prebuilt native smoke executable handoff");
+    assert!(native_scope < native_build);
+    assert!(native_build < native_copy);
+    assert!(native_copy < wasi_scope);
+    assert!(wasi_scope < wasi_build);
+    assert!(wasi_build < smoke);
 }
 
 #[test]
