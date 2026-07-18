@@ -36,6 +36,7 @@ EXPECTED_TOOL_NAMES = (
     "view_image",
     "write_stdin",
 )
+EXPECTED_REASONING = {"effort": "low", "summary": "auto"}
 FORBIDDEN_HEADERS = {"authorization", "cookie", "proxy-authorization", "x-api-key"}
 FORBIDDEN_CONTEXT_MARKERS = (
     "<skills_instructions>",
@@ -95,6 +96,7 @@ def validate_request(body: Any, headers: dict[str, str], model_id: str, seen_tur
     require(isinstance(request_id, str) and 1 <= len(request_id) <= 256 and request_id.isascii(), "missing or invalid client request id")
     require(request_id not in seen_ids, "duplicate client request id rejected")
     require(body["model"] == model_id, "requested model substitution")
+    require(body["reasoning"] == EXPECTED_REASONING, "local reasoning policy drift")
     require(body["stream"] is True and body["store"] is False, "Responses transport policy drift")
     require(body["parallel_tool_calls"] is False and body["tool_choice"] == "auto", "tool dispatch policy drift")
     require(isinstance(body["instructions"], str) and isinstance(body["input"], list), "invalid Responses context")
@@ -475,7 +477,7 @@ def fixture_request() -> dict[str, Any]:
     return {
         "client_metadata": {}, "include": [], "input": [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": "test"}]}],
         "instructions": "fixed", "model": "fixture", "parallel_tool_calls": False, "prompt_cache_key": "fixture",
-        "reasoning": {"effort": "low", "summary": "auto"}, "store": False, "stream": True,
+        "reasoning": copy.deepcopy(EXPECTED_REASONING), "store": False, "stream": True,
         "tool_choice": "auto", "tools": tools,
     }
 

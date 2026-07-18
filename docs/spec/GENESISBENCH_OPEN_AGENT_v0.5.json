@@ -1,6 +1,6 @@
 {
   "coldAcquisitionAdapterProfileUnchanged": true,
-  "contentIdentitySha256": "09550e29e6a4bb636cf18182fa13256130bf09632edc6073dd8f4dd5d2e15d0c",
+  "contentIdentitySha256": "1484ec49f9be6db6d0cb355e3ca202e241dcbc88ba19a276a83e7ed3f14f6b6a",
   "implementation": {
     "entrypoints": [
       "scripts/lib/genesisbench_open_agent.py",
@@ -43,19 +43,19 @@
         "sha256": "3298a1882a95823642ed08277b581b3245574db44358d1e95ae611fd0ef16eaa"
       },
       {
-        "bytes": 26747,
+        "bytes": 26971,
         "path": "scripts/lib/genesisbench_mlx_custody.py",
-        "sha256": "853f66ba479cdc73e6ebc586a17ba4d08024fe7ca57fd4679736db8d7fda5a42"
+        "sha256": "d6243100515f4b4364c3de9e026028f1779c905e18a6965895dcfaca3022ca3f"
       },
       {
-        "bytes": 34765,
+        "bytes": 34905,
         "path": "scripts/lib/genesisbench_mlx_responses.py",
-        "sha256": "01ddbd2c6b52c9294c5d7b78a87eb71791a0edf09aab56c0583dab9665e1ff1a"
+        "sha256": "edbb94385c8c2b24c06e2db047a6d0d95ea001454d74a6c01469301b783b1db6"
       },
       {
-        "bytes": 111546,
+        "bytes": 111984,
         "path": "scripts/lib/genesisbench_open_agent.py",
-        "sha256": "92404e67e63ae0ebe709e79824875fe2e9f8dddeba1b6c96b3246a683ff7abad"
+        "sha256": "9d458849979cd03829ea9ed0435dc341d0c6723220db48524f52ddd1f9dbe3bd"
       },
       {
         "bytes": 10669,
@@ -88,7 +88,7 @@
         "sha256": "b84990e4b57cd7ef097dec5055f9c49e84434c6ae356396c7345f1df0f23183e"
       }
     ],
-    "identitySha256": "1d1ca30cce166a49d058ca7885e7bd382ed79a2a29dad99966b940b46525c99a"
+    "identitySha256": "8e0ce880d6ccd35daf4bbc30aa4fdcf8ac4fcf4eeb2d95523d1be950d668230b"
   },
   "invocationProfiles": {
     "codex-cli-hosted": {
@@ -116,9 +116,9 @@
   "localExecution": {
     "acceleratorPolicy": "apple-metal-system-graphics",
     "custodySchema": {
-      "bytes": 6324,
+      "bytes": 6435,
       "path": "docs/spec/GENESISBENCH_MLX_CUSTODY_v0.1.schema.json",
-      "sha256": "5148cb67d8da4d011bdde1e97e6ffdff0c61a061ec0ace94ffbc2fc8aa92ab0d"
+      "sha256": "0554c1bc08be1a0aaf388dd754c981f44bc926f9e65ca3bad1cddfd60e0a5485"
     },
     "disabledFeatures": [
       "apps",
@@ -151,11 +151,12 @@
     ],
     "isolationBackend": "darwin-sandbox-exec-v0.1",
     "providerProtocol": "responses-to-mlx-chat-completions-v0.1",
+    "reasoningTranslation": "codex-low-to-qwen-thinking-disabled-v0.1",
     "requestRetries": 0,
     "streamRetries": 0
   },
   "purpose": "Execute transitively bound hosted campaigns and credential-free local MLX campaigns under an independently tested outer read/write/network sandbox with exact custody, single-request-per-turn transport, retained wire evidence, and hard server teardown.",
-  "scaffoldIdentitySha256": "f7ba313383a54b399b9fed92cc2a3725104988c5fe82a32f31853e7bd91d4caa",
+  "scaffoldIdentitySha256": "a4b38e331e287aea8881e2946021eb88fd6a83e90852b8ef951d922e097e1823",
   "securityControls": [
     "agent-and-model-never-accessed-during-replay",
     "all-environment-values-redacted",
