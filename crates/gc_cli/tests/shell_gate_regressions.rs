@@ -941,6 +941,12 @@ fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env() {
     );
     assert!(stdout.contains("report=temporary"));
     assert!(
+        stdout.contains(
+            "budget_subject=prepush-standard budget_ms=120000 disk_budget_bytes=3221225472"
+        ),
+        "explicit duration must not collapse the profile-fallback disk envelope"
+    );
+    assert!(
         !report.exists(),
         "legacy report environment override was honored"
     );
