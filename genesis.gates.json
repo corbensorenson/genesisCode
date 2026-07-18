@@ -710,7 +710,7 @@
       "executionIdentitySha256": "589808d917d9653a79c3407ca2c291fc81d10fd9b885a2b628912493686b047f",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2064,7 +2064,7 @@
       "executionIdentitySha256": "9cc5aa3304c46361ec8f6c9ca849abd798d5aa6816fa2acffe7db4607da80dc0",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3131,7 +3131,7 @@
       "executionIdentitySha256": "06ce5cbf4cc6c499ba9669527234944e84b762be001af3469809b262ec5d1f83",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4073,7 +4073,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5092,7 +5092,7 @@
       "executionIdentitySha256": "9f3020fd48c48b59a479a774c578f7ad9eafd3b232598bc068815cb5f1aee4db",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6317,7 +6317,7 @@
       "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "ecb8f71fa381a9eb228596cc90e7346fb33b1605d70e46dbc5802d8b910a68fc",
+      "inputIdentitySha256": "e95122a061a8909439738c1eab831b2b96aef17fb9315d13aa3769fda451fa2b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6594,7 +6594,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8102,7 +8102,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "fa5e29e56bdd3942131e99289c5638f27f7b3e19719cc9bf03f393c25a9b1fb2",
+      "inputIdentitySha256": "2077824c4c7ad9bfa72f87a759508ec3a615d572690de285cc16cf562842d5f3",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8167,7 +8167,7 @@
       "executionIdentitySha256": "bb0f9dc73bdea6da6f719477b5fecbd454c85b1ef233ab8ab02970964d507f33",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -10312,7 +10312,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11880,7 +11880,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12810,7 +12810,7 @@
       "executionIdentitySha256": "4cd05e00f81a932dd2ffbebf1e8a7a76bc6247080f66de016584124c8bf89c15",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "cfa8990467e4b43fc046c673abf0d9209b5d3045542c795fc610c3862bd4821a",
+      "inputIdentitySha256": "d417fc0532a7cb14a6b031be1e3a7b9470bf729af2afa5fff06041712247af68",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -12962,7 +12962,7 @@
       "executionIdentitySha256": "c696525e2b5c896e0369bb40d2f24eea0bd10da5b0d47a2f36147935e9e0a1a0",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14376,7 +14376,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -15597,7 +15597,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -18591,7 +18591,7 @@
       "executionIdentitySha256": "a8b7cf18f43dda8ef1a3ed6de4427e9080a9cf09e57ebddc7e43f48d4a952251",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19631,7 +19631,7 @@
       "executionIdentitySha256": "bbeead5624ce4e8f5e5746a4eceaf1aea16e54cd9df974fd8c36f095f8c1bbfd",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "7f2a12e7c1c3dc5b7089b6fb196bb86726fc263be686e4baafa162c86178ac46",
+      "inputIdentitySha256": "e788d3bfcd2c72a6a04f6c6632be209c507308d81a9efa07b36dbf4baee28abd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -21050,10 +21050,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_webxr_browser_conformance_lane.sh",
-      "executionIdentitySha256": "e58c64fe2ff5007a59094e507df7fa0ae22396111572e830899d04a4b48f1317",
+      "executionIdentitySha256": "636bdfe583f7a448ca4b753cf1b86d9881543dc71ed6f3e64f98beb55bc4e76e",
       "expectedDurationSeconds": 15,
       "id": "gate/webxr-browser-conformance-lane",
-      "inputIdentitySha256": "9a41850f3dea8c11f389421513cc3b8fd6157f68e2b40cfa442f081958f1a95b",
+      "inputIdentitySha256": "605c3634640b3bc0f3a079ccdfddd9b5a3f233f2dc4ffc651e10b75cfcc6c6b8",
       "inputs": {
         "paths": [
           "genesis.prerequisites.json",
@@ -21089,7 +21089,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "76d31ea2ee75272910ac74abebf4108d09576d3ec72613e6e2fe5ac247fd5c32",
+      "sourceSha256": "18f678edff9613bee5c91e68d34f4613f4ce4ba7dd7706ad50e20c4704dd3526",
       "tools": [
         "bash",
         "git",
@@ -21105,7 +21105,7 @@
       "executionIdentitySha256": "eaa4b0231722b1533de9a3a6cc7bcdc46851f0c26fc8157a30582de173b3e99b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "44e3f1af24549cc81e4a79b2861554b2dd0ac01b7bbb8e41579a96905c3302bf",
+      "inputIdentitySha256": "8371adee1c2933c13e48a3bf33d051c539eebea085d38909268922f392eb9122",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21229,7 +21229,7 @@
       "executionIdentitySha256": "4266b100069f929eab37aa86eab8f862d2b13ab9f3876e438da1fed9cef06ab4",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "b78cf7a71c38d4184015b6c2ea016dc5f9949fb19497dd508487af29e878c8c4",
+      "inputIdentitySha256": "8884e8f165ccd3bfb882b1d5cfd4177aaea436f5b0761da72baec7a9bfc918d4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21505,7 +21505,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "c92e580ad80e640d1928d0dd60ccc7c6abf3ddf26bdf806ea42cf1c090453f58"
+        "sha256": "abebb5fb8fa2a1ec269031b35c37ecfc4b23db577163695a12253bd2620b8459"
       },
       {
         "path": "genesis.prerequisites.json",
