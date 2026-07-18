@@ -575,8 +575,12 @@ if grep -B 2 -F 'fn scoring_contract_core_accepts_reference_and_rejects_symlinks
 fi
 
 if ! grep -B 2 -F 'fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env' \
-  crates/gc_cli/tests/shell_gate_regressions.rs | grep -Fq '#[ignore = "perf-gate"]'; then
+  crates/gc_cli/tests/changed_fast_perf_regressions.rs | grep -Fq '#[ignore = "perf-gate"]'; then
   echo "test-execution-profile-matrix: nested changed-fast probe must remain outside the default Rust suite" >&2
+  exit 1
+fi
+if ! grep -Fq 'changed_fast_perf_regressions' "$PERF_GATES_SCRIPT"; then
+  echo "test-execution-profile-matrix: changed-fast perf regressions must remain in the serial perf lane" >&2
   exit 1
 fi
 
