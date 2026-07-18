@@ -729,10 +729,10 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
                 == 3,
         "standard and full release profiles must provision the declared browser runtime"
     );
-    let local_workspace = workflow
-        .find("- name: Local Workspace Test Contract (CI unset)")
-        .expect("local workspace contract lane");
-    let perf_lane = &workflow[perf_tests..local_workspace];
+    let perf_budgets = workflow
+        .find("- name: Performance Budgets")
+        .expect("performance budgets lane");
+    let perf_lane = &workflow[perf_tests..perf_budgets];
     assert!(
         perf_lane.contains("if [[ \"$GENESIS_CI_PROFILE\" == \"full\" ]]")
             && perf_lane
@@ -741,6 +741,44 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             && perf_lane.contains("GENESIS_HEALTH_PROFILE=dev-fast")
             && perf_lane.contains("bash scripts/test_perf_gates.sh"),
         "standard CI must declare its cold dev-fast envelope without claiming release-full; full CI must retain strict release qualification"
+    );
+    let local_workspace_job = workflow
+        .find("  local_workspace_test_contract:")
+        .expect("isolated local workspace contract job");
+    let required_aggregate_job = workflow[local_workspace_job..]
+        .find("  test:\n")
+        .map(|offset| local_workspace_job + offset)
+        .expect("required aggregate job after local workspace contract");
+    let local_workspace = &workflow[local_workspace_job..required_aggregate_job];
+    assert!(
+        workflow[..local_workspace_job]
+            .find("- name: Local Workspace Test Contract (CI unset)")
+            .is_none()
+            && local_workspace.contains("runs-on: ubuntu-latest")
+            && local_workspace.contains("Local Workspace Disk Headroom")
+            && local_workspace.contains("--min-kb 10485760 --strict 1")
+            && local_workspace.contains("cargo fetch --locked")
+            && local_workspace.contains(
+                "env -u CI cargo test --workspace --profile selfhost-strict --locked --offline"
+            )
+            && !local_workspace.contains("Playwright")
+            && !local_workspace.contains("test_perf_gates.sh"),
+        "the CI-unset workspace contract must run offline in a fresh, disk-preflighted job without browser or performance artifacts"
+    );
+    let strict_equivalence_job = workflow
+        .find("  pr_strict_equivalence_gate:")
+        .expect("strict equivalence job after required aggregate");
+    let required_aggregate = &workflow[required_aggregate_job..strict_equivalence_job];
+    assert!(
+        required_aggregate.contains("if: ${{ always() }}")
+            && required_aggregate.contains("- test_suite")
+            && required_aggregate.contains("- local_workspace_test_contract")
+            && required_aggregate.contains("TEST_SUITE_RESULT: ${{ needs.test_suite.result }}")
+            && required_aggregate.contains(
+                "LOCAL_WORKSPACE_RESULT: ${{ needs.local_workspace_test_contract.result }}"
+            )
+            && required_aggregate.contains("Required CI Aggregate"),
+        "the protected test status must aggregate both parallel test jobs"
     );
     assert!(
         parity.contains("GENESIS_AGENT_REFERENCE_WORKFLOWS_TMPDIR=\"$lane_tmp_root\"")
