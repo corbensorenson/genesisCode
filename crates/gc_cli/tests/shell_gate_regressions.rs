@@ -729,9 +729,10 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         perf_lane.contains("if [[ \"$GENESIS_CI_PROFILE\" == \"full\" ]]")
             && perf_lane
                 .contains("GENESIS_HEALTH_PROFILE=release-full bash scripts/test_perf_gates.sh")
-            && perf_lane
-                .contains("GENESIS_HEALTH_PROFILE=dev-fast bash scripts/test_perf_gates.sh"),
-        "standard CI must run the serial perf suite without claiming release-full; full CI must retain strict release qualification"
+            && perf_lane.contains("GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=420000")
+            && perf_lane.contains("GENESIS_HEALTH_PROFILE=dev-fast")
+            && perf_lane.contains("bash scripts/test_perf_gates.sh"),
+        "standard CI must declare its cold dev-fast envelope without claiming release-full; full CI must retain strict release qualification"
     );
     assert!(
         parity.contains("GENESIS_AGENT_REFERENCE_WORKFLOWS_TMPDIR=\"$lane_tmp_root\"")
