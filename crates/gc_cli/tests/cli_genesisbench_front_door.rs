@@ -818,5 +818,5 @@ fn generated_authorities_and_all_adapter_controls_are_current() {
     );
     let report: Value = serde_json::from_slice(&output.stdout).expect("parse authority report");
     assert_eq!(report["adapterClasses"], 5);
-    assert_eq!(report["controls"], 58);
+    assert_eq!(report["controls"], 65);
 }
