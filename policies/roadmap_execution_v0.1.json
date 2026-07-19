@@ -300,7 +300,7 @@
     "R1.1": {"profile": "agent-contract", "start_after": ["R0.2.e", "R0.3", "R0.5"], "sequential": true},
     "R1.2": {"profile": "agent-contract", "start_after": ["R1.1"], "sequential": true},
     "R1.3": {"profile": "agent-contract", "start_after": ["R1.1"], "sequential": true},
-    "R1.4": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2"], "sequential": true},
+    "R1.4": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2"], "sequential": false},
     "R1.5": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2", "R1.4"], "sequential": true},
     "R1.6": {"profile": "agent-contract", "start_after": ["R0.2", "R1.3"], "sequential": true},
     "R1.7": {"profile": "agent-contract", "start_after": ["R1.3", "R1.6"], "sequential": true},
@@ -367,7 +367,15 @@
       "R2.2"
     ],
     "R1.4.o": [
-      "R0.4.i"
+      "R0.4.i",
+      "R1.4.n"
+    ],
+    "R1.4.q": [
+      "R1.4.j"
+    ],
+    "R1.4.p": [
+      "R1.4.o",
+      "R1.4.q"
     ],
     "R1.7.b": [
       "R1.4.l"
