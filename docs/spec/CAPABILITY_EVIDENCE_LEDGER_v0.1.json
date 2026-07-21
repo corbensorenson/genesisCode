@@ -1,6 +1,9 @@
 {
-  "active_defect_ids": [],
-  "audit_date": "2026-07-16",
+  "active_defect_ids": [
+    "P1.4",
+    "P1.5"
+  ],
+  "audit_date": "2026-07-21",
   "claims": [
     {
       "category": "kernel",
@@ -899,6 +902,7 @@
         "E1:cap-host-bridge/check-2"
       ],
       "gap_ids": [
+        "P1.5",
         "R2.2.f",
         "R7.3.b"
       ],
@@ -1015,6 +1019,8 @@
         "E1:cap-assurance-profiles/check-3"
       ],
       "gap_ids": [
+        "P1.4",
+        "P1.5",
         "R7.1.a",
         "R7.3.a"
       ],
@@ -1087,6 +1093,7 @@
         "E1:cap-modular-boundaries/check-1"
       ],
       "gap_ids": [
+        "P1.4",
         "R4.3.a",
         "R4.3.b"
       ],
@@ -1114,6 +1121,8 @@
     }
   ],
   "gap_catalog": {
+    "P1.4": "Restore protected v0.5 publication and complete transitive generated/gate-input authority under R0.4.k.",
+    "P1.5": "Eliminate host-bridge timeout kill/reap failure under mandatory fault injection and complete R2.2.f cleanup proof.",
     "R1.3.c": "Generate and verify the pinned MCP agent interface from canonical CLI schemas.",
     "R1.4.c": "Build deterministic generation, repair, refactor, and deployment task benchmarks.",
     "R1.5.a": "Generate the authoring skill from canonical language and capability inputs.",

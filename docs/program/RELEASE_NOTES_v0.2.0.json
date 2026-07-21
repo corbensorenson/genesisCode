@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "ab21a3ded78eafe070359e75632b3598840cfb17838641605bd66e3697247819",
+  "contentIdentitySha256": "47ef0c6917fb26074208128017710ebd15fe95e71475b16222f1e338d155906d",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -551,6 +551,7 @@
             "E1:cap-host-bridge/check-2"
           ],
           "gapIds": [
+            "P1.5",
             "R2.2.f",
             "R7.3.b"
           ],
@@ -621,6 +622,8 @@
             "E1:cap-assurance-profiles/check-3"
           ],
           "gapIds": [
+            "P1.4",
+            "P1.5",
             "R7.1.a",
             "R7.3.a"
           ],
@@ -665,6 +668,7 @@
             "E1:cap-modular-boundaries/check-1"
           ],
           "gapIds": [
+            "P1.4",
             "R4.3.a",
             "R4.3.b"
           ],
@@ -1878,8 +1882,27 @@
       ]
     },
     "knownGaps": {
-      "activeDefectIds": [],
+      "activeDefectIds": [
+        "P1.4",
+        "P1.5"
+      ],
       "roadmapGaps": [
+        {
+          "affectedClaims": [
+            "CAP-ASSURANCE-PROFILES",
+            "CAP-MODULAR-BOUNDARIES"
+          ],
+          "id": "P1.4",
+          "summary": "Restore protected v0.5 publication and complete transitive generated/gate-input authority under R0.4.k."
+        },
+        {
+          "affectedClaims": [
+            "CAP-ASSURANCE-PROFILES",
+            "CAP-HOST-BRIDGE"
+          ],
+          "id": "P1.5",
+          "summary": "Eliminate host-bridge timeout kill/reap failure under mandatory fault injection and complete R2.2.f cleanup proof."
+        },
         {
           "affectedClaims": [
             "CAP-AGENT-JSON-CONTRACTS"
@@ -2574,7 +2597,10 @@
       ]
     },
     "security": {
-      "activeDefectIds": [],
+      "activeDefectIds": [
+        "P1.4",
+        "P1.5"
+      ],
       "claimState": "requirements-only-unverified",
       "mandatoryChecks": [
         {
@@ -2674,7 +2700,7 @@
     "docs/program/evidence/artifact/genesis-example.bin": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
-    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "dc718f1c9adaabdc1a044454fae32020c7af8faece8ba382b1696264266afa9b",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "d3623033b8946775841deb662594c2e728202399c01b748073e2429e68d65780",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",
