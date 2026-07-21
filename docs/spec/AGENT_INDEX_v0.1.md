@@ -111,10 +111,12 @@ genesis --json agent-index --diagnostic <exact-code>
     as the frozen Cold Acquisition scaffold, its eight paired ablations over nine shared
     lineages, and the complete no-hidden-work trajectory contract.
   - includes `genesisbench_front_door = "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md"`,
-    `genesisbench_open_agent = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json"`,
+    `genesisbench_open_agent = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json"`,
     `genesisbench_open_agent_v0_1 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json"`,
     `genesisbench_open_agent_v0_2 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json"`,
     `genesisbench_open_agent_v0_3 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json"`,
+    `genesisbench_open_agent_v0_4 = "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json"`,
+    `genesisbench_mlx_custody_schema = "docs/spec/GENESISBENCH_MLX_CUSTODY_v0.1.schema.json"`,
     `genesisbench_open_agent_campaign_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json"`,
     `genesisbench_open_agent_campaign_report_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_REPORT_v0.1.schema.json"`,
     `genesisbench_open_agent_predeclaration_schema = "docs/spec/GENESISBENCH_OPEN_AGENT_PREDECLARATION_v0.1.schema.json"`,
@@ -123,13 +125,14 @@ genesis --json agent-index --diagnostic <exact-code>
     `genesisbench_local_models_schema = "docs/spec/GENESISBENCH_LOCAL_MODELS_v0.1.schema.json"`,
     `genesisbench_local_model_preselection = "benchmarks/genesisbench/v0.1/local-models/preselection.json"`,
     `genesisbench_local_model_inventory = "benchmarks/genesisbench/v0.1/local-models/inventory.json"`,
+    `genesisbench_local_model_custody_qwen3_4b = "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json"`,
     `genesisbench_adapters = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json"`,
     `genesisbench_adapters_schema = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json"`,
     `genesisbench_adapter_schema = "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json"`,
     `genesisbench_execution_run_schema = "docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json"`,
     and `genesisbench_bundle_manifest_schema = "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json"`
     as the canonical sixteen-command benchmark and registry surface, separate capability-minimal
-    Open Agent campaign/predeclaration/run/report/tool-archive boundary with retained v0.1/v0.2 replay and cache-closed, output-complete, path-normalized v0.3 execution, closed five-class Cold Acquisition transport contract,
+    Open Agent campaign/predeclaration/run/report/tool-archive boundary with retained v0.1-v0.4 replay and v0.5 credential-free MLX custody, independently sandboxed Codex/provider processes, exact wire evidence, zero hidden retries, and hard server teardown; closed five-class Cold Acquisition transport contract,
     strict run/replay records, and deterministic submission bundle.
   - includes `genesisbench_registry = "docs/spec/GENESISBENCH_REGISTRY_v0.1.json"`,
     `genesisbench_submission_claim_schema = "docs/spec/GENESISBENCH_SUBMISSION_CLAIM_v0.1.schema.json"`,

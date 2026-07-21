@@ -1,7 +1,7 @@
 {
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
-  "audit_date": "2026-07-15",
+  "audit_date": "2026-07-21",
   "resource_classes": [
     "static",
     "build",
@@ -300,8 +300,8 @@
     "R1.1": {"profile": "agent-contract", "start_after": ["R0.2.e", "R0.3", "R0.5"], "sequential": true},
     "R1.2": {"profile": "agent-contract", "start_after": ["R1.1"], "sequential": true},
     "R1.3": {"profile": "agent-contract", "start_after": ["R1.1"], "sequential": true},
-    "R1.4": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2"], "sequential": true},
-    "R1.5": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2", "R1.4"], "sequential": true},
+    "R1.4": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2"], "sequential": false},
+    "R1.5": {"profile": "agent-contract", "start_after": ["R1.1", "R1.2", "R0.4.k"], "sequential": true},
     "R1.6": {"profile": "agent-contract", "start_after": ["R0.2", "R1.3"], "sequential": true},
     "R1.7": {"profile": "agent-contract", "start_after": ["R1.3", "R1.6"], "sequential": true},
     "R2.1": {"profile": "runtime-core", "start_after": ["R0.5"], "sequential": true},
@@ -310,10 +310,10 @@
     "R2.4": {"profile": "runtime-core", "start_after": ["R2.1"], "sequential": true},
     "R3.1": {"profile": "validated-tier", "start_after": ["R2.1", "R2.2"], "sequential": true},
     "R3.2": {"profile": "validated-tier", "start_after": ["R2.1", "R2.2"], "sequential": true},
-    "R3.3": {"profile": "validated-tier", "start_after": ["R3.1", "R3.2"], "sequential": true},
+    "R3.3": {"profile": "validated-tier", "start_after": ["R2.4", "R3.1", "R3.2"], "sequential": true},
     "R3.4": {"profile": "validated-tier", "start_after": ["R2.3", "R3.3"], "sequential": true},
     "R4.1": {"profile": "selfhost-authority", "start_after": ["R0.1.f", "R0.2"], "sequential": true},
-    "R4.2": {"profile": "selfhost-authority", "start_after": ["R4.1", "R3.1", "R3.2", "R5.1", "R5.3"], "sequential": true},
+    "R4.2": {"profile": "selfhost-authority", "start_after": ["R4.1", "R3.1", "R3.2", "R3.3", "R5.1", "R5.3"], "sequential": true},
     "R4.3": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
     "R4.4": {"profile": "selfhost-authority", "start_after": ["R4.2", "R4.3"], "sequential": true},
     "R4.5": {"profile": "selfhost-authority", "start_after": ["R4.2"], "sequential": true},
@@ -337,12 +337,12 @@
     "R7.2": {"profile": "assurance", "start_after": ["R3.1", "R5.1"], "sequential": false},
     "R7.3": {"profile": "assurance", "start_after": ["R0.2", "R5.5", "R6.2"], "sequential": true},
     "R7.4": {"profile": "assurance", "start_after": ["R2.2", "R6.4"], "sequential": true},
-    "R8.1": {"profile": "product-proof", "start_after": ["R1.5", "R1.6", "R6.4", "R7.1"], "sequential": true},
+    "R8.1": {"profile": "product-proof", "start_after": ["R1.5", "R1.6", "R1.7", "R6.4", "R7.1"], "sequential": true},
     "R8.2": {"profile": "product-proof", "start_after": ["R8.1", "R7.3", "R6.5", "R6.6", "R6.7"], "sequential": false},
-    "R8.3": {"profile": "product-proof", "start_after": ["R8.2"], "sequential": true},
+    "R8.3": {"profile": "product-proof", "start_after": [], "sequential": true},
     "R8.4": {"profile": "product-proof", "start_after": ["R1.2", "R2.3"], "sequential": true},
-    "R8.5": {"profile": "product-proof", "start_after": ["R1.4", "R1.6", "R7.1", "R8.1"], "sequential": true},
-    "R9.1": {"profile": "trust-release", "start_after": ["R4.5", "R5.5", "R6.4", "R6.5", "R6.6", "R6.7", "R7.4", "R8.3", "R8.4", "R8.5"], "sequential": true},
+    "R8.5": {"profile": "product-proof", "start_after": ["R1.6", "R7.1", "R8.1"], "sequential": false},
+    "R9.1": {"profile": "trust-release", "start_after": ["R3.4", "R4.5", "R5.5", "R6.4", "R6.5", "R6.6", "R6.7", "R7.4", "R8.3", "R8.4"], "sequential": true},
     "R9.2": {"profile": "trust-release", "start_after": ["R4.4", "R6.3", "R7.3", "R9.1"], "sequential": true},
     "R9.3": {"profile": "trust-release", "start_after": ["R6.4", "R7.3", "R9.1"], "sequential": true},
     "R9.4": {"profile": "trust-release", "start_after": ["R9.1", "R9.2", "R9.3"], "sequential": true},
@@ -367,7 +367,31 @@
       "R2.2"
     ],
     "R1.4.o": [
-      "R0.4.i"
+      "R0.4.k",
+      "R1.4.n"
+    ],
+    "R1.5.a": [
+      "R1.4.a",
+      "R1.4.b",
+      "R1.4.c",
+      "R1.4.d",
+      "R1.4.e",
+      "R1.4.f",
+      "R1.4.g",
+      "R1.4.h",
+      "R1.4.i",
+      "R1.4.j",
+      "R1.4.k",
+      "R1.4.l",
+      "R1.4.m",
+      "R1.4.n"
+    ],
+    "R1.4.q": [
+      "R1.4.j"
+    ],
+    "R1.4.p": [
+      "R1.4.o",
+      "R1.4.q"
     ],
     "R1.7.b": [
       "R1.4.l"
@@ -380,6 +404,45 @@
     ],
     "R8.4.e": [
       "R8.3"
+    ],
+    "R8.3.a": [
+      "R8.2.a",
+      "R8.2.b",
+      "R8.2.c",
+      "R8.2.d",
+      "R8.2.e",
+      "R8.2.f",
+      "R8.2.g",
+      "R8.2.h",
+      "R8.2.i",
+      "R8.2.j",
+      "R8.2.k",
+      "R8.2.l",
+      "R8.2.m",
+      "R8.2.n",
+      "R8.2.o",
+      "R8.2.p",
+      "R8.2.q",
+      "R8.2.r"
+    ],
+    "R8.5.a": [
+      "R1.4.a",
+      "R1.4.b",
+      "R1.4.c",
+      "R1.4.d",
+      "R1.4.e",
+      "R1.4.f",
+      "R1.4.g",
+      "R1.4.h",
+      "R1.4.i",
+      "R1.4.j",
+      "R1.4.k",
+      "R1.4.l",
+      "R1.4.m",
+      "R1.4.n",
+      "R1.4.o",
+      "R1.4.q",
+      "R1.4.p"
     ],
     "R8.2.k": [
       "R6.5"
@@ -410,11 +473,80 @@
       "R6.4"
     ],
     "R8.5.p": [
+      "R8.5.o",
       "R5.4.e",
       "R7.3"
     ],
     "R8.5.r": [
+      "R8.5.q",
       "R8.3"
+    ],
+    "R8.5.b": [
+      "R8.5.a"
+    ],
+    "R8.5.c": [
+      "R8.5.b"
+    ],
+    "R8.5.d": [
+      "R8.5.c"
+    ],
+    "R8.5.e": [
+      "R8.5.d"
+    ],
+    "R8.5.s": [
+      "R8.5.e",
+      "R8.3.e"
+    ],
+    "R8.5.h": [
+      "R8.5.e"
+    ],
+    "R8.5.f": [
+      "R8.5.h"
+    ],
+    "R8.5.g": [
+      "R8.5.f"
+    ],
+    "R8.5.i": [
+      "R8.5.h"
+    ],
+    "R8.5.j": [
+      "R8.5.i"
+    ],
+    "R8.5.k": [
+      "R8.5.g",
+      "R8.5.j"
+    ],
+    "R8.5.l": [
+      "R8.5.k"
+    ],
+    "R8.5.m": [
+      "R8.5.l"
+    ],
+    "R8.5.n": [
+      "R8.5.m"
+    ],
+    "R8.5.o": [
+      "R8.5.n"
+    ],
+    "R8.5.q": [
+      "R8.5.p"
+    ],
+    "R9.1.a": [
+      "R0.1.a",
+      "R0.1.b",
+      "R0.1.c",
+      "R0.1.d",
+      "R0.1.e",
+      "R0.1.f",
+      "R0.1.g",
+      "R0.1.h",
+      "R7.2.a",
+      "R7.2.b",
+      "R7.2.c",
+      "R7.2.d",
+      "R7.2.e",
+      "R7.2.f",
+      "R7.2.g"
     ]
   }
 }

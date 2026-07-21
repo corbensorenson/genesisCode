@@ -1,17 +1,18 @@
 # GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
-Last updated: 2026-07-14
+Last updated: 2026-07-21
 
 Scope:
 - Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and production runtime trust.
 - This file is the canonical active P0/P1 defect-ID source. The capability ledger mirrors the exact IDs, and generated status views must match it.
 - Keep completed work out of this file. Durable source history and E1-E4 evidence establish closure; mutable `.genesis/perf/` observations do not.
 
-Open checklist items: 0
+Open checklist items: 2
 
 ## Critical Path
 
-No active P0/P1 defects. Roadmap work remains governed by `ROADMAP.md`.
+- [ ] P1.4 Restore protected v0.5 publication and complete transitive generated/gate-input authority. The required `test_suite` fails GB-8 because `scripts/lib/genesisbench_mlx_custody.py` is an undeclared packaging module, proving the current v0.5 custody tranche is not publishable. Close only when R0.4.k governs the module and every recursively reached Rust/Python/helper input, all partial-freshness and parallel-workstream fan-in controls pass locally and in protected CI, one exact reviewed SHA is promoted to `main`, and the temporary branch is deleted without bypassing checks.
+- [ ] P1.5 Eliminate host-bridge timeout kill/reap failure under mandatory fault injection. `runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers` produced `gpu/bridge-reap` after the process group survived repeated termination sweeps, so daemon and bridge cleanup are not yet reliable under the supported stress profile. Close only when R2.2.f proves success, failure, cancellation, timeout, restart, and repeated-load cleanup with bounded kill/reap latency and no surviving descendant on every supported native host.
 
 ## Evidence Anchors
 

@@ -14,23 +14,29 @@ import platform
 import re
 import shutil
 import signal
+import socket
 import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 import gc_agent_scoring
 import gc_task_benchmarks
+import genesisbench_mlx_custody
+import genesisbench_mlx_responses
 import genesisbench_protocol
 
 
 ROOT = Path(__file__).resolve().parents[2]
-AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json"
+AUTHORITY_PATH = ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json"
 LEGACY_AUTHORITY_PATHS = (
+    ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json",
     ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json",
     ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.2.json",
     ROOT / "docs/spec/GENESISBENCH_OPEN_AGENT_v0.1.json",
@@ -51,6 +57,7 @@ KIND_AUTHORITY = "genesis/genesisbench-open-agent-harness-v0.1"
 KIND_AUTHORITY_V2 = "genesis/genesisbench-open-agent-harness-v0.2"
 KIND_AUTHORITY_V3 = "genesis/genesisbench-open-agent-harness-v0.3"
 KIND_AUTHORITY_V4 = "genesis/genesisbench-open-agent-harness-v0.4"
+KIND_AUTHORITY_V5 = "genesis/genesisbench-open-agent-harness-v0.5"
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,191}$")
 REL_RE = re.compile(r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]{1,512}$")
@@ -80,6 +87,9 @@ IMPLEMENTATION_PATHS = (
     "scripts/lib/gc_task_benchmarks.py",
     "scripts/lib/genesisbench_contamination.py",
     "scripts/lib/genesisbench_eligibility.py",
+    "scripts/lib/genesisbench_local_models.py",
+    "scripts/lib/genesisbench_mlx_custody.py",
+    "scripts/lib/genesisbench_mlx_responses.py",
     "scripts/lib/genesisbench_open_agent.py",
     "scripts/lib/genesisbench_open_agent_report.py",
     "scripts/lib/genesisbench_protocol.py",
@@ -136,6 +146,46 @@ V4_SECURITY_CONTROLS = sorted((
     "supplied-genesis-tool-cache-disabled",
     "symlink-and-non-regular-file-rejection",
 ))
+V5_PURPOSE = (
+    "Execute transitively bound hosted campaigns and credential-free local MLX campaigns "
+    "under an independently tested outer read/write/network sandbox with exact custody, "
+    "single-request-per-turn transport, retained wire evidence, and hard server teardown."
+)
+V5_INVOCATION_PROFILES = {
+    "codex-cli-hosted": {
+        "argvPolicy": "fixed-codex-exec-ephemeral-json-workspace-write-one-prompt-ancestry-isolated-v0.5",
+        "id": "codex-cli-hosted-v0.5",
+        "network": "provider-only",
+        "provider": None,
+    },
+    "codex-cli-local": {
+        "argvPolicy": "fixed-codex-exec-custom-responses-auth-free-outer-sandbox-v0.5",
+        "id": "codex-cli-local-v0.5",
+        "network": "one-loopback-responses-endpoint-only",
+        "provider": "predeclared-mlx-responses",
+    },
+}
+V5_DISABLED_FEATURES = (
+    "apps", "browser_use", "computer_use", "enable_mcp_apps", "hooks", "image_generation",
+    "in_app_browser", "memories", "multi_agent", "plugins", "skill_mcp_dependency_install",
+    "skill_search", "workspace_dependencies",
+)
+V5_DISABLED_SYSTEM_SKILLS = (
+    "imagegen", "openai-docs", "plugin-creator", "skill-creator", "skill-installer",
+)
+V5_SECURITY_CONTROLS = sorted(set(V4_SECURITY_CONTROLS).union({
+    "auth-free-home-and-codex-home",
+    "authorization-cookie-and-api-key-header-rejection",
+    "canonical-model-runtime-license-custody-before-load",
+    "codex-request-and-mlx-response-byte-retention",
+    "declared-tool-scaffold-only",
+    "fresh-home-system-skill-disablement",
+    "local-server-no-fallback",
+    "outer-darwin-read-write-network-allowlist",
+    "single-backend-request-per-agent-turn-zero-transport-retries",
+    "supervised-adapter-and-model-server-hard-teardown",
+    "web-multi-agent-plugin-app-hook-memory-and-mcp-disablement",
+}))
 
 
 class OpenAgentError(RuntimeError):
@@ -291,6 +341,14 @@ def is_v4_harness(harness: dict[str, Any]) -> bool:
     return harness["version"] == "0.4.0"
 
 
+def is_v4_or_later_harness(harness: dict[str, Any]) -> bool:
+    return harness_minor_version(harness) >= 4
+
+
+def is_v5_harness(harness: dict[str, Any]) -> bool:
+    return harness["version"] == "0.5.0"
+
+
 def implementation_rows() -> list[dict[str, Any]]:
     rows = []
     for relative in IMPLEMENTATION_PATHS:
@@ -338,9 +396,11 @@ def validate_implementation_binding(document: Any, *, check_files: bool) -> dict
         require(isinstance(row["bytes"], int) and row["bytes"] > 0, "invalid implementation byte count")
         require(isinstance(row["sha256"], str) and SHA_RE.fullmatch(row["sha256"]) is not None, "invalid implementation digest")
         rows.append(row)
-    require([row["path"] for row in rows] == list(IMPLEMENTATION_PATHS), "implementation file closure drift")
+    paths = [row["path"] for row in rows]
+    require(paths == sorted(set(paths)), "implementation file closure is not sorted and unique")
     require(binding["identitySha256"] == sha256_bytes(canonical_bytes(rows)), "implementation identity drift")
     if check_files:
+        require(paths == list(IMPLEMENTATION_PATHS), "implementation file closure drift")
         require(discovered_implementation_paths() == IMPLEMENTATION_PATHS, "unbound local implementation import")
         require(rows == implementation_rows(), "Open Agent implementation bytes drift")
     return binding
@@ -386,7 +446,74 @@ def render_v4_authority() -> dict[str, Any]:
     return identified(document)
 
 
-def declared_environment_names(harness: dict[str, Any]) -> list[str]:
+def v5_local_execution() -> dict[str, Any]:
+    schema = regular_file(genesisbench_mlx_custody.SCHEMA_PATH, "MLX custody schema")
+    return {
+        "custodySchema": {
+            "bytes": schema.stat().st_size,
+            "path": str(schema.relative_to(ROOT)),
+            "sha256": sha256_file(schema),
+        },
+        "disabledFeatures": list(V5_DISABLED_FEATURES),
+        "disabledSystemSkills": list(V5_DISABLED_SYSTEM_SKILLS),
+        "expectedToolNames": list(genesisbench_mlx_responses.EXPECTED_TOOL_NAMES),
+        "acceleratorPolicy": "apple-metal-system-graphics",
+        "isolationBackend": "darwin-sandbox-exec-v0.1",
+        "providerProtocol": "responses-to-mlx-chat-completions-v0.1",
+        "reasoningTranslation": "codex-low-to-qwen-thinking-disabled-v0.1",
+        "requestRetries": 0,
+        "streamRetries": 0,
+    }
+
+
+def v5_scaffold_identity(harness: dict[str, Any]) -> str:
+    material = {
+        "kind": "genesis/genesisbench-open-agent-scaffold-v0.5",
+        "implementationIdentitySha256": harness["implementation"]["identitySha256"],
+        "invocationProfiles": harness["invocationProfiles"],
+        "localExecution": harness["localExecution"],
+        "fixedEnvironment": V3_FIXED_ENVIRONMENT,
+        "promptPolicy": "one-fixed-task-prompt-frozen-repository-one-writable-workspace-v0.5",
+    }
+    return sha256_bytes(canonical_bytes(material))
+
+
+def render_v5_authority() -> dict[str, Any]:
+    files = implementation_rows()
+    document = {
+        "coldAcquisitionAdapterProfileUnchanged": True,
+        "contentIdentitySha256": "",
+        "implementation": {
+            "entrypoints": list(IMPLEMENTATION_ENTRYPOINTS),
+            "files": files,
+            "identitySha256": sha256_bytes(canonical_bytes(files)),
+        },
+        "invocationProfiles": copy.deepcopy(V5_INVOCATION_PROFILES),
+        "kind": KIND_AUTHORITY_V5,
+        "limits": {
+            "maxEventLineBytes": MAX_CAPTURE_BYTES,
+            "maxStderrBytes": MAX_CAPTURE_BYTES,
+            "maxStdoutBytes": MAX_CAPTURE_BYTES,
+            "maxTimeoutMs": 3_600_000,
+            "maxWorkspaceBytes": 64 * 1024 * 1024,
+            "maxWorkspaceFiles": 4_096,
+        },
+        "localExecution": v5_local_execution(),
+        "purpose": V5_PURPOSE,
+        "scaffoldIdentitySha256": "",
+        "securityControls": V5_SECURITY_CONTROLS,
+        "version": "0.5.0",
+    }
+    document["scaffoldIdentitySha256"] = v5_scaffold_identity(document)
+    return identified(document)
+
+
+def declared_environment_names(harness: dict[str, Any], runner_class: str | None = None) -> list[str]:
+    if is_v5_harness(harness) and runner_class == "codex-cli-local":
+        return sorted({
+            "CODEX_HOME", "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE", "HOME", "NO_COLOR",
+            "NO_PROXY", "PATH", "TMPDIR",
+        })
     names = set(ALLOWED_ENVIRONMENT)
     if is_v3_or_later_harness(harness):
         names.update(V3_FIXED_ENVIRONMENT)
@@ -455,7 +582,7 @@ def common_predeclaration_fields(
     *, runner_class: str, executable: Path, model_id: str, model_revision: str,
     immutable_revision: bool, reasoning_effort: str, timeout_ms: int,
     local_provider: str | None, model_artifact_sha256: str | None,
-    genesis_bin: Path, selfhost_artifact: Path,
+    genesis_bin: Path, selfhost_artifact: Path, custody_manifest: Path | None = None,
 ) -> dict[str, Any]:
     executable = regular_file(executable, "agent executable")
     genesis_bin = regular_file(genesis_bin, "GenesisCode executable")
@@ -465,11 +592,14 @@ def common_predeclaration_fields(
     require(reasoning_effort in {"low", "medium", "high", "xhigh"}, "unsupported reasoning effort")
     require(1_000 <= timeout_ms <= harness["limits"]["maxTimeoutMs"], "timeout is outside harness limits")
     if runner_class == "codex-cli-local":
-        require(local_provider in {"lmstudio", "ollama"}, "local runner requires a supported provider")
+        allowed_providers = {"mlx-responses"} if is_v5_harness(harness) else {"lmstudio", "ollama"}
+        require(local_provider in allowed_providers, "local runner requires a supported provider")
         require(model_artifact_sha256 is not None and SHA_RE.fullmatch(model_artifact_sha256) is not None, "local runner requires a model artifact digest")
+        if is_v5_harness(harness):
+            require(reasoning_effort == "low", "v0.5 local execution requires the disclosed non-thinking low-reasoning policy")
         network_mode = "loopback-provider-only"
     else:
-        require(local_provider is None and model_artifact_sha256 is None, "hosted runner cannot declare local provider material")
+        require(local_provider is None and model_artifact_sha256 is None and custody_manifest is None, "hosted runner cannot declare local provider material")
         network_mode = "provider-only"
     common = {
         "track": {
@@ -508,7 +638,7 @@ def common_predeclaration_fields(
             "maxWorkspaceBytes": harness["limits"]["maxWorkspaceBytes"],
         },
         "disclosure": {
-            "environmentNames": declared_environment_names(harness),
+            "environmentNames": declared_environment_names(harness, runner_class),
             "environmentValuesRecorded": False,
             "genesisSpecificTraining": "unknown",
             "contaminationLabel": "unknown",
@@ -519,6 +649,18 @@ def common_predeclaration_fields(
             "genesisExecutableSha256": sha256_file(genesis_bin),
             "selfhostArtifactSha256": sha256_file(selfhost_artifact),
         }
+    if is_v5_harness(harness) and runner_class == "codex-cli-local":
+        require(custody_manifest is not None, "v0.5 local runner requires a custody manifest")
+        custody = genesisbench_mlx_custody.validate(load_json(custody_manifest))
+        require(custody["model"]["id"] == model_id and custody["model"]["revision"] == model_revision, "custody model binding drift")
+        require(custody["model"]["artifactIdentitySha256"] == model_artifact_sha256, "custody artifact binding drift")
+        common["custody"] = {
+            "adapterIdentitySha256": custody["adapter"]["identitySha256"],
+            "inventoryIdentitySha256": custody["inventoryIdentitySha256"],
+            "manifestIdentitySha256": custody["contentIdentitySha256"],
+            "preselectionIdentitySha256": custody["preselectionIdentitySha256"],
+            "runtimeIdentitySha256": custody["runtime"]["runtimeIdentitySha256"],
+        }
     return common
 
 
@@ -527,12 +669,12 @@ def build_campaign(
     executable: Path, model_id: str, model_revision: str, immutable_revision: bool,
     reasoning_effort: str, timeout_ms: int, local_provider: str | None,
     model_artifact_sha256: str | None, hardware_class: str,
-    genesis_bin: Path, selfhost_artifact: Path,
+    genesis_bin: Path, selfhost_artifact: Path, custody_manifest: Path | None = None,
 ) -> dict[str, Any]:
     suite = load_json(SUITE_PATH)
     protocol = load_json(PROTOCOL_PATH)
     harness = authority()
-    if is_v4_harness(harness):
+    if is_v4_or_later_harness(harness):
         validate_implementation_binding(harness["implementation"], check_files=True)
     expected_ids = campaign_case_ids(suite, phase)
     require(sorted(case_ids) == expected_ids and len(case_ids) == len(set(case_ids)), "campaign case matrix is incomplete or non-canonical")
@@ -543,6 +685,7 @@ def build_campaign(
         reasoning_effort=reasoning_effort, timeout_ms=timeout_ms,
         local_provider=local_provider, model_artifact_sha256=model_artifact_sha256,
         genesis_bin=genesis_bin, selfhost_artifact=selfhost_artifact,
+        custody_manifest=custody_manifest,
     )
     document = {
         "kind": KIND_CAMPAIGN,
@@ -569,7 +712,7 @@ def build_campaign(
             "operatingSystem": safe_id(platform.system(), "host operating system"),
         },
         "secrets": {
-            "source": "codex-auth-store",
+            "source": "none-auth-free-homes" if runner_class == "codex-cli-local" and is_v5_harness(harness) else "codex-auth-store",
             "valuesRecorded": False,
             "forwardedToWorkspace": False,
         },
@@ -594,6 +737,8 @@ def validate_campaign(document: Any) -> dict[str, Any]:
     harness = authority(harness_identity)
     if is_v3_or_later_harness(harness):
         top.add("tools")
+    if is_v5_harness(harness) and document.get("runner", {}).get("class") == "codex-cli-local":
+        top.add("custody")
     doc = closed(document, top, "Open Agent campaign")
     require(doc["kind"] == KIND_CAMPAIGN and doc["version"] == "0.1.0", "campaign kind/version drift")
     safe_id(doc["campaignId"], "campaign id")
@@ -617,7 +762,8 @@ def validate_campaign(document: Any) -> dict[str, Any]:
     }, "campaign stop policy drift")
     host = closed(doc["host"], {"hardwareClass", "architecture", "operatingSystem"}, "campaign host")
     for field in host: safe_id(host[field], f"host {field}")
-    require(doc["secrets"] == {"source": "codex-auth-store", "valuesRecorded": False, "forwardedToWorkspace": False}, "campaign secret policy drift")
+    secret_source = "none-auth-free-homes" if is_v5_harness(harness) and doc["runner"]["class"] == "codex-cli-local" else "codex-auth-store"
+    require(doc["secrets"] == {"source": secret_source, "valuesRecorded": False, "forwardedToWorkspace": False}, "campaign secret policy drift")
     require(doc["publication"] == {
         "class": "authentic-unranked-open-agent",
         "missingImmutableModelIdentityForcesUnranked": True,
@@ -639,6 +785,8 @@ def build_predeclaration(
     common_fields = ["track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"]
     if is_v3_or_later_harness(harness):
         common_fields.append("tools")
+    if is_v5_harness(harness) and campaign["runner"]["class"] == "codex-cli-local":
+        common_fields.append("custody")
     document = {
         "kind": KIND_PREDECLARATION,
         "version": "0.1.0",
@@ -669,8 +817,11 @@ def validate_common_fields(doc: dict[str, Any], harness: dict[str, Any] | None =
     require(type(model["immutableRevision"]) is bool, "immutableRevision must be boolean")
     require(model["reasoningEffort"] in {"low", "medium", "high", "xhigh"}, "invalid reasoning effort")
     if runner["class"] == "codex-cli-local":
-        require(runner["localProvider"] in {"lmstudio", "ollama"}, "invalid local provider")
+        allowed_providers = {"mlx-responses"} if is_v5_harness(harness) else {"lmstudio", "ollama"}
+        require(runner["localProvider"] in allowed_providers, "invalid local provider")
         require(SHA_RE.fullmatch(model["artifactSha256"] or "") is not None, "local model artifact is unbound")
+        if is_v5_harness(harness):
+            require(model["reasoningEffort"] == "low", "v0.5 local reasoning policy drift")
         expected_network = "loopback-provider-only"
     else:
         require(runner["localProvider"] is None and model["artifactSha256"] is None, "hosted runner contains local bindings")
@@ -689,7 +840,7 @@ def validate_common_fields(doc: dict[str, Any], harness: dict[str, Any] | None =
     for field in ("maxStdoutBytes", "maxStderrBytes", "maxWorkspaceFiles", "maxWorkspaceBytes"):
         require(limits[field] == harness["limits"][field], f"{field} limit drift")
     require(doc["disclosure"] == {
-        "environmentNames": declared_environment_names(harness), "environmentValuesRecorded": False,
+        "environmentNames": declared_environment_names(harness, runner["class"]), "environmentValuesRecorded": False,
         "genesisSpecificTraining": "unknown", "contaminationLabel": "unknown",
     }, "disclosure drift")
     if is_v3_or_later_harness(harness):
@@ -701,6 +852,12 @@ def validate_common_fields(doc: dict[str, Any], harness: dict[str, Any] | None =
             all(SHA_RE.fullmatch(tools[field] or "") is not None for field in tools),
             "invalid supplied tool digest",
         )
+    if is_v5_harness(harness) and runner["class"] == "codex-cli-local":
+        custody = closed(doc["custody"], {
+            "adapterIdentitySha256", "inventoryIdentitySha256", "manifestIdentitySha256",
+            "preselectionIdentitySha256", "runtimeIdentitySha256",
+        }, "local custody binding")
+        require(all(SHA_RE.fullmatch(custody[field] or "") is not None for field in custody), "invalid local custody digest")
 
 
 def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str, Any]:
@@ -712,6 +869,8 @@ def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str
     }
     if is_v3_or_later_harness(harness):
         top.add("tools")
+    if is_v5_harness(harness) and document.get("runner", {}).get("class") == "codex-cli-local":
+        top.add("custody")
     doc = closed(document, top, "Open Agent predeclaration")
     require(doc["kind"] == KIND_PREDECLARATION and doc["version"] == "0.1.0", "predeclaration kind/version drift")
     require(doc["campaignId"] == campaign["campaignId"] and doc["campaignIdentitySha256"] == campaign["contentIdentitySha256"], "attempt campaign binding drift")
@@ -730,6 +889,8 @@ def validate_predeclaration(document: Any, campaign: dict[str, Any]) -> dict[str
     common_fields = ["track", "runner", "model", "attemptPolicy", "capabilities", "limits", "disclosure"]
     if is_v3_or_later_harness(harness):
         common_fields.append("tools")
+    if is_v5_harness(harness) and campaign["runner"]["class"] == "codex-cli-local":
+        common_fields.append("custody")
     for field in common_fields:
         require(doc[field] == campaign[field], f"attempt {field} differs from campaign")
     validate_identity(doc)
@@ -918,17 +1079,41 @@ def prompt_for(case: dict[str, Any]) -> str:
     )
 
 
-def invocation(predeclaration: dict[str, Any], prompt: str) -> list[str]:
+def invocation(
+    predeclaration: dict[str, Any], prompt: str, *, provider_url: str | None = None,
+    codex_home: Path | None = None,
+) -> list[str]:
     runner = predeclaration["runner"]
     model = predeclaration["model"]
+    harness = authority(predeclaration["authorities"]["harnessIdentitySha256"])
     args = [
-        "exec", "--ignore-user-config", "--strict-config", "--ephemeral", "--json",
+        "exec", "--ignore-user-config", "--ignore-rules", "--strict-config", "--ephemeral", "--json",
         "--color", "never", "--sandbox", "workspace-write", "--skip-git-repo-check",
         "--model", model["requestedId"], "-c", f'model_reasoning_effort="{model["reasoningEffort"]}"',
         "-c", 'approval_policy="never"',
     ]
     if runner["class"] == "codex-cli-local":
-        args.extend(["--oss", "--local-provider", runner["localProvider"]])
+        if is_v5_harness(harness):
+            require(provider_url is not None and codex_home is not None, "v0.5 local invocation requires an isolated provider and Codex home")
+            require(re.fullmatch(r"http://127\.0\.0\.1:[0-9]{4,5}/v1", provider_url) is not None, "invalid local Responses endpoint")
+            for feature in V5_DISABLED_FEATURES:
+                args.extend(["--disable", feature])
+            skills = ",".join(
+                '{path="' + str(codex_home / "skills/.system" / skill / "SKILL.md") + '",enabled=false}'
+                for skill in V5_DISABLED_SYSTEM_SKILLS
+            )
+            args.extend([
+                "-c", 'model_provider="genesisbench_mlx"',
+                "-c", 'web_search="disabled"',
+                "-c", f"skills.config=[{skills}]",
+                "-c", 'model_providers.genesisbench_mlx.name="GenesisBench MLX"',
+                "-c", f'model_providers.genesisbench_mlx.base_url="{provider_url}"',
+                "-c", 'model_providers.genesisbench_mlx.wire_api="responses"',
+                "-c", "model_providers.genesisbench_mlx.request_max_retries=0",
+                "-c", "model_providers.genesisbench_mlx.stream_max_retries=0",
+            ])
+        else:
+            args.extend(["--oss", "--local-provider", runner["localProvider"]])
     args.append(prompt)
     return args
 
@@ -984,13 +1169,18 @@ def isolated_stage() -> Path:
 def run_process(
     executable: Path, args: list[str], cwd: Path, timeout_ms: int,
     stdout_path: Path, stderr_path: Path, max_stdout: int, max_stderr: int,
-    harness: dict[str, Any],
+    harness: dict[str, Any], *, environment_override: dict[str, str] | None = None,
+    command_prefix: list[str] | None = None,
 ) -> tuple[int | None, str, int, list[str]]:
-    environment, present = sanitized_environment(harness)
+    if environment_override is None:
+        environment, present = sanitized_environment(harness)
+    else:
+        environment = dict(environment_override)
+        present = sorted(environment)
     started = time.monotonic_ns()
     with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
         process = subprocess.Popen(
-            [str(executable), *args], cwd=cwd, env=environment, stdin=subprocess.DEVNULL,
+            [*(command_prefix or []), str(executable), *args], cwd=cwd, env=environment, stdin=subprocess.DEVNULL,
             stdout=stdout, stderr=stderr, start_new_session=(os.name == "posix"),
         )
         reason = "exited"
@@ -1009,6 +1199,178 @@ def run_process(
     if stderr_path.stat().st_size > max_stderr:
         with stderr_path.open("r+b") as stream: stream.truncate(max_stderr)
     return return_code, reason, elapsed_ms, present
+
+
+def unused_loopback_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        return int(listener.getsockname()[1])
+
+
+def wait_for_local_provider(port: int, process: subprocess.Popen[bytes]) -> None:
+    deadline = time.monotonic() + 130
+    while time.monotonic() < deadline:
+        require(process.poll() is None, "local MLX provider exited before readiness")
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}/__genesisbench__/health", timeout=0.25,
+            ) as response:
+                if response.status == 200:
+                    return
+        except (urllib.error.URLError, TimeoutError, OSError):
+            time.sleep(0.05)
+    raise OpenAgentError("local MLX provider readiness timeout")
+
+
+def terminate_supervised_group(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is None:
+        try:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGTERM)
+            else:
+                process.terminate()
+        except ProcessLookupError:
+            pass
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            terminate_group(process)
+    else:
+        process.wait()
+
+
+def local_environment(home: Path, codex_home: Path, temp: Path) -> dict[str, str]:
+    return {
+        "CODEX_HOME": str(codex_home),
+        "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE": "1",
+        "HOME": str(home),
+        "NO_COLOR": "1",
+        "NO_PROXY": "127.0.0.1,localhost",
+        "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+        "TMPDIR": str(temp),
+    }
+
+
+def local_sandbox_system_roots() -> list[Path]:
+    return [
+        Path("/System"), Path("/usr"), Path("/bin"), Path("/Library"), Path("/dev"),
+        Path("/private/etc"), Path("/private/var/db"),
+    ]
+
+
+def start_local_provider(
+    *, stage: Path, custody_manifest: Path, model_root: Path, python: Path,
+    predeclaration: dict[str, Any],
+) -> tuple[subprocess.Popen[bytes], int, Path, Path, Path]:
+    manifest = genesisbench_mlx_custody.validate(
+        load_json(custody_manifest), check_local=True, model_root=model_root, python=python,
+    )
+    require(manifest["contentIdentitySha256"] == predeclaration["custody"]["manifestIdentitySha256"], "runtime custody manifest substitution")
+    python = regular_file(python, "MLX Python executable")
+    model_root = model_root.resolve(strict=True)
+    provider_home = stage / "provider-home"; provider_home.mkdir()
+    provider_temp = stage / "provider-tmp"; provider_temp.mkdir()
+    evidence = stage / "provider-evidence"
+    supervisor_stdout = stage / "provider-supervisor-stdout.txt"
+    supervisor_stderr = stage / "provider-supervisor-stderr.txt"
+    listen_port = unused_loopback_port(); backend_port = unused_loopback_port()
+    require(listen_port != backend_port, "local provider port collision")
+    model_repository = model_root.parent.parent
+    profile = genesisbench_mlx_custody.darwin_profile(
+        read_roots=[
+            *local_sandbox_system_roots(), python.parent.parent, model_repository,
+            ROOT / "scripts/lib", provider_home, provider_temp,
+        ],
+        write_roots=[provider_home, provider_temp, evidence],
+        connect_ports=[backend_port],
+        listen_ports=[listen_port, backend_port],
+        allow_graphics=True,
+    )
+    command = [
+        *genesisbench_mlx_custody.sandbox_prefix(profile), str(python), "-I",
+        str(ROOT / "scripts/lib/genesisbench_mlx_responses.py"), "serve",
+        "--model-root", str(model_root), "--model-id", predeclaration["model"]["requestedId"],
+        "--listen-port", str(listen_port), "--backend-port", str(backend_port),
+        "--evidence", str(evidence), "--home", str(provider_home), "--max-tokens", "4096",
+    ]
+    provider_environment = {
+        "HOME": str(provider_home), "NO_COLOR": "1", "NO_PROXY": "127.0.0.1,localhost",
+        "PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TMPDIR": str(provider_temp),
+    }
+    stdout = supervisor_stdout.open("xb"); stderr = supervisor_stderr.open("xb")
+    try:
+        process = subprocess.Popen(
+            command, cwd=provider_home, env=provider_environment, stdin=subprocess.DEVNULL,
+            stdout=stdout, stderr=stderr, start_new_session=True,
+        )
+    finally:
+        stdout.close(); stderr.close()
+    try:
+        wait_for_local_provider(listen_port, process)
+    except BaseException:
+        terminate_supervised_group(process)
+        raise
+    return process, listen_port, evidence, supervisor_stdout, supervisor_stderr
+
+
+def local_codex_boundary(
+    *, executable: Path, stage: Path, workspace: Path, input_root: Path, listen_port: int,
+) -> tuple[dict[str, str], list[str], Path]:
+    home = stage / "agent-home"; home.mkdir()
+    codex_home = stage / "agent-codex-home"; codex_home.mkdir()
+    temp = stage / "agent-tmp"; temp.mkdir()
+    profile = genesisbench_mlx_custody.darwin_profile(
+        read_roots=[
+            *local_sandbox_system_roots(), executable.parent.parent, input_root, workspace,
+            home, codex_home, temp,
+        ],
+        write_roots=[workspace, home, codex_home, temp],
+        connect_ports=[listen_port],
+        listen_ports=[],
+    )
+    return local_environment(home, codex_home, temp), genesisbench_mlx_custody.sandbox_prefix(profile), codex_home
+
+
+def retain_local_custody(
+    *, retained: Path, manifest_path: Path, evidence: Path, supervisor_stdout: Path,
+    supervisor_stderr: Path, stage: Path, model_root: Path,
+) -> None:
+    root = retained / "custody"; root.mkdir()
+    shutil.copyfile(manifest_path, root / "manifest.json")
+    shutil.copytree(evidence, root / "adapter")
+    shutil.copyfile(supervisor_stdout, root / "supervisor-stdout.txt")
+    shutil.copyfile(supervisor_stderr, root / "supervisor-stderr.txt")
+    spellings = sorted({str(stage), str(stage).replace("/private/", "/")}, key=len, reverse=True)
+    model_spellings = sorted({str(model_root.resolve()), str(model_root)}, key=len, reverse=True)
+    for path in root.rglob("*"):
+        if not path.is_file() or path.is_symlink():
+            continue
+        payload = path.read_bytes()
+        for spelling in spellings:
+            payload = payload.replace(spelling.encode("utf-8"), b"$GENESISBENCH_STAGE")
+        for spelling in model_spellings:
+            payload = payload.replace(spelling.encode("utf-8"), b"$GENESISBENCH_MODEL_ROOT")
+        path.write_bytes(payload)
+    session_path = root / "adapter/session.json"
+    session = load_json(session_path)
+    for record in session["records"]:
+        index = record["index"]
+        request = load_json(root / f"adapter/turn-{index:03d}-responses-request.json")
+        events = (root / f"adapter/turn-{index:03d}-responses-events.sse").read_bytes()
+        record["requestIdentitySha256"] = sha256_bytes(canonical_bytes(request))
+        record["responseIdentitySha256"] = sha256_bytes(events)
+    write_json(session_path, session)
+
+
+def provider_violations(session: dict[str, Any] | None) -> list[str]:
+    if session is None:
+        return []
+    violations: list[str] = []
+    if session["backendRequestCount"] == 0:
+        violations.append("provider-no-request")
+    if session["rejections"] or session["authorizationHeadersObserved"] or session["hiddenRetriesObserved"]:
+        violations.append("provider-policy-rejection")
+    return violations
 
 
 def validate_jsonl(path: Path, max_line_bytes: int = 1024 * 1024) -> tuple[bool, int]:
@@ -1074,7 +1436,8 @@ def normalize_retained_stage_paths(paths: tuple[Path, ...], stage: Path) -> None
 
 def run_agent(
     campaign_path: Path, predeclaration_path: Path, out: Path, executable: Path,
-    genesis_bin: Path, selfhost_artifact: Path,
+    genesis_bin: Path, selfhost_artifact: Path, *, local_custody_manifest: Path | None = None,
+    local_model_root: Path | None = None, local_python: Path | None = None,
 ) -> dict[str, Any]:
     require(not out.exists(), "Open Agent run output already exists")
     campaign = validate_campaign(load_json(campaign_path))
@@ -1085,10 +1448,10 @@ def run_agent(
     require(sha256_file(executable) == predeclaration["runner"]["executableSha256"], "agent executable digest mismatch")
     require(executable_version(executable) == predeclaration["runner"]["executableVersion"], "agent executable version mismatch")
     harness = authority(campaign["authorities"]["harnessIdentitySha256"])
-    if is_v4_harness(harness):
+    if is_v4_or_later_harness(harness):
         require(
             harness["contentIdentitySha256"] == authority()["contentIdentitySha256"],
-            "v0.4 campaign execution requires the active harness authority",
+            "content-bound campaign execution requires the active harness authority",
         )
         validate_implementation_binding(harness["implementation"], check_files=True)
     if is_v3_or_later_harness(harness):
@@ -1115,15 +1478,53 @@ def run_agent(
         write_json(retained / "campaign.json", campaign)
         write_json(retained / "predeclaration.json", predeclaration)
         stdout_path = retained / "events.jsonl"; stderr_path = retained / "stderr.txt"
-        args = invocation(predeclaration, prompt_for(case))
-        return_code, termination, elapsed_ms, present_names = run_process(
-            executable, args, workspace, predeclaration["limits"]["timeoutMs"],
-            stdout_path, stderr_path, predeclaration["limits"]["maxStdoutBytes"],
-            predeclaration["limits"]["maxStderrBytes"], harness,
-        )
+        local_v5 = is_v5_harness(harness) and predeclaration["runner"]["class"] == "codex-cli-local"
+        local_provider_session: dict[str, Any] | None = None
+        if local_v5:
+            require(local_custody_manifest is not None and local_model_root is not None and local_python is not None, "v0.5 local execution inputs are incomplete")
+            custody_path = regular_file(local_custody_manifest, "local custody manifest")
+            provider, listen_port, provider_evidence, provider_stdout, provider_stderr = start_local_provider(
+                stage=stage, custody_manifest=custody_path, model_root=local_model_root,
+                python=local_python, predeclaration=predeclaration,
+            )
+            environment, prefix, codex_home = local_codex_boundary(
+                executable=executable, stage=stage, workspace=workspace, input_root=input_root,
+                listen_port=listen_port,
+            )
+            args = invocation(
+                predeclaration, prompt_for(case), provider_url=f"http://127.0.0.1:{listen_port}/v1",
+                codex_home=codex_home,
+            )
+            try:
+                return_code, termination, elapsed_ms, present_names = run_process(
+                    executable, args, workspace, predeclaration["limits"]["timeoutMs"],
+                    stdout_path, stderr_path, predeclaration["limits"]["maxStdoutBytes"],
+                    predeclaration["limits"]["maxStderrBytes"], harness,
+                    environment_override=environment, command_prefix=prefix,
+                )
+            finally:
+                terminate_supervised_group(provider)
+            require(provider.returncode == 0, "local MLX provider did not terminate cleanly")
+            local_provider_session = genesisbench_mlx_responses.validate_evidence(
+                provider_evidence, predeclaration["model"]["requestedId"],
+            )
+            retain_local_custody(
+                retained=retained, manifest_path=custody_path, evidence=provider_evidence,
+                supervisor_stdout=provider_stdout, supervisor_stderr=provider_stderr,
+                stage=stage, model_root=local_model_root,
+            )
+        else:
+            require(local_custody_manifest is None and local_model_root is None and local_python is None, "non-v0.5 run received local custody inputs")
+            args = invocation(predeclaration, prompt_for(case))
+            return_code, termination, elapsed_ms, present_names = run_process(
+                executable, args, workspace, predeclaration["limits"]["timeoutMs"],
+                stdout_path, stderr_path, predeclaration["limits"]["maxStdoutBytes"],
+                predeclaration["limits"]["maxStderrBytes"], harness,
+            )
         if is_v3_or_later_harness(harness):
             normalize_retained_stage_paths((stdout_path, stderr_path), stage)
         violations: list[str] = []
+        violations.extend(provider_violations(local_provider_session))
         try:
             repository_identity = validate_snapshot_root(repository, snapshot_rows)
         except OpenAgentError:
@@ -1155,7 +1556,7 @@ def run_agent(
             violations.append("nonzero-exit")
         violations = sorted(set(violations))
         score_doc = None
-        if violations and workspace_inventory_status == "valid" and is_v4_harness(harness):
+        if violations and workspace_inventory_status == "valid" and is_v4_or_later_harness(harness):
             copy_inventory_payload(workspace, retained / "observed-workspace", after_workspace)
         if not violations:
             copy_candidate(workspace, retained / "candidate", case, harness)
@@ -1227,7 +1628,7 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
     require(attempt["environmentValuesRecorded"] is False, "environment values must never be recorded")
     require(attempt["environmentPresentNames"] == sorted(set(attempt["environmentPresentNames"])), "environment names must be sorted and unique")
     require(
-        set(attempt["environmentPresentNames"]).issubset(declared_environment_names(harness)),
+        set(attempt["environmentPresentNames"]).issubset(predeclaration["disclosure"]["environmentNames"]),
         "undeclared environment name",
     )
     workspace = closed(run["workspace"], {"beforeInventory", "afterInventory", "afterInventoryStatus", "sourceSnapshotBeforeIdentitySha256", "sourceSnapshotAfterIdentitySha256", "violations"}, "workspace evidence")
@@ -1262,6 +1663,13 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
         derived_violations.append(attempt["termination"])
     if attempt["returnCode"] != 0:
         derived_violations.append("nonzero-exit")
+    local_v5 = is_v5_harness(harness) and predeclaration["runner"]["class"] == "codex-cli-local"
+    provider_session: dict[str, Any] | None = None
+    if local_v5:
+        provider_session = genesisbench_mlx_responses.validate_evidence(
+            root / "custody/adapter", predeclaration["model"]["requestedId"],
+        )
+        derived_violations.extend(provider_violations(provider_session))
     score_path = root / "score.json"
     score_doc = load_json(score_path) if score_path.exists() else None
     if score_doc is None:
@@ -1285,7 +1693,7 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
                 "retained candidate differs from observed workspace",
             )
         observed_root = root / "observed-workspace"
-        if is_v4_harness(harness) and run["outcome"] == "invalid" and workspace["afterInventoryStatus"] == "valid":
+        if is_v4_or_later_harness(harness) and run["outcome"] == "invalid" and workspace["afterInventoryStatus"] == "valid":
             require(observed_root.is_dir() and not observed_root.is_symlink(), "invalid run lacks observed workspace payload")
             require(
                 inventory(observed_root, max_files=4096, max_bytes=128 * 1024 * 1024) == after_rows,
@@ -1293,6 +1701,16 @@ def validate_run(run_path: Path, *, check_files: bool) -> dict[str, Any]:
             )
         else:
             require(not observed_root.exists(), "unexpected observed workspace payload")
+        custody_root = root / "custody"
+        if local_v5:
+            manifest = genesisbench_mlx_custody.validate(load_json(custody_root / "manifest.json"))
+            require(manifest["contentIdentitySha256"] == predeclaration["custody"]["manifestIdentitySha256"], "retained custody manifest binding drift")
+            require(manifest["model"]["artifactIdentitySha256"] == predeclaration["model"]["artifactSha256"], "retained custody model binding drift")
+            require(manifest["adapter"]["identitySha256"] == predeclaration["custody"]["adapterIdentitySha256"], "retained adapter binding drift")
+            require(manifest["runtime"]["runtimeIdentitySha256"] == predeclaration["custody"]["runtimeIdentitySha256"], "retained runtime binding drift")
+            require((custody_root / "supervisor-stdout.txt").is_file() and (custody_root / "supervisor-stderr.txt").is_file(), "local supervisor evidence is incomplete")
+        else:
+            require(not custody_root.exists(), "unexpected local custody evidence")
         valid_jsonl, event_count = validate_jsonl(
             root / "events.jsonl", event_line_limit(harness),
         )
@@ -1353,27 +1771,34 @@ def replay_run(run_path: Path, genesis_bin: Path, selfhost_artifact: Path) -> di
 def validate_authorities() -> dict[str, Any]:
     documents = [authority(), *(load_json(path) for path in LEGACY_AUTHORITY_PATHS)]
     require(
-        [doc["version"] for doc in documents] == ["0.4.0", "0.3.0", "0.2.0", "0.1.0"],
+        [doc["version"] for doc in documents] == ["0.5.0", "0.4.0", "0.3.0", "0.2.0", "0.1.0"],
         "Open Agent authority order drift",
     )
     for doc in documents:
         fields = {"kind", "version", "purpose", "coldAcquisitionAdapterProfileUnchanged", "scaffoldIdentitySha256", "invocationProfiles", "limits", "securityControls", "contentIdentitySha256"}
-        if is_v4_harness(doc):
+        if is_v4_or_later_harness(doc):
             fields.add("implementation")
+        if is_v5_harness(doc):
+            fields.add("localExecution")
         closed(doc, fields, "Open Agent authority")
         require((doc["kind"], doc["version"]) in {
             (KIND_AUTHORITY, "0.1.0"), (KIND_AUTHORITY_V2, "0.2.0"),
             (KIND_AUTHORITY_V3, "0.3.0"), (KIND_AUTHORITY_V4, "0.4.0"),
+            (KIND_AUTHORITY_V5, "0.5.0"),
         }, "Open Agent authority kind/version drift")
         require(doc["coldAcquisitionAdapterProfileUnchanged"] is True, "Open Agent authority silently broadens Cold Acquisition adapters")
         require(set(doc["invocationProfiles"]) == {"codex-cli-hosted", "codex-cli-local"}, "Open Agent invocation profile drift")
         require(doc["securityControls"] == sorted(set(doc["securityControls"])), "security controls must be sorted and unique")
         if is_v3_or_later_harness(doc):
             require(doc["limits"]["maxEventLineBytes"] == MAX_CAPTURE_BYTES, "v0.3+ event line limit drift")
+        if is_v4_or_later_harness(doc):
+            validate_implementation_binding(doc["implementation"], check_files=is_v5_harness(doc))
         if is_v4_harness(doc):
-            validate_implementation_binding(doc["implementation"], check_files=True)
             require(doc["scaffoldIdentitySha256"] == v4_scaffold_identity(doc), "v0.4 scaffold identity drift")
-            require(doc == render_v4_authority(), "v0.4 rendered authority is stale")
+        if is_v5_harness(doc):
+            require(doc["localExecution"] == v5_local_execution(), "v0.5 local execution authority drift")
+            require(doc["scaffoldIdentitySha256"] == v5_scaffold_identity(doc), "v0.5 scaffold identity drift")
+            require(doc == render_v5_authority(), "v0.5 rendered authority is stale")
         validate_identity(doc)
     for path in (CAMPAIGN_SCHEMA_PATH, PREDECLARATION_SCHEMA_PATH, RUN_SCHEMA_PATH, TOOL_ARCHIVE_SCHEMA_PATH):
         schema = load_json(path)
@@ -1423,7 +1848,7 @@ def self_test() -> int:
         implementation["files"].pop()
         implementation["identitySha256"] = sha256_bytes(canonical_bytes(implementation["files"]))
         try:
-            validate_implementation_binding(implementation, check_files=False)
+            validate_implementation_binding(implementation, check_files=True)
         except OpenAgentError:
             controls += 1
         else:
@@ -1450,6 +1875,40 @@ def self_test() -> int:
 
         baseline = build_predeclaration(case_id="completion-small", campaign=campaign)
         validate_predeclaration(baseline, campaign)
+
+        custody_path = temp / "custody.json"
+        custody = genesisbench_mlx_custody.capture_fixture()
+        write_json(custody_path, custody)
+        local_campaign = build_campaign(
+            campaign_id="local-conformance-v0.1", phase="reality-gate",
+            case_ids=campaign_case_ids(suite, "reality-gate"),
+            runner_class="codex-cli-local", executable=fixture,
+            model_id=custody["model"]["id"], model_revision=custody["model"]["revision"],
+            immutable_revision=True, reasoning_effort="low", timeout_ms=1_000,
+            local_provider="mlx-responses",
+            model_artifact_sha256=custody["model"]["artifactIdentitySha256"],
+            hardware_class="fixture-apple-silicon", genesis_bin=fixture,
+            selfhost_artifact=fixture, custody_manifest=custody_path,
+        )
+        local_predeclaration = build_predeclaration(case_id="completion-small", campaign=local_campaign)
+        validate_predeclaration(local_predeclaration, local_campaign)
+        local_mutations = (
+            lambda d: d["custody"].__setitem__("manifestIdentitySha256", "0" * 64),
+            lambda d: d["runner"].__setitem__("localProvider", "ollama"),
+            lambda d: d["disclosure"].__setitem__("secretSource", "ambient-env"),
+            lambda d: d["model"].__setitem__("reasoningEffort", "xhigh"),
+        )
+        for mutate in local_mutations:
+            candidate = copy.deepcopy(local_predeclaration); mutate(candidate); candidate = identified(candidate)
+            try:
+                validate_predeclaration(candidate, local_campaign)
+            except (OpenAgentError, KeyError, TypeError):
+                controls += 1
+            else:
+                raise OpenAgentError("negative local predeclaration control accepted")
+        require(provider_violations({"backendRequestCount": 0, "rejections": [], "authorizationHeadersObserved": False, "hiddenRetriesObserved": False}) == ["provider-no-request"], "zero-request provider violation drift")
+        require(provider_violations({"backendRequestCount": 1, "rejections": [{}], "authorizationHeadersObserved": False, "hiddenRetriesObserved": False}) == ["provider-policy-rejection"], "provider rejection violation drift")
+        controls += 2
 
         _, output_case = suite_and_case("generation-small", suite)
         output_workspace = temp / "output-workspace"
@@ -1613,6 +2072,21 @@ def self_test() -> int:
         require(not marker.exists(), "timeout descendant survived process-group kill")
         controls += 1
 
+        provider_marker = temp / "provider-descendant-survived"
+        provider_fixture = temp / "provider.py"
+        provider_fixture.write_text(
+            "#!/usr/bin/python3\n"
+            "import subprocess,time\n"
+            f"subprocess.Popen(['/usr/bin/python3','-c',\"import pathlib,time;time.sleep(1);pathlib.Path({str(provider_marker)!r}).write_text('alive')\"])\n"
+            "time.sleep(30)\n",
+            encoding="ascii",
+        )
+        provider_fixture.chmod(0o755)
+        supervised = subprocess.Popen([str(provider_fixture)], cwd=temp, start_new_session=True)
+        time.sleep(0.2); terminate_supervised_group(supervised); time.sleep(1.2)
+        require(supervised.poll() is not None and not provider_marker.exists(), "supervised provider descendant survived termination")
+        controls += 1
+
         readonly = temp / "readonly-cleanup"
         (readonly / "nested").mkdir(parents=True)
         (readonly / "nested" / "payload").write_text("fixture", encoding="ascii")
@@ -1641,13 +2115,15 @@ def parser() -> argparse.ArgumentParser:
     campaign.add_argument("--agent-executable", required=True, type=Path); campaign.add_argument("--model", required=True)
     campaign.add_argument("--model-revision", required=True); campaign.add_argument("--immutable-revision", action="store_true")
     campaign.add_argument("--reasoning-effort", default="xhigh", choices=["low", "medium", "high", "xhigh"])
-    campaign.add_argument("--timeout-ms", type=int, default=900_000); campaign.add_argument("--local-provider", choices=["lmstudio", "ollama"])
+    campaign.add_argument("--timeout-ms", type=int, default=900_000); campaign.add_argument("--local-provider", choices=["mlx-responses"])
     campaign.add_argument("--model-artifact-sha256"); campaign.add_argument("--hardware-class", required=True); campaign.add_argument("--out", required=True, type=Path)
     campaign.add_argument("--genesis-bin", required=True, type=Path); campaign.add_argument("--selfhost-artifact", required=True, type=Path)
+    campaign.add_argument("--local-custody-manifest", type=Path)
     plan = modes.add_parser("plan"); plan.add_argument("--case", required=True)
     plan.add_argument("--campaign-predeclaration", required=True, type=Path); plan.add_argument("--out", required=True, type=Path)
     run = modes.add_parser("run"); run.add_argument("--campaign-predeclaration", required=True, type=Path); run.add_argument("--predeclaration", required=True, type=Path); run.add_argument("--out", required=True, type=Path)
     run.add_argument("--agent-executable", required=True, type=Path); run.add_argument("--genesis-bin", required=True, type=Path); run.add_argument("--selfhost-artifact", required=True, type=Path)
+    run.add_argument("--local-custody-manifest", type=Path); run.add_argument("--local-model-root", type=Path); run.add_argument("--local-python", type=Path)
     validate = modes.add_parser("validate"); validate.add_argument("--run", required=True, type=Path)
     replay = modes.add_parser("replay"); replay.add_argument("--run", required=True, type=Path); replay.add_argument("--genesis-bin", required=True, type=Path); replay.add_argument("--selfhost-artifact", required=True, type=Path)
     return out
@@ -1660,7 +2136,7 @@ def main() -> int:
         controls = self_test() if args.self_test else 0
         result = {"kind": "genesis/genesisbench-open-agent-check-v0.1", "authorityIdentitySha256": doc["contentIdentitySha256"], "controls": controls}
     elif args.command == "render-authority":
-        result = render_v4_authority()
+        result = render_v5_authority()
     elif args.command == "campaign-plan":
         require(not args.out.exists(), "predeclaration output already exists")
         result = build_campaign(
@@ -1670,6 +2146,7 @@ def main() -> int:
             timeout_ms=args.timeout_ms, local_provider=args.local_provider,
             model_artifact_sha256=args.model_artifact_sha256, hardware_class=args.hardware_class,
             genesis_bin=args.genesis_bin, selfhost_artifact=args.selfhost_artifact,
+            custody_manifest=args.local_custody_manifest,
         )
         write_json(args.out, result)
     elif args.command == "plan":
@@ -1678,7 +2155,11 @@ def main() -> int:
         result = build_predeclaration(case_id=args.case, campaign=campaign)
         write_json(args.out, result)
     elif args.command == "run":
-        result = run_agent(args.campaign_predeclaration, args.predeclaration, args.out, args.agent_executable, args.genesis_bin, args.selfhost_artifact)
+        result = run_agent(
+            args.campaign_predeclaration, args.predeclaration, args.out, args.agent_executable,
+            args.genesis_bin, args.selfhost_artifact, local_custody_manifest=args.local_custody_manifest,
+            local_model_root=args.local_model_root, local_python=args.local_python,
+        )
     elif args.command == "validate":
         run = validate_run(args.run, check_files=True)
         result = {"kind": "genesis/genesisbench-open-agent-validation-v0.1", "valid": True, "runIdentitySha256": run["contentIdentitySha256"], "outcome": run["outcome"]}
