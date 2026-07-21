@@ -1,6 +1,6 @@
 # GenesisCode Docs Index
 
-Last updated: 2026-07-16
+Last updated: 2026-07-21
 
 This is the canonical entrypoint for project documentation.
 
@@ -26,7 +26,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 
 ## Live Status and Planning
 
-- `ROADMAP.md` - canonical v0.2-to-v1 roadmap (phases R0-R9 plus post-v1 frontier work): truthful evidence, agent-ready authoring, bounded/validated execution, semantic selfhost authority, platform delivery, and a reproducible trust release; strategic plan, not release evidence.
+- `ROADMAP.md` - canonical v0.2-to-v1 roadmap (phases R0-R9 plus post-v1 frontier work): independent GenesisCode, GenesisBench, and Genesis Model release lanes; truthful evidence; agent-ready authoring; bounded/validated execution; semantic selfhost authority; platform delivery; and reproducible trust releases; strategic plan, not release evidence.
 - `docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json` - machine-readable roadmap execution manifest schema.
 - `docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json` - generated, deterministic execution graph covering every roadmap task; scheduling aid, not completion authority.
 - `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#roadmap-execution-manifest` - normative authority, dependency, readiness, evidence, rollback, and check/update contract for the generated roadmap graph.
