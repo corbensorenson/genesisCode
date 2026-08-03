@@ -1143,13 +1143,17 @@ stdout_file="$3"
 stderr_file="$4"
 stdin_fifo="$5"
 shift 5
+child_pid_tmp="${child_pid_file}.tmp.$$"
+exit_tmp="${exit_file}.tmp.$$"
 exec 3<>"$stdin_fifo"
 "$@" <&3 >"$stdout_file" 2>"$stderr_file" &
 child="$!"
-printf '%s\n' "$child" >"$child_pid_file"
+printf '%s\n' "$child" >"$child_pid_tmp"
+mv -f "$child_pid_tmp" "$child_pid_file"
 wait "$child"
 code="$?"
-printf '%s\n' "$code" >"$exit_file"
+printf '%s\n' "$code" >"$exit_tmp"
+mv -f "$exit_tmp" "$exit_file"
 "#;
 
     let mut cmd = std::process::Command::new("sh");
@@ -1211,10 +1215,13 @@ fn read_process_exit_code(rec: &ProcessRecord) -> Result<Option<i64>, String> {
         return Ok(rec.exit);
     }
     let src = std::fs::read_to_string(path).map_err(|e| format!("read process exit code: {e}"))?;
-    let parsed = src
-        .trim()
+    let value = src.trim();
+    if value.is_empty() {
+        return Ok(None);
+    }
+    let parsed = value
         .parse::<i64>()
-        .map_err(|e| format!("parse process exit code `{}`: {e}", src.trim()))?;
+        .map_err(|e| format!("parse process exit code `{value}`: {e}"))?;
     Ok(Some(parsed))
 }
 
@@ -1226,10 +1233,13 @@ fn read_child_pid_from_file(rec: &ProcessRecord) -> Result<Option<u32>, String> 
         return Ok(rec.child_pid);
     }
     let src = std::fs::read_to_string(path).map_err(|e| format!("read process pid file: {e}"))?;
-    let pid = src
-        .trim()
+    let value = src.trim();
+    if value.is_empty() {
+        return Ok(None);
+    }
+    let pid = value
         .parse::<u32>()
-        .map_err(|e| format!("parse process pid `{}`: {e}", src.trim()))?;
+        .map_err(|e| format!("parse process pid `{value}`: {e}"))?;
     Ok(Some(pid))
 }
 

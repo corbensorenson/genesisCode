@@ -668,6 +668,43 @@ fn process_spawn_wait_and_stdout_read_use_real_lifecycle() {
     });
 }
 
+#[test]
+fn process_lifecycle_readers_ignore_partial_publications_and_reject_corruption() {
+    with_test_workspace(|root| {
+        let exit_path = root.join("exit.code");
+        let pid_path = root.join("child.pid");
+        let record = ProcessRecord {
+            exit_path: Some(exit_path.to_string_lossy().into_owned()),
+            pid_path: Some(pid_path.to_string_lossy().into_owned()),
+            ..ProcessRecord::default()
+        };
+
+        std::fs::write(&exit_path, []).expect("write partial exit publication");
+        std::fs::write(&pid_path, []).expect("write partial pid publication");
+        assert_eq!(
+            read_process_exit_code(&record).expect("read partial exit"),
+            None
+        );
+        assert_eq!(
+            read_child_pid_from_file(&record).expect("read partial pid"),
+            None
+        );
+
+        std::fs::write(&exit_path, "not-an-exit-code\n").expect("write corrupt exit publication");
+        std::fs::write(&pid_path, "not-a-pid\n").expect("write corrupt pid publication");
+        assert!(
+            read_process_exit_code(&record)
+                .expect_err("corrupt exit publication must fail")
+                .contains("parse process exit code")
+        );
+        assert!(
+            read_child_pid_from_file(&record)
+                .expect_err("corrupt pid publication must fail")
+                .contains("parse process pid")
+        );
+    });
+}
+
 #[cfg(unix)]
 #[test]
 fn process_kill_sets_killed_flag_and_wait_returns_terminated_exit() {
