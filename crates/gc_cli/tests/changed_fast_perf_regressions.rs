@@ -25,7 +25,9 @@ fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env() {
     let changed = temp.join("changed.txt");
     let report = temp.join("legacy-report.json");
     let history = temp.join("legacy-history.jsonl");
-    fs::write(&changed, "README.md\n").expect("write changed-file fixture");
+    // Keep this metrics-boundary probe on the smallest profile-fallback route.
+    // README is a transitive input to the complete generated-authority graph.
+    fs::write(&changed, "LICENSE\n").expect("write changed-file fixture");
 
     let output = Command::new("bash")
         .arg(root.join("scripts/test_changed_fast.sh"))
@@ -55,6 +57,10 @@ fn changed_fast_defaults_to_temporary_metrics_and_ignores_legacy_output_env() {
             "budget_subject=prepush-standard budget_ms=420000 disk_budget_bytes=3221225472"
         ),
         "explicit duration must not collapse the profile-fallback disk envelope"
+    );
+    assert!(
+        stdout.contains("generated-authority: fresh (nodes=1 changed=0)"),
+        "metrics-boundary fixture unexpectedly expanded its generated-authority route"
     );
     assert!(
         !report.exists(),
