@@ -45,7 +45,6 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 #### Known Gaps
 
-- `P1.4`: Restore protected v0.5 publication and complete transitive generated/gate-input authority under R0.4.k. Affected claims: `CAP-ASSURANCE-PROFILES`, `CAP-MODULAR-BOUNDARIES`.
 - `P1.5`: Eliminate host-bridge timeout kill/reap failure under mandatory fault injection and complete R2.2.f cleanup proof. Affected claims: `CAP-ASSURANCE-PROFILES`, `CAP-HOST-BRIDGE`.
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`.
@@ -131,7 +130,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.r`: Prove a reproducible Genesis-native data science and local ML system. Affected claims: `TARGET-DATA-ML`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: `P1.4`, `P1.5`. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: `P1.5`. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -165,7 +164,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `47ef0c6917fb26074208128017710ebd15fe95e71475b16222f1e338d155906d`.
+Machine-readable identity: `48a9bd09dbe2ee0e31ce3e95ca20d76729f89356f17f627251e3350c919fdc56`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02
