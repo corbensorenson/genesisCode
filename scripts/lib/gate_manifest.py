@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 from copy import deepcopy
 from functools import lru_cache
 from hashlib import sha256
@@ -540,6 +541,65 @@ def detect_tools(paths: Sequence[str], baseline: Sequence[str]) -> list[str]:
     return sorted(tools)
 
 
+def python_import_specs(source: str, rel: str) -> tuple[tuple[int, str], ...]:
+    if not rel.endswith(".py"):
+        return ()
+    try:
+        tree = ast.parse(source, filename=rel)
+    except SyntaxError as exc:
+        raise GateManifestError(
+            f"cannot parse Python gate input: {rel}:{exc.lineno}:{exc.offset}"
+        ) from exc
+    specs: set[tuple[int, str]] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            specs.update((0, alias.name) for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                specs.add((node.level, node.module))
+            elif node.level:
+                specs.update((node.level, alias.name) for alias in node.names)
+    return tuple(sorted(specs))
+
+
+def local_python_inputs(rel: str, source: str) -> tuple[str, ...]:
+    source_parent = PurePosixPath(rel).parent
+    resolved: set[str] = set()
+    for level, module in python_import_specs(source, rel):
+        module_path = PurePosixPath(*module.split("."))
+        if level:
+            base = source_parent
+            for _ in range(level - 1):
+                base = base.parent
+            bases = (base,)
+        else:
+            bases = (
+                source_parent,
+                PurePosixPath(),
+                PurePosixPath("scripts/lib"),
+                PurePosixPath("scripts"),
+                PurePosixPath("tools"),
+            )
+        for base in bases:
+            logical = base / module_path
+            candidates = (logical.with_suffix(".py"), logical / "__init__.py")
+            matched = False
+            for candidate in candidates:
+                candidate_rel = candidate.as_posix()
+                if (ROOT / candidate_rel).is_file():
+                    resolved.add(candidate_rel)
+                    matched = True
+            if matched:
+                package = base
+                for part in module_path.parts[:-1]:
+                    package /= part
+                    initializer = package / "__init__.py"
+                    if (ROOT / initializer.as_posix()).is_file():
+                        resolved.add(initializer.as_posix())
+                break
+    return tuple(sorted(resolved))
+
+
 @lru_cache(maxsize=None)
 def direct_repo_inputs(rel: str) -> tuple[str, ...]:
     source = (ROOT / rel).read_text(encoding="utf-8")
@@ -549,7 +609,8 @@ def direct_repo_inputs(rel: str) -> tuple[str, ...]:
         candidate = candidate.rstrip(".,:;)]}'\"")
         if (ROOT / candidate).is_file():
             result.append(candidate)
-    return tuple(result)
+    result.extend(local_python_inputs(rel, source))
+    return tuple(sorted(set(result)))
 
 
 def discover_repo_inputs(seed_paths: Sequence[str]) -> list[str]:
@@ -980,14 +1041,26 @@ def run_self_test(expected: Any, prerequisites: Any) -> int:
     vectors.append(("governance-entrypoint-budget", mutated))
     for name, candidate in vectors:
         expect_reject(name, candidate, expected, prerequisites)
+    import_specs = python_import_specs(
+        'import alpha.beta\nfrom gamma.delta import value\npayload = "import phantom"\n',
+        "fixture.py",
+    )
+    if import_specs != ((0, "alpha.beta"), (0, "gamma.delta")):
+        raise GateManifestError("Python import discovery parsed inert payload text")
+    open_agent_inputs = discover_repo_inputs(
+        ["scripts/lib/genesisbench_open_agent.py"]
+    )
+    if "scripts/lib/genesisbench_mlx_custody.py" not in open_agent_inputs:
+        raise GateManifestError("transitive local Python import was not discovered")
     try:
         json.loads('{"kind":"a","kind":"b"}', object_pairs_hook=reject_duplicate_keys)
     except GateManifestError:
         pass
     else:
         raise GateManifestError("duplicate JSON key negative control was accepted")
-    print(f"gate-manifest: self-test ok (negative_controls={len(vectors) + 1})")
-    return len(vectors) + 1
+    controls = len(vectors) + 3
+    print(f"gate-manifest: self-test ok (negative_controls={controls})")
+    return controls
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

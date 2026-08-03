@@ -260,7 +260,13 @@ scope, rationale, parity gate, and unexpired review date. Semantic crates above
 20,000 production lines require an exact M3-expiring waiver; no such waiver may
 survive M3. GB-8 keeps `genesis.prerequisites.json` as the single fresh-clone
 tool authority. Python 3.9 TOML compatibility is repository-vendored with its
-license, and the import-closure audit rejects undeclared host packages.
+license, and the import-closure audit rejects undeclared host packages. Python
+sources are parsed as syntax trees so imports inside inert strings, including
+isolated runtime probes, do not become false host prerequisites. Shell helpers
+remain conservatively scanned because they can execute Python heredocs. A
+dependency used only inside the MLX runtime is admissible only when the custody
+manifest binds that runtime's complete distribution closure; it is not silently
+promoted into the fresh-clone host profile.
 
 ## Reference Host Profiles
 
@@ -681,6 +687,12 @@ producer. A second independent updater inventory is forbidden.
 
 Every graph node declares one exact owner ID, direct argv, dependencies, input
 globs, exact output paths, read-only validators, mode, timeout, and disk bound.
+For routing, those declared inputs are conservatively augmented by every exact
+recursive input discovered for the node's validators in `genesis.gates.json`.
+The gate renderer resolves repository-local Python imports by syntax rather
+than incidental path strings and follows them transitively. This makes Rust
+integration tests, imported Python modules, and non-shell helpers first-class
+changed-path inputs without maintaining a second hand-copied inventory.
 The source file named by direct argv must match that node's input set, and
 dispatcher nodes must declare every child updater, renderer, runner, and
 content authority they read. Generated inputs also require an explicit
@@ -698,10 +710,12 @@ Dependencies are acyclic and deterministically ordered. Graph, output, timeout,
 and disk cardinalities are bounded. The four fixed-point exclusions for the gate
 manifest, changelog, roadmap citation destination, and roadmap execution
 manifest are explicit and domain-specific; adding an implicit self-exclusion is
-not allowed.
+not allowed. Read-only generated-authority validation independently re-renders
+the gate manifest and fails on stale source, execution, or recursive-input
+identity before reporting the graph fresh.
 
 `scripts/update_generated_authority.sh` is the only complete tracked-publication
-orchestrator. It selects direct input matches and their complete downstream
+orchestrator. It selects declared or gate-discovered input matches and their complete downstream
 closure, creates a detached staging worktree outside the authoritative checkout,
 overlays committed, staged, unstaged, deleted, and non-ignored untracked state,
 clears inherited Cargo target and cache-root provenance so path-specific build
@@ -738,13 +752,16 @@ qualification, assurance, or release claim.
 `scripts/test_changed_fast.sh` sends the exact changed-path set through staged
 freshness closure before selected gates run. `prepush-standard`, `release-full`,
 and `full-selfhost-cutover` do the same for committed divergence from
-`origin/main` when available. Six fixed routing controls cover `Cargo.lock`,
-the CLI schema, roadmap text, agent diagnostic/profile authority, and the
-GenesisBench suite. The structural gate also executes adversarial controls for
+`origin/main` when available. Ten fixed routing controls cover `Cargo.lock`,
+the CLI schema, roadmap text, agent diagnostic/profile authority, the
+GenesisBench suite, its front-door Rust integration test, a transitive MLX
+Python helper, the aggregate authoring gate helper, and an MLX custody bundle
+schema. The structural gate also executes adversarial controls for
 duplicate owners, cycles, unknown checks and updaters, resource overflow,
 protected evidence, forbidden signing, automatic operator-gated publication,
-route drift, undeclared writes, concurrent input/output drift, mid-promotion
-failure, byte-identical rollback, and second-pass no-op behavior.
+route drift, fixed-point-exclusion removal, undiscovered gate inputs, undeclared
+writes, concurrent input/output drift, mid-promotion failure, byte-identical
+rollback, and second-pass no-op behavior.
 
 ## Explicit E0 Producers
 

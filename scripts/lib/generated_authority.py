@@ -54,6 +54,12 @@ LIMIT_FIELDS = {"maxNodes", "maxOutputs", "maxTimeoutSeconds", "maxDiskMiB"}
 MUTATION_FIELDS = {"path", "expectedNodes", "expectedOutputs"}
 MODES = {"automatic", "operator-gated"}
 FORBIDDEN_COMMAND_PARTS = ("sign", "attest", "keygen", "release-assets/evidence")
+REQUIRED_IDENTITY_EXCLUSIONS = {
+    "CHANGELOG.md",
+    "ROADMAP.md",
+    "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+    "genesis.gates.json",
+}
 
 
 class AuthorityError(ValueError):
@@ -126,6 +132,33 @@ def graph_from_policy(policy: Mapping[str, Any]) -> Mapping[str, Any]:
     return require_closed(graph, GRAPH_FIELDS, "policy.generated_authority")
 
 
+def gate_inputs_by_check(root: Path) -> dict[str, tuple[str, ...]]:
+    manifest = load_json(root / GATES_REL)
+    require(isinstance(manifest.get("gates"), list), "gate manifest has no gate inventory")
+    result: dict[str, tuple[str, ...]] = {}
+    for index, gate in enumerate(manifest["gates"]):
+        require(isinstance(gate, dict), f"gate manifest entry {index} is not an object")
+        entrypoint = canonical_path(gate.get("entrypoint"), f"gate manifest entry {index}.entrypoint")
+        inputs = gate.get("inputs")
+        require(isinstance(inputs, dict), f"{entrypoint} gate inputs are missing")
+        paths = string_list(inputs.get("paths"), f"{entrypoint}.inputs.paths")
+        for path_index, path in enumerate(paths):
+            canonical_path(path, f"{entrypoint}.inputs.paths[{path_index}]")
+        require(entrypoint not in result, f"duplicate gate manifest entrypoint: {entrypoint}")
+        result[entrypoint] = tuple(paths)
+    return result
+
+
+def effective_inputs(
+    node: Mapping[str, Any], gate_inputs: Mapping[str, Sequence[str]]
+) -> tuple[str, ...]:
+    discovered = set(node["inputs"])
+    if node["mode"] == "automatic":
+        for check in node["checks"]:
+            discovered.update(gate_inputs.get(check, ()))
+    return tuple(sorted(discovered))
+
+
 def validate_schema(root: Path, graph: Mapping[str, Any]) -> None:
     schema_path = root / canonical_path(graph["schema"], "generated_authority.schema")
     schema = load_json(schema_path)
@@ -159,6 +192,10 @@ def validate_graph(root: Path, graph: Mapping[str, Any]) -> list[Mapping[str, An
     for path, reason in exclusions.items():
         canonical_path(path, f"identityExclusions[{path}]")
         require(isinstance(reason, str) and reason.strip(), f"identityExclusions[{path}] requires a reason")
+    require(
+        set(exclusions) == REQUIRED_IDENTITY_EXCLUSIONS,
+        "generated-authority fixed-point exclusion inventory drift",
+    )
 
     protected = string_list(graph["protectedOutputs"], "protectedOutputs")
     for index, path in enumerate(protected):
@@ -189,8 +226,8 @@ def validate_graph(root: Path, graph: Mapping[str, Any]) -> list[Mapping[str, An
     owner: dict[str, str] = {}
     update_commands: set[str] = set()
     total_outputs = 0
-    gate_manifest = load_json(root / GATES_REL)
-    gate_checks = {gate["entrypoint"] for gate in gate_manifest["gates"]}
+    gate_inputs = gate_inputs_by_check(root)
+    gate_checks = set(gate_inputs)
     audit = load_json(root / AUDIT_REL)
     audited_checks = {entry["path"] for entry in audit["entries"]}
     require(gate_checks == audited_checks, "gate manifest and check/update audit inventories diverge")
@@ -299,7 +336,9 @@ def validate_graph(root: Path, graph: Mapping[str, Any]) -> list[Mapping[str, An
         seen_paths.add(path)
         expected_nodes = string_list(control["expectedNodes"], f"mutationControls[{index}].expectedNodes")
         expected_outputs = string_list(control["expectedOutputs"], f"mutationControls[{index}].expectedOutputs")
-        selected = closure_for_paths(nodes, [path], include_operator=True)
+        selected = closure_for_paths(
+            nodes, [path], include_operator=True, gate_inputs=gate_inputs
+        )
         require(expected_nodes == [node["id"] for node in selected], f"mutation route drift for {path}")
         actual_outputs = sorted({output for node in selected for output in node["outputs"]})
         require(expected_outputs == actual_outputs, f"mutation output route drift for {path}")
@@ -308,6 +347,10 @@ def validate_graph(root: Path, graph: Mapping[str, Any]) -> list[Mapping[str, An
         "policies/gc_agent_profile_v0.3.json",
         "policies/gc_diagnostic_catalog_v0.1.json",
         "benchmarks/agent_tasks/v0.1/suite.json",
+        "crates/gc_cli/tests/cli_genesisbench_front_door.rs",
+        "scripts/lib/genesisbench_mlx_responses.py",
+        "scripts/check_agent_authoring_bundle.sh",
+        "docs/spec/GENESISBENCH_MLX_CUSTODY_v0.1.schema.json",
     }
     require(required_controls <= seen_paths, f"required mutation controls missing: {sorted(required_controls-seen_paths)}")
     return nodes
@@ -332,8 +375,19 @@ def matches(path: str, patterns: Iterable[str]) -> bool:
     return any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
 
 
-def closure_for_paths(nodes: Sequence[Mapping[str, Any]], paths: Sequence[str], *, include_operator: bool) -> list[Mapping[str, Any]]:
-    selected = {node["id"] for node in nodes if any(matches(path, node["inputs"]) for path in paths)}
+def closure_for_paths(
+    nodes: Sequence[Mapping[str, Any]],
+    paths: Sequence[str],
+    *,
+    include_operator: bool,
+    gate_inputs: Optional[Mapping[str, Sequence[str]]] = None,
+) -> list[Mapping[str, Any]]:
+    discovered = gate_inputs or {}
+    selected = {
+        node["id"]
+        for node in nodes
+        if any(matches(path, effective_inputs(node, discovered)) for path in paths)
+    }
     changed = True
     while changed:
         before = len(selected)
@@ -694,6 +748,10 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
     rejected("signing-command", lambda g: g["nodes"][0].__setitem__("command", ["genesis", "attest"]))
     rejected("unknown-updater", lambda g: g["excludedEntrypoints"].pop(next(iter(g["excludedEntrypoints"]))))
     rejected("mutation-route-drift", lambda g: g["mutationControls"][0]["expectedNodes"].pop())
+    rejected(
+        "fixed-point-exclusion",
+        lambda g: g["identityExclusions"].pop("genesis.gates.json"),
+    )
     gate_node_index = next(
         index for index, node in enumerate(graph["nodes"])
         if node["id"] == "generate/gate-manifest"
@@ -716,11 +774,30 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
         if node["mode"] == "operator-gated"
     )
     try:
-        closure_for_paths(graph["nodes"], [operator_output], include_operator=False)
+        closure_for_paths(
+            graph["nodes"],
+            [operator_output],
+            include_operator=False,
+            gate_inputs=gate_inputs_by_check(root),
+        )
     except AuthorityError:
         controls += 1
     else:
         raise AuthorityError("self-test allowed automatic operator-gated publication")
+
+    discovered_route = closure_for_paths(
+        graph["nodes"],
+        ["crates/gc_cli/tests/cli_genesisbench_front_door.rs"],
+        include_operator=True,
+        gate_inputs=gate_inputs_by_check(root),
+    )
+    discovered_ids = {node["id"] for node in discovered_route}
+    require(
+        {"generate/benchmark-protocol", "generate/agent-corpus", "generate/gate-manifest"}
+        <= discovered_ids,
+        "recursively discovered Rust gate input did not reach its generated closure",
+    )
+    controls += 1
 
     with tempfile.TemporaryDirectory(prefix="generated-authority-write-set-") as temporary:
         repository = Path(temporary)
@@ -836,7 +913,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 16, "generated-authority self-test inventory drift")
+    require(controls == 18, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 
@@ -864,6 +941,12 @@ def main(argv: Sequence[str]) -> int:
         if args.check:
             lock = common_git_dir(root) / LOCK_NAME
             require(not lock.exists(), f"generated-authority publication is in progress: {lock}")
+            subprocess.run(
+                ["python3", "scripts/lib/gate_manifest.py", "--check"],
+                cwd=root,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
             print(f"generated-authority: ok (nodes={len(nodes)} outputs={sum(len(node['outputs']) for node in nodes)} updaters={len(update_inventory(root))})")
             return 0
         paths = [canonical_path(path, "--path") for path in args.path]
@@ -871,7 +954,12 @@ def main(argv: Sequence[str]) -> int:
             selected = [node for node in topological(nodes) if node["mode"] == "automatic"]
         else:
             paths = paths or changed_paths(root, args.git_base)
-            selected = closure_for_paths(nodes, paths, include_operator=False) if paths else (
+            selected = closure_for_paths(
+                nodes,
+                paths,
+                include_operator=False,
+                gate_inputs=gate_inputs_by_check(root),
+            ) if paths else (
                 [node for node in topological(nodes) if node["mode"] == "automatic"]
                 if args.update else []
             )
