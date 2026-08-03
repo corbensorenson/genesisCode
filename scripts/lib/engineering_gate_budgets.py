@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 import datetime as dt
 from hashlib import sha256
@@ -269,7 +270,25 @@ def undeclared_python_modules(
     import_re = re.compile(r"^\s*(?:import|from)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
     unknown: Dict[str, Set[str]] = {}
     for source_name, source in sources:
-        for module in import_re.findall(source):
+        if source_name.endswith(".py"):
+            try:
+                tree = ast.parse(source, filename=source_name)
+            except SyntaxError as exc:
+                raise BudgetError(
+                    f"GB-8 cannot parse Python source: {source_name}:{exc.lineno}:{exc.offset}"
+                ) from exc
+            modules = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    modules.extend(alias.name.split(".", 1)[0] for alias in node.names)
+                elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                    modules.append(node.module.split(".", 1)[0])
+        else:
+            # Shell helpers can execute Python heredocs, so keep their scan
+            # conservative. Python files use ASTs so inert string payloads do
+            # not become false host prerequisites.
+            modules = import_re.findall(source)
+        for module in modules:
             if module not in STDLIB and module not in repo_modules:
                 unknown.setdefault(module, set()).add(source_name)
     return unknown
@@ -399,6 +418,20 @@ def self_test() -> int:
     )
     if unknown != {"genesis_undeclared_dependency": {"external.py"}}:
         raise BudgetError("undeclared Python module negative control was accepted")
+    controls += 1
+    embedded = undeclared_python_modules(
+        (("payload.py", 'probe = """from packaging.requirements import Requirement"""\n'),),
+        set(),
+    )
+    if embedded:
+        raise BudgetError("inert Python payload was treated as a host import")
+    controls += 1
+    shell_unknown = undeclared_python_modules(
+        (("embedded.sh", "python3 - <<'PY'\nimport genesis_shell_dependency\nPY\n"),),
+        set(),
+    )
+    if shell_unknown != {"genesis_shell_dependency": {"embedded.sh"}}:
+        raise BudgetError("shell-embedded Python dependency escaped GB-8")
     controls += 1
     print(f"engineering-gate-budgets: self-test ok (negative_controls={controls})")
     return controls
