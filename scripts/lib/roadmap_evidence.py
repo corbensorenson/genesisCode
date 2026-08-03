@@ -1535,7 +1535,7 @@ BUNDLE_OCCURRENCES = {
     "deterministic-cleanup-bundle": 1,
     "generated-state-lifecycle-bundle": 1,
     "governance-consolidation-bundle": 1,
-    "generated-authority-closure-bundle": 1,
+    "generated-authority-closure-bundle": 2,
     "engineering-gate-budget-bundle": 1,
     "reference-host-profile-bundle": 1,
     "roadmap-workload-bundle": 1,
