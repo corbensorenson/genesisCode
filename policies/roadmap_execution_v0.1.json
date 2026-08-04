@@ -1,7 +1,7 @@
 {
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
-  "audit_date": "2026-08-03",
+  "audit_date": "2026-08-04",
   "execution_frontier": {
     "wip_limit": 1,
     "ordered_task_ids": [
@@ -16,11 +16,11 @@
       "R1.4.p",
       "R2.3.a"
     ],
-    "rationale": "Finish the in-flight release-profile transaction, close the sole P1.5 host-lifecycle defect, then concentrate on M1-A, M1-B, and startup without opening Foundry, model, or platform breadth.",
+    "rationale": "Finish R0.4.j and its P1.6 CI-liveness counterexample, close P1.5 through R2.2.f, then concentrate on M1-A, M1-B, and startup without opening Foundry, model, or platform breadth.",
     "task_context": {
       "R0.4.j": {
         "product_lanes": ["GenesisCode", "GenesisBench"],
-        "milestones": ["M1-A", "M1-B"],
+        "milestones": ["M0", "M1-A", "M1-B"],
         "nonclaims": [
           "does not implement or qualify future platform packs",
           "does not turn synthetic or unavailable target execution into product evidence"

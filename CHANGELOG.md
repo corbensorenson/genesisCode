@@ -46,6 +46,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 #### Known Gaps
 
 - `P1.5`: Eliminate host-bridge timeout kill/reap failure under mandatory fault injection and complete R2.2.f cleanup proof. Affected claims: `CAP-ASSURANCE-PROFILES`, `CAP-HOST-BRIDGE`.
+- `P1.6`: Restore authoritative default-branch and full-profile CI liveness through non-starving concurrency, bounded runner readiness, independent freshness monitoring, and R0.4.j closure evidence. Affected claims: `CAP-ASSURANCE-PROFILES`.
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`.
 - `R1.5.a`: Generate the authoring skill from canonical language and capability inputs. Affected claims: `CAP-AGENT-SKILL-PACK`.
@@ -130,7 +131,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.r`: Prove a reproducible Genesis-native data science and local ML system. Affected claims: `TARGET-DATA-ML`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: `P1.5`. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: `P1.5`, `P1.6`. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -164,7 +165,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `48a9bd09dbe2ee0e31ce3e95ca20d76729f89356f17f627251e3350c919fdc56`.
+Machine-readable identity: `21c99608f3b3344e9a35a9abd8ec270a1170f8899e8d1ac15f348da9bb15dbd4`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02
