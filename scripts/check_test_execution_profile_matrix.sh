@@ -958,12 +958,23 @@ for marker in [
     "GENESIS_GCPM_TARGET_RUNTIME_TARGETS",
     "prepare_release_target_reference.sh",
     "android-emulator-runner@v2",
+    "Enable Android KVM",
     "wasmtime/setup@v1",
     "--exclude-test upgrade_plan_health",
     "--pairs 2",
 ]:
     if marker not in workflow:
         raise SystemExit(f"test-execution-profile-matrix: named target CI marker missing: {marker}")
+
+prepare = (root / "scripts/prepare_release_target_reference.sh").read_text(encoding="utf-8")
+for marker in [
+    'resolve_executable emulator',
+    '"$sdk_root/emulator/emulator"',
+    'Docker image has no immutable repository digest',
+    '$image.RepoDigests | sort | join(",")',
+]:
+    if marker not in prepare:
+        raise SystemExit(f"test-execution-profile-matrix: reference preparation hardening missing: {marker}")
 
 measurement = (root / "scripts/lib/release_full_measurement.py").read_text(encoding="utf-8")
 for marker in [
@@ -995,6 +1006,8 @@ for relative in sorted(consumers):
     if "genesis_verify_health_profile_evidence" not in source:
         raise SystemExit(f"test-execution-profile-matrix: evidence consumer bypasses verifier: {relative}")
 PY
+
+bash scripts/test_prepare_release_target_reference.sh
 
 python3 "$LINT_SUPPRESSION_POLICY" --root "$ROOT_DIR"
 

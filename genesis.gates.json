@@ -826,7 +826,7 @@
       "executionIdentitySha256": "d425a18f129b895d3f818429bcd96ae135a76d392b70deb989ce6d2844ed0650",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1642,6 +1642,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -2205,7 +2206,7 @@
       "executionIdentitySha256": "705da23ba5ee6f735a3cc5e8c1a9412dd8166b084ad8ad17e33165e32b155f9b",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3021,6 +3022,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -3293,7 +3295,7 @@
       "executionIdentitySha256": "413a261bef8019890d3ecef40d7030e2af4ef612abb636f6c69bf63078766212",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4109,6 +4111,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -4256,7 +4259,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5072,6 +5075,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -5298,7 +5302,7 @@
       "executionIdentitySha256": "5d7fcca0e4a1109fa79c1d828aa09ebefb4eb1bd2cb1cd143f819300fc4a8cca",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6114,6 +6118,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -6549,7 +6554,7 @@
       "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "22a7212c91ed0191ac2b1e09fb79fb8ba88d3c16eb671b4fbe8602140c80c9c0",
+      "inputIdentitySha256": "2679aa505c5993ec763c84ad28fa044a947060862af13198e8c734e3366c1e4d",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6830,7 +6835,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7646,6 +7651,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -8142,7 +8148,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "e7391e50d1caca20665c9ae14b9946993d5fa65a3839af956eaae20d5de76754",
+      "inputIdentitySha256": "fd4fb00356f1b561a65e8147070eba03cb453b474969530945d465511c278a52",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8379,7 +8385,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "3507866cb6e6c19e53db8caebf0f224721f1a67c09b5fdb417cedcee1a35f9ef",
+      "inputIdentitySha256": "657a9871ec658e124f95222f7c0161e115814978f3cdddd0bac9a55d839c2b4e",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8566,7 +8572,7 @@
       "executionIdentitySha256": "969f063c2bb464130de2dc61013286e16ddaf028bc31c8b8bc99dabe3e95398d",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9382,6 +9388,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -10715,7 +10722,7 @@
       "executionIdentitySha256": "30b12f7abe0eaf84a31e0103738acc000d625686153d2c6d8b5737f4405b463e",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-target-runtime-pipelines",
-      "inputIdentitySha256": "fe93d039118f481161e3bfc53b7916cddab8b458b68c610695e3cdc95934fdcd",
+      "inputIdentitySha256": "156879d6a5320a5ea49c75f820b3369a38a861944b4b284f810f2399149c0a9a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10786,7 +10793,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11602,6 +11609,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -12386,7 +12394,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13202,6 +13210,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -13514,7 +13523,7 @@
       "executionIdentitySha256": "b5a5877112d47b1cd04e2b00c868b18e79a5d2572677ca2682ca66137324f9b1",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14330,6 +14339,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -15024,7 +15034,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -15840,6 +15850,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -16268,7 +16279,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -17084,6 +17095,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -18697,7 +18709,7 @@
       "executionIdentitySha256": "a75bef0c8614f9c2aef9d2bf07db0eb53ff40e153aea48f4e697466d4566dac0",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "62679dfc6dae67edad461292bafb4ab7da2712fc6224aaee5df81996c6f0f096",
+      "inputIdentitySha256": "d00b462e490c144a0974e377ba2490d834f8c09c15cad988aa1dd86bec1c6ea7",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -19463,10 +19475,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_test_execution_profile_matrix.sh",
-      "executionIdentitySha256": "f3f3e690258e9e35e5ca0458d7c958ac0add1113f87f9f91b029862a662d4909",
+      "executionIdentitySha256": "8431cad9e0cf5fa011e51f51e530a6c6fe8497b59e37f5f6100cc866b54b188e",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20282,6 +20294,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -20399,13 +20412,15 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "2b31c23bdb48c8d93cd1dd67d37754268de28c44e431bd27b5ef4b0534024776",
+      "sourceSha256": "8cb861a3be7be0bb7cd705ed10780e83c50e346bc560e5e572dda58052422ead",
       "tools": [
+        "adb",
         "bash",
         "cargo",
         "cargo-deny",
         "cargo-nextest",
         "git",
+        "jq",
         "python",
         "rustc",
         "wasmtime"
@@ -20528,7 +20543,7 @@
       "executionIdentitySha256": "ea555e4cbfdce852609197c8bb6348b9d29f416067dc2982d420a5632f87c184",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "71831103c1723b8a7db0ca7f719e64cbb35985922c10134090f3d66a1fcd6359",
+      "inputIdentitySha256": "29b25071a521c921a3183b8ca05c0676c21ffb7732d3c274e45b0e9f66b0b909",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -21344,6 +21359,7 @@
           "scripts/test_fast_full.sh",
           "scripts/test_offline_dependency_mirror.sh",
           "scripts/test_perf_gates.sh",
+          "scripts/test_prepare_release_target_reference.sh",
           "scripts/test_shard_workspace.sh",
           "scripts/update_agent_authoring_bundle.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -22449,7 +22465,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "d359799de1ddcf320017724a5212bdbc83ca828a5255967246f13236083812bb"
+        "sha256": "8eff268c4c07bed5ae8c36ef313c1d8bca1e42ca8c237281840a77576535610c"
       },
       {
         "path": "genesis.prerequisites.json",
