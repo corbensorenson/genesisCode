@@ -1107,6 +1107,25 @@ with tempfile.TemporaryDirectory(prefix="genesis-release-cache-isolation.") as r
 print(f"release-full-measurement-cache-isolation: ok (negative_controls={negative_controls})")
 PY
 
+HEALTH_OUTPUT_FIXTURE="$(mktemp -d)"
+cleanup_health_output_fixture() {
+  rm -rf "$HEALTH_OUTPUT_FIXTURE"
+}
+trap cleanup_health_output_fixture EXIT INT TERM
+mkdir "$HEALTH_OUTPUT_FIXTURE/retained"
+printf '%s\n' 'parent-owned' > "$HEALTH_OUTPUT_FIXTURE/retained/parent.txt"
+GENESIS_CHECK_HEALTH_OUTPUT_CONTAINMENT_ROOT="$HEALTH_OUTPUT_FIXTURE" \
+GENESIS_CHECK_HEALTH_OUTPUT_ROOT="$HEALTH_OUTPUT_FIXTURE/retained" \
+  bash scripts/check_check_update_boundary.sh >/dev/null
+if [[ "$(find "$HEALTH_OUTPUT_FIXTURE/retained" -mindepth 1 -maxdepth 1 -print)" != \
+      "$HEALTH_OUTPUT_FIXTURE/retained/parent.txt" ]]; then
+  echo "test-execution-profile-matrix: nested health canary mutated parent private output" >&2
+  exit 1
+fi
+cleanup_health_output_fixture
+trap - EXIT INT TERM
+echo "nested-health-output-isolation: ok"
+
 bash scripts/test_prepare_release_target_reference.sh
 
 python3 "$LINT_SUPPRESSION_POLICY" --root "$ROOT_DIR"
