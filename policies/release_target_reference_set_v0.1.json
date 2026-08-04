@@ -15,7 +15,7 @@
       "identityEnv": "GENESIS_GCPM_ANDROID_RUNTIME_IDENTITY",
       "identityProbe": "adb shell getprop ro.build.fingerprint",
       "productId": "TARGET-ANDROID",
-      "referenceCommand": "java -jar $BUNDLETOOL_JAR build-apks --bundle=$GENESIS_TARGET_PACKAGE --output=$GENESIS_TARGET_ARTIFACT_DIR/app.apks --mode=universal && java -jar $BUNDLETOOL_JAR install-apks --apks=$GENESIS_TARGET_ARTIFACT_DIR/app.apks",
+      "referenceCommand": "java -jar $BUNDLETOOL_JAR build-apks --bundle=$GENESIS_TARGET_PACKAGE --output=$GENESIS_TARGET_ARTIFACT_DIR/app.apks --mode=universal && java -jar $BUNDLETOOL_JAR install-apks --apks=$GENESIS_TARGET_ARTIFACT_DIR/app.apks --device-id=\"$(adb get-serialno)\"",
       "runner": "ubuntu-24.04",
       "runtimeClass": "emulator",
       "sdkIdentityEnv": "GENESIS_GCPM_ANDROID_SDK_IDENTITY",

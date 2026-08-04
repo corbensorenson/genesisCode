@@ -64,6 +64,7 @@ ANDROID_ENV="$TMP_DIR/android.env"
 )
 grep -Fqx 'GENESIS_GCPM_ANDROID_RUNTIME_IDENTITY=genesis/android/reference:fingerprint' "$ANDROID_ENV"
 grep -Fqx 'GENESIS_GCPM_ANDROID_SDK_IDENTITY=sdkmanager=19.0;emulator-package=36.2.3.0' "$ANDROID_ENV"
+grep -Fqx 'GENESIS_GCPM_ANDROID_RUNTIME_CMD=java -jar $BUNDLETOOL_JAR build-apks --bundle=$GENESIS_TARGET_PACKAGE --output=$GENESIS_TARGET_ARTIFACT_DIR/app.apks --mode=universal && java -jar $BUNDLETOOL_JAR install-apks --apks=$GENESIS_TARGET_ARTIFACT_DIR/app.apks --device-id="$(adb get-serialno)"' "$ANDROID_ENV"
 
 MISSING_SDK="$TMP_DIR/android-sdk-missing-emulator-metadata"
 mkdir -p "$MISSING_SDK/platform-tools" "$MISSING_SDK/cmdline-tools/latest/bin"
