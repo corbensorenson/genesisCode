@@ -933,6 +933,11 @@ for row in shards:
         raise SystemExit(f"test-execution-profile-matrix: invalid named target shard: {row.get('target')}")
     if "PINNED" in row["referenceCommand"] or "PINNED" in row["sdkIdentityProbe"]:
         raise SystemExit(f"test-execution-profile-matrix: placeholder reference integration: {row.get('target')}")
+shards_by_target = {row["target"]: row for row in shards}
+android_command = shards_by_target["android"]["referenceCommand"].lower()
+for marker in ["bundletool", "install-apks", '--device-id="$(adb get-serialno)"']:
+    if marker not in android_command:
+        raise SystemExit(f"test-execution-profile-matrix: Android reference command binding missing: {marker}")
 
 health = (root / "scripts/render_upgrade_plan_health_report.sh").read_text(encoding="utf-8")
 workflow = (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
