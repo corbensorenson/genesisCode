@@ -56,6 +56,38 @@ resolve_executable() {
   return 1
 }
 
+resolve_android_emulator_revision() {
+  local candidate=""
+  local properties=""
+  for candidate in "$@"; do
+    if [[ -n "$candidate" && -f "$candidate" ]]; then
+      properties="$candidate"
+      break
+    fi
+  done
+  if [[ -z "$properties" ]]; then
+    echo "release-target-reference: missing Android emulator package metadata" >&2
+    return 1
+  fi
+
+  local revision=""
+  revision="$(
+    awk -F= '
+      $1 ~ /^[[:space:]]*Pkg[.]Revision[[:space:]]*$/ {
+        value = $0
+        sub(/^[^=]*=[[:space:]]*/, "", value)
+        sub(/[[:space:]\r]+$/, "", value)
+        print value
+      }
+    ' "$properties"
+  )"
+  if [[ -z "$revision" || "$revision" == *$'\n'* || ! "$revision" =~ ^[0-9]+([.][0-9]+)+(-[A-Za-z0-9._-]+)?$ ]]; then
+    echo "release-target-reference: invalid Android emulator package revision" >&2
+    return 1
+  fi
+  printf '%s\n' "$revision"
+}
+
 COMMAND_ENV="$(policy_value commandEnv)"
 IDENTITY_ENV="$(policy_value identityEnv)"
 SDK_IDENTITY_ENV="$(policy_value sdkIdentityEnv)"
@@ -77,7 +109,7 @@ case "$TARGET" in
   android)
     adb_candidates=()
     sdkmanager_candidates=()
-    emulator_candidates=()
+    emulator_properties_candidates=()
     for sdk_root in "${ANDROID_SDK_ROOT:-}" "${ANDROID_HOME:-}"; do
       [[ -n "$sdk_root" ]] || continue
       adb_candidates+=("$sdk_root/platform-tools/adb")
@@ -86,18 +118,18 @@ case "$TARGET" in
         "$sdk_root/cmdline-tools/bin/sdkmanager"
         "$sdk_root/tools/bin/sdkmanager"
       )
-      emulator_candidates+=("$sdk_root/emulator/emulator")
+      emulator_properties_candidates+=("$sdk_root/emulator/source.properties")
     done
     ADB_BIN="$(resolve_executable adb "${adb_candidates[@]}")"
     SDKMANAGER_BIN="$(resolve_executable sdkmanager "${sdkmanager_candidates[@]}")"
-    EMULATOR_BIN="$(resolve_executable emulator "${emulator_candidates[@]}")"
+    EMULATOR_REVISION="$(resolve_android_emulator_revision "${emulator_properties_candidates[@]}")"
     timeout 120 "$ADB_BIN" wait-for-device
     [[ "$(timeout 30 "$ADB_BIN" shell getprop sys.boot_completed | tr -d '\r')" == "1" ]] || {
       echo "release-target-reference: Android emulator did not complete boot" >&2
       exit 1
     }
     RUNTIME_IDENTITY="$(timeout 30 "$ADB_BIN" shell getprop ro.build.fingerprint | tr -d '\r\n')"
-    SDK_IDENTITY="sdkmanager=$("$SDKMANAGER_BIN" --version | sed -n '1p' | tr -d '\r\n');emulator=$("$EMULATOR_BIN" -version | sed -n '1p' | tr -d '\r\n')"
+    SDK_IDENTITY="sdkmanager=$("$SDKMANAGER_BIN" --version | sed -n '1p' | tr -d '\r\n');emulator-package=$EMULATOR_REVISION"
     ;;
   edge)
     RUNTIME_IDENTITY="$(wasmtime --version | tr -d '\r\n')"
