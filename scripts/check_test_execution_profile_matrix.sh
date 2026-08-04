@@ -968,8 +968,9 @@ for marker in [
 
 prepare = (root / "scripts/prepare_release_target_reference.sh").read_text(encoding="utf-8")
 for marker in [
-    'resolve_executable emulator',
-    '"$sdk_root/emulator/emulator"',
+    'resolve_android_emulator_revision',
+    '"$sdk_root/emulator/source.properties"',
+    'emulator-package=$EMULATOR_REVISION',
     'Docker image has no immutable repository digest',
     '$image.RepoDigests | sort | join(",")',
 ]:

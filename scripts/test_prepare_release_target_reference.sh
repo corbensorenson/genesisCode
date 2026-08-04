@@ -42,9 +42,13 @@ SH
 cat >"$ANDROID_SDK/emulator/emulator" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "${1:-}" == "-version" ]]
-printf 'Android emulator version 36.2.3.0\n'
+echo "reference-prepare-test: emulator executable must not be invoked" >&2
+exit 70
 SH
+cat >"$ANDROID_SDK/emulator/source.properties" <<'EOF'
+Pkg.Desc=Android Emulator
+Pkg.Revision=36.2.3.0
+EOF
 chmod +x \
   "$ANDROID_SDK/platform-tools/adb" \
   "$ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager" \
@@ -59,9 +63,9 @@ ANDROID_ENV="$TMP_DIR/android.env"
     /bin/bash "$PREPARE" android "$ANDROID_ENV"
 )
 grep -Fqx 'GENESIS_GCPM_ANDROID_RUNTIME_IDENTITY=genesis/android/reference:fingerprint' "$ANDROID_ENV"
-grep -Fqx 'GENESIS_GCPM_ANDROID_SDK_IDENTITY=sdkmanager=19.0;emulator=Android emulator version 36.2.3.0' "$ANDROID_ENV"
+grep -Fqx 'GENESIS_GCPM_ANDROID_SDK_IDENTITY=sdkmanager=19.0;emulator-package=36.2.3.0' "$ANDROID_ENV"
 
-MISSING_SDK="$TMP_DIR/android-sdk-missing-emulator"
+MISSING_SDK="$TMP_DIR/android-sdk-missing-emulator-metadata"
 mkdir -p "$MISSING_SDK/platform-tools" "$MISSING_SDK/cmdline-tools/latest/bin"
 cp "$ANDROID_SDK/platform-tools/adb" "$MISSING_SDK/platform-tools/adb"
 cp "$ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager" "$MISSING_SDK/cmdline-tools/latest/bin/sdkmanager"
@@ -72,10 +76,27 @@ if (
     ANDROID_SDK_ROOT="$MISSING_SDK" \
     /bin/bash "$PREPARE" android "$TMP_DIR/android-missing.env"
 ) >"$TMP_DIR/android-missing.out" 2>"$TMP_DIR/android-missing.err"; then
-  echo "reference-prepare-test: Android setup accepted a missing emulator executable" >&2
+  echo "reference-prepare-test: Android setup accepted missing emulator package metadata" >&2
   exit 1
 fi
-grep -Fq 'missing required executable: emulator' "$TMP_DIR/android-missing.err"
+grep -Fq 'missing Android emulator package metadata' "$TMP_DIR/android-missing.err"
+
+for invalid_revision in 'preview' $'36.2.3\nPkg.Revision=36.2.4'; do
+  INVALID_SDK="$TMP_DIR/android-sdk-invalid-$RANDOM"
+  cp -R "$ANDROID_SDK" "$INVALID_SDK"
+  printf 'Pkg.Revision=%s\n' "$invalid_revision" >"$INVALID_SDK/emulator/source.properties"
+  if (
+    cd "$ROOT_DIR"
+    PATH="$COMMON_BIN:/usr/bin:/bin" \
+      ANDROID_HOME="$INVALID_SDK" \
+      ANDROID_SDK_ROOT="$INVALID_SDK" \
+      /bin/bash "$PREPARE" android "$TMP_DIR/android-invalid.env"
+  ) >"$TMP_DIR/android-invalid.out" 2>"$TMP_DIR/android-invalid.err"; then
+    echo "reference-prepare-test: Android setup accepted invalid emulator package metadata" >&2
+    exit 1
+  fi
+  grep -Fq 'invalid Android emulator package revision' "$TMP_DIR/android-invalid.err"
+done
 
 DOCKER_BIN="$TMP_DIR/docker-bin"
 mkdir -p "$DOCKER_BIN"

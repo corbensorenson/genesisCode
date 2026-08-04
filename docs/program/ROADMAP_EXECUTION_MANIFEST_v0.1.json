@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "92e22352949c364637aad7f80805ff4579db46ddd2555539bdad8b98a1f87975",
-    "roadmap_sha256": "56154e455ec9148818075e1c35a8d7caac6e893fa5b56276dece45694b67170f",
+    "roadmap_sha256": "62aa39737cdf8aaf156b20b13f958c6b13c5c838b27eebb905a0a874045f7e7d",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -678,7 +678,7 @@
             "scripts/check_genesis_evidence_profile.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "genesis-evidence-profile-bundle-sha256:05dec372d0c374b1bc5aa3a4b865feb224a1dcbc15aa336cd7ca621c8648a53f"
+          "input_identity": "genesis-evidence-profile-bundle-sha256:fe2822d9cd089b9275d5a1d09af1b1a70f7f6d2a9ad674a75c3195af8f9e2442"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -750,7 +750,7 @@
             "scripts/check_genesis_evidence_verifier.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "genesis-evidence-verifier-bundle-sha256:3dd2e110a86077bbe525af5c57177c329567b1a56442289119db40b91451a168"
+          "input_identity": "genesis-evidence-verifier-bundle-sha256:2da6797b850fa3aaf8870bb532078fa1d645fef62bfbc19585b227387c522fa8"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -822,7 +822,7 @@
             "scripts/check_evidence_storage_classes.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "evidence-storage-classes-bundle-sha256:689c5cad2a14cf9d13bb0686e44124fe3d3395bdbb0242762a8270dec361ba25"
+          "input_identity": "evidence-storage-classes-bundle-sha256:24314eaa7220fe4f2f071a323432876b5badad6b40a6171339e86bde2d08e676"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -894,7 +894,7 @@
             "scripts/check_evidence_adversarial_matrix.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "evidence-adversarial-matrix-bundle-sha256:dec5ffdfd7137a386b4e3969551653ae921dba79b247f58230a35280499bb581"
+          "input_identity": "evidence-adversarial-matrix-bundle-sha256:e2d3cac1f260e7df2d321e8b7b6683f8e4e7f050593b4f0a7b665c561877aa48"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -966,7 +966,7 @@
             "scripts/check_evidence_adversarial_matrix.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "evidence-adversarial-matrix-bundle-sha256:dec5ffdfd7137a386b4e3969551653ae921dba79b247f58230a35280499bb581"
+          "input_identity": "evidence-adversarial-matrix-bundle-sha256:e2d3cac1f260e7df2d321e8b7b6683f8e4e7f050593b4f0a7b665c561877aa48"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1040,7 +1040,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "test-hermeticity-bundle-sha256:5c7c25cfbdc0147e6de7548b28a8fd8004b3d0c3fd309ca428b38e0d708fceb2"
+          "input_identity": "test-hermeticity-bundle-sha256:d9c2c6f978f005678d1271889650842261eec92b9cab1a8cb118b51a68b954ea"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1114,7 +1114,7 @@
             "scripts/check_test_execution_profile_matrix.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "warning-free-workspace-bundle-sha256:83bb9336e84bd628cc489412a8c7627d6765a269fe791493fbdae9412eea0eb6"
+          "input_identity": "warning-free-workspace-bundle-sha256:3db6a32768ade3634b9b36504f6ce2ca5ae6fa515bd963e2e77e9babc5a28de9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1262,7 +1262,7 @@
             "scripts/check_prerequisite_manifest.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "prerequisite-manifest-bundle-sha256:8dd06de57c8b202ffdd385386822e3ff24009b16facfba1795256365caa849c7"
+          "input_identity": "prerequisite-manifest-bundle-sha256:3e8d40afbfbdccbcbc0b399a6194a4944e1fde7c6fe384626c9d742be030e3d9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1337,7 +1337,7 @@
             "scripts/test_offline_dependency_mirror.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "dependency-mirror-bundle-sha256:74eb63f47cf404e44a19b9d2d9544d89420333e23e82653e29905e4953dc083b"
+          "input_identity": "dependency-mirror-bundle-sha256:da0f8f4aa1671dc55725e7e999e496213244ed8ab3a715d5e478f442125c29ae"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1413,7 +1413,7 @@
             "scripts/check_release_smoke.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "version-surface-bundle-sha256:df456f9871862eef19fd610545427da1fc0e332a8dc6bbccbda82f3f4472b59d"
+          "input_identity": "version-surface-bundle-sha256:61b2b93b2950331f0928660290995ca934ef3aed63490eefdc843b3577118a95"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1487,7 +1487,7 @@
             "scripts/check_v1_compatibility.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "v1-compatibility-registry-bundle-sha256:21d367e0ae1d01545f87d959e0d895044767425e651acab3e99c11221813be83"
+          "input_identity": "v1-compatibility-registry-bundle-sha256:83d0ab807426efe2e7c4d933bb8072f2b6fc6c69901b532a66544281e1230648"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1561,7 +1561,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "gate-manifest-bundle-sha256:87cc7a52b73956e152679765e43f45cd4fe114d561eb2eb0ff9f0c200532e4dd"
+          "input_identity": "gate-manifest-bundle-sha256:18837f364573de884be0a80c144b2ed4f8dde95c79625e66b794691de365db59"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1942,7 +1942,7 @@
             "scripts/check_cargo_target_dir_policy.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "engineering-gate-budget-bundle-sha256:0cca386300edfc8c94d8e36fe1e6c00cf02e8649787edc565d5d1d89a9bef653"
+          "input_identity": "engineering-gate-budget-bundle-sha256:0033379ca0b736b503fec8f71efa9861a55c23e1c1ed8e2ee3daf1e9d89adbf8"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2097,7 +2097,7 @@
             "scripts/check_check_update_boundary.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "governance-consolidation-bundle-sha256:fd95e5432c25f5fc6d7b24ee38c685f1a1fdb0e016e5fc1678a2aca35a6072e7"
+          "input_identity": "governance-consolidation-bundle-sha256:76ce8def171a61b67d867cf799605f1effb393d0b3040e342c678dd1f77c987d"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2175,7 +2175,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "generated-authority-closure-bundle-sha256:4eb43331b8b8b87f8c89fac8f288d784980c87266c3e334b881ebb16e538113a"
+          "input_identity": "generated-authority-closure-bundle-sha256:97504e0715ba92fe5292a9042f04530c45867c68080f7c0ad13bb24d11da351c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2255,7 +2255,7 @@
             "30826800834"
           ],
           "completed_date": "2026-08-03",
-          "input_identity": "generated-authority-closure-bundle-sha256:4eb43331b8b8b87f8c89fac8f288d784980c87266c3e334b881ebb16e538113a"
+          "input_identity": "generated-authority-closure-bundle-sha256:97504e0715ba92fe5292a9042f04530c45867c68080f7c0ad13bb24d11da351c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2405,7 +2405,7 @@
             "scripts/check_reference_host_profiles.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "reference-host-profile-bundle-sha256:fe748a3a1f02fd9c8c3a16b5deeb19d4703cd346d7228b60031d5facfcf6c800"
+          "input_identity": "reference-host-profile-bundle-sha256:cf4fc49698ddcf91d456fe08b642865963efe803eecef3b434a9b532d59c34ff"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2479,7 +2479,7 @@
             "scripts/check_roadmap_workloads.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "roadmap-workload-bundle-sha256:e74590be4f4468f0fc93b0eb54dc9d68f6638451d43652d71a50a6993fe664b2"
+          "input_identity": "roadmap-workload-bundle-sha256:3ada16bbbafa303dee8b28fc18f4176d034134ade7d59957a3e9c825631e972f"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2555,7 +2555,7 @@
             "scripts/check_roadmap_baseline.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "roadmap-baseline-bundle-sha256:00b9e44d41fdaf37771e6e31a8d82adc285cfb608d6a230c11c4b4f6a2ad7263"
+          "input_identity": "roadmap-baseline-bundle-sha256:8ae5ce87bd605a5e7d20a1c39808b9380c1790e92ddd34df85729fefbce96a01"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2631,7 +2631,7 @@
             "scripts/check_release_notes.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "release-notes-bundle-sha256:b8fac1796650baeeff23eed00222d50b36ae84b0fd710ed028f877d849d86ed7"
+          "input_identity": "release-notes-bundle-sha256:7cb9f69b058e0ab354207d32fa9838fc0a420ecc047f445346ea6b6b86ce955e"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2707,7 +2707,7 @@
             "scripts/check_gc_agent_profile.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-profile-bundle-sha256:b151b8738177eaa081737d9f7c28e4d23c5cf989967754a9d47b2ed225a5b7d2"
+          "input_identity": "gc-agent-profile-bundle-sha256:4a3184d83f3bc47077cdbc6fb91a9635f473467355a36290afd0ec54e3833877"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2783,7 +2783,7 @@
             "scripts/check_gc_agent_core_card.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-core-card-bundle-sha256:7fac3a0ea9de233c2b1cc09cf17de0cdb604e5395309df61f91710ef5848676a"
+          "input_identity": "gc-agent-core-card-bundle-sha256:f8a732e4cad712a00480bf83f0443d25910ab7aedbece491e7e8c4cffdda9e2c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2861,7 +2861,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-task-cards-bundle-sha256:b1976afdff660da44b7ccdc94d4e7aa96384e4944c7e64e88898dd6af975eb3b"
+          "input_identity": "gc-agent-task-cards-bundle-sha256:c9129c2de10a4e6fa268d86e56878b3bb21857ce9511a6605123d7f8f4580046"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2939,7 +2939,7 @@
             "scripts/check_gc_agent_symbol_index.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-symbol-index-bundle-sha256:e87f8d2e374a3bc961d4ece28a437d46558e37a3677afa4086123109ef115280"
+          "input_identity": "gc-agent-symbol-index-bundle-sha256:2032cfe9545eb3dca8db2eef4e93c2e415322731b0d6164a96a2a47bcc5fb718"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3018,7 +3018,7 @@
             "scripts/check_gc_agent_core_card.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-unsupported-behavior-bundle-sha256:d514a601a1e9286d157b71d2ec652dfb2a9e1c001beeb35ebde2ccfcad964f66"
+          "input_identity": "gc-agent-unsupported-behavior-bundle-sha256:5ad2b1f7a81c3bb5926e2aeeb47d221e05351758bec801eb0b2ebff6259177d4"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3538,7 +3538,7 @@
             "scripts/check_warm_protocol_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "warm-protocol-bundle-sha256:15dafc84d6af71933d4f33a0cdeddd4d6594a1ad1780c3eacd1c3ec25b3f91a5"
+          "input_identity": "warm-protocol-bundle-sha256:d25d67e6c7b772bc2dbbc5845904fca264181fbb0f8d8bbc40bbebb5f756131f"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3610,7 +3610,7 @@
             "scripts/check_host_bridge_fault_injection.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "hard-cancellation-bundle-sha256:a2782012c703907f9ebd02d50e730b9425d3e2f28e05b60048396125e8cc6f72"
+          "input_identity": "hard-cancellation-bundle-sha256:3d59cc2eebd0bb49366dfb58fd619eb9c17822d75ffe40b68d2b22b93c5bd877"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3685,7 +3685,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "mcp-interface-bundle-sha256:f944bfc6584a130a4a639a15793e2cb948f51f495fb10d9f48291a7cbfdd5af4"
+          "input_identity": "mcp-interface-bundle-sha256:b35619969cce0226d7f2a1a180565f330543cb6278ab3be91a3cea7f9430475c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
