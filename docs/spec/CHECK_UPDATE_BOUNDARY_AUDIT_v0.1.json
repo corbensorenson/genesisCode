@@ -56,14 +56,19 @@
       ],
       "execution_helper_closure": [
         {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        },
+        {
           "path": "scripts/render_agent_generative_workloads_report.sh",
           "sha256": "1d0704c621d9ee24ab251fb78b5a865fd037e81a174623f4b96caa5369a89b90"
         }
       ],
       "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh",
         "scripts/render_agent_generative_workloads_report.sh"
       ],
-      "execution_identity_sha256": "639c20da77191db919a996c61988dce723bce97db6985d3eb0c4dd5f1b14463b",
+      "execution_identity_sha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -74,7 +79,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "fbff21b4412a61f39061b3437fd0fdc6ede035b21da603118168aef4403979a3",
+      "sha256": "f6597faa393b246258dd01ca39f0c56da7a5a8b0c8202990849232f8ca9a47e5",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -207,14 +212,19 @@
       ],
       "execution_helper_closure": [
         {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        },
+        {
           "path": "scripts/render_agent_scenario_perf_report.sh",
           "sha256": "fa2bf807ae4411ef54514e60e8e70dad8d3c133c5d065cd00a313aa9e1faa2a2"
         }
       ],
       "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh",
         "scripts/render_agent_scenario_perf_report.sh"
       ],
-      "execution_identity_sha256": "0eb22a0f3a9579301e4d14eb7319c50c3cc3abd28569487a28485a9f58b11b11",
+      "execution_identity_sha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -225,7 +235,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "3afab2bb3a357e7935b417665b7e13388504e3aa354e93f2adda35ee92eeec81",
+      "sha256": "78dcaddc586fcf43513e2f231c550c5a274be23b7406ea66ec29203a080f1054",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -264,6 +274,10 @@
           "sha256": "50fde897f78fb925eec1bd6a2c452b45244d06802a2a20c5010d0aa135368dbd"
         },
         {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        },
+        {
           "path": "scripts/lib/heavy_gate_preflight.sh",
           "sha256": "5f31f712312127de677617ffc7ac9f92d56c8b5a980f60d8de389ea72304ce30"
         },
@@ -281,9 +295,10 @@
         }
       ],
       "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh",
         "scripts/render_agent_workflow_runtime_parity_report.sh"
       ],
-      "execution_identity_sha256": "f1fd02ded37b4d24e45476389532eeda14850118da19eaeb6d0d94cf99c3ea10",
+      "execution_identity_sha256": "b6c30174236151191a76946a7cef6fa3b651dfdfcd8a6761121fed880c44eebe",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -294,7 +309,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "1a73c9ce70a043f33ef4c5c513dedaa8704a053db3d1e178d82db747f9547275",
+      "sha256": "1e0b042ff4397628662986f27a809a940ba06f57d99c54ada0655491587a150f",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -749,7 +764,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "9cc5aa3304c46361ec8f6c9ca849abd798d5aa6816fa2acffe7db4607da80dc0",
+      "execution_identity_sha256": "705da23ba5ee6f735a3cc5e8c1a9412dd8166b084ad8ad17e33165e32b155f9b",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -760,7 +775,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "df3bcc773a2176b192506de196d45fb0a916140e32ad24c379860dc293cadd2a",
+      "sha256": "74d6161c2b79101a3e71ddf0739f027a84fbcd03a780ea1424041387097a2be1",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -1024,14 +1039,14 @@
         },
         {
           "path": "scripts/render_gc_repair_utility_report.sh",
-          "sha256": "58e09ca71018e8418ce6d7f48f464c78d8b58ef5a1cbb7aea319c620e79cc619"
+          "sha256": "2754bc018c4988b2b9f60bcda6cd1d51d8c8bfd8b68a7e30e9cfe2c27e8ab88e"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cli_diagnostics_contract_report.sh",
         "scripts/render_gc_repair_utility_report.sh"
       ],
-      "execution_identity_sha256": "99c191c4c9b7ef17b69f7e760ef2bef19c4e69870273570caf00706579702648",
+      "execution_identity_sha256": "1047d4ee5e899e1a490449f0b841731c9942b5deb6b350d8bc3ab65ae61268b1",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -2042,7 +2057,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "bb0f9dc73bdea6da6f719477b5fecbd454c85b1ef233ab8ab02970964d507f33",
+      "execution_identity_sha256": "969f063c2bb464130de2dc61013286e16ddaf028bc31c8b8bc99dabe3e95398d",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -2053,7 +2068,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "9c837e269920abf3e772a5350dad42a9c36065a00f0b7425ec13b5e3fccf678f",
+      "sha256": "61fb2153dc4f6545cad381aee1a9622ba6dad1201043bbc92ed3ee0e504dcc2e",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -2358,13 +2373,13 @@
         },
         {
           "path": "scripts/render_gcpm_target_runtime_pipelines_report.sh",
-          "sha256": "a66324b3399cd455c5a81753bd9ad8e310312cee5a156b6b03d90560e0e3e33d"
+          "sha256": "4a15f5a6369ee2b3a94974da8bf0673a770814dfd9a3ecf0007a70b4838fbc08"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_gcpm_target_runtime_pipelines_report.sh"
       ],
-      "execution_identity_sha256": "89a60e63bf3dd27cc182f69b82ee76575e8512613638e2eccd8d1529325aa3ce",
+      "execution_identity_sha256": "30b12f7abe0eaf84a31e0103738acc000d625686153d2c6d8b5737f4405b463e",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3017,6 +3032,10 @@
           "sha256": "50fde897f78fb925eec1bd6a2c452b45244d06802a2a20c5010d0aa135368dbd"
         },
         {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        },
+        {
           "path": "scripts/lib/heavy_gate_preflight.sh",
           "sha256": "5f31f712312127de677617ffc7ac9f92d56c8b5a980f60d8de389ea72304ce30"
         },
@@ -3034,11 +3053,12 @@
         }
       ],
       "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh",
         "scripts/render_agent_reference_workflows_report.sh",
         "scripts/render_gpu_xr_productization_kits_report.sh",
         "scripts/render_webxr_browser_conformance_report.sh"
       ],
-      "execution_identity_sha256": "4cd05e00f81a932dd2ffbebf1e8a7a76bc6247080f66de016584124c8bf89c15",
+      "execution_identity_sha256": "d60530979a929879d65612ef0c41f028fb304df085b0e4dcde48254614f08350",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3049,7 +3069,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "c3a928dc7595e239c35b2f1541762069e0eac8b3a42df29d74d67490d3ca4fdc",
+      "sha256": "58578a265203352fff95a427c95d0880980d8e2582d4ab87c2d29b8b4ada40cb",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -3349,14 +3369,19 @@
           "sha256": "50fde897f78fb925eec1bd6a2c452b45244d06802a2a20c5010d0aa135368dbd"
         },
         {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        },
+        {
           "path": "scripts/render_host_bridge_fault_injection_report.sh",
           "sha256": "7ffbc6b3c9744f1198465769501c984e7ed66b4fb4c6b9f518384021dd6d55d9"
         }
       ],
       "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh",
         "scripts/render_host_bridge_fault_injection_report.sh"
       ],
-      "execution_identity_sha256": "99a9aa597a679a1bc67c85c341fd05cad7b1040f496a985baf59ad3c53b90b80",
+      "execution_identity_sha256": "ed52805212f70b30b13895dbdcc1dc8cdcc23f840fbb14e93cc5596eca24a634",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3367,7 +3392,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "2b0b03c47be745ed300d25a789f5f30b0a5d41f5362ece7c0e223cc219b6fe53",
+      "sha256": "17fe72670c9ad92f2f02eeb808273be64e34e231ebc219533b884e0a60fa6ef8",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -4396,7 +4421,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "37b42742d763be7f504a77620bfaa920ce51763477c46817e8a55322a61eeb7d",
+      "execution_identity_sha256": "f0b31ca6b37d84eeb697e180549cab42710599cfd9f9146a82e02458eed9a101",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -4407,7 +4432,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "81b981adf7ae101944194d0f397a4f1112dc5c21b905a162a937c33608194304",
+      "sha256": "58826fb98aa1ec1d1c691b4c2a614823683ad0e76be423785f31c354b4513356",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -4547,14 +4572,19 @@
           "sha256": "50fde897f78fb925eec1bd6a2c452b45244d06802a2a20c5010d0aa135368dbd"
         },
         {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        },
+        {
           "path": "scripts/render_runtime_backend_feature_matrix_report.sh",
           "sha256": "a16e8086431f0342ea29ac2dd286d927b3669367c7ed84bb991ff3a941dba784"
         }
       ],
       "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh",
         "scripts/render_runtime_backend_feature_matrix_report.sh"
       ],
-      "execution_identity_sha256": "0742da9d20ca75cb0f56e002f06d02c0450af3f277aaf824e984cfa5719677a8",
+      "execution_identity_sha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -4565,7 +4595,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "f1b2425c1097432302038fc225a466676a323b3d61ca9203c29d7c7073203c38",
+      "sha256": "945d18ee36d32676a07f234361aa3fa67ba57689559c3771a9d7748c0bb1d815",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -5173,9 +5203,16 @@
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
       "direct_write_candidates": [],
-      "execution_helper_closure": [],
-      "execution_helper_invocations": [],
-      "execution_identity_sha256": "4050f6e09390500fd865d2e8a27ec2f65a81d6726c05ccad7fba94b0534f7ff0",
+      "execution_helper_closure": [
+        {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        }
+      ],
+      "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh"
+      ],
+      "execution_identity_sha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5189,7 +5226,7 @@
         "PARITY_REPORT=\"${GENESIS_AGENT_PARITY_REPORT:-.genesis/perf/agent_workflow_runtime_parity_report.json}\""
       ],
       "refresh_controls": [],
-      "sha256": "854c042fac051c006a2432c3ce2d84d1d29fcbfa530f9d66ec49091081cc960b",
+      "sha256": "a543e7a0beff37c65e5623b08c2845d2d6ce9ff4449ea3e315820769c6e45671",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []
@@ -5500,7 +5537,7 @@
       "direct_write_candidates": [],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "472d565d2676ab005a6230156eed5d5dc2e98fcb3ee503206c0cc2fdacaf306a",
+      "execution_identity_sha256": "f3f3e690258e9e35e5ca0458d7c958ac0add1113f87f9f91b029862a662d4909",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5511,7 +5548,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "ceb8573c7067cd1516e5b14c5ceb9d97758040ff09b2b617ceb6dc41c370a72e",
+      "sha256": "2b31c23bdb48c8d93cd1dd67d37754268de28c44e431bd27b5ef4b0534024776",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []
@@ -5701,7 +5738,7 @@
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
       "direct_write_candidates": [
-        "trap 'rm -rf \"$TMP_DIR\"' EXIT"
+        "rm -rf \"$TMP_DIR\""
       ],
       "execution_helper_closure": [
         {
@@ -5754,7 +5791,7 @@
         },
         {
           "path": "scripts/render_health_profile_evidence_bundle.sh",
-          "sha256": "820cbb4711a5a2af87b34658b550fc9028415ff5bc898c9764e1f20459d82434"
+          "sha256": "c4719640486fbf28b49408eb9a652776a71e2e662b240a8cadfc72054b9132d8"
         },
         {
           "path": "scripts/render_host_bridge_fault_injection_report.sh",
@@ -5770,7 +5807,7 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "8b3037c87f929f3025c5f37c058c320b0c97c8ee0ef1e34ff953b09c52b2357a"
+          "sha256": "802af2febcc623ff9ca25e68054980104079d0d0c61ad21934816c410f3160e5"
         },
         {
           "path": "scripts/render_webxr_browser_conformance_report.sh",
@@ -5782,13 +5819,13 @@
         },
         {
           "path": "scripts/test_perf_gates.sh",
-          "sha256": "8c3a79365b6d97b4b60020418b1fbc90b530aa957c40b0b2a81d869224fc2034"
+          "sha256": "ffa1425f6b05990c55b21844fd39dc80235acf139eaa519d150b70cdf39b3050"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "95d9e688a74b93b5a7cd06d32cb2e1bf3e9dbed66cafddb3a78225df52b2dfc4",
+      "execution_identity_sha256": "ea555e4cbfdce852609197c8bb6348b9d29f416067dc2982d420a5632f87c184",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5802,10 +5839,11 @@
         "GENESIS_FULL_SELFHOST_CUTOVER_REFRESH",
         "GENESIS_PLANNING_REFRESH_READINESS"
       ],
-      "sha256": "7514b480ae40e4085c549947801d420eb53ce391625b63762195c2b11e08c4cc",
+      "sha256": "0a68e388442332a3ff0cc317ecc574a5039f7465b60e7f199f7007d91d22a6fe",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
+        "rm -rf \"$TMP_DIR\"",
         "scripts/lib/cargo_target_dir.sh: mkdir -p \"$CARGO_TARGET_DIR\" || return",
         "scripts/lib/heavy_gate_preflight.sh: mkdir -p \"$tmp_root\"",
         "scripts/lib/heavy_gate_preflight.sh: rm -rf \"$probe\"",
@@ -5833,7 +5871,6 @@
         "scripts/render_gpu_compute_runtime_profile_report.sh: summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + \"\\n\", encoding=\"utf-8\")",
         "scripts/render_gpu_xr_productization_kits_report.sh: report_path.parent.mkdir(parents=True, exist_ok=True)",
         "scripts/render_gpu_xr_productization_kits_report.sh: report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + \"\\n\", encoding=\"utf-8\")",
-        "scripts/render_health_profile_evidence_bundle.sh: (root / \"manifest.json\").write_text(",
         "scripts/render_health_profile_evidence_bundle.sh: mkdir -p \"$OUTPUT_ROOT\"",
         "scripts/render_host_bridge_fault_injection_report.sh: history_path.parent.mkdir(parents=True, exist_ok=True)",
         "scripts/render_host_bridge_fault_injection_report.sh: mkdir -p \"$(dirname \"$HISTORY_PATH\")\"",
@@ -5870,8 +5907,7 @@
         "scripts/test_changed_fast.sh: mkdir -p \"$(dirname \"$HISTORY_PATH\")\"",
         "scripts/test_changed_fast.sh: mkdir -p \"$(dirname \"$REPORT_PATH\")\"",
         "scripts/test_changed_fast.sh: rm -rf \"$IMPACT_TMP_DIR\"",
-        "scripts/test_changed_fast.sh: rm -rf \"$OUTPUT_TMP_DIR\"",
-        "trap 'rm -rf \"$TMP_DIR\"' EXIT"
+        "scripts/test_changed_fast.sh: rm -rf \"$OUTPUT_TMP_DIR\""
       ]
     },
     {
@@ -6238,14 +6274,19 @@
       ],
       "execution_helper_closure": [
         {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        },
+        {
           "path": "scripts/render_write_genesiscode_skill_conformance_report.sh",
           "sha256": "fbd7af6a484bbc94b13b11cb1bb36c451b75b9da9208995598a01939f6c9784e"
         }
       ],
       "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh",
         "scripts/render_write_genesiscode_skill_conformance_report.sh"
       ],
-      "execution_identity_sha256": "eaa4b0231722b1533de9a3a6cc7bcdc46851f0c26fc8157a30582de173b3e99b",
+      "execution_identity_sha256": "31569b75611a2b32efebe21b501a3350945d3eafae9a23a3ecf44fa8fea44490",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -6256,7 +6297,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "385436f1ffa327c490cbdf81c6e95eea9228a515efd9836bd6a3168678d50038",
+      "sha256": "45bb37d1f7aa99e399b34b6d804bcb9e31dc160f85287f680c3b0aae205b8ee5",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [

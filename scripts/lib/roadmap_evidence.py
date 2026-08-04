@@ -15,6 +15,10 @@ from typing import Mapping, Sequence
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ROADMAP = ROOT / "ROADMAP.md"
 
+# This generated distribution view transitively contains ROADMAP.md. Binding it
+# into an identity cited by ROADMAP.md would require an impossible hash fixed point.
+DERIVED_FIXED_POINT_EXCLUSIONS = frozenset({"llms.txt"})
+
 COMMON_CAPABILITY_FILES = (
     "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json",
     "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
@@ -1617,7 +1621,12 @@ def cargo_cache_authority_files() -> Sequence[str]:
 
 
 def identities() -> Mapping[str, str]:
-    result = {name: bundle_digest(paths) for name, paths in BUNDLES.items()}
+    result = {
+        name: bundle_digest(
+            tuple(path for path in paths if path not in DERIVED_FIXED_POINT_EXCLUSIONS)
+        )
+        for name, paths in BUNDLES.items()
+    }
     result["cargo-cache-bundle"] = authority_bundle_digest(cargo_cache_authority_files())
     result["changed-impact-bundle"] = authority_bundle_digest(CHANGED_IMPACT_AUTHORITY_FILES)
     return result

@@ -15,7 +15,7 @@ import sys
 import tempfile
 import threading
 import time
-from typing import Any, Sequence
+from typing import Any, Optional, Sequence
 
 POLICY_REL = "policies/gate_telemetry_v0.1.json"
 MANIFEST_REL = "genesis.gates.json"
@@ -180,12 +180,16 @@ class Sampler:
         self.io_read_by_pid = defaultdict(int)
         self.io_write_by_pid = defaultdict(int)
         self.platform = platform.system().lower()
+        self.error: Optional[str] = None
 
     def run(self):
-        while not self.stop.is_set():
+        try:
+            while not self.stop.is_set():
+                self.sample()
+                self.stop.wait(self.interval)
             self.sample()
-            self.stop.wait(self.interval)
-        self.sample()
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.error = str(exc)
 
     def sample(self):
         if self.platform == "linux":
@@ -313,6 +317,12 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
         thread.join(timeout=2)
         for signum, handler in previous_handlers.items():
             signal.signal(signum, handler)
+    if thread.is_alive():
+        event_path.unlink(missing_ok=True)
+        raise TelemetryError("resource sampler did not stop within 2 seconds")
+    if sampler.error is not None:
+        event_path.unlink(missing_ok=True)
+        raise TelemetryError(f"resource sampler failed: {sampler.error}")
     duration = time.monotonic_ns() - started
     after_disk = disk_size(root, policy["diskRoots"]) if exact_disk else filesystem_free_bytes(root)
     try:

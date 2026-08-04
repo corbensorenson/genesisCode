@@ -573,6 +573,22 @@ enforce_release_full_history_budget() {
   if [[ "$HEALTH_WARM_CARGO_CACHE" == "1" ]]; then
     warm_cargo_cache_enabled=1
   fi
+  local measurement_run_class="${GENESIS_RELEASE_MEASUREMENT_RUN_CLASS:-}"
+  local agent_gpu_profile="${GENESIS_AGENT_GPU_PROFILE:-}"
+  case "$measurement_run_class" in
+    ""|cold|warm) ;;
+    *)
+      echo "upgrade-plan-health: invalid release measurement run class: $measurement_run_class" >&2
+      return 2
+      ;;
+  esac
+  case "$agent_gpu_profile" in
+    agent-gpu-strict|agent-gpu-fallback) ;;
+    *)
+      echo "upgrade-plan-health: release-full requires an explicit agent GPU profile" >&2
+      return 2
+      ;;
+  esac
   local -a args=(
     scripts/lib/profile_runtime_budget.py
     --profile "$PROFILE"
@@ -583,7 +599,7 @@ enforce_release_full_history_budget() {
     --budget-ms "$RELEASE_FULL_WALL_BUDGET_MS"
     --min-history "$RELEASE_FULL_MIN_HISTORY"
     --baseline-history "$RELEASE_FULL_BASELINE_HISTORY"
-    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$RELEASE_FULL_WALL_BUDGET_MS,\"generated_disk_delta_bytes\":$profile_generated_disk_delta_bytes,\"artifact_bytes\":$profile_artifact_bytes,\"artifact_budget_bytes\":$RELEASE_ARTIFACT_BUDGET_BYTES}"
+    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$RELEASE_FULL_WALL_BUDGET_MS,\"generated_disk_delta_bytes\":$profile_generated_disk_delta_bytes,\"artifact_bytes\":$profile_artifact_bytes,\"artifact_budget_bytes\":$RELEASE_ARTIFACT_BUDGET_BYTES,\"measurement_run_class\":\"$measurement_run_class\",\"agent_gpu_profile\":\"$agent_gpu_profile\"}"
   )
   if [[ -n "$RELEASE_FULL_HISTORY_SCOPE_KEY" ]]; then
     args+=(--history-scope-key "$RELEASE_FULL_HISTORY_SCOPE_KEY")
@@ -1457,27 +1473,26 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
-    PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
-    PROFILE_GATES+=("GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json' GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' bash scripts/check_runtime_backend_feature_matrix.sh")
+    PROFILE_GATES+=("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1 GENESIS_GCPM_TARGET_RUNTIME_EXPECT_OUTCOME=unsupported-product bash scripts/check_gcpm_target_runtime_pipelines.sh")
+    PROFILE_GATES+=("GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json' GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
-    PROFILE_GATES+=("GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 GENESIS_GPU_XR_PRODUCTIZATION_AUTO_RUN_GAUNTLET=0 GENESIS_GPU_XR_PRODUCTIZATION_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_GPU_XR_PRODUCTIZATION_WEBXR_REPORT='$HEALTH_EVIDENCE_ROOT/webxr_browser_conformance_report.json' bash scripts/check_gpu_xr_productization_kits.sh")
-    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_PARITY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' bash scripts/check_slo_report_contracts.sh")
-    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_GAUNTLET_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_history.jsonl' bash scripts/check_agent_scenario_perf.sh")
-    PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full GENESIS_WRITE_SKILL_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_WRITE_SKILL_GENERATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_report.json' GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json' GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT='$HEALTH_EVIDENCE_ROOT/host_bridge_fault_injection_report.json' GENESIS_WRITE_SKILL_GPU_XR_REPORT='$HEALTH_EVIDENCE_ROOT/gpu_xr_productization_kits_report.json' GENESIS_WRITE_SKILL_ASSURANCE_REPORT='$HEALTH_EVIDENCE_ROOT/assurance_profile_packs_report.json' bash scripts/check_write_genesiscode_skill_conformance.sh")
+    PROFILE_GATES+=("GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 GENESIS_GPU_XR_PRODUCTIZATION_AUTO_RUN_GAUNTLET=0 GENESIS_GPU_XR_PRODUCTIZATION_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_GPU_XR_PRODUCTIZATION_WEBXR_REPORT='$HEALTH_EVIDENCE_ROOT/webxr_browser_conformance_report.json' GENESIS_GPU_XR_PRODUCTIZATION_PREBUILT_REPORT='$HEALTH_EVIDENCE_ROOT/gpu_xr_productization_kits_report.json' bash scripts/check_gpu_xr_productization_kits.sh")
+    PROFILE_GATES+=("GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_GAUNTLET_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_history.jsonl' bash scripts/check_agent_scenario_perf.sh")
+    PROFILE_GATES+=("GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full GENESIS_WRITE_SKILL_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_WRITE_SKILL_GENERATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_report.json' GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json' GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT='$HEALTH_EVIDENCE_ROOT/host_bridge_fault_injection_report.json' GENESIS_WRITE_SKILL_GPU_XR_REPORT='$HEALTH_EVIDENCE_ROOT/gpu_xr_productization_kits_report.json' GENESIS_WRITE_SKILL_ASSURANCE_REPORT='$HEALTH_EVIDENCE_ROOT/assurance_profile_packs_report.json' bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 bash scripts/check_write_genesiscode_skill_distribution.sh")
-    PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_PARITY_REUSE_REPORTS=1 GENESIS_AGENT_PARITY_NATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json' GENESIS_AGENT_PARITY_NATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_history.jsonl' GENESIS_AGENT_PARITY_WASI_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_report.json' GENESIS_AGENT_PARITY_WASI_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_history.jsonl' GENESIS_AGENT_PARITY_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_history.jsonl' GENESIS_AGENT_PARITY_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' bash scripts/check_agent_workflow_runtime_parity.sh")
+    PROFILE_GATES+=("GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_PARITY_REUSE_REPORTS=1 GENESIS_AGENT_PARITY_PREBUILT_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' GENESIS_AGENT_PARITY_NATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json' GENESIS_AGENT_PARITY_NATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_history.jsonl' GENESIS_AGENT_PARITY_WASI_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_report.json' GENESIS_AGENT_PARITY_WASI_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_history.jsonl' GENESIS_AGENT_PARITY_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_history.jsonl' GENESIS_AGENT_PARITY_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' bash scripts/check_agent_workflow_runtime_parity.sh")
     PROFILE_GATES+=(
-      "GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json' GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_report.json' GENESIS_AGENT_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 bash scripts/check_agent_generative_workloads.sh"
+      "GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json' GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_report.json' GENESIS_AGENT_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' GENESIS_AGENT_GENERATIVE_PREBUILT_REPORT='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_report.json' GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 bash scripts/check_agent_generative_workloads.sh"
     )
     PROFILE_GATES+=(
       "GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=1 GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT=.genesis/perf/production_cli_help_surface_parity_report.json GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY=.genesis/perf/production_cli_help_surface_parity_history.jsonl GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY=production-plus-parity-v1 bash scripts/check_production_cli_help_surface.sh"
     )
-    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_PARITY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' GENESIS_SLO_REQUIRE_PARITY_REPORT=1 bash scripts/check_slo_report_contracts.sh")
+    PROFILE_GATES+=("GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_AGENT_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json' GENESIS_AGENT_PARITY_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' GENESIS_SLO_REQUIRE_PARITY_REPORT=1 bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=(
       "GENESIS_TASK_STRESS_RUNS=6 GENESIS_TASK_STRESS_ITERATIONS=8 GENESIS_TASK_STRESS_MAX_FAILURE_RATE_PCT=0 GENESIS_TASK_STRESS_SUITE_BUDGET_MS=420000 bash scripts/check_task_concurrency_stress.sh"
     )
     PROFILE_GATES+=(
-      "GENESIS_HOST_BRIDGE_FAULT_RUNS=6 GENESIS_HOST_BRIDGE_FAULT_MAX_FAILURE_RATE_PCT=0 GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS=300000 bash scripts/check_host_bridge_fault_injection.sh"
+      "GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_HOST_BRIDGE_FAULT_HISTORY='$HEALTH_EVIDENCE_ROOT/host_bridge_fault_injection_history.jsonl' GENESIS_CHECK_HOST_BRIDGE_FAULT_REPORT='$HEALTH_EVIDENCE_ROOT/host_bridge_fault_injection_report.json' bash scripts/check_host_bridge_fault_injection.sh"
     )
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")

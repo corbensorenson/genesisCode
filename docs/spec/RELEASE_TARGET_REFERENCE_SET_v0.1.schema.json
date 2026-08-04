@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/release-target-reference-set-v0.1.json",
+  "title": "GenesisCode Release Target Reference Set v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "lifecycleSteps", "shards"],
+  "properties": {
+    "kind": {"const": "genesis/release-target-reference-set-v0.1"},
+    "version": {"const": "0.1.0"},
+    "lifecycleSteps": {
+      "const": ["install", "launch", "smoke", "teardown", "reap"]
+    },
+    "shards": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["commandEnv", "expectedOutcome", "identityEnv", "identityProbe", "productId", "referenceCommand", "runner", "runtimeClass", "sdkIdentityEnv", "sdkIdentityProbe", "target"],
+        "properties": {
+          "commandEnv": {"type": "string", "pattern": "^GENESIS_GCPM_[A-Z_]+_RUNTIME_CMD$"},
+          "expectedOutcome": {"enum": ["qualified", "unsupported-product"]},
+          "identityEnv": {"type": "string", "pattern": "^GENESIS_GCPM_[A-Z_]+_RUNTIME_IDENTITY$"},
+          "identityProbe": {"type": "string", "minLength": 1},
+          "productId": {"type": "string", "pattern": "^TARGET-[A-Z0-9-]+$"},
+          "referenceCommand": {"type": "string", "minLength": 1},
+          "runner": {"type": "string", "minLength": 1},
+          "runtimeClass": {"enum": ["emulator", "device", "container", "host-runtime"]},
+          "sdkIdentityEnv": {"type": "string", "pattern": "^GENESIS_GCPM_[A-Z_]+_SDK_IDENTITY$"},
+          "sdkIdentityProbe": {"type": "string", "minLength": 1},
+          "target": {"enum": ["ios", "android", "edge", "service-runtime"]}
+        }
+      }
+    }
+  }
+}

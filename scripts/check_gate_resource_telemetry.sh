@@ -66,6 +66,14 @@ require(
     "aggregate observer cadence is not low-perturbation",
 )
 controls.append("aggregate-low-perturbation-sampling")
+sampler = telemetry.Sampler(os.getpid(), 10)
+sampler.sample = lambda: (_ for _ in ()).throw(PermissionError("denied process inventory"))
+sampler.run()
+require(
+    sampler.error == "denied process inventory",
+    "sampler failure was not captured for parent propagation",
+)
+controls.append("sampler-failure-propagation")
 schema_path = root / "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json"
 schema = telemetry.load_json(schema_path)
 require(
@@ -248,7 +256,7 @@ for path in check_scripts:
 require(not missing, f"governed checks missing telemetry wrapper: {missing}")
 controls.append("complete-gate-wrapper-coverage")
 
-require(len(controls) == 17 and len(set(controls)) == 17, "control coverage drift")
+require(len(controls) == 18 and len(set(controls)) == 18, "control coverage drift")
 authorities = [
     "policies/gate_telemetry_v0.1.json",
     "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json",

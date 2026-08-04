@@ -274,8 +274,74 @@ Strict/full profile runtime reports:
     - `scripts/update_gcpm_target_runtime_pipelines_report.sh` is the sole retained
       `.genesis/perf/gcpm_target_runtime_evidence_report.json` and replay-artifact producer.
     - strict non-synthetic policy:
-      - `GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1` requires non-synthetic runtime evidence for every target.
+      - `GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1` requires a typed authentic lifecycle or a typed readiness blocker for every selected target.
       - default strictness follows CI context (`CI=true` => strict).
+      - `policies/release_target_reference_set_v0.1.json` binds the four named reference shards, command and identity inputs, runtime classes, and expected outcome.
+      - `scripts/prepare_release_target_reference.sh` must successfully boot and identify the
+        named iOS/Android simulator or probe the installed Wasmtime/container runtime before a
+        hosted shard may set `GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP=1`.
+      - while the product matrix remains unsupported, release-full sets `GENESIS_GCPM_TARGET_RUNTIME_EXPECT_OUTCOME=unsupported-product`; the runner does not execute configured runtime commands and records `release_qualified=false`.
+      - `qualified` requires a matching `genesis/target-runtime-lifecycle-v0.1` record with install, launch, smoke, teardown, and reap success. Setup, infrastructure, execution, and unsupported-product states remain distinct.
+  - release/full evidence reuse is closed by this contract and `docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json`:
+    - one `genesis/health-profile-evidence-bundle-v0.2` manifest binds source, environment, toolchain, producer, report/history, freshness, and consumer identities;
+    - every prebuilt consumer validates the exact manifest and artifact set at its report-read boundary;
+    - native/WASI gauntlets, generative parity, GPU/XR aggregation, host-bridge fault injection, and runtime-backend compilation execute once per profile rather than once per consumer.
+  - GB-4 qualification is measured only by `scripts/measure_release_full_profile.sh` and
+    `scripts/lib/release_full_measurement.py`, under the closed
+    `docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json` contract:
+    - the retained manifest kind is `genesis/release-full-measurement-v0.1`;
+    - two to five ordered pairs each run a genuinely cold profile against a new, empty,
+      external Cargo/cache root and then a warm profile against the same root;
+      result caching remains disabled, so every gate executes in both classes;
+    - every run retains its profile report and logs, samples process-tree peak RSS and
+      non-overlapping artifact roots, and enforces the GB-4 `2700000ms` and
+      `21474836480`-byte ceilings;
+    - the manifest derives cold and warm p95 wall, peak-RSS, and artifact values from the
+      retained runs, proves complete owned-cache reclamation after each pair, and rejects
+      incomplete histories, cache-class or GPU-profile relabeling between the parent sample
+      and retained profile report, artifact tampering, or a false success after
+      `unsupported-product`;
+    - the producer requires one CI-provenanced report from every named target shard, with
+      the exact runner label, complete reference shard, product-matrix limitation, build and
+      runtime-log identities, source commit, and shared workflow run attempt. Those expected blockers keep
+      `productReleaseQualified = false`, `profileOperational = true`, and
+      `readinessStatus = unsupported-product`; they prove profile operation and readiness
+      classification, not product support;
+    - scheduled and manually dispatched full CI run this paired lane once on `ubuntu-24.04`;
+      the separate iOS readiness shard remains on `macos-15`.
+      The generic ignored-perf lane excludes `upgrade_plan_health`, preventing nested
+      duplicate execution while retaining every other required perf target.
+
+### Closed Release Evidence Semantics
+
+The `genesis/health-profile-evidence-bundle-v0.2` manifest binds every report and
+history by kind, evidence class, bytes, and SHA-256; every producer by command,
+declared environment, complete-input identity, source snapshot, OS/architecture, and
+toolchain executable/version identities; and every authorized consumer by script,
+profile, artifact set, and evidence class. It also binds generation, an exact six-hour
+expiry window, maximum age, and a canonical content identity.
+
+Every release gate reading bundle evidence sets
+`GENESIS_HEALTH_EVIDENCE_REQUIRED=1`, provides
+`GENESIS_HEALTH_EVIDENCE_MANIFEST`, and calls
+`genesis_verify_health_profile_evidence` at its report-read boundary. Verification
+rejects unknown fields, stale or future evidence, changed source or toolchain inputs,
+unauthorized consumers, incomplete artifact sets, non-sibling paths, and changed
+artifact bytes. Failure requires a producer rerun and must never fall back to ambient
+`.genesis/perf` state.
+
+The named target reference set binds runner class, product claim, authentic command,
+runtime identity probe, SDK/image/device identity probe, and lifecycle. Strict target
+states are `qualified`, `unsupported-product`, `setup-required`,
+`infrastructure-failure`, and `execution-failure`; `synthetic-only` is a development
+state and never qualifies. A lifecycle must bind target, bundle and package hashes,
+runtime and SDK identities, and successful install, launch, smoke, teardown, and reap.
+While `R6.3.f` and `R6.6` remain open, the product matrix forces
+`unsupported-product`, configured runtime commands are not executed, and
+`release_qualified` remains false even when the orchestrator correctly accepts the
+expected readiness classification. Hosted reference reports additionally require non-empty
+runtime and SDK/image/device identities from the prepared infrastructure; a runner label alone
+is not reference evidence.
   - release-full profile also enforces production WASM surface isolation:
     - `scripts/check_wasm_production_surface.sh` (forbids parity-only Rust frontend exports in default-feature wasm-bindgen artifacts).
   - release-full profile also enforces large-workspace SLO coverage:

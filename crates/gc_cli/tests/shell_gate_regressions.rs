@@ -656,7 +656,7 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         "bundle must isolate optional history inputs from ambient workstation state"
     );
     assert!(
-        bundle.contains("genesis/health-profile-evidence-bundle-v0.1"),
+        bundle.contains("scripts/lib/health_profile_evidence.py build"),
         "bundle must emit a validated evidence manifest"
     );
     assert!(
@@ -736,11 +736,20 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
     assert!(
         perf_lane.contains("if [[ \"$GENESIS_CI_PROFILE\" == \"full\" ]]")
             && perf_lane
-                .contains("GENESIS_HEALTH_PROFILE=release-full bash scripts/test_perf_gates.sh")
+                .contains("bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health")
             && perf_lane.contains("GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=420000")
             && perf_lane.contains("GENESIS_HEALTH_PROFILE=dev-fast")
             && perf_lane.contains("bash scripts/test_perf_gates.sh"),
-        "standard CI must declare its cold dev-fast envelope without claiming release-full; full CI must retain strict release qualification"
+        "standard CI must declare its cold dev-fast envelope; full CI must exclude the aggregate owned by its paired release measurement lane"
+    );
+    assert!(
+        workflow.contains("release_full_measurement:")
+            && workflow.contains("needs: release_target_reference_readiness")
+            && workflow.contains("reactivecircus/android-emulator-runner@v2")
+            && workflow.contains("scripts/prepare_release_target_reference.sh")
+            && workflow.contains("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP")
+            && workflow.contains("Paired Cold/Warm Release Measurement"),
+        "full CI must measure the release aggregate once after all named target shards"
     );
     let ai_slo = workflow
         .find("- name: AI Iteration SLO")

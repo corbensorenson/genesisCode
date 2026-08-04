@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/health-profile-evidence-bundle-v0.2.json",
+  "title": "GenesisCode Health Profile Evidence Bundle v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifacts", "consumers", "contentIdentitySha256", "executionEnvironment", "expiresAtUtc", "generatedAtUtc", "kind", "maxAgeSeconds", "ok", "producerEnvironment", "producers", "profile", "source"],
+  "properties": {
+    "kind": {"const": "genesis/health-profile-evidence-bundle-v0.2"},
+    "ok": {"const": true},
+    "profile": {"enum": ["prepush-standard", "release-full"]},
+    "generatedAtUtc": {"type": "string", "format": "date-time"},
+    "expiresAtUtc": {"type": "string", "format": "date-time"},
+    "maxAgeSeconds": {"const": 21600},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["byteCount", "fileCount", "gitCommit", "semanticInputsSha256"],
+      "properties": {
+        "byteCount": {"type": "integer", "minimum": 0},
+        "fileCount": {"type": "integer", "minimum": 1},
+        "gitCommit": {"type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"},
+        "semanticInputsSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "producerEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "variables"],
+      "properties": {
+        "profile": {"enum": ["prepush-standard", "release-full"]},
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "valueSha256"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "valueSha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        }
+      }
+    },
+    "executionEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["architecture", "identitySha256", "operatingSystem", "operatingSystemRelease", "profile", "toolchains"],
+      "properties": {
+        "architecture": {"type": "string", "minLength": 1},
+        "identitySha256": {"$ref": "#/$defs/sha256"},
+        "operatingSystem": {"type": "string", "minLength": 1},
+        "operatingSystemRelease": {"type": "string", "minLength": 1},
+        "profile": {"enum": ["prepush-standard", "release-full"]},
+        "toolchains": {
+          "type": "array",
+          "minItems": 7,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["executableSha256", "name", "versionSha256"],
+            "properties": {
+              "executableSha256": {"$ref": "#/$defs/sha256"},
+              "name": {"type": "string", "minLength": 1},
+              "versionSha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        }
+      }
+    },
+    "artifacts": {"type": "object", "minProperties": 18, "additionalProperties": {"$ref": "#/$defs/artifact"}},
+    "consumers": {"type": "object", "minProperties": 8, "additionalProperties": {"$ref": "#/$defs/consumer"}},
+    "producers": {"type": "object", "minProperties": 7, "additionalProperties": {"$ref": "#/$defs/producer"}}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "evidenceClass", "kind", "sha256"],
+      "properties": {
+        "bytes": {"type": "integer", "minimum": 1},
+        "evidenceClass": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "consumer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts", "evidenceClasses", "profile", "script"],
+      "properties": {
+        "artifacts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "evidenceClasses": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "profile": {"enum": ["prepush-standard", "release-full"]},
+        "script": {"type": "string", "pattern": "^scripts/check_[A-Za-z0-9_]+\\.sh$"}
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts", "command", "completeInputsSha256", "declaredEnvironment"],
+      "properties": {
+        "artifacts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "command": {"type": "string", "pattern": "^scripts/render_[A-Za-z0-9_]+\\.sh$"},
+        "completeInputsSha256": {"$ref": "#/$defs/sha256"},
+        "declaredEnvironment": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    }
+  }
+}

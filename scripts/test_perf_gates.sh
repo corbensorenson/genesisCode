@@ -16,6 +16,7 @@ CARGO_PROFILE="${GENESIS_TEST_PERF_GATES_CARGO_PROFILE:-}"
 LIST_ONLY=0
 KERNEL_TAIL_STRESS=0
 declare -a TESTS=()
+declare -a EXCLUDED_TESTS=()
 
 DEFAULT_TESTS=(
   upgrade_plan_health
@@ -44,6 +45,7 @@ intentionally excluded from default `cargo test --workspace`.
 
 Options:
   --test <name>        run one ignored integration-test target; repeatable
+  --exclude-test <n>   omit one default target; repeatable, invalid with --test
   --runner <name>      runner name, currently cargo only (default: cargo)
   --cargo-profile <p>  optional cargo profile passed to cargo test
   --kernel-tail-stress run only the bounded 10M-per-tier kernel tail proof
@@ -56,6 +58,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --test)
       TESTS+=("${2:-}")
+      shift 2
+      ;;
+    --exclude-test)
+      EXCLUDED_TESTS+=("${2:-}")
       shift 2
       ;;
     --runner)
@@ -87,8 +93,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 if (( KERNEL_TAIL_STRESS == 1 )); then
-  if [[ "${#TESTS[@]}" -ne 0 || -n "$CARGO_PROFILE" || "$LIST_ONLY" -ne 0 ]]; then
-    echo "test-perf-gates: --kernel-tail-stress cannot be combined with --test, --cargo-profile, or --list" >&2
+  if [[ "${#TESTS[@]}" -ne 0 || "${#EXCLUDED_TESTS[@]}" -ne 0 || -n "$CARGO_PROFILE" || "$LIST_ONLY" -ne 0 ]]; then
+    echo "test-perf-gates: --kernel-tail-stress cannot be combined with --test, --exclude-test, --cargo-profile, or --list" >&2
     exit 2
   fi
   if [[ "$RUNNER" != "cargo" ]]; then
@@ -138,6 +144,29 @@ fi
 
 if [[ "${#TESTS[@]}" -eq 0 ]]; then
   TESTS=("${DEFAULT_TESTS[@]}")
+elif [[ "${#EXCLUDED_TESTS[@]}" -ne 0 ]]; then
+  echo "test-perf-gates: --exclude-test cannot be combined with --test" >&2
+  exit 2
+fi
+
+if [[ "${#EXCLUDED_TESTS[@]}" -ne 0 ]]; then
+  FILTERED_TESTS=()
+  for test_name in "${TESTS[@]}"; do
+    excluded=0
+    for excluded_name in "${EXCLUDED_TESTS[@]}"; do
+      [[ -n "$excluded_name" ]] || {
+        echo "test-perf-gates: empty --exclude-test value" >&2
+        exit 2
+      }
+      if [[ "$test_name" == "$excluded_name" ]]; then
+        excluded=1
+      fi
+    done
+    if (( excluded == 0 )); then
+      FILTERED_TESTS+=("$test_name")
+    fi
+  done
+  TESTS=("${FILTERED_TESTS[@]}")
 fi
 
 if (( LIST_ONLY == 1 )); then

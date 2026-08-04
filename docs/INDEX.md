@@ -212,6 +212,11 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `.genesis/perf/source_decomposition_tracked_parity_report.json` - optional tracked over-budget module parity and waiver-contract observation, produced only by `scripts/update_source_decomposition_tracked_parity_report.sh`.
 - `.genesis/perf/full_cross_host_profile_report.json` - optional local full-cross-host aggregate observation, produced only by `scripts/update_full_cross_host_profile_budget_report.sh`.
 - `.genesis/perf/gcpm_target_runtime_evidence_report.json` - optional local target-runtime evidence observation with replay artifacts, produced only by `scripts/update_gcpm_target_runtime_pipelines_report.sh`.
+- `docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json` - machine-readable closed health-profile evidence manifest schema.
+- `policies/release_target_reference_set_v0.1.json` - named iOS, Android, edge, and service runtime reference shard authority.
+- `docs/spec/RELEASE_TARGET_REFERENCE_SET_v0.1.schema.json` - machine-readable named release-target reference-set schema.
+- `docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json` - closed paired cold/warm release-full measurement schema.
+- `.genesis/perf/release-full-measurement/manifest.json` - optional retained GB-4 measurement manifest, produced only by `scripts/measure_release_full_profile.sh` from named target-shard evidence.
 - `.genesis/perf/runtime_backend_feature_matrix_report.json` - optional local runtime-backend matrix observation, produced only by `scripts/update_runtime_backend_feature_matrix_report.sh`.
 - `.genesis/perf/write_genesiscode_skill_conformance_report.json` - optional local write-skill conformance observation, produced only by `scripts/update_write_genesiscode_skill_conformance_report.sh`.
 - `.genesis/perf/large_workspace_agent_perf_report.json` - optional local large-workspace performance observation, produced only by `scripts/update_large_workspace_agent_perf_report.sh`.

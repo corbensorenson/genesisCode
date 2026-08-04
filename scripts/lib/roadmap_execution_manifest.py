@@ -36,6 +36,13 @@ PATH_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.*?@+-]+)+/?$")
 HOST_PATH_RE = re.compile(
     r"/(?:Users|home|private/var/folders|var/folders)/|(?i:[A-Z]:\\\\)"
 )
+RELEASE_LANE_IDS = {
+    "genesiscode-core",
+    "genesisbench-trust",
+    "foundry-calibration",
+    "genesis-model-readiness",
+    "genesis-model-release",
+}
 
 
 class ManifestError(ValueError):
@@ -216,6 +223,8 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
             "kind",
             "version",
             "audit_date",
+            "execution_frontier",
+            "release_lane_contracts",
             "risk_classes",
             "resource_classes",
             "execution_profiles",
@@ -379,6 +388,100 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
         )
 
     task_ids = {str(task["id"]) for task in tasks}
+    frontier = require_object(
+        policy.get("execution_frontier"), "policy.execution_frontier"
+    )
+    reject_unknown_fields(
+        frontier,
+        (
+            "wip_limit",
+            "ordered_task_ids",
+            "rationale",
+            "task_context",
+            "allowed_parallel_lanes",
+        ),
+        "policy.execution_frontier",
+    )
+    wip_limit = frontier.get("wip_limit")
+    if isinstance(wip_limit, bool) or not isinstance(wip_limit, int):
+        raise ManifestError("execution_frontier.wip_limit must be an integer")
+    if wip_limit < 1 or wip_limit > 3:
+        raise ManifestError("execution_frontier.wip_limit must be between 1 and 3")
+    frontier_ids = require_string_list(
+        frontier.get("ordered_task_ids"),
+        "execution_frontier.ordered_task_ids",
+        non_empty=True,
+    )
+    unknown_frontier_ids = sorted(set(frontier_ids) - task_ids)
+    if unknown_frontier_ids:
+        raise ManifestError(
+            "execution_frontier contains unknown tasks: "
+            + ", ".join(unknown_frontier_ids)
+        )
+    require_string(frontier.get("rationale"), "execution_frontier.rationale")
+    task_context = require_object(
+        frontier.get("task_context"), "execution_frontier.task_context"
+    )
+    if set(task_context) != set(frontier_ids):
+        missing = sorted(set(frontier_ids) - set(task_context))
+        extra = sorted(set(task_context) - set(frontier_ids))
+        raise ManifestError(
+            f"execution_frontier task context drift: missing={missing} extra={extra}"
+        )
+    for task_id, raw_context in task_context.items():
+        context = require_object(
+            raw_context, f"execution_frontier.task_context[{task_id}]"
+        )
+        reject_unknown_fields(
+            context,
+            ("product_lanes", "milestones", "nonclaims"),
+            f"execution_frontier.task_context[{task_id}]",
+        )
+        require_string_list(
+            context.get("product_lanes"),
+            f"execution_frontier.task_context[{task_id}].product_lanes",
+            non_empty=True,
+        )
+        require_string_list(
+            context.get("milestones"),
+            f"execution_frontier.task_context[{task_id}].milestones",
+            non_empty=True,
+        )
+        require_string_list(
+            context.get("nonclaims"),
+            f"execution_frontier.task_context[{task_id}].nonclaims",
+            non_empty=True,
+        )
+    parallel_lanes = frontier.get("allowed_parallel_lanes")
+    if not isinstance(parallel_lanes, list) or not parallel_lanes:
+        raise ManifestError(
+            "execution_frontier.allowed_parallel_lanes must be a non-empty array"
+        )
+    observed_parallel_lane_ids: set[str] = set()
+    for index, raw_lane in enumerate(parallel_lanes):
+        lane = require_object(
+            raw_lane, f"execution_frontier.allowed_parallel_lanes[{index}]"
+        )
+        reject_unknown_fields(
+            lane,
+            ("id", "description", "conditions"),
+            f"execution_frontier.allowed_parallel_lanes[{index}]",
+        )
+        lane_id = require_string(
+            lane.get("id"), f"execution_frontier.allowed_parallel_lanes[{index}].id"
+        )
+        if lane_id in observed_parallel_lane_ids:
+            raise ManifestError(f"duplicate allowed parallel lane: {lane_id}")
+        observed_parallel_lane_ids.add(lane_id)
+        require_string(
+            lane.get("description"),
+            f"execution_frontier.allowed_parallel_lanes[{index}].description",
+        )
+        require_string_list(
+            lane.get("conditions"),
+            f"execution_frontier.allowed_parallel_lanes[{index}].conditions",
+            non_empty=True,
+        )
     task_prerequisites = require_object(
         policy.get("task_prerequisites"), "policy.task_prerequisites"
     )
@@ -386,6 +489,11 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
         if task_id not in task_ids:
             raise ManifestError(f"task_prerequisites contains unknown task: {task_id}")
         require_string_list(refs, f"policy.task_prerequisites[{task_id}]")
+    validate_release_lane_contracts(
+        policy.get("release_lane_contracts"),
+        task_ids=task_ids,
+        workstream_ids=task_workstreams,
+    )
     return policy
 
 
@@ -404,6 +512,137 @@ def resolve_reference(
             raise ManifestError(f"empty workstream reference: {ref}")
         return candidates[-1]
     raise ManifestError(f"unknown prerequisite reference: {ref}")
+
+
+def release_lane_task_matches_forbidden_selector(
+    task_id: str,
+    contract: Mapping[str, Any],
+    workstream_by_task: Mapping[str, str],
+) -> bool:
+    return (
+        task_id in contract["forbidden_task_ids"]
+        or workstream_by_task[task_id] in contract["forbidden_workstreams"]
+        or any(
+            task_id.startswith(prefix)
+            for prefix in contract["forbidden_task_prefixes"]
+        )
+    )
+
+
+def release_lane_task_is_forbidden(
+    task_id: str,
+    contract: Mapping[str, Any],
+    workstream_by_task: Mapping[str, str],
+) -> bool:
+    return task_id not in contract["allowed_task_ids"] and (
+        release_lane_task_matches_forbidden_selector(
+            task_id, contract, workstream_by_task
+        )
+    )
+
+
+def validate_release_lane_contracts(
+    raw: Any,
+    *,
+    task_ids: Iterable[str],
+    workstream_ids: Iterable[str],
+) -> Mapping[str, Any]:
+    contracts = require_object(raw, "policy.release_lane_contracts")
+    if set(contracts) != RELEASE_LANE_IDS:
+        raise ManifestError(
+            "release-lane contract coverage drift: "
+            f"missing={sorted(RELEASE_LANE_IDS - set(contracts))} "
+            f"extra={sorted(set(contracts) - RELEASE_LANE_IDS)}"
+        )
+    known_tasks = set(task_ids)
+    known_workstreams = set(workstream_ids)
+    workstream_by_task = {task_id: task_workstream(task_id) for task_id in known_tasks}
+    for lane_id, raw_contract in contracts.items():
+        contract = require_object(
+            raw_contract, f"policy.release_lane_contracts[{lane_id}]"
+        )
+        reject_unknown_fields(
+            contract,
+            (
+                "root_task_id",
+                "required_ancestor_task_ids",
+                "forbidden_task_ids",
+                "forbidden_workstreams",
+                "forbidden_task_prefixes",
+                "allowed_task_ids",
+            ),
+            f"policy.release_lane_contracts[{lane_id}]",
+        )
+        root_task_id = require_string(
+            contract.get("root_task_id"), f"release lane {lane_id}.root_task_id"
+        )
+        required = require_string_list(
+            contract.get("required_ancestor_task_ids"),
+            f"release lane {lane_id}.required_ancestor_task_ids",
+        )
+        forbidden_tasks = require_string_list(
+            contract.get("forbidden_task_ids"),
+            f"release lane {lane_id}.forbidden_task_ids",
+            non_empty=True,
+        )
+        forbidden_workstreams = require_string_list(
+            contract.get("forbidden_workstreams"),
+            f"release lane {lane_id}.forbidden_workstreams",
+            non_empty=True,
+        )
+        forbidden_prefixes = require_string_list(
+            contract.get("forbidden_task_prefixes"),
+            f"release lane {lane_id}.forbidden_task_prefixes",
+        )
+        allowed = require_string_list(
+            contract.get("allowed_task_ids"),
+            f"release lane {lane_id}.allowed_task_ids",
+        )
+        referenced_tasks = set(required + forbidden_tasks + allowed + [root_task_id])
+        unknown_tasks = sorted(referenced_tasks - known_tasks)
+        if unknown_tasks:
+            raise ManifestError(
+                f"release lane {lane_id} references unknown tasks: "
+                + ", ".join(unknown_tasks)
+            )
+        unknown_workstreams = sorted(set(forbidden_workstreams) - known_workstreams)
+        if unknown_workstreams:
+            raise ManifestError(
+                f"release lane {lane_id} references unknown workstreams: "
+                + ", ".join(unknown_workstreams)
+            )
+        for prefix in forbidden_prefixes:
+            if not any(task_id.startswith(prefix) for task_id in known_tasks):
+                raise ManifestError(
+                    f"release lane {lane_id} has a stale task prefix: {prefix}"
+                )
+        for task_id in allowed:
+            if not release_lane_task_matches_forbidden_selector(
+                task_id, contract, workstream_by_task
+            ):
+                raise ManifestError(
+                    f"release lane {lane_id} allows a task not selected as forbidden: "
+                    f"{task_id}"
+                )
+        if release_lane_task_is_forbidden(
+            root_task_id, contract, workstream_by_task
+        ):
+            raise ManifestError(
+                f"release lane {lane_id} forbids its own root: {root_task_id}"
+            )
+        impossible_required = sorted(
+            task_id
+            for task_id in required
+            if release_lane_task_is_forbidden(
+                task_id, contract, workstream_by_task
+            )
+        )
+        if impossible_required:
+            raise ManifestError(
+                f"release lane {lane_id} both requires and forbids: "
+                + ", ".join(impossible_required)
+            )
+    return contracts
 
 
 def validate_dag(tasks: Sequence[Mapping[str, Any]]) -> None:
@@ -427,6 +666,54 @@ def validate_dag(tasks: Sequence[Mapping[str, Any]]) -> None:
 
     for task_id in graph:
         visit(task_id, [])
+
+
+def transitive_prerequisites(
+    tasks: Sequence[Mapping[str, Any]], root_id: str
+) -> set[str]:
+    graph = {str(task["id"]): list(task["prerequisites"]) for task in tasks}
+    if root_id not in graph:
+        raise ManifestError(f"release-lane root is missing: {root_id}")
+    ancestors: set[str] = set()
+    pending = [root_id]
+    while pending:
+        task_id = pending.pop()
+        for prerequisite in graph[task_id]:
+            if prerequisite not in ancestors:
+                ancestors.add(prerequisite)
+                pending.append(prerequisite)
+    return ancestors
+
+
+def validate_release_lane_isolation(
+    tasks: Sequence[Mapping[str, Any]], contracts: Mapping[str, Any]
+) -> None:
+    workstream_by_task = {
+        str(task["id"]): str(task["workstream"]) for task in tasks
+    }
+    for lane_id, raw_contract in contracts.items():
+        contract = require_object(raw_contract, f"release lane {lane_id}")
+        root_task_id = str(contract["root_task_id"])
+        ancestors = transitive_prerequisites(tasks, root_task_id)
+        required = set(contract["required_ancestor_task_ids"])
+        missing = required - ancestors
+        if missing:
+            raise ManifestError(
+                f"release lane {lane_id} is missing required ancestors: "
+                + ", ".join(sorted(missing))
+            )
+        forbidden = {
+            task_id
+            for task_id in ancestors
+            if release_lane_task_is_forbidden(
+                task_id, contract, workstream_by_task
+            )
+        }
+        if forbidden:
+            raise ManifestError(
+                f"release lane {lane_id} has forbidden ancestors: "
+                + ", ".join(sorted(forbidden))
+            )
 
 
 def validate_schema(raw: Any) -> Mapping[str, Any]:
@@ -654,6 +941,10 @@ def build_manifest(
         )
 
     validate_dag(resolved_tasks)
+    release_lane_contracts = require_object(
+        policy.get("release_lane_contracts"), "policy.release_lane_contracts"
+    )
+    validate_release_lane_isolation(resolved_tasks, release_lane_contracts)
     ready = [task["id"] for task in resolved_tasks if task["start_ready"]]
     completed = sum(1 for task in resolved_tasks if task["state"] == "done")
     manifest = {
@@ -681,7 +972,11 @@ def build_manifest(
         "ready_task_ids": ready,
         "tasks": resolved_tasks,
     }
-    validate_manifest(manifest, parsed_tasks=parsed_tasks)
+    validate_manifest(
+        manifest,
+        parsed_tasks=parsed_tasks,
+        release_lane_contracts=release_lane_contracts,
+    )
     return manifest
 
 
@@ -689,6 +984,7 @@ def validate_manifest(
     raw: Any,
     *,
     parsed_tasks: Sequence[Mapping[str, Any]],
+    release_lane_contracts: Mapping[str, Any],
     expected_identities: Optional[Mapping[str, str]] = None,
 ) -> Mapping[str, Any]:
     manifest = require_object(raw, "manifest")
@@ -957,6 +1253,7 @@ def validate_manifest(
             "manifest task order/coverage does not exactly match ROADMAP.md"
         )
     validate_dag(tasks_raw)
+    validate_release_lane_isolation(tasks_raw, release_lane_contracts)
     summary = require_object(manifest.get("summary"), "manifest.summary")
     done_count = sum(1 for task in tasks_raw if task.get("state") == "done")
     ready_ids = [task["id"] for task in tasks_raw if task.get("start_ready") is True]
@@ -979,8 +1276,109 @@ def canonical_bytes(doc: Mapping[str, Any]) -> bytes:
     return (json.dumps(doc, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
+def build_execution_slice(
+    manifest: Mapping[str, Any], policy_path: Path
+) -> Mapping[str, Any]:
+    policy = require_object(load_json(policy_path, "roadmap execution policy"), "policy")
+    frontier = require_object(
+        policy.get("execution_frontier"), "policy.execution_frontier"
+    )
+    ordered_ids = require_string_list(
+        frontier.get("ordered_task_ids"),
+        "execution_frontier.ordered_task_ids",
+        non_empty=True,
+    )
+    wip_limit = frontier.get("wip_limit")
+    if isinstance(wip_limit, bool) or not isinstance(wip_limit, int):
+        raise ManifestError("execution_frontier.wip_limit must be an integer")
+    task_context = require_object(
+        frontier.get("task_context"), "execution_frontier.task_context"
+    )
+    tasks = require_object(
+        {str(task["id"]): task for task in manifest["tasks"]}, "task index"
+    )
+    open_ids = [task_id for task_id in ordered_ids if tasks[task_id]["state"] == "open"]
+    focused_ids = open_ids[:wip_limit]
+    focus_tasks = []
+    for task_id in focused_ids:
+        task = tasks[task_id]
+        context = require_object(
+            task_context[task_id], f"execution_frontier.task_context[{task_id}]"
+        )
+        focus_tasks.append(
+            {
+                "id": task["id"],
+                "title": task["title"],
+                "phase": task["phase"],
+                "workstream": task["workstream"],
+                "product_lanes": context["product_lanes"],
+                "milestones": context["milestones"],
+                "start_ready": task["start_ready"],
+                "prerequisites": task["prerequisites"],
+                "unsatisfied_prerequisites": task["unsatisfied_prerequisites"],
+                "risk_class": task["risk_class"],
+                "resource_class": task["resource_class"],
+                "owner_paths": task["owner_paths"],
+                "guard_checks": task["guard_checks"],
+                "parallel_safe_with": task["parallel_safe_with"],
+                "negative_controls": task["negative_controls"],
+                "nonclaims": context["nonclaims"],
+                "expected_outputs": task["expected_outputs"],
+                "acceptance": task["acceptance"],
+                "rollback": task["rollback"],
+                "source": task["source"],
+            }
+        )
+    ready_ids = list(manifest["ready_task_ids"])
+    queued_ids = open_ids[wip_limit:]
+    queued_tasks = []
+    for task_id in queued_ids:
+        task = tasks[task_id]
+        context = require_object(
+            task_context[task_id], f"execution_frontier.task_context[{task_id}]"
+        )
+        queued_tasks.append(
+            {
+                "id": task_id,
+                "title": task["title"],
+                "product_lanes": context["product_lanes"],
+                "milestones": context["milestones"],
+                "start_ready": task["start_ready"],
+                "unsatisfied_prerequisites": task["unsatisfied_prerequisites"],
+                "nonclaims": context["nonclaims"],
+            }
+        )
+    return {
+        "kind": "genesis/roadmap-execution-slice-v0.1",
+        "version": "0.1",
+        "authority": {
+            "roadmap": manifest["authority"]["roadmap"],
+            "policy": manifest["authority"]["policy"],
+            "derived_view_only": True,
+        },
+        "input_identities": manifest["input_identities"],
+        "wip_limit": wip_limit,
+        "rationale": require_string(
+            frontier.get("rationale"), "execution_frontier.rationale"
+        ),
+        "allowed_parallel_lanes": frontier["allowed_parallel_lanes"],
+        "focus_tasks": focus_tasks,
+        "queued_task_ids": queued_ids,
+        "queued_tasks": queued_tasks,
+        "ready_but_deprioritized_task_ids": [
+            task_id for task_id in ready_ids if task_id not in focused_ids
+        ],
+    }
+
+
 def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> int:
     parsed = parse_roadmap(roadmap_path)
+    policy = validate_policy(
+        load_json(policy_path, "roadmap execution policy"), parsed
+    )
+    release_lane_contracts = require_object(
+        policy.get("release_lane_contracts"), "policy.release_lane_contracts"
+    )
     baseline = build_manifest(roadmap_path, policy_path, schema_path)
     cases: List[Tuple[str, Any]] = []
 
@@ -1052,11 +1450,108 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
             validate_manifest(
                 fixture,
                 parsed_tasks=parsed,
+                release_lane_contracts=release_lane_contracts,
                 expected_identities=baseline["input_identities"],
             )
         except ManifestError:
             continue
         raise ManifestError(f"self-test accepted adversarial fixture: {label}")
+
+    lane_cases: List[Tuple[str, Any]] = []
+
+    core_platform_leak = copy.deepcopy(baseline)
+    next(
+        task for task in core_platform_leak["tasks"] if task["id"] == "R9.4.f"
+    )["prerequisites"].append("R8.3.e")
+    lane_cases.append(("core-platform-leak", core_platform_leak))
+
+    core_data_ml_leak = copy.deepcopy(baseline)
+    next(
+        task for task in core_data_ml_leak["tasks"] if task["id"] == "R9.4.f"
+    )["prerequisites"].append("R5.7.e")
+    lane_cases.append(("core-data-ml-leak", core_data_ml_leak))
+
+    core_benchmark_leak = copy.deepcopy(baseline)
+    next(
+        task for task in core_benchmark_leak["tasks"] if task["id"] == "R9.4.f"
+    )["prerequisites"].append("R8.5.e")
+    lane_cases.append(("core-benchmark-leak", core_benchmark_leak))
+
+    bench_platform_leak = copy.deepcopy(baseline)
+    next(
+        task for task in bench_platform_leak["tasks"] if task["id"] == "R8.5.s"
+    )["prerequisites"].append("R8.3.e")
+    lane_cases.append(("bench-platform-leak", bench_platform_leak))
+
+    bench_generator_gate_leak = copy.deepcopy(baseline)
+    next(
+        task
+        for task in bench_generator_gate_leak["tasks"]
+        if task["id"] == "R8.5.s"
+    )["prerequisites"].append("R7.1.f")
+    lane_cases.append(("bench-generator-gate-leak", bench_generator_gate_leak))
+
+    bench_model_leak = copy.deepcopy(baseline)
+    next(
+        task for task in bench_model_leak["tasks"] if task["id"] == "R8.5.s"
+    )["prerequisites"].append("R8.5.h")
+    lane_cases.append(("bench-model-leak", bench_model_leak))
+
+    foundry_platform_leak = copy.deepcopy(baseline)
+    next(
+        task for task in foundry_platform_leak["tasks"] if task["id"] == "F2.q"
+    )["prerequisites"].append("R8.3.e")
+    lane_cases.append(("foundry-platform-leak", foundry_platform_leak))
+
+    foundry_hardware_gate_leak = copy.deepcopy(baseline)
+    next(
+        task
+        for task in foundry_hardware_gate_leak["tasks"]
+        if task["id"] == "F2.q"
+    )["prerequisites"].append("R7.3.f")
+    lane_cases.append(("foundry-hardware-gate-leak", foundry_hardware_gate_leak))
+
+    foundry_model_leak = copy.deepcopy(baseline)
+    next(
+        task for task in foundry_model_leak["tasks"] if task["id"] == "F2.q"
+    )["prerequisites"].append("R8.5.h")
+    lane_cases.append(("foundry-model-leak", foundry_model_leak))
+
+    model_gate_bypass = copy.deepcopy(baseline)
+    model_gate = next(
+        task for task in model_gate_bypass["tasks"] if task["id"] == "R8.5.t"
+    )
+    model_gate["prerequisites"].remove("R8.5.i")
+    lane_cases.append(("model-gate-bypass", model_gate_bypass))
+
+    model_platform_leak = copy.deepcopy(baseline)
+    next(
+        task for task in model_platform_leak["tasks"] if task["id"] == "R8.5.r"
+    )["prerequisites"].append("R8.3.e")
+    lane_cases.append(("model-platform-leak", model_platform_leak))
+
+    model_device_soak_leak = copy.deepcopy(baseline)
+    next(
+        task for task in model_device_soak_leak["tasks"] if task["id"] == "R8.5.r"
+    )["prerequisites"].append("R7.4.d")
+    lane_cases.append(("model-device-soak-leak", model_device_soak_leak))
+
+    model_foundry_expansion_leak = copy.deepcopy(baseline)
+    next(
+        task
+        for task in model_foundry_expansion_leak["tasks"]
+        if task["id"] == "R8.5.r"
+    )["prerequisites"].append("F2.r")
+    lane_cases.append(("model-foundry-expansion-leak", model_foundry_expansion_leak))
+
+    for label, fixture in lane_cases:
+        try:
+            validate_release_lane_isolation(
+                fixture["tasks"], release_lane_contracts
+            )
+        except ManifestError:
+            continue
+        raise ManifestError(f"self-test accepted release-lane fixture: {label}")
 
     schema_fixture = copy.deepcopy(load_json(schema_path, "roadmap execution schema"))
     schema_fixture["$defs"]["task"]["required"].remove("acceptance")
@@ -1067,7 +1562,7 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
     else:
         raise ManifestError("self-test accepted weakened schema fixture")
 
-    negative_controls = len(cases) + 1
+    negative_controls = len(cases) + len(lane_cases) + 1
     print(
         "roadmap-execution-manifest-self-test: ok "
         f"(negative_controls={negative_controls})"
@@ -1082,6 +1577,8 @@ def main(argv: Sequence[str]) -> int:
     mode.add_argument("--update", action="store_true")
     mode.add_argument("--render", action="store_true")
     mode.add_argument("--self-test", action="store_true")
+    mode.add_argument("--slice", action="store_true")
+    mode.add_argument("--explain", metavar="TASK_ID")
     parser.add_argument("--roadmap", type=Path, default=DEFAULT_ROADMAP)
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
@@ -1099,7 +1596,19 @@ def main(argv: Sequence[str]) -> int:
             return 0
         rendered = build_manifest(roadmap_path, policy_path, schema_path)
         rendered_bytes = canonical_bytes(rendered)
-        if args.render:
+        if args.slice:
+            sys.stdout.buffer.write(
+                canonical_bytes(build_execution_slice(rendered, policy_path))
+            )
+        elif args.explain is not None:
+            task = next(
+                (task for task in rendered["tasks"] if task["id"] == args.explain),
+                None,
+            )
+            if task is None:
+                raise ManifestError(f"unknown roadmap task: {args.explain}")
+            sys.stdout.buffer.write(canonical_bytes(task))
+        elif args.render:
             if args.output is None:
                 raise ManifestError("--render requires --output")
             output = args.output.resolve()
@@ -1113,9 +1622,17 @@ def main(argv: Sequence[str]) -> int:
         else:
             observed = load_json(manifest_path, "roadmap execution manifest")
             parsed = parse_roadmap(roadmap_path)
+            policy = validate_policy(
+                load_json(policy_path, "roadmap execution policy"), parsed
+            )
+            release_lane_contracts = require_object(
+                policy.get("release_lane_contracts"),
+                "policy.release_lane_contracts",
+            )
             validate_manifest(
                 observed,
                 parsed_tasks=parsed,
+                release_lane_contracts=release_lane_contracts,
                 expected_identities=rendered["input_identities"],
             )
             if canonical_bytes(observed) != rendered_bytes:
