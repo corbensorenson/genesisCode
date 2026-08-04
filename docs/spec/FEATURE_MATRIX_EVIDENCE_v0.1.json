@@ -7,7 +7,7 @@
     "CAP-BROWSER-XR",
     "CAP-DEPLOYMENT-PIPELINE"
   ],
-  "audit_date": "2026-08-03",
+  "audit_date": "2026-08-04",
   "entries": [
     {
       "capability": "Pure deterministic kernel separated from effects",
@@ -999,6 +999,7 @@
       ],
       "gap_ids": [
         "P1.5",
+        "P1.6",
         "R7.1.a",
         "R7.3.a"
       ],
