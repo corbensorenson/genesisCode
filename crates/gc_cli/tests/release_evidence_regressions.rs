@@ -283,7 +283,39 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
     let report = temp.path().join("report.json");
     let artifacts = temp.path().join("artifacts");
     let marker = temp.path().join("runtime-command-executed");
-    let command = format!("touch {} # xcrun simctl", marker.display());
+    let (
+        target,
+        runner_label,
+        runtime_command_env,
+        runtime_class_env,
+        runtime_identity_env,
+        sdk_identity_env,
+        runtime_class,
+        command_fingerprint,
+    ) = match std::env::consts::OS {
+        "macos" => (
+            "ios",
+            "macos-15",
+            "GENESIS_GCPM_IOS_RUNTIME_CMD",
+            "GENESIS_GCPM_IOS_RUNTIME_CLASS",
+            "GENESIS_GCPM_IOS_RUNTIME_IDENTITY",
+            "GENESIS_GCPM_IOS_SDK_IDENTITY",
+            "emulator",
+            "xcrun simctl",
+        ),
+        "linux" => (
+            "edge",
+            "ubuntu-24.04",
+            "GENESIS_GCPM_EDGE_RUNTIME_CMD",
+            "GENESIS_GCPM_EDGE_RUNTIME_CLASS",
+            "GENESIS_GCPM_EDGE_RUNTIME_IDENTITY",
+            "GENESIS_GCPM_EDGE_SDK_IDENTITY",
+            "host-runtime",
+            "wasmtime run",
+        ),
+        platform => panic!("no named release-reference shard for test host: {platform}"),
+    };
+    let command = format!("touch {} # {command_fingerprint}", marker.display());
     let git_sha = String::from_utf8(
         Command::new("git")
             .args(["rev-parse", "HEAD"])
@@ -299,23 +331,23 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
         .arg(root.join("scripts/render_gcpm_target_runtime_pipelines_report.sh"))
         .arg(&report)
         .arg(&artifacts)
-        .env("GENESIS_GCPM_TARGET_RUNTIME_TARGETS", "ios")
+        .env("GENESIS_GCPM_TARGET_RUNTIME_TARGETS", target)
         .env("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC", "1")
         .env("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP", "1")
         .env(
             "GENESIS_GCPM_TARGET_RUNTIME_EXPECT_OUTCOME",
             "unsupported-product",
         )
-        .env("GENESIS_GCPM_IOS_RUNTIME_CMD", command)
-        .env("GENESIS_GCPM_IOS_RUNTIME_CLASS", "emulator")
-        .env("GENESIS_GCPM_IOS_RUNTIME_IDENTITY", "forged-device")
-        .env("GENESIS_GCPM_IOS_SDK_IDENTITY", "forged-sdk")
+        .env(runtime_command_env, command)
+        .env(runtime_class_env, runtime_class)
+        .env(runtime_identity_env, "fixture-runtime-identity")
+        .env(sdk_identity_env, "fixture-sdk-identity")
         .env("GENESIS_CARGO_CACHE_ROOT", temp.path().join("cargo-cache"))
         .env("CI", "true")
         .env("GITHUB_RUN_ATTEMPT", "1")
         .env("GITHUB_RUN_ID", "123")
         .env("GITHUB_SHA", &git_sha)
-        .env("GENESIS_GCPM_TARGET_RUNTIME_RUNNER_LABEL", "macos-15")
+        .env("GENESIS_GCPM_TARGET_RUNTIME_RUNNER_LABEL", runner_label)
         .current_dir(&root)
         .output()
         .expect("run strict target classification");
@@ -345,7 +377,7 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
         Value::Null
     );
     assert_eq!(doc["targets"][0]["runtime_evidence"]["ok"], false);
-    assert_eq!(doc["runner_evidence"]["label"], "macos-15");
+    assert_eq!(doc["runner_evidence"]["label"], runner_label);
     assert_eq!(doc["runner_evidence"]["matches_reference"], true);
     assert_eq!(doc["runner_evidence"]["ci"], true);
 
@@ -388,7 +420,7 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
         .arg(root.join("scripts/render_gcpm_target_runtime_pipelines_report.sh"))
         .arg(&missing_setup_report)
         .arg(temp.path().join("missing-setup-artifacts"))
-        .env("GENESIS_GCPM_TARGET_RUNTIME_TARGETS", "ios")
+        .env("GENESIS_GCPM_TARGET_RUNTIME_TARGETS", target)
         .env("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC", "1")
         .env("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP", "1")
         .env(
@@ -400,7 +432,7 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
         .env("GITHUB_RUN_ATTEMPT", "1")
         .env("GITHUB_RUN_ID", "123")
         .env("GITHUB_SHA", &git_sha)
-        .env("GENESIS_GCPM_TARGET_RUNTIME_RUNNER_LABEL", "macos-15")
+        .env("GENESIS_GCPM_TARGET_RUNTIME_RUNNER_LABEL", runner_label)
         .current_dir(&root)
         .output()
         .expect("run missing reference setup control");
@@ -418,7 +450,7 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
         .arg(root.join("scripts/render_gcpm_target_runtime_pipelines_report.sh"))
         .arg(temp.path().join("mismatch.json"))
         .arg(temp.path().join("mismatch-artifacts"))
-        .env("GENESIS_GCPM_TARGET_RUNTIME_TARGETS", "ios")
+        .env("GENESIS_GCPM_TARGET_RUNTIME_TARGETS", target)
         .env("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC", "1")
         .env("GENESIS_GCPM_TARGET_RUNTIME_EXPECT_OUTCOME", "qualified")
         .env("GENESIS_CARGO_CACHE_ROOT", temp.path().join("cargo-cache"))
