@@ -6,6 +6,7 @@ genesis_gate_telemetry_reexec "$0" "$@"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/health_profile_evidence.sh"
 
 MANIFEST_INPUT="${GENESIS_WRITE_SKILL_CONFORMANCE_MANIFEST:-docs/skill_pack/write_genesiscode_v1/manifest.json}"
 GAUNTLET_INPUT="${GENESIS_WRITE_SKILL_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
@@ -15,6 +16,17 @@ HOST_BRIDGE_INPUT="${GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT:-.genesis/perf/host_
 GPU_XR_INPUT="${GENESIS_WRITE_SKILL_GPU_XR_REPORT:-.genesis/perf/gpu_xr_productization_kits_report.json}"
 ASSURANCE_INPUT="${GENESIS_WRITE_SKILL_ASSURANCE_REPORT:-.genesis/perf/assurance_profile_packs_report.json}"
 SCORE_BASELINE_FILE="${GENESIS_CHECK_WRITE_SKILL_CONFORMANCE_HISTORY_INPUT:-.genesis/perf/write_genesiscode_skill_conformance_history.jsonl}"
+if [[ -n "${GENESIS_HEALTH_EVIDENCE_MANIFEST:-}" ]]; then
+  genesis_verify_health_profile_evidence \
+    "write-skill-conformance" \
+    "scripts/check_write_genesiscode_skill_conformance.sh" \
+    "$GAUNTLET_INPUT" \
+    "$GENERATIVE_INPUT" \
+    "$ASSURANCE_INPUT" \
+    "$GPU_XR_INPUT" \
+    "$HOST_BRIDGE_INPUT" \
+    "$RUNTIME_BACKEND_INPUT"
+fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 

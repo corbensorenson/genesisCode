@@ -1,15 +1,19 @@
 
-Below is a **handoff technical document** you can paste into your repo (or hand directly to a Codex Desktop / GPT‑5.3‑Codex agent). It’s written to be maximally actionable from day 0: repo structure, invariants, module boundaries, file formats, tests, and a task plan that takes advantage of Codex threads \+ worktrees \+ skills.
+# GenesisCode v0.2 Historical Technical Handoff
 
-I’ve also included **templates for `AGENTS.md`** and a **Codex Skill** you can drop into `.agents/skills/` so the agent reliably follows the same workflow every time. Codex explicitly supports project-level instruction files (`AGENTS.md` / `AGENTS.override.md`) and skill folders with `SKILL.md`. ([OpenAI Developers](https://developers.openai.com/codex/guides/agents-md/))
+> **Status (2026-08-03): historical architecture reference, not current execution authority.** This document records the original v0.2 implementation plan and still contains useful kernel, Prelude, effect, format, and module-boundary rationale. Its day-zero milestones, proposed repository layout, agent template, and task ordering describe the project at inception and must not be used to infer current completion or priority.
+>
+> Start with root `AGENTS.md` for the working agreement, `ROADMAP.md` for canonical strategy and task dependencies, `upgrade_plan.md` for active defects, `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md` for governed checks, and `docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json` for the generated execution graph. Query the bounded current slice with `python3 scripts/lib/roadmap_execution_manifest.py --slice`. Normative current behavior lives in the versioned authorities indexed by `docs/INDEX.md`; where this handoff conflicts with them, the current authority wins.
+
+The original handoff follows unchanged except for this status framing so its design history remains reviewable.
 
 ---
 
-# **GenesisCode v0.2 Implementation Guide**
+# **Original GenesisCode v0.2 Implementation Guide**
 
 ## **Technical Handoff for Codex Desktop \+ GPT‑5.3‑Codex**
 
-### **Purpose**
+### **Original Purpose**
 
 Implement **GenesisCode v0.2** as specified in the accompanying paper:
 

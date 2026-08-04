@@ -34,6 +34,148 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  release_target_reference_readiness:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: android
+            runner: ubuntu-24.04
+          - target: edge
+            runner: ubuntu-24.04
+          - target: ios
+            runner: macos-15
+          - target: service-runtime
+            runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Reference Rust Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+      - name: Install Reference Wasmtime
+        if: ${{ matrix.target == 'edge' }}
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+        with:
+          version: 36.0.9
+      - name: Prepare Android Reference Emulator
+        if: ${{ matrix.target == 'android' }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/prepare_release_target_reference.sh android "$GITHUB_ENV"
+      - name: Prepare Named Reference Infrastructure
+        if: ${{ matrix.target != 'android' }}
+        shell: bash
+        run: bash scripts/prepare_release_target_reference.sh "${{ matrix.target }}" "$GITHUB_ENV"
+      - name: Classify Named Target Readiness
+        shell: bash
+        env:
+          GENESIS_GCPM_TARGET_RUNTIME_EVIDENCE_DIR: .genesis/perf/reference-target-${{ matrix.target }}
+          GENESIS_GCPM_TARGET_RUNTIME_EVIDENCE_REPORT: .genesis/perf/reference-target-${{ matrix.target }}.json
+          GENESIS_GCPM_TARGET_RUNTIME_EXPECT_OUTCOME: unsupported-product
+          GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC: "1"
+          GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP: "1"
+          GENESIS_GCPM_TARGET_RUNTIME_RUNNER_LABEL: ${{ matrix.runner }}
+          GENESIS_GCPM_TARGET_RUNTIME_TARGETS: ${{ matrix.target }}
+        run: bash scripts/update_gcpm_target_runtime_pipelines_report.sh
+      - name: Upload Named Target Readiness
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-target-readiness-${{ matrix.target }}
+          path: |
+            .genesis/perf/reference-target-${{ matrix.target }}.json
+            .genesis/perf/reference-target-${{ matrix.target }}/
+          if-no-files-found: error
+
+  release_full_measurement:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    needs: release_target_reference_readiness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown, wasm32-wasip1
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
+      - name: Cache WASI SDK
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/genesis/wasi-sdk
+          key: wasi-sdk-33.0-${{ runner.os }}-${{ runner.arch }}
+      - name: Install Verified WASI SDK
+        run: |
+          bash scripts/install_wasi_sdk.sh \
+            --install-base "$RUNNER_TOOL_CACHE/genesis/wasi-sdk" \
+            --github-env "$GITHUB_ENV"
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.137
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.19.0
+      - name: Install wasmtime
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+        with:
+          version: 36.0.9
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install JS Dependencies
+        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
+      - name: Fetch Offline Gate Dependencies
+        run: |
+          cargo fetch --locked
+          cargo fetch --manifest-path tools/genesis-evidence-producer/Cargo.toml --locked
+          cargo fetch --manifest-path tools/genesis-evidence-verifier/Cargo.toml --locked
+      - name: Download Named Target Readiness
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-target-readiness-*
+          path: .genesis/reference-targets
+          merge-multiple: true
+      - name: Paired Cold/Warm Release Measurement
+        run: |
+          bash scripts/measure_release_full_profile.sh \
+            .genesis/perf/release-full-measurement \
+            .genesis/reference-targets/reference-target-android.json \
+            .genesis/reference-targets/reference-target-edge.json \
+            .genesis/reference-targets/reference-target-ios.json \
+            .genesis/reference-targets/reference-target-service-runtime.json \
+            --pairs 2
+      - name: Upload Release Measurement
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-full-measurement
+          path: .genesis/perf/release-full-measurement/
+          if-no-files-found: error
+
   test_suite:
     runs-on: ubuntu-latest
     env:
@@ -368,7 +510,8 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: |
           if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
-            GENESIS_HEALTH_PROFILE=release-full bash scripts/test_perf_gates.sh
+            GENESIS_HEALTH_PROFILE=release-full \
+              bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health
           else
             # Keep the 360s local warm-cache target; hosted regression runs disable
             # the nested health cache and need an explicit cold-run envelope.

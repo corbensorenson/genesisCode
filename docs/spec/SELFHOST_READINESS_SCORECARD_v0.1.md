@@ -73,9 +73,12 @@ Target runtime evidence report contract:
 - per-target runtime evidence payload includes:
   - runtime mode (`synthetic-adapter` or `non-synthetic`)
   - runtime class (`emulator|device|container|host-runtime|synthetic-adapter`)
+  - typed qualification status (`qualified|unsupported-product|setup-required|infrastructure-failure|execution-failure|synthetic-only`)
+  - command, SDK/image/device identity, artifact identity, lifecycle, and replay-log hashes
   - replay artifact directory + stdout/stderr hashes
 - strict policy:
-  - `GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1` requires non-synthetic evidence per target and fails closed
+  - `GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1` requires a typed authentic lifecycle or fails closed at an explicit readiness blocker
+  - `GENESIS_GCPM_TARGET_RUNTIME_EXPECT_OUTCOME=unsupported-product` accepts only the current product-matrix blocker and never changes `release_qualified=false`
   - default strictness follows CI context (`CI=true` => strict)
 
 GPU/GFX headroom conformance must include lane backend metadata consumed by readiness:

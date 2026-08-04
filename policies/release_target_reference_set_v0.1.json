@@ -1,0 +1,65 @@
+{
+  "kind": "genesis/release-target-reference-set-v0.1",
+  "version": "0.1.0",
+  "lifecycleSteps": [
+    "install",
+    "launch",
+    "smoke",
+    "teardown",
+    "reap"
+  ],
+  "shards": [
+    {
+      "commandEnv": "GENESIS_GCPM_ANDROID_RUNTIME_CMD",
+      "expectedOutcome": "unsupported-product",
+      "identityEnv": "GENESIS_GCPM_ANDROID_RUNTIME_IDENTITY",
+      "identityProbe": "adb shell getprop ro.build.fingerprint",
+      "productId": "TARGET-ANDROID",
+      "referenceCommand": "java -jar $BUNDLETOOL_JAR build-apks --bundle=$GENESIS_TARGET_PACKAGE --output=$GENESIS_TARGET_ARTIFACT_DIR/app.apks --mode=universal && java -jar $BUNDLETOOL_JAR install-apks --apks=$GENESIS_TARGET_ARTIFACT_DIR/app.apks",
+      "runner": "ubuntu-24.04",
+      "runtimeClass": "emulator",
+      "sdkIdentityEnv": "GENESIS_GCPM_ANDROID_SDK_IDENTITY",
+      "sdkIdentityProbe": "sdkmanager --version",
+      "target": "android"
+    },
+    {
+      "commandEnv": "GENESIS_GCPM_EDGE_RUNTIME_CMD",
+      "expectedOutcome": "unsupported-product",
+      "identityEnv": "GENESIS_GCPM_EDGE_RUNTIME_IDENTITY",
+      "identityProbe": "wasmtime --version",
+      "productId": "TARGET-WEB-INTERACTIVE-SSR-PWA",
+      "referenceCommand": "wasmtime run $GENESIS_TARGET_PACKAGE",
+      "runner": "ubuntu-24.04",
+      "runtimeClass": "host-runtime",
+      "sdkIdentityEnv": "GENESIS_GCPM_EDGE_SDK_IDENTITY",
+      "sdkIdentityProbe": "wasmtime --version",
+      "target": "edge"
+    },
+    {
+      "commandEnv": "GENESIS_GCPM_IOS_RUNTIME_CMD",
+      "expectedOutcome": "unsupported-product",
+      "identityEnv": "GENESIS_GCPM_IOS_RUNTIME_IDENTITY",
+      "identityProbe": "xcrun simctl list devices available --json",
+      "productId": "TARGET-IOS",
+      "referenceCommand": "xcrun simctl install $GENESIS_TARGET_DEVICE_ID $GENESIS_TARGET_PACKAGE && xcrun simctl launch --console $GENESIS_TARGET_DEVICE_ID $GENESIS_TARGET_BUNDLE_ID",
+      "runner": "macos-15",
+      "runtimeClass": "emulator",
+      "sdkIdentityEnv": "GENESIS_GCPM_IOS_SDK_IDENTITY",
+      "sdkIdentityProbe": "xcodebuild -version && xcrun --sdk iphonesimulator --show-sdk-version",
+      "target": "ios"
+    },
+    {
+      "commandEnv": "GENESIS_GCPM_SERVICE_RUNTIME_RUNTIME_CMD",
+      "expectedOutcome": "unsupported-product",
+      "identityEnv": "GENESIS_GCPM_SERVICE_RUNTIME_RUNTIME_IDENTITY",
+      "identityProbe": "docker version --format '{{.Server.Version}}'",
+      "productId": "TARGET-SERVICE-DATA",
+      "referenceCommand": "docker run --rm --network none --read-only --mount type=bind,src=$GENESIS_TARGET_PACKAGE,dst=/app/service.wasm,ro alpine:3.20 /bin/sh -c 'test -r /app/service.wasm'",
+      "runner": "ubuntu-24.04",
+      "runtimeClass": "container",
+      "sdkIdentityEnv": "GENESIS_GCPM_SERVICE_RUNTIME_SDK_IDENTITY",
+      "sdkIdentityProbe": "docker image inspect alpine:3.20 --format '{{.Id}}|{{join .RepoDigests \",\"}}'",
+      "target": "service-runtime"
+    }
+  ]
+}

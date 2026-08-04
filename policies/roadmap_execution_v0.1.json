@@ -2,6 +2,308 @@
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
   "audit_date": "2026-08-03",
+  "execution_frontier": {
+    "wip_limit": 1,
+    "ordered_task_ids": [
+      "R0.4.j",
+      "R2.2.f",
+      "R1.5.a",
+      "R1.4.o",
+      "R1.4.q",
+      "R2.1.h",
+      "R1.6.a",
+      "R1.7.a",
+      "R1.4.p",
+      "R2.3.a"
+    ],
+    "rationale": "Finish the in-flight release-profile transaction, close the sole P1.5 host-lifecycle defect, then concentrate on M1-A, M1-B, and startup without opening Foundry, model, or platform breadth.",
+    "task_context": {
+      "R0.4.j": {
+        "product_lanes": ["GenesisCode", "GenesisBench"],
+        "milestones": ["M1-A", "M1-B"],
+        "nonclaims": [
+          "does not implement or qualify future platform packs",
+          "does not turn synthetic or unavailable target execution into product evidence"
+        ]
+      },
+      "R2.2.f": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M1-A", "M2"],
+        "nonclaims": [
+          "does not close daemon or service readiness until every supported-host lifecycle matrix passes",
+          "does not downgrade a promised hard-cancellation guarantee to cooperative cancellation"
+        ]
+      },
+      "R1.5.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M1-A"],
+        "nonclaims": [
+          "does not close the generated authoring skill or its clean-install distribution proof",
+          "does not make benchmark or model output authoritative"
+        ]
+      },
+      "R1.4.o": {
+        "product_lanes": ["GenesisBench"],
+        "milestones": ["M1-B"],
+        "nonclaims": [
+          "does not establish temporal cleanliness from a mutable provider alias",
+          "does not publish a rank until every predeclared cell and invalid disposition is retained"
+        ]
+      },
+      "R1.4.q": {
+        "product_lanes": ["GenesisBench"],
+        "milestones": ["M1-B"],
+        "nonclaims": [
+          "does not count commitments without custody-verified private payload and oracle bytes",
+          "does not expose active held-out material or admit it to training"
+        ]
+      },
+      "R2.1.h": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2"],
+        "nonclaims": [
+          "does not close Runtime Beta without the remaining R2 and R3 parity and budget gates",
+          "does not loosen deterministic resource ceilings to meet performance targets"
+        ]
+      },
+      "R1.6.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M1-A"],
+        "nonclaims": [
+          "does not grant candidates live-state or verification authority",
+          "does not create a second VCS, patch engine, or content store"
+        ]
+      },
+      "R1.7.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M1-A"],
+        "nonclaims": [
+          "does not treat English or model output as executable authority",
+          "does not require or authorize a Genesis Model"
+        ]
+      },
+      "R1.4.p": {
+        "product_lanes": ["GenesisBench"],
+        "milestones": ["M1-B"],
+        "nonclaims": [
+          "does not claim the later GenesisBench Trust release",
+          "does not rewrite prior epochs, attempts, invalids, or scores"
+        ]
+      },
+      "R2.3.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2"],
+        "nonclaims": [
+          "does not claim PB-6 until cold and warm startup evidence passes",
+          "does not make cached or host-specific state part of canonical semantics"
+        ]
+      }
+    },
+    "allowed_parallel_lanes": [
+      {
+        "id": "immutable-benchmark-custody",
+        "description": "One predeclared benchmark custody or execution campaign may run beside the production task.",
+        "conditions": [
+          "its files, credentials, operators, storage, and generated authorities are disjoint from the production task",
+          "its task, cohort, attempt, scoring, and publication authorities were frozen before target-model access",
+          "it cannot modify the repository transaction or delay the selected production frontier"
+        ]
+      }
+    ]
+  },
+  "release_lane_contracts": {
+    "genesiscode-core": {
+      "root_task_id": "R9.4.f",
+      "required_ancestor_task_ids": [
+        "R7.1.e",
+        "R7.2.a",
+        "R7.2.b",
+        "R7.2.c",
+        "R7.2.d",
+        "R7.2.e",
+        "R7.2.f",
+        "R7.2.g",
+        "R7.3.e",
+        "R7.4.a",
+        "R7.4.b",
+        "R7.4.c",
+        "R8.1.d",
+        "R8.2.a",
+        "R8.2.b",
+        "R8.4.e"
+      ],
+      "forbidden_task_ids": [
+        "R1.4.o",
+        "R1.4.p",
+        "R1.4.q",
+        "R5.7.e",
+        "R7.1.f",
+        "R7.3.f",
+        "R7.4.d"
+      ],
+      "forbidden_workstreams": [
+        "R5.6",
+        "R5.8",
+        "R5.9",
+        "R6.5",
+        "R6.6",
+        "R6.7",
+        "R8.3",
+        "R8.5",
+        "F1",
+        "F2",
+        "F3",
+        "F4"
+      ],
+      "forbidden_task_prefixes": ["R8.2."],
+      "allowed_task_ids": ["R8.2.a", "R8.2.b"]
+    },
+    "genesisbench-trust": {
+      "root_task_id": "R8.5.s",
+      "required_ancestor_task_ids": [
+        "R8.5.a",
+        "R8.5.b",
+        "R8.5.c",
+        "R8.5.d",
+        "R8.5.e"
+      ],
+      "forbidden_task_ids": [
+        "R5.7.e",
+        "R7.1.f",
+        "R7.3.f",
+        "R7.4.d"
+      ],
+      "forbidden_workstreams": [
+        "R5.6",
+        "R5.8",
+        "R5.9",
+        "R6.5",
+        "R6.6",
+        "R6.7",
+        "R8.3",
+        "R8.5",
+        "F1",
+        "F2",
+        "F3",
+        "F4"
+      ],
+      "forbidden_task_prefixes": ["R8.2."],
+      "allowed_task_ids": [
+        "R8.5.a",
+        "R8.5.b",
+        "R8.5.c",
+        "R8.5.d",
+        "R8.5.e",
+        "R8.5.s"
+      ]
+    },
+    "foundry-calibration": {
+      "root_task_id": "F2.q",
+      "required_ancestor_task_ids": ["R9.4.f"],
+      "forbidden_task_ids": [
+        "R5.7.e",
+        "R7.1.f",
+        "R7.3.f",
+        "R7.4.d",
+        "F2.r",
+        "F2.s",
+        "F2.t",
+        "F2.u",
+        "F2.v",
+        "F2.w",
+        "F2.x",
+        "F2.y",
+        "F2.z"
+      ],
+      "forbidden_workstreams": [
+        "R5.6",
+        "R5.8",
+        "R5.9",
+        "R6.5",
+        "R6.6",
+        "R6.7",
+        "R8.3",
+        "R8.5",
+        "F1",
+        "F3",
+        "F4"
+      ],
+      "forbidden_task_prefixes": ["R8.2."],
+      "allowed_task_ids": ["R8.2.a", "R8.2.b"]
+    },
+    "genesis-model-readiness": {
+      "root_task_id": "R8.5.t",
+      "required_ancestor_task_ids": [
+        "R9.4.f",
+        "R8.5.s",
+        "R8.5.h",
+        "R8.5.i",
+        "F2.q"
+      ],
+      "forbidden_task_ids": [
+        "R5.7.e",
+        "R7.1.f",
+        "R7.3.f",
+        "R7.4.d",
+        "F2.r",
+        "F2.s",
+        "F2.t",
+        "F2.u",
+        "F2.v",
+        "F2.w",
+        "F2.x",
+        "F2.y",
+        "F2.z"
+      ],
+      "forbidden_workstreams": [
+        "R5.6",
+        "R5.8",
+        "R5.9",
+        "R6.5",
+        "R6.6",
+        "R6.7",
+        "R8.3",
+        "F1",
+        "F3",
+        "F4"
+      ],
+      "forbidden_task_prefixes": ["R8.2."],
+      "allowed_task_ids": ["R8.2.a", "R8.2.b"]
+    },
+    "genesis-model-release": {
+      "root_task_id": "R8.5.r",
+      "required_ancestor_task_ids": ["R8.5.t"],
+      "forbidden_task_ids": [
+        "R5.7.e",
+        "R7.1.f",
+        "R7.3.f",
+        "R7.4.d",
+        "F2.r",
+        "F2.s",
+        "F2.t",
+        "F2.u",
+        "F2.v",
+        "F2.w",
+        "F2.x",
+        "F2.y",
+        "F2.z"
+      ],
+      "forbidden_workstreams": [
+        "R5.6",
+        "R5.8",
+        "R5.9",
+        "R6.5",
+        "R6.6",
+        "R6.7",
+        "R8.3",
+        "F1",
+        "F3",
+        "F4"
+      ],
+      "forbidden_task_prefixes": ["R8.2."],
+      "allowed_task_ids": ["R8.2.a", "R8.2.b"]
+    }
+  },
   "resource_classes": [
     "static",
     "build",
@@ -323,28 +625,28 @@
     "R5.4": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
     "R5.5": {"profile": "language-contract", "start_after": ["R2.2", "R3.2", "R5.1"], "sequential": true},
     "R5.6": {"profile": "language-contract", "start_after": ["R0.1.h", "R5.2", "R5.3", "R5.4", "R5.5"], "sequential": true},
-    "R5.7": {"profile": "language-contract", "start_after": ["R0.1.h", "R5.2", "R5.3", "R5.4", "R5.5"], "sequential": true},
+    "R5.7": {"profile": "language-contract", "start_after": ["R0.1.h", "R5.2", "R5.3", "R5.4", "R5.5"], "sequential": false},
     "R5.8": {"profile": "language-contract", "start_after": ["R0.1.h", "R2.2", "R5.4", "R5.6"], "sequential": true},
     "R5.9": {"profile": "language-contract", "start_after": ["R0.1.h", "R2.2", "R3.2", "R5.1", "R5.4", "R5.5"], "sequential": true},
     "R6.1": {"profile": "ecosystem-delivery", "start_after": ["R4.2", "R5.3"], "sequential": true},
     "R6.2": {"profile": "ecosystem-delivery", "start_after": ["R0.2", "R6.1"], "sequential": true},
     "R6.3": {"profile": "ecosystem-delivery", "start_after": ["R4.2", "R5.5", "R6.1"], "sequential": true},
     "R6.4": {"profile": "ecosystem-delivery", "start_after": ["R6.3"], "sequential": true},
-    "R6.5": {"profile": "ecosystem-delivery", "start_after": ["R5.6", "R5.7", "R6.3", "R6.4"], "sequential": true},
+    "R6.5": {"profile": "ecosystem-delivery", "start_after": ["R5.6", "R5.7.c", "R5.7.f", "R6.3", "R6.4"], "sequential": true},
     "R6.6": {"profile": "ecosystem-delivery", "start_after": ["R5.6", "R5.8", "R6.3", "R6.4"], "sequential": true},
-    "R6.7": {"profile": "ecosystem-delivery", "start_after": ["R5.7", "R5.9", "R6.3", "R6.4"], "sequential": true},
+    "R6.7": {"profile": "ecosystem-delivery", "start_after": ["R5.7.c", "R5.7.f", "R5.9", "R6.3", "R6.4"], "sequential": true},
     "R7.1": {"profile": "assurance", "start_after": ["R0.2", "R0.4"], "sequential": true},
     "R7.2": {"profile": "assurance", "start_after": ["R3.1", "R5.1"], "sequential": false},
     "R7.3": {"profile": "assurance", "start_after": ["R0.2", "R5.5", "R6.2"], "sequential": true},
     "R7.4": {"profile": "assurance", "start_after": ["R2.2", "R6.4"], "sequential": true},
-    "R8.1": {"profile": "product-proof", "start_after": ["R1.5", "R1.6", "R1.7", "R6.4", "R7.1"], "sequential": true},
-    "R8.2": {"profile": "product-proof", "start_after": ["R8.1", "R7.3", "R6.5", "R6.6", "R6.7"], "sequential": false},
+    "R8.1": {"profile": "product-proof", "start_after": ["R1.5", "R1.6", "R1.7", "R6.4", "R7.1.e"], "sequential": true},
+    "R8.2": {"profile": "product-proof", "start_after": ["R8.1", "R7.3.e", "R6.4"], "sequential": false},
     "R8.3": {"profile": "product-proof", "start_after": [], "sequential": true},
     "R8.4": {"profile": "product-proof", "start_after": ["R1.2", "R2.3"], "sequential": true},
-    "R8.5": {"profile": "product-proof", "start_after": ["R1.6", "R7.1", "R8.1"], "sequential": false},
-    "R9.1": {"profile": "trust-release", "start_after": ["R3.4", "R4.5", "R5.5", "R6.4", "R6.5", "R6.6", "R6.7", "R7.4", "R8.3", "R8.4"], "sequential": true},
-    "R9.2": {"profile": "trust-release", "start_after": ["R4.4", "R6.3", "R7.3", "R9.1"], "sequential": true},
-    "R9.3": {"profile": "trust-release", "start_after": ["R6.4", "R7.3", "R9.1"], "sequential": true},
+    "R8.5": {"profile": "product-proof", "start_after": ["R1.6", "R7.1.e", "R8.1"], "sequential": false},
+    "R9.1": {"profile": "trust-release", "start_after": ["R3.4", "R4.5", "R5.5", "R6.4", "R8.1", "R8.4"], "sequential": true},
+    "R9.2": {"profile": "trust-release", "start_after": ["R4.4", "R6.3", "R7.3.e", "R9.1"], "sequential": true},
+    "R9.3": {"profile": "trust-release", "start_after": ["R6.4", "R7.3.e", "R9.1"], "sequential": true},
     "R9.4": {"profile": "trust-release", "start_after": ["R9.1", "R9.2", "R9.3"], "sequential": true},
     "F1": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true},
     "F2": {"profile": "frontier-research", "start_after": ["R3.4", "R9.4"], "sequential": true},
@@ -402,8 +704,24 @@
     "R1.7.f": [
       "R0.1.h"
     ],
+    "R5.7.b": [
+      "R5.7.a"
+    ],
+    "R5.7.c": [
+      "R5.7.a",
+      "R5.7.b"
+    ],
+    "R5.7.d": [
+      "R5.7.a"
+    ],
+    "R5.7.f": [
+      "R5.7.a",
+      "R5.7.b",
+      "R5.7.d"
+    ],
     "R8.4.e": [
-      "R8.3"
+      "R8.2.a",
+      "R8.2.b"
     ],
     "R8.3.a": [
       "R8.2.a",
@@ -445,41 +763,101 @@
       "R1.4.p"
     ],
     "R8.2.k": [
-      "R6.5"
+      "R6.5",
+      "R7.1.f",
+      "R7.3.f"
+    ],
+    "R8.2.b": [
+      "R5.7.a",
+      "R5.7.b",
+      "R5.7.c",
+      "R5.7.d",
+      "R5.7.f",
+      "R6.4"
+    ],
+    "R8.2.c": [
+      "R5.7.b",
+      "R5.7.c",
+      "R5.7.d",
+      "R5.7.e",
+      "R6.4",
+      "R7.1.f",
+      "R7.3.f"
+    ],
+    "R8.2.d": [
+      "R5.7.a",
+      "R5.7.d",
+      "R5.7.f",
+      "R7.1.f",
+      "R7.3.f"
+    ],
+    "R8.2.e": [
+      "R6.5",
+      "R7.1.f",
+      "R7.3.f"
+    ],
+    "R8.2.h": [
+      "R5.7.e",
+      "R7.1.f",
+      "R7.3.f"
+    ],
+    "R8.2.i": [
+      "R6.6",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.2.l": [
-      "R6.6"
+      "R6.6",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.2.m": [
       "R5.8",
       "R6.5",
-      "R6.6"
+      "R6.6",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.2.n": [
       "R5.8",
-      "R6.6"
+      "R6.6",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.2.o": [
-      "R6.7.a"
+      "R6.7.a",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.2.p": [
-      "R6.7.e"
+      "R6.7.e",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.2.q": [
-      "R6.7.e"
+      "R6.7.e",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.2.r": [
+      "R5.6",
+      "R5.7.a",
+      "R5.7.b",
+      "R5.7.c",
+      "R5.7.d",
       "R5.7.e",
-      "R6.4"
+      "R5.7.f",
+      "R6.4",
+      "R7.1.f",
+      "R7.3.f"
     ],
     "R8.5.p": [
       "R8.5.o",
       "R5.4.e",
-      "R7.3"
+      "R7.3.e"
     ],
     "R8.5.r": [
-      "R8.5.q",
-      "R8.3"
+      "R8.5.q"
     ],
     "R8.5.b": [
       "R8.5.a"
@@ -494,23 +872,30 @@
       "R8.5.d"
     ],
     "R8.5.s": [
-      "R8.5.e",
-      "R8.3.e"
+      "R8.5.e"
     ],
     "R8.5.h": [
       "R8.5.e"
     ],
     "R8.5.f": [
-      "R8.5.h"
+      "R8.5.t"
     ],
     "R8.5.g": [
       "R8.5.f"
     ],
     "R8.5.i": [
-      "R8.5.h"
+      "R8.5.h",
+      "F2.q"
     ],
     "R8.5.j": [
-      "R8.5.i"
+      "R8.5.i",
+      "R8.5.t"
+    ],
+    "R8.5.t": [
+      "R8.5.s",
+      "R8.5.h",
+      "R8.5.i",
+      "R9.4"
     ],
     "R8.5.k": [
       "R8.5.g",
@@ -546,7 +931,12 @@
       "R7.2.d",
       "R7.2.e",
       "R7.2.f",
-      "R7.2.g"
+      "R7.2.g",
+      "R7.4.a",
+      "R7.4.b",
+      "R7.4.c",
+      "R8.2.a",
+      "R8.2.b"
     ]
   }
 }

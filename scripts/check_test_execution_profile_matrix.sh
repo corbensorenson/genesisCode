@@ -64,6 +64,10 @@ SOURCE_PARITY_SCRIPT="scripts/check_source_decomposition_tracked_parity.sh"
 SOURCE_PARITY_UPDATE_SCRIPT="scripts/update_source_decomposition_tracked_parity_report.sh"
 HEALTH_RENDERER="scripts/render_upgrade_plan_health_report.sh"
 HEALTH_UPDATE_SCRIPT="scripts/update_upgrade_plan_health_report.sh"
+RELEASE_MEASUREMENT_SCRIPT="scripts/measure_release_full_profile.sh"
+RELEASE_MEASUREMENT_RUNNER="scripts/lib/release_full_measurement.py"
+RELEASE_MEASUREMENT_SCHEMA="docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json"
+REFERENCE_TARGET_PREPARE_SCRIPT="scripts/prepare_release_target_reference.sh"
 ROADMAP_EXECUTION_CHECK="scripts/check_roadmap_execution_manifest.sh"
 ROADMAP_EXECUTION_UPDATE="scripts/update_roadmap_execution_manifest.sh"
 ROADMAP_EXECUTION_SCHEMA="docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json"
@@ -143,6 +147,10 @@ for path in \
   "$SOURCE_PARITY_UPDATE_SCRIPT" \
   "$HEALTH_RENDERER" \
   "$HEALTH_UPDATE_SCRIPT" \
+  "$RELEASE_MEASUREMENT_SCRIPT" \
+  "$RELEASE_MEASUREMENT_RUNNER" \
+  "$RELEASE_MEASUREMENT_SCHEMA" \
+  "$REFERENCE_TARGET_PREPARE_SCRIPT" \
   "$ROADMAP_EXECUTION_CHECK" \
   "$ROADMAP_EXECUTION_UPDATE" \
   "$ROADMAP_EXECUTION_SCHEMA" \
@@ -229,6 +237,9 @@ require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY'
+require_doc_pattern 'scripts/measure_release_full_profile.sh'
+require_doc_pattern 'genesis/release-full-measurement-v0.1'
+require_doc_pattern 'two to five ordered pairs'
 require_doc_pattern 'GENESIS_HEALTH_SHARDS'
 require_doc_pattern 'content-addressed `root-host` cache'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_GATE_SHARDS'
@@ -358,7 +369,9 @@ require_ci_pattern 'Ignored Perf Gate Regression Tests'
 require_ci_pattern 'bash scripts/test_perf_gates.sh'
 require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=420000'
 require_ci_pattern 'GENESIS_HEALTH_PROFILE=dev-fast'
-require_ci_pattern 'GENESIS_HEALTH_PROFILE=release-full bash scripts/test_perf_gates.sh'
+require_ci_pattern 'bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health'
+require_ci_pattern 'release_full_measurement:'
+require_ci_pattern 'Paired Cold/Warm Release Measurement'
 require_ci_pattern 'Local Workspace Test Contract (CI unset)'
 require_ci_pattern 'env -u CI cargo test --workspace --profile selfhost-strict'
 python3 - "$CI" <<'PY'
@@ -883,6 +896,105 @@ if ! grep -Fq '.genesis/perf/test_changed_fast_metrics.json' "$UPDATE_CHANGED_FA
   echo "test-execution-profile-matrix: explicit changed-fast updater must own canonical local E0 paths" >&2
   exit 1
 fi
+
+python3 - "$ROOT_DIR" <<'PY'
+import json
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+policy_path = root / "policies/release_target_reference_set_v0.1.json"
+schema_path = root / "docs/spec/RELEASE_TARGET_REFERENCE_SET_v0.1.schema.json"
+evidence_schema_path = root / "docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json"
+measurement_schema_path = root / "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json"
+policy = json.loads(policy_path.read_text(encoding="utf-8"))
+schema = json.loads(schema_path.read_text(encoding="utf-8"))
+evidence_schema = json.loads(evidence_schema_path.read_text(encoding="utf-8"))
+measurement_schema = json.loads(measurement_schema_path.read_text(encoding="utf-8"))
+if schema.get("$id") != "https://genesiscode.dev/schemas/release-target-reference-set-v0.1.json":
+    raise SystemExit("test-execution-profile-matrix: release target reference schema id mismatch")
+if evidence_schema.get("$id") != "https://genesiscode.dev/schemas/health-profile-evidence-bundle-v0.2.json":
+    raise SystemExit("test-execution-profile-matrix: health evidence schema id mismatch")
+if measurement_schema.get("$id") != "https://genesiscode.dev/schemas/release-full-measurement-v0.1.schema.json":
+    raise SystemExit("test-execution-profile-matrix: release measurement schema id mismatch")
+if policy.get("kind") != "genesis/release-target-reference-set-v0.1":
+    raise SystemExit("test-execution-profile-matrix: release target reference policy kind mismatch")
+if policy.get("lifecycleSteps") != ["install", "launch", "smoke", "teardown", "reap"]:
+    raise SystemExit("test-execution-profile-matrix: authentic lifecycle steps drift")
+shards = policy.get("shards")
+if not isinstance(shards, list) or [row.get("target") for row in shards] != ["android", "edge", "ios", "service-runtime"]:
+    raise SystemExit("test-execution-profile-matrix: named target shards must remain complete and sorted")
+required = {
+    "commandEnv", "expectedOutcome", "identityEnv", "identityProbe", "productId",
+    "referenceCommand", "runner", "runtimeClass", "sdkIdentityEnv", "sdkIdentityProbe", "target",
+}
+for row in shards:
+    if set(row) != required or row["expectedOutcome"] != "unsupported-product":
+        raise SystemExit(f"test-execution-profile-matrix: invalid named target shard: {row.get('target')}")
+    if "PINNED" in row["referenceCommand"] or "PINNED" in row["sdkIdentityProbe"]:
+        raise SystemExit(f"test-execution-profile-matrix: placeholder reference integration: {row.get('target')}")
+
+health = (root / "scripts/render_upgrade_plan_health_report.sh").read_text(encoding="utf-8")
+workflow = (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+for marker in [
+    "GENESIS_HEALTH_EVIDENCE_REQUIRED=1",
+    "GENESIS_HEALTH_EVIDENCE_MANIFEST=",
+    "GENESIS_GCPM_TARGET_RUNTIME_EXPECT_OUTCOME=unsupported-product",
+    "GENESIS_AGENT_PARITY_PREBUILT_REPORT=",
+    "GENESIS_AGENT_GENERATIVE_PREBUILT_REPORT=",
+    "GENESIS_GPU_XR_PRODUCTIZATION_PREBUILT_REPORT=",
+    "GENESIS_CHECK_HOST_BRIDGE_FAULT_REPORT=",
+]:
+    if marker not in health:
+        raise SystemExit(f"test-execution-profile-matrix: release evidence marker missing: {marker}")
+for marker in [
+    "release_target_reference_readiness:",
+    "release_full_measurement:",
+    "needs: release_target_reference_readiness",
+    "macos-15",
+    "ubuntu-24.04",
+    "GENESIS_GCPM_TARGET_RUNTIME_RUNNER_LABEL",
+    "GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP",
+    "GENESIS_GCPM_TARGET_RUNTIME_TARGETS",
+    "prepare_release_target_reference.sh",
+    "android-emulator-runner@v2",
+    "wasmtime/setup@v1",
+    "--exclude-test upgrade_plan_health",
+    "--pairs 2",
+]:
+    if marker not in workflow:
+        raise SystemExit(f"test-execution-profile-matrix: named target CI marker missing: {marker}")
+
+measurement = (root / "scripts/lib/release_full_measurement.py").read_text(encoding="utf-8")
+for marker in [
+    'KIND = "genesis/release-full-measurement-v0.1"',
+    "MIN_PAIRS = 2",
+    "WALL_BUDGET_MS = 2_700_000",
+    "ARTIFACT_BUDGET_BYTES = 20 * 1024 * 1024 * 1024",
+    'for run_class in ("cold", "warm")',
+    "process-tree peak RSS sampling produced no measurement",
+    "owned-ephemeral-root-removal",
+    "expected unsupported-product was relabeled as release qualification",
+    "named target report policy or product binding mismatch",
+]:
+    if marker not in measurement:
+        raise SystemExit(f"test-execution-profile-matrix: release measurement marker missing: {marker}")
+
+consumers = {
+    "scripts/check_agent_generative_workloads.sh",
+    "scripts/check_agent_scenario_perf.sh",
+    "scripts/check_agent_workflow_runtime_parity.sh",
+    "scripts/check_gpu_xr_productization_kits.sh",
+    "scripts/check_host_bridge_fault_injection.sh",
+    "scripts/check_runtime_backend_feature_matrix.sh",
+    "scripts/check_slo_report_contracts.sh",
+    "scripts/check_write_genesiscode_skill_conformance.sh",
+}
+for relative in sorted(consumers):
+    source = (root / relative).read_text(encoding="utf-8")
+    if "genesis_verify_health_profile_evidence" not in source:
+        raise SystemExit(f"test-execution-profile-matrix: evidence consumer bypasses verifier: {relative}")
+PY
 
 python3 "$LINT_SUPPRESSION_POLICY" --root "$ROOT_DIR"
 

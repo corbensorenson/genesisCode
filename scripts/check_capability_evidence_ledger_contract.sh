@@ -124,6 +124,16 @@ done
 run_tool --update --ledger "$LEDGER" >/dev/null
 
 python3 scripts/lib/roadmap_evidence.py --check >/dev/null
+python3 - <<'PY'
+import sys
+sys.path.insert(0, "scripts/lib")
+import roadmap_evidence
+
+if roadmap_evidence.DERIVED_FIXED_POINT_EXCLUSIONS != frozenset({"llms.txt"}):
+    raise SystemExit("capability-evidence-ledger-contract: roadmap fixed-point exclusion drift")
+if not any("llms.txt" in paths for paths in roadmap_evidence.BUNDLES.values()):
+    raise SystemExit("capability-evidence-ledger-contract: fixed-point fixture lost coverage")
+PY
 roadmap_identity_count="$(python3 scripts/lib/roadmap_evidence.py --print | wc -l | tr -d ' ')"
 [[ "$roadmap_identity_count" == "56" ]] || {
   echo "capability-evidence-ledger-contract: expected 56 roadmap identities, got $roadmap_identity_count" >&2
@@ -175,4 +185,4 @@ if python3 scripts/lib/roadmap_evidence.py --check --roadmap "$TMP_DIR/roadmap-o
   exit 1
 fi
 
-echo "capability-evidence-ledger-contract: ok (negative_controls=19 check_mode=read_only generated_views=6 roadmap_identities=$roadmap_identity_count)"
+echo "capability-evidence-ledger-contract: ok (negative_controls=19 fixed_point_exclusions=1 check_mode=read_only generated_views=6 roadmap_identities=$roadmap_identity_count)"

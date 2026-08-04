@@ -6,6 +6,7 @@ genesis_gate_telemetry_reexec "$0" "$@"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/health_profile_evidence.sh"
 
 TIMING_BASELINE_FILE="${GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_HISTORY_INPUT:-.genesis/perf/runtime_backend_feature_matrix_history.jsonl}"
 PREBUILT_REPORT="${GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT:-}"
@@ -14,6 +15,13 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [[ -n "$PREBUILT_REPORT" ]]; then
+  if [[ -n "${GENESIS_HEALTH_EVIDENCE_MANIFEST:-}" ]]; then
+    genesis_verify_health_profile_evidence \
+      "runtime-backend-matrix" \
+      "scripts/check_runtime_backend_feature_matrix.sh" \
+      "$PREBUILT_REPORT"
+    exit 0
+  fi
   if [[ -z "$PREBUILT_MANIFEST" ]]; then
     echo "runtime-backend-feature-matrix: prebuilt report requires GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST" >&2
     exit 2

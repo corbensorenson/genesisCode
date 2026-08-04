@@ -7,8 +7,46 @@ genesis_gate_telemetry_reexec "$0" "$@"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+TMP_DIR=""
+REMOVE_TMP_DIR=1
+if [[ -n "${GENESIS_CHECK_HEALTH_OUTPUT_ROOT:-}" ]]; then
+  TMP_DIR="$(python3 - "${GENESIS_CHECK_HEALTH_OUTPUT_ROOT}" "${GENESIS_CHECK_HEALTH_OUTPUT_CONTAINMENT_ROOT:-}" "$ROOT_DIR" <<'PY'
+import pathlib
+import sys
+
+raw_output, raw_containment, raw_repo = sys.argv[1:]
+if not raw_containment:
+    raise SystemExit(
+        "upgrade-plan-health: retained private output requires "
+        "GENESIS_CHECK_HEALTH_OUTPUT_CONTAINMENT_ROOT"
+    )
+output = pathlib.Path(raw_output)
+containment = pathlib.Path(raw_containment)
+repo = pathlib.Path(raw_repo).resolve(strict=True)
+if not output.is_absolute() or not containment.is_absolute():
+    raise SystemExit("upgrade-plan-health: private output paths must be absolute")
+containment = containment.resolve(strict=True)
+output = output.resolve(strict=True)
+if output.parent != containment:
+    raise SystemExit("upgrade-plan-health: private output must be a direct containment child")
+if containment == repo or repo in containment.parents or containment in repo.parents:
+    raise SystemExit("upgrade-plan-health: private output containment must be outside the repository")
+if any(output.iterdir()):
+    raise SystemExit("upgrade-plan-health: private output directory must start empty")
+print(output)
+PY
+)"
+  REMOVE_TMP_DIR=0
+else
+  TMP_DIR="$(mktemp -d)"
+fi
+
+cleanup_private_output() {
+  if [[ "$REMOVE_TMP_DIR" == "1" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+trap cleanup_private_output EXIT
 
 copy_history_input() {
   local source="$1"

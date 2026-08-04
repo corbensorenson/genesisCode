@@ -6,6 +6,7 @@ genesis_gate_telemetry_reexec "$0" "$@"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/health_profile_evidence.sh"
 
 TOP_BASELINE_FILE="${GENESIS_AGENT_PARITY_HISTORY:-.genesis/perf/agent_workflow_runtime_parity_history.jsonl}"
 NATIVE_EVIDENCE_FILE="${GENESIS_AGENT_PARITY_NATIVE_REPORT:-.genesis/perf/agent_capability_gauntlet_native_report.json}"
@@ -13,6 +14,21 @@ NATIVE_TIMING_FILE="${GENESIS_AGENT_PARITY_NATIVE_HISTORY:-.genesis/perf/agent_c
 WASI_EVIDENCE_FILE="${GENESIS_AGENT_PARITY_WASI_REPORT:-.genesis/perf/agent_capability_gauntlet_wasi_report.json}"
 WASI_TIMING_FILE="${GENESIS_AGENT_PARITY_WASI_HISTORY:-.genesis/perf/agent_capability_gauntlet_wasi_history.jsonl}"
 GENERATIVE_BASELINE_FILE="${GENESIS_AGENT_PARITY_GENERATIVE_HISTORY:-.genesis/perf/agent_generative_workloads_parity_history.jsonl}"
+PREBUILT_REPORT="${GENESIS_AGENT_PARITY_PREBUILT_REPORT:-}"
+
+if [[ -n "$PREBUILT_REPORT" ]]; then
+  genesis_verify_health_profile_evidence \
+    "agent-runtime-parity" \
+    "scripts/check_agent_workflow_runtime_parity.sh" \
+    "$NATIVE_TIMING_FILE" \
+    "$NATIVE_EVIDENCE_FILE" \
+    "$WASI_TIMING_FILE" \
+    "$WASI_EVIDENCE_FILE" \
+    "$GENERATIVE_BASELINE_FILE" \
+    "$TOP_BASELINE_FILE" \
+    "$PREBUILT_REPORT"
+  exit 0
+fi
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {

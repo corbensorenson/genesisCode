@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/release-full-measurement-v0.1.schema.json",
+  "title": "GenesisCode paired release-full measurement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifacts",
+    "budgets",
+    "cleanupRecovery",
+    "contentIdentitySha256",
+    "executionEnvironment",
+    "generatedAtUtc",
+    "history",
+    "kind",
+    "ok",
+    "pairs",
+    "productReleaseQualified",
+    "profileOperational",
+    "readinessStatus",
+    "runs",
+    "source",
+    "targetReadiness",
+    "version"
+  ],
+  "properties": {
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxArtifactBytes", "maxWallMs", "minimumPairs"],
+      "properties": {
+        "maxArtifactBytes": { "const": 21474836480 },
+        "maxWallMs": { "const": 2700000 },
+        "minimumPairs": { "const": 2 }
+      }
+    },
+    "cleanupRecovery": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["method", "ok", "pair", "recoveredBytes", "remainingBytes"],
+        "properties": {
+          "method": { "const": "owned-ephemeral-root-removal" },
+          "ok": { "const": true },
+          "pair": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "recoveredBytes": { "type": "integer", "minimum": 1 },
+          "remainingBytes": { "const": 0 }
+        }
+      }
+    },
+    "contentIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "executionEnvironment": { "type": "object" },
+    "generatedAtUtc": { "type": "string", "format": "date-time" },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coldP95ArtifactBytes",
+        "coldP95PeakRssBytes",
+        "coldP95WallMs",
+        "samplesPerClass",
+        "warmP95ArtifactBytes",
+        "warmP95PeakRssBytes",
+        "warmP95WallMs"
+      ],
+      "properties": {
+        "coldP95ArtifactBytes": { "type": "integer", "minimum": 1, "maximum": 21474836480 },
+        "coldP95PeakRssBytes": { "type": "integer", "minimum": 1 },
+        "coldP95WallMs": { "type": "integer", "minimum": 1, "maximum": 2700000 },
+        "samplesPerClass": { "type": "integer", "minimum": 2, "maximum": 5 },
+        "warmP95ArtifactBytes": { "type": "integer", "minimum": 1, "maximum": 21474836480 },
+        "warmP95PeakRssBytes": { "type": "integer", "minimum": 1 },
+        "warmP95WallMs": { "type": "integer", "minimum": 1, "maximum": 2700000 }
+      }
+    },
+    "kind": { "const": "genesis/release-full-measurement-v0.1" },
+    "ok": { "const": true },
+    "pairs": { "type": "integer", "minimum": 2, "maximum": 5 },
+    "productReleaseQualified": { "const": false },
+    "profileOperational": { "const": true },
+    "readinessStatus": { "const": "unsupported-product" },
+    "runs": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/run" }
+    },
+    "source": { "type": "object" },
+    "targetReadiness": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["expectedOutcome", "githubRunAttempt", "githubRunId", "githubSha", "releaseQualified", "reportArtifact", "reportSha256", "runner", "target"],
+        "properties": {
+          "expectedOutcome": { "const": "unsupported-product" },
+          "githubRunAttempt": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+          "githubRunId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+          "githubSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "releaseQualified": { "const": false },
+          "reportArtifact": { "type": "string", "pattern": "^target-readiness/(android|edge|ios|service-runtime)\\.json$" },
+          "reportSha256": { "$ref": "#/$defs/sha256" },
+          "runner": { "enum": ["macos-15", "ubuntu-24.04"] },
+          "target": { "enum": ["android", "edge", "ios", "service-runtime"] }
+        }
+      }
+    },
+    "version": { "const": "0.1.0" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "path", "sha256"],
+      "properties": {
+        "bytes": { "type": "integer", "minimum": 0 },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactAttributionBytes",
+        "artifactPeakBytes",
+        "agentGpuProfile",
+        "cacheRootStartedEmpty",
+        "class",
+        "exitCode",
+        "index",
+        "logArtifacts",
+        "peakRssBytes",
+        "profileElapsedMs",
+        "profileReportArtifact",
+        "profileReportSha256",
+        "telemetryElapsedMs"
+      ],
+      "properties": {
+        "agentGpuProfile": { "enum": ["agent-gpu-strict", "agent-gpu-fallback"] },
+        "artifactAttributionBytes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["isolated-run", "node-modules", "workspace-build", "workspace-target"],
+          "properties": {
+            "isolated-run": { "type": "integer", "minimum": 0 },
+            "node-modules": { "type": "integer", "minimum": 0 },
+            "workspace-build": { "type": "integer", "minimum": 0 },
+            "workspace-target": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "artifactPeakBytes": { "type": "integer", "minimum": 1, "maximum": 21474836480 },
+        "cacheRootStartedEmpty": { "type": "boolean" },
+        "class": { "enum": ["cold", "warm"] },
+        "exitCode": { "const": 0 },
+        "index": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "logArtifacts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "peakRssBytes": { "type": "integer", "minimum": 1 },
+        "profileElapsedMs": { "type": "integer", "minimum": 1, "maximum": 2700000 },
+        "profileReportArtifact": { "type": "string", "minLength": 1 },
+        "profileReportSha256": { "$ref": "#/$defs/sha256" },
+        "telemetryElapsedMs": { "type": "integer", "minimum": 1, "maximum": 2700000 }
+      }
+    }
+  }
+}

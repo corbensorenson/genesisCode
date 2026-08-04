@@ -16,6 +16,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
 
@@ -40,6 +41,13 @@ STAGE_SCOPED_ENVIRONMENT = (
     "GENESIS_SELFHOST_TOOLCHAIN_FRESHNESS",
     "GENESIS_SELFHOST_TOOLCHAIN_MANIFEST",
 )
+STAGE_BUILD_ENVIRONMENT = {
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+}
+CHECK_WORKERS = 4
+COMPILATION_CHECK_WORKERS = 1
 SHA_RE_LENGTH = 64
 NODE_FIELDS = {
     "id", "command", "dependencies", "inputs", "outputs", "checks", "mode",
@@ -59,6 +67,7 @@ REQUIRED_IDENTITY_EXCLUSIONS = {
     "ROADMAP.md",
     "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
     "genesis.gates.json",
+    "llms.txt",
 }
 
 
@@ -511,6 +520,9 @@ def stage_environment(marker: str) -> dict[str, str]:
     environment = os.environ.copy()
     for name in STAGE_SCOPED_ENVIRONMENT:
         environment.pop(name, None)
+    # Staging worktrees are disposable, so incremental state and debug symbols
+    # only add cold-build time and disk without contributing to verification.
+    environment.update(STAGE_BUILD_ENVIRONMENT)
     environment[marker] = "1"
     return environment
 
@@ -539,12 +551,112 @@ def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
     for node in nodes:
         for check in node["checks"]:
             checks[check] = max(checks.get(check, 0), node["timeoutSeconds"])
+    gate_manifest = stage / "genesis.gates.json"
+    compilation_by_check: dict[str, bool] = {}
+    if gate_manifest.is_file():
+        manifest = load_json(gate_manifest)
+        for gate in manifest.get("gates", []):
+            entrypoint = gate.get("entrypoint")
+            compilation = gate.get("compilation")
+            if isinstance(entrypoint, str) and isinstance(compilation, bool):
+                compilation_by_check[entrypoint] = compilation
+        unknown = sorted(set(checks) - set(compilation_by_check))
+        require(not unknown, "generated checks missing gate compilation metadata: " + ", ".join(unknown))
     environment = stage_environment("GENESIS_GENERATED_AUTHORITY_VALIDATING")
-    for check, timeout in checks.items():
-        run_bounded(
-            ["bash", check], cwd=stage, environment=environment,
-            timeout=timeout,
-        )
+    check_records = [
+        (index, check, timeout, compilation_by_check.get(check, False))
+        for index, (check, timeout) in enumerate(checks.items())
+    ]
+    pending = list(check_records)
+    active: dict[int, tuple[str, int, bool, subprocess.Popen[bytes], Any, float, Path]] = {}
+    completed_logs: dict[int, Path] = {}
+    durations_ms: dict[int, int] = {}
+    failure: Optional[BaseException] = None
+
+    print(
+        "generated-authority: validating "
+        f"checks={len(pending)} workers={CHECK_WORKERS} "
+        f"compilation_workers={COMPILATION_CHECK_WORKERS}",
+        flush=True,
+    )
+    with tempfile.TemporaryDirectory(prefix="generated-authority-checks-") as temporary:
+        log_root = Path(temporary)
+        while pending or active:
+            while pending and len(active) < CHECK_WORKERS:
+                active_compilation = sum(1 for item in active.values() if item[2])
+                next_pending = next(
+                    (
+                        position for position, item in enumerate(pending)
+                        if not item[3] or active_compilation < COMPILATION_CHECK_WORKERS
+                    ),
+                    None,
+                )
+                if next_pending is None:
+                    break
+                index, check, timeout, compilation = pending.pop(next_pending)
+                log_path = log_root / f"{index:04d}.log"
+                handle = log_path.open("wb")
+                process = subprocess.Popen(
+                    ["bash", check],
+                    cwd=stage,
+                    env=environment,
+                    stdout=handle,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=(os.name != "nt"),
+                )
+                active[index] = (
+                    check, timeout, compilation, process, handle, time.monotonic(), log_path
+                )
+
+            now = time.monotonic()
+            for index, (check, timeout, _, process, handle, started, log_path) in list(active.items()):
+                return_code = process.poll()
+                if return_code is None and now - started <= timeout:
+                    continue
+                if return_code is None:
+                    failure = subprocess.TimeoutExpired(["bash", check], timeout)
+                elif return_code != 0:
+                    failure = subprocess.CalledProcessError(return_code, ["bash", check])
+                handle.close()
+                completed_logs[index] = log_path
+                durations_ms[index] = round((now - started) * 1000)
+                del active[index]
+                if failure is not None:
+                    break
+
+            if failure is not None:
+                for index, (_, _, _, process, handle, started, log_path) in active.items():
+                    if process.poll() is None:
+                        try:
+                            if os.name != "nt":
+                                os.killpg(process.pid, signal.SIGKILL)
+                            else:
+                                process.kill()
+                        except ProcessLookupError:
+                            pass
+                    process.wait()
+                    handle.close()
+                    completed_logs[index] = log_path
+                    durations_ms[index] = round((time.monotonic() - started) * 1000)
+                active.clear()
+                break
+            if active:
+                time.sleep(0.05)
+
+        sys.stdout.flush()
+        for index in sorted(completed_logs):
+            with completed_logs[index].open("rb") as handle:
+                shutil.copyfileobj(handle, sys.stdout.buffer)
+        sys.stdout.buffer.flush()
+        for index, check, _, compilation in check_records:
+            if index not in durations_ms:
+                continue
+            lane = "compilation" if compilation else "static"
+            print(
+                f"generated-authority-check: {check} lane={lane} duration_ms={durations_ms[index]}"
+            )
+        if failure is not None:
+            raise failure
 
 
 def tree_snapshot(root: Path, excluded_outputs: set[str]) -> str:
@@ -711,9 +823,10 @@ def synthetic_graph(root: Path, graph: Mapping[str, Any], mutation: callable) ->
 def self_test(root: Path, graph: Mapping[str, Any]) -> None:
     controls = 0
 
-    saved_stage_values = {name: os.environ.get(name) for name in STAGE_SCOPED_ENVIRONMENT}
+    staged_names = (*STAGE_SCOPED_ENVIRONMENT, *STAGE_BUILD_ENVIRONMENT)
+    saved_stage_values = {name: os.environ.get(name) for name in staged_names}
     try:
-        for name in STAGE_SCOPED_ENVIRONMENT:
+        for name in staged_names:
             os.environ[name] = "inherited-fixture"
         isolated = stage_environment("GENESIS_GENERATED_AUTHORITY_STAGE")
         require(
@@ -724,12 +837,52 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             isolated.get("GENESIS_GENERATED_AUTHORITY_STAGE") == "1",
             "staging environment omitted its execution marker",
         )
+        require(
+            all(isolated.get(name) == value for name, value in STAGE_BUILD_ENVIRONMENT.items()),
+            "staging environment omitted its deterministic slim Cargo profile",
+        )
     finally:
         for name, value in saved_stage_values.items():
             if value is None:
                 os.environ.pop(name, None)
             else:
                 os.environ[name] = value
+
+    with tempfile.TemporaryDirectory(prefix="generated-authority-check-cancel-") as temporary:
+        stage = Path(temporary)
+        scripts = stage / "scripts"
+        scripts.mkdir()
+        marker = stage / "escaped"
+        (scripts / "fail.sh").write_text("#!/usr/bin/env bash\nexit 7\n", encoding="utf-8")
+        (scripts / "linger.sh").write_text(
+            "#!/usr/bin/env bash\nsleep 2\nprintf escaped > escaped\n",
+            encoding="utf-8",
+        )
+        fixture = [{
+            "checks": ["scripts/fail.sh", "scripts/linger.sh"],
+            "timeoutSeconds": 5,
+        }]
+        try:
+            run_checks(stage, fixture)
+        except subprocess.CalledProcessError:
+            time.sleep(0.1)
+            require(not marker.exists(), "failed check did not cancel its concurrent process group")
+            controls += 1
+        else:
+            raise AuthorityError("self-test accepted a failed concurrent check")
+
+        (scripts / "timeout.sh").write_text(
+            "#!/usr/bin/env bash\nsleep 2\nprintf escaped > escaped\n",
+            encoding="utf-8",
+        )
+        try:
+            run_checks(stage, [{"checks": ["scripts/timeout.sh"], "timeoutSeconds": 0}])
+        except subprocess.TimeoutExpired:
+            time.sleep(0.1)
+            require(not marker.exists(), "timed-out check escaped hard cancellation")
+            controls += 1
+        else:
+            raise AuthorityError("self-test accepted a timed-out check")
 
     def rejected(label: str, mutation: callable) -> None:
         nonlocal controls
@@ -913,7 +1066,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 18, "generated-authority self-test inventory drift")
+    require(controls == 20, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 

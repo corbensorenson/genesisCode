@@ -253,7 +253,8 @@
       "CHANGELOG.md": "Release derivation excludes the generated changelog destination while preserving released history.",
       "ROADMAP.md": "Roadmap bundle citations exclude the citation destination while binding every declared source.",
       "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json": "Roadmap execution identity excludes its generated destination.",
-      "genesis.gates.json": "Gate-manifest identity excludes its generated destination to avoid an impossible hash fixed point."
+      "genesis.gates.json": "Gate-manifest identity excludes its generated destination to avoid an impossible hash fixed point.",
+      "llms.txt": "Roadmap evidence bundles exclude this generated Quarto/agent distribution view because it transitively includes ROADMAP.md; its sources and independent freshness check remain bound without creating an impossible citation fixed point."
     },
     "kind": "genesis/generated-authority-graph-v0.1",
     "limits": {

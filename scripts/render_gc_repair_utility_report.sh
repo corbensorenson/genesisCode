@@ -10,7 +10,15 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 REPORT_OUT="$1"
-REPEATS="${GENESIS_GC_REPAIR_UTILITY_REPEATS:-2}"
+DEFAULT_REPEATS=2
+if [[ "${GENESIS_GENERATED_AUTHORITY_STAGE:-0}" == "1" || \
+      "${GENESIS_GENERATED_AUTHORITY_VALIDATING:-0}" == "1" ]]; then
+  # The transaction's generated report and validation replay form the two
+  # executions required for deterministic comparison. Standalone checks still
+  # execute two fresh replays because they have no staged producer execution.
+  DEFAULT_REPEATS=1
+fi
+REPEATS="${GENESIS_GC_REPAIR_UTILITY_REPEATS:-$DEFAULT_REPEATS}"
 [[ "$REPEATS" == "1" || "$REPEATS" == "2" ]] || {
   echo "gc-repair-utility: GENESIS_GC_REPAIR_UTILITY_REPEATS must be 1 or 2" >&2
   exit 2
@@ -78,5 +86,5 @@ cp "$TMP_DIR/report-1.json" "$REPORT_OUT"
 if [[ "$REPEATS" == "2" ]]; then
   echo "gc-repair-utility: deterministic replay ok"
 else
-  echo "gc-repair-utility: staged render complete; replay validation delegated"
+  echo "gc-repair-utility: single transactional replay complete"
 fi

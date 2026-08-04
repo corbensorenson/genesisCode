@@ -6,6 +6,7 @@ genesis_gate_telemetry_reexec "$0" "$@"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/health_profile_evidence.sh"
 
 GAUNTLET_REPORT="${GENESIS_AGENT_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
 PARITY_REPORT="${GENESIS_AGENT_PARITY_REPORT:-.genesis/perf/agent_workflow_runtime_parity_report.json}"
@@ -14,6 +15,14 @@ REQUIRE_PARITY_REPORT="${GENESIS_SLO_REQUIRE_PARITY_REPORT:-0}"
 if [[ "$REQUIRE_PARITY_REPORT" != "0" && "$REQUIRE_PARITY_REPORT" != "1" ]]; then
   echo "slo-report-contracts: GENESIS_SLO_REQUIRE_PARITY_REPORT must be 0 or 1" >&2
   exit 2
+fi
+
+if [[ -n "${GENESIS_HEALTH_EVIDENCE_MANIFEST:-}" ]]; then
+  genesis_verify_health_profile_evidence \
+    "slo-report-contracts" \
+    "scripts/check_slo_report_contracts.sh" \
+    "$GAUNTLET_REPORT" \
+    "$PARITY_REPORT"
 fi
 
 python3 - "$GAUNTLET_REPORT" "$PARITY_REPORT" "$REQUIRE_PARITY_REPORT" <<'PY'
