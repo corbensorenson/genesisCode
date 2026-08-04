@@ -10,6 +10,25 @@ fn repo_root() -> PathBuf {
         .expect("canonicalize repo root")
 }
 
+fn isolated_bash() -> Command {
+    let mut command = Command::new("bash");
+    for name in [
+        "CARGO_TARGET_DIR",
+        "GENESIS_CARGO_CACHE_EPHEMERAL",
+        "GENESIS_CARGO_CACHE_HIT",
+        "GENESIS_CARGO_CACHE_KEY_SHA256",
+        "GENESIS_CARGO_CACHE_RESOLVED",
+        "GENESIS_CARGO_CACHE_RUSTC_IDENTITY_JSON",
+        "GENESIS_CARGO_CACHE_SCOPE",
+        "GENESIS_GENERATED_STATE_LEASE_PID",
+        "GENESIS_GENERATED_STATE_LEASE_TOKEN",
+        "GENESIS_GENERATED_STATE_ROOT",
+    ] {
+        command.env_remove(name);
+    }
+    command
+}
+
 const ARTIFACTS: &[(&str, &str)] = &[
     (
         "agent_capability_gauntlet_report.json",
@@ -276,7 +295,7 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
     .expect("UTF-8 source commit")
     .trim()
     .to_owned();
-    let output = Command::new("bash")
+    let output = isolated_bash()
         .arg(root.join("scripts/render_gcpm_target_runtime_pipelines_report.sh"))
         .arg(&report)
         .arg(&artifacts)
@@ -365,7 +384,7 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
     );
 
     let missing_setup_report = temp.path().join("missing-setup.json");
-    let missing_setup = Command::new("bash")
+    let missing_setup = isolated_bash()
         .arg(root.join("scripts/render_gcpm_target_runtime_pipelines_report.sh"))
         .arg(&missing_setup_report)
         .arg(temp.path().join("missing-setup-artifacts"))
@@ -395,7 +414,7 @@ fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
         "setup-required"
     );
 
-    let mismatch = Command::new("bash")
+    let mismatch = isolated_bash()
         .arg(root.join("scripts/render_gcpm_target_runtime_pipelines_report.sh"))
         .arg(temp.path().join("mismatch.json"))
         .arg(temp.path().join("mismatch-artifacts"))
@@ -419,7 +438,7 @@ fn health_check_retains_only_explicitly_contained_private_measurement_output() {
     let containment = tempfile::tempdir().expect("create health output containment");
     let output = containment.path().join("run-output");
     fs::create_dir(&output).expect("create empty run output");
-    let run = Command::new("bash")
+    let run = isolated_bash()
         .arg(root.join("scripts/check_upgrade_plan_health.sh"))
         .args(["--profile", "dev-fast"])
         .env("GENESIS_HEALTH_PROFILE", "dev-fast")
@@ -449,7 +468,7 @@ fn health_check_retains_only_explicitly_contained_private_measurement_output() {
     let nested_parent = containment.path().join("nested");
     let nested = nested_parent.join("escaped");
     fs::create_dir_all(&nested).expect("create nested output");
-    let rejected = Command::new("bash")
+    let rejected = isolated_bash()
         .arg(root.join("scripts/check_upgrade_plan_health.sh"))
         .args(["--profile", "release-full"])
         .env("GENESIS_GATE_TELEMETRY_DISABLE", "1")
