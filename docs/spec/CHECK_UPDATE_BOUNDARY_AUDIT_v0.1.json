@@ -985,7 +985,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
+      "execution_identity_sha256": "23f601dc62c74c771fd8e24a55cb9e837aae715589dcf8d0f36cbdf87a166399",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -996,7 +996,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "dce6d9ef30619711c378055a19248adb1cfa0a9cccd73182ff189bf3eacfe084",
+      "sha256": "87fc239d51b43eb36e2398fd4d39c86c766297fb981143cbd7152602cb73c624",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -5537,7 +5537,8 @@
       "direct_write_candidates": [
         "(inherited_target / resolved[\"metadata_file\"]).write_bytes(",
         "(inherited_target / resolved[\"metadata_file\"]).write_text(\"{}\\n\", encoding=\"utf-8\")",
-        "inherited_target.mkdir(parents=True)"
+        "inherited_target.mkdir(parents=True)",
+        "rm -rf \"$HEALTH_OUTPUT_FIXTURE\""
       ],
       "execution_helper_closure": [
         {
@@ -5548,7 +5549,7 @@
       "execution_helper_invocations": [
         "scripts/test_prepare_release_target_reference.sh"
       ],
-      "execution_identity_sha256": "ffe68644efc0b2fdb9cbf53dcdb25c496182c7be8d6995c053fc4a4763dce318",
+      "execution_identity_sha256": "493b58c35c087abcc60198501da304cbdfcb1a1344ce9f0e3c349d264d029b54",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5559,13 +5560,14 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "e0370cb58d2e4430c11f9ea2833ec4de8e61b75beb7180bc4150de32e00e0aea",
+      "sha256": "e365ce0745a512192be05244fe3660958ac5bef1866009401c8843ee38939120",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
         "(inherited_target / resolved[\"metadata_file\"]).write_bytes(",
         "(inherited_target / resolved[\"metadata_file\"]).write_text(\"{}\\n\", encoding=\"utf-8\")",
         "inherited_target.mkdir(parents=True)",
+        "rm -rf \"$HEALTH_OUTPUT_FIXTURE\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$COMMON_BIN\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$DOCKER_BIN\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$MISSING_SDK/platform-tools\" \"$MISSING_SDK/cmdline-tools/latest/bin\"",
