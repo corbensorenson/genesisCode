@@ -58,7 +58,7 @@
       "runner": "ubuntu-24.04",
       "runtimeClass": "container",
       "sdkIdentityEnv": "GENESIS_GCPM_SERVICE_RUNTIME_SDK_IDENTITY",
-      "sdkIdentityProbe": "docker image inspect alpine:3.20 --format '{{.Id}}|{{join .RepoDigests \",\"}}'",
+      "sdkIdentityProbe": "docker image inspect alpine:3.20 | jq -er '.[0] | [.Id, ((.RepoDigests // []) | sort | join(\",\"))] | join(\"|\")'",
       "target": "service-runtime"
     }
   ]

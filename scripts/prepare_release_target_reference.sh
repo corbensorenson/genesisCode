@@ -37,6 +37,25 @@ emit_env() {
   printf '%s=%s\n' "$name" "$value" >>"$GITHUB_ENV_OUTPUT"
 }
 
+resolve_executable() {
+  local tool="$1"
+  shift
+  local candidate=""
+  for candidate in "$@"; do
+    if [[ -n "$candidate" && -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  candidate="$(command -v "$tool" 2>/dev/null || true)"
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+  echo "release-target-reference: missing required executable: $tool" >&2
+  return 1
+}
+
 COMMAND_ENV="$(policy_value commandEnv)"
 IDENTITY_ENV="$(policy_value identityEnv)"
 SDK_IDENTITY_ENV="$(policy_value sdkIdentityEnv)"
@@ -56,13 +75,29 @@ trap cleanup EXIT
 
 case "$TARGET" in
   android)
-    timeout 120 adb wait-for-device
-    [[ "$(timeout 30 adb shell getprop sys.boot_completed | tr -d '\r')" == "1" ]] || {
+    adb_candidates=()
+    sdkmanager_candidates=()
+    emulator_candidates=()
+    for sdk_root in "${ANDROID_SDK_ROOT:-}" "${ANDROID_HOME:-}"; do
+      [[ -n "$sdk_root" ]] || continue
+      adb_candidates+=("$sdk_root/platform-tools/adb")
+      sdkmanager_candidates+=(
+        "$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+        "$sdk_root/cmdline-tools/bin/sdkmanager"
+        "$sdk_root/tools/bin/sdkmanager"
+      )
+      emulator_candidates+=("$sdk_root/emulator/emulator")
+    done
+    ADB_BIN="$(resolve_executable adb "${adb_candidates[@]}")"
+    SDKMANAGER_BIN="$(resolve_executable sdkmanager "${sdkmanager_candidates[@]}")"
+    EMULATOR_BIN="$(resolve_executable emulator "${emulator_candidates[@]}")"
+    timeout 120 "$ADB_BIN" wait-for-device
+    [[ "$(timeout 30 "$ADB_BIN" shell getprop sys.boot_completed | tr -d '\r')" == "1" ]] || {
       echo "release-target-reference: Android emulator did not complete boot" >&2
       exit 1
     }
-    RUNTIME_IDENTITY="$(timeout 30 adb shell getprop ro.build.fingerprint | tr -d '\r\n')"
-    SDK_IDENTITY="sdkmanager=$(sdkmanager --version | sed -n '1p' | tr -d '\r\n');emulator=$(emulator -version | sed -n '1p' | tr -d '\r\n')"
+    RUNTIME_IDENTITY="$(timeout 30 "$ADB_BIN" shell getprop ro.build.fingerprint | tr -d '\r\n')"
+    SDK_IDENTITY="sdkmanager=$("$SDKMANAGER_BIN" --version | sed -n '1p' | tr -d '\r\n');emulator=$("$EMULATOR_BIN" -version | sed -n '1p' | tr -d '\r\n')"
     ;;
   edge)
     RUNTIME_IDENTITY="$(wasmtime --version | tr -d '\r\n')"
@@ -92,7 +127,23 @@ PY
     docker info >/dev/null
     timeout 180 docker pull alpine:3.20 >/dev/null
     RUNTIME_IDENTITY="docker-server=$(docker version --format '{{.Server.Version}}' | tr -d '\r\n')"
-    SDK_IDENTITY="$(docker image inspect alpine:3.20 --format '{{.Id}}|{{join .RepoDigests ","}}' | tr -d '\r\n')"
+    SDK_IDENTITY="$(
+      docker image inspect alpine:3.20 |
+        jq -er '
+          (if type != "array" or length != 1 then
+             error("expected one Docker image record")
+           else .[0] end) as $image
+          | if ($image.Id | type) != "string" or ($image.Id | length) == 0 then
+              error("Docker image identity is missing")
+            elif ($image.RepoDigests | type) != "array" or ($image.RepoDigests | length) == 0 then
+              error("Docker image has no immutable repository digest")
+            elif any($image.RepoDigests[]; type != "string" or length == 0) then
+              error("Docker repository digests must be non-empty strings")
+            else
+              [$image.Id, ($image.RepoDigests | sort | join(","))] | join("|")
+            end
+        '
+    )"
     ;;
 esac
 

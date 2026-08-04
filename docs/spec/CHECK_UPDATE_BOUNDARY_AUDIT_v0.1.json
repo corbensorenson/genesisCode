@@ -5535,9 +5535,16 @@
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
       "direct_write_candidates": [],
-      "execution_helper_closure": [],
-      "execution_helper_invocations": [],
-      "execution_identity_sha256": "f3f3e690258e9e35e5ca0458d7c958ac0add1113f87f9f91b029862a662d4909",
+      "execution_helper_closure": [
+        {
+          "path": "scripts/test_prepare_release_target_reference.sh",
+          "sha256": "652dbfa61ae45cb1b7a9bb8316dc92db265dbf47be27edde56b4079812e0c1c7"
+        }
+      ],
+      "execution_helper_invocations": [
+        "scripts/test_prepare_release_target_reference.sh"
+      ],
+      "execution_identity_sha256": "8431cad9e0cf5fa011e51f51e530a6c6fe8497b59e37f5f6100cc866b54b188e",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5548,10 +5555,16 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "2b31c23bdb48c8d93cd1dd67d37754268de28c44e431bd27b5ef4b0534024776",
+      "sha256": "8cb861a3be7be0bb7cd705ed10780e83c50e346bc560e5e572dda58052422ead",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
-      "write_candidates": []
+      "write_candidates": [
+        "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$COMMON_BIN\"",
+        "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$DOCKER_BIN\"",
+        "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$MISSING_SDK/platform-tools\" \"$MISSING_SDK/cmdline-tools/latest/bin\"",
+        "scripts/test_prepare_release_target_reference.sh: mkdir -p \\",
+        "scripts/test_prepare_release_target_reference.sh: trap 'rm -rf \"$TMP_DIR\"' EXIT"
+      ]
     },
     {
       "check_invocations": [],
