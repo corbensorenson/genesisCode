@@ -91,6 +91,8 @@ DETERMINISTIC_CLEANUP_RESULT_SCHEMA="docs/spec/DETERMINISTIC_CLEANUP_RESULT_v0.1
 GENERATED_AUTHORITY_UPDATE_SCRIPT="scripts/update_generated_authority.sh"
 AGENT_GPU_PROFILE_CONTRACT_SCRIPT="scripts/check_agent_gpu_profile_contract.sh"
 AGENT_GPU_PROFILE_LIB="scripts/lib/agent_gpu_profile_contract.sh"
+WRITE_SKILL_DISTRIBUTION_SCRIPT="scripts/check_write_genesiscode_skill_distribution.sh"
+HEALTH_EVIDENCE_LIB="scripts/lib/health_profile_evidence.py"
 DENY_CONFIG="deny.toml"
 LINT_SUPPRESSION_POLICY="scripts/lib/lint_suppression_policy.py"
 
@@ -174,6 +176,8 @@ for path in \
   "$GENERATED_AUTHORITY_UPDATE_SCRIPT" \
   "$AGENT_GPU_PROFILE_CONTRACT_SCRIPT" \
   "$AGENT_GPU_PROFILE_LIB" \
+  "$WRITE_SKILL_DISTRIBUTION_SCRIPT" \
+  "$HEALTH_EVIDENCE_LIB" \
   "$LINT_SUPPRESSION_POLICY" \
   "$DENY_CONFIG"; do
   [[ -f "$path" ]] || {
@@ -949,9 +953,33 @@ for marker in [
     "GENESIS_AGENT_GENERATIVE_PREBUILT_REPORT=",
     "GENESIS_GPU_XR_PRODUCTIZATION_PREBUILT_REPORT=",
     "GENESIS_CHECK_HOST_BRIDGE_FAULT_REPORT=",
+    "GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1",
 ]:
     if marker not in health:
         raise SystemExit(f"test-execution-profile-matrix: release evidence marker missing: {marker}")
+try:
+    release_section = health.rsplit("  release-full)\n", 1)[1].split(
+        "  full-selfhost-cutover)\n", 1
+    )[0]
+except IndexError as exc:
+    raise SystemExit("test-execution-profile-matrix: release profile topology is not parseable") from exc
+if "bash scripts/check_write_genesiscode_skill_conformance.sh" in release_section:
+    raise SystemExit(
+        "test-execution-profile-matrix: release profile duplicates write-skill conformance"
+    )
+for marker in [
+    "GENESIS_WRITE_SKILL_GAUNTLET_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_report.json'",
+    "GENESIS_WRITE_SKILL_GENERATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_report.json'",
+    "GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT='$HEALTH_EVIDENCE_ROOT/runtime_backend_feature_matrix_report.json'",
+    "GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT='$HEALTH_EVIDENCE_ROOT/host_bridge_fault_injection_report.json'",
+    "GENESIS_WRITE_SKILL_GPU_XR_REPORT='$HEALTH_EVIDENCE_ROOT/gpu_xr_productization_kits_report.json'",
+    "GENESIS_WRITE_SKILL_ASSURANCE_REPORT='$HEALTH_EVIDENCE_ROOT/assurance_profile_packs_report.json'",
+    "bash scripts/check_write_genesiscode_skill_distribution.sh",
+]:
+    if marker not in release_section:
+        raise SystemExit(
+            f"test-execution-profile-matrix: release distribution binding missing: {marker}"
+        )
 for marker in [
     "release_target_reference_readiness:",
     "release_full_measurement:",
@@ -1006,6 +1034,7 @@ consumers = {
     "scripts/check_runtime_backend_feature_matrix.sh",
     "scripts/check_slo_report_contracts.sh",
     "scripts/check_write_genesiscode_skill_conformance.sh",
+    "scripts/check_write_genesiscode_skill_distribution.sh",
 }
 for relative in sorted(consumers):
     source = (root / relative).read_text(encoding="utf-8")
@@ -1106,6 +1135,121 @@ with tempfile.TemporaryDirectory(prefix="genesis-release-cache-isolation.") as r
 
 print(f"release-full-measurement-cache-isolation: ok (negative_controls={negative_controls})")
 PY
+
+WRITE_SKILL_FIXTURE="$(mktemp -d)"
+cleanup_write_skill_fixture() {
+  rm -rf "$WRITE_SKILL_FIXTURE"
+}
+trap cleanup_write_skill_fixture EXIT INT TERM
+mkdir -p \
+  "$WRITE_SKILL_FIXTURE/evidence" \
+  "$WRITE_SKILL_FIXTURE/kit/prompts" \
+  "$WRITE_SKILL_FIXTURE/kit/recipes"
+printf 'fixture\n' >"$WRITE_SKILL_FIXTURE/kit/prompts/prompt.md"
+printf 'fixture\n' >"$WRITE_SKILL_FIXTURE/kit/recipes/recipe.md"
+cat >"$WRITE_SKILL_FIXTURE/kit/manifest.json" <<JSON
+{
+  "kind": "genesis/write-genesiscode-skill-distribution-v1",
+  "version": "1",
+  "prompts": [{"path": "prompts/prompt.md"}],
+  "recipes": [{"path": "recipes/recipe.md", "workflow": "scripts/check_write_genesiscode_skill_conformance.sh", "domain": "fixture", "mode": "standard"}],
+  "expected_reports": [{"id": "fixture", "kind": "genesis/write-genesiscode-skill-conformance-v0.1", "path": "$WRITE_SKILL_FIXTURE/missing-retained-report.json", "min_score": 100}],
+  "verification_scripts": ["scripts/check_write_genesiscode_skill_conformance.sh"],
+  "distribution_requirements": {"min_prompts": 1, "min_recipes": 1, "required_recipe_domains": ["fixture"], "require_fault_injection_recipe": false, "min_report_score": 100}
+}
+JSON
+PYTHONPATH="$ROOT_DIR/scripts/lib" python3 - "$ROOT_DIR" "$WRITE_SKILL_FIXTURE/evidence" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+import health_profile_evidence as evidence
+
+root = Path(sys.argv[1]).resolve()
+output = Path(sys.argv[2]).resolve()
+for name, (kind, _) in evidence.ARTIFACTS.items():
+    path = output / name
+    if kind == "jsonl-history":
+        path.write_text('{"fixture":true}\n', encoding="utf-8")
+    else:
+        path.write_text(
+            json.dumps({"kind": kind, "ok": True}, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+manifest = evidence.build(root, output, "release-full")
+(output / "manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+PY
+cat >"$WRITE_SKILL_FIXTURE/bash-env" <<'SH'
+bash() {
+  [[ "${1:-}" == "scripts/check_write_genesiscode_skill_conformance.sh" ]]
+  local binding
+  for binding in \
+    GENESIS_HEALTH_EVIDENCE_MANIFEST \
+    GENESIS_WRITE_SKILL_GAUNTLET_REPORT \
+    GENESIS_WRITE_SKILL_GENERATIVE_REPORT \
+    GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT \
+    GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT \
+    GENESIS_WRITE_SKILL_GPU_XR_REPORT \
+    GENESIS_WRITE_SKILL_ASSURANCE_REPORT; do
+    [[ -n "${!binding:-}" ]]
+  done
+  : >"${GENESIS_WRITE_SKILL_FIXTURE_CALLED:?}"
+}
+SH
+
+WRITE_SKILL_BASE_ENV=(
+  "BASH_ENV=$WRITE_SKILL_FIXTURE/bash-env"
+  "GENESIS_GATE_TELEMETRY_DISABLE=1"
+  "GENESIS_WRITE_SKILL_DIST_ROOT=$WRITE_SKILL_FIXTURE/kit"
+  "GENESIS_WRITE_SKILL_DIST_MANIFEST=$WRITE_SKILL_FIXTURE/kit/manifest.json"
+  "GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1"
+  "GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full"
+  "GENESIS_WRITE_SKILL_FIXTURE_CALLED=$WRITE_SKILL_FIXTURE/conformance-called"
+)
+WRITE_SKILL_EVIDENCE_ENV=(
+  "GENESIS_HEALTH_EVIDENCE_REQUIRED=1"
+  "GENESIS_HEALTH_EVIDENCE_MANIFEST=$WRITE_SKILL_FIXTURE/evidence/manifest.json"
+  "GENESIS_WRITE_SKILL_GAUNTLET_REPORT=$WRITE_SKILL_FIXTURE/evidence/agent_capability_gauntlet_report.json"
+  "GENESIS_WRITE_SKILL_GENERATIVE_REPORT=$WRITE_SKILL_FIXTURE/evidence/agent_generative_workloads_report.json"
+  "GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT=$WRITE_SKILL_FIXTURE/evidence/runtime_backend_feature_matrix_report.json"
+  "GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT=$WRITE_SKILL_FIXTURE/evidence/host_bridge_fault_injection_report.json"
+  "GENESIS_WRITE_SKILL_GPU_XR_REPORT=$WRITE_SKILL_FIXTURE/evidence/gpu_xr_productization_kits_report.json"
+  "GENESIS_WRITE_SKILL_ASSURANCE_REPORT=$WRITE_SKILL_FIXTURE/evidence/assurance_profile_packs_report.json"
+)
+write_skill_negative_controls=0
+if env "${WRITE_SKILL_BASE_ENV[@]}" \
+  /bin/bash "$WRITE_SKILL_DISTRIBUTION_SCRIPT" >/dev/null 2>&1; then
+  echo "test-execution-profile-matrix: release distribution accepted absent private evidence" >&2
+  exit 1
+fi
+write_skill_negative_controls=$((write_skill_negative_controls + 1))
+if env "${WRITE_SKILL_BASE_ENV[@]}" \
+  "${WRITE_SKILL_EVIDENCE_ENV[@]:0:7}" \
+  /bin/bash "$WRITE_SKILL_DISTRIBUTION_SCRIPT" >/dev/null 2>&1; then
+  echo "test-execution-profile-matrix: release distribution accepted a missing report binding" >&2
+  exit 1
+fi
+write_skill_negative_controls=$((write_skill_negative_controls + 1))
+env "${WRITE_SKILL_BASE_ENV[@]}" "${WRITE_SKILL_EVIDENCE_ENV[@]}" \
+  /bin/bash "$WRITE_SKILL_DISTRIBUTION_SCRIPT" >/dev/null
+[[ -f "$WRITE_SKILL_FIXTURE/conformance-called" ]] || {
+  echo "test-execution-profile-matrix: release distribution did not invoke conformance" >&2
+  exit 1
+}
+printf '{"kind":"tampered","ok":true}\n' \
+  >"$WRITE_SKILL_FIXTURE/evidence/assurance_profile_packs_report.json"
+if env "${WRITE_SKILL_BASE_ENV[@]}" "${WRITE_SKILL_EVIDENCE_ENV[@]}" \
+  /bin/bash "$WRITE_SKILL_DISTRIBUTION_SCRIPT" >/dev/null 2>&1; then
+  echo "test-execution-profile-matrix: release distribution accepted tampered evidence" >&2
+  exit 1
+fi
+write_skill_negative_controls=$((write_skill_negative_controls + 1))
+cleanup_write_skill_fixture
+trap - EXIT INT TERM
+echo "release-write-skill-evidence-binding: ok (negative_controls=$write_skill_negative_controls)"
 
 HEALTH_OUTPUT_FIXTURE="$(mktemp -d)"
 cleanup_health_output_fixture() {

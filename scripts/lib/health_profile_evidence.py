@@ -155,6 +155,17 @@ CONSUMERS = {
             "runtime_backend_feature_matrix_report.json",
         ],
     },
+    "write-skill-distribution": {
+        "script": "scripts/check_write_genesiscode_skill_distribution.sh",
+        "artifacts": [
+            "agent_capability_gauntlet_report.json",
+            "agent_generative_workloads_report.json",
+            "assurance_profile_packs_report.json",
+            "gpu_xr_productization_kits_report.json",
+            "host_bridge_fault_injection_report.json",
+            "runtime_backend_feature_matrix_report.json",
+        ],
+    },
 }
 
 PRODUCERS = {

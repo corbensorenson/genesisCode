@@ -5537,8 +5537,13 @@
       "direct_write_candidates": [
         "(inherited_target / resolved[\"metadata_file\"]).write_bytes(",
         "(inherited_target / resolved[\"metadata_file\"]).write_text(\"{}\\n\", encoding=\"utf-8\")",
+        "(output / \"manifest.json\").write_text(",
         "inherited_target.mkdir(parents=True)",
-        "rm -rf \"$HEALTH_OUTPUT_FIXTURE\""
+        "mkdir -p \\",
+        "path.write_text(",
+        "path.write_text('{\"fixture\":true}\\n', encoding=\"utf-8\")",
+        "rm -rf \"$HEALTH_OUTPUT_FIXTURE\"",
+        "rm -rf \"$WRITE_SKILL_FIXTURE\""
       ],
       "execution_helper_closure": [
         {
@@ -5549,7 +5554,7 @@
       "execution_helper_invocations": [
         "scripts/test_prepare_release_target_reference.sh"
       ],
-      "execution_identity_sha256": "493b58c35c087abcc60198501da304cbdfcb1a1344ce9f0e3c349d264d029b54",
+      "execution_identity_sha256": "f2baecf18e38788f027f4b2946dae0b83880c63c4c14881b3623eb059ec8e3c5",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5560,14 +5565,19 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "e365ce0745a512192be05244fe3660958ac5bef1866009401c8843ee38939120",
+      "sha256": "4b18a6ba2b5b2c33f996d985e1be195d5eac206c0f61672c41d9c12a4c66bca2",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
         "(inherited_target / resolved[\"metadata_file\"]).write_bytes(",
         "(inherited_target / resolved[\"metadata_file\"]).write_text(\"{}\\n\", encoding=\"utf-8\")",
+        "(output / \"manifest.json\").write_text(",
         "inherited_target.mkdir(parents=True)",
+        "mkdir -p \\",
+        "path.write_text(",
+        "path.write_text('{\"fixture\":true}\\n', encoding=\"utf-8\")",
         "rm -rf \"$HEALTH_OUTPUT_FIXTURE\"",
+        "rm -rf \"$WRITE_SKILL_FIXTURE\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$COMMON_BIN\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$DOCKER_BIN\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$MISSING_SDK/platform-tools\" \"$MISSING_SDK/cmdline-tools/latest/bin\"",
@@ -5829,7 +5839,7 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "802af2febcc623ff9ca25e68054980104079d0d0c61ad21934816c410f3160e5"
+          "sha256": "89d03b7dd369d7d9c9af1d899e752548cb9479ea64917b7690e14eef5cf9a2df"
         },
         {
           "path": "scripts/render_webxr_browser_conformance_report.sh",
@@ -5847,7 +5857,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "ea555e4cbfdce852609197c8bb6348b9d29f416067dc2982d420a5632f87c184",
+      "execution_identity_sha256": "7205ad4a7be0b1fa1463fd683239c58675be9706b0b438277e1910bb2f017f52",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -6348,9 +6358,16 @@
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
       "direct_write_candidates": [],
-      "execution_helper_closure": [],
-      "execution_helper_invocations": [],
-      "execution_identity_sha256": "4266b100069f929eab37aa86eab8f862d2b13ab9f3876e438da1fed9cef06ab4",
+      "execution_helper_closure": [
+        {
+          "path": "scripts/lib/health_profile_evidence.sh",
+          "sha256": "f94c62cc8e6b969c813b1ceedef4bc47ab01c6ca7a058eadaf6de918f0b36b24"
+        }
+      ],
+      "execution_helper_invocations": [
+        "scripts/lib/health_profile_evidence.sh"
+      ],
+      "execution_identity_sha256": "63e4baf7b80d7b5711df0c03e74f977a6128c7a4acc7a92aba569aaaf4c798f7",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -6361,7 +6378,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "cfe1abe915211235e4dbda164139ba33cae601a6bc083b4320d6bea202550fdf",
+      "sha256": "1fc19ab6c673798cd0745cfdca1f3b53f59c73a82a1c14593dee5be917827f76",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []

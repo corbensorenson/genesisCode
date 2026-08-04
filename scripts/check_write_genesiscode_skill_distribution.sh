@@ -6,10 +6,18 @@ genesis_gate_telemetry_reexec "$0" "$@"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/health_profile_evidence.sh"
 
 KIT_ROOT="${GENESIS_WRITE_SKILL_DIST_ROOT:-docs/skill_pack/write_genesiscode_v1}"
 MANIFEST_PATH="${GENESIS_WRITE_SKILL_DIST_MANIFEST:-$KIT_ROOT/manifest.json}"
 VERIFY_RUNTIME="${GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME:-0}"
+CONFORMANCE_PROFILE="${GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE:-${GENESIS_AGENT_GAUNTLET_PROFILE:-prepush-standard}}"
+GAUNTLET_INPUT="${GENESIS_WRITE_SKILL_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
+GENERATIVE_INPUT="${GENESIS_WRITE_SKILL_GENERATIVE_REPORT:-.genesis/perf/agent_generative_workloads_report.json}"
+RUNTIME_BACKEND_INPUT="${GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT:-.genesis/perf/runtime_backend_feature_matrix_report.json}"
+HOST_BRIDGE_INPUT="${GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT:-.genesis/perf/host_bridge_fault_injection_report.json}"
+GPU_XR_INPUT="${GENESIS_WRITE_SKILL_GPU_XR_REPORT:-.genesis/perf/gpu_xr_productization_kits_report.json}"
+ASSURANCE_INPUT="${GENESIS_WRITE_SKILL_ASSURANCE_REPORT:-.genesis/perf/assurance_profile_packs_report.json}"
 
 [[ -f "$MANIFEST_PATH" ]] || {
   echo "write-genesiscode-skill-distribution: missing manifest: $MANIFEST_PATH" >&2
@@ -150,6 +158,12 @@ for script_path in verification_scripts:
 for item in expected_reports:
     if not isinstance(item, dict):
         raise SystemExit("write-genesiscode-skill-distribution: expected_report entry must be an object")
+    kind = item.get("kind")
+    report_path = item.get("path")
+    if not isinstance(kind, str) or not kind:
+        raise SystemExit("write-genesiscode-skill-distribution: expected report kind must be a non-empty string")
+    if not isinstance(report_path, str) or not report_path:
+        raise SystemExit("write-genesiscode-skill-distribution: expected report path must be a non-empty string")
     if "min_score" not in item:
         raise SystemExit("write-genesiscode-skill-distribution: expected_report entry must include min_score")
     report_min = int(item.get("min_score", 0))
@@ -166,41 +180,67 @@ print(
 PY
 
 if [[ "$VERIFY_RUNTIME" == "1" ]]; then
+  if [[ "$CONFORMANCE_PROFILE" == "release-full" ]]; then
+    [[ "${GENESIS_HEALTH_EVIDENCE_REQUIRED:-0}" == "1" ]] || {
+      echo "write-genesiscode-skill-distribution: release-full runtime verification requires private evidence" >&2
+      exit 1
+    }
+    [[ -n "${GENESIS_HEALTH_EVIDENCE_MANIFEST:-}" ]] || {
+      echo "write-genesiscode-skill-distribution: release-full runtime verification requires an evidence manifest" >&2
+      exit 1
+    }
+    for binding in \
+      GENESIS_WRITE_SKILL_GAUNTLET_REPORT \
+      GENESIS_WRITE_SKILL_GENERATIVE_REPORT \
+      GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT \
+      GENESIS_WRITE_SKILL_HOST_BRIDGE_REPORT \
+      GENESIS_WRITE_SKILL_GPU_XR_REPORT \
+      GENESIS_WRITE_SKILL_ASSURANCE_REPORT; do
+      [[ -n "${!binding:-}" ]] || {
+        echo "write-genesiscode-skill-distribution: release-full runtime verification requires $binding" >&2
+        exit 1
+      }
+    done
+  fi
+  if [[ -n "${GENESIS_HEALTH_EVIDENCE_MANIFEST:-}" ]]; then
+    genesis_verify_health_profile_evidence \
+      "write-skill-distribution" \
+      "scripts/check_write_genesiscode_skill_distribution.sh" \
+      "$GAUNTLET_INPUT" \
+      "$GENERATIVE_INPUT" \
+      "$ASSURANCE_INPUT" \
+      "$GPU_XR_INPUT" \
+      "$HOST_BRIDGE_INPUT" \
+      "$RUNTIME_BACKEND_INPUT"
+  fi
   bash scripts/check_write_genesiscode_skill_conformance.sh
-  python3 - "$MANIFEST_PATH" <<'PY'
+  if [[ "$CONFORMANCE_PROFILE" == "release-full" ]]; then
+    echo "write-genesiscode-skill-distribution: runtime verification ok"
+  else
+    python3 - "$MANIFEST_PATH" <<'PY'
 import json
 import pathlib
 import sys
 
 manifest_path = pathlib.Path(sys.argv[1])
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-reports = manifest.get("expected_reports", [])
-
-for item in reports:
-    if not isinstance(item, dict):
-        raise SystemExit("write-genesiscode-skill-distribution: expected_report entry must be an object")
-    kind = item.get("kind")
-    report_path_raw = item.get("path")
-    min_score = int(item.get("min_score", 0))
-    if not isinstance(kind, str) or not kind:
-        raise SystemExit("write-genesiscode-skill-distribution: expected report kind must be a non-empty string")
-    if not isinstance(report_path_raw, str) or not report_path_raw:
-        raise SystemExit("write-genesiscode-skill-distribution: expected report path must be a non-empty string")
-    report_path = pathlib.Path(report_path_raw)
+for item in manifest.get("expected_reports", []):
+    report_path = pathlib.Path(item["path"])
     if not report_path.is_file():
         raise SystemExit(
             f"write-genesiscode-skill-distribution: expected report missing: {report_path}; "
             "produce it with: bash scripts/update_write_genesiscode_skill_conformance_report.sh"
         )
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    if report.get("kind") != kind:
+    if report.get("kind") != item["kind"]:
         raise SystemExit(
-            f"write-genesiscode-skill-distribution: expected kind {kind!r}, got {report.get('kind')!r}"
+            f"write-genesiscode-skill-distribution: expected kind {item['kind']!r}, "
+            f"got {report.get('kind')!r}"
         )
-    if int(report.get("score", 0)) < min_score:
+    if int(report.get("score", 0)) < int(item["min_score"]):
         raise SystemExit(
             f"write-genesiscode-skill-distribution: score below minimum for {report_path}: "
-            f"{report.get('score')} < {min_score}"
+            f"{report.get('score')} < {item['min_score']}"
         )
     if report.get("ok") is not True:
         raise SystemExit(
@@ -209,6 +249,7 @@ for item in reports:
 
 print("write-genesiscode-skill-distribution: runtime verification ok")
 PY
+  fi
 fi
 
 echo "write-genesiscode-skill-distribution: ok"
