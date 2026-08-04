@@ -19,8 +19,9 @@ import sys
 import tempfile
 import threading
 import time
-from typing import Any, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence
 
+import cargo_cache
 import health_profile_evidence as health_evidence
 
 
@@ -51,6 +52,23 @@ TARGET_CLASS_ENVS = {
     "edge": "GENESIS_GCPM_EDGE_RUNTIME_CLASS",
     "ios": "GENESIS_GCPM_IOS_RUNTIME_CLASS",
     "service-runtime": "GENESIS_GCPM_SERVICE_RUNTIME_RUNTIME_CLASS",
+}
+CARGO_CACHE_ENV = {
+    "CARGO_TARGET_DIR",
+    "GENESIS_CARGO_CACHE_EPHEMERAL",
+    "GENESIS_CARGO_CACHE_HIT",
+    "GENESIS_CARGO_CACHE_KEY_SHA256",
+    "GENESIS_CARGO_CACHE_RESOLVED",
+    "GENESIS_CARGO_CACHE_ROOT",
+    "GENESIS_CARGO_CACHE_RUSTC_IDENTITY_JSON",
+    "GENESIS_CARGO_CACHE_SCOPE",
+    "GENESIS_GENERATED_STATE_LEASE_PID",
+    "GENESIS_GENERATED_STATE_LEASE_TOKEN",
+    "GENESIS_GENERATED_STATE_ROOT",
+}
+CARGO_CACHE_PROVENANCE_ENV = CARGO_CACHE_ENV - {
+    "GENESIS_CARGO_CACHE_ROOT",
+    "GENESIS_CARGO_CACHE_RUSTC_IDENTITY_JSON",
 }
 RUN_FIELDS = {
     "agentGpuProfile",
@@ -281,6 +299,47 @@ def terminate_group(proc: subprocess.Popen[Any]) -> None:
     proc.wait()
 
 
+def measurement_environment(
+    root: Path,
+    cache_root: Path,
+    environ: Optional[Mapping[str, str]] = None,
+) -> dict[str, str]:
+    env = dict(os.environ if environ is None else environ)
+    if any(name in env for name in CARGO_CACHE_PROVENANCE_ENV):
+        inherited_target = env.get("CARGO_TARGET_DIR", "")
+        if not inherited_target:
+            fail("inherited Cargo cache provenance is missing CARGO_TARGET_DIR")
+        if env.get("GENESIS_CARGO_CACHE_RESOLVED") != "1":
+            fail(f"arbitrary inherited CARGO_TARGET_DIR is forbidden: {inherited_target}")
+        scope = env.get("GENESIS_CARGO_CACHE_SCOPE", "")
+        inherited_key = env.get("GENESIS_CARGO_CACHE_KEY_SHA256", "")
+        if not scope or not is_sha256(inherited_key):
+            fail("inherited Cargo cache provenance is incomplete")
+        try:
+            resolved = cargo_cache.resolve(root, scope, env)
+        except cargo_cache.CachePolicyError as exc:
+            fail(f"cannot validate inherited Cargo cache provenance: {exc}")
+        expected_target = Path(resolved["target_dir"]).resolve()
+        target = Path(inherited_target)
+        if (
+            not target.is_absolute()
+            or target.resolve() != expected_target
+            or resolved["metadata"]["cacheKeySha256"] != inherited_key
+        ):
+            fail("inherited Cargo cache provenance does not match the canonical resolver")
+        metadata_path = expected_target / str(resolved["metadata_file"])
+        try:
+            metadata = metadata_path.read_bytes()
+        except OSError as exc:
+            fail(f"cannot validate inherited Cargo cache metadata: {exc}")
+        if metadata != cargo_cache.pretty_bytes(resolved["metadata"]):
+            fail("inherited Cargo cache metadata does not match the canonical resolver")
+    for name in CARGO_CACHE_ENV:
+        env.pop(name, None)
+    env["GENESIS_CARGO_CACHE_ROOT"] = str(cache_root)
+    return env
+
+
 def run_sample(
     root: Path,
     containment: Path,
@@ -298,14 +357,13 @@ def run_sample(
     stderr_path = containment / f"{run_class}.stderr.log"
     empty_history = containment / "empty-history.jsonl"
     empty_history.touch(exist_ok=True)
-    env = dict(os.environ)
+    env = measurement_environment(root, cache_root)
     gpu_profile = env.get("GENESIS_AGENT_GPU_PROFILE", "")
     if gpu_profile not in {"agent-gpu-strict", "agent-gpu-fallback"}:
         fail("release measurement requires an explicit agent GPU profile")
     env.update(
         {
             "CI": "true",
-            "GENESIS_CARGO_CACHE_ROOT": str(cache_root),
             "GENESIS_CHECK_HEALTH_OUTPUT_CONTAINMENT_ROOT": str(containment),
             "GENESIS_CHECK_HEALTH_OUTPUT_ROOT": str(raw),
             "GENESIS_CHECK_HEALTH_RELEASE_FULL_HISTORY_INPUT": str(empty_history),

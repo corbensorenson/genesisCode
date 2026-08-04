@@ -1013,6 +1013,100 @@ for relative in sorted(consumers):
         raise SystemExit(f"test-execution-profile-matrix: evidence consumer bypasses verifier: {relative}")
 PY
 
+PYTHONPATH="$ROOT_DIR/scripts/lib" python3 - "$ROOT_DIR" <<'PY'
+from pathlib import Path
+import os
+import sys
+import tempfile
+
+import cargo_cache
+import release_full_measurement as measurement
+
+root = Path(sys.argv[1]).resolve()
+with tempfile.TemporaryDirectory(prefix="genesis-release-cache-isolation.") as raw:
+    temp = Path(raw)
+    inherited = dict(os.environ)
+    inherited["GENESIS_CARGO_CACHE_ROOT"] = str(temp / "parent-cache")
+    resolved = cargo_cache.resolve(root, "root-host", inherited)
+    key = resolved["metadata"]["cacheKeySha256"]
+    inherited_target = Path(resolved["target_dir"])
+    inherited_target.mkdir(parents=True)
+    (inherited_target / resolved["metadata_file"]).write_bytes(
+        cargo_cache.pretty_bytes(resolved["metadata"])
+    )
+    inherited.update({
+        "CARGO_TARGET_DIR": str(inherited_target),
+        "GENESIS_CARGO_CACHE_RESOLVED": "1",
+        "GENESIS_CARGO_CACHE_SCOPE": "root-host",
+        "GENESIS_CARGO_CACHE_KEY_SHA256": key,
+        "GENESIS_CARGO_CACHE_HIT": "1",
+        "GENESIS_CARGO_CACHE_ROOT": str(temp / "parent-cache"),
+        "GENESIS_GENERATED_STATE_ROOT": str(root),
+        "GENESIS_GENERATED_STATE_LEASE_PID": "123",
+        "GENESIS_GENERATED_STATE_LEASE_TOKEN": "fixture-token",
+        "UNRELATED": "preserved",
+    })
+    pair_cache = temp / "pair-cache"
+    child = measurement.measurement_environment(root, pair_cache, inherited)
+    if child.get("GENESIS_CARGO_CACHE_ROOT") != str(pair_cache):
+        raise SystemExit("test-execution-profile-matrix: pair-owned cache root was not selected")
+    if child.get("UNRELATED") != "preserved":
+        raise SystemExit("test-execution-profile-matrix: unrelated environment was not preserved")
+    leaked = sorted((measurement.CARGO_CACHE_ENV - {"GENESIS_CARGO_CACHE_ROOT"}) & child.keys())
+    if leaked:
+        raise SystemExit(f"test-execution-profile-matrix: inherited cache provenance leaked: {leaked}")
+
+    negative_controls = 0
+    cases = [
+        ({"CARGO_TARGET_DIR": str(temp / "arbitrary")}, "arbitrary inherited CARGO_TARGET_DIR"),
+        ({"GENESIS_CARGO_CACHE_RESOLVED": "1"}, "missing CARGO_TARGET_DIR"),
+        (
+            {
+                "CARGO_TARGET_DIR": str(inherited_target),
+                "GENESIS_CARGO_CACHE_RESOLVED": "1",
+                "GENESIS_CARGO_CACHE_SCOPE": "root-host",
+            },
+            "provenance is incomplete",
+        ),
+    ]
+    for environ, expected in cases:
+        try:
+            measurement.measurement_environment(root, pair_cache, environ)
+        except measurement.MeasurementError as exc:
+            if expected not in str(exc):
+                raise SystemExit(
+                    f"test-execution-profile-matrix: wrong cache isolation failure: {exc}"
+                )
+        else:
+            raise SystemExit(
+                f"test-execution-profile-matrix: cache isolation accepted invalid state: {expected}"
+            )
+        negative_controls += 1
+
+    mismatched = dict(inherited)
+    mismatched["CARGO_TARGET_DIR"] = str(temp / "wrong-target")
+    try:
+        measurement.measurement_environment(root, pair_cache, mismatched)
+    except measurement.MeasurementError as exc:
+        if "does not match the canonical resolver" not in str(exc):
+            raise SystemExit(f"test-execution-profile-matrix: wrong mismatch failure: {exc}")
+    else:
+        raise SystemExit("test-execution-profile-matrix: mismatched inherited target was accepted")
+    negative_controls += 1
+
+    (inherited_target / resolved["metadata_file"]).write_text("{}\n", encoding="utf-8")
+    try:
+        measurement.measurement_environment(root, pair_cache, inherited)
+    except measurement.MeasurementError as exc:
+        if "metadata does not match" not in str(exc):
+            raise SystemExit(f"test-execution-profile-matrix: wrong metadata failure: {exc}")
+    else:
+        raise SystemExit("test-execution-profile-matrix: tampered cache metadata was accepted")
+    negative_controls += 1
+
+print(f"release-full-measurement-cache-isolation: ok (negative_controls={negative_controls})")
+PY
+
 bash scripts/test_prepare_release_target_reference.sh
 
 python3 "$LINT_SUPPRESSION_POLICY" --root "$ROOT_DIR"

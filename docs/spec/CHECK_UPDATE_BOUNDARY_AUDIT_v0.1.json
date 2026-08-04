@@ -5534,7 +5534,11 @@
       "direct_read_only_persistent_inputs": [],
       "direct_refresh_controls": [],
       "direct_update_invocations": [],
-      "direct_write_candidates": [],
+      "direct_write_candidates": [
+        "(inherited_target / resolved[\"metadata_file\"]).write_bytes(",
+        "(inherited_target / resolved[\"metadata_file\"]).write_text(\"{}\\n\", encoding=\"utf-8\")",
+        "inherited_target.mkdir(parents=True)"
+      ],
       "execution_helper_closure": [
         {
           "path": "scripts/test_prepare_release_target_reference.sh",
@@ -5544,7 +5548,7 @@
       "execution_helper_invocations": [
         "scripts/test_prepare_release_target_reference.sh"
       ],
-      "execution_identity_sha256": "08911d9d217cd5cbd818c1e4ee43f6cf64a015e314b420f51180a9e41ddbd8ac",
+      "execution_identity_sha256": "ffe68644efc0b2fdb9cbf53dcdb25c496182c7be8d6995c053fc4a4763dce318",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5555,10 +5559,13 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "509e98f60b039ba8ac1292c5f165ed2e79f6add10eabbf08bf3e99f6e4b29ec5",
+      "sha256": "e0370cb58d2e4430c11f9ea2833ec4de8e61b75beb7180bc4150de32e00e0aea",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
+        "(inherited_target / resolved[\"metadata_file\"]).write_bytes(",
+        "(inherited_target / resolved[\"metadata_file\"]).write_text(\"{}\\n\", encoding=\"utf-8\")",
+        "inherited_target.mkdir(parents=True)",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$COMMON_BIN\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$DOCKER_BIN\"",
         "scripts/test_prepare_release_target_reference.sh: mkdir -p \"$MISSING_SDK/platform-tools\" \"$MISSING_SDK/cmdline-tools/latest/bin\"",
