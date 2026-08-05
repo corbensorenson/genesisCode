@@ -241,7 +241,9 @@ fn ci_has_secondary_gpu_deterministic_lane_and_release_parity_gate() {
         "release parity gate must depend on hosted preflight and both conformance lanes"
     );
     assert!(
-        ci.contains("PREFLIGHT_STATUS: ${{ needs.gpu_runner_preflight.outputs.primary_linux_status }}"),
+        ci.contains(
+            "PREFLIGHT_STATUS: ${{ needs.gpu_runner_preflight.outputs.primary_linux_status }}"
+        ),
         "release parity gate must consume the typed primary-runner disposition"
     );
     assert!(
