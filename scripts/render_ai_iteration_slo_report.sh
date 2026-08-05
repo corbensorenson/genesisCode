@@ -25,6 +25,9 @@ source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
 BUDGET_INCREMENTAL_WARM_MS="${GENESIS_BUDGET_INCREMENTAL_WARM_MS:-5000}"
 BUDGET_CORE_SUITE_MS="${GENESIS_BUDGET_CORE_SUITE_MS:-45000}"
 BUDGET_CHANGED_FAST_MS="${GENESIS_BUDGET_CHANGED_FAST_MS:-15000}"
+# A sample must be collectable even when it is an outlier. The retained median,
+# not this execution ceiling, decides the 15-second AI iteration SLO.
+CHANGED_FAST_SAMPLE_CEILING_MS=120000
 BUDGET_GCPM_LOCK_MS="${GENESIS_BUDGET_GCPM_LOCK_MS:-5000}"
 BUDGET_GCPM_ENV_MS="${GENESIS_BUDGET_GCPM_ENV_MS:-1000}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
@@ -228,6 +231,7 @@ profile_target_dir() {
 TARGET_PROFILE_DIR="$(profile_target_dir "$CARGO_PROFILE")"
 
 require_positive_int "GENESIS_AI_ITERATION_SLO_MIN_HISTORY" "$HISTORY_MIN_SAMPLES"
+require_positive_int "GENESIS_BUDGET_CHANGED_FAST_MS" "$BUDGET_CHANGED_FAST_MS"
 require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM" "$SAMPLES_INCREMENTAL_WARM"
 require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST" "$SAMPLES_CHANGED_FAST"
 require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE" "$SAMPLES_CORE_SUITE"
@@ -238,6 +242,9 @@ require_non_negative_int "GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_ENV" "$WARMUP_GCP
 require_non_negative_int "GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK" "$STABILIZE_RETRIES_GCPM_LOCK"
 require_non_negative_int "GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_ENV" "$STABILIZE_RETRIES_GCPM_ENV"
 require_non_negative_int "GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT" "$CONTENTION_WARN_PERCENT"
+if (( CHANGED_FAST_SAMPLE_CEILING_MS < BUDGET_CHANGED_FAST_MS )); then
+  fail "changed-fast sample ceiling must not be below the median SLO budget"
+fi
 
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "ai-iteration-slo" --strict "$DISK_STRICT_MODE"
 
@@ -290,7 +297,7 @@ run_changed_fast_loop() {
   bash scripts/test_changed_fast.sh \
     --base HEAD \
     --runner cargo \
-    --budget-ms "$BUDGET_CHANGED_FAST_MS" \
+    --budget-ms "$CHANGED_FAST_SAMPLE_CEILING_MS" \
     --min-history 1 \
     --strict-disk "$DISK_STRICT_MODE" \
     --report "$TMP_DIR/test_changed_fast_metrics.json" \
@@ -353,7 +360,7 @@ if [[ "$HISTORY_INPUT" != "$HISTORY_OUT" ]]; then
   fi
 fi
 
-python3 - "$REPORT_OUT" "$HISTORY_OUT" "$BASELINE_HISTORY" "$CARGO_PROFILE" "$TARGET_PROFILE_DIR" "$DISK_STRICT_MODE" "$HISTORY_MIN_SAMPLES" "$REGRESSION_PERCENT" "$CONTENTION_WARN_PERCENT" "$INCREMENTAL_WARM_SAMPLES" "$CHANGED_FAST_SAMPLES" "$CORE_SUITE_SAMPLES" "$GCPM_LOCK_SAMPLES" "$GCPM_ENV_SAMPLES" "$BUDGET_INCREMENTAL_WARM_MS" "$BUDGET_CHANGED_FAST_MS" "$BUDGET_CORE_SUITE_MS" "$BUDGET_GCPM_LOCK_MS" "$BUDGET_GCPM_ENV_MS" <<'PY'
+python3 - "$REPORT_OUT" "$HISTORY_OUT" "$BASELINE_HISTORY" "$CARGO_PROFILE" "$TARGET_PROFILE_DIR" "$DISK_STRICT_MODE" "$HISTORY_MIN_SAMPLES" "$REGRESSION_PERCENT" "$CONTENTION_WARN_PERCENT" "$INCREMENTAL_WARM_SAMPLES" "$CHANGED_FAST_SAMPLES" "$CORE_SUITE_SAMPLES" "$GCPM_LOCK_SAMPLES" "$GCPM_ENV_SAMPLES" "$BUDGET_INCREMENTAL_WARM_MS" "$BUDGET_CHANGED_FAST_MS" "$BUDGET_CORE_SUITE_MS" "$BUDGET_GCPM_LOCK_MS" "$BUDGET_GCPM_ENV_MS" "$CHANGED_FAST_SAMPLE_CEILING_MS" <<'PY'
 import json
 import math
 import os
@@ -380,6 +387,7 @@ import time
     budget_core_suite_ms_s,
     budget_gcpm_lock_ms_s,
     budget_gcpm_env_ms_s,
+    changed_fast_sample_ceiling_ms_s,
 ) = sys.argv[1:]
 
 history_min_samples = int(history_min_samples_s)
@@ -528,6 +536,7 @@ entry = {
     "budgets": budgets,
     "sampling": {
         "statistic": "median",
+        "changed_fast_sample_ceiling_ms": int(changed_fast_sample_ceiling_ms_s),
         "contention_warn_percent": contention_warn_percent,
         "warnings": contention_warnings,
     },

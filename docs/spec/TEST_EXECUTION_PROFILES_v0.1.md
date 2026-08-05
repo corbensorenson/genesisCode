@@ -20,7 +20,7 @@ Deterministic test execution policy for local iteration and CI.
 | `kernel-tail-stress` | `bash scripts/test_perf_gates.sh --kernel-tail-stress` | `<= 5m` |
 | `persistent-sharing-stress` | `bash scripts/test_perf_gates.sh --test persistent_sharing_stress` | `<= 2m` |
 | `agent-inner-loop` | `bash scripts/check_upgrade_plan_health.sh --profile agent-inner-loop` | `<= 5m` |
-| `release-full` | `bash scripts/check_upgrade_plan_health.sh --profile release-full` | `<= 30m` |
+| `release-full` | `bash scripts/check_upgrade_plan_health.sh --profile release-full` | `<= 45m` |
 | `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 8m` |
 | `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` + `bash scripts/check_full_cross_host_profile_budget.sh` | `<= 12m` |
 
@@ -299,6 +299,10 @@ Strict/full profile runtime reports:
     - every run retains its profile report and logs, samples process-tree peak RSS and
       non-overlapping artifact roots, and enforces the GB-4 `2700000ms` and
       `21474836480`-byte ceilings;
+    - the paired producer has a separate 50-minute session deadline inside a 55-minute
+      CI job envelope, leaving bounded termination, reaping, diagnostic retention, and
+      upload time before the independent 60-minute full-run watchdog; no orchestration
+      timeout may preempt the 45-minute per-profile ceiling without a typed failure;
     - the manifest derives cold and warm p95 wall, peak-RSS, and artifact values from the
       retained runs, proves complete owned-cache reclamation after each pair, and rejects
       incomplete histories, cache-class or GPU-profile relabeling between the parent sample

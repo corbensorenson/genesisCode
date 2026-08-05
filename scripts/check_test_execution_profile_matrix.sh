@@ -212,7 +212,7 @@ require_doc_pattern '| `strict-golden` |'
 require_doc_pattern '| `full-cross-host` |'
 require_doc_pattern '`<= 2m`'
 require_doc_pattern '`<= 5m`'
-require_doc_pattern '`<= 30m`'
+require_doc_pattern '`<= 45m`'
 require_doc_pattern '`<= 3m`'
 require_doc_pattern '`<= 8m`'
 require_doc_pattern '`<= 12m`'
@@ -1050,7 +1050,7 @@ for job, dispatch in {
 for job, timeout in {
     "gpu_runner_preflight": "timeout-minutes: 5",
     "release_target_reference_readiness": "timeout-minutes: 20",
-    "release_full_measurement": "timeout-minutes: 40",
+    "release_full_measurement": "timeout-minutes: 55",
     "local_workspace_test_contract": "timeout-minutes: 45",
     "test": "timeout-minutes: 5",
     "webxr_browser_conformance": "timeout-minutes: 20",
@@ -1162,6 +1162,9 @@ for marker in [
     'KIND = "genesis/release-full-measurement-v0.1"',
     "MIN_PAIRS = 2",
     "WALL_BUDGET_MS = 2_700_000",
+    "SESSION_BUDGET_MS = 3_000_000",
+    "bounded child stderr tail",
+    "min(WALL_BUDGET_MS, remaining_ms)",
     "ARTIFACT_BUDGET_BYTES = 20 * 1024 * 1024 * 1024",
     'for run_class in ("cold", "warm")',
     "process-tree peak RSS sampling produced no measurement",
@@ -1171,6 +1174,30 @@ for marker in [
 ]:
     if marker not in measurement:
         raise SystemExit(f"test-execution-profile-matrix: release measurement marker missing: {marker}")
+
+ai_slo = (root / "scripts/render_ai_iteration_slo_report.sh").read_text(encoding="utf-8")
+for marker in [
+    "CHANGED_FAST_SAMPLE_CEILING_MS=120000",
+    '--budget-ms "$CHANGED_FAST_SAMPLE_CEILING_MS"',
+    '[[ "$CHANGED_FAST_MS" -le "$BUDGET_CHANGED_FAST_MS" ]]',
+    '"changed_fast_sample_ceiling_ms": int(changed_fast_sample_ceiling_ms_s)',
+]:
+    if marker not in ai_slo:
+        raise SystemExit(f"test-execution-profile-matrix: AI SLO sample contract missing: {marker}")
+if '--budget-ms "$BUDGET_CHANGED_FAST_MS"' in ai_slo:
+    raise SystemExit("test-execution-profile-matrix: changed-fast samples still enforce the median SLO per run")
+
+def integer_median(values):
+    ordered = sorted(values)
+    midpoint = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[midpoint]
+    return int((ordered[midpoint - 1] + ordered[midpoint]) / 2.0)
+
+if integer_median([10_000, 16_733]) > 15_000:
+    raise SystemExit("test-execution-profile-matrix: one collectable outlier corrupted median adjudication")
+if integer_median([16_001, 16_001]) <= 15_000:
+    raise SystemExit("test-execution-profile-matrix: over-budget median was accepted")
 
 consumers = {
     "scripts/check_agent_generative_workloads.sh",
@@ -1278,6 +1305,23 @@ with tempfile.TemporaryDirectory(prefix="genesis-release-cache-isolation.") as r
             raise SystemExit(f"test-execution-profile-matrix: wrong metadata failure: {exc}")
     else:
         raise SystemExit("test-execution-profile-matrix: tampered cache metadata was accepted")
+    negative_controls += 1
+
+    diagnostic_path = temp / "diagnostic.log"
+    diagnostic_path.write_text(
+        "\n".join(
+            [f"{root}/private/line-{index}\x1b[31m" for index in range(100)]
+            + ["final portable failure"]
+        ),
+        encoding="utf-8",
+    )
+    tail = measurement.diagnostic_tail(diagnostic_path, root)
+    if len(tail.encode("utf-8")) > measurement.DIAGNOSTIC_TAIL_MAX_BYTES:
+        raise SystemExit("test-execution-profile-matrix: diagnostic tail exceeded byte bound")
+    if len(tail.splitlines()) > measurement.DIAGNOSTIC_TAIL_MAX_LINES:
+        raise SystemExit("test-execution-profile-matrix: diagnostic tail exceeded line bound")
+    if str(root) in tail or "\x1b" in tail or "final portable failure" not in tail:
+        raise SystemExit("test-execution-profile-matrix: diagnostic tail was not portable and terminal")
     negative_controls += 1
 
 print(f"release-full-measurement-cache-isolation: ok (negative_controls={negative_controls})")

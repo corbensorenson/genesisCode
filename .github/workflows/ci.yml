@@ -196,7 +196,9 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
     needs: release_target_reference_readiness
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    # The producer owns a 50-minute session deadline and needs time to terminate,
+    # reap, retain diagnostics, and upload before the 60-minute watchdog.
+    timeout-minutes: 55
     env:
       GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
     steps:
