@@ -27,6 +27,8 @@ import health_profile_evidence as health_evidence
 
 KIND = "genesis/release-full-measurement-v0.1"
 VERSION = "0.1.0"
+PAIR_KIND = "genesis/release-full-measurement-pair-v0.1"
+PAIR_VERSION = "0.1.0"
 PROFILE_KIND = "genesis/upgrade-plan-health-profile-v0.1"
 TARGET_KIND = "genesis/gcpm-target-runtime-evidence-v0.1"
 REFERENCE_KIND = "genesis/release-target-reference-set-v0.1"
@@ -87,6 +89,34 @@ RUN_FIELDS = {
     "profileReportArtifact",
     "profileReportSha256",
     "telemetryElapsedMs",
+}
+PAIR_WORKER_FIELDS = {
+    "cacheIsolationIdentitySha256",
+    "executionEnvironmentSha256",
+    "githubJob",
+    "githubRunAttempt",
+    "githubRunId",
+    "githubSha",
+    "pair",
+    "workerContentIdentitySha256",
+    "workerManifestArtifact",
+    "workerManifestSha256",
+}
+PAIR_REPORT_FIELDS = {
+    "artifacts",
+    "budgets",
+    "cacheIsolation",
+    "cleanupRecovery",
+    "contentIdentitySha256",
+    "executionEnvironment",
+    "generatedAtUtc",
+    "github",
+    "kind",
+    "ok",
+    "pair",
+    "runs",
+    "source",
+    "version",
 }
 
 
@@ -765,9 +795,52 @@ def artifact_inventory(output: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def validate_run_set(runs: Sequence[dict[str, Any]], pairs: int) -> None:
-    if pairs < MIN_PAIRS or pairs > MAX_PAIRS or len(runs) != pairs * 2:
-        fail("release measurement requires two to five complete cold/warm pairs")
+def github_provenance(
+    source: Mapping[str, Any],
+    environ: Optional[Mapping[str, str]] = None,
+) -> dict[str, str]:
+    env = os.environ if environ is None else environ
+    values = {
+        "job": env.get("GITHUB_JOB", ""),
+        "runAttempt": env.get("GITHUB_RUN_ATTEMPT", ""),
+        "runId": env.get("GITHUB_RUN_ID", ""),
+        "sha": env.get("GITHUB_SHA", ""),
+    }
+    if values["job"] != "release_full_measurement_pair":
+        fail("release pair worker lacks the canonical GitHub job identity")
+    for field in ("runAttempt", "runId"):
+        value = values[field]
+        if not value.isdigit() or value.startswith("0"):
+            fail(f"release pair worker GitHub {field} is invalid")
+    if values["sha"] != source.get("gitCommit"):
+        fail("release pair worker source commit does not match GitHub provenance")
+    return values
+
+
+def cache_isolation_record(
+    pair_index: int,
+    github: Mapping[str, str],
+    nonce_sha256: Optional[str] = None,
+) -> dict[str, Any]:
+    nonce = nonce_sha256 or sha256_bytes(os.urandom(32))
+    if not is_sha256(nonce):
+        fail("release pair cache-isolation nonce is invalid")
+    core = {
+        "githubJob": github["job"],
+        "githubRunAttempt": github["runAttempt"],
+        "githubRunId": github["runId"],
+        "method": "job-unique-external-owned-root",
+        "nonceSha256": nonce,
+        "pair": pair_index,
+        "rootRemoved": True,
+        "rootStartedEmpty": True,
+    }
+    return {**core, "identitySha256": sha256_bytes(canonical(core))}
+
+
+def validate_pair_runs(runs: Sequence[dict[str, Any]], pair_index: int) -> None:
+    if len(runs) != 2:
+        fail("release pair worker requires one complete cold/warm pair")
     for row in runs:
         exact_keys(row, RUN_FIELDS, "run")
         run_class = row["class"]
@@ -783,9 +856,9 @@ def validate_run_set(runs: Sequence[dict[str, Any]], pairs: int) -> None:
             fail("release run did not exit successfully")
         if row["agentGpuProfile"] not in {"agent-gpu-strict", "agent-gpu-fallback"}:
             fail("release run lacks an explicit agent GPU profile")
-        if not isinstance(row["index"], int) or isinstance(row["index"], bool) or not 1 <= row["index"] <= MAX_PAIRS:
-            fail("release run pair index is invalid")
-        prefix = f"runs/pair-{row['index']:02d}-{run_class}"
+        if row["index"] != pair_index:
+            fail("release run pair index does not match its worker")
+        prefix = f"runs/pair-{pair_index:02d}-{run_class}"
         if row["logArtifacts"] != [f"{prefix}/stdout.log", f"{prefix}/stderr.log"]:
             fail("release run log paths do not match its pair identity")
         if row["profileReportArtifact"] != f"{prefix}/profile-report.json":
@@ -810,10 +883,169 @@ def validate_run_set(runs: Sequence[dict[str, Any]], pairs: int) -> None:
             fail("release run artifact peak exceeds GB-4")
         if row["telemetryElapsedMs"] > WALL_BUDGET_MS:
             fail("release run duration exceeds GB-4")
-    expected = [(index, run_class) for index in range(1, pairs + 1) for run_class in ("cold", "warm")]
-    observed = [(row["index"], row["class"]) for row in runs]
-    if observed != expected:
-        fail("release run ordering or pair coverage mismatch")
+    if [(row["index"], row["class"]) for row in runs] != [
+        (pair_index, "cold"),
+        (pair_index, "warm"),
+    ]:
+        fail("release pair worker run ordering mismatch")
+
+
+def validate_run_set(runs: Sequence[dict[str, Any]], pairs: int) -> None:
+    if pairs < MIN_PAIRS or pairs > MAX_PAIRS or len(runs) != pairs * 2:
+        fail("release measurement requires two to five complete cold/warm pairs")
+    for pair_index in range(1, pairs + 1):
+        validate_pair_runs(runs[(pair_index - 1) * 2 : pair_index * 2], pair_index)
+
+
+def validate_cleanup(row: Any, expected_pair: int) -> dict[str, Any]:
+    cleanup = exact_keys(
+        row,
+        {"method", "ok", "pair", "recoveredBytes", "remainingBytes"},
+        "cleanup recovery",
+    )
+    if (
+        cleanup["method"] != "owned-ephemeral-root-removal"
+        or cleanup["ok"] is not True
+        or cleanup["pair"] != expected_pair
+        or not isinstance(cleanup["recoveredBytes"], int)
+        or isinstance(cleanup["recoveredBytes"], bool)
+        or cleanup["recoveredBytes"] <= 0
+        or cleanup["remainingBytes"] != 0
+    ):
+        fail("measurement cleanup recovery is incomplete")
+    return cleanup
+
+
+def validate_cache_isolation(row: Any, expected_pair: int, github: Mapping[str, str]) -> dict[str, Any]:
+    isolation = exact_keys(
+        row,
+        {
+            "githubJob", "githubRunAttempt", "githubRunId", "identitySha256", "method",
+            "nonceSha256", "pair", "rootRemoved", "rootStartedEmpty",
+        },
+        "cache isolation",
+    )
+    core = dict(isolation)
+    observed_identity = core.pop("identitySha256", None)
+    if (
+        isolation["method"] != "job-unique-external-owned-root"
+        or isolation["pair"] != expected_pair
+        or isolation["rootStartedEmpty"] is not True
+        or isolation["rootRemoved"] is not True
+        or isolation["githubJob"] != github["job"]
+        or isolation["githubRunAttempt"] != github["runAttempt"]
+        or isolation["githubRunId"] != github["runId"]
+        or not is_sha256(isolation["nonceSha256"])
+        or observed_identity != sha256_bytes(canonical(core))
+    ):
+        fail("release pair cache-isolation identity mismatch")
+    return isolation
+
+
+def validate_pair_report(report: dict[str, Any], expected_pair: Optional[int] = None) -> None:
+    exact_keys(report, PAIR_REPORT_FIELDS, "pair measurement report")
+    if report["kind"] != PAIR_KIND or report["version"] != PAIR_VERSION or report["ok"] is not True:
+        fail("pair measurement report identity or status mismatch")
+    pair_index = report["pair"]
+    if (
+        not isinstance(pair_index, int)
+        or isinstance(pair_index, bool)
+        or not 1 <= pair_index <= MAX_PAIRS
+        or (expected_pair is not None and pair_index != expected_pair)
+    ):
+        fail("pair measurement index mismatch")
+    if report["contentIdentitySha256"] != identity(report):
+        fail("pair measurement content identity mismatch")
+    try:
+        generated_at = dt.datetime.fromisoformat(report["generatedAtUtc"])
+    except (TypeError, ValueError):
+        fail("pair measurement generation time is invalid")
+    if generated_at.tzinfo is None:
+        fail("pair measurement generation time lacks a timezone")
+    if report["budgets"] != {
+        "maxArtifactBytes": ARTIFACT_BUDGET_BYTES,
+        "maxPairSessionMs": SESSION_BUDGET_MS,
+        "maxWallMs": WALL_BUDGET_MS,
+    }:
+        fail("pair measurement budget contract mismatch")
+    github = exact_keys(report["github"], {"job", "runAttempt", "runId", "sha"}, "pair GitHub provenance")
+    if github["job"] != "release_full_measurement_pair":
+        fail("pair measurement GitHub job identity mismatch")
+    for field in ("runAttempt", "runId"):
+        if not isinstance(github[field], str) or not github[field].isdigit() or github[field].startswith("0"):
+            fail("pair measurement GitHub run identity mismatch")
+    if github["sha"] != report["source"].get("gitCommit"):
+        fail("pair measurement source and GitHub revision mismatch")
+    validate_pair_runs(report["runs"], pair_index)
+    validate_cleanup(report["cleanupRecovery"], pair_index)
+    validate_cache_isolation(report["cacheIsolation"], pair_index, github)
+def validate_artifacts(
+    output: Path,
+    entries: Any,
+    *,
+    require_complete_tree: bool,
+    ignored_paths: Sequence[Path] = (),
+) -> dict[str, dict[str, Any]]:
+    if not isinstance(entries, list):
+        fail("measurement artifact inventory must be an array")
+    expected_paths = []
+    by_path: dict[str, dict[str, Any]] = {}
+    for index, entry in enumerate(entries):
+        artifact = exact_keys(entry, {"bytes", "path", "sha256"}, f"artifact {index}")
+        relative = PurePosixPath(artifact["path"])
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or relative.as_posix() != artifact["path"]
+            or artifact["path"] in by_path
+        ):
+            fail(f"measurement artifact path is not canonical or unique: {artifact['path']!r}")
+        path = output / relative
+        payload = path.read_bytes()
+        if len(payload) != artifact["bytes"] or sha256_bytes(payload) != artifact["sha256"]:
+            fail(f"measurement artifact identity mismatch: {artifact['path']}")
+        expected_paths.append(artifact["path"])
+        by_path[artifact["path"]] = artifact
+    if require_complete_tree:
+        ignored = {path.resolve() for path in ignored_paths}
+        actual_paths = [
+            safe_relative(path, output)
+            for path in sorted(output.rglob("*"))
+            if path.is_file() and path.resolve() not in ignored
+        ]
+        if expected_paths != actual_paths:
+            fail("measurement artifact inventory is incomplete")
+    return by_path
+
+
+def verify_pair(root: Path, output: Path, expected_pair: Optional[int] = None) -> dict[str, Any]:
+    report_path = output / "manifest.json"
+    report = load_json(report_path)
+    validate_pair_report(report, expected_pair)
+    if report["source"] != health_evidence.source_inventory(root):
+        fail("pair measurement source snapshot does not match the checkout")
+    if report["executionEnvironment"] != health_evidence.execution_environment("release-full"):
+        fail("pair measurement execution environment does not match the verifier")
+    by_path = validate_artifacts(
+        output,
+        report["artifacts"],
+        require_complete_tree=True,
+        ignored_paths=(report_path,),
+    )
+    for run in report["runs"]:
+        entry = by_path.get(run["profileReportArtifact"])
+        if entry is None or entry["sha256"] != run["profileReportSha256"]:
+            fail("pair run profile report is not bound to the artifact inventory")
+        profile = validate_profile_report(
+            output / run["profileReportArtifact"],
+            run["class"],
+            run["agentGpuProfile"],
+        )
+        if profile["elapsed_ms"] != run["profileElapsedMs"]:
+            fail("pair run profile elapsed time disagrees with its retained report")
+        if any(path not in by_path for path in run["logArtifacts"]):
+            fail("pair run logs are not bound to the artifact inventory")
+    return report
 
 
 def build_report(
@@ -823,6 +1055,7 @@ def build_report(
     pairs: int,
     cleanups: list[dict[str, Any]],
     targets: list[dict[str, Any]],
+    pair_workers: list[dict[str, Any]],
 ) -> dict[str, Any]:
     validate_run_set(runs, pairs)
     if len(cleanups) != pairs or any(row.get("ok") is not True for row in cleanups):
@@ -855,6 +1088,7 @@ def build_report(
         },
         "kind": KIND,
         "ok": True,
+        "pairWorkers": pair_workers,
         "pairs": pairs,
         "productReleaseQualified": False,
         "profileOperational": True,
@@ -874,8 +1108,8 @@ def validate_report(report: dict[str, Any]) -> None:
         {
             "artifacts", "budgets", "cleanupRecovery", "contentIdentitySha256",
             "executionEnvironment", "generatedAtUtc", "history", "kind", "ok",
-            "pairs", "productReleaseQualified", "profileOperational", "readinessStatus",
-            "runs", "source", "targetReadiness", "version",
+            "pairs", "pairWorkers", "productReleaseQualified", "profileOperational",
+            "readinessStatus", "runs", "source", "targetReadiness", "version",
         },
         "measurement report",
     )
@@ -909,20 +1143,38 @@ def validate_report(report: dict[str, Any]) -> None:
     if not isinstance(cleanups, list) or len(cleanups) != pairs:
         fail("measurement cleanup recovery is incomplete")
     for expected_pair, row in enumerate(cleanups, 1):
-        exact_keys(
-            row,
-            {"method", "ok", "pair", "recoveredBytes", "remainingBytes"},
-            "cleanup recovery",
-        )
+        validate_cleanup(row, expected_pair)
+    workers = report["pairWorkers"]
+    if not isinstance(workers, list) or len(workers) != pairs:
+        fail("measurement pair worker set is incomplete")
+    expected_execution_sha = sha256_bytes(canonical(report["executionEnvironment"]))
+    for expected_pair, row in enumerate(workers, 1):
+        worker = exact_keys(row, PAIR_WORKER_FIELDS, "pair worker")
+        expected_manifest = f"workers/pair-{expected_pair:02d}.json"
         if (
-            row["method"] != "owned-ephemeral-root-removal"
-            or row["ok"] is not True
-            or row["pair"] != expected_pair
-            or not isinstance(row["recoveredBytes"], int)
-            or row["recoveredBytes"] <= 0
-            or row["remainingBytes"] != 0
+            worker["pair"] != expected_pair
+            or worker["githubJob"] != "release_full_measurement_pair"
+            or worker["githubSha"] != report["source"].get("gitCommit")
+            or worker["workerManifestArtifact"] != expected_manifest
+            or not all(
+                is_sha256(worker[field])
+                for field in (
+                    "cacheIsolationIdentitySha256", "executionEnvironmentSha256",
+                    "workerContentIdentitySha256", "workerManifestSha256",
+                )
+            )
+            or worker["executionEnvironmentSha256"] != expected_execution_sha
         ):
-            fail("measurement cleanup recovery is incomplete")
+            fail("measurement pair worker identity mismatch")
+        for field in ("githubRunAttempt", "githubRunId"):
+            if not isinstance(worker[field], str) or not worker[field].isdigit() or worker[field].startswith("0"):
+                fail("measurement pair worker workflow identity mismatch")
+    if len({row["cacheIsolationIdentitySha256"] for row in workers}) != pairs:
+        fail("measurement pair workers reused a cache-isolation identity")
+    if len({row["githubRunId"] for row in workers}) != 1 or len(
+        {row["githubRunAttempt"] for row in workers}
+    ) != 1:
+        fail("measurement pair workers do not share one workflow run attempt")
     target_readiness = report["targetReadiness"]
     if not isinstance(target_readiness, list) or any(not isinstance(row, dict) for row in target_readiness):
         fail("measurement target readiness set must be an array of objects")
@@ -979,28 +1231,12 @@ def verify(root: Path, output: Path) -> None:
         fail("measurement source snapshot does not match the checkout")
     if report["executionEnvironment"] != health_evidence.execution_environment("release-full"):
         fail("measurement execution environment does not match the verifier")
-    entries = report["artifacts"]
-    if not isinstance(entries, list):
-        fail("measurement artifact inventory must be an array")
-    expected_paths = []
-    for index, entry in enumerate(entries):
-        exact_keys(entry, {"bytes", "path", "sha256"}, f"artifact {index}")
-        relative = PurePosixPath(entry["path"])
-        if relative.is_absolute() or ".." in relative.parts or relative.as_posix() != entry["path"]:
-            fail(f"measurement artifact path is not canonical: {entry['path']!r}")
-        path = output / relative
-        payload = path.read_bytes()
-        if len(payload) != entry["bytes"] or sha256_bytes(payload) != entry["sha256"]:
-            fail(f"measurement artifact identity mismatch: {entry['path']}")
-        expected_paths.append(entry["path"])
-    actual_paths = [
-        safe_relative(path, output)
-        for path in sorted(output.rglob("*"))
-        if path.is_file() and path != report_path
-    ]
-    if expected_paths != actual_paths:
-        fail("measurement artifact inventory is incomplete")
-    by_path = {row["path"]: row for row in entries}
+    by_path = validate_artifacts(
+        output,
+        report["artifacts"],
+        require_complete_tree=True,
+        ignored_paths=(report_path,),
+    )
     for run in report["runs"]:
         entry = by_path.get(run["profileReportArtifact"])
         if entry is None or entry["sha256"] != run["profileReportSha256"]:
@@ -1021,17 +1257,139 @@ def verify(root: Path, output: Path) -> None:
     target_paths = [output / row["reportArtifact"] for row in report["targetReadiness"]]
     if validate_target_reports(root, target_paths) != report["targetReadiness"]:
         fail("target readiness records disagree with retained reports")
+    for worker in report["pairWorkers"]:
+        manifest_entry = by_path.get(worker["workerManifestArtifact"])
+        if manifest_entry is None or manifest_entry["sha256"] != worker["workerManifestSha256"]:
+            fail("pair worker manifest is not bound to the artifact inventory")
+        pair_report = load_json(output / worker["workerManifestArtifact"])
+        validate_pair_report(pair_report, worker["pair"])
+        if (
+            pair_report["contentIdentitySha256"] != worker["workerContentIdentitySha256"]
+            or pair_report["cacheIsolation"]["identitySha256"]
+            != worker["cacheIsolationIdentitySha256"]
+            or sha256_bytes(canonical(pair_report["executionEnvironment"]))
+            != worker["executionEnvironmentSha256"]
+            or pair_report["source"] != report["source"]
+            or pair_report["executionEnvironment"] != report["executionEnvironment"]
+            or pair_report["runs"]
+            != report["runs"][(worker["pair"] - 1) * 2 : worker["pair"] * 2]
+            or pair_report["cleanupRecovery"] != report["cleanupRecovery"][worker["pair"] - 1]
+        ):
+            fail("pair worker evidence disagrees with the aggregate")
+        pair_artifacts = validate_artifacts(
+            output,
+            pair_report["artifacts"],
+            require_complete_tree=False,
+        )
+        if any(path not in by_path or by_path[path] != entry for path, entry in pair_artifacts.items()):
+            fail("pair worker artifact inventory disagrees with the aggregate")
+    target_run_id = report["targetReadiness"][0]["githubRunId"]
+    target_run_attempt = report["targetReadiness"][0]["githubRunAttempt"]
+    if any(
+        worker["githubRunId"] != target_run_id
+        or worker["githubRunAttempt"] != target_run_attempt
+        for worker in report["pairWorkers"]
+    ):
+        fail("pair workers and target readiness do not share one workflow run attempt")
     print(
         "release-full-measurement: verified "
         f"pairs={report['pairs']} identity={report['contentIdentitySha256']}"
     )
 
 
-def run(root: Path, output: Path, target_paths: Sequence[Path], pairs: int) -> None:
+def run_pair(
+    root: Path,
+    output: Path,
+    pair_index: int,
+) -> None:
     root = root.resolve(strict=True)
     output = output.resolve()
     if output.exists() and any(output.iterdir()):
-        fail("measurement output must start absent or empty")
+        fail("pair measurement output must start absent or empty")
+    output.mkdir(parents=True, exist_ok=True)
+    source_before = health_evidence.source_inventory(root)
+    execution = health_evidence.execution_environment("release-full")
+    github = github_provenance(source_before)
+    session_started = time.monotonic_ns()
+    runs: list[dict[str, Any]] = []
+    cache_nonce = sha256_bytes(os.urandom(32))
+    containment = Path(tempfile.gettempdir()) / (
+        f"genesis-release-pair-{pair_index:02d}-{cache_nonce}"
+    )
+    containment.mkdir(mode=0o700, parents=False, exist_ok=False)
+    cache_root = containment / "cargo-cache"
+    before = 0
+    try:
+        for run_class in ("cold", "warm"):
+            session_elapsed_ms = (time.monotonic_ns() - session_started) // 1_000_000
+            remaining_ms = SESSION_BUDGET_MS - session_elapsed_ms
+            if remaining_ms <= 0:
+                fail("release pair measurement exceeded its 50-minute execution envelope")
+            runs.append(
+                run_sample(
+                    root,
+                    containment,
+                    output,
+                    pair_index,
+                    run_class,
+                    cache_root,
+                    min(WALL_BUDGET_MS, remaining_ms),
+                )
+            )
+        before = allocated_bytes(containment)
+    finally:
+        shutil.rmtree(containment, ignore_errors=False)
+    remaining = allocated_bytes(containment)
+    cleanup = {
+        "method": "owned-ephemeral-root-removal",
+        "ok": remaining == 0,
+        "pair": pair_index,
+        "recoveredBytes": before,
+        "remainingBytes": remaining,
+    }
+    if source_before != health_evidence.source_inventory(root):
+        fail("semantic source changed during release pair measurement")
+    report = {
+        "artifacts": artifact_inventory(output),
+        "budgets": {
+            "maxArtifactBytes": ARTIFACT_BUDGET_BYTES,
+            "maxPairSessionMs": SESSION_BUDGET_MS,
+            "maxWallMs": WALL_BUDGET_MS,
+        },
+        "cacheIsolation": cache_isolation_record(pair_index, github, cache_nonce),
+        "cleanupRecovery": cleanup,
+        "contentIdentitySha256": "",
+        "executionEnvironment": execution,
+        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "github": github,
+        "kind": PAIR_KIND,
+        "ok": True,
+        "pair": pair_index,
+        "runs": runs,
+        "source": source_before,
+        "version": PAIR_VERSION,
+    }
+    report["contentIdentitySha256"] = identity(report)
+    (output / "manifest.json").write_bytes(json.dumps(report, indent=2, sort_keys=True).encode() + b"\n")
+    verify_pair(root, output, pair_index)
+    print(
+        "release-full-measurement: pair verified "
+        f"pair={pair_index} identity={report['contentIdentitySha256']}"
+    )
+
+
+def aggregate(
+    root: Path,
+    output: Path,
+    target_paths: Sequence[Path],
+    pair_outputs: Sequence[Path],
+) -> None:
+    root = root.resolve(strict=True)
+    output = output.resolve()
+    if output.exists() and any(output.iterdir()):
+        fail("measurement aggregate output must start absent or empty")
+    if not MIN_PAIRS <= len(pair_outputs) <= MAX_PAIRS:
+        fail("measurement aggregate requires two to five pair workers")
     output.mkdir(parents=True, exist_ok=True)
     targets = validate_target_reports(root, target_paths)
     target_dir = output / "target-readiness"
@@ -1040,46 +1398,62 @@ def run(root: Path, output: Path, target_paths: Sequence[Path], pairs: int) -> N
         doc = load_json(path)
         target = doc["targets"][0]["target"]
         copy_artifact(path, output, f"target-readiness/{target}.json")
-    source_before = health_evidence.source_inventory(root)
-    session_started = time.monotonic_ns()
-    runs = []
-    cleanups = []
-    for pair_index in range(1, pairs + 1):
-        containment = Path(tempfile.mkdtemp(prefix=f"genesis-release-pair-{pair_index:02d}."))
-        cache_root = containment / "cargo-cache"
-        try:
-            for run_class in ("cold", "warm"):
-                session_elapsed_ms = (time.monotonic_ns() - session_started) // 1_000_000
-                remaining_ms = SESSION_BUDGET_MS - session_elapsed_ms
-                if remaining_ms <= 0:
-                    fail("release measurement session exceeded its 50-minute execution envelope")
-                runs.append(
-                    run_sample(
-                        root,
-                        containment,
-                        output,
-                        pair_index,
-                        run_class,
-                        cache_root,
-                        min(WALL_BUDGET_MS, remaining_ms),
-                    )
-                )
-            before = allocated_bytes(containment)
-        finally:
-            shutil.rmtree(containment, ignore_errors=False)
-        remaining = allocated_bytes(containment)
-        cleanups.append(
+    pair_reports: list[tuple[Path, dict[str, Any]]] = []
+    for raw in pair_outputs:
+        pair_output = raw.resolve(strict=True)
+        report = verify_pair(root, pair_output)
+        pair_reports.append((pair_output, report))
+    pair_reports.sort(key=lambda item: item[1]["pair"])
+    expected_pairs = list(range(1, len(pair_reports) + 1))
+    if [report["pair"] for _, report in pair_reports] != expected_pairs:
+        fail("measurement aggregate pair coverage is incomplete or duplicated")
+    source = health_evidence.source_inventory(root)
+    execution = health_evidence.execution_environment("release-full")
+    runs: list[dict[str, Any]] = []
+    cleanups: list[dict[str, Any]] = []
+    pair_workers: list[dict[str, Any]] = []
+    for pair_output, report in pair_reports:
+        pair_index = report["pair"]
+        if (
+            report["source"] != source
+            or report["executionEnvironment"] != execution
+        ):
+            fail("measurement pair worker source or environment mismatch")
+        for artifact in report["artifacts"]:
+            relative = artifact["path"]
+            if (output / relative).exists():
+                fail(f"measurement pair workers produced a duplicate artifact: {relative}")
+            copied = copy_artifact(pair_output / relative, output, relative)
+            if copied != artifact:
+                fail("measurement pair worker artifact changed during aggregation")
+        worker_relative = f"workers/pair-{pair_index:02d}.json"
+        worker_artifact = copy_artifact(pair_output / "manifest.json", output, worker_relative)
+        github = report["github"]
+        pair_workers.append(
             {
-                "method": "owned-ephemeral-root-removal",
-                "ok": remaining == 0,
+                "cacheIsolationIdentitySha256": report["cacheIsolation"]["identitySha256"],
+                "executionEnvironmentSha256": sha256_bytes(canonical(report["executionEnvironment"])),
+                "githubJob": github["job"],
+                "githubRunAttempt": github["runAttempt"],
+                "githubRunId": github["runId"],
+                "githubSha": github["sha"],
                 "pair": pair_index,
-                "recoveredBytes": before,
-                "remainingBytes": remaining,
+                "workerContentIdentitySha256": report["contentIdentitySha256"],
+                "workerManifestArtifact": worker_relative,
+                "workerManifestSha256": worker_artifact["sha256"],
             }
         )
-    if source_before != health_evidence.source_inventory(root):
-        fail("semantic source changed during release measurement")
-    report = build_report(root, output, runs, pairs, cleanups, targets)
+        runs.extend(report["runs"])
+        cleanups.append(report["cleanupRecovery"])
+    report = build_report(
+        root,
+        output,
+        runs,
+        len(pair_reports),
+        cleanups,
+        targets,
+        pair_workers,
+    )
     (output / "manifest.json").write_bytes(json.dumps(report, indent=2, sort_keys=True).encode() + b"\n")
     verify(root, output)
 
@@ -1087,20 +1461,32 @@ def run(root: Path, output: Path, target_paths: Sequence[Path], pairs: int) -> N
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    run_parser = sub.add_parser("run")
-    run_parser.add_argument("--root", type=Path, required=True)
-    run_parser.add_argument("--output", type=Path, required=True)
-    run_parser.add_argument("--pairs", type=int, default=MIN_PAIRS)
-    run_parser.add_argument("--target-report", type=Path, action="append", required=True)
+    pair_parser = sub.add_parser("run-pair")
+    pair_parser.add_argument("--root", type=Path, required=True)
+    pair_parser.add_argument("--output", type=Path, required=True)
+    pair_parser.add_argument("--pair-index", type=int, required=True)
+    aggregate_parser = sub.add_parser("aggregate")
+    aggregate_parser.add_argument("--root", type=Path, required=True)
+    aggregate_parser.add_argument("--output", type=Path, required=True)
+    aggregate_parser.add_argument("--pair-output", type=Path, action="append", required=True)
+    aggregate_parser.add_argument("--target-report", type=Path, action="append", required=True)
+    pair_verify_parser = sub.add_parser("verify-pair")
+    pair_verify_parser.add_argument("--root", type=Path, required=True)
+    pair_verify_parser.add_argument("--output", type=Path, required=True)
+    pair_verify_parser.add_argument("--pair-index", type=int)
     verify_parser = sub.add_parser("verify")
     verify_parser.add_argument("--root", type=Path, required=True)
     verify_parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "run":
-            if args.pairs < MIN_PAIRS or args.pairs > MAX_PAIRS:
-                fail(f"--pairs must be between {MIN_PAIRS} and {MAX_PAIRS}")
-            run(args.root, args.output, args.target_report, args.pairs)
+        if args.command == "run-pair":
+            if not 1 <= args.pair_index <= MAX_PAIRS:
+                fail(f"--pair-index must be between 1 and {MAX_PAIRS}")
+            run_pair(args.root, args.output, args.pair_index)
+        elif args.command == "aggregate":
+            aggregate(args.root, args.output, args.target_report, args.pair_output)
+        elif args.command == "verify-pair":
+            verify_pair(args.root.resolve(strict=True), args.output.resolve(strict=True), args.pair_index)
         else:
             verify(args.root.resolve(strict=True), args.output.resolve(strict=True))
     except (MeasurementError, OSError, subprocess.SubprocessError) as exc:

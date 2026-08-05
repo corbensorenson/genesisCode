@@ -14,6 +14,7 @@
     "history",
     "kind",
     "ok",
+    "pairWorkers",
     "pairs",
     "productReleaseQualified",
     "profileOperational",
@@ -81,6 +82,12 @@
     },
     "kind": { "const": "genesis/release-full-measurement-v0.1" },
     "ok": { "const": true },
+    "pairWorkers": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/pairWorker" }
+    },
     "pairs": { "type": "integer", "minimum": 2, "maximum": 5 },
     "productReleaseQualified": { "const": false },
     "profileOperational": { "const": true },
@@ -117,6 +124,34 @@
   },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "pairWorker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cacheIsolationIdentitySha256",
+        "executionEnvironmentSha256",
+        "githubJob",
+        "githubRunAttempt",
+        "githubRunId",
+        "githubSha",
+        "pair",
+        "workerContentIdentitySha256",
+        "workerManifestArtifact",
+        "workerManifestSha256"
+      ],
+      "properties": {
+        "cacheIsolationIdentitySha256": { "$ref": "#/$defs/sha256" },
+        "executionEnvironmentSha256": { "$ref": "#/$defs/sha256" },
+        "githubJob": { "const": "release_full_measurement_pair" },
+        "githubRunAttempt": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "githubRunId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "githubSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "pair": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "workerContentIdentitySha256": { "$ref": "#/$defs/sha256" },
+        "workerManifestArtifact": { "type": "string", "pattern": "^workers/pair-[0-9]{2}\\.json$" },
+        "workerManifestSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
     "artifact": {
       "type": "object",
       "additionalProperties": false,

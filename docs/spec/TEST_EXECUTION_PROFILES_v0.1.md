@@ -291,31 +291,43 @@ Strict/full profile runtime reports:
     - native/WASI gauntlets, generative parity, GPU/XR aggregation, host-bridge fault injection, and runtime-backend compilation execute once per profile rather than once per consumer.
   - GB-4 qualification is measured only by `scripts/measure_release_full_profile.sh` and
     `scripts/lib/release_full_measurement.py`, under the closed
-    `docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json` contract:
+    `docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json` worker and
+    `docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json` aggregate contracts:
     - the retained manifest kind is `genesis/release-full-measurement-v0.1`;
-    - two to five ordered pairs each run a genuinely cold profile against a new, empty,
-      external Cargo/cache root and then a warm profile against the same root;
-      result caching remains disabled, so every gate executes in both classes;
+    - two to five independently scheduled pair workers each run a genuinely cold profile
+      against a new, empty, external Cargo/cache root and then a warm profile against the
+      same root; result caching remains disabled, so every gate executes in both classes;
+    - each worker emits only a closed observation manifest. It binds exact source,
+      execution environment, workflow run/attempt/job, ordered run
+      pair, artifact inventory, owned-root cleanup, and an opaque nonce-bound cache-isolation
+      identity. The nonce is selected before execution and names the exclusively created
+      owned root, so retained identities cannot be invented after cleanup. Worker
+      observations cannot authorize the final result;
     - every run retains its profile report and logs, samples process-tree peak RSS and
       non-overlapping artifact roots, and enforces the GB-4 `2700000ms` and
       `21474836480`-byte ceilings;
-    - the paired producer has a separate 50-minute session deadline inside a 55-minute
-      CI job envelope, leaving bounded termination, reaping, diagnostic retention, and
-      upload time before the independent 60-minute full-run watchdog; no orchestration
-      timeout may preempt the 45-minute per-profile ceiling without a typed failure;
-    - the manifest derives cold and warm p95 wall, peak-RSS, and artifact values from the
-      retained runs, proves complete owned-cache reclamation after each pair, and rejects
-      incomplete histories, cache-class or GPU-profile relabeling between the parent sample
-      and retained profile report, artifact tampering, or a false success after
-      `unsupported-product`;
+    - every pair worker has a separate 50-minute session deadline inside a 55-minute job
+      envelope. A read-only five-minute aggregate runs after all workers, validates and
+      copies their complete artifacts, and leaves diagnostic publication time before the
+      independent 60-minute full-run watchdog; no orchestration timeout may preempt the
+      45-minute per-profile ceiling without a typed failure;
+    - the aggregate requires ordered complete pair coverage, distinct cache-isolation
+      identities, one workflow run/attempt, exact source/environment/target agreement,
+      byte-exact worker manifests and artifact inventories, and complete cleanup. It derives
+      cold and warm p95 wall, peak-RSS, and artifact values from the retained runs and rejects
+      missing/duplicate workers, cache reuse, cache-class or GPU-profile relabeling, artifact
+      tampering, or a false success after `unsupported-product`;
     - the producer requires one CI-provenanced report from every named target shard, with
       the exact runner label, complete reference shard, product-matrix limitation, build and
       runtime-log identities, source commit, and shared workflow run attempt. Those expected blockers keep
       `productReleaseQualified = false`, `profileOperational = true`, and
       `readinessStatus = unsupported-product`; they prove profile operation and readiness
       classification, not product support;
-    - scheduled and manually dispatched full CI run this paired lane once on `ubuntu-24.04`;
-      the separate iOS readiness shard remains on `macos-15`.
+    - scheduled and manually dispatched full CI start pair indices 1 and 2 concurrently with
+      the named-target shards. The isolated pair workers run on `ubuntu-24.04`, the iOS
+      readiness shard remains on `macos-15`, and the aggregate joins both branches on
+      `ubuntu-24.04`. The required `test` disposition binds the
+      aggregate result for full runs and accepts only `skipped|success` outside full runs.
       The generic ignored-perf lane excludes `upgrade_plan_health`, preventing nested
       duplicate execution while retaining every other required perf target.
 
@@ -491,7 +503,8 @@ is not reference evidence.
   `releaseQualified = false`.
 - The full-profile dependency graph also enforces the 3,600-second ceiling rather
   than relying on observation alone. Named-target preparation is limited to 20
-  minutes and its dependent release measurement to 40; the full test and local
+  minutes in parallel with each 55-minute release pair, followed by a 5-minute aggregate;
+  the full test and local
   workspace lanes are limited to 55 minutes with a 5-minute aggregate; hosted
   and selected self-hosted GPU paths use a 5-minute preflight, 50-minute lane,
   and 5-minute aggregate. Independent branches such as WebXR have shorter
