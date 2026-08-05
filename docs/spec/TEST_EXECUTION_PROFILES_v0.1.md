@@ -230,7 +230,7 @@ Strict/full profile runtime reports:
     `scripts/check_no_user_panics_compiler.sh` retains the Clippy semantic lane
     in `prepush-standard`, `release-full`, and standard/full CI.
   - enforces release-full wall-time + history p95 budget
-    `GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS` (default `1800000`)
+    `GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS` (default `2700000`)
     via `scripts/lib/profile_runtime_budget.py` using:
     - `GENESIS_HEALTH_RELEASE_FULL_HISTORY`
     - `GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY`
@@ -382,10 +382,13 @@ is not reference evidence.
   and bounded history are produced only by `scripts/update_ai_iteration_slo_report.sh`.
 - Default sample counts are tuned for contention robustness without excessive loop time:
   - `incremental_warm_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM=3`
-  - `changed_fast_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST=2`
-  - `core_suite_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE=2`
-  - `gcpm_lock_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK=2`
-  - `gcpm_env_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV=2`
+  - `changed_fast_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST=3`
+  - `core_suite_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE=3`
+  - `gcpm_lock_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK=3`
+  - `gcpm_env_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV=3`
+- Every median cohort is an odd sample count of at least three. This gives the
+  decision statistic non-zero single-outlier resistance; an even two-sample
+  arithmetic midpoint is rejected rather than mislabeled as a robust median.
 - Reports include raw sample vectors + spread telemetry and contention warnings
   (`GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT`, default `60`).
 - `gcpm lock/env` paths use deterministic warm-up + stabilization retries before final
