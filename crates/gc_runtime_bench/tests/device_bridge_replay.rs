@@ -71,17 +71,42 @@ prog
     )
     .expect("run with device bridge");
 
-    let Value::Data(Term::Map(run_map)) = &run_out.value else {
-        panic!("device bridge result must be data map");
-    };
-    assert_eq!(
-        run_map.get(&TermOrdKey(Term::symbol(":backend"))),
-        Some(&Term::Str("device-runtime".to_string()))
-    );
-    assert_eq!(
-        run_map.get(&TermOrdKey(Term::symbol(":ok"))),
-        Some(&Term::Bool(true))
-    );
+    match &run_out.value {
+        Value::Data(run_data) => {
+            let Term::Map(run_map) = run_data.as_ref() else {
+                panic!("device bridge result must be data map");
+            };
+            assert_eq!(
+                run_map.get(&TermOrdKey(Term::symbol(":backend"))),
+                Some(&Term::Str("device-runtime".to_string()))
+            );
+            assert_eq!(
+                run_map.get(&TermOrdKey(Term::symbol(":ok"))),
+                Some(&Term::Bool(true))
+            );
+            let Some(Term::Str(adapter)) = run_map.get(&TermOrdKey(Term::symbol(":adapter")))
+            else {
+                panic!("device bridge result must identify its adapter");
+            };
+            assert!(
+                !adapter.trim().is_empty(),
+                "adapter identity must be non-empty"
+            );
+        }
+        Value::Sealed { payload, .. } => {
+            let Value::Data(error_data) = payload.as_ref() else {
+                panic!("device bridge sealed error must contain data");
+            };
+            let Term::Map(error_map) = error_data.as_ref() else {
+                panic!("device bridge sealed error must contain a map");
+            };
+            assert_eq!(
+                error_map.get(&TermOrdKey(Term::symbol(":error/code"))),
+                Some(&Term::Str("gpu/bridge-exit".to_string()))
+            );
+        }
+        other => panic!("unexpected device bridge result: {}", other.debug_repr()),
+    }
 
     let mut ctx_replay = EvalCtx::new();
     let (program_replay, _) = parse_and_eval(&mut ctx_replay, src);

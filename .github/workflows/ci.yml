@@ -274,12 +274,17 @@ jobs:
 
   test_suite:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) && 55 || 120 }}
+    timeout-minutes: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) && 45 || 120 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) && '["governance","runtime","platform"]' || '["standard"]') }}
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       # GitHub-hosted CPU runners must select the reviewed fallback profile explicitly.
       GENESIS_AGENT_GPU_PROFILE: "agent-gpu-fallback"
       GENESIS_CI_PROFILE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'workflow_dispatch' && github.event.inputs.profile || github.event_name == 'pull_request' && 'standard' || 'fast' }}
+      GENESIS_CI_LANE: ${{ matrix.lane }}
       GENESIS_TEST_SHARDS_TOTAL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_shards_total || '1' }}
       GENESIS_TEST_SHARD_INDEX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_shard_index || '0' }}
     steps:
@@ -298,6 +303,19 @@ jobs:
               ;;
           esac
           echo "CI profile: ${GENESIS_CI_PROFILE}"
+          if [[ "${GENESIS_CI_PROFILE}" == "full" ]]; then
+            case "${GENESIS_CI_LANE}" in
+              governance|runtime|platform) ;;
+              *)
+                echo "full CI requires governance, runtime, or platform lane; got ${GENESIS_CI_LANE}"
+                exit 1
+                ;;
+            esac
+          elif [[ "${GENESIS_CI_LANE}" != "standard" ]]; then
+            echo "non-full CI requires standard lane; got ${GENESIS_CI_LANE}"
+            exit 1
+          fi
+          echo "CI lane: ${GENESIS_CI_LANE}"
           [[ "${GENESIS_TEST_SHARDS_TOTAL}" =~ ^[0-9]+$ ]] || {
             echo "GENESIS_TEST_SHARDS_TOTAL must be numeric"
             exit 1
@@ -359,29 +377,37 @@ jobs:
           cargo fetch --manifest-path tools/genesis-evidence-verifier/Cargo.toml --locked
 
       - name: Prerequisite Manifest Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_prerequisite_manifest.sh
 
       - name: Reference Host Profile Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_reference_host_profiles.sh
 
       - name: Roadmap Workload Normalization Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_roadmap_workloads.sh
 
       - name: Signed Roadmap Baseline Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_roadmap_baseline.sh
 
       - name: Dependency Mirror Contract Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_dependency_mirror_contract.sh
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Format
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: cargo fmt --all -- --check
 
       - name: Selfhost Boundary Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_selfhost_boundary.sh --strict
 
       - name: Rust Bootstrap Retirement Gate
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: |
           STRICT_RELEASE=1
           if [[ "${GENESIS_CI_PROFILE}" == "fast" ]]; then
@@ -391,163 +417,207 @@ jobs:
             bash scripts/check_bootstrap_retirement_gate.sh
 
       - name: Host ABI Conformance Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_host_abi_conformance.sh
 
       - name: Runner High-Level Op Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_runner_high_level_op_guard.sh
 
       - name: Prelude Capability Coverage Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_prelude_capability_coverage.sh
 
       - name: Foundation Stdlib Conformance Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_foundation_stdlib_conformance.sh
 
       - name: Capability Indices Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_capability_indices.sh
 
       - name: Generated Artifact Policy Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_generated_artifact_policy.sh
 
       - name: Genesis Evidence Profile Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_genesis_evidence_profile.sh
 
       - name: Genesis Evidence Verifier Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_genesis_evidence_verifier.sh
 
       - name: Evidence Adversarial Matrix Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_evidence_adversarial_matrix.sh
 
       - name: Evidence Storage Classes Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_evidence_storage_classes.sh
 
       - name: Check Update Boundary Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_check_update_boundary.sh
 
       - name: Gate Resource Telemetry Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gate_resource_telemetry.sh
 
       - name: Deterministic Cleanup Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_deterministic_cleanup.sh
 
       - name: Gate Manifest Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gate_manifest.sh
 
       - name: Engineering Gate Budget Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_engineering_gate_contract.sh
 
       - name: Generated Release Notes Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_release_notes.sh
 
       - name: Versioning Release Hygiene Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_versioning_release_hygiene.sh
 
       - name: Version Surfaces Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_version_surfaces.sh
 
       - name: V1 Compatibility Registry Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_v1_compatibility.sh
 
       - name: Supply Chain Guard
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_supply_chain.sh
 
       - name: Release Smoke Gate
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_release_smoke.sh
 
       - name: Assurance Profile Pack Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_assurance_profile_packs.sh
 
       - name: Agent Authoring Bundle Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_agent_authoring_bundle.sh
 
       - name: GC Agent Profile Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gc_agent_profile.sh
 
       - name: GC Agent Core Card Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gc_agent_core_card.sh
 
       - name: GC Agent Task Cards Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gc_agent_task_cards.sh
 
       - name: GC Agent Symbol Index Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gc_agent_symbol_index.sh
 
       - name: GenesisCode Authoring Skill Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_genesiscode_authoring_skill.sh
 
       - name: Domain Kit Workflow Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_domain_kit_workflows.sh
 
       - name: Backend Starter Workflow Evidence
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/update_backend_starter_workflows_report.sh
 
       - name: Domain Starter Registry Bootstrap Evidence
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/update_domain_starter_registry_bootstrap_report.sh
 
       - name: Selfhost Refactor Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_selfhost_refactor_guard.sh
 
       - name: Selfhost Dashboard Freshness Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_selfhost_dashboard_fresh.sh
 
       - name: Red-Team Report Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_redteam_report.sh
 
       - name: User-Path Panic Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_no_user_panics.sh
 
       - name: User-Path Panic Compiler Assurance
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_no_user_panics_compiler.sh
 
       - name: Rust Engine Compatibility Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_rust_engine_compat.sh
 
       - name: Production CLI Parse Surface Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_production_cli_parse_surface.sh
 
       - name: Production CLI Help Surface Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_production_cli_help_surface.sh
 
       - name: CLI Diagnostics Contract Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_cli_diagnostics_contract.sh
 
       - name: Fuzz + Differential Hardening Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_fuzz_differential_hardening.sh
 
       - name: Test Execution Profile Matrix Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_test_execution_profile_matrix.sh
 
       - name: Changed Impact Contract Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_changed_impact.sh
 
       - name: Docs Quickstart Gate
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_docs_quickstart.sh
 
       - name: GPU Conformance Lane Matrix Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gpu_conformance_lane_matrix.sh
 
       - name: Source Size Budget Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_source_size_budget.sh
 
       - name: GC Source Size Budget Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_gc_source_size_budget.sh
 
       - name: Test Size Budget Guard
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_test_size_budget.sh
 
       - name: Clippy
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'runtime') }}
         run: cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 
       - name: Runtime Backend Feature Matrix Guard
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'runtime') }}
         run: bash scripts/update_runtime_backend_feature_matrix_report.sh
 
       - name: Test
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'runtime') }}
         run: |
           source scripts/lib/cargo_target_dir.sh
           genesis_configure_cargo_target_dir "$PWD" "workspace-test" root-host
@@ -569,7 +639,7 @@ jobs:
           fi
 
       - name: Changed-File Fast Loop Budget
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'runtime') }}
         run: |
           BASE=""
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -590,21 +660,21 @@ jobs:
           fi
 
       - name: Install Node (Release Evidence + WASM)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install JS Deps (Playwright Release Evidence)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
 
       - name: Install Playwright Chromium (Release Evidence)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: npx playwright install --with-deps chromium
 
       - name: Ignored Perf Gate Regression Tests
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
             GENESIS_HEALTH_PROFILE=release-full \
@@ -618,7 +688,7 @@ jobs:
           fi
 
       - name: Upload Test Shard Artifacts
-        if: ${{ always() && env.GENESIS_TEST_SHARDS_TOTAL != '1' }}
+        if: ${{ (always() && env.GENESIS_TEST_SHARDS_TOTAL != '1') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'runtime') }}
         uses: actions/upload-artifact@v4
         with:
           name: test-shard-${{ env.GENESIS_TEST_SHARD_INDEX }}-of-${{ env.GENESIS_TEST_SHARDS_TOTAL }}
@@ -626,11 +696,11 @@ jobs:
           if-no-files-found: error
 
       - name: Performance Budgets
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_perf_budgets_report.sh
 
       - name: AI Iteration SLO
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
             bash scripts/update_ai_iteration_slo_report.sh
@@ -641,31 +711,31 @@ jobs:
           fi
 
       - name: AI Stress Suite (Tasks + Bridge + GPU/Compute)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_ai_stress_suite_report.sh
 
       - name: Hot Path Budgets
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_hot_path_budgets_report.sh
 
       - name: Runtime Microbench Budgets
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_runtime_microbench_budgets_report.sh
 
       - name: Runtime Workload Budgets
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_runtime_workload_budgets_report.sh
 
       - name: GPU Compute Runtime Profile (Compute-Only)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_gpu_compute_runtime_profile_report.sh
 
       - name: Selfhost Strict Smoke (Native + WASI CLI)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/selfhost_strict_smoke.sh
 
       - name: Agent Capability Gauntlet (Selfhost-Only)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           bash scripts/update_agent_reference_workflows_report.sh
           if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
@@ -673,11 +743,11 @@ jobs:
           fi
 
       - name: Agent End-to-End Scenario Perf Gate
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_agent_scenario_perf_report.sh
 
       - name: Agent Generative Workload Gate
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
             GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_native_report.json \
@@ -691,7 +761,7 @@ jobs:
           fi
 
       - name: Upload Perf Trend Artifacts
-        if: ${{ always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') }}
+        if: ${{ (always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full')) && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         uses: actions/upload-artifact@v4
         with:
           name: perf-trend-artifacts
@@ -701,60 +771,60 @@ jobs:
           if-no-files-found: warn
 
       - name: Selfhost Strict Golden (Native + WASI CLI)
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/selfhost_strict_golden.sh
 
       - name: WASM Build (Pure Kernel)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           source scripts/lib/cargo_target_dir.sh
           genesis_configure_cargo_target_dir "$PWD" ci-wasm-build root-wasm
           cargo build -p gc_wasm --target wasm32-unknown-unknown
 
       - name: Prepare Content-Addressed Dependency Mirror
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           mirror="$(bash scripts/update_dependency_mirror.sh --format path)"
           echo "GENESIS_DEPENDENCY_MIRROR=${mirror}" >> "$GITHUB_ENV"
 
       - name: Clean Offline Build With Hard Network Denial
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/test_offline_dependency_mirror.sh --mirror "$GENESIS_DEPENDENCY_MIRROR"
 
       - name: Install wasm-bindgen-cli
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
 
       - name: WASM Bindings (Node) + Smoke Test
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           wasm_js_path="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)"
           node scripts/wasm_node_smoke.mjs "$wasm_js_path"
 
       - name: WASM Cross-Host Determinism (Native vs Node)
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           wasm_js_path="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)"
           node scripts/wasm_cross_host_determinism.mjs "$wasm_js_path"
 
       - name: Full Cross-Host Runtime Budget Gate
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_full_cross_host_profile_budget_report.sh
 
       - name: WASM Bindings (Web) + Headless Browser Smoke
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           bash scripts/wasm_bindgen_web.sh >/dev/null
           node scripts/wasm_web_smoke.mjs
 
       - name: Install wasmtime
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         uses: bytecodealliance/actions/wasmtime/setup@v1
         with:
           version: 36.0.9
 
       - name: WASI Build + Smoke (genesis_wasi.wasm)
-        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
           bash scripts/install_wasi_sdk.sh --version
           source scripts/lib/cargo_target_dir.sh
@@ -771,7 +841,7 @@ jobs:
   local_workspace_test_contract:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile != 'fast') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 45
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
     steps:
@@ -905,7 +975,7 @@ jobs:
     if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.primary_linux_dispatch == 'true' }}
     needs: gpu_runner_preflight
     runs-on: [self-hosted, linux, x64, gpu]
-    timeout-minutes: 50
+    timeout-minutes: 45
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -948,7 +1018,7 @@ jobs:
   gpu_device_microbench_deterministic:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 45
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance_deterministic"
@@ -1072,7 +1142,7 @@ jobs:
     if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.nvidia_linux_dispatch == 'true' }}
     needs: gpu_runner_preflight
     runs-on: [self-hosted, linux, x64, gpu, nvidia]
-    timeout-minutes: 50
+    timeout-minutes: 45
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -1111,7 +1181,7 @@ jobs:
     if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.amd_linux_dispatch == 'true' }}
     needs: gpu_runner_preflight
     runs-on: [self-hosted, linux, x64, gpu, amd]
-    timeout-minutes: 50
+    timeout-minutes: 45
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -1150,7 +1220,7 @@ jobs:
     if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.intel_windows_dispatch == 'true' }}
     needs: gpu_runner_preflight
     runs-on: [self-hosted, windows, x64, gpu, intel]
-    timeout-minutes: 50
+    timeout-minutes: 45
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -1190,7 +1260,7 @@ jobs:
     if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.apple_macos_dispatch == 'true' }}
     needs: gpu_runner_preflight
     runs-on: [self-hosted, macOS, arm64, gpu, apple]
-    timeout-minutes: 50
+    timeout-minutes: 45
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"

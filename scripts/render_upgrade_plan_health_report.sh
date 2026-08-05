@@ -1059,7 +1059,14 @@ if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "agent-inner-loop" && "$PROFILE"
 fi
 if [[ -z "${GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE+x}" ]]; then
   if [[ "$PROFILE" == "release-full" ]]; then
-    GPU_DEVICE_CONFORMANCE="1"
+    # The fallback profile is for hosted CPU runners. Authentic device evidence is
+    # produced by the separately selected self-hosted GPU lanes, never synthesized
+    # inside the paired release measurement.
+    if [[ "$AGENT_GPU_PROFILE" == "agent-gpu-fallback" ]]; then
+      GPU_DEVICE_CONFORMANCE="0"
+    else
+      GPU_DEVICE_CONFORMANCE="1"
+    fi
   else
     GPU_DEVICE_CONFORMANCE="0"
   fi
@@ -1098,6 +1105,7 @@ if [[ "$GPU_DEVICE_CONFORMANCE" != "0" && "$GPU_DEVICE_CONFORMANCE" != "1" ]]; t
   echo "upgrade-plan-health: GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE must be 0 or 1" >&2
   exit 2
 fi
+echo "upgrade-plan-health: gpu device conformance selection=$GPU_DEVICE_CONFORMANCE (profile=$PROFILE agent_gpu_profile=${AGENT_GPU_PROFILE:-none})"
 genesis_apply_agent_gpu_profile_contract "$PROFILE" "$AGENT_AUTOMATION_CONTEXT"
 if [[ -n "$AGENT_GPU_PROFILE" ]]; then
   echo "upgrade-plan-health: agent gpu profile selection=$AGENT_GPU_PROFILE"
