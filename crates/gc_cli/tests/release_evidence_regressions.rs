@@ -117,6 +117,12 @@ fn release_profile_uses_one_closed_bundle_without_duplicate_derived_workloads() 
     let root = repo_root();
     let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
         .expect("read release health runner");
+    let bundle = fs::read_to_string(root.join("scripts/render_health_profile_evidence_bundle.sh"))
+        .expect("read release evidence bundle");
+    let parity =
+        fs::read_to_string(root.join("scripts/render_agent_workflow_runtime_parity_report.sh"))
+            .expect("read parity renderer");
+    let web = fs::read_to_string(root.join("scripts/wasm_web_smoke.mjs")).expect("read Web smoke");
     let helper = fs::read_to_string(root.join("scripts/lib/health_profile_evidence.py"))
         .expect("read evidence helper");
     for marker in [
@@ -149,6 +155,50 @@ fn release_profile_uses_one_closed_bundle_without_duplicate_derived_workloads() 
             "closed manifest marker missing: {marker}"
         );
     }
+    for marker in [
+        "GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=\"$PROFILE\"",
+        "GENESIS_AGENT_PARITY_REUSE_REPORTS=0",
+        "GENESIS_AGENT_PARITY_REUSE_NATIVE_REPORT=1",
+        "\"$NATIVE_REPORT\" \\",
+        "\"$NATIVE_HISTORY\" \\",
+        "\"$GAUNTLET_REPORT\" \\",
+        "\"$GAUNTLET_HISTORY\" \\",
+        "\"$WASI_REPORT\" \\",
+        "\"$WASI_HISTORY\" \\",
+    ] {
+        assert!(
+            bundle.contains(marker),
+            "missing exact native reuse: {marker}"
+        );
+    }
+    for marker in [
+        "lane_source=\"reused-native-report\"",
+        "reusing native gauntlet and running WASI lane",
+        "native-report:runtime_profile=",
+        "native report reuse failed",
+    ] {
+        assert!(parity.contains(marker), "missing parity guard: {marker}");
+    }
+    assert!(
+        web.contains("process.env.CARGO_TARGET_DIR ?? path.join(rootDir, \"target\")")
+            && web.contains("path.join(cargoTargetDir, \"wasm-bindgen-web\", \"gc_wasm\")"),
+        "Web bindings must resolve from the configured Cargo target directory"
+    );
+    assert!(
+        bundle.contains("GENESIS_HOST_BRIDGE_FAULT_RUNS=\"$([[ \"$PROFILE\" == \"release-full\" ]] && echo 3 || echo 1)\"")
+            && health.contains("GENESIS_TASK_STRESS_RUNS=3")
+            && health.contains("GENESIS_TASK_STRESS_SUITE_BUDGET_MS=240000"),
+        "each release pair must retain an odd three-run stress cohort"
+    );
+    assert!(
+        bundle.contains(
+            "RUNTIME_BACKEND_BUDGET_MS=360000\nif [[ \"$PROFILE\" == \"release-full\" ]]; then"
+        ) && bundle.contains("RUNTIME_BACKEND_BUDGET_MS=600000\nfi")
+            && bundle.contains(
+                "GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS=\"$RUNTIME_BACKEND_BUDGET_MS\""
+            ),
+        "the cold release matrix must use its 600s sub-budget without relaxing prepush"
+    );
 }
 
 fn resign_manifest(root: &Path, manifest: &Path, mutation: &str) {

@@ -527,6 +527,24 @@ def stage_environment(marker: str) -> dict[str, str]:
     return environment
 
 
+def next_check_position(
+    pending: Sequence[tuple[int, str, int, bool]],
+    active_compilation_lanes: Sequence[bool],
+) -> Optional[int]:
+    if not pending:
+        return None
+    lanes = set(active_compilation_lanes)
+    require(len(lanes) <= 1, "generated checks mixed static and compilation lanes")
+    lane = next(iter(lanes)) if lanes else pending[0][3]
+    limit = COMPILATION_CHECK_WORKERS if lane else CHECK_WORKERS
+    if len(active_compilation_lanes) >= limit:
+        return None
+    return next(
+        (position for position, item in enumerate(pending) if item[3] == lane),
+        None,
+    )
+
+
 def run_node(stage: Path, node: Mapping[str, Any]) -> None:
     before = content_snapshot(stage)
     command = list(node["command"])
@@ -583,13 +601,9 @@ def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
         log_root = Path(temporary)
         while pending or active:
             while pending and len(active) < CHECK_WORKERS:
-                active_compilation = sum(1 for item in active.values() if item[2])
-                next_pending = next(
-                    (
-                        position for position, item in enumerate(pending)
-                        if not item[3] or active_compilation < COMPILATION_CHECK_WORKERS
-                    ),
-                    None,
+                next_pending = next_check_position(
+                    pending,
+                    [item[2] for item in active.values()],
                 )
                 if next_pending is None:
                     break
@@ -822,6 +836,17 @@ def synthetic_graph(root: Path, graph: Mapping[str, Any], mutation: callable) ->
 
 def self_test(root: Path, graph: Mapping[str, Any]) -> None:
     controls = 0
+
+    static = (0, "scripts/static.sh", 1, False)
+    compilation = (1, "scripts/compilation.sh", 1, True)
+    require(
+        next_check_position([static, compilation], []) == 0
+        and next_check_position([compilation], [False]) is None
+        and next_check_position([static], [True]) is None
+        and next_check_position([compilation], [True]) is None,
+        "generated check scheduler allowed mixed lanes or multiple compilers",
+    )
+    controls += 1
 
     staged_names = (*STAGE_SCOPED_ENVIRONMENT, *STAGE_BUILD_ENVIRONMENT)
     saved_stage_values = {name: os.environ.get(name) for name in staged_names}
@@ -1066,7 +1091,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 20, "generated-authority self-test inventory drift")
+    require(controls == 21, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 
