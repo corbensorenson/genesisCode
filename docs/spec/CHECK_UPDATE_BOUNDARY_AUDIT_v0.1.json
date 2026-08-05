@@ -291,14 +291,14 @@
         },
         {
           "path": "scripts/render_agent_workflow_runtime_parity_report.sh",
-          "sha256": "a652dc3184fd5a0021b88f7f2d21adb25172f44dbaa6750d94f5d78b48f6db13"
+          "sha256": "fbc6c27c95b622fd74c3577933078c271e2042c42dafa0789480387f757c45d3"
         }
       ],
       "execution_helper_invocations": [
         "scripts/lib/health_profile_evidence.sh",
         "scripts/render_agent_workflow_runtime_parity_report.sh"
       ],
-      "execution_identity_sha256": "b6c30174236151191a76946a7cef6fa3b651dfdfcd8a6761121fed880c44eebe",
+      "execution_identity_sha256": "40576239afd82ec6bc6364a51c3cc0e287c823662e2f53bec8254bebad0a7124",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5559,7 +5559,7 @@
       "execution_helper_invocations": [
         "scripts/test_prepare_release_target_reference.sh"
       ],
-      "execution_identity_sha256": "f25833a6f8e9ecbb833d37d1a35021b54a0291cf4ca3219146adf7b0e2808da1",
+      "execution_identity_sha256": "710a27b4feebd23a536315898f43daba9ca5e4158329ceb1040ffbfa092b7441",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5570,7 +5570,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "95f598d48f53dea66b5e3bddda78b95b77017efb36074e5ed3d6ead5e34f646e",
+      "sha256": "06bfa0df9635de49c17617597fe856e97d69957a7e1d069c15a2a5d9d6b448ec",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -5813,7 +5813,7 @@
         },
         {
           "path": "scripts/render_agent_workflow_runtime_parity_report.sh",
-          "sha256": "a652dc3184fd5a0021b88f7f2d21adb25172f44dbaa6750d94f5d78b48f6db13"
+          "sha256": "fbc6c27c95b622fd74c3577933078c271e2042c42dafa0789480387f757c45d3"
         },
         {
           "path": "scripts/render_assurance_profile_packs_report.sh",
@@ -5833,7 +5833,7 @@
         },
         {
           "path": "scripts/render_health_profile_evidence_bundle.sh",
-          "sha256": "c4719640486fbf28b49408eb9a652776a71e2e662b240a8cadfc72054b9132d8"
+          "sha256": "aab9773eedc7f5bcc157fe78abd3ab35a947f9f7904e63ebc45d5f9036cf9f74"
         },
         {
           "path": "scripts/render_host_bridge_fault_injection_report.sh",
@@ -5849,7 +5849,7 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "9e54de933806fcb1fcd72f16fd2647cc9e605937d973ebe1f06ee392b9fa7ff0"
+          "sha256": "d84cc96a1a1be0a62ba9294474e207e3a714bb0aff14717cba43296777722227"
         },
         {
           "path": "scripts/render_webxr_browser_conformance_report.sh",
@@ -5867,7 +5867,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "40deb0f3232184e0a4ee838baa2adfb072340cf9a3a35aad697de54773ff3090",
+      "execution_identity_sha256": "88a2cf3811b1de1d3d2563c6150d975073f596b42349af19141d96d0357f5669",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],

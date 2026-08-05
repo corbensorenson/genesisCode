@@ -63,6 +63,7 @@ LARGE_WORKSPACE_UPDATE_SCRIPT="scripts/update_large_workspace_agent_perf_report.
 SOURCE_PARITY_SCRIPT="scripts/check_source_decomposition_tracked_parity.sh"
 SOURCE_PARITY_UPDATE_SCRIPT="scripts/update_source_decomposition_tracked_parity_report.sh"
 HEALTH_RENDERER="scripts/render_upgrade_plan_health_report.sh"
+HEALTH_EVIDENCE_RENDERER="scripts/render_health_profile_evidence_bundle.sh"
 HEALTH_UPDATE_SCRIPT="scripts/update_upgrade_plan_health_report.sh"
 RELEASE_MEASUREMENT_SCRIPT="scripts/measure_release_full_profile.sh"
 RELEASE_MEASUREMENT_RUNNER="scripts/lib/release_full_measurement.py"
@@ -148,6 +149,7 @@ for path in \
   "$SOURCE_PARITY_SCRIPT" \
   "$SOURCE_PARITY_UPDATE_SCRIPT" \
   "$HEALTH_RENDERER" \
+  "$HEALTH_EVIDENCE_RENDERER" \
   "$HEALTH_UPDATE_SCRIPT" \
   "$RELEASE_MEASUREMENT_SCRIPT" \
   "$RELEASE_MEASUREMENT_RUNNER" \
@@ -687,6 +689,14 @@ fi
 
 if ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS:-2700000' "$HEALTH_RENDERER"; then
   echo "test-execution-profile-matrix: release-full strict loop budget must remain pinned at the GB-4 ceiling 2700000ms (45m)" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'RUNTIME_BACKEND_BUDGET_MS=360000' "$HEALTH_EVIDENCE_RENDERER" || \
+   ! grep -Fq 'if [[ "$PROFILE" == "release-full" ]]; then' "$HEALTH_EVIDENCE_RENDERER" || \
+   ! grep -Fq 'RUNTIME_BACKEND_BUDGET_MS=600000' "$HEALTH_EVIDENCE_RENDERER" || \
+   ! grep -Fq 'GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS="$RUNTIME_BACKEND_BUDGET_MS"' "$HEALTH_EVIDENCE_RENDERER"; then
+  echo "test-execution-profile-matrix: the cold release runtime matrix must use the declared 600s gate envelope without relaxing the 360s prepush bound" >&2
   exit 1
 fi
 

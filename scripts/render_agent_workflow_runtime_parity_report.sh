@@ -40,6 +40,7 @@ BUDGET_MS="${GENESIS_AGENT_PARITY_BUDGET_MS:-900000}"
 P95_MIN_SAMPLES="${GENESIS_AGENT_PARITY_P95_MIN_SAMPLES:-8}"
 INPUT_MAX_AGE_SEC="${GENESIS_AGENT_PARITY_INPUT_MAX_AGE_SEC:-21600}"
 REUSE_REPORTS="${GENESIS_AGENT_PARITY_REUSE_REPORTS:-1}"
+REUSE_NATIVE_REPORT="${GENESIS_AGENT_PARITY_REUSE_NATIVE_REPORT:-0}"
 PARITY_TMP_ROOT="$(mktemp -d)"
 cleanup() {
   rm -rf "$PARITY_TMP_ROOT"
@@ -60,6 +61,10 @@ if [[ ! "$INPUT_MAX_AGE_SEC" =~ ^[0-9]+$ ]]; then
 fi
 if [[ "$REUSE_REPORTS" != "0" && "$REUSE_REPORTS" != "1" ]]; then
   echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_REUSE_REPORTS must be 0 or 1" >&2
+  exit 2
+fi
+if [[ "$REUSE_NATIVE_REPORT" != "0" && "$REUSE_NATIVE_REPORT" != "1" ]]; then
+  echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_REUSE_NATIVE_REPORT must be 0 or 1" >&2
   exit 2
 fi
 if [[ ! "$GENERATIVE_CASE_COUNT" =~ ^[0-9]+$ || "$GENERATIVE_CASE_COUNT" -le 0 ]]; then
@@ -157,11 +162,73 @@ PY
   fi
 fi
 
+can_reuse_native_report=0
+native_reuse_detail=""
+if [[ "$can_reuse_reports" -eq 0 && "$REUSE_NATIVE_REPORT" == "1" ]]; then
+  if native_reuse_detail="$(python3 - "$NATIVE_REPORT_INPUT" "$GAUNTLET_PROFILE" "$INPUT_MAX_AGE_SEC" <<'PY'
+import json
+import pathlib
+import sys
+import time
+
+path = pathlib.Path(sys.argv[1])
+expected_profile = sys.argv[2]
+max_age_sec = int(sys.argv[3])
+
+if not path.is_file():
+    raise SystemExit("native-report:missing")
+age = max(0, int(time.time() - path.stat().st_mtime))
+if max_age_sec > 0 and age > max_age_sec:
+    raise SystemExit(f"native-report:stale age={age}s max={max_age_sec}s")
+doc = json.loads(path.read_text(encoding="utf-8"))
+if doc.get("kind") != "genesis/agent-capability-gauntlet-v0.1":
+    raise SystemExit(f"native-report:kind={doc.get('kind')!r}")
+if doc.get("profile") != expected_profile:
+    raise SystemExit(
+        f"native-report:profile={doc.get('profile')!r} expected={expected_profile!r}"
+    )
+if doc.get("runtime_profile") != "native":
+    raise SystemExit(
+        f"native-report:runtime_profile={doc.get('runtime_profile')!r} expected='native'"
+    )
+if doc.get("ok") is not True:
+    raise SystemExit("native-report:ok=false")
+workflow_count = int(doc.get("workflow_count", 0))
+if workflow_count <= 0:
+    raise SystemExit(f"native-report:workflow_count={workflow_count}")
+print(f"reuse-native native_age_sec={age} native_workflows={workflow_count}")
+PY
+  )"; then
+    can_reuse_native_report=1
+  else
+    echo "agent-workflow-runtime-parity: native report reuse failed ($native_reuse_detail)" >&2
+    exit 1
+  fi
+fi
+
 if [[ "$can_reuse_reports" -eq 1 ]]; then
   lane_source="reused-reports"
   NATIVE_REPORT="$NATIVE_REPORT_INPUT"
   WASI_REPORT="$WASI_REPORT_INPUT"
   echo "agent-workflow-runtime-parity: reusing existing native+wasi gauntlet reports ($reuse_detail)"
+elif [[ "$can_reuse_native_report" -eq 1 ]]; then
+  lane_source="reused-native-report"
+  if [[ "$NATIVE_REPORT_INPUT" != "$NATIVE_REPORT_OUT" ]]; then
+    cp "$NATIVE_REPORT_INPUT" "$NATIVE_REPORT_OUT"
+  fi
+  if [[ "$NATIVE_HISTORY_INPUT" != "$NATIVE_HISTORY_OUT" ]]; then
+    cp "$NATIVE_HISTORY_INPUT" "$NATIVE_HISTORY_OUT"
+  fi
+  NATIVE_REPORT="$NATIVE_REPORT_OUT"
+  WASI_REPORT="$WASI_REPORT_OUT"
+  echo "agent-workflow-runtime-parity: reusing native gauntlet and running WASI lane ($native_reuse_detail)"
+  run_gauntlet_lane \
+    "$WASI_BIN" \
+    "wasi-wasm-host-bridge" \
+    "$WASI_REPORT_OUT" \
+    "$WASI_HISTORY_OUT" \
+    "$WASI_HISTORY_INPUT" \
+    "$PARITY_TMP_ROOT/wasi"
 else
   NATIVE_REPORT="$NATIVE_REPORT_OUT"
   WASI_REPORT="$WASI_REPORT_OUT"
