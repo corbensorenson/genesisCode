@@ -236,9 +236,13 @@ fn ci_has_secondary_gpu_deterministic_lane_and_release_parity_gate() {
     );
     assert!(
         ci.contains(
-            "needs:\n      - gpu_device_microbench\n      - gpu_device_microbench_deterministic"
+            "needs:\n      - gpu_runner_preflight\n      - gpu_device_microbench\n      - gpu_device_microbench_deterministic"
         ),
-        "release parity gate must depend on both conformance lanes"
+        "release parity gate must depend on hosted preflight and both conformance lanes"
+    );
+    assert!(
+        ci.contains("PREFLIGHT_STATUS: ${{ needs.gpu_runner_preflight.outputs.primary_linux_status }}"),
+        "release parity gate must consume the typed primary-runner disposition"
     );
     assert!(
         ci.contains("bash scripts/update_gpu_device_conformance_lane_parity_report.sh"),
