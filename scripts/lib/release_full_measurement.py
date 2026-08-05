@@ -419,6 +419,7 @@ def run_sample(
             "GENESIS_CHECK_HEALTH_OUTPUT_ROOT": str(raw),
             "GENESIS_CHECK_HEALTH_RELEASE_FULL_HISTORY_INPUT": str(empty_history),
             "GENESIS_GATE_TELEMETRY_DISABLE": "1",
+            "GENESIS_HEALTH_CARGO_GATE_SHARDS": "2",
             "GENESIS_HEALTH_PROFILE": "release-full",
             "GENESIS_HEALTH_PROFILE_GATE_CACHE": "0",
             "GENESIS_HEALTH_WARM_CARGO_CACHE": "0",

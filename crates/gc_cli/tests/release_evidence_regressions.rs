@@ -123,6 +123,9 @@ fn release_profile_uses_one_closed_bundle_without_duplicate_derived_workloads() 
         fs::read_to_string(root.join("scripts/render_agent_workflow_runtime_parity_report.sh"))
             .expect("read parity renderer");
     let web = fs::read_to_string(root.join("scripts/wasm_web_smoke.mjs")).expect("read Web smoke");
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml")).expect("read CI workflow");
+    let measurement = fs::read_to_string(root.join("scripts/lib/release_full_measurement.py"))
+        .expect("read release measurement runner");
     let helper = fs::read_to_string(root.join("scripts/lib/health_profile_evidence.py"))
         .expect("read evidence helper");
     for marker in [
@@ -184,6 +187,11 @@ fn release_profile_uses_one_closed_bundle_without_duplicate_derived_workloads() 
             && web.contains("path.join(cargoTargetDir, \"wasm-bindgen-web\", \"gc_wasm\")"),
         "Web bindings must resolve from the configured Cargo target directory"
     );
+    assert!(
+        ci.contains("node scripts/wasm_web_smoke.mjs \"$(dirname \"$wasm_js_path\")\""),
+        "CI must pass the producer-selected Web binding directory across subprocess scope"
+    );
+    assert!(measurement.contains("\"GENESIS_HEALTH_CARGO_GATE_SHARDS\": \"2\""));
     assert!(
         bundle.contains("GENESIS_HOST_BRIDGE_FAULT_RUNS=\"$([[ \"$PROFILE\" == \"release-full\" ]] && echo 3 || echo 1)\"")
             && health.contains("GENESIS_TASK_STRESS_RUNS=3")

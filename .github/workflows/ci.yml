@@ -868,8 +868,8 @@ jobs:
       - name: WASM Bindings (Web) + Headless Browser Smoke
         if: ${{ (env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
-          bash scripts/wasm_bindgen_web.sh >/dev/null
-          node scripts/wasm_web_smoke.mjs
+          wasm_js_path="$(bash scripts/wasm_bindgen_web.sh | tail -n 1)"
+          node scripts/wasm_web_smoke.mjs "$(dirname "$wasm_js_path")"
 
       - name: Install wasmtime
         if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
