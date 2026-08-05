@@ -21,6 +21,12 @@ esac
 
 mkdir -p "$OUTPUT_ROOT"
 INPUT_ROOT="$OUTPUT_ROOT/baseline-inputs"
+RUNTIME_BACKEND_BUDGET_MS=360000
+if [[ "$PROFILE" == "release-full" ]]; then
+  # The release matrix starts from an empty non-incremental target. Keep its
+  # bound aligned with the gate manifest while remaining inside GB-4.
+  RUNTIME_BACKEND_BUDGET_MS=600000
+fi
 
 GAUNTLET_REPORT="$OUTPUT_ROOT/agent_capability_gauntlet_report.json"
 GAUNTLET_HISTORY="$OUTPUT_ROOT/agent_capability_gauntlet_history.jsonl"
@@ -53,6 +59,7 @@ bash scripts/render_agent_reference_workflows_report.sh \
   "$INPUT_ROOT/agent_capability_gauntlet_history.jsonl"
 
 GENESIS_RUNTIME_BACKEND_MATRIX_EPHEMERAL_TARGET_DIR="$OUTPUT_ROOT/runtime-backend-target" \
+GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS="$RUNTIME_BACKEND_BUDGET_MS" \
 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 \
 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=0 \
 bash scripts/render_runtime_backend_feature_matrix_report.sh \
@@ -60,7 +67,7 @@ bash scripts/render_runtime_backend_feature_matrix_report.sh \
   "$RUNTIME_BACKEND_HISTORY" \
   "$INPUT_ROOT/runtime_backend_feature_matrix_history.jsonl"
 
-GENESIS_HOST_BRIDGE_FAULT_RUNS="$([[ "$PROFILE" == "release-full" ]] && echo 6 || echo 1)" \
+GENESIS_HOST_BRIDGE_FAULT_RUNS="$([[ "$PROFILE" == "release-full" ]] && echo 3 || echo 1)" \
 GENESIS_HOST_BRIDGE_FAULT_MAX_FAILURE_RATE_PCT=0 \
 GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS="$([[ "$PROFILE" == "release-full" ]] && echo 300000 || echo 120000)" \
 bash scripts/render_host_bridge_fault_injection_report.sh \
@@ -79,8 +86,9 @@ bash scripts/render_assurance_profile_packs_report.sh \
   "$ASSURANCE_REPORT" \
   "$ASSURANCE_HISTORY"
 
-GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard \
+GENESIS_AGENT_PARITY_GAUNTLET_PROFILE="$PROFILE" \
 GENESIS_AGENT_PARITY_REUSE_REPORTS=0 \
+GENESIS_AGENT_PARITY_REUSE_NATIVE_REPORT=1 \
 GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS=1500 \
 bash scripts/render_agent_workflow_runtime_parity_report.sh \
   "$PARITY_REPORT" \
@@ -88,8 +96,8 @@ bash scripts/render_agent_workflow_runtime_parity_report.sh \
   "$INPUT_ROOT/agent_workflow_runtime_parity_history.jsonl" \
   "$NATIVE_REPORT" \
   "$NATIVE_HISTORY" \
-  "$INPUT_ROOT/agent_capability_gauntlet_native_report.json" \
-  "$INPUT_ROOT/agent_capability_gauntlet_native_history.jsonl" \
+  "$GAUNTLET_REPORT" \
+  "$GAUNTLET_HISTORY" \
   "$WASI_REPORT" \
   "$WASI_HISTORY" \
   "$INPUT_ROOT/agent_capability_gauntlet_wasi_report.json" \

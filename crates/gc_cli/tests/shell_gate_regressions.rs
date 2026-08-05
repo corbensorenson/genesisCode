@@ -62,6 +62,8 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         .expect("read wasm_cross_host_determinism.mjs");
     let wasm_smoke = fs::read_to_string(root.join("scripts/wasm_node_smoke.mjs"))
         .expect("read wasm_node_smoke.mjs");
+    let wasm_web_smoke = fs::read_to_string(root.join("scripts/wasm_web_smoke.mjs"))
+        .expect("read wasm_web_smoke.mjs");
     let full_cross =
         fs::read_to_string(root.join("scripts/render_full_cross_host_profile_budget_report.sh"))
             .expect("read render_full_cross_host_profile_budget_report.sh");
@@ -248,7 +250,11 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     );
     assert!(
         wasm_cross.contains("process.env.CARGO_TARGET_DIR ?? \"target\"")
-            && wasm_smoke.contains("process.env.CARGO_TARGET_DIR ?? \"target\""),
+            && wasm_smoke.contains("process.env.CARGO_TARGET_DIR ?? \"target\"")
+            && wasm_web_smoke
+                .contains("process.env.CARGO_TARGET_DIR ?? path.join(rootDir, \"target\")")
+            && wasm_web_smoke
+                .contains("path.join(cargoTargetDir, \"wasm-bindgen-web\", \"gc_wasm\")"),
         "Node WASM consumers must resolve bindings from the configured Cargo target directory"
     );
     assert!(
@@ -670,10 +676,42 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         "bundle must tolerate bounded cold-process jitter without weakening p95 ceilings"
     );
     assert!(
+        bundle.contains("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=\"$PROFILE\"")
+            && bundle.contains("GENESIS_AGENT_PARITY_REUSE_REPORTS=0")
+            && bundle.contains("GENESIS_AGENT_PARITY_REUSE_NATIVE_REPORT=1")
+            && bundle.contains("\"$NATIVE_REPORT\" \\")
+            && bundle.contains("\"$NATIVE_HISTORY\" \\")
+            && bundle.contains("\"$GAUNTLET_REPORT\" \\")
+            && bundle.contains("\"$GAUNTLET_HISTORY\" \\")
+            && bundle.contains("\"$WASI_REPORT\" \\")
+            && bundle.contains("\"$WASI_HISTORY\" \\")
+            && parity.contains("lane_source=\"reused-native-report\"")
+            && parity.contains("reusing native gauntlet and running WASI lane")
+            && parity.contains("native-report:runtime_profile=")
+            && parity.contains("native report reuse failed"),
+        "the release bundle must reuse its exact native gauntlet and execute only the missing WASI parity lane"
+    );
+    assert!(
+        bundle.contains(
+            "GENESIS_HOST_BRIDGE_FAULT_RUNS=\"$([[ \"$PROFILE\" == \"release-full\" ]] && echo 3 || echo 1)\""
+        ) && health.contains("GENESIS_TASK_STRESS_RUNS=3")
+            && health.contains("GENESIS_TASK_STRESS_SUITE_BUDGET_MS=240000"),
+        "each release pair must retain an odd three-run stress cohort inside its reduced bounded envelope"
+    );
+    assert!(
         bundle.contains(
             "GENESIS_RUNTIME_BACKEND_MATRIX_EPHEMERAL_TARGET_DIR=\"$OUTPUT_ROOT/runtime-backend-target\""
         ),
         "bundle must keep disposable runtime-matrix compiler output inside its private root"
+    );
+    assert!(
+        bundle.contains(
+            "RUNTIME_BACKEND_BUDGET_MS=360000\nif [[ \"$PROFILE\" == \"release-full\" ]]; then"
+        ) && bundle.contains("RUNTIME_BACKEND_BUDGET_MS=600000\nfi")
+            && bundle.contains(
+                "GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS=\"$RUNTIME_BACKEND_BUDGET_MS\""
+            ),
+        "the empty-target release matrix must use the bounded 600s gate-manifest envelope without relaxing the 360s prepush profile"
     );
     let runtime_matrix =
         fs::read_to_string(root.join("scripts/render_runtime_backend_feature_matrix_report.sh"))

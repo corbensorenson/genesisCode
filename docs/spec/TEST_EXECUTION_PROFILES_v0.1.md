@@ -188,6 +188,14 @@ Strict/full profile runtime reports:
     WebXR/GPU-XR, and assurance reports under one private temporary root, validates their kinds and
     `ok` states into a hash manifest, and binds every parallel consumer to those explicit paths.
     Untracked `.genesis/perf` reports are never release inputs; targeted gate overrides skip setup.
+    The bundle keeps the runtime-backend matrix at `360000ms` for `prepush-standard` and uses the
+    gate-manifest `600000ms` envelope only for the empty-target, non-incremental `release-full`
+    build. This subordinate bound does not alter the per-profile GB-4 `2700000ms` ceiling.
+    Its primary `release-full` gauntlet is also the native parity lane; the bundle copies those
+    exact bytes into the parity-owned artifact name, executes only the missing WASI lane, and
+    requires the parity producer to validate both reports as fresh, same-profile evidence before
+    reuse. Each independent release pair runs three task-concurrency and three host-bridge stress
+    repetitions, yielding odd per-pair decisions and six total repetitions across the two pairs.
     The governed runtime-backend check entrypoint validates its bundle-local prebuilt report
     against the direct-sibling bundle manifest, release profile, kind, and SHA-256 before avoiding
     a repeated compilation matrix.

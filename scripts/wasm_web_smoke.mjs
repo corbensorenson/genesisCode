@@ -239,15 +239,14 @@ async function startStaticServer(rootDir) {
 }
 
 async function main() {
-  const defaultOut = path.resolve("target/wasm-bindgen-web/gc_wasm");
-  const outDir = path.resolve(process.argv[2] ?? defaultOut);
-
-  // Ensure we are running from repo root if invoked from other cwd.
-  // If called via `node scripts/wasm_web_smoke.mjs`, this is already true.
   const self = fileURLToPath(import.meta.url);
   const selfDir = path.dirname(self);
   const rootDir = path.resolve(selfDir, "..");
   process.chdir(rootDir);
+
+  const cargoTargetDir = process.env.CARGO_TARGET_DIR ?? path.join(rootDir, "target");
+  const defaultOut = path.join(cargoTargetDir, "wasm-bindgen-web", "gc_wasm");
+  const outDir = path.resolve(process.argv[2] ?? defaultOut);
 
   const selfhostArtifactSrc = runNativeSelfhostArtifactSource();
   await writeHarnessHtml(outDir, selfhostArtifactSrc);

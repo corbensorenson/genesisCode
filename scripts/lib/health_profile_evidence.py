@@ -428,7 +428,8 @@ def declared_producer_environment(producer_id: str, profile: str) -> dict[str, s
         },
         "agent-runtime-parity": {
             "GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS": "1500",
-            "GENESIS_AGENT_PARITY_GAUNTLET_PROFILE": "prepush-standard",
+            "GENESIS_AGENT_PARITY_GAUNTLET_PROFILE": profile,
+            "GENESIS_AGENT_PARITY_REUSE_NATIVE_REPORT": "1",
             "GENESIS_AGENT_PARITY_REUSE_REPORTS": "0",
         },
         "assurance-profile-packs": {},
@@ -438,11 +439,12 @@ def declared_producer_environment(producer_id: str, profile: str) -> dict[str, s
         "host-bridge-fault-injection": {
             "GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS": "300000" if release else "120000",
             "GENESIS_HOST_BRIDGE_FAULT_MAX_FAILURE_RATE_PCT": "0",
-            "GENESIS_HOST_BRIDGE_FAULT_RUNS": "6" if release else "1",
+            "GENESIS_HOST_BRIDGE_FAULT_RUNS": "3" if release else "1",
         },
         "runtime-backend-matrix": {
             "GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL": "0",
             "GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG": "0",
+            "GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS": "600000" if release else "360000",
             "GENESIS_RUNTIME_BACKEND_MATRIX_EPHEMERAL_TARGET_DIR": "$OUTPUT_ROOT/runtime-backend-target",
         },
         "webxr-browser-conformance": {},
