@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "2be68374db1f3d5870c2f37be0b1523ae8f2b9b6d21c41617e7d52045975b6fc",
-    "roadmap_sha256": "9f8374c31b0c6e5cd75d8d52d08491c8192b870a2a83cf58574bcb0526ad457c",
+    "roadmap_sha256": "c3877e57b10942e3a4eff11fb90de51690b66afb870df69959490730eda028ec",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -1040,7 +1040,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "test-hermeticity-bundle-sha256:a5323a5beeed5d4779ec66dfd05aa4e0347b1f662b1058d26417c01819ec88ee"
+          "input_identity": "test-hermeticity-bundle-sha256:7a9605f32f9f6ed1fe6bc32a2ae2cbb11f4e475dfc8bb40e0d64cda7361c876b"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2175,7 +2175,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "generated-authority-closure-bundle-sha256:a9ed15b270fa3e50b114ed1a41115c5eaec95984c9481f8fb5cbd232bdefa244"
+          "input_identity": "generated-authority-closure-bundle-sha256:aff00ae9ad538a3949a59e893a03a61cf34da432199360824124955f9a0f65f1"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2255,7 +2255,7 @@
             "30826800834"
           ],
           "completed_date": "2026-08-03",
-          "input_identity": "generated-authority-closure-bundle-sha256:a9ed15b270fa3e50b114ed1a41115c5eaec95984c9481f8fb5cbd232bdefa244"
+          "input_identity": "generated-authority-closure-bundle-sha256:aff00ae9ad538a3949a59e893a03a61cf34da432199360824124955f9a0f65f1"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3096,7 +3096,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-diagnostic-catalog-bundle-sha256:3c3bd7f8582a2ba546bb9322a651d6c2277ae69ffa3ed1e995aaf89770cf5bca"
+          "input_identity": "gc-diagnostic-catalog-bundle-sha256:0f7dbe030068823c6534cca50c7bf45933df232f09f2ec93f75fc426fc05a367"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3390,7 +3390,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "diagnostic-repair-utility-bundle-sha256:74d0b8056d8472e3ebc1e17ca4dc3c0c9ca71b680675f2dc6c809f996d4e9eac"
+          "input_identity": "diagnostic-repair-utility-bundle-sha256:275f61ec10efec9fd50b37418404c233ac6dde277f28b79e2ac03832547c8441"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
