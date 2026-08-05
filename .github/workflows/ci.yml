@@ -192,12 +192,14 @@ jobs:
             .genesis/perf/reference-target-${{ matrix.target }}/
           if-no-files-found: warn
 
-  release_full_measurement:
+  release_full_measurement_pair:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
-    needs: release_target_reference_readiness
     runs-on: ubuntu-24.04
-    # The producer owns a 50-minute session deadline and needs time to terminate,
-    # reap, retain diagnostics, and upload before the 60-minute watchdog.
+    strategy:
+      fail-fast: false
+      matrix:
+        pair: [1, 2]
+    # Each independent pair owns a 50-minute session and five-minute diagnostic margin.
     timeout-minutes: 55
     env:
       GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
@@ -251,28 +253,70 @@ jobs:
           cargo fetch --locked
           cargo fetch --manifest-path tools/genesis-evidence-producer/Cargo.toml --locked
           cargo fetch --manifest-path tools/genesis-evidence-verifier/Cargo.toml --locked
+      - name: Cold/Warm Release Measurement Pair ${{ matrix.pair }}
+        run: |
+          bash scripts/measure_release_full_profile.sh \
+            .genesis/perf/release-full-measurement-pair-${{ matrix.pair }} \
+            --pair-index ${{ matrix.pair }}
+      - name: Upload Release Measurement Pair ${{ matrix.pair }}
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-full-measurement-pair-${{ matrix.pair }}
+          path: .genesis/perf/release-full-measurement-pair-${{ matrix.pair }}/
+          if-no-files-found: warn
+
+  release_full_measurement:
+    if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    needs:
+      - release_target_reference_readiness
+      - release_full_measurement_pair
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+      - name: Resolve Cargo Cache
+        shell: bash
+        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Download Named Target Readiness
         uses: actions/download-artifact@v4
         with:
           pattern: release-target-readiness-*
           path: .genesis/reference-targets
           merge-multiple: true
-      - name: Paired Cold/Warm Release Measurement
+      - name: Download Release Measurement Pairs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-full-measurement-pair-*
+          path: .genesis/release-pairs
+      - name: Aggregate Paired Release Measurements
         run: |
           bash scripts/measure_release_full_profile.sh \
             .genesis/perf/release-full-measurement \
-            .genesis/reference-targets/reference-target-android.json \
-            .genesis/reference-targets/reference-target-edge.json \
-            .genesis/reference-targets/reference-target-ios.json \
-            .genesis/reference-targets/reference-target-service-runtime.json \
-            --pairs 2
-      - name: Upload Release Measurement
+            --aggregate \
+            --target-report .genesis/reference-targets/reference-target-android.json \
+            --target-report .genesis/reference-targets/reference-target-edge.json \
+            --target-report .genesis/reference-targets/reference-target-ios.json \
+            --target-report .genesis/reference-targets/reference-target-service-runtime.json \
+            --pair-output .genesis/release-pairs/release-full-measurement-pair-1 \
+            --pair-output .genesis/release-pairs/release-full-measurement-pair-2
+      - name: Upload Release Measurement Aggregate
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: release-full-measurement
           path: .genesis/perf/release-full-measurement/
-          if-no-files-found: error
+          if-no-files-found: warn
 
   test_suite:
     runs-on: ubuntu-latest
@@ -885,6 +929,7 @@ jobs:
     needs:
       - test_suite
       - local_workspace_test_contract
+      - release_full_measurement
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -892,7 +937,9 @@ jobs:
         env:
           TEST_SUITE_RESULT: ${{ needs.test_suite.result }}
           LOCAL_WORKSPACE_RESULT: ${{ needs.local_workspace_test_contract.result }}
+          RELEASE_FULL_MEASUREMENT_RESULT: ${{ needs.release_full_measurement.result }}
           LOCAL_WORKSPACE_REQUIRED: ${{ (github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile != 'fast')) && '1' || '0' }}
+          RELEASE_FULL_MEASUREMENT_REQUIRED: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) && '1' || '0' }}
         run: |
           [[ "$TEST_SUITE_RESULT" == "success" ]] || {
             echo "test_suite result: $TEST_SUITE_RESULT" >&2
@@ -906,6 +953,17 @@ jobs:
           else
             [[ "$LOCAL_WORKSPACE_RESULT" == "skipped" || "$LOCAL_WORKSPACE_RESULT" == "success" ]] || {
               echo "optional local_workspace_test_contract result: $LOCAL_WORKSPACE_RESULT" >&2
+              exit 1
+            }
+          fi
+          if [[ "$RELEASE_FULL_MEASUREMENT_REQUIRED" == "1" ]]; then
+            [[ "$RELEASE_FULL_MEASUREMENT_RESULT" == "success" ]] || {
+              echo "required release_full_measurement result: $RELEASE_FULL_MEASUREMENT_RESULT" >&2
+              exit 1
+            }
+          else
+            [[ "$RELEASE_FULL_MEASUREMENT_RESULT" == "skipped" || "$RELEASE_FULL_MEASUREMENT_RESULT" == "success" ]] || {
+              echo "optional release_full_measurement result: $RELEASE_FULL_MEASUREMENT_RESULT" >&2
               exit 1
             }
           fi

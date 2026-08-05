@@ -243,7 +243,7 @@ require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY'
 require_doc_pattern 'scripts/measure_release_full_profile.sh'
 require_doc_pattern 'genesis/release-full-measurement-v0.1'
-require_doc_pattern 'two to five ordered pairs'
+require_doc_pattern 'two to five independently scheduled pair workers'
 require_doc_pattern 'GENESIS_HEALTH_SHARDS'
 require_doc_pattern 'content-addressed `root-host` cache'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_GATE_SHARDS'
@@ -377,7 +377,9 @@ require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=420000'
 require_ci_pattern 'GENESIS_HEALTH_PROFILE=dev-fast'
 require_ci_pattern 'bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health'
 require_ci_pattern 'release_full_measurement:'
-require_ci_pattern 'Paired Cold/Warm Release Measurement'
+require_ci_pattern 'release_full_measurement_pair:'
+require_ci_pattern 'Cold/Warm Release Measurement Pair'
+require_ci_pattern 'Aggregate Paired Release Measurements'
 require_ci_pattern 'Local Workspace Test Contract (CI unset)'
 require_ci_pattern 'env -u CI cargo test --workspace --profile selfhost-strict'
 python3 - "$CI" <<'PY'
@@ -418,8 +420,11 @@ for required in (
     "if: ${{ always() }}",
     "- test_suite",
     "- local_workspace_test_contract",
+    "- release_full_measurement",
     "TEST_SUITE_RESULT: ${{ needs.test_suite.result }}",
     "LOCAL_WORKSPACE_RESULT: ${{ needs.local_workspace_test_contract.result }}",
+    "RELEASE_FULL_MEASUREMENT_RESULT: ${{ needs.release_full_measurement.result }}",
+    "RELEASE_FULL_MEASUREMENT_REQUIRED:",
     "Required CI Aggregate",
 ):
     if required not in aggregate:
@@ -914,16 +919,20 @@ policy_path = root / "policies/release_target_reference_set_v0.1.json"
 schema_path = root / "docs/spec/RELEASE_TARGET_REFERENCE_SET_v0.1.schema.json"
 evidence_schema_path = root / "docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json"
 measurement_schema_path = root / "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json"
+pair_measurement_schema_path = root / "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json"
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 evidence_schema = json.loads(evidence_schema_path.read_text(encoding="utf-8"))
 measurement_schema = json.loads(measurement_schema_path.read_text(encoding="utf-8"))
+pair_measurement_schema = json.loads(pair_measurement_schema_path.read_text(encoding="utf-8"))
 if schema.get("$id") != "https://genesiscode.dev/schemas/release-target-reference-set-v0.1.json":
     raise SystemExit("test-execution-profile-matrix: release target reference schema id mismatch")
 if evidence_schema.get("$id") != "https://genesiscode.dev/schemas/health-profile-evidence-bundle-v0.2.json":
     raise SystemExit("test-execution-profile-matrix: health evidence schema id mismatch")
 if measurement_schema.get("$id") != "https://genesiscode.dev/schemas/release-full-measurement-v0.1.schema.json":
     raise SystemExit("test-execution-profile-matrix: release measurement schema id mismatch")
+if pair_measurement_schema.get("$id") != "https://genesiscode.dev/schemas/release-full-measurement-pair-v0.1.schema.json":
+    raise SystemExit("test-execution-profile-matrix: release pair measurement schema id mismatch")
 if policy.get("kind") != "genesis/release-target-reference-set-v0.1":
     raise SystemExit("test-execution-profile-matrix: release target reference policy kind mismatch")
 if policy.get("lifecycleSteps") != ["install", "launch", "smoke", "teardown", "reap"]:
@@ -985,8 +994,8 @@ for marker in [
         )
 for marker in [
     "release_target_reference_readiness:",
+    "release_full_measurement_pair:",
     "release_full_measurement:",
-    "needs: release_target_reference_readiness",
     "macos-15",
     "ubuntu-24.04",
     "GENESIS_GCPM_TARGET_RUNTIME_RUNNER_LABEL",
@@ -997,7 +1006,13 @@ for marker in [
     "Enable Android KVM",
     "wasmtime/setup@v1",
     "--exclude-test upgrade_plan_health",
-    "--pairs 2",
+    "pair: [1, 2]",
+    "--pair-index ${{ matrix.pair }}",
+    "--aggregate",
+    "--target-report .genesis/reference-targets/reference-target-android.json",
+    "--pair-output .genesis/release-pairs/release-full-measurement-pair-1",
+    "RELEASE_FULL_MEASUREMENT_REQUIRED",
+    "required release_full_measurement result",
     "gpu_runner_preflight:",
     "Collect Exact Repository Runner Inventory",
     "Classify Exact Runner Readiness",
@@ -1010,6 +1025,27 @@ for marker in [
 ]:
     if marker not in workflow:
         raise SystemExit(f"test-execution-profile-matrix: named target CI marker missing: {marker}")
+
+def workflow_job(name):
+    match = re.search(
+        rf"(?ms)^  {re.escape(name)}:\n(?P<section>.*?)(?=^  [A-Za-z0-9_]+:\n|\Z)",
+        workflow,
+    )
+    if match is None:
+        raise SystemExit(f"test-execution-profile-matrix: missing CI job: {name}")
+    return match.group("section")
+
+pair_section = workflow_job("release_full_measurement_pair")
+if "needs:" in pair_section or "reference-target" in pair_section:
+    raise SystemExit(
+        "test-execution-profile-matrix: release pair workers must start independently of target readiness"
+    )
+aggregate_section = workflow_job("release_full_measurement")
+for dependency in ("- release_target_reference_readiness", "- release_full_measurement_pair"):
+    if dependency not in aggregate_section:
+        raise SystemExit(
+            f"test-execution-profile-matrix: release aggregate lacks dependency: {dependency}"
+        )
 
 policy_control = json.loads((root / "policies/ci_control_plane_v0.1.json").read_text(encoding="utf-8"))
 if policy_control.get("kind") != "genesis/ci-control-plane-policy-v0.1":
@@ -1050,7 +1086,8 @@ for job, dispatch in {
 for job, timeout in {
     "gpu_runner_preflight": "timeout-minutes: 5",
     "release_target_reference_readiness": "timeout-minutes: 20",
-    "release_full_measurement": "timeout-minutes: 55",
+    "release_full_measurement_pair": "timeout-minutes: 55",
+    "release_full_measurement": "timeout-minutes: 5",
     "local_workspace_test_contract": "timeout-minutes: 45",
     "test": "timeout-minutes: 5",
     "webxr_browser_conformance": "timeout-minutes: 20",
@@ -1160,6 +1197,7 @@ for marker in [
 measurement = (root / "scripts/lib/release_full_measurement.py").read_text(encoding="utf-8")
 for marker in [
     'KIND = "genesis/release-full-measurement-v0.1"',
+    'PAIR_KIND = "genesis/release-full-measurement-pair-v0.1"',
     "MIN_PAIRS = 2",
     "WALL_BUDGET_MS = 2_700_000",
     "SESSION_BUDGET_MS = 3_000_000",
@@ -1169,6 +1207,12 @@ for marker in [
     'for run_class in ("cold", "warm")',
     "process-tree peak RSS sampling produced no measurement",
     "owned-ephemeral-root-removal",
+    "job-unique-external-owned-root",
+    "containment.mkdir(mode=0o700, parents=False, exist_ok=False)",
+    "cache_isolation_record(pair_index, github, cache_nonce)",
+    "measurement pair workers reused a cache-isolation identity",
+    "measurement aggregate pair coverage is incomplete or duplicated",
+    "pair workers and target readiness do not share one workflow run attempt",
     "expected unsupported-product was relabeled as release qualification",
     "named target report policy or product binding mismatch",
 ]:
@@ -1223,6 +1267,8 @@ PY
 
 PYTHONPATH="$ROOT_DIR/scripts/lib" python3 - "$ROOT_DIR" <<'PY'
 from pathlib import Path
+import copy
+import json
 import os
 import sys
 import tempfile
@@ -1328,6 +1374,214 @@ with tempfile.TemporaryDirectory(prefix="genesis-release-cache-isolation.") as r
     if str(root) in tail or "\x1b" in tail or "final portable failure" not in tail:
         raise SystemExit("test-execution-profile-matrix: diagnostic tail was not portable and terminal")
     negative_controls += 1
+
+    source = {"gitCommit": "a" * 40}
+    github = {
+        "job": "release_full_measurement_pair",
+        "runAttempt": "1",
+        "runId": "42",
+        "sha": source["gitCommit"],
+    }
+
+    def run_row(pair, run_class):
+        prefix = f"runs/pair-{pair:02d}-{run_class}"
+        return {
+            "agentGpuProfile": "agent-gpu-fallback",
+            "artifactAttributionBytes": {
+                "isolated-run": 1,
+                "node-modules": 0,
+                "workspace-build": 0,
+                "workspace-target": 0,
+            },
+            "artifactPeakBytes": 1,
+            "cacheRootStartedEmpty": run_class == "cold",
+            "class": run_class,
+            "exitCode": 0,
+            "index": pair,
+            "logArtifacts": [f"{prefix}/stdout.log", f"{prefix}/stderr.log"],
+            "peakRssBytes": 1,
+            "profileElapsedMs": 1,
+            "profileReportArtifact": f"{prefix}/profile-report.json",
+            "profileReportSha256": "b" * 64,
+            "telemetryElapsedMs": 2,
+        }
+
+    target_rows = [
+        {
+            "expectedOutcome": "unsupported-product",
+            "githubRunAttempt": "1",
+            "githubRunId": "42",
+            "githubSha": source["gitCommit"],
+            "releaseQualified": False,
+            "reportArtifact": f"target-readiness/{target}.json",
+            "reportSha256": "c" * 64,
+            "runner": measurement.TARGET_RUNNERS[target],
+            "target": target,
+        }
+        for target in measurement.TARGETS
+    ]
+    pair_reports = []
+    for pair in (1, 2):
+        pair_report = {
+            "artifacts": [],
+            "budgets": {
+                "maxArtifactBytes": measurement.ARTIFACT_BUDGET_BYTES,
+                "maxPairSessionMs": measurement.SESSION_BUDGET_MS,
+                "maxWallMs": measurement.WALL_BUDGET_MS,
+            },
+            "cacheIsolation": measurement.cache_isolation_record(
+                pair,
+                github,
+                nonce_sha256=f"{pair}" * 64,
+            ),
+            "cleanupRecovery": {
+                "method": "owned-ephemeral-root-removal",
+                "ok": True,
+                "pair": pair,
+                "recoveredBytes": 1,
+                "remainingBytes": 0,
+            },
+            "contentIdentitySha256": "",
+            "executionEnvironment": {},
+            "generatedAtUtc": "2026-08-05T00:00:00+00:00",
+            "github": github,
+            "kind": measurement.PAIR_KIND,
+            "ok": True,
+            "pair": pair,
+            "runs": [run_row(pair, "cold"), run_row(pair, "warm")],
+            "source": source,
+            "version": measurement.PAIR_VERSION,
+        }
+        pair_report["contentIdentitySha256"] = measurement.identity(pair_report)
+        measurement.validate_pair_report(pair_report, pair)
+        pair_reports.append(pair_report)
+
+    pair_dirs = []
+    for report in pair_reports:
+        pair_dir = temp / f"pair-{report['pair']}"
+        pair_dir.mkdir()
+        (pair_dir / "manifest.json").write_text(
+            json.dumps(report, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        pair_dirs.append(pair_dir)
+    target_paths = []
+    for target in measurement.TARGETS:
+        path = temp / f"target-{target}.json"
+        path.write_text(json.dumps({"targets": [{"target": target}]}) + "\n", encoding="utf-8")
+        target_paths.append(path)
+    originals = (
+        measurement.verify_pair,
+        measurement.validate_target_reports,
+        measurement.health_evidence.source_inventory,
+        measurement.health_evidence.execution_environment,
+        measurement.verify,
+    )
+    try:
+        by_pair = {report["pair"]: report for report in pair_reports}
+        measurement.verify_pair = lambda _root, path, _expected=None: by_pair[int(path.name.rsplit("-", 1)[1])]
+        measurement.validate_target_reports = lambda _root, _paths: target_rows
+        measurement.health_evidence.source_inventory = lambda _root: source
+        measurement.health_evidence.execution_environment = lambda _profile: {}
+        measurement.verify = lambda _root, output: measurement.validate_report(
+            measurement.load_json(output / "manifest.json")
+        )
+        measurement.aggregate(root, temp / "aggregate-smoke", target_paths, pair_dirs)
+    finally:
+        (
+            measurement.verify_pair,
+            measurement.validate_target_reports,
+            measurement.health_evidence.source_inventory,
+            measurement.health_evidence.execution_environment,
+            measurement.verify,
+        ) = originals
+
+    pair_mutations = [
+        (lambda d: d["github"].__setitem__("job", "untrusted"), "GitHub job identity mismatch"),
+        (lambda d: d["cacheIsolation"].__setitem__("identitySha256", "0" * 64), "cache-isolation identity mismatch"),
+    ]
+    for mutate, expected in pair_mutations:
+        invalid = copy.deepcopy(pair_reports[0])
+        mutate(invalid)
+        invalid["contentIdentitySha256"] = measurement.identity(invalid)
+        try:
+            measurement.validate_pair_report(invalid, 1)
+        except measurement.MeasurementError as exc:
+            if expected not in str(exc):
+                raise SystemExit(f"test-execution-profile-matrix: wrong pair failure: {exc}")
+        else:
+            raise SystemExit(f"test-execution-profile-matrix: invalid pair evidence accepted: {expected}")
+        negative_controls += 1
+
+    execution_sha = measurement.sha256_bytes(measurement.canonical({}))
+    pair_workers = []
+    for report in pair_reports:
+        pair = report["pair"]
+        pair_workers.append({
+            "cacheIsolationIdentitySha256": report["cacheIsolation"]["identitySha256"],
+            "executionEnvironmentSha256": execution_sha,
+            "githubJob": github["job"],
+            "githubRunAttempt": github["runAttempt"],
+            "githubRunId": github["runId"],
+            "githubSha": github["sha"],
+            "pair": pair,
+            "workerContentIdentitySha256": report["contentIdentitySha256"],
+            "workerManifestArtifact": f"workers/pair-{pair:02d}.json",
+            "workerManifestSha256": "d" * 64,
+        })
+    aggregate = {
+        "artifacts": [],
+        "budgets": {
+            "maxArtifactBytes": measurement.ARTIFACT_BUDGET_BYTES,
+            "maxWallMs": measurement.WALL_BUDGET_MS,
+            "minimumPairs": measurement.MIN_PAIRS,
+        },
+        "cleanupRecovery": [report["cleanupRecovery"] for report in pair_reports],
+        "contentIdentitySha256": "",
+        "executionEnvironment": {},
+        "generatedAtUtc": "2026-08-05T00:00:00+00:00",
+        "history": {
+            "coldP95ArtifactBytes": 1,
+            "coldP95PeakRssBytes": 1,
+            "coldP95WallMs": 2,
+            "samplesPerClass": 2,
+            "warmP95ArtifactBytes": 1,
+            "warmP95PeakRssBytes": 1,
+            "warmP95WallMs": 2,
+        },
+        "kind": measurement.KIND,
+        "ok": True,
+        "pairWorkers": pair_workers,
+        "pairs": 2,
+        "productReleaseQualified": False,
+        "profileOperational": True,
+        "readinessStatus": "unsupported-product",
+        "runs": [row for report in pair_reports for row in report["runs"]],
+        "source": source,
+        "targetReadiness": target_rows,
+        "version": measurement.VERSION,
+    }
+    aggregate["contentIdentitySha256"] = measurement.identity(aggregate)
+    measurement.validate_report(aggregate)
+
+    aggregate_mutations = [
+        (lambda d: d["pairWorkers"][1].__setitem__("cacheIsolationIdentitySha256", d["pairWorkers"][0]["cacheIsolationIdentitySha256"]), "reused a cache-isolation identity"),
+        (lambda d: d.__setitem__("pairWorkers", d["pairWorkers"][:-1]), "worker set is incomplete"),
+        (lambda d: d["pairWorkers"][1].__setitem__("githubRunAttempt", "2"), "do not share one workflow run attempt"),
+        (lambda d: d["pairWorkers"][1].__setitem__("workerManifestArtifact", "workers/pair-01.json"), "worker identity mismatch"),
+    ]
+    for mutate, expected in aggregate_mutations:
+        invalid = copy.deepcopy(aggregate)
+        mutate(invalid)
+        invalid["contentIdentitySha256"] = measurement.identity(invalid)
+        try:
+            measurement.validate_report(invalid)
+        except measurement.MeasurementError as exc:
+            if expected not in str(exc):
+                raise SystemExit(f"test-execution-profile-matrix: wrong aggregate failure: {exc}")
+        else:
+            raise SystemExit(f"test-execution-profile-matrix: invalid aggregate accepted: {expected}")
+        negative_controls += 1
 
 print(f"release-full-measurement-cache-isolation: ok (negative_controls={negative_controls})")
 PY

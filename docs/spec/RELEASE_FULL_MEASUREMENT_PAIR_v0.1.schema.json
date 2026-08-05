@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/release-full-measurement-pair-v0.1.schema.json",
+  "title": "GenesisCode isolated cold/warm release measurement pair",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifacts",
+    "budgets",
+    "cacheIsolation",
+    "cleanupRecovery",
+    "contentIdentitySha256",
+    "executionEnvironment",
+    "generatedAtUtc",
+    "github",
+    "kind",
+    "ok",
+    "pair",
+    "runs",
+    "source",
+    "version"
+  ],
+  "properties": {
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "RELEASE_FULL_MEASUREMENT_v0.1.schema.json#/$defs/artifact" }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxArtifactBytes", "maxPairSessionMs", "maxWallMs"],
+      "properties": {
+        "maxArtifactBytes": { "const": 21474836480 },
+        "maxPairSessionMs": { "const": 3000000 },
+        "maxWallMs": { "const": 2700000 }
+      }
+    },
+    "cacheIsolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "githubJob",
+        "githubRunAttempt",
+        "githubRunId",
+        "identitySha256",
+        "method",
+        "nonceSha256",
+        "pair",
+        "rootRemoved",
+        "rootStartedEmpty"
+      ],
+      "properties": {
+        "githubJob": { "const": "release_full_measurement_pair" },
+        "githubRunAttempt": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "githubRunId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "identitySha256": { "$ref": "RELEASE_FULL_MEASUREMENT_v0.1.schema.json#/$defs/sha256" },
+        "method": { "const": "job-unique-external-owned-root" },
+        "nonceSha256": { "$ref": "RELEASE_FULL_MEASUREMENT_v0.1.schema.json#/$defs/sha256" },
+        "pair": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "rootRemoved": { "const": true },
+        "rootStartedEmpty": { "const": true }
+      }
+    },
+    "cleanupRecovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "ok", "pair", "recoveredBytes", "remainingBytes"],
+      "properties": {
+        "method": { "const": "owned-ephemeral-root-removal" },
+        "ok": { "const": true },
+        "pair": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "recoveredBytes": { "type": "integer", "minimum": 1 },
+        "remainingBytes": { "const": 0 }
+      }
+    },
+    "contentIdentitySha256": { "$ref": "RELEASE_FULL_MEASUREMENT_v0.1.schema.json#/$defs/sha256" },
+    "executionEnvironment": { "type": "object" },
+    "generatedAtUtc": { "type": "string", "format": "date-time" },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job", "runAttempt", "runId", "sha"],
+      "properties": {
+        "job": { "const": "release_full_measurement_pair" },
+        "runAttempt": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "runId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "kind": { "const": "genesis/release-full-measurement-pair-v0.1" },
+    "ok": { "const": true },
+    "pair": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "runs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "RELEASE_FULL_MEASUREMENT_v0.1.schema.json#/$defs/run" }
+    },
+    "source": { "type": "object" },
+    "version": { "const": "0.1.0" }
+  }
+}
