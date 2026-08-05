@@ -31,7 +31,10 @@ PROFILE_KIND = "genesis/upgrade-plan-health-profile-v0.1"
 TARGET_KIND = "genesis/gcpm-target-runtime-evidence-v0.1"
 REFERENCE_KIND = "genesis/release-target-reference-set-v0.1"
 WALL_BUDGET_MS = 2_700_000
+SESSION_BUDGET_MS = 3_000_000
 ARTIFACT_BUDGET_BYTES = 20 * 1024 * 1024 * 1024
+DIAGNOSTIC_TAIL_MAX_BYTES = 4096
+DIAGNOSTIC_TAIL_MAX_LINES = 40
 MIN_PAIRS = 2
 MAX_PAIRS = 5
 TARGETS = ["android", "edge", "ios", "service-runtime"]
@@ -299,6 +302,23 @@ def terminate_group(proc: subprocess.Popen[Any]) -> None:
     proc.wait()
 
 
+def diagnostic_tail(path: Path, root: Path) -> str:
+    """Return a bounded, control-free, repository-relative diagnostic tail."""
+    payload = path.read_bytes()[-(DIAGNOSTIC_TAIL_MAX_BYTES * 2) :]
+    text = payload.decode("utf-8", errors="replace").replace(str(root), "<repo>")
+    lines = []
+    for raw in text.splitlines()[-DIAGNOSTIC_TAIL_MAX_LINES:]:
+        clean = "".join(char if char == "\t" or 32 <= ord(char) <= 126 else "?" for char in raw)
+        lines.append(clean)
+    while lines and len("\n".join(lines).encode("utf-8")) > DIAGNOSTIC_TAIL_MAX_BYTES:
+        if len(lines) > 1:
+            lines.pop(0)
+        else:
+            encoded = lines[0].encode("utf-8")[-DIAGNOSTIC_TAIL_MAX_BYTES:]
+            lines[0] = encoded.decode("utf-8", errors="ignore")
+    return "\n".join(lines)
+
+
 def measurement_environment(
     root: Path,
     cache_root: Path,
@@ -347,6 +367,7 @@ def run_sample(
     pair_index: int,
     run_class: str,
     cache_root: Path,
+    timeout_ms: int,
 ) -> dict[str, Any]:
     raw = containment / f"raw-{run_class}"
     raw.mkdir()
@@ -415,7 +436,7 @@ def run_sample(
         for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
             previous_handlers[signum] = signal.signal(signum, forward)
         try:
-            exit_code = proc.wait(timeout=WALL_BUDGET_MS / 1000)
+            exit_code = proc.wait(timeout=timeout_ms / 1000)
         except subprocess.TimeoutExpired:
             terminate_group(proc)
             exit_code = 124
@@ -435,9 +456,14 @@ def run_sample(
     stdout_artifact = copy_artifact(stdout_path, output, f"{retained_prefix}/stdout.log")
     stderr_artifact = copy_artifact(stderr_path, output, f"{retained_prefix}/stderr.log")
     if exit_code != 0:
+        tail = diagnostic_tail(stderr_path, root)
+        if tail:
+            print("release-full-measurement: bounded child stderr tail:", file=sys.stderr)
+            for line in tail.splitlines():
+                print(f"release-full-measurement: | {line}", file=sys.stderr)
         fail(
             f"release {run_class} run {pair_index} failed with exit {exit_code}; "
-            f"see {stderr_artifact['path']}"
+            f"timeout_ms={timeout_ms}; see {stderr_artifact['path']}"
         )
     profile_path = raw / "profile-report.json"
     profile = validate_profile_report(profile_path, run_class, gpu_profile)
@@ -1015,14 +1041,29 @@ def run(root: Path, output: Path, target_paths: Sequence[Path], pairs: int) -> N
         target = doc["targets"][0]["target"]
         copy_artifact(path, output, f"target-readiness/{target}.json")
     source_before = health_evidence.source_inventory(root)
+    session_started = time.monotonic_ns()
     runs = []
     cleanups = []
     for pair_index in range(1, pairs + 1):
         containment = Path(tempfile.mkdtemp(prefix=f"genesis-release-pair-{pair_index:02d}."))
         cache_root = containment / "cargo-cache"
         try:
-            runs.append(run_sample(root, containment, output, pair_index, "cold", cache_root))
-            runs.append(run_sample(root, containment, output, pair_index, "warm", cache_root))
+            for run_class in ("cold", "warm"):
+                session_elapsed_ms = (time.monotonic_ns() - session_started) // 1_000_000
+                remaining_ms = SESSION_BUDGET_MS - session_elapsed_ms
+                if remaining_ms <= 0:
+                    fail("release measurement session exceeded its 50-minute execution envelope")
+                runs.append(
+                    run_sample(
+                        root,
+                        containment,
+                        output,
+                        pair_index,
+                        run_class,
+                        cache_root,
+                        min(WALL_BUDGET_MS, remaining_ms),
+                    )
+                )
             before = allocated_bytes(containment)
         finally:
             shutil.rmtree(containment, ignore_errors=False)

@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "2be68374db1f3d5870c2f37be0b1523ae8f2b9b6d21c41617e7d52045975b6fc",
-    "roadmap_sha256": "517601ced29abfefe1af2f8d169e29482fad05852977b5b6d591778443aca0fc",
+    "roadmap_sha256": "2d7d1a0ff63982b4de2850ed4144e66d2686aa1ea96ffa4ab352eeaa99ce1110",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -678,7 +678,7 @@
             "scripts/check_genesis_evidence_profile.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "genesis-evidence-profile-bundle-sha256:e456e7c8140e4360e844929f056f783880b3951f9f3efaec6bf688a0fba6cc50"
+          "input_identity": "genesis-evidence-profile-bundle-sha256:1ae3740fa928f08d1807297b465a44cfb948b039ec2a442ea5d755ca101e7747"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -750,7 +750,7 @@
             "scripts/check_genesis_evidence_verifier.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "genesis-evidence-verifier-bundle-sha256:a530e5c828b021fc6d1000f683a81663afa7680525e793bb23ff856d38bf4e74"
+          "input_identity": "genesis-evidence-verifier-bundle-sha256:f4ba43e4ece76fd5cafd26dbaaafa70a7d7928f280ad8b5d309c6202a5173b41"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -822,7 +822,7 @@
             "scripts/check_evidence_storage_classes.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "evidence-storage-classes-bundle-sha256:b8254be3fc4284d772a857b3faa6f5660584749b1c084690f78c5dee73ee5c72"
+          "input_identity": "evidence-storage-classes-bundle-sha256:232b867c8cc421a8cb0b5b610a5f880b8e9d3dc2f742f89430e75b2a05cb5bda"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -894,7 +894,7 @@
             "scripts/check_evidence_adversarial_matrix.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "evidence-adversarial-matrix-bundle-sha256:5dcea7dcba25c8bdff84afc0ba422a9e17a415039f947387d7d3d37415c5d0c7"
+          "input_identity": "evidence-adversarial-matrix-bundle-sha256:0fe218ccb5105582f7476dfc00d6ad983dab6678463ffcd207ee1713c39756e2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -966,7 +966,7 @@
             "scripts/check_evidence_adversarial_matrix.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "evidence-adversarial-matrix-bundle-sha256:5dcea7dcba25c8bdff84afc0ba422a9e17a415039f947387d7d3d37415c5d0c7"
+          "input_identity": "evidence-adversarial-matrix-bundle-sha256:0fe218ccb5105582f7476dfc00d6ad983dab6678463ffcd207ee1713c39756e2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1040,7 +1040,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "test-hermeticity-bundle-sha256:88694616b5b664d26c73f79c18260e136033c670279ef35b037ad2131ca85ad9"
+          "input_identity": "test-hermeticity-bundle-sha256:8b9ab84b2696b22d98b30ac4a4b3c05f6f3d79c35eb809879a3151a29d83fa56"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1114,7 +1114,7 @@
             "scripts/check_test_execution_profile_matrix.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "warning-free-workspace-bundle-sha256:2e28413135521f96a465c7173573a0f50275b54da98b465c3a89a15cb8abef19"
+          "input_identity": "warning-free-workspace-bundle-sha256:b9a2f4902041fb191300a1f58a334dc7299c0bd159d24750af58f9fcac619527"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1262,7 +1262,7 @@
             "scripts/check_prerequisite_manifest.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "prerequisite-manifest-bundle-sha256:8812497ae33bd2c5bb7a05c6f0f604b9a537481bfa195fe9d05ea1d0e9ad8ab1"
+          "input_identity": "prerequisite-manifest-bundle-sha256:25727689aa5ad6ff028a5704cbd7096795cd044765a148ac0db540e4d660d78e"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1337,7 +1337,7 @@
             "scripts/test_offline_dependency_mirror.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "dependency-mirror-bundle-sha256:2f4a5a524b3d178b25a6552d7f08e770c8dd81e1b732057e7446c209b66115fe"
+          "input_identity": "dependency-mirror-bundle-sha256:278554057e788a3a64f39731fe12c5ac753ec08daaeaedf9d90c54c9254d287f"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1413,7 +1413,7 @@
             "scripts/check_release_smoke.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "version-surface-bundle-sha256:00e14110f9e4abaa11c4e8fde95dda8c313b3a71e840c28f8588d9a07cd9d960"
+          "input_identity": "version-surface-bundle-sha256:799a7359c812bd6dfe4824d856e4edb59affc3e173d2246c4daa099223b24577"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1487,7 +1487,7 @@
             "scripts/check_v1_compatibility.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "v1-compatibility-registry-bundle-sha256:0884fd8cea0d39dafb97b8ac682ab6600bdc5deefd088ca5d6a855ab67846704"
+          "input_identity": "v1-compatibility-registry-bundle-sha256:c980aab78c671055c3539560805233c31430411cede961d59b3ad1159803c8e2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1561,7 +1561,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "gate-manifest-bundle-sha256:eedf4c39878582e33a77325c10e06f325916a7a9cf865645cf7a887e06f7c5c2"
+          "input_identity": "gate-manifest-bundle-sha256:17095c5319bf45f74d68822447f0d8733378031b47f9a290c8ef9471ef540964"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1635,7 +1635,7 @@
             "scripts/check_cargo_target_dir_policy.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "cargo-cache-bundle-sha256:15ab2c70e29654347759a344b7c698009961755ed90beaa0660a50d47a3e70a9"
+          "input_identity": "cargo-cache-bundle-sha256:eedcb9adab58cde8042f67ba48d8968a7e8d6df63f3442520ffbf935568a1de6"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1711,7 +1711,7 @@
             "scripts/check_changed_impact.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "changed-impact-bundle-sha256:bd6b67bdf81a6c33a48b6118960355ddf958182954f53468e97cdd955cdcf540"
+          "input_identity": "changed-impact-bundle-sha256:5f29e5093cde49b28fe7c6b602f2552f577363da1e22ab992c84a15008f8eaea"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1942,7 +1942,7 @@
             "scripts/check_cargo_target_dir_policy.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "engineering-gate-budget-bundle-sha256:c62b474ac914794e55f3b8de284525fe6b9adfbb6700b9a9c6f167448c0a2e14"
+          "input_identity": "engineering-gate-budget-bundle-sha256:00276f9d7028cedc937c0a4c8e0988cc3b77646c5b0b71fd11e0a8e3e6c6f00c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2020,7 +2020,7 @@
             "scripts/check_default_iteration_workflow.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "generated-state-lifecycle-bundle-sha256:0bcfea4dbecbc465a735426f22c95ff5fa24088c057547c142c5c85530e8dabc"
+          "input_identity": "generated-state-lifecycle-bundle-sha256:4d82e4114c74195c7b644c2eb3c85ae882bc673a7b1efba5d945fd588c7d42a6"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2097,7 +2097,7 @@
             "scripts/check_check_update_boundary.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "governance-consolidation-bundle-sha256:2945eab24cbeb904b9ba0131f8c1f23e3c3a488bdf6c71d6ba674881bbbfc4a7"
+          "input_identity": "governance-consolidation-bundle-sha256:6fdcad8073983cd1d962b58abd870806a21b1d4f5e6fbe21a15fd40b302d20da"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2175,7 +2175,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "generated-authority-closure-bundle-sha256:ae8ccb9ee1588a57745103ba88f7b12c9a7b61145ca4b5adee87bb0a5551183e"
+          "input_identity": "generated-authority-closure-bundle-sha256:fb9c03fc0ab4d725dddd4d6c4ee4320303a7afa0fdb77373027ce263c242636a"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2255,7 +2255,7 @@
             "30826800834"
           ],
           "completed_date": "2026-08-03",
-          "input_identity": "generated-authority-closure-bundle-sha256:ae8ccb9ee1588a57745103ba88f7b12c9a7b61145ca4b5adee87bb0a5551183e"
+          "input_identity": "generated-authority-closure-bundle-sha256:fb9c03fc0ab4d725dddd4d6c4ee4320303a7afa0fdb77373027ce263c242636a"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2351,7 +2351,7 @@
         "declared_artifacts": [
           ".genesis/perf"
         ],
-        "deliverable": "This is an M0/M1-A/M1-B critical-path refinement of R0.4.f, not a new release or platform scope. Give the serialized release evidence bundle one closed manifest whose report identities, semantic inputs, runtime/toolchain identities, and freshness are validated by every direct and nested consumer; source-decomposition and other aggregate checks may reuse a report only when the invoked gate, complete inputs, environment profile, and required evidence class match exactly, otherwise they rerun. Eliminate repeated native/WASI gauntlets, backend matrices, and other proven duplicate work without replacing execution with stale `.genesis/perf` state or weakening parity. Provision and document a named reference CI shard set with real iOS simulator, Android emulator, edge runtime, and service/container commands; bind each command, runtime class, SDK/image/device identity, artifact hash, logs, and lifecycle result. Until R6.3.f/R6.6 make the emitted packages genuinely installable and executable, strict target qualification must stop at a typed `unsupported-product`/readiness blocker and may not call a synthetic launcher non-synthetic; infrastructure/configuration failures remain distinct hard failures. Make the CI control plane fail boundedly: PR-only supersession may cancel an older run for the same PR, but default-branch pushes, schedules, and dispatches cannot silently replace one another; a hosted preflight binds exact self-hosted runner labels and prevents impossible 24-hour queues; unavailable optional pack runners produce typed non-claiming dispositions while unavailable runners required by a claimed profile fail; and a disjoint watchdog enforces latest-`main` standard disposition within two hours, full-run termination within sixty minutes, and successful full freshness within forty-eight hours. Add clean/cold and warm repeated measurements, history p95, peak RSS, generated-disk attribution, cleanup recovery, and adversarial controls for stale report reuse, mismatched environment identity, absent runtimes, impossible runner labels, cancelled-only history, missing schedules, wrong-head success, watchdog self-reporting, synthetic relabeling, nested duplicate execution, and false success after an expected blocker. Completion requires the entire claimed release-candidate profile, not merely the prefix before the first blocker, to pass on the exact reviewed `main` revision and named reference set in <=45 minutes and <=20 GiB; the independent watchdog must recognize that evidence; the runner-absent path must terminate within five minutes with exact setup, infrastructure, or unsupported-profile diagnostics; and the 2026-07-18 through 2026-08-04 failed/cancelled sequence must have an append-only disposition. Capacity decision: this task owns P1.6, consumes the existing R0.4.f operational-hardening allocation, and must close before M1-A or M1-B publication; it defers no R6 implementation and does not make mobile, edge, service, GPU, or other platform-pack product claims early.",
+        "deliverable": "This is an M0/M1-A/M1-B critical-path refinement of R0.4.f, not a new release or platform scope. Give the serialized release evidence bundle one closed manifest whose report identities, semantic inputs, runtime/toolchain identities, and freshness are validated by every direct and nested consumer; source-decomposition and other aggregate checks may reuse a report only when the invoked gate, complete inputs, environment profile, and required evidence class match exactly, otherwise they rerun. Eliminate repeated native/WASI gauntlets, backend matrices, and other proven duplicate work without replacing execution with stale `.genesis/perf` state or weakening parity. Provision and document a named reference CI shard set with real iOS simulator, Android emulator, edge runtime, and service/container commands; bind each command, runtime class, SDK/image/device identity, artifact hash, logs, and lifecycle result. Until R6.3.f/R6.6 make the emitted packages genuinely installable and executable, strict target qualification must stop at a typed `unsupported-product`/readiness blocker and may not call a synthetic launcher non-synthetic; infrastructure/configuration failures remain distinct hard failures. Make the CI control plane fail boundedly: PR-only supersession may cancel an older run for the same PR, but default-branch pushes, schedules, and dispatches cannot silently replace one another; a hosted preflight binds exact self-hosted runner labels and prevents impossible 24-hour queues; unavailable optional pack runners produce typed non-claiming dispositions while unavailable runners required by a claimed profile fail; and a disjoint watchdog enforces latest-`main` standard disposition within two hours, full-run termination within sixty minutes, and successful full freshness within forty-eight hours. Add clean/cold and warm repeated measurements, history p95, peak RSS, generated-disk attribution, cleanup recovery, and adversarial controls for stale report reuse, mismatched environment identity, absent runtimes, impossible runner labels, cancelled-only history, missing schedules, wrong-head success, watchdog self-reporting, synthetic relabeling, nested duplicate execution, and false success after an expected blocker. Keep the per-profile GB-4 decision, repeated-sample session deadline, CI job envelope, and full-workflow watchdog as distinct ordered limits: the orchestrator must terminate and reap each child, retain a bounded portable failure tail plus complete logs, and leave enough time to publish diagnostics rather than being externally cancelled first. Completion requires the entire claimed release-candidate profile, not merely the prefix before the first blocker, to pass on the exact reviewed `main` revision and named reference set in <=45 minutes and <=20 GiB; the independent watchdog must recognize that evidence; the runner-absent path must terminate within five minutes with exact setup, infrastructure, or unsupported-profile diagnostics; and the 2026-07-18 through 2026-08-04 failed/cancelled sequence must have an append-only disposition. Capacity decision: this task owns P1.6, consumes the existing R0.4.f operational-hardening allocation, and must close before M1-A or M1-B publication; it defers no R6 implementation and does not make mobile, edge, service, GPU, or other platform-pack product claims early.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -2366,7 +2366,7 @@
         "reject capability, policy, format, or resource broadening without an explicit reviewed contract",
         "reject undeclared tools, network inputs, rebuild islands, and benchmark environments"
       ],
-      "objective": "This is an M0/M1-A/M1-B critical-path refinement of R0.4.f, not a new release or platform scope. Give the serialized release evidence bundle one closed manifest whose report identities, semantic inputs, runtime/toolchain identities, and freshness are validated by every direct and nested consumer; source-decomposition and other aggregate checks may reuse a report only when the invoked gate, complete inputs, environment profile, and required evidence class match exactly, otherwise they rerun. Eliminate repeated native/WASI gauntlets, backend matrices, and other proven duplicate work without replacing execution with stale `.genesis/perf` state or weakening parity. Provision and document a named reference CI shard set with real iOS simulator, Android emulator, edge runtime, and service/container commands; bind each command, runtime class, SDK/image/device identity, artifact hash, logs, and lifecycle result. Until R6.3.f/R6.6 make the emitted packages genuinely installable and executable, strict target qualification must stop at a typed `unsupported-product`/readiness blocker and may not call a synthetic launcher non-synthetic; infrastructure/configuration failures remain distinct hard failures. Make the CI control plane fail boundedly: PR-only supersession may cancel an older run for the same PR, but default-branch pushes, schedules, and dispatches cannot silently replace one another; a hosted preflight binds exact self-hosted runner labels and prevents impossible 24-hour queues; unavailable optional pack runners produce typed non-claiming dispositions while unavailable runners required by a claimed profile fail; and a disjoint watchdog enforces latest-`main` standard disposition within two hours, full-run termination within sixty minutes, and successful full freshness within forty-eight hours. Add clean/cold and warm repeated measurements, history p95, peak RSS, generated-disk attribution, cleanup recovery, and adversarial controls for stale report reuse, mismatched environment identity, absent runtimes, impossible runner labels, cancelled-only history, missing schedules, wrong-head success, watchdog self-reporting, synthetic relabeling, nested duplicate execution, and false success after an expected blocker. Completion requires the entire claimed release-candidate profile, not merely the prefix before the first blocker, to pass on the exact reviewed `main` revision and named reference set in <=45 minutes and <=20 GiB; the independent watchdog must recognize that evidence; the runner-absent path must terminate within five minutes with exact setup, infrastructure, or unsupported-profile diagnostics; and the 2026-07-18 through 2026-08-04 failed/cancelled sequence must have an append-only disposition. Capacity decision: this task owns P1.6, consumes the existing R0.4.f operational-hardening allocation, and must close before M1-A or M1-B publication; it defers no R6 implementation and does not make mobile, edge, service, GPU, or other platform-pack product claims early.",
+      "objective": "This is an M0/M1-A/M1-B critical-path refinement of R0.4.f, not a new release or platform scope. Give the serialized release evidence bundle one closed manifest whose report identities, semantic inputs, runtime/toolchain identities, and freshness are validated by every direct and nested consumer; source-decomposition and other aggregate checks may reuse a report only when the invoked gate, complete inputs, environment profile, and required evidence class match exactly, otherwise they rerun. Eliminate repeated native/WASI gauntlets, backend matrices, and other proven duplicate work without replacing execution with stale `.genesis/perf` state or weakening parity. Provision and document a named reference CI shard set with real iOS simulator, Android emulator, edge runtime, and service/container commands; bind each command, runtime class, SDK/image/device identity, artifact hash, logs, and lifecycle result. Until R6.3.f/R6.6 make the emitted packages genuinely installable and executable, strict target qualification must stop at a typed `unsupported-product`/readiness blocker and may not call a synthetic launcher non-synthetic; infrastructure/configuration failures remain distinct hard failures. Make the CI control plane fail boundedly: PR-only supersession may cancel an older run for the same PR, but default-branch pushes, schedules, and dispatches cannot silently replace one another; a hosted preflight binds exact self-hosted runner labels and prevents impossible 24-hour queues; unavailable optional pack runners produce typed non-claiming dispositions while unavailable runners required by a claimed profile fail; and a disjoint watchdog enforces latest-`main` standard disposition within two hours, full-run termination within sixty minutes, and successful full freshness within forty-eight hours. Add clean/cold and warm repeated measurements, history p95, peak RSS, generated-disk attribution, cleanup recovery, and adversarial controls for stale report reuse, mismatched environment identity, absent runtimes, impossible runner labels, cancelled-only history, missing schedules, wrong-head success, watchdog self-reporting, synthetic relabeling, nested duplicate execution, and false success after an expected blocker. Keep the per-profile GB-4 decision, repeated-sample session deadline, CI job envelope, and full-workflow watchdog as distinct ordered limits: the orchestrator must terminate and reap each child, retain a bounded portable failure tail plus complete logs, and leave enough time to publish diagnostics rather than being externally cancelled first. Completion requires the entire claimed release-candidate profile, not merely the prefix before the first blocker, to pass on the exact reviewed `main` revision and named reference set in <=45 minutes and <=20 GiB; the independent watchdog must recognize that evidence; the runner-absent path must terminate within five minutes with exact setup, infrastructure, or unsupported-profile diagnostics; and the 2026-07-18 through 2026-08-04 failed/cancelled sequence must have an append-only disposition. Capacity decision: this task owns P1.6, consumes the existing R0.4.f operational-hardening allocation, and must close before M1-A or M1-B publication; it defers no R6 implementation and does not make mobile, edge, service, GPU, or other platform-pack product claims early.",
       "owner_paths": [
         "Cargo.toml",
         "Cargo.lock",
@@ -2405,7 +2405,7 @@
             "scripts/check_reference_host_profiles.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "reference-host-profile-bundle-sha256:a6306bf41d2e008bd0089a68b4d19767c447eebf6097e2ea5331e09f590b5bb3"
+          "input_identity": "reference-host-profile-bundle-sha256:e1eb2abcbc04063409654a45d3ab63cf1bf46537bd2f70816817f8735251baaf"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2479,7 +2479,7 @@
             "scripts/check_roadmap_workloads.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "roadmap-workload-bundle-sha256:f8c19594b1578ac0a2e08e0ff3625ad52f546d98b4c7988f644f939e9cf014d9"
+          "input_identity": "roadmap-workload-bundle-sha256:eefaba9c975648aa515fe0d5543c0010885cf8dccbf05a9d30f9ecd47c2ef9ea"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2555,7 +2555,7 @@
             "scripts/check_roadmap_baseline.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "roadmap-baseline-bundle-sha256:91b7ff11b5686686210dd08daae3b577eb2e1fa4dc34dee7389bcc8404d2a81c"
+          "input_identity": "roadmap-baseline-bundle-sha256:1f64e309a7340571466a8692169333e249ba4854866bfe1c59647a505c0cd83d"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2631,7 +2631,7 @@
             "scripts/check_release_notes.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "release-notes-bundle-sha256:7da6e19d9e179575f4b30b4b7ba9c04ef3a5bc7c47ea5cc84f7c61e3b71eb548"
+          "input_identity": "release-notes-bundle-sha256:1442000a954064776034b8fcfc206f99730c991fc3062a32003c51f51d7efcb9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2707,7 +2707,7 @@
             "scripts/check_gc_agent_profile.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-profile-bundle-sha256:11d02e7d939211b19823c6707ffef51a85e40563f123a5753cab637ded28c2b1"
+          "input_identity": "gc-agent-profile-bundle-sha256:a234f3d342d3f361db602670ea2a4d569ab0602d920c1eb2e680b8cfb9d5c087"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2783,7 +2783,7 @@
             "scripts/check_gc_agent_core_card.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-core-card-bundle-sha256:fc6806f86c91ecaad4300b89741ad83152a57bedd91f6816492b92529bf144cb"
+          "input_identity": "gc-agent-core-card-bundle-sha256:1af91316716ac8e25036371a15ec843a6f248f1262a83fd453ccd7439b45ea07"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2861,7 +2861,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-task-cards-bundle-sha256:2b88842383b3a6fdfb276a9c08a78b5879dc48c46a73bd89927e7bfe49940f63"
+          "input_identity": "gc-agent-task-cards-bundle-sha256:0171c7b91ece7a2b58fe877a81ba1e5831b66b92b5e25f91652636cdf7fc3e16"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2939,7 +2939,7 @@
             "scripts/check_gc_agent_symbol_index.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-symbol-index-bundle-sha256:528f81ce54e264be2dbd1e40bf844e90a00293ee5e5d9c626129a026951986fa"
+          "input_identity": "gc-agent-symbol-index-bundle-sha256:4a3cfb2c17c8583f6b50d8296656aeed720ae2b2fc156cbbee1f1399ebd13684"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3018,7 +3018,7 @@
             "scripts/check_gc_agent_core_card.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-unsupported-behavior-bundle-sha256:f0102e81a8a59cb32d71b729b2ce02895bf976d0aef54e13af3ba4151d2ac318"
+          "input_identity": "gc-agent-unsupported-behavior-bundle-sha256:897e1e105d041451900899777a9fce701f155df5959892144ad03f6e786aaea2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3096,7 +3096,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-diagnostic-catalog-bundle-sha256:5eeb95f33ed319c8d17e4aaa3b8d5e37605cb4e57589c60071a07ba808ab47f9"
+          "input_identity": "gc-diagnostic-catalog-bundle-sha256:c8de4ef7f1f52f393bb6809ba97e2943a1f9e23400d249424f14ee15cbd9ebdf"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3538,7 +3538,7 @@
             "scripts/check_warm_protocol_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "warm-protocol-bundle-sha256:17ad7b37ca7857ef4c388da5f355317c746c5f01f8c1be28e944f22f48518ff8"
+          "input_identity": "warm-protocol-bundle-sha256:878cd6a0f3e362f96cad3f2ecfa419300f2862fc77140a7c2b79249333e14b1d"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3610,7 +3610,7 @@
             "scripts/check_host_bridge_fault_injection.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "hard-cancellation-bundle-sha256:3a38867a36ad14885238120a9a4bdd72a0012436e3d1ba8b8fd7de0362c1eaa6"
+          "input_identity": "hard-cancellation-bundle-sha256:33d8811e4802a6e7337cfc455a2ae5f407940bc54f1973569198523fcacdc828"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3685,7 +3685,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "mcp-interface-bundle-sha256:ecc1af1ff12d4409cfdb1c1c63abbeebbcba93803fe39e0fddff17dc8704810c"
+          "input_identity": "mcp-interface-bundle-sha256:73d8e2e51ca893dfe26fdd864d06ed17a7752561413d5297bd33ac7b054ff9f1"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3762,7 +3762,7 @@
             "scripts/check_write_genesiscode_skill_conformance.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "transactional-agent-session-bundle-sha256:4bfb6a37a51f50eca87e58aa830d2e0e23e71987a765346e4c0bea82940c9b9b"
+          "input_identity": "transactional-agent-session-bundle-sha256:cd62726116f8f5cf26f576cff504a98c964d1bcb336bb9e50a43b7653e1fd858"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3985,7 +3985,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "gc-agent-corpus-bundle-sha256:5337cbeafd65b85dc87f5d4f2f5a757a81c961777b816b17f2093389c1bb3e15"
+          "input_identity": "gc-agent-corpus-bundle-sha256:a8734a7a26c979f7177f626034a3ca9911da2bd709a909d51eddff35b068dded"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4060,7 +4060,7 @@
             "crates/gc_cli/tests/cli_canonical_language_examples.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-canonical-examples-bundle-sha256:62b088508f12ac8e2b8957f0b2be32a3671fea4acecf6ae8b85f83b1b9aed7bd"
+          "input_identity": "gc-canonical-examples-bundle-sha256:337b677744479ec53431dd1bfe314f128f0e84a30990cae925c2f092a877a241"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4135,7 +4135,7 @@
             "crates/gc_cli/tests/cli_agent_task_benchmarks.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-agent-task-benchmark-bundle-sha256:e5d217a496b6af50d35e7462de4442e5b92903ad79dead7a4a6e650f82082705"
+          "input_identity": "gc-agent-task-benchmark-bundle-sha256:bac06c2effa86b2c3477a5829e00357b78cb3f211047464443763bf8fec537d8"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4285,7 +4285,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-agent-benchmark-scoring-bundle-sha256:7040a5e658975d5d9a592d54d1c967c404d43b7adb63f74530efb5a80fd2a35f"
+          "input_identity": "gc-agent-benchmark-scoring-bundle-sha256:cf589cfffd70c7909a198d244210ff53ab6500dd5f357206e1eaaf277399f4a0"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4360,7 +4360,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_run.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-agent-benchmark-run-bundle-sha256:b4c07754cbeef2de17f1a78e13358f0fecfa926228b89123431cfbd0cabf0eb5"
+          "input_identity": "gc-agent-benchmark-run-bundle-sha256:6d34b25b444121fa034cec54bcfdac217e18cb1c31784e2a1664b24c53dfe6d2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4436,7 +4436,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_run.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-protocol-bundle-sha256:d5cedbfa39588dc66852bcdeb2d76d99a31cc9d4b0d924854d269643557c74f1"
+          "input_identity": "genesisbench-protocol-bundle-sha256:a3c413d9eb1be6e354269565a2c253e312c712eee8a9509cb2af92f313617bbf"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4512,7 +4512,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_run.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-protocol-bundle-sha256:d5cedbfa39588dc66852bcdeb2d76d99a31cc9d4b0d924854d269643557c74f1"
+          "input_identity": "genesisbench-protocol-bundle-sha256:a3c413d9eb1be6e354269565a2c253e312c712eee8a9509cb2af92f313617bbf"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4590,7 +4590,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-lineage-analysis-bundle-sha256:62d84ec3707fb9c1a173a0bbaaaf734b7bd930f63c16f131ba0c98589dad04df"
+          "input_identity": "genesisbench-lineage-analysis-bundle-sha256:feb8ed03c87cabc15d51f9ba75ea71a012e1a94269a752e1f9d57808cebd570e"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4667,7 +4667,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-temporal-epochs-bundle-sha256:f82fb94e3643d8f8284bb8999bb179dfcd0273806d79f5642e0c809cee5062db"
+          "input_identity": "genesisbench-temporal-epochs-bundle-sha256:323cf33f982662fba28d516c85959d57a872820dedf3eba881c756ea6d3686e4"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4743,7 +4743,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-reference-agent-bundle-sha256:77e1c756b1255ea507e08e06356ab1f41267e71ab328e91275b6728687a2bda7"
+          "input_identity": "genesisbench-reference-agent-bundle-sha256:10689ce77214ec4f6267b73c244dafc4852607248ce3ff33fe3a662a642eae1d"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4895,7 +4895,7 @@
             "scripts/check_agent_authoring_bundle.sh"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-signed-registry-bundle-sha256:a113ccaa3d1458681263558a87f87491a4f5152684229b869ef6abf16415628d"
+          "input_identity": "genesisbench-signed-registry-bundle-sha256:2895cdec524995d4d8ac1ad338056c8d4b2a2c5d12d05a1f9fc01f3f0e7fc455"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4972,7 +4972,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "genesisbench-construct-validity-bundle-sha256:d7c95f5a68d2c62230b0e1b7f40f1f94cd8f6f9f15b2254894b19cc0e79926dd"
+          "input_identity": "genesisbench-construct-validity-bundle-sha256:c7abd75a9dee5e94516275184842fd267660a3cecdafbe411c8e374e83fa5dbd"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
