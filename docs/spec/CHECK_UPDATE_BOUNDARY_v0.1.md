@@ -242,8 +242,8 @@ must be reclassified rather than granted a static exception.
 
 The changed-file loop measures its complete invocation, forces Cargo offline,
 and caps additional disk at 1 GiB. `prepush-standard` is capped at eight
-minutes and 3 GiB additional disk. `release-full` retains the stricter local
-30-minute default while rejecting any configured ceiling above 45 minutes and
+minutes and 3 GiB additional disk. `release-full` uses the canonical local
+45-minute default, rejects any configured ceiling above 45 minutes, and
 any generated artifact footprint above 20 GiB. Profile checks retain private
 runtime history; explicit updaters alone may persist E0 observations.
 

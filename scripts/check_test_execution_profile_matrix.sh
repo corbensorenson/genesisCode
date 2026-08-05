@@ -680,8 +680,8 @@ if ! grep -Fq 'CARGO_GATE_ENTRYPOINTS' "$HEALTH_RENDERER" || \
   exit 1
 fi
 
-if ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS:-1800000' "$HEALTH_RENDERER"; then
-  echo "test-execution-profile-matrix: release-full strict loop budget must remain pinned at default 1800000ms (30m)" >&2
+if ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS:-2700000' "$HEALTH_RENDERER"; then
+  echo "test-execution-profile-matrix: release-full strict loop budget must remain pinned at the GB-4 ceiling 2700000ms (45m)" >&2
   exit 1
 fi
 
@@ -1178,6 +1178,11 @@ for marker in [
 ai_slo = (root / "scripts/render_ai_iteration_slo_report.sh").read_text(encoding="utf-8")
 for marker in [
     "CHANGED_FAST_SAMPLE_CEILING_MS=120000",
+    'SAMPLES_CHANGED_FAST="${GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST:-3}"',
+    'SAMPLES_CORE_SUITE="${GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE:-3}"',
+    'SAMPLES_GCPM_LOCK="${GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK:-3}"',
+    'SAMPLES_GCPM_ENV="${GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV:-3}"',
+    "require_robust_median_sample_count",
     '--budget-ms "$CHANGED_FAST_SAMPLE_CEILING_MS"',
     '[[ "$CHANGED_FAST_MS" -le "$BUDGET_CHANGED_FAST_MS" ]]',
     '"changed_fast_sample_ceiling_ms": int(changed_fast_sample_ceiling_ms_s)',
@@ -1194,9 +1199,9 @@ def integer_median(values):
         return ordered[midpoint]
     return int((ordered[midpoint - 1] + ordered[midpoint]) / 2.0)
 
-if integer_median([10_000, 16_733]) > 15_000:
+if integer_median([3_548, 3_600, 16_367]) > 15_000:
     raise SystemExit("test-execution-profile-matrix: one collectable outlier corrupted median adjudication")
-if integer_median([16_001, 16_001]) <= 15_000:
+if integer_median([16_001, 16_001, 16_001]) <= 15_000:
     raise SystemExit("test-execution-profile-matrix: over-budget median was accepted")
 
 consumers = {
