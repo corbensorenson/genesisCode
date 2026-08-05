@@ -748,14 +748,47 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             && perf_lane.contains("bash scripts/test_perf_gates.sh"),
         "standard CI must declare its cold dev-fast envelope; full CI must exclude the aggregate owned by its paired release measurement lane"
     );
+    let pair_job = workflow
+        .find("  release_full_measurement_pair:")
+        .expect("release measurement pair job");
+    let aggregate_job = workflow
+        .find("  release_full_measurement:")
+        .expect("release measurement aggregate job");
+    let test_suite_job = workflow
+        .find("  test_suite:")
+        .expect("test suite job after release measurement jobs");
+    let pair_lane = &workflow[pair_job..aggregate_job];
+    let aggregate_lane = &workflow[aggregate_job..test_suite_job];
     assert!(
-        workflow.contains("release_full_measurement:")
-            && workflow.contains("needs: release_target_reference_readiness")
-            && workflow.contains("reactivecircus/android-emulator-runner@v2")
+        pair_lane.contains("pair: [1, 2]")
+            && pair_lane.contains("Cold/Warm Release Measurement Pair ${{ matrix.pair }}")
+            && pair_lane.contains("--pair-index ${{ matrix.pair }}")
+            && pair_lane.contains("release-full-measurement-pair-${{ matrix.pair }}"),
+        "full CI must run two independently uploaded cold/warm measurement pairs"
+    );
+    assert!(
+        aggregate_lane.contains("- release_target_reference_readiness")
+            && aggregate_lane.contains("- release_full_measurement_pair")
+            && aggregate_lane.contains("Aggregate Paired Release Measurements")
+            && aggregate_lane.contains("reference-target-android.json")
+            && aggregate_lane.contains("reference-target-edge.json")
+            && aggregate_lane.contains("reference-target-ios.json")
+            && aggregate_lane.contains("reference-target-service-runtime.json")
+            && aggregate_lane
+                .contains("--pair-output .genesis/release-pairs/release-full-measurement-pair-1")
+            && aggregate_lane
+                .contains("--pair-output .genesis/release-pairs/release-full-measurement-pair-2"),
+        "full CI must aggregate both measurement pairs after every named target shard"
+    );
+    assert!(
+        workflow.contains("reactivecircus/android-emulator-runner@v2")
             && workflow.contains("scripts/prepare_release_target_reference.sh")
             && workflow.contains("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP")
-            && workflow.contains("Paired Cold/Warm Release Measurement"),
-        "full CI must measure the release aggregate once after all named target shards"
+            && workflow.contains("- release_full_measurement\n")
+            && workflow.contains(
+                "RELEASE_FULL_MEASUREMENT_RESULT: ${{ needs.release_full_measurement.result }}"
+            ),
+        "the required CI check must retain custody of target setup and the release measurement aggregate"
     );
     assert!(
         workflow.contains("'[\"governance\",\"runtime\",\"platform\"]'")
