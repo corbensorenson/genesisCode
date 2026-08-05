@@ -259,6 +259,9 @@ Strict/full profile runtime reports:
       `GENESIS_GPU_BACKEND_POLICY_DEFAULT=allow-fallback`.
     - downgrade attempts (strict profile + fallback policy env) are rejected by
       `scripts/check_agent_gpu_profile_contract.sh`.
+    - hosted CI applies this contract during profile resolution and persists all three
+      resolved backend-policy variables through `GITHUB_ENV`; declaring
+      `GENESIS_AGENT_GPU_PROFILE` without applying its policy is invalid.
   - GPU/GFX decoupled runtime lanes:
     - compute-only lane: `scripts/check_gpu_compute_runtime_profile.sh`
     - gfx-only lane: `scripts/check_gfx_runtime_profile.sh`

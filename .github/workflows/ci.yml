@@ -334,6 +334,14 @@ jobs:
           fi
           echo "Test shard: ${GENESIS_TEST_SHARD_INDEX}/${GENESIS_TEST_SHARDS_TOTAL}"
 
+          source scripts/lib/agent_gpu_profile_contract.sh
+          genesis_apply_agent_gpu_profile_contract "${GENESIS_CI_PROFILE}" 1
+          {
+            echo "HEALTH_GPU_BACKEND_POLICY_DEFAULT=${HEALTH_GPU_BACKEND_POLICY_DEFAULT}"
+            echo "GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT=${GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT}"
+            echo "GENESIS_GPU_COMPUTE_BACKEND_POLICY=${GENESIS_GPU_COMPUTE_BACKEND_POLICY}"
+          } >> "$GITHUB_ENV"
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:

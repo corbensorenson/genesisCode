@@ -32,6 +32,35 @@ fn ci_has_pr_strict_equivalence_gate_job() {
 }
 
 #[test]
+fn ci_applies_and_persists_the_selected_agent_gpu_profile() {
+    let root = repo_root();
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
+    let resolve = ci
+        .find("- name: Resolve CI Profile")
+        .expect("CI profile resolution step");
+    let install = ci[resolve..]
+        .find("- name: Install Rust")
+        .map(|offset| resolve + offset)
+        .expect("step after CI profile resolution");
+    let body = &ci[resolve..install];
+
+    assert!(body.contains("source scripts/lib/agent_gpu_profile_contract.sh"));
+    assert!(body.contains("genesis_apply_agent_gpu_profile_contract \"${GENESIS_CI_PROFILE}\" 1"));
+    for name in [
+        "HEALTH_GPU_BACKEND_POLICY_DEFAULT",
+        "GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT",
+        "GENESIS_GPU_COMPUTE_BACKEND_POLICY",
+    ] {
+        assert!(
+            body.contains(&format!("echo \"{name}=${{{name}}}\"")),
+            "resolved {name} must persist through GITHUB_ENV"
+        );
+    }
+    assert!(body.contains(">> \"$GITHUB_ENV\""));
+}
+
+#[test]
 fn workspace_test_step_holds_a_live_cargo_cache_lease() {
     let root = repo_root();
     let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
