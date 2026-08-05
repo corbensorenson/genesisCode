@@ -1,0 +1,419 @@
+{
+  "disposition": {
+    "correctiveAction": "R0.4.j/P1.6",
+    "remainingNonclaims": [
+      "No successful full-profile run is established by this incident record.",
+      "Runner absence does not qualify an optional GPU pack.",
+      "Post-incident push success does not close R0.4.j or P1.6."
+    ],
+    "status": "retained-with-open-corrective-action",
+    "subsequentMainPushSuccessRunIds": [
+      30950817979,
+      30958624492
+    ]
+  },
+  "incidentId": "ci-liveness-2026-07-18_2026-08-04",
+  "kind": "genesis/ci-incident-disposition-v0.1",
+  "observedControlPlaneFacts": {
+    "registeredSelfHostedRunnerCount": 0,
+    "sharedPendingConcurrencyClasses": [
+      "push",
+      "schedule",
+      "workflow_dispatch"
+    ],
+    "unconditionalSelfHostedLabels": [
+      "self-hosted",
+      "linux",
+      "x64",
+      "gpu"
+    ]
+  },
+  "records": [
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-19T09:51:28Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 29682310988,
+      "startedAt": "2026-07-19T09:51:28Z",
+      "status": "completed",
+      "updatedAt": "2026-07-20T09:51:30Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/29682310988"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-20T10:51:47Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 29736505688,
+      "startedAt": "2026-07-20T10:51:47Z",
+      "status": "completed",
+      "updatedAt": "2026-07-21T10:51:49Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/29736505688"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-21T10:25:00Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 29822134765,
+      "startedAt": "2026-07-21T10:25:00Z",
+      "status": "completed",
+      "updatedAt": "2026-07-22T10:51:50Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/29822134765"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-22T10:24:49Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 29911808946,
+      "startedAt": "2026-07-22T10:24:49Z",
+      "status": "completed",
+      "updatedAt": "2026-07-23T10:51:51Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/29911808946"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-23T10:22:32Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 29999056487,
+      "startedAt": "2026-07-23T10:22:32Z",
+      "status": "completed",
+      "updatedAt": "2026-07-24T10:51:53Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/29999056487"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-24T10:16:17Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30085579956,
+      "startedAt": "2026-07-24T10:16:17Z",
+      "status": "completed",
+      "updatedAt": "2026-07-25T10:51:54Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30085579956"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-25T09:46:44Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30153342487,
+      "startedAt": "2026-07-25T09:46:44Z",
+      "status": "completed",
+      "updatedAt": "2026-07-25T12:26:23Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30153342487"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-26T09:59:07Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30197434912,
+      "startedAt": "2026-07-26T09:59:07Z",
+      "status": "completed",
+      "updatedAt": "2026-07-27T09:59:08Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30197434912"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-27T11:20:33Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30261564841,
+      "startedAt": "2026-07-27T11:20:33Z",
+      "status": "completed",
+      "updatedAt": "2026-07-28T11:20:35Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30261564841"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-28T10:34:27Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30351289146,
+      "startedAt": "2026-07-28T10:34:27Z",
+      "status": "completed",
+      "updatedAt": "2026-07-29T11:20:36Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30351289146"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-29T10:38:18Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30444442501,
+      "startedAt": "2026-07-29T10:38:18Z",
+      "status": "completed",
+      "updatedAt": "2026-07-30T11:20:37Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30444442501"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-30T10:24:06Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30534522310,
+      "startedAt": "2026-07-30T10:24:06Z",
+      "status": "completed",
+      "updatedAt": "2026-07-31T11:20:38Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30534522310"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-07-31T10:38:34Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30624248821,
+      "startedAt": "2026-07-31T10:38:34Z",
+      "status": "completed",
+      "updatedAt": "2026-08-01T11:20:40Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30624248821"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-08-01T09:58:43Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30694800890,
+      "startedAt": "2026-08-01T09:58:43Z",
+      "status": "completed",
+      "updatedAt": "2026-08-02T11:20:41Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30694800890"
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-08-02T09:56:15Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30742742750,
+      "startedAt": "2026-08-02T09:56:15Z",
+      "status": "completed",
+      "updatedAt": "2026-08-03T11:20:42Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30742742750"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-03T11:22:31Z",
+      "event": "schedule",
+      "headSha": "9a6e441d6f629f8da4088d8868f0c442724f2691",
+      "runAttempt": 1,
+      "runId": 30809276640,
+      "startedAt": "2026-08-03T11:22:31Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T08:38:55Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30809276640"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-03T16:38:09Z",
+      "event": "push",
+      "headSha": "2646e42ec7a27c929f5cbbbd5e62f979175eff90",
+      "runAttempt": 1,
+      "runId": 30833058461,
+      "startedAt": "2026-08-03T16:38:09Z",
+      "status": "completed",
+      "updatedAt": "2026-08-03T19:13:41Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30833058461"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-03T19:13:40Z",
+      "event": "push",
+      "headSha": "648594e60e11b70aba3089f8b1ce6be4261e7a1d",
+      "runAttempt": 1,
+      "runId": 30844836673,
+      "startedAt": "2026-08-03T19:13:40Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T08:31:12Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30844836673"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T08:31:11Z",
+      "event": "push",
+      "headSha": "211d8413746bc8e1c0eabd71b0e835d30c398c64",
+      "runAttempt": 1,
+      "runId": 30892292383,
+      "startedAt": "2026-08-04T08:31:11Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T08:33:28Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30892292383"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T08:33:25Z",
+      "event": "workflow_dispatch",
+      "headSha": "211d8413746bc8e1c0eabd71b0e835d30c398c64",
+      "runAttempt": 1,
+      "runId": 30892451389,
+      "startedAt": "2026-08-04T08:33:25Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T08:50:51Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30892451389"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T10:38:33Z",
+      "event": "schedule",
+      "headSha": "211d8413746bc8e1c0eabd71b0e835d30c398c64",
+      "runAttempt": 1,
+      "runId": 30901491521,
+      "startedAt": "2026-08-04T10:38:33Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T10:52:52Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30901491521"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T10:51:20Z",
+      "event": "push",
+      "headSha": "91fd5c4f11949974334321dab2ac32be4df614e7",
+      "runAttempt": 1,
+      "runId": 30902365056,
+      "startedAt": "2026-08-04T10:51:20Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T10:52:25Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30902365056"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T10:53:22Z",
+      "event": "workflow_dispatch",
+      "headSha": "91fd5c4f11949974334321dab2ac32be4df614e7",
+      "runAttempt": 1,
+      "runId": 30902507374,
+      "startedAt": "2026-08-04T10:53:22Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T11:04:52Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30902507374"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T12:38:55Z",
+      "event": "push",
+      "headSha": "f605e0f7bda3e995957e21f499dcc6006999a222",
+      "runAttempt": 1,
+      "runId": 30910029649,
+      "startedAt": "2026-08-04T12:38:55Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T12:39:43Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30910029649"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T12:39:51Z",
+      "event": "workflow_dispatch",
+      "headSha": "f605e0f7bda3e995957e21f499dcc6006999a222",
+      "runAttempt": 1,
+      "runId": 30910095006,
+      "startedAt": "2026-08-04T12:39:51Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T12:48:50Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30910095006"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T14:31:00Z",
+      "event": "push",
+      "headSha": "22d5dd3d98685cad4f74429a38d25ab1e7d05a26",
+      "runAttempt": 1,
+      "runId": 30919347301,
+      "startedAt": "2026-08-04T14:31:00Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T14:32:41Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30919347301"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T14:31:36Z",
+      "event": "workflow_dispatch",
+      "headSha": "22d5dd3d98685cad4f74429a38d25ab1e7d05a26",
+      "runAttempt": 1,
+      "runId": 30919398416,
+      "startedAt": "2026-08-04T14:31:36Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T14:46:11Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30919398416"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T16:28:22Z",
+      "event": "push",
+      "headSha": "6a424002e3e521e5d65fe263655995f611dd0854",
+      "runAttempt": 1,
+      "runId": 30929287209,
+      "startedAt": "2026-08-04T16:28:22Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T16:29:14Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30929287209"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T16:28:47Z",
+      "event": "workflow_dispatch",
+      "headSha": "6a424002e3e521e5d65fe263655995f611dd0854",
+      "runAttempt": 1,
+      "runId": 30929318409,
+      "startedAt": "2026-08-04T16:28:47Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T17:01:25Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30929318409"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T18:35:12Z",
+      "event": "push",
+      "headSha": "5b9cd9d39a40620bac76c94946e7de859af51e3b",
+      "runAttempt": 1,
+      "runId": 30939312348,
+      "startedAt": "2026-08-04T18:35:12Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T18:36:17Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30939312348"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-04T18:35:57Z",
+      "event": "workflow_dispatch",
+      "headSha": "5b9cd9d39a40620bac76c94946e7de859af51e3b",
+      "runAttempt": 1,
+      "runId": 30939372612,
+      "startedAt": "2026-08-04T18:35:57Z",
+      "status": "completed",
+      "updatedAt": "2026-08-04T19:18:27Z",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/30939372612"
+    }
+  ],
+  "recordsSha256": "8651a34f4c44d6859eebaa75166a315751a0a1a66602bd1bb91c31cf2f463d0e",
+  "repository": "corbensorenson/genesisCode",
+  "summary": {
+    "cancelled": 16,
+    "failed": 15,
+    "total": 31
+  },
+  "version": "0.1",
+  "window": {
+    "afterLastSuccessfulRunId": 29664738972,
+    "fromExclusive": "2026-07-18T23:22:55Z",
+    "throughInclusive": "2026-08-04T19:18:27Z"
+  },
+  "workflowPath": ".github/workflows/ci.yml"
+}

@@ -1,0 +1,62 @@
+{
+  "kind": "genesis/ci-control-plane-policy-v0.1",
+  "version": "0.1",
+  "repository": "corbensorenson/genesisCode",
+  "branch": "main",
+  "workflows": {
+    "ci": ".github/workflows/ci.yml",
+    "watchdog": ".github/workflows/ci-watchdog.yml"
+  },
+  "limitsSeconds": {
+    "latestMainDisposition": 7200,
+    "fullRunTermination": 3600,
+    "successfulFullFreshness": 172800,
+    "scheduledFullCadence": 93600,
+    "runnerPreflight": 300
+  },
+  "historicalIncident": {
+    "path": "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
+    "incidentId": "ci-liveness-2026-07-18_2026-08-04",
+    "lastSuccessfulRunId": 29664738972,
+    "firstAffectedRunId": 29682310988,
+    "lastAffectedRunId": 30939372612,
+    "failedCount": 15,
+    "cancelledCount": 16,
+    "recordsSha256": "8651a34f4c44d6859eebaa75166a315751a0a1a66602bd1bb91c31cf2f463d0e"
+  },
+  "selectionProfiles": {
+    "none": [],
+    "primary": [
+      "primary-linux"
+    ],
+    "matrix": [
+      "primary-linux",
+      "nvidia-linux",
+      "amd-linux",
+      "intel-windows",
+      "apple-macos"
+    ]
+  },
+  "runnerLanes": [
+    {
+      "id": "primary-linux",
+      "requiredLabels": ["self-hosted", "linux", "x64", "gpu"]
+    },
+    {
+      "id": "nvidia-linux",
+      "requiredLabels": ["self-hosted", "linux", "x64", "gpu", "nvidia"]
+    },
+    {
+      "id": "amd-linux",
+      "requiredLabels": ["self-hosted", "linux", "x64", "gpu", "amd"]
+    },
+    {
+      "id": "intel-windows",
+      "requiredLabels": ["self-hosted", "windows", "x64", "gpu", "intel"]
+    },
+    {
+      "id": "apple-macos",
+      "requiredLabels": ["self-hosted", "macOS", "arm64", "gpu", "apple"]
+    }
+  ]
+}

@@ -449,7 +449,52 @@ is not reference evidence.
   validation is restricted to canonical `main`. Pull-request runs share one
   concurrency group per pull request and cancel superseded commits, preventing
   duplicate cold-cache work without narrowing the selected gates. The resulting
-  `main` push still runs the independent post-merge `fast` profile.
+  `main` push still runs the independent post-merge `fast` profile. Pushes bind
+  their immutable commit SHA, while schedules and dispatches bind their unique run
+  identity; those event classes never share a pending slot and therefore cannot
+  silently replace one another under GitHub's one-pending-run concurrency rule.
+- `policies/ci_control_plane_v0.1.json` is the closed authority for CI workflow
+  paths, the canonical branch, exact self-hosted label sets, hardware-pack
+  selections, and liveness limits. Scheduled full runs select the optional GPU
+  pack through `GENESIS_GPU_SCHEDULE_PACK=none|primary|matrix`; manual full runs
+  use the closed `gpu_pack` input. `none` is a typed `unsupported-profile`
+  nonclaim. A requested pack is release-relevant and must resolve every selected
+  lane to at least one online runner containing the complete required label set.
+- `gpu_runner_preflight` always runs on `ubuntu-24.04` before any self-hosted job.
+  It queries repository runner inventory only for a requested pack, writes a
+  `genesis/ci-runner-preflight-v0.1` artifact, and exports per-lane dispatch
+  booleans. No self-hosted job has any other dispatch path. Missing labels,
+  offline runners, or unavailable inventory for a requested pack are typed
+  `infrastructure-failure`; an unrequested lane is `unsupported-profile` and can
+  never be relabeled as release qualification. The preflight terminates within
+  300 seconds.
+- `.github/workflows/ci-watchdog.yml` is a separately scheduled observer with a
+  unique per-run concurrency group and read-only Actions access. It evaluates
+  `.github/workflows/ci.yml` history rather than its own status and retains a
+  `genesis/ci-liveness-watchdog-v0.1` disposition. It rejects a latest-main push
+  without a successful terminal disposition after 7,200 seconds, any scheduled
+  or explicitly named full dispatch still running after 3,600 seconds, successful
+  full evidence older than 172,800 seconds, an unsuccessful latest full run, a
+  missing daily schedule after 93,600
+  seconds, and a successful full run whose revision is absent from canonical
+  `main` history. Watchdog output is observational and always has
+  `releaseQualified = false`.
+- The full-profile dependency graph also enforces the 3,600-second ceiling rather
+  than relying on observation alone. Named-target preparation is limited to 20
+  minutes and its dependent release measurement to 40; the full test and local
+  workspace lanes are limited to 55 minutes with a 5-minute aggregate; hosted
+  and selected self-hosted GPU paths use a 5-minute preflight, 50-minute lane,
+  and 5-minute aggregate. Independent branches such as WebXR have shorter
+  limits. A timeout is a terminal failure, never release evidence. Queue latency
+  remains visible to the watchdog and cannot be hidden by a job-level timeout.
+- `docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json` is the
+  append-only disposition for the first observed blackout: the 31-run sequence
+  after run `29664738972` contains exactly 15 failures and 16 cancellations,
+  binds every run identity and terminal timestamp, records the zero-runner and
+  shared-pending-group observations, and retains the remaining full-profile
+  nonclaim. Its canonical record digest is pinned by the control-plane policy;
+  changing, dropping, reordering, or relabeling a historical run fails the
+  execution-profile gate.
 - Standard pull-request CI runs the changed-impact planner with `--dry-run`
   because the same job executes generated-authority checks, lint, and the full
   test surface directly. This prevents a second disposable-worktree compilation
@@ -498,11 +543,13 @@ is not reference evidence.
     (median + p95 + regression policy) derived from gauntlet workflow durations.
   - runs `scripts/check_agent_generative_workloads.sh` for mutation-based workload validation
     beyond the fixed reference workflow list.
-  - full release-profile workflows also require dual GPU conformance lanes
-    (`gpu_device_microbench` + `gpu_device_microbench_deterministic`) and
-    retained lane-contract parity via
-    `scripts/update_gpu_device_conformance_lane_parity_report.sh`; local checks remain
-    read-only.
+  - full release-profile workflows always require the hosted deterministic GPU
+    lane. When the independently selected `primary` or `matrix` hardware pack is
+    claimed, exact-label preflight additionally requires the corresponding
+    self-hosted lanes and retained lane-contract parity via
+    `scripts/update_gpu_device_conformance_lane_parity_report.sh`. Core full runs
+    with `gpu_pack=none` retain `unsupported-profile` and make no hardware-pack
+    claim; local checks remain read-only.
 - Iteration conformance check:
   - `scripts/check_default_iteration_workflow.sh` validates measurable fast-path execution and
     deterministic shard selection.

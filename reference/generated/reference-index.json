@@ -5,7 +5,7 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 303,
+    "canonicalSources": 304,
     "diagnostics": 196,
     "exampleFiles": 189,
     "hostOperations": 188,
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "be5b3c460fe0770eca664c7617648d9d4b600927c86a6413ada363441cb258ca"
+      "sha256": "81cde481ca7c771e376b012c72ada64dd48844a22dfa0bee3b9befda08b8523f"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "6c3aa16a5b6a96f30295a1c7d789b6b544bb7cc70e532aeb7b31ce753a450930"
+      "sha256": "97230abef2c12f78628def7e511e372eeb36d57c41d5da7b3597f96b2a567f23"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -173,6 +173,10 @@
     {
       "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
       "sha256": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f"
+    },
+    {
+      "path": "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
+      "sha256": "f75cfa079e5bed93de12ee9d2e77654f7a65c31523a61af1592eaf772791f005"
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
@@ -424,7 +428,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "45049ebb50b6c7894eac3482b8f25f3300f3e205116ad33cd44cfdc4d8365bf8"
+      "sha256": "ae66f46462c24dcee274676f90cf79c1ec6a7090835fe00365c0ebb2245b3a96"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -588,7 +592,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "ec7984a47a7536420f1c511667aba803a4bf6e91f91f959f4dc306bce67d16c4"
+      "sha256": "a3c4cfaee70cbaf392f105b083628e40b3a216407d1253fa7669f4615a14e909"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
@@ -604,7 +608,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "53ca049f952bae9f072b82a54918ecb54c2d31a663c43671dbcf3de541288ea8"
+      "sha256": "a9bc8f3305cc513fe284d4e245b7aa36718239ea293e0ad623cc7f687d31edd1"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -648,11 +652,11 @@
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "baa376bf662f3e48fea23f63e82aae718bb4638323f93fe01d5410344d50eaa0"
+      "sha256": "365c9b4597fd6f20779e558d15e951c07f2af47c65436833aea686fdbbd07eec"
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-      "sha256": "1c4db7ceb4c0ea30cdd6f74220c637716c142b3a9c6c6aa39feb95401152e426"
+      "sha256": "5b598c22c2666fe92477ce2d063d0caed883d3562c697389902553ca6085864e"
     },
     {
       "path": "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
@@ -728,7 +732,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "0c51f63f6b13b821eded77f9a4fc4648f1daadfe92da3c7924c1790a8145663d"
+      "sha256": "a95370af8ceb24f04c986c06e699901e8b5147c194d6feceeae498c4b23fd652"
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -748,11 +752,11 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
-      "sha256": "f990834bb9bf3ec82fd85876695e112194dc272059c501da19a3bd23fe3a45dc"
+      "sha256": "6a3a79317a41d97a374ff270855b576a483505258a29b7354d9e428d0113d982"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json",
-      "sha256": "962ea24c35c217e43b369bd2cdb430356e3967e76ab86ef59c94748c31d69011"
+      "sha256": "86e1358cc04cd3ce5167def37a7ba595fdac7dbc75f501be6ab81a5ef68f9033"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
@@ -760,7 +764,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
-      "sha256": "95a0072ecc6f58f774107bfb3c4d6c56de81691d22e50257a4d3dc921665790e"
+      "sha256": "3bf5cd7278e9334fccc48e0c4276111557bc53939f5b56529060ed6ac71214a5"
     },
     {
       "path": "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
@@ -784,7 +788,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
-      "sha256": "43e779a350104242c1ad7e8a4c8769d4d1ce9ff23c253381c415f8dcf294703b"
+      "sha256": "25a886902ef5fe611f2128170bdd39978a9d12f0ad7d4b91b847b746629a28f5"
     },
     {
       "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
@@ -852,7 +856,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "8af28b377bd6890a01de56646fd476e8e2079727c496002aaf9ba10e466f8683"
+      "sha256": "322d41680eb2085ab271abaea545cb0a1cedc7398962788ec7f75a84b8056836"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -860,7 +864,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "924261f41b202d8c76b93124f350da4047934e55649a8e35ff6d5400ca5decda"
+      "sha256": "ead2af880baba3df02abd0600d48e1ea4fe2eb0b194d4d2317d65af697c56dae"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
@@ -872,7 +876,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "7e5667171707445acfd241dcd10895817d4df8e1bd590df6ca3424bc33673b92"
+      "sha256": "134443dd29c5b14f5227f48cc04700dd5d3b19918a207860a799f449641ac3bd"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
@@ -1120,7 +1124,7 @@
     },
     {
       "path": "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
-      "sha256": "62217c32963498b8ceb57b84e20cda73011714ed20f4a700234bb8ca5e283959"
+      "sha256": "362280c0a38ffc17bc2c9ede63311911438b00170f886eadbce4363db6927daf"
     },
     {
       "path": "docs/spec/TRANSLATION_VALIDATION.md",
@@ -1172,7 +1176,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
-      "sha256": "3aacc5e0ce56ac5ad42d66f28b793c16a0d10901f471b55c9179ef08d7177771"
+      "sha256": "365e2c5ab1f27c4bc45a6fd0385d498e1ba417e54f7bb33ebf59efa9cd6a8638"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",

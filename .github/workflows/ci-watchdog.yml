@@ -1,0 +1,59 @@
+name: ci-watchdog
+run-name: ci-watchdog / ${{ github.event_name }} / ${{ github.run_id }}
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ci-watchdog-${{ github.event_name }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 200
+
+      - name: Collect Canonical CI History
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .genesis/ci-control-plane
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&per_page=100" \
+            > .genesis/ci-control-plane/runs.json
+          git rev-list --max-count=200 HEAD > .genesis/ci-control-plane/main-history.txt
+
+      - name: Evaluate Independent CI Liveness
+        shell: bash
+        run: |
+          expected_head_time="$(git show -s --format=%cI HEAD)"
+          observed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python3 scripts/lib/ci_liveness_watchdog.py evaluate \
+            --policy policies/ci_control_plane_v0.1.json \
+            --runs .genesis/ci-control-plane/runs.json \
+            --expected-head "$(git rev-parse HEAD)" \
+            --expected-head-time "$expected_head_time" \
+            --main-history .genesis/ci-control-plane/main-history.txt \
+            --now "$observed_at" \
+            --out .genesis/ci-control-plane/liveness-report.json
+
+      - name: Upload CI Liveness Disposition
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-liveness-disposition-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .genesis/ci-control-plane/liveness-report.json
+          if-no-files-found: error
+          retention-days: 90

@@ -11,7 +11,7 @@ source "$ROOT_DIR/scripts/lib/health_profile_evidence.sh"
 KIT_ROOT="${GENESIS_WRITE_SKILL_DIST_ROOT:-docs/skill_pack/write_genesiscode_v1}"
 MANIFEST_PATH="${GENESIS_WRITE_SKILL_DIST_MANIFEST:-$KIT_ROOT/manifest.json}"
 VERIFY_RUNTIME="${GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME:-0}"
-CONFORMANCE_PROFILE="${GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE:-${GENESIS_AGENT_GAUNTLET_PROFILE:-prepush-standard}}"
+CONFORMANCE_PROFILE="${GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE:-${GENESIS_AGENT_GAUNTLET_PROFILE:-dev-fast}}"
 GAUNTLET_INPUT="${GENESIS_WRITE_SKILL_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
 GENERATIVE_INPUT="${GENESIS_WRITE_SKILL_GENERATIVE_REPORT:-.genesis/perf/agent_generative_workloads_report.json}"
 RUNTIME_BACKEND_INPUT="${GENESIS_WRITE_SKILL_RUNTIME_BACKEND_REPORT:-.genesis/perf/runtime_backend_feature_matrix_report.json}"
@@ -213,7 +213,8 @@ if [[ "$VERIFY_RUNTIME" == "1" ]]; then
       "$HOST_BRIDGE_INPUT" \
       "$RUNTIME_BACKEND_INPUT"
   fi
-  bash scripts/check_write_genesiscode_skill_conformance.sh
+  GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE="$CONFORMANCE_PROFILE" \
+    bash scripts/check_write_genesiscode_skill_conformance.sh
   if [[ "$CONFORMANCE_PROFILE" == "release-full" ]]; then
     echo "write-genesiscode-skill-distribution: runtime verification ok"
   else
