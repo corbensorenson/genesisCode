@@ -110,8 +110,12 @@ conformance by default (fail-closed for release/full profile health gates).
 This keeps the bridge-overhead metric (`bridge_runner_ms`) and compute-submit metric
 (`gpu_compute_submit_ms`) independently visible in SLO reports.
 
-Perf-critical lanes must set `GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device`
-so fallback is never accepted implicitly.
+Generic GitHub-hosted CPU lanes make no device-grade claim and must apply the selected
+`agent-gpu-fallback` contract explicitly, which resolves
+`GENESIS_GPU_COMPUTE_BACKEND_POLICY=dev-allow-fallback`. Perf-critical lanes that publish
+device-grade results must set `GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device`, so a
+fallback result is never accepted implicitly. Dedicated device and deterministic-device
+conformance lanes retain that strict policy.
 
 For compute-only runtime profile gating that explicitly excludes non-compute lanes,
 see `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`.
