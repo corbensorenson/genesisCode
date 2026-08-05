@@ -164,25 +164,42 @@ fn compute_bridge_policy(
     compute_bridge_policy_with_override(tmp_dir, None, backend_policy)
 }
 
-fn extract_adapter_name(value: &Value) -> Option<String> {
+fn validate_compute_result(value: &Value, expected_backend: &str) -> Result<Option<String>> {
     let Value::Data(t) = value else {
-        return None;
+        bail!(
+            "gpu compute bridge returned a non-data result: {}",
+            value.debug_repr()
+        );
     };
     let Term::Map(mm) = t.as_ref() else {
-        return None;
+        bail!("gpu compute bridge returned data that is not a map");
     };
+    if mm.get(&TermOrdKey(Term::symbol(":ok"))) != Some(&Term::Bool(true)) {
+        bail!("gpu compute bridge response must contain :ok true");
+    }
+    let response_backend = mm
+        .get(&TermOrdKey(Term::symbol(":backend")))
+        .or_else(|| mm.get(&TermOrdKey(Term::Str(":backend".to_string()))));
+    let Some(Term::Str(response_backend)) = response_backend else {
+        bail!("gpu compute bridge response must identify :backend");
+    };
+    if response_backend.trim() != expected_backend {
+        bail!(
+            "gpu compute bridge backend mismatch: expected {expected_backend}, observed {}",
+            response_backend.trim()
+        );
+    }
     let adapter = mm
         .get(&TermOrdKey(Term::symbol(":adapter")))
         .or_else(|| mm.get(&TermOrdKey(Term::Str(":adapter".to_string()))));
-    let Some(Term::Str(raw)) = adapter else {
-        return None;
+    let adapter = match adapter {
+        Some(Term::Str(raw)) if !raw.trim().is_empty() => Some(raw.trim().to_string()),
+        _ => None,
     };
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        None
-    } else {
-        Some(trimmed.to_string())
+    if expected_backend == GPU_COMPUTE_BACKEND_DEVICE_RUNTIME && adapter.is_none() {
+        bail!("device-runtime gpu compute response must identify a non-empty :adapter");
     }
+    Ok(adapter)
 }
 
 pub fn run_gpu_compute_submit(cfg: &BenchConfig) -> Result<(u128, String, Option<String>)> {
@@ -221,8 +238,16 @@ bench/prog
             "runtime-bench".to_string(),
         )
         .context("run gpu compute benchmark effect program")?;
+        let observed_adapter = validate_compute_result(&run_out.value, &backend)?;
+        if let (Some(expected), Some(observed)) = (&adapter, &observed_adapter)
+            && expected != observed
+        {
+            bail!(
+                "gpu compute adapter changed within one measurement: expected {expected}, observed {observed}"
+            );
+        }
         if adapter.is_none() {
-            adapter = extract_adapter_name(&run_out.value);
+            adapter = observed_adapter;
         }
         Ok(())
     })?;
@@ -235,11 +260,12 @@ mod tests {
     use gc_coreform::{Term, TermOrdKey};
     use gc_kernel::Value;
 
+    #[cfg(not(feature = "device-bridge"))]
+    use super::GPU_COMPUTE_BACKEND_FALLBACK;
     use super::{
-        GPU_COMPUTE_BACKEND_DEVICE_RUNTIME, GPU_COMPUTE_BACKEND_FALLBACK,
-        GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK, GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE,
-        GpuComputeBackendPolicy, compute_bridge_policy_with_override,
-        resolve_device_bridge_cmd_from,
+        GPU_COMPUTE_BACKEND_DEVICE_RUNTIME, GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK,
+        GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE, GpuComputeBackendPolicy,
+        compute_bridge_policy_with_override, resolve_device_bridge_cmd_from,
     };
 
     #[test]
@@ -325,31 +351,77 @@ mod tests {
     }
 
     #[test]
-    fn extract_adapter_name_reads_symbol_and_string_keys() {
+    fn validate_compute_result_reads_symbol_and_string_keys() {
         let adapter_value = Value::data(Term::Map(
-            [(
-                TermOrdKey(Term::symbol(":adapter")),
-                Term::Str("GPU Adapter 0".to_string()),
-            )]
+            [
+                (
+                    TermOrdKey(Term::symbol(":adapter")),
+                    Term::Str("GPU Adapter 0".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":backend")),
+                    Term::Str(GPU_COMPUTE_BACKEND_DEVICE_RUNTIME.to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            ]
             .into_iter()
             .collect(),
         ));
         assert_eq!(
-            super::extract_adapter_name(&adapter_value),
-            Some("GPU Adapter 0".to_string())
+            super::validate_compute_result(&adapter_value, GPU_COMPUTE_BACKEND_DEVICE_RUNTIME)
+                .expect("valid device response"),
+            Some("GPU Adapter 0".to_string()),
         );
 
         let adapter_string_key = Value::data(Term::Map(
-            [(
-                TermOrdKey(Term::Str(":adapter".to_string())),
-                Term::Str("GPU Adapter 1".to_string()),
-            )]
+            [
+                (
+                    TermOrdKey(Term::Str(":adapter".to_string())),
+                    Term::Str("GPU Adapter 1".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::Str(":backend".to_string())),
+                    Term::Str(GPU_COMPUTE_BACKEND_DEVICE_RUNTIME.to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            ]
             .into_iter()
             .collect(),
         ));
         assert_eq!(
-            super::extract_adapter_name(&adapter_string_key),
-            Some("GPU Adapter 1".to_string())
+            super::validate_compute_result(
+                &adapter_string_key,
+                GPU_COMPUTE_BACKEND_DEVICE_RUNTIME,
+            )
+            .expect("valid device response"),
+            Some("GPU Adapter 1".to_string()),
+        );
+    }
+
+    #[test]
+    fn validate_compute_result_rejects_sealed_errors_and_missing_adapter_identity() {
+        let sealed = Value::sealed(
+            gc_kernel::SealId(7),
+            Value::data(Term::Str("device unavailable".to_string())),
+        );
+        assert!(
+            super::validate_compute_result(&sealed, GPU_COMPUTE_BACKEND_DEVICE_RUNTIME).is_err()
+        );
+
+        let missing_adapter = Value::data(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":backend")),
+                    Term::Str(GPU_COMPUTE_BACKEND_DEVICE_RUNTIME.to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+        assert!(
+            super::validate_compute_result(&missing_adapter, GPU_COMPUTE_BACKEND_DEVICE_RUNTIME)
+                .is_err()
         );
     }
 }

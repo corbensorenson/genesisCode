@@ -1051,16 +1051,16 @@ for job, timeout in {
     "gpu_runner_preflight": "timeout-minutes: 5",
     "release_target_reference_readiness": "timeout-minutes: 20",
     "release_full_measurement": "timeout-minutes: 40",
-    "local_workspace_test_contract": "timeout-minutes: 55",
+    "local_workspace_test_contract": "timeout-minutes: 45",
     "test": "timeout-minutes: 5",
     "webxr_browser_conformance": "timeout-minutes: 20",
-    "gpu_device_microbench": "timeout-minutes: 50",
-    "gpu_device_microbench_deterministic": "timeout-minutes: 50",
+    "gpu_device_microbench": "timeout-minutes: 45",
+    "gpu_device_microbench_deterministic": "timeout-minutes: 45",
     "gpu_device_conformance_release_gate": "timeout-minutes: 5",
-    "gpu_device_microbench_nvidia_linux": "timeout-minutes: 50",
-    "gpu_device_microbench_amd_linux": "timeout-minutes: 50",
-    "gpu_device_microbench_intel_windows": "timeout-minutes: 50",
-    "gpu_device_microbench_apple_macos": "timeout-minutes: 50",
+    "gpu_device_microbench_nvidia_linux": "timeout-minutes: 45",
+    "gpu_device_microbench_amd_linux": "timeout-minutes: 45",
+    "gpu_device_microbench_intel_windows": "timeout-minutes: 45",
+    "gpu_device_microbench_apple_macos": "timeout-minutes: 45",
     "gpu_device_conformance_matrix_gate": "timeout-minutes: 5",
 }.items():
     match = re.search(
@@ -1078,10 +1078,56 @@ test_suite = re.search(
 expected_test_timeout = (
     "timeout-minutes: ${{ (github.event_name == 'schedule' || "
     "(github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) "
-    "&& 55 || 120 }}"
+    "&& 45 || 120 }}"
 )
 if test_suite is None or expected_test_timeout not in test_suite.group("section"):
-    raise SystemExit("test-execution-profile-matrix: full test lane is not bounded to 55 minutes")
+    raise SystemExit("test-execution-profile-matrix: full test lane is not bounded to 45 minutes")
+test_suite_section = test_suite.group("section")
+for marker in [
+    "'[\"governance\",\"runtime\",\"platform\"]'",
+    "GENESIS_CI_LANE: ${{ matrix.lane }}",
+    "governance|runtime|platform",
+]:
+    if marker not in test_suite_section:
+        raise SystemExit(f"test-execution-profile-matrix: full test sharding marker missing: {marker}")
+
+lane_start = {
+    "Prerequisite Manifest Guard": "governance",
+    "Format": "governance",
+    "Clippy": "runtime",
+    "Install Node (Release Evidence + WASM)": "platform",
+    "Ignored Perf Gate Regression Tests": "platform",
+    "Upload Test Shard Artifacts": "runtime",
+    "Performance Budgets": "platform",
+}
+lane_end = {
+    "Dependency Mirror Contract Guard",
+    "Test Size Budget Guard",
+    "Changed-File Fast Loop Budget",
+    "Install Playwright Chromium (Release Evidence)",
+    "Ignored Perf Gate Regression Tests",
+    "Upload Test Shard Artifacts",
+    "WASI Build + Smoke (genesis_wasi.wasm)",
+}
+named_steps = list(re.finditer(r"(?m)^      - name: (?P<name>.+)$", test_suite_section))
+lane = None
+for index, step in enumerate(named_steps):
+    name = step.group("name")
+    if name in lane_start:
+        lane = lane_start[name]
+    if lane is not None:
+        end = named_steps[index + 1].start() if index + 1 < len(named_steps) else len(test_suite_section)
+        block = test_suite_section[step.start():end]
+        required = (
+            "env.GENESIS_CI_LANE == 'standard' || "
+            f"env.GENESIS_CI_LANE == '{lane}'"
+        )
+        if required not in block:
+            raise SystemExit(
+                f"test-execution-profile-matrix: {name} is not owned by standard+{lane}"
+            )
+    if name in lane_end:
+        lane = None
 
 watchdog = (root / ".github/workflows/ci-watchdog.yml").read_text(encoding="utf-8")
 for marker in [

@@ -57,11 +57,11 @@ pub(crate) fn inrepo_device_bridge_spec() -> Result<Option<BridgeCommandSpec>> {
             .and_then(|s| s.to_str())
             .context("resolve runtime bench executable filename")?
             .to_string();
-        return Ok(Some(BridgeCommandSpec {
+        Ok(Some(BridgeCommandSpec {
             base_dir,
             cmd_name,
             args: vec![GPU_COMPUTE_BRIDGE_MODE_ARG.to_string()],
-        }));
+        }))
     }
     #[cfg(not(feature = "device-bridge"))]
     {

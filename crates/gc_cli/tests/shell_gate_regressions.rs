@@ -327,6 +327,12 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         "upgrade-plan health profiles must include gpu/gfx stack decoupling topology validation"
     );
     assert!(
+        health.contains("if [[ \"$AGENT_GPU_PROFILE\" == \"agent-gpu-fallback\" ]]")
+            && health.contains("GPU_DEVICE_CONFORMANCE=\"0\"")
+            && health.contains("GPU_DEVICE_CONFORMANCE=\"1\""),
+        "release-full health must reserve real-device conformance for strict GPU profiles"
+    );
+    assert!(
         health.contains("check_gfx_runtime_profile.sh"),
         "upgrade-plan health profiles must include gfx-only runtime profile lane validation"
     );
@@ -750,6 +756,18 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             && workflow.contains("GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_REFERENCE_SETUP")
             && workflow.contains("Paired Cold/Warm Release Measurement"),
         "full CI must measure the release aggregate once after all named target shards"
+    );
+    assert!(
+        workflow.contains("'[\"governance\",\"runtime\",\"platform\"]'")
+            && workflow.contains("GENESIS_CI_LANE: ${{ matrix.lane }}")
+            && workflow.contains("governance|runtime|platform"),
+        "full CI must split the preserved test surface into three explicit parallel ownership lanes"
+    );
+    assert!(
+        workflow.contains("env.GENESIS_CI_LANE == 'governance'")
+            && workflow.contains("env.GENESIS_CI_LANE == 'runtime'")
+            && workflow.contains("env.GENESIS_CI_LANE == 'platform'"),
+        "every full CI ownership lane must be represented by guarded workflow steps"
     );
     let ai_slo = workflow
         .find("- name: AI Iteration SLO")
