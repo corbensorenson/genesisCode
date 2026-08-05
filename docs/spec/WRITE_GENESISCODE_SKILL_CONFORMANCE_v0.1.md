@@ -50,5 +50,13 @@ Default pass threshold remains `100/100` (`GENESIS_WRITE_SKILL_CONFORMANCE_MIN_S
 
 ## Profile wiring
 
+- A standalone local check defaults to `dev-fast`, matching the default optional
+  gauntlet producer. This lane is development evidence and is not release
+  qualification.
 - `scripts/check_upgrade_plan_health.sh --profile prepush-standard`
 - `scripts/check_upgrade_plan_health.sh --profile release-full`
+
+The prepush and release health profiles bind
+`GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE` explicitly. The distribution wrapper
+propagates that exact value to its child conformance check; it cannot downgrade
+to the standalone default.

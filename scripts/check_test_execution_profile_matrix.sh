@@ -359,13 +359,15 @@ if not re.search(
     )
 if not re.search(
     r"(?m)^concurrency:\n"
-    r"  group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n"
+    r"  group: ci-\$\{\{ github\.event_name \}\}-\$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.number \|\| github\.event_name == 'push' && github\.sha \|\| github\.run_id \}\}\n"
     r"  cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}\n",
     source,
 ):
     raise SystemExit(
-        "test-execution-profile-matrix: pull-request CI must cancel superseded runs"
+        "test-execution-profile-matrix: only same-PR CI may supersede; push, schedule, and dispatch runs need unique groups"
     )
+if "run-name: ci / ${{ github.event_name }} /" not in source:
+    raise SystemExit("test-execution-profile-matrix: CI run names must bind event and selected profile")
 PY
 require_ci_pattern 'Docs Quickstart Gate'
 require_ci_pattern 'bash scripts/check_docs_quickstart.sh'
@@ -904,6 +906,7 @@ fi
 python3 - "$ROOT_DIR" <<'PY'
 import json
 import pathlib
+import re
 import sys
 
 root = pathlib.Path(sys.argv[1])
@@ -995,9 +998,107 @@ for marker in [
     "wasmtime/setup@v1",
     "--exclude-test upgrade_plan_health",
     "--pairs 2",
+    "gpu_runner_preflight:",
+    "Collect Exact Repository Runner Inventory",
+    "Classify Exact Runner Readiness",
+    "Enforce Requested Runner Readiness",
+    "policies/ci_control_plane_v0.1.json",
+    "scripts/lib/ci_runner_preflight.py",
+    "ci-runner-preflight-${{ github.run_id }}-${{ github.run_attempt }}",
+    "infrastructure-failure",
+    "unsupported-profile",
 ]:
     if marker not in workflow:
         raise SystemExit(f"test-execution-profile-matrix: named target CI marker missing: {marker}")
+
+policy_control = json.loads((root / "policies/ci_control_plane_v0.1.json").read_text(encoding="utf-8"))
+if policy_control.get("kind") != "genesis/ci-control-plane-policy-v0.1":
+    raise SystemExit("test-execution-profile-matrix: CI control-plane policy identity mismatch")
+if policy_control.get("limitsSeconds") != {
+    "latestMainDisposition": 7200,
+    "fullRunTermination": 3600,
+    "successfulFullFreshness": 172800,
+    "scheduledFullCadence": 93600,
+    "runnerPreflight": 300,
+}:
+    raise SystemExit("test-execution-profile-matrix: CI control-plane limit drift")
+lanes = policy_control.get("runnerLanes")
+expected_lanes = {
+    "primary-linux": ["self-hosted", "linux", "x64", "gpu"],
+    "nvidia-linux": ["self-hosted", "linux", "x64", "gpu", "nvidia"],
+    "amd-linux": ["self-hosted", "linux", "x64", "gpu", "amd"],
+    "intel-windows": ["self-hosted", "windows", "x64", "gpu", "intel"],
+    "apple-macos": ["self-hosted", "macOS", "arm64", "gpu", "apple"],
+}
+if not isinstance(lanes, list) or {row.get("id"): row.get("requiredLabels") for row in lanes} != expected_lanes:
+    raise SystemExit("test-execution-profile-matrix: exact self-hosted runner labels drift")
+
+for job, dispatch in {
+    "gpu_device_microbench": "primary_linux_dispatch",
+    "gpu_device_microbench_nvidia_linux": "nvidia_linux_dispatch",
+    "gpu_device_microbench_amd_linux": "amd_linux_dispatch",
+    "gpu_device_microbench_intel_windows": "intel_windows_dispatch",
+    "gpu_device_microbench_apple_macos": "apple_macos_dispatch",
+}.items():
+    start = workflow.find(f"  {job}:\n")
+    next_job = re.search(r"(?m)^  [A-Za-z0-9_]+:\n", workflow[start + len(job) + 4 :])
+    end = len(workflow) if next_job is None else start + len(job) + 4 + next_job.start()
+    section = workflow[start:end]
+    if start < 0 or "needs: gpu_runner_preflight" not in section or f"outputs.{dispatch} == 'true'" not in section:
+        raise SystemExit(f"test-execution-profile-matrix: {job} bypasses hosted exact-label preflight")
+
+for job, timeout in {
+    "gpu_runner_preflight": "timeout-minutes: 5",
+    "release_target_reference_readiness": "timeout-minutes: 20",
+    "release_full_measurement": "timeout-minutes: 40",
+    "local_workspace_test_contract": "timeout-minutes: 55",
+    "test": "timeout-minutes: 5",
+    "webxr_browser_conformance": "timeout-minutes: 20",
+    "gpu_device_microbench": "timeout-minutes: 50",
+    "gpu_device_microbench_deterministic": "timeout-minutes: 50",
+    "gpu_device_conformance_release_gate": "timeout-minutes: 5",
+    "gpu_device_microbench_nvidia_linux": "timeout-minutes: 50",
+    "gpu_device_microbench_amd_linux": "timeout-minutes: 50",
+    "gpu_device_microbench_intel_windows": "timeout-minutes: 50",
+    "gpu_device_microbench_apple_macos": "timeout-minutes: 50",
+    "gpu_device_conformance_matrix_gate": "timeout-minutes: 5",
+}.items():
+    match = re.search(
+        rf"(?ms)^  {re.escape(job)}:\n(?P<section>.*?)(?=^  [A-Za-z0-9_]+:\n|\Z)",
+        workflow,
+    )
+    if match is None or timeout not in match.group("section"):
+        raise SystemExit(
+            f"test-execution-profile-matrix: {job} lacks the reviewed full-run timeout {timeout}"
+        )
+test_suite = re.search(
+    r"(?ms)^  test_suite:\n(?P<section>.*?)(?=^  [A-Za-z0-9_]+:\n|\Z)",
+    workflow,
+)
+expected_test_timeout = (
+    "timeout-minutes: ${{ (github.event_name == 'schedule' || "
+    "(github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) "
+    "&& 55 || 120 }}"
+)
+if test_suite is None or expected_test_timeout not in test_suite.group("section"):
+    raise SystemExit("test-execution-profile-matrix: full test lane is not bounded to 55 minutes")
+
+watchdog = (root / ".github/workflows/ci-watchdog.yml").read_text(encoding="utf-8")
+for marker in [
+    "name: ci-watchdog",
+    'cron: "17 * * * *"',
+    "actions: read",
+    "group: ci-watchdog-${{ github.event_name }}-${{ github.run_id }}",
+    "timeout-minutes: 5",
+    "actions/workflows/ci.yml/runs?branch=main&per_page=100",
+    "scripts/lib/ci_liveness_watchdog.py evaluate",
+    '--expected-head "$(git rev-parse HEAD)"',
+    "ci-liveness-disposition-${{ github.run_id }}-${{ github.run_attempt }}",
+]:
+    if marker not in watchdog:
+        raise SystemExit(f"test-execution-profile-matrix: independent CI watchdog marker missing: {marker}")
+if "group: ci-${{" in watchdog or "cancel-in-progress: true" in watchdog:
+    raise SystemExit("test-execution-profile-matrix: watchdog shares CI supersession authority")
 
 prepare = (root / "scripts/prepare_release_target_reference.sh").read_text(encoding="utf-8")
 for marker in [
@@ -1271,6 +1372,11 @@ trap - EXIT INT TERM
 echo "nested-health-output-isolation: ok"
 
 bash scripts/test_prepare_release_target_reference.sh
+
+python3 scripts/lib/ci_runner_preflight.py self-test \
+  --policy policies/ci_control_plane_v0.1.json
+python3 scripts/lib/ci_liveness_watchdog.py self-test \
+  --policy policies/ci_control_plane_v0.1.json
 
 python3 "$LINT_SUPPRESSION_POLICY" --root "$ROOT_DIR"
 

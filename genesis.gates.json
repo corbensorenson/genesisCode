@@ -9,7 +9,7 @@
       "executionIdentitySha256": "b45040a3cfad48c97dcda192f6e59152dbe8521250eb3d5e19d420b0034c3038",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "a9c686d57fd4d68aa5ef40025d727e206d524a99b8eb35fefe46ec0ff6b7eeff",
+      "inputIdentitySha256": "627d7197f32abe011e7b6ada792a1a4138aa62591cca1cc5ec17934d10167f38",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -274,7 +274,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -556,7 +556,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -694,7 +694,7 @@
       "executionIdentitySha256": "b6c30174236151191a76946a7cef6fa3b651dfdfcd8a6761121fed880c44eebe",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -832,7 +832,7 @@
       "executionIdentitySha256": "d425a18f129b895d3f818429bcd96ae135a76d392b70deb989ce6d2844ed0650",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1058,6 +1058,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -1325,6 +1326,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -1502,6 +1504,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -2212,7 +2216,7 @@
       "executionIdentitySha256": "705da23ba5ee6f735a3cc5e8c1a9412dd8166b084ad8ad17e33165e32b155f9b",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2438,6 +2442,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -2705,6 +2710,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -2882,6 +2888,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -3221,7 +3229,7 @@
       "executionIdentitySha256": "242ca8460da231b46767e4964fbc3b6656b93e244ae9007a53943df8349af97e",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "6803027a7f830ae605adf0f432e37bfbfd4130663d9ce82e394697613e35bd2a",
+      "inputIdentitySha256": "749e6c1f0f89cae4c0398e2bc0281f64ac3f7ff0c3048a363a123a6222588620",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3301,7 +3309,7 @@
       "executionIdentitySha256": "413a261bef8019890d3ecef40d7030e2af4ef612abb636f6c69bf63078766212",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3527,6 +3535,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -3794,6 +3803,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -3971,6 +3981,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -4265,7 +4277,7 @@
       "executionIdentitySha256": "23f601dc62c74c771fd8e24a55cb9e837aae715589dcf8d0f36cbdf87a166399",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4491,6 +4503,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -4758,6 +4771,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -4935,6 +4949,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -5308,7 +5324,7 @@
       "executionIdentitySha256": "5d7fcca0e4a1109fa79c1d828aa09ebefb4eb1bd2cb1cd143f819300fc4a8cca",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5534,6 +5550,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -5801,6 +5818,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -5978,6 +5996,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -6560,7 +6580,7 @@
       "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "daa12166cee6fbd53f9fbb427fb68d0a864bd4c6f374fcf59d77d3fa76b1c151",
+      "inputIdentitySha256": "eeaabf24e1a7e730bff0bcbf1f38f2ab97207804915b7f765b1214c4a850ec82",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6841,7 +6861,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7067,6 +7087,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -7334,6 +7355,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -7511,6 +7533,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -8391,7 +8415,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "25df8b4755351900f8355893bb6e0daacc652acc84137e09408ed22f41ef23ad",
+      "inputIdentitySha256": "2df7eef83a0c282aa23a24af20696b08bbeac832be3d5e1dd734bb666cfbf49b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8578,7 +8602,7 @@
       "executionIdentitySha256": "969f063c2bb464130de2dc61013286e16ddaf028bc31c8b8bc99dabe3e95398d",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8804,6 +8828,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -9071,6 +9096,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -9248,6 +9274,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -9526,7 +9554,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "a9c686d57fd4d68aa5ef40025d727e206d524a99b8eb35fefe46ec0ff6b7eeff",
+      "inputIdentitySha256": "627d7197f32abe011e7b6ada792a1a4138aa62591cca1cc5ec17934d10167f38",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9795,7 +9823,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "a9c686d57fd4d68aa5ef40025d727e206d524a99b8eb35fefe46ec0ff6b7eeff",
+      "inputIdentitySha256": "627d7197f32abe011e7b6ada792a1a4138aa62591cca1cc5ec17934d10167f38",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10064,7 +10092,7 @@
       "executionIdentitySha256": "09ccbdaf204f565c2bca87bb239f1e4e529497f7ff1a50c3e999396a593cbce7",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "a9c686d57fd4d68aa5ef40025d727e206d524a99b8eb35fefe46ec0ff6b7eeff",
+      "inputIdentitySha256": "627d7197f32abe011e7b6ada792a1a4138aa62591cca1cc5ec17934d10167f38",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10333,7 +10361,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "a9c686d57fd4d68aa5ef40025d727e206d524a99b8eb35fefe46ec0ff6b7eeff",
+      "inputIdentitySha256": "627d7197f32abe011e7b6ada792a1a4138aa62591cca1cc5ec17934d10167f38",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10799,7 +10827,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11025,6 +11053,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -11292,6 +11321,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -11469,6 +11499,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -12143,14 +12175,15 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_gpu_conformance_lane_matrix.sh",
-      "executionIdentitySha256": "a17975450bf8bc3c83a3ae9724330cf8498a6ae3d0ec517cf28d4973ebb2c722",
+      "executionIdentitySha256": "b670ee5748457381aed83dc9fe411f7ca7d2d3bb55f2b5c8583a8b7a3c7a5cba",
       "expectedDurationSeconds": 15,
       "id": "gate/gpu-conformance-lane-matrix",
-      "inputIdentitySha256": "10cb719046e5381c6530867b5f86c9729ecb40c7d5cf62abe3578187bd6a0aa1",
+      "inputIdentitySha256": "0c992eb3332e692bb4abe2487f32a96e550676ca95eaa013c340c4ec181048c0",
       "inputs": {
         "paths": [
           "Cargo.lock",
           "Cargo.toml",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json",
           "policies/cargo_cache_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
@@ -12161,6 +12194,7 @@
           "scripts/check_gpu_conformance_lane_matrix.sh",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/perf_disk_mode.sh",
@@ -12203,7 +12237,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "38c6b4396725935e845b28377ab192fb11b84705844c489092e14807f24f929c",
+      "sourceSha256": "1f9f14d16476861f4572f93ebff38b1aa8d4dace4f2d578ac8870d8e2ceb5abf",
       "tools": [
         "bash",
         "git",
@@ -12400,7 +12434,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12626,6 +12660,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -12893,6 +12928,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -13070,6 +13106,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -13352,7 +13390,7 @@
       "executionIdentitySha256": "d60530979a929879d65612ef0c41f028fb304df085b0e4dcde48254614f08350",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -13531,7 +13569,7 @@
       "executionIdentitySha256": "b5a5877112d47b1cd04e2b00c868b18e79a5d2572677ca2682ca66137324f9b1",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13757,6 +13795,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -14024,6 +14063,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -14201,6 +14241,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -14658,7 +14700,7 @@
       "executionIdentitySha256": "ed52805212f70b30b13895dbdcc1dc8cdcc23f840fbb14e93cc5596eca24a634",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -15044,7 +15086,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -15270,6 +15312,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -15537,6 +15580,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -15714,6 +15758,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -16289,7 +16335,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -16515,6 +16561,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -16782,6 +16829,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -16959,6 +17007,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -18087,7 +18137,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -19044,7 +19094,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -19489,10 +19539,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_test_execution_profile_matrix.sh",
-      "executionIdentitySha256": "f2baecf18e38788f027f4b2946dae0b83880c63c4c14881b3623eb059ec8e3c5",
+      "executionIdentitySha256": "1ade6a169d6bc5646ca8ab596f072eca6b8fb0462809130c10b57510af1ae57c",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19718,6 +19768,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -19985,6 +20036,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -20162,6 +20214,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -20426,7 +20480,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "4b18a6ba2b5b2c33f996d985e1be195d5eac206c0f61672c41d9c12a4c66bca2",
+      "sourceSha256": "a30df938b2fd7e752b76f279343628c24e5e06cc3c74f5660702bc930f722752",
       "tools": [
         "adb",
         "bash",
@@ -20557,7 +20611,7 @@
       "executionIdentitySha256": "7205ad4a7be0b1fa1463fd683239c58675be9706b0b438277e1910bb2f017f52",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "dd712d12e35892199796c5c267a7ce667c1ded4ba2aaaf9df575f512fcdfbb90",
+      "inputIdentitySha256": "715afd18c282b32baf87808f987a2f4eed4aa5ebf988ba67b31084d38478258a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20783,6 +20837,7 @@
           "docs/program/evidence/artifact/genesis-example.bin",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
           "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+          "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
           "docs/skill_pack/write_genesiscode_v1/manifest.json",
           "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
           "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
@@ -21050,6 +21105,7 @@
           "policies/cargo_cache_v0.1.json",
           "policies/changed_impact_v0.1.json",
           "policies/check_update_boundary_v0.1.json",
+          "policies/ci_control_plane_v0.1.json",
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
@@ -21227,6 +21283,8 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/changed_impact.py",
           "scripts/lib/check_update_boundary.py",
+          "scripts/lib/ci_liveness_watchdog.py",
+          "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
@@ -22058,10 +22116,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_write_genesiscode_skill_conformance.sh",
-      "executionIdentitySha256": "31569b75611a2b32efebe21b501a3350945d3eafae9a23a3ecf44fa8fea44490",
+      "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22193,10 +22251,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_write_genesiscode_skill_distribution.sh",
-      "executionIdentitySha256": "63e4baf7b80d7b5711df0c03e74f977a6128c7a4acc7a92aba569aaaf4c798f7",
+      "executionIdentitySha256": "fb5873b585d0bbdf67528bc4e9b315953250f3eb2904eac89e64988ce8d9ab2e",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "fc90478595f1d1eb4a3149f37a879bcfc29a26e7c5833ba6d5d37aed52e76b1a",
+      "inputIdentitySha256": "36aa12dae9babcf22c654842abd54fd1a0a37227e05db2ddd8f60d219a46b8f4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22315,7 +22373,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "1fc19ab6c673798cd0745cfdca1f3b53f59c73a82a1c14593dee5be917827f76",
+      "sourceSha256": "2f8518d3f7e8ffd50878d74612038e8f3719a8fa7d1eb45c60f384d6b53d3c26",
       "tools": [
         "bash",
         "cargo",
@@ -22333,7 +22391,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "bdb0b5d46398a737936bc03fce6c91009a6096066586ca507bb6c02c2b39868b",
+      "inputIdentitySha256": "f38cf71c0d6caf18f40202b0159d0ace25d15142161560ab953bf60d6bf6ef15",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -22481,7 +22539,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "45049ebb50b6c7894eac3482b8f25f3300f3e205116ad33cd44cfdc4d8365bf8"
+        "sha256": "ae66f46462c24dcee274676f90cf79c1ec6a7090835fe00365c0ebb2245b3a96"
       },
       {
         "path": "genesis.prerequisites.json",

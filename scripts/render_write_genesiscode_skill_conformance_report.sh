@@ -19,9 +19,17 @@ RUNTIME_BACKEND_REPORT="$7"
 HOST_BRIDGE_REPORT="$8"
 GPU_XR_REPORT="$9"
 ASSURANCE_REPORT="${10}"
-PROFILE="${GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE:-${GENESIS_AGENT_GAUNTLET_PROFILE:-prepush-standard}}"
+PROFILE="${GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE:-${GENESIS_AGENT_GAUNTLET_PROFILE:-dev-fast}}"
 MIN_SCORE="${GENESIS_WRITE_SKILL_CONFORMANCE_MIN_SCORE:-100}"
 MIN_GENERATIVE_CASES="${GENESIS_WRITE_SKILL_CONFORMANCE_MIN_GENERATIVE_CASES:-8}"
+
+case "$PROFILE" in
+  dev-fast|prepush-standard|release-full) ;;
+  *)
+    echo "write-genesiscode-skill-conformance: unsupported profile: $PROFILE" >&2
+    exit 2
+    ;;
+esac
 
 [[ -f "$MANIFEST_PATH" ]] || {
   echo "write-genesiscode-skill-conformance: missing manifest input: $MANIFEST_PATH" >&2

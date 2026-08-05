@@ -1,4 +1,5 @@
 name: ci
+run-name: ci / ${{ github.event_name }} / ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'workflow_dispatch' && github.event.inputs.profile || github.event_name == 'pull_request' && 'standard' || 'fast' }}
 
 on:
   push:
@@ -26,16 +27,102 @@ on:
         required: true
         default: "0"
         type: string
+      gpu_pack:
+        description: "Optional self-hosted GPU pack required by this full run"
+        required: true
+        default: none
+        type: choice
+        options:
+          - none
+          - primary
+          - matrix
   schedule:
     - cron: "0 8 * * *"
 
+permissions:
+  actions: read
+  contents: read
+
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.event_name == 'push' && github.sha || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  gpu_runner_preflight:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GENESIS_GPU_PACK: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.gpu_pack || github.event_name == 'schedule' && vars.GENESIS_GPU_SCHEDULE_PACK || 'none' }}
+    outputs:
+      overall_status: ${{ steps.classify.outputs.overall_status }}
+      primary_linux_status: ${{ steps.classify.outputs.primary_linux_status }}
+      primary_linux_dispatch: ${{ steps.classify.outputs.primary_linux_dispatch }}
+      nvidia_linux_status: ${{ steps.classify.outputs.nvidia_linux_status }}
+      nvidia_linux_dispatch: ${{ steps.classify.outputs.nvidia_linux_dispatch }}
+      amd_linux_status: ${{ steps.classify.outputs.amd_linux_status }}
+      amd_linux_dispatch: ${{ steps.classify.outputs.amd_linux_dispatch }}
+      intel_windows_status: ${{ steps.classify.outputs.intel_windows_status }}
+      intel_windows_dispatch: ${{ steps.classify.outputs.intel_windows_dispatch }}
+      apple_macos_status: ${{ steps.classify.outputs.apple_macos_status }}
+      apple_macos_dispatch: ${{ steps.classify.outputs.apple_macos_dispatch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect Exact Repository Runner Inventory
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .genesis/ci-control-plane
+          inventory_status=not-requested
+          printf '{"total_count":0,"runners":[]}\n' \
+            > .genesis/ci-control-plane/runner-inventory.json
+          if [[ "$GENESIS_GPU_PACK" != "none" ]]; then
+            inventory_status=ok
+            if ! gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100" \
+              > .genesis/ci-control-plane/runner-inventory.json; then
+              inventory_status=api-unavailable
+              printf '{"total_count":0,"runners":[]}\n' \
+                > .genesis/ci-control-plane/runner-inventory.json
+            fi
+          fi
+          echo "GENESIS_RUNNER_INVENTORY_STATUS=$inventory_status" >> "$GITHUB_ENV"
+
+      - name: Classify Exact Runner Readiness
+        id: classify
+        shell: bash
+        run: |
+          python3 scripts/lib/ci_runner_preflight.py classify \
+            --policy policies/ci_control_plane_v0.1.json \
+            --inventory .genesis/ci-control-plane/runner-inventory.json \
+            --inventory-status "$GENESIS_RUNNER_INVENTORY_STATUS" \
+            --selection "$GENESIS_GPU_PACK" \
+            --repository "$GITHUB_REPOSITORY" \
+            --revision "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --out .genesis/ci-control-plane/runner-preflight.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Upload Runner Preflight Disposition
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-runner-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .genesis/ci-control-plane/runner-preflight.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce Requested Runner Readiness
+        run: |
+          python3 scripts/lib/ci_runner_preflight.py verify \
+            --report .genesis/ci-control-plane/runner-preflight.json
+
   release_target_reference_readiness:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -109,7 +196,7 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
     needs: release_target_reference_readiness
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
+    timeout-minutes: 40
     env:
       GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
     steps:
@@ -187,6 +274,7 @@ jobs:
 
   test_suite:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) && 55 || 120 }}
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       # GitHub-hosted CPU runners must select the reviewed fallback profile explicitly.
@@ -683,6 +771,7 @@ jobs:
   local_workspace_test_contract:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile != 'fast') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
     steps:
@@ -717,6 +806,7 @@ jobs:
       - test_suite
       - local_workspace_test_contract
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Required CI Aggregate
         env:
@@ -743,6 +833,7 @@ jobs:
   pr_strict_equivalence_gate:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
     steps:
@@ -782,6 +873,7 @@ jobs:
   webxr_browser_conformance:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
     steps:
@@ -810,8 +902,10 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_microbench:
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.primary_linux_dispatch == 'true' }}
+    needs: gpu_runner_preflight
     runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 50
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -854,6 +948,7 @@ jobs:
   gpu_device_microbench_deterministic:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance_deterministic"
@@ -892,15 +987,60 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_conformance_release_gate:
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
     needs:
+      - gpu_runner_preflight
       - gpu_device_microbench
       - gpu_device_microbench_deterministic
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download Runner Preflight Disposition
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-runner-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .genesis/ci-control-plane
+
+      - name: Enforce GPU Pack Disposition
+        shell: bash
+        env:
+          PREFLIGHT_RESULT: ${{ needs.gpu_runner_preflight.result }}
+          PREFLIGHT_STATUS: ${{ needs.gpu_runner_preflight.outputs.primary_linux_status }}
+          PRIMARY_RESULT: ${{ needs.gpu_device_microbench.result }}
+          DETERMINISTIC_RESULT: ${{ needs.gpu_device_microbench_deterministic.result }}
+        run: |
+          [[ "$DETERMINISTIC_RESULT" == "success" ]] || {
+            echo "deterministic GPU lane result: $DETERMINISTIC_RESULT" >&2
+            exit 1
+          }
+          case "$PREFLIGHT_STATUS" in
+            ready)
+              [[ "$PREFLIGHT_RESULT" == "success" && "$PRIMARY_RESULT" == "success" ]] || {
+                echo "required primary GPU lane did not succeed" >&2
+                exit 1
+              }
+              ;;
+            unsupported-profile)
+              [[ "$PREFLIGHT_RESULT" == "success" && "$PRIMARY_RESULT" == "skipped" ]] || {
+                echo "optional primary GPU disposition is inconsistent" >&2
+                exit 1
+              }
+              echo "primary GPU pack unavailable by explicit non-claim"
+              ;;
+            infrastructure-failure)
+              echo "requested primary GPU pack is unavailable" >&2
+              exit 1
+              ;;
+            *)
+              echo "unknown primary GPU preflight status: $PREFLIGHT_STATUS" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Download Self-Hosted GPU Lane Artifact
+        if: ${{ needs.gpu_runner_preflight.outputs.primary_linux_status == 'ready' }}
         uses: actions/download-artifact@v4
         with:
           name: gpu-device-conformance-artifacts-selfhosted-linux
@@ -913,6 +1053,7 @@ jobs:
           path: .genesis/perf/lane_b
 
       - name: GPU Device Conformance Lane Parity Gate
+        if: ${{ needs.gpu_runner_preflight.outputs.primary_linux_status == 'ready' }}
         run: |
           bash scripts/update_gpu_device_conformance_lane_parity_report.sh \
             --lane-a .genesis/perf/lane_a/gpu_device_conformance_report.json \
@@ -920,7 +1061,7 @@ jobs:
             --out .genesis/perf/gpu_device_lane_parity_report.json
 
       - name: Upload GPU Lane Parity Artifact
-        if: ${{ always() }}
+        if: ${{ always() && needs.gpu_runner_preflight.outputs.primary_linux_status == 'ready' }}
         uses: actions/upload-artifact@v4
         with:
           name: gpu-device-conformance-lane-parity
@@ -928,8 +1069,10 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_microbench_nvidia_linux:
-    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.nvidia_linux_dispatch == 'true' }}
+    needs: gpu_runner_preflight
     runs-on: [self-hosted, linux, x64, gpu, nvidia]
+    timeout-minutes: 50
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -965,8 +1108,10 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_microbench_amd_linux:
-    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.amd_linux_dispatch == 'true' }}
+    needs: gpu_runner_preflight
     runs-on: [self-hosted, linux, x64, gpu, amd]
+    timeout-minutes: 50
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -1002,8 +1147,10 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_microbench_intel_windows:
-    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.intel_windows_dispatch == 'true' }}
+    needs: gpu_runner_preflight
     runs-on: [self-hosted, windows, x64, gpu, intel]
+    timeout-minutes: 50
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -1040,8 +1187,10 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_microbench_apple_macos:
-    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    if: ${{ !cancelled() && needs.gpu_runner_preflight.outputs.apple_macos_dispatch == 'true' }}
+    needs: gpu_runner_preflight
     runs-on: [self-hosted, macOS, arm64, gpu, apple]
+    timeout-minutes: 50
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
@@ -1077,13 +1226,15 @@ jobs:
           if-no-files-found: warn
 
   gpu_device_conformance_matrix_gate:
-    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    if: ${{ always() && needs.gpu_runner_preflight.outputs.nvidia_linux_status == 'ready' }}
     needs:
+      - gpu_runner_preflight
       - gpu_device_microbench_nvidia_linux
       - gpu_device_microbench_amd_linux
       - gpu_device_microbench_intel_windows
       - gpu_device_microbench_apple_macos
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Download NVIDIA Linux Artifact
