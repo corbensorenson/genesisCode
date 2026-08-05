@@ -577,6 +577,21 @@ report = {
     'history': history,
     'kind': m.KIND,
     'ok': True,
+    'pairWorkers': [
+        {
+            'cacheIsolationIdentitySha256': f'{i}' * 64,
+            'executionEnvironmentSha256': m.sha256_bytes(m.canonical({})),
+            'githubJob': 'release_full_measurement_pair',
+            'githubRunAttempt': '1',
+            'githubRunId': '123',
+            'githubSha': 'c' * 40,
+            'pair': i,
+            'workerContentIdentitySha256': 'd' * 64,
+            'workerManifestArtifact': f'workers/pair-{i:02d}.json',
+            'workerManifestSha256': 'e' * 64,
+        }
+        for i in (1, 2)
+    ],
     'pairs': 2,
     'productReleaseQualified': False,
     'profileOperational': True,
@@ -595,6 +610,7 @@ m.validate_report(report)
 for mutation, expected in (
     (lambda d: d['runs'][1].update(cacheRootStartedEmpty=True), 'warm run cache identity is false'),
     (lambda d: d['cleanupRecovery'][0].update(ok=False), 'cleanup recovery is incomplete'),
+    (lambda d: d['pairWorkers'][1].update(cacheIsolationIdentitySha256=d['pairWorkers'][0]['cacheIsolationIdentitySha256']), 'reused a cache-isolation identity'),
     (lambda d: d['targetReadiness'][0].update(releaseQualified=True), 'unsupported-product was relabeled'),
     (lambda d: d.update(productReleaseQualified=True), 'confused profile operation with product qualification'),
 ):
