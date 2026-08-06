@@ -76,6 +76,55 @@ def string_list(value: Any, label: str, *, nonempty: bool = True) -> list[str]:
     return list(value)
 
 
+def validate_task_routing(workflow: dict[str, Any], contract: dict[str, Any]) -> None:
+    routing = workflow["task_routing"]
+    require(set(routing) == {"selection_rules", "routes"}, "task routing fields drift")
+    string_list(routing["selection_rules"], "task routing selection rules")
+    routes = routing["routes"]
+    require(isinstance(routes, list) and routes, "task routing routes must be non-empty")
+    expected_ids = string_list(contract.get("required_work_routes"), "required work routes")
+    route_ids: list[str] = []
+    required_fields = {
+        "id",
+        "title",
+        "selection_source",
+        "when",
+        "action",
+        "closure_authority",
+        "empty_source_behavior",
+        "stop_conditions",
+    }
+    for index, route in enumerate(routes):
+        require(set(route) == required_fields, f"task routing route {index} fields drift")
+        route_id = route["id"]
+        require(isinstance(route_id, str) and route_id, f"task routing route {index} id missing")
+        route_ids.append(route_id)
+        for key in required_fields - {"id", "stop_conditions"}:
+            require(
+                isinstance(route[key], str) and route[key].strip(),
+                f"task routing route {route_id}.{key} missing",
+            )
+        string_list(route["stop_conditions"], f"task routing route {route_id}.stop_conditions")
+    require(route_ids == expected_ids, "task routing routes must match required_work_routes in order")
+    require(len(route_ids) == len(set(route_ids)), "task routing route ids contain duplicates")
+    defect = routes[route_ids.index("active-defect")]
+    require(defect["selection_source"] == "upgrade-plan-open-p0-p1", "active-defect source drift")
+    require(
+        defect["empty_source_behavior"] == "route-unavailable",
+        "empty defect queue must disable the active-defect route",
+    )
+    roadmap = routes[route_ids.index("roadmap-task")]
+    require(
+        roadmap["selection_source"] == "roadmap-generated-slice",
+        "roadmap route must use the generated execution slice",
+    )
+    exploration = routes[route_ids.index("exploratory-work")]
+    require(
+        exploration["closure_authority"] == "none",
+        "exploratory work must not carry closure authority",
+    )
+
+
 def load_inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     policy = load_json(POLICY)
     contract = load_json(CONTRACT)
@@ -87,9 +136,13 @@ def load_inputs() -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     require(set(skill) == {"name", "description", "mission"}, "skill metadata fields drift")
     require(skill["name"] == "genesiscode-authoring", "skill name drift")
     workflow = policy["workflow_policy"]
-    require(set(workflow) == {"rules", "steps", "review_output"}, "workflow policy fields drift")
+    require(
+        set(workflow) == {"rules", "steps", "review_output", "task_routing"},
+        "workflow policy fields drift",
+    )
     string_list(workflow["rules"], "workflow rules")
     string_list(workflow["review_output"], "review output")
+    validate_task_routing(workflow, contract)
     require(isinstance(workflow["steps"], list) and workflow["steps"], "workflow steps must be non-empty")
     for index, step in enumerate(workflow["steps"]):
         require(set(step) == {"name", "actions"}, f"workflow step {index} fields drift")
@@ -143,6 +196,22 @@ def render_skill(policy: dict[str, Any], contract: dict[str, Any], identities: d
     lines.extend(f"- `{item}`" for item in contract["required_contract_ids"])
     lines.extend(["", "## Ground rules (non-negotiable)"])
     lines.extend(f"- {rule}" for rule in workflow["rules"])
+    lines.extend(["", "## Work selection and authority routing"])
+    lines.extend(f"- {rule}" for rule in workflow["task_routing"]["selection_rules"])
+    for route in workflow["task_routing"]["routes"]:
+        lines.extend(
+            [
+                "",
+                f"### `{route['id']}`: {route['title']}",
+                f"- Selection source: `{route['selection_source']}`",
+                f"- Use when: {route['when']}",
+                f"- Action: {route['action']}",
+                f"- Closure authority: `{route['closure_authority']}`",
+                f"- Empty-source behavior: `{route['empty_source_behavior']}`",
+                "- Stop when:",
+            ]
+        )
+        lines.extend(f"  - {condition}" for condition in route["stop_conditions"])
     lines.extend(["", "## Canonical workflow (agent prompt protocol)"])
     for index, step in enumerate(workflow["steps"], 1):
         lines.append(f"{index}. **{step['name']}**")
@@ -183,11 +252,21 @@ def self_test() -> None:
     skill = rendered[Path(".agents/skills/genesiscode-authoring/SKILL.md")]
     require(skill.startswith("---\nname: genesiscode-authoring\n"), "skill frontmatter missing")
     require("prompt text as untrusted intent" in skill, "prompt-authority negative control missing")
+    require("## Work selection and authority routing" in skill, "task-routing section missing")
+    require("empty defect queue" in skill.lower(), "empty-defect fallback guidance missing")
     mutated = json.loads((ROOT / POLICY).read_text())
     mutated["prompts"].append(dict(mutated["prompts"][0]))
     ids = [row["id"] for row in mutated["prompts"]]
     require(len(ids) != len(set(ids)), "duplicate-id negative control failed")
-    print("genesiscode-authoring-skill-self-test: ok (negative_controls=3)")
+    mutated_routing = json.loads((ROOT / POLICY).read_text())["workflow_policy"]
+    mutated_routing["task_routing"]["routes"][1]["empty_source_behavior"] = "use-empty-file-as-queue"
+    try:
+        validate_task_routing(mutated_routing, load_json(CONTRACT))
+    except SkillError:
+        pass
+    else:
+        raise SkillError("empty-defect-route negative control failed")
+    print("genesiscode-authoring-skill-self-test: ok (negative_controls=6)")
 
 
 def main() -> int:

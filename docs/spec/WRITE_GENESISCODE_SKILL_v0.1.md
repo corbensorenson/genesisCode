@@ -29,6 +29,18 @@ skill remains aligned with current CLI/ABI/spec surfaces.
 - `required_contract_ids`
 - `required_capability_indices`
 - `required_schema_docs`
+- `required_work_routes`
+
+## Work Selection Contract
+
+The generated skill exposes exactly four non-interchangeable routes:
+
+- `user-task` uses the current concrete user request as intent, subject to normative constraints.
+- `active-defect` uses only open P0/P1 IDs from `upgrade_plan.md`; the route is unavailable when none exist.
+- `roadmap-task` uses the bounded output of `python3 scripts/lib/roadmap_execution_manifest.py --slice`, not unchecked boxes or an empty defect ledger.
+- `exploratory-work` produces quarantined observations or proposals and has no closure authority.
+
+Every route declares its selection source, empty-source behavior, closure authority, and stop conditions. A status document may constrain or evidence work without becoming task authority.
 
 ## Drift Gate
 

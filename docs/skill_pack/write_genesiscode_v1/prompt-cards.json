@@ -7,18 +7,19 @@
       ],
       "id": "backlog_slice",
       "inputs": [
-        "Current `upgrade_plan.md`",
-        "Current `feature_matrix.md`",
-        "Current `docs/status/REDTEAM_REPORT.md`"
+        "current explicit user request or reproduced defect report, when present",
+        "generated `python3 scripts/lib/roadmap_execution_manifest.py --slice` result",
+        "open P0/P1 IDs from `upgrade_plan.md`, only when at least one exists",
+        "current `feature_matrix.md` and `docs/status/REDTEAM_REPORT.md` as status evidence, not task authority"
       ],
-      "objective": "Use this prompt to complete the highest-impact unresolved `upgrade_plan.md` items.",
+      "objective": "Classify the requested work as a user task, active P0/P1 defect, generated-roadmap task, or exploratory proposal, then complete one authority-compatible transaction without treating an empty defect ledger as a queue.",
       "outputs": [
-        "explicit checklist of selected IDs",
+        "selected route ID, authority source, and coherent transaction ID",
         "code/doc changes with file paths",
         "deterministic verification commands and outcomes",
-        "updated remaining-open item count"
+        "updated remaining-open roadmap and P0/P1 counts without invented work"
       ],
-      "title": "Backlog Slice"
+      "title": "Work Selection"
     },
     {
       "checks": [
@@ -50,7 +51,7 @@
       "id": "selfhost_cutover",
       "inputs": [
         "strict selfhost boundary docs",
-        "active upgrade plan IDs related to selfhost parity/cutover",
+        "relevant open P0/P1 defect IDs when present, otherwise the selected generated-roadmap task",
         "affected runtime/CLI contracts"
       ],
       "objective": "Use this prompt when migrating behavior from bootstrap/runtime boundaries into `.gc`.",
@@ -284,6 +285,6 @@
   ],
   "kind": "genesis/write-genesiscode-prompt-cards-v1",
   "source": "policies/genesiscode_authoring_workflow_v0.1.json",
-  "source_sha256": "c713bc35071552cdcc3eb313d988ca7ce7fba8098f550b423d018484ff909132",
+  "source_sha256": "2163929e7a4ebd06e1e1a14ca0092031405ef9cbb8073e273b23d3ee0c505d71",
   "version": "1"
 }
