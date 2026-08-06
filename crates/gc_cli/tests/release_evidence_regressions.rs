@@ -630,6 +630,7 @@ history = {
     'warmP95PeakRssBytes': 4096,
     'warmP95WallMs': 120,
 }
+
 report = {
     'artifacts': [],
     'budgets': {'maxArtifactBytes': m.ARTIFACT_BUDGET_BYTES, 'maxWallMs': m.WALL_BUDGET_MS, 'minimumPairs': 2},
@@ -702,4 +703,67 @@ for mutation, expected in (
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[test]
+fn release_evidence_v02_partition_is_closed_and_adversarially_checked() {
+    let root = repo_root();
+    let policy = fs::read_to_string(root.join("policies/release_evidence_dag_v0.2.json"))
+        .expect("read release evidence DAG policy");
+    let schema = fs::read_to_string(root.join("docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json"))
+        .expect("read release evidence DAG schema");
+    let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
+        .expect("read release health runner");
+    for marker in [
+        "genesis/release-evidence-dag-v0.2",
+        "independent-matched-cohorts",
+        "independent-odd-cohort",
+        "producer-authored-verdict",
+        "crossRunReuseAllowed",
+    ] {
+        assert!(
+            policy.contains(marker),
+            "missing DAG policy marker: {marker}"
+        );
+    }
+    for marker in [
+        "release-evidence-dag-v0.2.schema.json",
+        "measuredWorkerWallMs",
+        "oddSamplesRequired",
+        "agent-gpu-strict",
+    ] {
+        assert!(
+            schema.contains(marker),
+            "missing DAG schema marker: {marker}"
+        );
+    }
+    for marker in [
+        "GENESIS_RELEASE_EVIDENCE_NODE_CLASS",
+        "GENESIS_RELEASE_EVIDENCE_INPUT_ROOT",
+        "GENESIS_RELEASE_EVIDENCE_EXPORT_ROOT",
+        "GENESIS_RELEASE_EVIDENCE_FANOUT_TOKEN",
+        "release_evidence_partial",
+        "release_evidence_command_ids_sha256",
+    ] {
+        assert!(
+            health.contains(marker),
+            "missing DAG runner marker: {marker}"
+        );
+    }
+
+    for action in ["check", "self-test"] {
+        let output = Command::new("python3")
+            .arg(root.join("scripts/lib/release_evidence_dag.py"))
+            .arg("--root")
+            .arg(&root)
+            .arg(action)
+            .current_dir(&root)
+            .output()
+            .expect("run release evidence DAG validation");
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }

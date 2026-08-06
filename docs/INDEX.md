@@ -217,6 +217,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/RELEASE_TARGET_REFERENCE_SET_v0.1.schema.json` - machine-readable named release-target reference-set schema.
 - `docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json` - closed paired cold/warm release-full measurement schema.
 - `docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json` - closed isolated pair-worker observation schema for release-full aggregation.
+- `docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json` - closed command partition, cohort, fan-out, aggregate, and watchdog authority for the release-full v0.2 migration.
 - `.genesis/perf/release-full-measurement/manifest.json` - optional retained GB-4 measurement manifest, produced only by `scripts/measure_release_full_profile.sh` from named target-shard evidence.
 - `.genesis/perf/runtime_backend_feature_matrix_report.json` - optional local runtime-backend matrix observation, produced only by `scripts/update_runtime_backend_feature_matrix_report.sh`.
 - `.genesis/perf/write_genesiscode_skill_conformance_report.json` - optional local write-skill conformance observation, produced only by `scripts/update_write_genesiscode_skill_conformance_report.sh`.

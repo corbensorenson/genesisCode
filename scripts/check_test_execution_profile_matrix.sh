@@ -68,6 +68,9 @@ HEALTH_UPDATE_SCRIPT="scripts/update_upgrade_plan_health_report.sh"
 RELEASE_MEASUREMENT_SCRIPT="scripts/measure_release_full_profile.sh"
 RELEASE_MEASUREMENT_RUNNER="scripts/lib/release_full_measurement.py"
 RELEASE_MEASUREMENT_SCHEMA="docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json"
+RELEASE_EVIDENCE_DAG_POLICY="policies/release_evidence_dag_v0.2.json"
+RELEASE_EVIDENCE_DAG_SCHEMA="docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json"
+RELEASE_EVIDENCE_DAG_RUNNER="scripts/lib/release_evidence_dag.py"
 REFERENCE_TARGET_PREPARE_SCRIPT="scripts/prepare_release_target_reference.sh"
 ROADMAP_EXECUTION_CHECK="scripts/check_roadmap_execution_manifest.sh"
 ROADMAP_EXECUTION_UPDATE="scripts/update_roadmap_execution_manifest.sh"
@@ -154,6 +157,9 @@ for path in \
   "$RELEASE_MEASUREMENT_SCRIPT" \
   "$RELEASE_MEASUREMENT_RUNNER" \
   "$RELEASE_MEASUREMENT_SCHEMA" \
+  "$RELEASE_EVIDENCE_DAG_POLICY" \
+  "$RELEASE_EVIDENCE_DAG_SCHEMA" \
+  "$RELEASE_EVIDENCE_DAG_RUNNER" \
   "$REFERENCE_TARGET_PREPARE_SCRIPT" \
   "$ROADMAP_EXECUTION_CHECK" \
   "$ROADMAP_EXECUTION_UPDATE" \
@@ -187,6 +193,9 @@ for path in \
     exit 1
   }
 done
+
+python3 "$RELEASE_EVIDENCE_DAG_RUNNER" --root "$ROOT_DIR" check
+python3 "$RELEASE_EVIDENCE_DAG_RUNNER" --root "$ROOT_DIR" self-test
 
 require_doc_pattern() {
   local pattern="$1"

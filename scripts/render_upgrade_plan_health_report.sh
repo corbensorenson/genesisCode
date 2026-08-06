@@ -84,12 +84,116 @@ CARGO_PARTITION=()
 PROFILE_SETUP_GATES=()
 HEALTH_TEMP_ROOT=""
 GPU_DEVICE_EVIDENCE_ROOT=""
+RELEASE_EVIDENCE_NODE_CLASS="${GENESIS_RELEASE_EVIDENCE_NODE_CLASS:-}"
+RELEASE_EVIDENCE_INPUT_ROOT="${GENESIS_RELEASE_EVIDENCE_INPUT_ROOT:-}"
+RELEASE_EVIDENCE_EXPORT_ROOT="${GENESIS_RELEASE_EVIDENCE_EXPORT_ROOT:-}"
+RELEASE_EVIDENCE_FANOUT_TOKEN="${GENESIS_RELEASE_EVIDENCE_FANOUT_TOKEN:-}"
+RELEASE_EVIDENCE_DAG_POLICY="${GENESIS_RELEASE_EVIDENCE_DAG_POLICY:-policies/release_evidence_dag_v0.2.json}"
+RELEASE_EVIDENCE_DESCRIBE_ONLY="${GENESIS_RELEASE_EVIDENCE_DESCRIBE_ONLY:-0}"
+RELEASE_EVIDENCE_DESCRIBE_OUTPUT="${GENESIS_RELEASE_EVIDENCE_DESCRIBE_OUTPUT:-}"
+RELEASE_EVIDENCE_DAG_IDENTITY=""
+RELEASE_EVIDENCE_COMMAND_IDS_IDENTITY=""
+RELEASE_EVIDENCE_SELECTED_IDS=()
 
 cleanup_health_temp_roots() {
   [[ -z "$HEALTH_TEMP_ROOT" ]] || rm -rf "$HEALTH_TEMP_ROOT"
   [[ -z "$GPU_DEVICE_EVIDENCE_ROOT" ]] || rm -rf "$GPU_DEVICE_EVIDENCE_ROOT"
 }
 trap cleanup_health_temp_roots EXIT
+
+release_evidence_resolve_input_root() {
+  python3 - "$1" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if not path.is_absolute():
+    raise SystemExit("release evidence input root must be absolute")
+path = path.resolve(strict=True)
+manifest = path / "manifest.json"
+if not manifest.is_file():
+    raise SystemExit("release evidence input root lacks manifest.json")
+print(path)
+PY
+}
+
+release_evidence_filter_commands() {
+  local group="$1"
+  local output_name="$2"
+  shift 2
+  local -a commands=("$@")
+  local -a selected=()
+  local -a query=(
+    python3 scripts/lib/release_evidence_dag.py
+    --root "$ROOT_DIR"
+    --policy "$RELEASE_EVIDENCE_DAG_POLICY"
+    select
+    --group "$group"
+    --evidence-class "$RELEASE_EVIDENCE_NODE_CLASS"
+  )
+  local command
+  for command in "${commands[@]}"; do
+    query+=(--command "$command")
+  done
+  local selection
+  if ! selection="$("${query[@]}")"; then
+    echo "upgrade-plan-health: release evidence command selection failed: $group" >&2
+    return 2
+  fi
+  local index row_id
+  if [[ -n "$selection" ]]; then
+    while IFS=$'\t' read -r index row_id; do
+      [[ "$index" =~ ^[0-9]+$ && -n "$row_id" ]] || {
+        echo "upgrade-plan-health: invalid release evidence selection row" >&2
+        return 2
+      }
+      selected+=("${commands[$index]}")
+      RELEASE_EVIDENCE_SELECTED_IDS+=("$row_id")
+    done <<< "$selection"
+  fi
+  case "$output_name" in
+    COMMON_GATES)
+      if (( ${#selected[@]} == 0 )); then COMMON_GATES=(); else COMMON_GATES=("${selected[@]}"); fi
+      ;;
+    PROFILE_GATES)
+      if (( ${#selected[@]} == 0 )); then PROFILE_GATES=(); else PROFILE_GATES=("${selected[@]}"); fi
+      ;;
+    PROFILE_SETUP_GATES)
+      if (( ${#selected[@]} == 0 )); then PROFILE_SETUP_GATES=(); else PROFILE_SETUP_GATES=("${selected[@]}"); fi
+      ;;
+    *)
+      echo "upgrade-plan-health: invalid release evidence output array: $output_name" >&2
+      return 2
+      ;;
+  esac
+}
+
+release_evidence_export_bundle() {
+  [[ -n "$RELEASE_EVIDENCE_EXPORT_ROOT" ]] || return 0
+  [[ "$RELEASE_EVIDENCE_NODE_CLASS" == "cache-sensitive" ]] || {
+    echo "upgrade-plan-health: only cache-sensitive workers may export release evidence" >&2
+    return 2
+  }
+  python3 - "$HEALTH_EVIDENCE_ROOT" "$RELEASE_EVIDENCE_EXPORT_ROOT" <<'PY'
+import pathlib
+import shutil
+import sys
+
+source = pathlib.Path(sys.argv[1]).resolve(strict=True)
+output = pathlib.Path(sys.argv[2])
+if not output.is_absolute():
+    raise SystemExit("release evidence export root must be absolute")
+if output.exists() and any(output.iterdir()):
+    raise SystemExit("release evidence export root must start absent or empty")
+output.mkdir(parents=True, exist_ok=True)
+for child in source.iterdir():
+    destination = output / child.name
+    if child.is_dir():
+        shutil.copytree(child, destination)
+    else:
+        shutil.copy2(child, destination)
+PY
+}
 
 now_ms() {
   python3 - <<'PY'
@@ -576,7 +680,7 @@ enforce_release_full_history_budget() {
   local measurement_run_class="${GENESIS_RELEASE_MEASUREMENT_RUN_CLASS:-}"
   local agent_gpu_profile="${GENESIS_AGENT_GPU_PROFILE:-}"
   case "$measurement_run_class" in
-    ""|cold|warm) ;;
+    ""|cold|warm|invariant|stress-performance) ;;
     *)
       echo "upgrade-plan-health: invalid release measurement run class: $measurement_run_class" >&2
       return 2
@@ -589,6 +693,18 @@ enforce_release_full_history_budget() {
       return 2
       ;;
   esac
+  local partial_json=false
+  local command_count=0
+  local min_history="$RELEASE_FULL_MIN_HISTORY"
+  local history_scope_key="$RELEASE_FULL_HISTORY_SCOPE_KEY"
+  local -a baseline_args=(--baseline-history "$RELEASE_FULL_BASELINE_HISTORY")
+  if [[ -n "$RELEASE_EVIDENCE_NODE_CLASS" ]]; then
+    partial_json=true
+    command_count="${#RELEASE_EVIDENCE_SELECTED_IDS[@]}"
+    min_history=1
+    history_scope_key="release-evidence-${RELEASE_EVIDENCE_NODE_CLASS}-v2"
+    baseline_args=()
+  fi
   local -a args=(
     scripts/lib/profile_runtime_budget.py
     --profile "$PROFILE"
@@ -597,12 +713,12 @@ enforce_release_full_history_budget() {
     --history "$RELEASE_FULL_HISTORY"
     --elapsed-ms "$elapsed_ms"
     --budget-ms "$RELEASE_FULL_WALL_BUDGET_MS"
-    --min-history "$RELEASE_FULL_MIN_HISTORY"
-    --baseline-history "$RELEASE_FULL_BASELINE_HISTORY"
-    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$RELEASE_FULL_WALL_BUDGET_MS,\"generated_disk_delta_bytes\":$profile_generated_disk_delta_bytes,\"artifact_bytes\":$profile_artifact_bytes,\"artifact_budget_bytes\":$RELEASE_ARTIFACT_BUDGET_BYTES,\"measurement_run_class\":\"$measurement_run_class\",\"agent_gpu_profile\":\"$agent_gpu_profile\"}"
+    --min-history "$min_history"
+    "${baseline_args[@]}"
+    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$RELEASE_FULL_WALL_BUDGET_MS,\"generated_disk_delta_bytes\":$profile_generated_disk_delta_bytes,\"artifact_bytes\":$profile_artifact_bytes,\"artifact_budget_bytes\":$RELEASE_ARTIFACT_BUDGET_BYTES,\"measurement_run_class\":\"$measurement_run_class\",\"agent_gpu_profile\":\"$agent_gpu_profile\",\"release_evidence_partial\":$partial_json,\"release_evidence_node_class\":\"$RELEASE_EVIDENCE_NODE_CLASS\",\"release_evidence_dag_identity_sha256\":\"$RELEASE_EVIDENCE_DAG_IDENTITY\",\"release_evidence_command_ids_sha256\":\"$RELEASE_EVIDENCE_COMMAND_IDS_IDENTITY\",\"release_evidence_command_count\":$command_count}"
   )
-  if [[ -n "$RELEASE_FULL_HISTORY_SCOPE_KEY" ]]; then
-    args+=(--history-scope-key "$RELEASE_FULL_HISTORY_SCOPE_KEY")
+  if [[ -n "$history_scope_key" ]]; then
+    args+=(--history-scope-key "$history_scope_key")
   fi
   if [[ "$RELEASE_FULL_REQUIRE_MIN_HISTORY" == "1" ]]; then
     args+=(--require-min-history)
@@ -1057,6 +1173,31 @@ if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "agent-inner-loop" && "$PROFILE"
   echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|agent-inner-loop|prepush-standard|release-full|full-selfhost-cutover)" >&2
   exit 2
 fi
+case "$RELEASE_EVIDENCE_NODE_CLASS" in
+  "") ;;
+  cache-sensitive|invariant|stress-performance)
+    [[ "$PROFILE" == "release-full" ]] || {
+      echo "upgrade-plan-health: release evidence node classes require profile=release-full" >&2
+      exit 2
+    }
+    ;;
+  *)
+    echo "upgrade-plan-health: invalid GENESIS_RELEASE_EVIDENCE_NODE_CLASS: $RELEASE_EVIDENCE_NODE_CLASS" >&2
+    exit 2
+    ;;
+esac
+if [[ -z "$RELEASE_EVIDENCE_NODE_CLASS" && ( -n "$RELEASE_EVIDENCE_INPUT_ROOT" || -n "$RELEASE_EVIDENCE_EXPORT_ROOT" || -n "$RELEASE_EVIDENCE_FANOUT_TOKEN" ) ]]; then
+  echo "upgrade-plan-health: release evidence input/export controls require a node class" >&2
+  exit 2
+fi
+if [[ "$RELEASE_EVIDENCE_DESCRIBE_ONLY" != "0" && "$RELEASE_EVIDENCE_DESCRIBE_ONLY" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_RELEASE_EVIDENCE_DESCRIBE_ONLY must be 0 or 1" >&2
+  exit 2
+fi
+if [[ "$RELEASE_EVIDENCE_DESCRIBE_ONLY" == "1" && ( -z "$RELEASE_EVIDENCE_NODE_CLASS" || -z "$RELEASE_EVIDENCE_DESCRIBE_OUTPUT" ) ]]; then
+  echo "upgrade-plan-health: release evidence describe mode requires node class and output" >&2
+  exit 2
+fi
 if [[ -z "${GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE+x}" ]]; then
   if [[ "$PROFILE" == "release-full" ]]; then
     # The fallback profile is for hosted CPU runners. Authentic device evidence is
@@ -1468,9 +1609,22 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     ;;
   release-full)
-    HEALTH_TEMP_ROOT="$(mktemp -d)"
-    HEALTH_EVIDENCE_ROOT="$HEALTH_TEMP_ROOT/release-evidence"
-    PROFILE_SETUP_GATES+=("bash scripts/render_health_profile_evidence_bundle.sh release-full '$HEALTH_EVIDENCE_ROOT'")
+    if [[ "$RELEASE_EVIDENCE_DESCRIBE_ONLY" == "1" ]]; then
+      HEALTH_EVIDENCE_ROOT="/release-evidence-describe-only"
+      if [[ "$RELEASE_EVIDENCE_NODE_CLASS" == "cache-sensitive" ]]; then
+        PROFILE_SETUP_GATES+=("bash scripts/render_health_profile_evidence_bundle.sh release-full '$HEALTH_EVIDENCE_ROOT'")
+      fi
+    elif [[ "$RELEASE_EVIDENCE_NODE_CLASS" == "invariant" || "$RELEASE_EVIDENCE_NODE_CLASS" == "stress-performance" ]]; then
+      [[ -n "$RELEASE_EVIDENCE_INPUT_ROOT" && -n "$RELEASE_EVIDENCE_FANOUT_TOKEN" ]] || {
+        echo "upgrade-plan-health: invariant/stress release nodes require authenticated fanout input and token" >&2
+        exit 2
+      }
+      HEALTH_EVIDENCE_ROOT="$(release_evidence_resolve_input_root "$RELEASE_EVIDENCE_INPUT_ROOT")"
+    else
+      HEALTH_TEMP_ROOT="$(mktemp -d)"
+      HEALTH_EVIDENCE_ROOT="$HEALTH_TEMP_ROOT/release-evidence"
+      PROFILE_SETUP_GATES+=("bash scripts/render_health_profile_evidence_bundle.sh release-full '$HEALTH_EVIDENCE_ROOT'")
+    fi
     PROFILE_GATES+=("if git rev-parse --verify origin/main >/dev/null 2>&1; then python3 scripts/lib/generated_authority.py --freshness --git-base origin/main; else python3 scripts/lib/generated_authority.py --freshness; fi")
     PROFILE_GATES+=("bash scripts/test_perf_gates.sh --kernel-tail-stress")
     PROFILE_GATES+=("bash scripts/check_domain_starter_registry_bootstrap.sh")
@@ -1523,6 +1677,70 @@ if [[ "$GPU_DEVICE_CONFORMANCE" == "1" ]]; then
   PROFILE_GATES+=(
     "bash scripts/render_gpu_compute_device_conformance_report.sh '$GPU_DEVICE_EVIDENCE_ROOT/device' '$GPU_DEVICE_EVIDENCE_ROOT/device_report.json' .genesis/perf/runtime_microbench_runtime_history.jsonl .genesis/perf/gpu_compute_runtime_profile_runtime_history.jsonl && GENESIS_GPU_DEVICE_CONFORMANCE_FEATURES= GENESIS_GPU_COMPUTE_DEVICE_RUNTIME_CMD='$ROOT_DIR/scripts/gpu_device_runtime_deterministic.sh' bash scripts/render_gpu_compute_device_conformance_report.sh '$GPU_DEVICE_EVIDENCE_ROOT/deterministic' '$GPU_DEVICE_EVIDENCE_ROOT/deterministic_report.json' .genesis/perf/runtime_microbench_runtime_history.jsonl .genesis/perf/gpu_compute_runtime_profile_runtime_history.jsonl && bash scripts/render_gpu_device_conformance_lane_parity_report.sh '$GPU_DEVICE_EVIDENCE_ROOT/device_report.json' '$GPU_DEVICE_EVIDENCE_ROOT/deterministic_report.json' '$GPU_DEVICE_EVIDENCE_ROOT/lane_parity_report.json'"
   )
+fi
+
+if [[ -n "$RELEASE_EVIDENCE_NODE_CLASS" ]]; then
+  python3 scripts/lib/release_evidence_dag.py \
+    --root "$ROOT_DIR" \
+    --policy "$RELEASE_EVIDENCE_DAG_POLICY" \
+    check
+  if (( ${#PROFILE_SETUP_GATES[@]} > 0 )); then
+    release_evidence_filter_commands "setup" "PROFILE_SETUP_GATES" "${PROFILE_SETUP_GATES[@]}"
+  fi
+  release_evidence_filter_commands "common" "COMMON_GATES" "${COMMON_GATES[@]}"
+  release_evidence_filter_commands "profile" "PROFILE_GATES" "${PROFILE_GATES[@]}"
+  (( ${#RELEASE_EVIDENCE_SELECTED_IDS[@]} > 0 )) || {
+    echo "upgrade-plan-health: release evidence node class selected no commands: $RELEASE_EVIDENCE_NODE_CLASS" >&2
+    exit 2
+  }
+  RELEASE_EVIDENCE_DAG_IDENTITY="$(python3 - "$RELEASE_EVIDENCE_DAG_POLICY" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+
+doc = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+payload = (json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n").encode()
+print(hashlib.sha256(payload).hexdigest())
+PY
+)"
+  RELEASE_EVIDENCE_COMMAND_IDS_IDENTITY="$(python3 - "${RELEASE_EVIDENCE_SELECTED_IDS[@]}" <<'PY'
+import hashlib
+import json
+import sys
+
+payload = (json.dumps(sys.argv[1:], sort_keys=True, separators=(",", ":")) + "\n").encode()
+print(hashlib.sha256(payload).hexdigest())
+PY
+)"
+  echo "upgrade-plan-health: release evidence node class=$RELEASE_EVIDENCE_NODE_CLASS commands=${#RELEASE_EVIDENCE_SELECTED_IDS[@]} dag=$RELEASE_EVIDENCE_DAG_IDENTITY"
+  if [[ "$RELEASE_EVIDENCE_DESCRIBE_ONLY" == "1" ]]; then
+    python3 - \
+      "$RELEASE_EVIDENCE_DESCRIBE_OUTPUT" \
+      "$RELEASE_EVIDENCE_NODE_CLASS" \
+      "$RELEASE_EVIDENCE_DAG_IDENTITY" \
+      "$RELEASE_EVIDENCE_COMMAND_IDS_IDENTITY" \
+      "${RELEASE_EVIDENCE_SELECTED_IDS[@]}" <<'PY'
+import json
+import pathlib
+import sys
+
+output = pathlib.Path(sys.argv[1])
+if not output.is_absolute():
+    raise SystemExit("release evidence describe output must be absolute")
+doc = {
+    "commandIds": sys.argv[5:],
+    "commandIdsSha256": sys.argv[4],
+    "dagIdentitySha256": sys.argv[3],
+    "evidenceClass": sys.argv[2],
+    "kind": "genesis/release-evidence-node-description-v0.2",
+    "version": "0.2.0",
+}
+output.parent.mkdir(parents=True, exist_ok=True)
+output.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+    exit 0
+  fi
 fi
 
 write_health_disk_preflight_report \
@@ -1583,6 +1801,7 @@ if (( profile_cargo_gate_count > 0 )); then
   echo "upgrade-plan-health: running ${profile_cargo_gate_count} profile cargo gates (profile=${PROFILE}, shards=${HEALTH_CARGO_GATE_SHARDS})"
   run_gate_commands "profile:${PROFILE}:cargo" "$HEALTH_CARGO_GATE_SHARDS" "${CARGO_PARTITION[@]}"
 fi
+release_evidence_export_bundle
 end_ms="$(now_ms)"
 elapsed_ms=$((end_ms - start_ms))
 profile_end_free_bytes="$(filesystem_free_bytes)"

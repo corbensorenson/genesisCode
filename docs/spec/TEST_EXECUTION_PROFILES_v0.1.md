@@ -343,6 +343,20 @@ Strict/full profile runtime reports:
       aggregate result for full runs and accepts only `skipped|success` outside full runs.
       The generic ignored-perf lane excludes `upgrade_plan_health`, preventing nested
       duplicate execution while retaining every other required perf target.
+  - The v0.2 migration authority is `policies/release_evidence_dag_v0.2.json`, validated
+    against the complete release command inventory by
+    `scripts/lib/release_evidence_dag.py` and `scripts/check_test_execution_profile_matrix.sh`.
+    It partitions every setup, common, profile, and device-conformance command into exactly
+    one `cache-sensitive`, `invariant`, `stress-performance`, or explicitly superseded
+    disposition. Superseded commands name a live replacement and cannot execute in a v0.2
+    node. Class-selective health runs set `GENESIS_RELEASE_EVIDENCE_NODE_CLASS`; invariant
+    and stress workers require an authenticated same-run bundle through
+    `GENESIS_RELEASE_EVIDENCE_INPUT_ROOT` and `GENESIS_RELEASE_EVIDENCE_FANOUT_TOKEN`, while
+    only a cache-sensitive worker may export a bundle through
+    `GENESIS_RELEASE_EVIDENCE_EXPORT_ROOT`. Partial node reports bind the DAG identity and
+    selected-command identity and cannot be treated as a complete monolithic profile.
+    Until the measurement worker, aggregate schemas, and CI fan-out are promoted together,
+    hosted full CI remains on the v0.1 pair topology and cannot claim v0.2 evidence.
 
 ### Closed Release Evidence Semantics
 

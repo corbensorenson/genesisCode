@@ -9,7 +9,7 @@
       "executionIdentitySha256": "b45040a3cfad48c97dcda192f6e59152dbe8521250eb3d5e19d420b0034c3038",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "ace86304e20ce214b756c160c1c5d7ee4195ae96935dcf5c619e5bf1f646f5b1",
+      "inputIdentitySha256": "393625424090fd8b7777420bf1a84c6f573fc9d9edf2b242630429bbcf485531",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -832,7 +832,7 @@
       "executionIdentitySha256": "057623bf88ddbfcc1bcc06d79016ec18b5a0841b91d77d465babfd292082527d",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1215,6 +1215,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -1353,6 +1354,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -1565,6 +1567,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -2217,7 +2220,7 @@
       "executionIdentitySha256": "705da23ba5ee6f735a3cc5e8c1a9412dd8166b084ad8ad17e33165e32b155f9b",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2600,6 +2603,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -2738,6 +2742,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -2950,6 +2955,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -3231,7 +3237,7 @@
       "executionIdentitySha256": "242ca8460da231b46767e4964fbc3b6656b93e244ae9007a53943df8349af97e",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "f21c7a4d7c7480179571b1f982cfd77dae4c13b5aab1a548b60e5f40c6fa6a80",
+      "inputIdentitySha256": "38aacb7b9ed2fedeba76b03c54f55e37169ff091eb736906e1de92c7dffd500b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3311,7 +3317,7 @@
       "executionIdentitySha256": "413a261bef8019890d3ecef40d7030e2af4ef612abb636f6c69bf63078766212",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3694,6 +3700,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -3832,6 +3839,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -4044,6 +4052,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -4280,7 +4289,7 @@
       "executionIdentitySha256": "23f601dc62c74c771fd8e24a55cb9e837aae715589dcf8d0f36cbdf87a166399",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4663,6 +4672,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -4801,6 +4811,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -5013,6 +5024,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -5328,7 +5340,7 @@
       "executionIdentitySha256": "5d7fcca0e4a1109fa79c1d828aa09ebefb4eb1bd2cb1cd143f819300fc4a8cca",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -5711,6 +5723,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -5849,6 +5862,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -6061,6 +6075,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -6585,7 +6600,7 @@
       "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "4ef3610d96aec40555054079d255137ead80ab68d11594d45f67c045e4577469",
+      "inputIdentitySha256": "767715c2bc5e02476158032557f3012acb49349e0ca89b62904efc7e60955672",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6866,7 +6881,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7249,6 +7264,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -7387,6 +7403,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -7599,6 +7616,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -8421,7 +8439,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "c27401cb8a324314871ecb0c7e29d39e28b3cf6817e770eb9d209081bec28ede",
+      "inputIdentitySha256": "b7ad065b8f19f3beeed68639f2a6c9f93b7949a523ca760ac800138c97186361",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8608,7 +8626,7 @@
       "executionIdentitySha256": "969f063c2bb464130de2dc61013286e16ddaf028bc31c8b8bc99dabe3e95398d",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8991,6 +9009,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -9129,6 +9148,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -9341,6 +9361,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -9561,7 +9582,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "ace86304e20ce214b756c160c1c5d7ee4195ae96935dcf5c619e5bf1f646f5b1",
+      "inputIdentitySha256": "393625424090fd8b7777420bf1a84c6f573fc9d9edf2b242630429bbcf485531",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9830,7 +9851,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "ace86304e20ce214b756c160c1c5d7ee4195ae96935dcf5c619e5bf1f646f5b1",
+      "inputIdentitySha256": "393625424090fd8b7777420bf1a84c6f573fc9d9edf2b242630429bbcf485531",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10099,7 +10120,7 @@
       "executionIdentitySha256": "09ccbdaf204f565c2bca87bb239f1e4e529497f7ff1a50c3e999396a593cbce7",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "ace86304e20ce214b756c160c1c5d7ee4195ae96935dcf5c619e5bf1f646f5b1",
+      "inputIdentitySha256": "393625424090fd8b7777420bf1a84c6f573fc9d9edf2b242630429bbcf485531",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10368,7 +10389,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "ace86304e20ce214b756c160c1c5d7ee4195ae96935dcf5c619e5bf1f646f5b1",
+      "inputIdentitySha256": "393625424090fd8b7777420bf1a84c6f573fc9d9edf2b242630429bbcf485531",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10834,7 +10855,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11217,6 +11238,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -11355,6 +11377,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -11567,6 +11590,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -12442,7 +12466,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12825,6 +12849,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -12963,6 +12988,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -13175,6 +13201,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -13578,7 +13605,7 @@
       "executionIdentitySha256": "b5a5877112d47b1cd04e2b00c868b18e79a5d2572677ca2682ca66137324f9b1",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13961,6 +13988,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -14099,6 +14127,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -14311,6 +14340,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -15096,7 +15126,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -15479,6 +15509,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -15617,6 +15648,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -15829,6 +15861,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -16289,7 +16322,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "f608ae704d558ea29e1d2f254e3c1c305fe153e8c8ba6cbc78b8d958fe8a2f68",
+      "inputIdentitySha256": "b60283231377540ab372c728ddef108805c5cf06946fb2e04b066ceac050ea34",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -16346,7 +16379,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -16729,6 +16762,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -16867,6 +16901,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -17079,6 +17114,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -17917,7 +17953,7 @@
       "executionIdentitySha256": "f0b31ca6b37d84eeb697e180549cab42710599cfd9f9146a82e02458eed9a101",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "5256c75312738c682cf7ceffd31a7bb7a14303390835ca8ec6fb359ea0a338d4",
+      "inputIdentitySha256": "d60a857a552d55291c950c5916dced2d85bc845a7812f7df8e9a7ade2e0c6440",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -19551,10 +19587,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_test_execution_profile_matrix.sh",
-      "executionIdentitySha256": "710a27b4feebd23a536315898f43daba9ca5e4158329ceb1040ffbfa092b7441",
+      "executionIdentitySha256": "81898c586a17759299ad446a951b6d65cebe9972e1b945e1c7337103ca4f3044",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19937,6 +19973,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -20075,6 +20112,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -20287,6 +20325,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -20493,7 +20532,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "06bfa0df9635de49c17617597fe856e97d69957a7e1d069c15a2a5d9d6b448ec",
+      "sourceSha256": "ecbf0adacad85b55ff860c74ac795b963b2d1fd8a047eca05182f6d25e0e0b68",
       "tools": [
         "adb",
         "bash",
@@ -20621,10 +20660,10 @@
       "dependencies": [],
       "diskBudgetMiB": 5120,
       "entrypoint": "scripts/check_upgrade_plan_health.sh",
-      "executionIdentitySha256": "1b888665e3c8c8186ee224460f9070437d4b891a4ba3fe6384fb10365ca82618",
+      "executionIdentitySha256": "4f53e25b856cf3039b5b2381059092921e2c923e595402ec73c25ab23fd7c9ae",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "70b40890a6b593cd0b5ec104b0686d9ca1e756580415b217473d6d7456bde913",
+      "inputIdentitySha256": "9408c410f11ac7c9e2da46beaba0feffae65200aabe41cdebb2a907a21fb6019",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -21007,6 +21046,7 @@
           "docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json",
           "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
           "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+          "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json",
           "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json",
           "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
@@ -21145,6 +21185,7 @@
           "policies/perf/runtime_workload_bench_runtime_seed_history.jsonl",
           "policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl",
           "policies/reference_host_profiles_v0.1.json",
+          "policies/release_evidence_dag_v0.2.json",
           "policies/release_notes_v0.1.json",
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
@@ -21357,6 +21398,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/release_evidence_dag.py",
           "scripts/lib/release_full_measurement.py",
           "scripts/lib/release_notes.py",
           "scripts/lib/roadmap_baseline.py",
@@ -21773,7 +21815,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "8f9cb31deb632c34e789952852310af9ceb092ad3b7aac9ff2308a59a6a4c16f",
+      "inputIdentitySha256": "08add521d13e1c083a262de99b955805f55efba02e0fd79b9add205cd5b4d26e",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -22405,7 +22447,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "2139a4ff65e347b1c11d73a36d8f550be3b9f946466c0130cb23f867eb0eaa0f",
+      "inputIdentitySha256": "0bf5b952d38780653f4b7fb693464a4835a3194e0ad765eb506035991241b90e",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -22462,7 +22504,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "2a4d844c1b014612c5f8be7c14b6803c7a4cd38367c5df9a8984bce51f42aa81",
+      "inputIdentitySha256": "79dc7b0322659fd28d45e5259e8181cb9336b294be80ca4b3ba9cb9e65258cab",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -22553,7 +22595,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "648b6e290adafe97d72b859d58eaca6e390a3315c12f17a914fe2b3185eb709b"
+        "sha256": "eef55cbc43367ad3f92106cdaa75115191d10de02e50d3c13be3b6fc1a39d607"
       },
       {
         "path": "genesis.prerequisites.json",

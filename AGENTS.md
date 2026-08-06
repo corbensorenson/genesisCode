@@ -44,6 +44,6 @@ Never hand-edit a generated authority. Use its explicit `update_*` command, insp
 
 ## Current Concentration
 
-Complete the in-flight R0.4.j release-profile transaction, then close P1.5 through R2.2.f before agent-daemon or robust-service claims. Continue M1-A and M1-B before bytecode breadth, universal platform breadth, Foundry implementation, or Genesis Model implementation. Foundry implementation WIP and Genesis Model implementation WIP are zero until their graph prerequisites become start-ready.
+Complete the in-flight R0.4.j release-profile transaction and hosted v0.2 cutover, then execute R1.4.o's frozen Qwen3 4B nine-class product-proof campaign before returning to P1.5 through R2.2.f. Keep the one authorized disjoint benchmark/private-lineage lane explicitly dispositioned under the 72-hour/two-review anti-starvation rule. Continue M1-A and M1-B before bytecode breadth, universal platform breadth, Foundry implementation, or Genesis Model implementation. Foundry implementation WIP and Genesis Model implementation WIP are zero until their graph prerequisites become start-ready.
 
 Scoped instructions under a subtree override this file only for that subtree; they cannot weaken these program invariants.
