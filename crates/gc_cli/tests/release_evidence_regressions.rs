@@ -191,7 +191,15 @@ fn release_profile_uses_one_closed_bundle_without_duplicate_derived_workloads() 
         ci.contains("node scripts/wasm_web_smoke.mjs \"$(dirname \"$wasm_js_path\")\""),
         "CI must pass the producer-selected Web binding directory across subprocess scope"
     );
-    assert!(measurement.contains("\"GENESIS_HEALTH_CARGO_GATE_SHARDS\": \"2\""));
+    assert!(
+        !measurement.contains("GENESIS_HEALTH_CARGO_GATE_SHARDS"),
+        "release-pair measurements must retain the serial Cargo gate default"
+    );
+    assert!(
+        health.contains("GENESIS_AGENT_PARITY_PREBUILT_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' GENESIS_AGENT_PARITY_NATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json'")
+            && health.contains("GENESIS_AGENT_PARITY_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' bash scripts/check_source_decomposition_tracked_parity.sh"),
+        "source-decomposition parity must verify the sealed setup evidence instead of rerunning gauntlets"
+    );
     assert!(
         bundle.contains("GENESIS_HOST_BRIDGE_FAULT_RUNS=\"$([[ \"$PROFILE\" == \"release-full\" ]] && echo 3 || echo 1)\"")
             && health.contains("GENESIS_TASK_STRESS_RUNS=3")
