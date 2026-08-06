@@ -99,6 +99,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `benchmarks/genesisbench/v0.1/local-models/preselection.json`
 - `benchmarks/genesisbench/v0.1/local-models/inventory.json`
 - `benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json`
+- `benchmarks/genesisbench/v0.1/local-models/custody/qwen3-8b-4bit-v0.1.json`
 - `benchmarks/genesisbench/v0.1/contamination.fixture.json`
 - `benchmarks/genesisbench/v0.1/eligibility.fixture.json`
 - `benchmarks/genesisbench/v0.1/reference-agent/retrieval.json`

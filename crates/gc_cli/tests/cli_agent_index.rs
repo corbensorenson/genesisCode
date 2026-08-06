@@ -210,6 +210,10 @@ fn agent_index_emits_expected_schema_and_sources() {
             "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json",
         ),
         (
+            "genesisbench_local_model_custody_qwen3_8b",
+            "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-8b-4bit-v0.1.json",
+        ),
+        (
             "genesisbench_open_agent",
             "docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json",
         ),

@@ -29,6 +29,10 @@ pub(super) fn insert_docs(docs: &mut serde_json::Value) {
             "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json",
         ),
         (
+            "genesisbench_local_model_custody_qwen3_8b",
+            "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-8b-4bit-v0.1.json",
+        ),
+        (
             "genesisbench_open_agent_campaign_schema",
             "docs/spec/GENESISBENCH_OPEN_AGENT_CAMPAIGN_v0.1.schema.json",
         ),

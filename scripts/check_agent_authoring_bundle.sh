@@ -91,6 +91,8 @@ run_parallel 12 genesisbench-construct-validity \
   python3 scripts/lib/genesisbench_construct_validity.py --check --self-test
 run_parallel 13 genesisbench-local-models \
   python3 scripts/lib/genesisbench_local_models.py --check --self-test
+run_parallel 14 genesisbench-mlx-custody-manifests \
+  bash -c 'python3 scripts/lib/genesisbench_mlx_custody.py --check --manifest benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json && python3 scripts/lib/genesisbench_mlx_custody.py --check --manifest benchmarks/genesisbench/v0.1/local-models/custody/qwen3-8b-4bit-v0.1.json'
 
 parallel_status=0
 for index in "${!parallel_pids[@]}"; do
@@ -299,6 +301,7 @@ required_included = [
     "benchmarks/genesisbench/v0.1/local-models/preselection.json",
     "benchmarks/genesisbench/v0.1/local-models/inventory.json",
     "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json",
+    "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-8b-4bit-v0.1.json",
     "benchmarks/genesisbench/v0.1/contamination.fixture.json",
     "benchmarks/genesisbench/v0.1/eligibility.fixture.json",
     "benchmarks/genesisbench/v0.1/reference-agent/retrieval.json",
