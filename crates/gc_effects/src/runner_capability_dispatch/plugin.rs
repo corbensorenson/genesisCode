@@ -63,6 +63,7 @@ fn plugin_bridge_digest_pin_from_policy(pol: Option<&OpPolicy>) -> Option<String
 
 pub(super) fn capability_host_plugin_command(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -184,7 +185,7 @@ pub(super) fn capability_host_plugin_command(
     } else {
         "host/plugin"
     };
-    match call_host_bridge(family, op, payload, pol) {
+    match call_host_bridge(bridge_runtime, family, op, payload, pol) {
         Ok(resp) => {
             if let Some(schema_id) = schema_ids.response_schema_id.as_deref()
                 && let Err(err) = validate_plugin_response_schema(schema_id, &resp)

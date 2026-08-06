@@ -12,6 +12,7 @@ pub(super) fn dispatch_publish(
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
     budget: &mut ArtifactBudgetState,
+    bridge_runtime: &mut HostBridgeRuntime,
     error_tok: SealId,
     op: &str,
     timeout_ms: Option<u64>,
@@ -480,7 +481,7 @@ pub(super) fn dispatch_publish(
 
             let sync_payload = Term::Map(sync_payload_m);
             let sync_pol = pol.or_else(|| policy.op_policy("core/sync::push"));
-            let sync_out = call_capability(
+            let sync_out = call_capability_with_runtime(
                 "core/sync::push",
                 &sync_payload,
                 sync_pol,
@@ -488,6 +489,7 @@ pub(super) fn dispatch_publish(
                 Some(store),
                 Some(refs),
                 budget,
+                bridge_runtime,
                 error_tok,
             )?;
 
@@ -910,7 +912,7 @@ pub(super) fn dispatch_publish(
                 .collect(),
             );
             let sign_pol = policy.op_policy("core/crypto::sign").or(pol);
-            let sign_out = call_capability(
+            let sign_out = call_capability_with_runtime(
                 "core/crypto::sign",
                 &sign_payload,
                 sign_pol,
@@ -918,6 +920,7 @@ pub(super) fn dispatch_publish(
                 Some(store),
                 refs,
                 budget,
+                bridge_runtime,
                 error_tok,
             )?;
             let signature = match sign_out {

@@ -5,7 +5,7 @@ use gc_kernel::{SealId, Value};
 use num_traits::ToPrimitive;
 
 use crate::policy::OpPolicy;
-use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 
 #[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
 mod desktop_adapter;
@@ -76,6 +76,7 @@ pub(crate) struct GfxHostRuntime {
 
 pub(crate) fn gfx_host_call(
     runtime: &mut GfxHostRuntime,
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -89,10 +90,12 @@ pub(crate) fn gfx_host_call(
             runtime, op, payload, pol,
         )));
     }
-    Some(match call_host_bridge("gfx", op, payload, pol) {
-        Ok(resp) => Value::data(resp),
-        Err(err) => mk_error(error_tok, &err, Some(op)),
-    })
+    Some(
+        match call_host_bridge(bridge_runtime, "gfx", op, payload, pol) {
+            Ok(resp) => Value::data(resp),
+            Err(err) => mk_error(error_tok, &err, Some(op)),
+        },
+    )
 }
 
 fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {

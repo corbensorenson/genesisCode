@@ -3,7 +3,7 @@ use super::*;
 
 #[cfg(not(target_os = "wasi"))]
 use crate::runner_process_control::{
-    configure_killable_process, terminate_and_reap, terminate_descendants,
+    configure_killable_process, signal_process_tree, terminate_and_reap, terminate_descendants,
 };
 
 #[cfg(not(target_os = "wasi"))]
@@ -28,6 +28,28 @@ struct PersistentBridgeSession {
     process_id: u32,
     requests: Option<std::sync::mpsc::SyncSender<PersistentBridgeRequest>>,
     worker: Option<std::thread::JoinHandle<()>>,
+}
+
+#[cfg(not(target_os = "wasi"))]
+#[derive(Default)]
+pub(super) struct PersistentBridgeRuntime {
+    sessions: std::collections::HashMap<PersistentBridgeSessionKey, PersistentBridgeSession>,
+}
+
+#[cfg(not(target_os = "wasi"))]
+impl PersistentBridgeRuntime {
+    fn clear(&mut self) {
+        for (_, mut session) in self.sessions.drain() {
+            let _ = session.stop();
+        }
+    }
+}
+
+#[cfg(not(target_os = "wasi"))]
+impl Drop for PersistentBridgeRuntime {
+    fn drop(&mut self) {
+        self.clear();
+    }
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -62,13 +84,25 @@ pub(super) fn joined_persistent_bridge_workers_for_tests() -> usize {
 
 #[cfg(not(target_os = "wasi"))]
 impl PersistentBridgeSession {
-    fn stop(&mut self) {
-        let _ = terminate_descendants(self.process_id);
+    fn stop(&mut self) -> std::io::Result<()> {
+        // The worker exclusively owns Child and is therefore the only thread that
+        // can reap the leader. Signal first, join that owner, then verify that no
+        // residual process-group member remains.
+        let signal_result = signal_process_tree(self.process_id);
         self.requests.take();
-        if let Some(worker) = self.worker.take() {
-            let _ = worker.join();
-            JOINED_PERSISTENT_BRIDGE_WORKERS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        }
+        let join_result = if let Some(worker) = self.worker.take() {
+            let result = worker.join().map_err(|_| {
+                std::io::Error::other("persistent bridge worker panicked during teardown")
+            });
+            if result.is_ok() {
+                JOINED_PERSISTENT_BRIDGE_WORKERS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            }
+            result
+        } else {
+            Ok(())
+        };
+        let residual_result = terminate_descendants(self.process_id);
+        signal_result.and(join_result).and(residual_result)
     }
 
     fn call(
@@ -104,9 +138,7 @@ impl PersistentBridgeSession {
         match result.recv_timeout(std::time::Duration::from_millis(timeout_ms)) {
             Ok(result) => result,
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                let termination = terminate_descendants(self.process_id);
-                let _ = result.recv();
-                self.stop();
+                let termination = self.stop();
                 if let Err(error) = termination {
                     return Err(BridgeError {
                         code: format!("{family}/bridge-reap"),
@@ -121,7 +153,7 @@ impl PersistentBridgeSession {
                 })
             }
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                self.stop();
+                let _ = self.stop();
                 Err(BridgeError {
                     code: format!("{family}/bridge-session"),
                     message: "persistent bridge worker disconnected".to_string(),
@@ -134,17 +166,8 @@ impl PersistentBridgeSession {
 #[cfg(not(target_os = "wasi"))]
 impl Drop for PersistentBridgeSession {
     fn drop(&mut self) {
-        self.stop();
+        let _ = self.stop();
     }
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn persistent_bridge_session_map()
--> &'static Mutex<HashMap<PersistentBridgeSessionKey, Arc<Mutex<PersistentBridgeSession>>>> {
-    static SESSIONS: OnceLock<
-        Mutex<HashMap<PersistentBridgeSessionKey, Arc<Mutex<PersistentBridgeSession>>>>,
-    > = OnceLock::new();
-    SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -294,80 +317,44 @@ fn spawn_persistent_bridge_session(
 }
 
 #[cfg(not(target_os = "wasi"))]
-fn ensure_persistent_bridge_session(key: &PersistentBridgeSessionKey) -> Result<(), BridgeError> {
-    let map = persistent_bridge_session_map();
-    let mut sessions = map.lock().map_err(|_| BridgeError {
-        code: format!("{}/bridge-session", key.family),
-        message: "persistent bridge session map lock poisoned".to_string(),
-    })?;
-    if sessions.contains_key(key) {
+fn ensure_persistent_bridge_session(
+    runtime: &mut PersistentBridgeRuntime,
+    key: &PersistentBridgeSessionKey,
+) -> Result<(), BridgeError> {
+    if runtime.sessions.contains_key(key) {
         return Ok(());
     }
     let session = spawn_persistent_bridge_session(key)?;
-    sessions.insert(key.clone(), Arc::new(Mutex::new(session)));
+    runtime.sessions.insert(key.clone(), session);
     Ok(())
 }
 
 #[cfg(not(target_os = "wasi"))]
-fn clear_persistent_bridge_session(key: &PersistentBridgeSessionKey) {
-    let session = persistent_bridge_session_map()
-        .lock()
-        .ok()
-        .and_then(|mut sessions| sessions.remove(key));
-    if let Some(session) = session
-        && let Ok(mut session) = session.lock()
-    {
-        session.stop();
-    }
-}
-
-#[cfg(all(test, not(target_os = "wasi")))]
-pub(super) fn reset_persistent_bridge_sessions_for_tests() {
-    let sessions = persistent_bridge_session_map()
-        .lock()
-        .map(|mut sessions| {
-            sessions
-                .drain()
-                .map(|(_, session)| session)
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    for session in sessions {
-        if let Ok(mut session) = session.lock() {
-            session.stop();
-        }
+fn clear_persistent_bridge_session(
+    runtime: &mut PersistentBridgeRuntime,
+    key: &PersistentBridgeSessionKey,
+) {
+    if let Some(mut session) = runtime.sessions.remove(key) {
+        let _ = session.stop();
     }
 }
 
 #[cfg(not(target_os = "wasi"))]
 fn run_persistent_bridge_process_once(
+    runtime: &mut PersistentBridgeRuntime,
     key: &PersistentBridgeSessionKey,
     payload_frame: &str,
     timeout_ms: Option<u64>,
     max_bytes: Option<usize>,
 ) -> Result<Term, BridgeError> {
-    ensure_persistent_bridge_session(key)?;
-    let session = persistent_bridge_session_map()
-        .lock()
-        .map_err(|_| BridgeError {
-            code: format!("{}/bridge-session", key.family),
-            message: "persistent bridge session map lock poisoned".to_string(),
-        })?
-        .get(key)
-        .cloned()
-        .ok_or_else(|| BridgeError {
-            code: format!("{}/bridge-session", key.family),
-            message: "persistent bridge session disappeared".to_string(),
-        })?;
-    let result = session
-        .lock()
-        .map_err(|_| BridgeError {
-            code: format!("{}/bridge-session", key.family),
-            message: "persistent bridge session lock poisoned".to_string(),
-        })?
-        .call(&key.family, payload_frame, max_bytes, timeout_ms);
+    ensure_persistent_bridge_session(runtime, key)?;
+    let session = runtime.sessions.get_mut(key).ok_or_else(|| BridgeError {
+        code: format!("{}/bridge-session", key.family),
+        message: "persistent bridge session disappeared".to_string(),
+    })?;
+    let result = session.call(&key.family, payload_frame, max_bytes, timeout_ms);
     if result.is_err() {
-        clear_persistent_bridge_session(key);
+        clear_persistent_bridge_session(runtime, key);
     }
     result
 }
@@ -378,6 +365,7 @@ fn run_persistent_bridge_process_once(
     reason = "bridge process runner requires explicit io/time/resource limits for deterministic envelopes"
 )]
 pub(super) fn run_bridge_process_persistent(
+    runtime: &mut PersistentBridgeRuntime,
     family: &str,
     op: &str,
     payload: &Term,
@@ -397,5 +385,5 @@ pub(super) fn run_bridge_process_persistent(
         cmd_path: cmd_path.to_path_buf(),
         args: args.to_vec(),
     };
-    run_persistent_bridge_process_once(&key, &payload_frame, timeout_ms, max_bytes)
+    run_persistent_bridge_process_once(runtime, &key, &payload_frame, timeout_ms, max_bytes)
 }

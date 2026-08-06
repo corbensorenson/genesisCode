@@ -7,6 +7,8 @@ This document is normative for bridge-backed host capabilities:
 - `editor/*`
 - `gfx/*`
 - `gpu/compute::*`
+- `io/net::*`, `io/db::*`, `sys/process::*`, `core/crypto::*`
+- `host/plugin::*`, `host/ffi::*`, and model-provider families
 
 ## Goals
 
@@ -28,7 +30,7 @@ For a single capability request (`bridge_transport = "spawn-per-op"`):
 
 For persistent capability requests (`bridge_transport = "persistent-stdio"`):
 
-1. Runner resolves and executes `bridge_cmd` under op `base_dir` once per deterministic session key.
+1. Runner resolves and executes `bridge_cmd` under op `base_dir` once per deterministic session key within one runner execution.
 2. Runner appends the requested op symbol as the final CLI arg.
 3. Runner sets env vars:
    - `GENESIS_HOST_BRIDGE_OP`
@@ -36,6 +38,11 @@ For persistent capability requests (`bridge_transport = "persistent-stdio"`):
    - `GENESIS_HOST_BRIDGE_TRANSPORT=persistent-stdio`
 4. Runner reuses the live bridge process and writes one framed request payload per op invocation.
 5. Bridge writes one framed response payload per request and remains alive for the next frame.
+
+A persistent session is owned by the current effect runner, never by a process-global cache. Its
+key cannot carry a process, socket, database, GPU, graphics, plugin, FFI, or model session across
+runner requests. Returning success or a sealed error from the runner, unwinding the runner,
+cancelling its worker, or replacing/restarting the daemon drops the owner and closes every session.
 
 `stderr` is reserved for diagnostics and is included in deterministic error mapping when the bridge exits non-zero.
 
@@ -66,8 +73,8 @@ Example:
     - entries may match `bridge_cmd` token, resolved absolute path, or executable filename.
   - `bridge_cmd_sha256` (string): expected executable digest (64 hex, optional `sha256:` prefix).
 - `timeout_ms` is a hard process-tree deadline for both transports.
-  - `spawn-per-op` terminates residual descendants, reaps the child, and joins all I/O pumps before returning `<family>/bridge-timeout`.
-  - `persistent-stdio` terminates and evicts the whole session, joins its sole worker, and never retries the uncertain timed-out request.
+  - On hosts advertising process-tree termination support, `spawn-per-op` creates a separately killable process tree. Success, non-zero exit, protocol error, and timeout terminate residual descendants, reap the child, and join all I/O pumps before returning.
+  - `persistent-stdio` timeout signals the process tree, closes the request channel, joins the sole worker that owns and reaps the child, verifies no process-group member remains, and evicts the session. It never retries the uncertain timed-out request.
 - Hard bridge timeouts require platform process-tree termination support. Current Unix hosts use a dedicated process group per bridge tree. Other hosts fail closed with `<family>/bridge-policy` instead of advertising or attempting a cooperative timeout.
 - `max_bytes` applies to both request payload size and response payload size.
 - Violations return deterministic sealed errors with family-scoped codes:
@@ -84,6 +91,14 @@ Example:
 - Payload hashing and continuation hashing remain owned by the effect runner (`.gclog` semantics unchanged).
 - Bridge transport errors are represented as sealed ERROR values and are replay-stable.
 
+## Ownership And Teardown
+
+- `HostBridgeRuntime` is the explicit owner for all persistent bridge sessions in one runner execution.
+- The owner contains no ambient process-global session map. Production capability dispatch must receive the owner explicitly.
+- A persistent worker exclusively owns its `Child`. Teardown must signal before join, let that owner reap the leader, then perform the bounded residual-group verification. Waiting for group disappearance before joining the child owner is forbidden because it misclassifies the owner's unreaped leader as a surviving process.
+- Teardown is bounded. Failure to signal, join, reap, or eliminate a live residual member returns a family-scoped `bridge-reap` error; it is never rewritten as successful cancellation.
+- Recreating a runner after daemon restart creates a fresh bridge generation. Logical IDs or processes from the retired owner cannot be reused.
+
 ## WASI Profile
 
 - If bridge process execution is unavailable, runtime returns deterministic `*/bridge-not-supported`.
@@ -92,5 +107,6 @@ Example:
 ## Conformance
 
 Conformance tests:
-- Native bridge framing + budget tests: `crates/gc_effects/src/runner_host_bridge.rs` test module.
+- Native framing, owner lifetime, success/error descendant reap, timeout/cancellation, restart, and repeated-load tests: `crates/gc_effects/src/runner_host_bridge_tests.rs`.
 - End-to-end bridge replay tests: `crates/gc_effects/tests/gfx_gpu_bridge.rs`, `crates/gc_effects/tests/editor_bridge.rs`.
+- Mandatory aggregate gate and machine report: `scripts/check_host_bridge_fault_injection.sh` and `.genesis/perf/host_bridge_fault_injection_report.json`.

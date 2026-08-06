@@ -10,7 +10,7 @@ use crate::runner_gpu_backend_policy::{
     gpu_backend_kind_label, gpu_op_prefers_device_backend, inject_backend_fallback_metadata,
 };
 use crate::runner_gpu_device_backend::call_device_backend;
-use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 
 const FIRST_PARTY_GPU_BUFFER_MAX_BYTES: usize = 8 * 1024 * 1024;
 const FIRST_PARTY_GPU_TEXTURE_MAX_BYTES: usize = 16 * 1024 * 1024;
@@ -40,6 +40,7 @@ pub(crate) struct GpuHostRuntime {
 
 pub(crate) fn gpu_host_call(
     runtime: &mut GpuHostRuntime,
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -78,10 +79,12 @@ pub(crate) fn gpu_host_call(
         }
         return Some(Value::data(first_party_gpu_response(runtime, op, payload)));
     }
-    Some(match call_host_bridge("gpu", op, payload, pol) {
-        Ok(resp) => Value::data(resp),
-        Err(err) => mk_error(error_tok, &err, Some(op)),
-    })
+    Some(
+        match call_host_bridge(bridge_runtime, "gpu", op, payload, pol) {
+            Ok(resp) => Value::data(resp),
+            Err(err) => mk_error(error_tok, &err, Some(op)),
+        },
+    )
 }
 
 fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {

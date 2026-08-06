@@ -35,6 +35,7 @@ fn process_allow_programs_from_policy(
 
 pub(super) fn capability_sys_process_spawn_or_exec(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -64,7 +65,7 @@ pub(super) fn capability_sys_process_spawn_or_exec(
             Some(op),
         ));
     }
-    match call_host_bridge("process", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "process", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -72,6 +73,7 @@ pub(super) fn capability_sys_process_spawn_or_exec(
 
 pub(super) fn capability_sys_process_wait_or_kill(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -85,7 +87,7 @@ pub(super) fn capability_sys_process_wait_or_kill(
             Some(op),
         ));
     }
-    match call_host_bridge("process", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "process", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -93,6 +95,7 @@ pub(super) fn capability_sys_process_wait_or_kill(
 
 pub(super) fn capability_sys_process_stdin_write(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -107,7 +110,7 @@ pub(super) fn capability_sys_process_stdin_write(
             Some(op),
         ));
     }
-    match call_host_bridge("process", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "process", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }

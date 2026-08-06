@@ -43,17 +43,25 @@ fn kill_process_group(process_id: u32) -> std::io::Result<()> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
+pub(crate) fn signal_process_tree(process_id: u32) -> std::io::Result<()> {
+    kill_process_group(process_id)
+}
+
 #[cfg(all(not(target_os = "wasi"), unix))]
 fn kill_process_group_until_gone(process_id: u32) -> std::io::Result<()> {
-    const MAX_SWEEPS: usize = 50;
+    const MAX_REAP_WAIT: std::time::Duration = std::time::Duration::from_millis(250);
     let process_id = i32::try_from(process_id).map_err(|_| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             "child process ID exceeds the platform process-group range",
         )
     })?;
-    let mut last_error = None;
-    for _ in 0..MAX_SWEEPS {
+    let started = std::time::Instant::now();
+    let deadline = started + MAX_REAP_WAIT;
+    let mut last_error;
+    let mut sleep_ms = 1_u64;
+    loop {
         let result = unsafe { libc::kill(-process_id, libc::SIGKILL) };
         if result == 0 {
             last_error = None;
@@ -68,12 +76,19 @@ fn kill_process_group_until_gone(process_id: u32) -> std::io::Result<()> {
                 _ => return Err(error),
             }
         }
-        std::thread::sleep(std::time::Duration::from_millis(1));
+        if std::time::Instant::now() >= deadline {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(sleep_ms));
+        sleep_ms = (sleep_ms.saturating_mul(2)).min(10);
     }
     Err(last_error.unwrap_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::TimedOut,
-            "bridge process group remained after repeated termination sweeps",
+            format!(
+                "bridge process group remained after {}ms bounded termination",
+                started.elapsed().as_millis()
+            ),
         )
     }))
 }

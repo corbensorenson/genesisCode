@@ -42,6 +42,15 @@ genesis_configure_cargo_target_dir \
   "host-bridge-fault-injection" \
   root-host
 
+if rg -n 'static SESSIONS|persistent_bridge_session_map' \
+  crates/gc_effects/src/runner_host_bridge_persistent.rs; then
+  echo "host-bridge-fault-injection: process-global persistent bridge ownership is forbidden" >&2
+  exit 1
+fi
+rg -q 'struct HostBridgeRuntime' crates/gc_effects/src/runner_host_bridge.rs
+rg -q 'bridge_runtime: &mut HostBridgeRuntime' \
+  crates/gc_effects/src/runner_capability_dispatch.rs
+
 start_ns="$(python3 - <<'PY'
 import time
 print(time.time_ns())
@@ -60,6 +69,8 @@ print(time.time_ns())
 PY
 )"
   if cargo test -p gc_effects --test host_bridge_fault_injection --quiet && \
+     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_reaps_residual_descendants_after_success_and_error --quiet -- --exact && \
+     cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact; then
     run_ok=1
@@ -142,11 +153,30 @@ report = {
     "deterministic_replay_verified": True,
     "hard_cancellation": {
         "transports": ["persistent-stdio", "spawn-per-op"],
-        "repeated_hang_cases": 48,
+        "repeated_hang_cases": 49,
         "process_tree_termination": True,
         "child_reap": True,
         "io_worker_quiescence": True,
         "uncertain_request_retry": False,
+        "owner_scope": "runner",
+        "process_global_session_cache": False,
+        "lifecycle_paths": [
+            "success",
+            "error",
+            "cancellation",
+            "timeout",
+            "runtime-drop",
+            "restart",
+            "repeated-load",
+        ],
+        "resource_families": [
+            "network",
+            "process",
+            "plugin",
+            "graphics",
+            "gpu",
+            "model",
+        ],
     },
     "runs_detail": run_records,
 }

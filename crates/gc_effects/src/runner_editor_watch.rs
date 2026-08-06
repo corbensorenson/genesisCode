@@ -88,7 +88,10 @@ pub(super) fn watch_state_poll(watch: &mut WatchState) -> Result<Vec<Term>, Stri
                 &mut watch.snapshot,
                 backend,
             ) {
-                Ok(events) => return Ok(events),
+                Ok(events) if !events.is_empty() => return Ok(events),
+                // Native notification delivery is advisory and may lag the write
+                // that precedes this poll. Snapshot comparison is authoritative.
+                Ok(_) => {}
                 Err(_) => {
                     degrade_to_polling = true;
                 }
