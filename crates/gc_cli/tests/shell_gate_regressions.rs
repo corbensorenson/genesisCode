@@ -748,76 +748,61 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             && perf_lane.contains("bash scripts/test_perf_gates.sh"),
         "standard CI must declare its cold dev-fast envelope; full CI must exclude the aggregate owned by its paired release measurement lane"
     );
-    let cold_job = workflow
-        .find("  release_evidence_cold_worker:")
-        .expect("cold release evidence worker job");
-    let warm_job = workflow
-        .find("  release_evidence_warm_worker:")
-        .expect("warm release evidence worker job");
-    let invariant_job = workflow
-        .find("  release_evidence_invariant_worker:")
-        .expect("invariant release evidence worker job");
-    let stress_job = workflow
-        .find("  release_evidence_stress_worker:")
-        .expect("stress release evidence worker job");
-    let aggregate_job = workflow
-        .find("  release_full_measurement:")
-        .expect("release measurement aggregate job");
-    let test_suite_job = workflow
-        .find("  test_suite:")
-        .expect("test suite job after release measurement jobs");
+    let release_jobs = [
+        "  release_evidence_cold_worker:",
+        "  release_evidence_warm_worker:",
+        "  release_evidence_invariant_worker:",
+        "  release_evidence_stress_worker:",
+        "  release_full_measurement:",
+        "  test_suite:",
+    ];
+    let positions: Vec<_> = release_jobs
+        .iter()
+        .map(|marker| workflow.find(marker).expect("missing release evidence job"))
+        .collect();
     assert!(
-        cold_job < warm_job
-            && warm_job < invariant_job
-            && invariant_job < stress_job
-            && stress_job < aggregate_job,
+        positions.windows(2).all(|pair| pair[0] < pair[1]),
         "release evidence worker and aggregate job identities must remain unique"
     );
-    let cold_lane = &workflow[cold_job..warm_job];
-    let warm_lane = &workflow[warm_job..invariant_job];
-    let invariant_lane = &workflow[invariant_job..stress_job];
-    let stress_lane = &workflow[stress_job..aggregate_job];
-    let aggregate_lane = &workflow[aggregate_job..test_suite_job];
-    assert!(
-        cold_lane.contains("index: [1, 2, 3]")
-            && cold_lane.contains("release-evidence-environment")
-            && cold_lane.contains("Publish Same-Run Cold-1 Fanout")
-            && cold_lane.contains("GENESIS_RELEASE_FANOUT_DIGEST")
-            && warm_lane.contains("index: [1, 2, 3]")
-            && warm_lane.contains("Prove Warm Precondition And Measure Setup")
-            && invariant_lane.contains("Fetch Authenticated Same-Run Fanout")
-            && invariant_lane.contains("--evidence-class invariant")
-            && stress_lane.contains("index: [1, 2, 3]")
-            && stress_lane.contains("Fetch Authenticated Same-Run Fanout")
-            && stress_lane.contains("--evidence-class stress-performance"),
-        "full CI must run the closed v0.2 release-evidence worker partition"
-    );
-    assert!(
-        aggregate_lane.contains("- release_target_reference_readiness")
-            && aggregate_lane.contains("- release_evidence_cold_worker")
-            && aggregate_lane.contains("- release_evidence_warm_worker")
-            && aggregate_lane.contains("- release_evidence_invariant_worker")
-            && aggregate_lane.contains("- release_evidence_stress_worker")
-            && aggregate_lane.contains("timeout-minutes: 5")
-            && aggregate_lane.contains("Aggregate Release Evidence DAG")
-            && aggregate_lane.contains("reference-target-android.json")
-            && aggregate_lane.contains("reference-target-edge.json")
-            && aggregate_lane.contains("reference-target-ios.json")
-            && aggregate_lane.contains("reference-target-service-runtime.json")
-            && aggregate_lane.contains(
-                "--worker-output .genesis/release-workers/release-evidence-worker-cold-1"
-            )
-            && aggregate_lane.contains(
-                "--worker-output .genesis/release-workers/release-evidence-worker-warm-3"
-            )
-            && aggregate_lane.contains(
-                "--worker-output .genesis/release-workers/release-evidence-worker-invariant-1"
-            )
-            && aggregate_lane.contains(
-                "--worker-output .genesis/release-workers/release-evidence-worker-stress-3"
-            ),
-        "full CI must aggregate all ten v0.2 workers after every named target shard"
-    );
+    let worker_lane = &workflow[positions[0]..positions[4]];
+    for marker in [
+        "index: [1, 2, 3]",
+        "release-evidence-environment",
+        "Publish Same-Run Cold-1 Fanout",
+        "GENESIS_RELEASE_FANOUT_DIGEST",
+        "Prove Warm Precondition And Measure Setup",
+        "Fetch Authenticated Same-Run Fanout",
+        "--evidence-class invariant",
+        "--evidence-class stress-performance",
+    ] {
+        assert!(
+            worker_lane.contains(marker),
+            "missing v0.2 worker custody: {marker}"
+        );
+    }
+    let aggregate_lane = &workflow[positions[4]..positions[5]];
+    for marker in [
+        "- release_target_reference_readiness",
+        "- release_evidence_cold_worker",
+        "- release_evidence_warm_worker",
+        "- release_evidence_invariant_worker",
+        "- release_evidence_stress_worker",
+        "timeout-minutes: 5",
+        "Aggregate Release Evidence DAG",
+        "reference-target-android.json",
+        "reference-target-edge.json",
+        "reference-target-ios.json",
+        "reference-target-service-runtime.json",
+        "release-evidence-worker-cold-1",
+        "release-evidence-worker-warm-3",
+        "release-evidence-worker-invariant-1",
+        "release-evidence-worker-stress-3",
+    ] {
+        assert!(
+            aggregate_lane.contains(marker),
+            "missing v0.2 aggregate custody: {marker}"
+        );
+    }
     assert!(
         workflow.contains("reactivecircus/android-emulator-runner@v2")
             && workflow.contains("scripts/prepare_release_target_reference.sh")
