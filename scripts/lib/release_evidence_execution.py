@@ -45,6 +45,57 @@ PHASE_FIELDS = {
     "peakRssBytes", "profileReportArtifact", "profileReportSha256", "timedOut",
 }
 TARGETS = ["android", "edge", "ios", "service-runtime"]
+SUDO_RELAY_ENV_NAMES = frozenset(
+    {
+        "AR_wasm32_wasip1",
+        "CARGO",
+        "CARGO_HOME",
+        "CARGO_INCREMENTAL",
+        "CARGO_NET_OFFLINE",
+        "CARGO_TERM_COLOR",
+        "CC_wasm32_wasip1",
+        "CFLAGS_wasm32_wasip1",
+        "CI",
+        "GENESIS_AGENT_GPU_PROFILE",
+        "GENESIS_CARGO_CACHE_ROOT",
+        "GENESIS_CHECK_HEALTH_OUTPUT_CONTAINMENT_ROOT",
+        "GENESIS_CHECK_HEALTH_OUTPUT_ROOT",
+        "GENESIS_CHECK_HEALTH_RELEASE_FULL_HISTORY_INPUT",
+        "GENESIS_GATE_TELEMETRY_DISABLE",
+        "GENESIS_HEALTH_PROFILE",
+        "GENESIS_HEALTH_PROFILE_GATE_CACHE",
+        "GENESIS_HEALTH_WARM_CARGO_CACHE",
+        "GENESIS_RELEASE_EVIDENCE_NODE_CLASS",
+        "GENESIS_RELEASE_EVIDENCE_PHASE",
+        "GENESIS_RELEASE_MEASUREMENT_RUN_CLASS",
+        "GITHUB_ACTIONS",
+        "GITHUB_RUN_ATTEMPT",
+        "GITHUB_RUN_ID",
+        "GITHUB_SHA",
+        "GITHUB_WORKSPACE",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "LOGNAME",
+        "NPM_CONFIG_OFFLINE",
+        "PATH",
+        "RUSTC",
+        "RUSTDOC",
+        "RUSTUP_HOME",
+        "RUSTUP_TOOLCHAIN",
+        "RUNNER_ARCH",
+        "RUNNER_OS",
+        "RUNNER_TEMP",
+        "RUNNER_TOOL_CACHE",
+        "SHELL",
+        "TMPDIR",
+        "TZ",
+        "USER",
+        "WASI_SDK_PATH",
+        "WASI_SYSROOT",
+        "WASMTIME_VERSION",
+    }
+)
 
 
 class ExecutionError(ValueError):
@@ -293,6 +344,52 @@ def cache_key(root: Path, cache_root: Path) -> str:
     return value
 
 
+def sudo_relay_environment(root: Path, environ: Mapping[str, str]) -> dict[str, str]:
+    cache_policy = cargo_cache.load_policy(root)
+    allowed = SUDO_RELAY_ENV_NAMES | set(cache_policy["buildEnvironment"])
+    relay = {name: environ[name] for name in sorted(allowed) if name in environ}
+    for name in (
+        "CARGO_HOME",
+        "CI",
+        "GENESIS_AGENT_GPU_PROFILE",
+        "GENESIS_CARGO_CACHE_ROOT",
+        "GENESIS_CHECK_HEALTH_OUTPUT_CONTAINMENT_ROOT",
+        "GENESIS_CHECK_HEALTH_OUTPUT_ROOT",
+        "GENESIS_CHECK_HEALTH_RELEASE_FULL_HISTORY_INPUT",
+        "GENESIS_HEALTH_PROFILE",
+        "GENESIS_RELEASE_EVIDENCE_NODE_CLASS",
+        "GENESIS_RELEASE_EVIDENCE_PHASE",
+        "GENESIS_RELEASE_MEASUREMENT_RUN_CLASS",
+        "HOME",
+        "PATH",
+    ):
+        if not relay.get(name):
+            fail(f"sudo-isolated release child is missing required environment: {name}")
+    if shutil.which("rustc", path=relay["PATH"]) is None:
+        fail("sudo-isolated release child PATH cannot resolve rustc")
+    return relay
+
+
+def guarded_process_command(
+    root: Path,
+    network_prefix: Sequence[str],
+    argv: Sequence[str],
+    environ: Mapping[str, str],
+) -> tuple[list[str], dict[str, str]]:
+    prefix = list(network_prefix)
+    if prefix and Path(prefix[0]).name == "sudo":
+        env_tool = shutil.which("env") or "/usr/bin/env"
+        relay = sudo_relay_environment(root, environ)
+        command = prefix + [
+            env_tool,
+            "-i",
+            *(f"{name}={relay[name]}" for name in sorted(relay)),
+            *argv,
+        ]
+        return command, {"LANG": "C", "PATH": "/usr/bin:/bin"}
+    return prefix + list(argv), dict(environ)
+
+
 def copy_phase_tree(source: Path, output: Path, prefix: str) -> None:
     for path in sorted(source.rglob("*")):
         if path.is_file():
@@ -382,19 +479,19 @@ def run_phase(
         "workspace-target": root / "target",
     }
     argv = [
-        *network_prefix,
         "bash",
         "scripts/check_upgrade_plan_health.sh",
         "--profile",
         "release-full",
     ]
+    argv, process_env = guarded_process_command(root, network_prefix, argv, env)
     started = time.monotonic_ns()
     timed_out = False
     with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
         proc = subprocess.Popen(
             argv,
             cwd=root,
-            env=env,
+            env=process_env,
             stdout=stdout,
             stderr=stderr,
             start_new_session=True,
@@ -1576,6 +1673,43 @@ def self_test(root: Path) -> int:
             controls += 1
         else:
             fail("release execution self-test accepted a forged worker start")
+    required_env = {
+        name: "fixture"
+        for name in SUDO_RELAY_ENV_NAMES | set(cargo_cache.load_policy(root)["buildEnvironment"])
+    }
+    required_env.update(
+        {
+            "CARGO_HOME": str(Path.home() / ".cargo"),
+            "CI": "true",
+            "HOME": str(Path.home()),
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "SUPER_SECRET_SENTINEL": "must-not-cross-sudo-boundary",
+        }
+    )
+    relay = sudo_relay_environment(root, required_env)
+    command, process_env = guarded_process_command(
+        root,
+        ["/usr/bin/sudo", "-n", "/usr/bin/unshare", "--net", "--"],
+        ["bash", "-c", "true"],
+        required_env,
+    )
+    if (
+        relay.get("PATH") != required_env["PATH"]
+        or "SUPER_SECRET_SENTINEL" in relay
+        or any("SUPER_SECRET_SENTINEL" in argument for argument in command)
+        or process_env != {"LANG": "C", "PATH": "/usr/bin:/bin"}
+        or shutil.which("rustc", path=relay["PATH"]) is None
+    ):
+        fail("release execution self-test found an open or incomplete sudo relay")
+    controls += 1
+    missing_path = dict(required_env)
+    missing_path.pop("PATH")
+    try:
+        sudo_relay_environment(root, missing_path)
+    except ExecutionError:
+        controls += 1
+    else:
+        fail("release execution self-test accepted a sudo relay without PATH")
     return controls
 
 

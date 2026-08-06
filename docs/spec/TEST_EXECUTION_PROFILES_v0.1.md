@@ -333,7 +333,11 @@ Strict/full profile runtime reports:
     - invariant and stress workers query only the current workflow run, require exactly
       one unexpired artifact with the canonical name, verify GitHub's archive digest,
       safely extract it under the 20GiB limit, and bind its manifest, DAG, source,
-      toolchain, producer class, and cold-sample index. The renderer reauthenticates
+      producer class, cold-sample index, and exact profile, architecture, operating
+      system, and toolchain inventory. Each manifest retains and authenticates its
+      complete observed execution environment, but the hosted-runner kernel release is
+      not a cross-worker compatibility field because GitHub does not pin one kernel
+      build across distinct `ubuntu-24.04` workers. The renderer reauthenticates
       that sidecar, the aggregate matches every consumer digest to cold sample 1's
       service-issued upload receipt, and every evidence consumer rechecks its exact
       manifest inputs;

@@ -386,6 +386,37 @@ assert same_origin.get_header('Authorization') == 'Bearer secret'
 assert cross_origin.get_header('Authorization') is None
 
 manifest = json.loads((bundle / 'manifest.json').read_text())
+producer_environment = manifest['executionEnvironment']
+consumer_environment = copy.deepcopy(producer_environment)
+consumer_environment['operatingSystemRelease'] += '-distinct-hosted-runner'
+consumer_core = {
+    key: value for key, value in consumer_environment.items()
+    if key != 'identitySha256'
+}
+consumer_environment['identitySha256'] = f.sha256_bytes(f.canonical(consumer_core))
+assert f.compatible_execution_environment(producer_environment, consumer_environment)
+for field, value in (
+    ('profile', 'release-standard'),
+    ('architecture', 'incompatible-architecture'),
+    ('operatingSystem', 'incompatible-operating-system'),
+    ('toolchains', []),
+):
+    incompatible = copy.deepcopy(consumer_environment)
+    incompatible[field] = value
+    incompatible_core = {
+        key: item for key, item in incompatible.items()
+        if key != 'identitySha256'
+    }
+    incompatible['identitySha256'] = f.sha256_bytes(f.canonical(incompatible_core))
+    assert not f.compatible_execution_environment(producer_environment, incompatible)
+forged = copy.deepcopy(consumer_environment)
+forged['identitySha256'] = 'f' * 64
+try:
+    f.compatible_execution_environment(producer_environment, forged)
+except f.FanoutError as exc:
+    assert 'identity mismatch' in str(exc)
+else:
+    raise SystemExit('accepted forged fanout execution environment identity')
 context = {
     'repository': 'corbensorenson/genesisCode',
     'runAttempt': '1',
