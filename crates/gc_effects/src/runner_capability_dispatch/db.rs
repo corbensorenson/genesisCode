@@ -72,6 +72,7 @@ fn validate_db_query_class_policy(
 
 pub(super) fn capability_io_db_connect(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -93,7 +94,7 @@ pub(super) fn capability_io_db_connect(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -101,6 +102,7 @@ pub(super) fn capability_io_db_connect(
 
 pub(super) fn capability_io_db_tx_begin(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -114,7 +116,7 @@ pub(super) fn capability_io_db_tx_begin(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -122,6 +124,7 @@ pub(super) fn capability_io_db_tx_begin(
 
 pub(super) fn capability_io_db_query_or_exec(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -168,7 +171,7 @@ pub(super) fn capability_io_db_query_or_exec(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, &effective_payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, &effective_payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -176,6 +179,7 @@ pub(super) fn capability_io_db_query_or_exec(
 
 pub(super) fn capability_io_db_tx_finish(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -189,7 +193,7 @@ pub(super) fn capability_io_db_tx_finish(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -197,6 +201,7 @@ pub(super) fn capability_io_db_tx_finish(
 
 pub(super) fn capability_io_db_kv_open(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -218,7 +223,7 @@ pub(super) fn capability_io_db_kv_open(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -226,6 +231,7 @@ pub(super) fn capability_io_db_kv_open(
 
 pub(super) fn capability_io_db_kv_get(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -252,7 +258,7 @@ pub(super) fn capability_io_db_kv_get(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, &effective_payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, &effective_payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -260,6 +266,7 @@ pub(super) fn capability_io_db_kv_get(
 
 pub(super) fn capability_io_db_kv_put(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -287,7 +294,7 @@ pub(super) fn capability_io_db_kv_put(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, &effective_payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, &effective_payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -295,6 +302,7 @@ pub(super) fn capability_io_db_kv_put(
 
 pub(super) fn capability_io_db_kv_delete(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -309,7 +317,7 @@ pub(super) fn capability_io_db_kv_delete(
             Some(op),
         ));
     }
-    match call_host_bridge("db", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "db", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }

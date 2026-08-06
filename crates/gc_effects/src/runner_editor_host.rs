@@ -7,7 +7,7 @@ use gc_opt::optimize_module_with_report;
 use gc_pkg::PackageManifest;
 
 use crate::policy::OpPolicy;
-use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 use crate::runner_io_ops::path_to_slash;
 
 #[path = "runner_editor_watch.rs"]
@@ -52,6 +52,7 @@ impl Default for EditorHostRuntime {
 
 pub(crate) fn editor_host_call(
     runtime: &mut EditorHostRuntime,
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -65,10 +66,12 @@ pub(crate) fn editor_host_call(
             runtime, op, payload,
         )));
     }
-    Some(match call_host_bridge("editor", op, payload, pol) {
-        Ok(resp) => Value::data(resp),
-        Err(err) => mk_error(error_tok, &err, Some(op)),
-    })
+    Some(
+        match call_host_bridge(bridge_runtime, "editor", op, payload, pol) {
+            Ok(resp) => Value::data(resp),
+            Err(err) => mk_error(error_tok, &err, Some(op)),
+        },
+    )
 }
 
 fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {

@@ -460,7 +460,7 @@ Browser-native WebXR runtime conformance:
 ### Host-Bridge Fault Evidence Lifecycle
 
 - Read-only fault-injection check: `scripts/check_host_bridge_fault_injection.sh`
-- The same gate executes 48 repeated hard-timeout cases across `spawn-per-op` and `persistent-stdio`, verifies bridge leaders and descendants are gone, proves child reap and I/O-worker join before return, and forbids automatic retry of an uncertain timed-out request.
+- The same gate executes 49 repeated hard-timeout/readiness cases across `spawn-per-op` and `persistent-stdio`; covers success, error, cancellation, timeout, owner drop, restart, and repeated load; verifies bridge leaders and descendants are gone; proves child reap and I/O-worker join before return; rejects process-global persistent-session ownership; and forbids automatic retry of an uncertain timed-out request.
 - Explicit report/history producer: `scripts/update_host_bridge_fault_injection_report.sh`
 - Renderer with caller-owned destinations: `scripts/render_host_bridge_fault_injection_report.sh`
 - Optional E0 report: `.genesis/perf/host_bridge_fault_injection_report.json`

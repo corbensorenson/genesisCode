@@ -386,13 +386,14 @@ fn ffi_common_preflight(
 }
 
 fn ffi_common_bridge_call(
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
     schema_ids: &crate::runner_ffi_schema::FfiSchemaIds,
     error_tok: SealId,
 ) -> Value {
-    match call_host_bridge("host/ffi", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "host/ffi", op, payload, pol) {
         Ok(response) => {
             if let Err(err) = ffi_validate_response_schema(op, &response, schema_ids, error_tok) {
                 return err;
@@ -404,6 +405,7 @@ fn ffi_common_bridge_call(
 }
 
 fn capability_host_ffi_call(
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -502,10 +504,11 @@ fn capability_host_ffi_call(
         }
     }
 
-    ffi_common_bridge_call(op, payload, pol, &schema_ids, error_tok)
+    ffi_common_bridge_call(bridge_runtime, op, payload, pol, &schema_ids, error_tok)
 }
 
 fn capability_host_ffi_buffer_pin(
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -579,10 +582,11 @@ fn capability_host_ffi_buffer_pin(
         );
     }
 
-    ffi_common_bridge_call(op, payload, pol, &schema_ids, error_tok)
+    ffi_common_bridge_call(bridge_runtime, op, payload, pol, &schema_ids, error_tok)
 }
 
 fn capability_host_ffi_buffer_unpin(
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -623,19 +627,24 @@ fn capability_host_ffi_buffer_unpin(
     {
         return err;
     }
-    ffi_common_bridge_call(op, payload, pol, &schema_ids, error_tok)
+    ffi_common_bridge_call(bridge_runtime, op, payload, pol, &schema_ids, error_tok)
 }
 
 pub(super) fn capability_host_ffi(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let out = match op {
-        "host/ffi::call" => capability_host_ffi_call(op, payload, pol, error_tok),
-        "host/ffi::buffer-pin" => capability_host_ffi_buffer_pin(op, payload, pol, error_tok),
-        "host/ffi::buffer-unpin" => capability_host_ffi_buffer_unpin(op, payload, pol, error_tok),
+        "host/ffi::call" => capability_host_ffi_call(bridge_runtime, op, payload, pol, error_tok),
+        "host/ffi::buffer-pin" => {
+            capability_host_ffi_buffer_pin(bridge_runtime, op, payload, pol, error_tok)
+        }
+        "host/ffi::buffer-unpin" => {
+            capability_host_ffi_buffer_unpin(bridge_runtime, op, payload, pol, error_tok)
+        }
         _ => mk_error(
             error_tok,
             "core/caps/unknown-op",

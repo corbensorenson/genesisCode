@@ -5,7 +5,7 @@ use gc_kernel::{SealId, Value};
 use num_traits::ToPrimitive;
 
 use crate::policy::OpPolicy;
-use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 
 #[path = "runner_xr_host/advanced.rs"]
 mod advanced;
@@ -100,6 +100,7 @@ pub(crate) struct XrHostRuntime {
 
 pub(crate) fn xr_host_call(
     runtime: &mut XrHostRuntime,
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -114,7 +115,12 @@ pub(crate) fn xr_host_call(
     };
     if backend_kind == XrBackendKind::WebxrDevice {
         return Some(webxr_device_bridge_call(
-            runtime, op, payload, pol, error_tok,
+            runtime,
+            bridge_runtime,
+            op,
+            payload,
+            pol,
+            error_tok,
         ));
     }
 
@@ -133,20 +139,24 @@ pub(crate) fn xr_host_call(
         if !has_explicit_bridge_profile(pol) {
             return Some(Value::data(first_party_haptics_pulse(runtime, &request)));
         }
-        return Some(match call_host_bridge("gfx-xr", op, payload, pol) {
-            Ok(resp) => Value::data(resp),
-            Err(err) => mk_error(error_tok, &err, Some(op)),
-        });
+        return Some(
+            match call_host_bridge(bridge_runtime, "gfx-xr", op, payload, pol) {
+                Ok(resp) => Value::data(resp),
+                Err(err) => mk_error(error_tok, &err, Some(op)),
+            },
+        );
     }
     if !has_explicit_bridge_profile(pol) {
         return Some(Value::data(first_party_xr_response(
             runtime, op, payload, pol,
         )));
     }
-    Some(match call_host_bridge("gfx-xr", op, payload, pol) {
-        Ok(resp) => Value::data(resp),
-        Err(err) => mk_error(error_tok, &err, Some(op)),
-    })
+    Some(
+        match call_host_bridge(bridge_runtime, "gfx-xr", op, payload, pol) {
+            Ok(resp) => Value::data(resp),
+            Err(err) => mk_error(error_tok, &err, Some(op)),
+        },
+    )
 }
 
 fn parse_xr_backend_kind(pol: Option<&OpPolicy>, op: &str) -> Result<XrBackendKind, Term> {
@@ -232,6 +242,7 @@ fn production_backend_or_policy_disabled(
 
 fn webxr_device_bridge_call(
     runtime: &mut XrHostRuntime,
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -243,7 +254,7 @@ fn webxr_device_bridge_call(
             "`xr_backend = webxr-device` requires an explicit bridge profile (`bridge_cmd` or `wasi_bridge_profile`)",
         ));
     }
-    match call_host_bridge("webxr-device", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "webxr-device", op, payload, pol) {
         Ok(resp) => Value::data(normalize_webxr_device_response(runtime, op, resp)),
         Err(err) => mk_error(error_tok, &err, Some(op)),
     }

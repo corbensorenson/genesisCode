@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `4ac66c9a03a9` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `ff9b84e2c40c` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `80368c73cde9` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `681dee283d11` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `9a9ecec5750a` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-04) | md | `f00e4367230d` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `45353d016626` |
@@ -60,7 +60,7 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
 | [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `43c9bb63cf5a` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `51b3465f9368` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `10addd4f51f9` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -145,7 +145,7 @@ toc-depth: 2
 | [`docs/spec/CAPS_TOML.md`](../docs/spec/CAPS_TOML.md) | caps.toml (Capability Policy) v0.2 | md | `e718c78fd6de` |
 | [`docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json`](../docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json) | GenesisCode Cargo Cache Policy v0.1 | schema | `10c82a4c531b` |
 | [`docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json`](../docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json) | GenesisCode Changed Impact Policy v0.1 | schema | `dd72983c147a` |
-| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `ee9b2afe5458` |
+| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `eecf80f68c6d` |
 | [`docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`](../docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md) | Check/Update Boundary v0.1 | md | `a89e1d31940b` |
 | [`docs/spec/CLI.md`](../docs/spec/CLI.md) | Genesis CLI v0.2 (Exit Codes + JSON) | md | `a37c7bfc8ee0` |
 | [`docs/spec/CLI_JSON_SCHEMAS_v0.1.md`](../docs/spec/CLI_JSON_SCHEMAS_v0.1.md) | CLI JSON Schemas v0.1 (Non-GCPM) | md | `17a47959003b` |
@@ -280,10 +280,10 @@ toc-depth: 2
 | [`docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`](../docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md) | GPU Compute Runtime Profile v0.1 | md | `a68c3b654c1a` |
 | [`docs/spec/GPU_GFX_BUNDLE_v0.1.md`](../docs/spec/GPU_GFX_BUNDLE_v0.1.md) | GPU/GFX Bundle v0.1 | md | `0940fd587b80` |
 | [`docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json`](../docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json) | GenesisCode Health Profile Evidence Bundle v0.2 | schema | `4a5b45c6d138` |
-| [`docs/spec/HOST_ABI.md`](../docs/spec/HOST_ABI.md) | Host ABI (v0.2) | md | `40b948de01a5` |
+| [`docs/spec/HOST_ABI.md`](../docs/spec/HOST_ABI.md) | Host ABI (v0.2) | md | `60f0c6fcfa8e` |
 | [`docs/spec/HOST_ABI_INDEX_v0.1.json`](../docs/spec/HOST_ABI_INDEX_v0.1.json) | genesis/host-abi-index-v0.1 | json | `f17e9fe14cdf` |
 | [`docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json`](../docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json) | genesis/host-abi-schema-index-v0.1 | json | `fac75aafb77f` |
-| [`docs/spec/HOST_BRIDGE_PROTOCOL.md`](../docs/spec/HOST_BRIDGE_PROTOCOL.md) | Host Bridge Protocol v0.1 | md | `92fb05de3f7d` |
+| [`docs/spec/HOST_BRIDGE_PROTOCOL.md`](../docs/spec/HOST_BRIDGE_PROTOCOL.md) | Host Bridge Protocol v0.1 | md | `9f41210bb311` |
 | [`docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`](../docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md) | Host Runtime Bundle v0.1 | md | `1f1090afac76` |
 | [`docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md`](../docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md) | Large Workspace Agent Perf v0.1 | md | `97abcd034ee7` |
 | [`docs/spec/MODULE_SCOPE.md`](../docs/spec/MODULE_SCOPE.md) | Module Scope + def Semantics v0.2 | md | `e042607f7d78` |

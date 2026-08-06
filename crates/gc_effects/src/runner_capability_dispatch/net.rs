@@ -9,6 +9,7 @@ use net_policy::{
 
 pub(super) fn capability_io_net_tcp_listen(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -38,7 +39,7 @@ pub(super) fn capability_io_net_tcp_listen(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -46,6 +47,7 @@ pub(super) fn capability_io_net_tcp_listen(
 
 pub(super) fn capability_io_net_tcp_accept(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -71,7 +73,7 @@ pub(super) fn capability_io_net_tcp_accept(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, &effective_payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, &effective_payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -79,6 +81,7 @@ pub(super) fn capability_io_net_tcp_accept(
 
 pub(super) fn capability_io_net_http_listen(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -120,7 +123,7 @@ pub(super) fn capability_io_net_http_listen(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, &effective_payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, &effective_payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -128,6 +131,7 @@ pub(super) fn capability_io_net_http_listen(
 
 pub(super) fn capability_io_net_http_respond(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -148,7 +152,7 @@ pub(super) fn capability_io_net_http_respond(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -156,6 +160,7 @@ pub(super) fn capability_io_net_http_respond(
 
 pub(super) fn capability_io_net_ws_accept(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -182,7 +187,7 @@ pub(super) fn capability_io_net_ws_accept(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, &effective_payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, &effective_payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -190,6 +195,7 @@ pub(super) fn capability_io_net_ws_accept(
 
 pub(super) fn capability_io_net_http_request(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -211,7 +217,7 @@ pub(super) fn capability_io_net_http_request(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -219,6 +225,7 @@ pub(super) fn capability_io_net_http_request(
 
 pub(super) fn capability_io_net_ws_open(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -240,7 +247,7 @@ pub(super) fn capability_io_net_ws_open(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -248,6 +255,7 @@ pub(super) fn capability_io_net_ws_open(
 
 pub(super) fn capability_io_net_tcp_open(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -269,7 +277,7 @@ pub(super) fn capability_io_net_tcp_open(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -277,6 +285,7 @@ pub(super) fn capability_io_net_tcp_open(
 
 pub(super) fn capability_io_net_tcp_send(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -291,7 +300,7 @@ pub(super) fn capability_io_net_tcp_send(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -299,6 +308,7 @@ pub(super) fn capability_io_net_tcp_send(
 
 pub(super) fn capability_io_net_tcp_recv_or_close(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -312,7 +322,7 @@ pub(super) fn capability_io_net_tcp_recv_or_close(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -320,6 +330,7 @@ pub(super) fn capability_io_net_tcp_recv_or_close(
 
 pub(super) fn capability_io_net_udp_bind(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -341,7 +352,7 @@ pub(super) fn capability_io_net_udp_bind(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -349,6 +360,7 @@ pub(super) fn capability_io_net_udp_bind(
 
 pub(super) fn capability_io_net_udp_send(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -372,7 +384,7 @@ pub(super) fn capability_io_net_udp_send(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -380,6 +392,7 @@ pub(super) fn capability_io_net_udp_send(
 
 pub(super) fn capability_io_net_udp_recv_or_close(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -393,7 +406,7 @@ pub(super) fn capability_io_net_udp_recv_or_close(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -401,6 +414,7 @@ pub(super) fn capability_io_net_udp_recv_or_close(
 
 pub(super) fn capability_io_net_dns_resolve(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -423,7 +437,7 @@ pub(super) fn capability_io_net_dns_resolve(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -431,6 +445,7 @@ pub(super) fn capability_io_net_dns_resolve(
 
 pub(super) fn capability_io_net_ws_send(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -445,7 +460,7 @@ pub(super) fn capability_io_net_ws_send(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -453,6 +468,7 @@ pub(super) fn capability_io_net_ws_send(
 
 pub(super) fn capability_io_net_ws_recv_or_close(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -466,7 +482,7 @@ pub(super) fn capability_io_net_ws_recv_or_close(
             Some(op),
         ));
     }
-    match call_host_bridge("net", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "net", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }

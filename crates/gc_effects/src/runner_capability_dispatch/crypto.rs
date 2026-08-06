@@ -131,6 +131,7 @@ fn check_bound_len(
 }
 
 fn crypto_bridge_call(
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -144,7 +145,7 @@ fn crypto_bridge_call(
             Some(op),
         ));
     }
-    match call_host_bridge("crypto", op, payload, pol) {
+    match call_host_bridge(bridge_runtime, "crypto", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
@@ -152,6 +153,7 @@ fn crypto_bridge_call(
 
 pub(super) fn capability_core_crypto_hash(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -175,11 +177,12 @@ pub(super) fn capability_core_crypto_hash(
     ) {
         return Ok(limit_err);
     }
-    crypto_bridge_call(op, payload, pol, error_tok)
+    crypto_bridge_call(bridge_runtime, op, payload, pol, error_tok)
 }
 
 pub(super) fn capability_core_crypto_sign(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -225,11 +228,12 @@ pub(super) fn capability_core_crypto_sign(
             return Ok(limit_err);
         }
     }
-    crypto_bridge_call(op, payload, pol, error_tok)
+    crypto_bridge_call(bridge_runtime, op, payload, pol, error_tok)
 }
 
 pub(super) fn capability_core_crypto_verify(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -290,11 +294,12 @@ pub(super) fn capability_core_crypto_verify(
             return Ok(limit_err);
         }
     }
-    crypto_bridge_call(op, payload, pol, error_tok)
+    crypto_bridge_call(bridge_runtime, op, payload, pol, error_tok)
 }
 
 pub(super) fn capability_core_crypto_kdf(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -351,11 +356,12 @@ pub(super) fn capability_core_crypto_kdf(
             return Ok(limit_err);
         }
     }
-    crypto_bridge_call(op, payload, pol, error_tok)
+    crypto_bridge_call(bridge_runtime, op, payload, pol, error_tok)
 }
 
 pub(super) fn capability_core_crypto_aead_seal(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -410,11 +416,12 @@ pub(super) fn capability_core_crypto_aead_seal(
             return Ok(limit_err);
         }
     }
-    crypto_bridge_call(op, payload, pol, error_tok)
+    crypto_bridge_call(bridge_runtime, op, payload, pol, error_tok)
 }
 
 pub(super) fn capability_core_crypto_aead_open(
     op: &str,
+    bridge_runtime: &mut HostBridgeRuntime,
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
@@ -480,5 +487,5 @@ pub(super) fn capability_core_crypto_aead_open(
             return Ok(limit_err);
         }
     }
-    crypto_bridge_call(op, payload, pol, error_tok)
+    crypto_bridge_call(bridge_runtime, op, payload, pol, error_tok)
 }

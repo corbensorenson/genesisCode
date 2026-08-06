@@ -1,5 +1,5 @@
 use super::*;
-use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 use crate::runner_plugin_schema::{
     parse_plugin_schema_ids, validate_plugin_request_schema, validate_plugin_response_schema,
 };
@@ -341,7 +341,7 @@ fn parse_url_scheme<'a>(url: &'a str, op: &str, field: &str) -> Result<&'a str, 
     clippy::too_many_arguments,
     reason = "central capability dispatcher forwards explicit runner context"
 )]
-pub(super) fn call_capability(
+pub(super) fn call_capability_with_runtime(
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -349,6 +349,7 @@ pub(super) fn call_capability(
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
     budget: &mut ArtifactBudgetState,
+    bridge_runtime: &mut HostBridgeRuntime,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let op_eff = dispatch_op_alias(op);
@@ -381,7 +382,17 @@ pub(super) fn call_capability(
         "core/sync::push" => capability_sync_push(payload, pol, store, error_tok, op, timeout_ms),
 
         s if s.starts_with("core/pkg-low::") => capability_pkg_low(
-            s, payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
+            s,
+            payload,
+            pol,
+            policy,
+            store,
+            refs,
+            budget,
+            bridge_runtime,
+            error_tok,
+            op,
+            timeout_ms,
         ),
         "core/store::put" => cap_store_put(op, payload, pol, policy, store, budget, error_tok),
         "core/store::has" => cap_store_has(op, payload, pol, policy, store, timeout_ms, error_tok),
@@ -409,62 +420,98 @@ pub(super) fn call_capability(
             capability_core_media_audio_transcode(op, payload, pol, error_tok)
         }
         "host/plugin::command" | "editor/plugin::command" => {
-            capability_host_plugin_command(op, payload, pol, error_tok)
+            capability_host_plugin_command(op, bridge_runtime, payload, pol, error_tok)
         }
         "host/ffi::call" | "host/ffi::buffer-pin" | "host/ffi::buffer-unpin" => {
-            capability_host_ffi(op, payload, pol, error_tok)
+            capability_host_ffi(op, bridge_runtime, payload, pol, error_tok)
         }
-        "io/net::http-request" => capability_io_net_http_request(op, payload, pol, error_tok),
-        "io/net::dns-resolve" => capability_io_net_dns_resolve(op, payload, pol, error_tok),
-        "io/net::tcp-listen" => capability_io_net_tcp_listen(op, payload, pol, error_tok),
-        "io/net::tcp-accept" => capability_io_net_tcp_accept(op, payload, pol, error_tok),
-        "io/net::tcp-open" => capability_io_net_tcp_open(op, payload, pol, error_tok),
-        "io/net::tcp-send" => capability_io_net_tcp_send(op, payload, pol, error_tok),
+        "io/net::http-request" => {
+            capability_io_net_http_request(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::dns-resolve" => {
+            capability_io_net_dns_resolve(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::tcp-listen" => {
+            capability_io_net_tcp_listen(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::tcp-accept" => {
+            capability_io_net_tcp_accept(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::tcp-open" => {
+            capability_io_net_tcp_open(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::tcp-send" => {
+            capability_io_net_tcp_send(op, bridge_runtime, payload, pol, error_tok)
+        }
         "io/net::tcp-recv" | "io/net::tcp-close" => {
-            capability_io_net_tcp_recv_or_close(op, payload, pol, error_tok)
+            capability_io_net_tcp_recv_or_close(op, bridge_runtime, payload, pol, error_tok)
         }
-        "io/net::http-listen" => capability_io_net_http_listen(op, payload, pol, error_tok),
-        "io/net::http-respond" => capability_io_net_http_respond(op, payload, pol, error_tok),
-        "io/net::udp-bind" => capability_io_net_udp_bind(op, payload, pol, error_tok),
-        "io/net::udp-send" => capability_io_net_udp_send(op, payload, pol, error_tok),
+        "io/net::http-listen" => {
+            capability_io_net_http_listen(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::http-respond" => {
+            capability_io_net_http_respond(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::udp-bind" => {
+            capability_io_net_udp_bind(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::udp-send" => {
+            capability_io_net_udp_send(op, bridge_runtime, payload, pol, error_tok)
+        }
         "io/net::udp-recv" | "io/net::udp-close" => {
-            capability_io_net_udp_recv_or_close(op, payload, pol, error_tok)
+            capability_io_net_udp_recv_or_close(op, bridge_runtime, payload, pol, error_tok)
         }
-        "io/net::ws-open" => capability_io_net_ws_open(op, payload, pol, error_tok),
-        "io/net::ws-accept" => capability_io_net_ws_accept(op, payload, pol, error_tok),
-        "io/net::ws-send" => capability_io_net_ws_send(op, payload, pol, error_tok),
+        "io/net::ws-open" => capability_io_net_ws_open(op, bridge_runtime, payload, pol, error_tok),
+        "io/net::ws-accept" => {
+            capability_io_net_ws_accept(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "io/net::ws-send" => capability_io_net_ws_send(op, bridge_runtime, payload, pol, error_tok),
         "io/net::ws-recv" | "io/net::ws-close" => {
-            capability_io_net_ws_recv_or_close(op, payload, pol, error_tok)
+            capability_io_net_ws_recv_or_close(op, bridge_runtime, payload, pol, error_tok)
         }
-        "io/db::connect" => capability_io_db_connect(op, payload, pol, error_tok),
-        "io/db::tx-begin" => capability_io_db_tx_begin(op, payload, pol, error_tok),
+        "io/db::connect" => capability_io_db_connect(op, bridge_runtime, payload, pol, error_tok),
+        "io/db::tx-begin" => capability_io_db_tx_begin(op, bridge_runtime, payload, pol, error_tok),
         "io/db::query" | "io/db::exec" => {
-            capability_io_db_query_or_exec(op, payload, pol, error_tok)
+            capability_io_db_query_or_exec(op, bridge_runtime, payload, pol, error_tok)
         }
         "io/db::tx-commit" | "io/db::tx-rollback" => {
-            capability_io_db_tx_finish(op, payload, pol, error_tok)
+            capability_io_db_tx_finish(op, bridge_runtime, payload, pol, error_tok)
         }
-        "io/db::kv-open" => capability_io_db_kv_open(op, payload, pol, error_tok),
-        "io/db::kv-get" => capability_io_db_kv_get(op, payload, pol, error_tok),
-        "io/db::kv-put" => capability_io_db_kv_put(op, payload, pol, error_tok),
-        "io/db::kv-delete" => capability_io_db_kv_delete(op, payload, pol, error_tok),
-        "core/crypto::hash" => capability_core_crypto_hash(op, payload, pol, error_tok),
-        "core/crypto::sign" => capability_core_crypto_sign(op, payload, pol, error_tok),
-        "core/crypto::verify" => capability_core_crypto_verify(op, payload, pol, error_tok),
-        "core/crypto::kdf" => capability_core_crypto_kdf(op, payload, pol, error_tok),
-        "core/crypto::aead-seal" => capability_core_crypto_aead_seal(op, payload, pol, error_tok),
-        "core/crypto::aead-open" => capability_core_crypto_aead_open(op, payload, pol, error_tok),
+        "io/db::kv-open" => capability_io_db_kv_open(op, bridge_runtime, payload, pol, error_tok),
+        "io/db::kv-get" => capability_io_db_kv_get(op, bridge_runtime, payload, pol, error_tok),
+        "io/db::kv-put" => capability_io_db_kv_put(op, bridge_runtime, payload, pol, error_tok),
+        "io/db::kv-delete" => {
+            capability_io_db_kv_delete(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "core/crypto::hash" => {
+            capability_core_crypto_hash(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "core/crypto::sign" => {
+            capability_core_crypto_sign(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "core/crypto::verify" => {
+            capability_core_crypto_verify(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "core/crypto::kdf" => {
+            capability_core_crypto_kdf(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "core/crypto::aead-seal" => {
+            capability_core_crypto_aead_seal(op, bridge_runtime, payload, pol, error_tok)
+        }
+        "core/crypto::aead-open" => {
+            capability_core_crypto_aead_open(op, bridge_runtime, payload, pol, error_tok)
+        }
         "sys/process::exec" | "sys/process::spawn" => {
-            capability_sys_process_spawn_or_exec(op, payload, pol, error_tok)
+            capability_sys_process_spawn_or_exec(op, bridge_runtime, payload, pol, error_tok)
         }
         "sys/process::wait"
         | "sys/process::kill"
         | "sys/process::stdout-read"
         | "sys/process::stderr-read" => {
-            capability_sys_process_wait_or_kill(op, payload, pol, error_tok)
+            capability_sys_process_wait_or_kill(op, bridge_runtime, payload, pol, error_tok)
         }
         "sys/process::stdin-write" => {
-            capability_sys_process_stdin_write(op, payload, pol, error_tok)
+            capability_sys_process_stdin_write(op, bridge_runtime, payload, pol, error_tok)
         }
         "sys/time::now" => {
             if let Some(ms) = timeout_ms {
@@ -713,6 +760,35 @@ pub(super) fn call_capability(
             Some(op),
         )),
     }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "legacy unit helpers use an isolated bridge owner per assertion"
+)]
+pub(super) fn call_capability(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
+    store: Option<&ArtifactStore>,
+    refs: Option<&RefsDb>,
+    budget: &mut ArtifactBudgetState,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let mut bridge_runtime = HostBridgeRuntime::default();
+    call_capability_with_runtime(
+        op,
+        payload,
+        pol,
+        policy,
+        store,
+        refs,
+        budget,
+        &mut bridge_runtime,
+        error_tok,
+    )
 }
 
 #[cfg(test)]

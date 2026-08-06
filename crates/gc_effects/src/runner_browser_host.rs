@@ -5,7 +5,7 @@ use gc_kernel::{SealId, Value};
 use num_traits::ToPrimitive;
 
 use crate::policy::OpPolicy;
-use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 
 const BROWSER_BACKEND: &str = "browser-first-party-runtime";
 const BROWSER_ADAPTER: &str = "browser-host";
@@ -44,6 +44,7 @@ pub(crate) struct BrowserHostRuntime {
 
 pub(crate) fn browser_host_call(
     runtime: &mut BrowserHostRuntime,
+    bridge_runtime: &mut HostBridgeRuntime,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -57,10 +58,12 @@ pub(crate) fn browser_host_call(
             runtime, op, payload,
         )));
     }
-    Some(match call_host_bridge("browser", op, payload, pol) {
-        Ok(resp) => Value::data(resp),
-        Err(err) => mk_error(error_tok, &err, Some(op)),
-    })
+    Some(
+        match call_host_bridge(bridge_runtime, "browser", op, payload, pol) {
+            Ok(resp) => Value::data(resp),
+            Err(err) => mk_error(error_tok, &err, Some(op)),
+        },
+    )
 }
 
 fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {

@@ -1,13 +1,3 @@
-use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
-#[cfg(not(target_os = "wasi"))]
-use std::collections::HashMap;
-#[cfg(not(target_os = "wasi"))]
-use std::io::{BufRead as _, BufReader, Read as _, Write as _};
-#[cfg(not(target_os = "wasi"))]
-use std::process::{ChildStdout, Command, Stdio};
-#[cfg(not(target_os = "wasi"))]
-use std::sync::{Arc, Mutex, OnceLock};
-
 use crate::policy::OpPolicy;
 use crate::runner_io_ops::{effective_base_dir, sandbox_path_read};
 #[cfg(not(target_os = "wasi"))]
@@ -15,6 +5,11 @@ use crate::runner_process_control::{
     configure_killable_process, hard_process_tree_termination_supported, terminate_and_reap,
     terminate_descendants,
 };
+use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
+#[cfg(not(target_os = "wasi"))]
+use std::io::{BufRead as _, BufReader, Read as _, Write as _};
+#[cfg(not(target_os = "wasi"))]
+use std::process::{ChildStdout, Command, Stdio};
 
 #[cfg(not(target_os = "wasi"))]
 static ACTIVE_BRIDGE_IO_PUMPS: std::sync::atomic::AtomicUsize =
@@ -55,12 +50,22 @@ pub(crate) struct BridgeError {
     pub message: String,
 }
 
+#[derive(Default)]
+pub(crate) struct HostBridgeRuntime {
+    #[cfg(not(target_os = "wasi"))]
+    persistent: runner_host_bridge_persistent::PersistentBridgeRuntime,
+}
+
 pub(crate) fn call_host_bridge(
+    runtime: &mut HostBridgeRuntime,
     family: &str,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
 ) -> Result<Term, BridgeError> {
+    #[cfg(target_os = "wasi")]
+    let _ = runtime;
+
     let max_bytes = runner_host_bridge_policy::bridge_max_bytes(pol, family)?;
     if runner_host_bridge_policy::wasi_bridge_profile_enabled(pol) {
         return runner_host_bridge_wasi::run_wasi_bridge_profile(
@@ -110,16 +115,19 @@ pub(crate) fn call_host_bridge(
             ),
             runner_host_bridge_policy::BridgeTransport::PersistentStdio => {
                 runner_host_bridge_persistent::run_bridge_process_persistent(
-                    family, op, payload, &base_dir, &cmd_path, &args, timeout_ms, max_bytes,
+                    &mut runtime.persistent,
+                    family,
+                    op,
+                    payload,
+                    &base_dir,
+                    &cmd_path,
+                    &args,
+                    timeout_ms,
+                    max_bytes,
                 )
             }
         }
     }
-}
-
-#[cfg(all(test, not(target_os = "wasi")))]
-fn reset_persistent_bridge_sessions_for_tests() {
-    runner_host_bridge_persistent::reset_persistent_bridge_sessions_for_tests();
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -140,72 +148,16 @@ fn run_bridge_process(
     let payload_src = print_term(payload);
     runner_host_bridge_policy::enforce_payload_limit(family, payload, max_bytes)?;
     let payload_frame = format!("{}\n{}", payload_src.len(), payload_src);
-    let output = if let Some(ms) = timeout_ms {
-        run_bridge_process_once_with_timeout(
-            family,
-            op,
-            &payload_frame,
-            base_dir,
-            cmd_path,
-            args,
-            ms,
-        )?
-    } else {
-        run_bridge_process_once(family, op, &payload_frame, base_dir, cmd_path, args)?
-    };
+    let output = run_bridge_process_once(
+        family,
+        op,
+        &payload_frame,
+        base_dir,
+        cmd_path,
+        args,
+        timeout_ms,
+    )?;
     decode_bridge_stdout(family, &output.stdout, max_bytes)
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn run_bridge_process_once(
-    family: &str,
-    op: &str,
-    payload_frame: &str,
-    base_dir: &std::path::Path,
-    cmd_path: &std::path::Path,
-    args: &[String],
-) -> Result<std::process::Output, BridgeError> {
-    use std::io::Write as _;
-    use std::process::{Command, Stdio};
-
-    let mut cmd = Command::new(cmd_path);
-    cmd.current_dir(base_dir);
-    for arg in args {
-        cmd.arg(arg);
-    }
-    cmd.arg(op);
-    cmd.env("GENESIS_HOST_BRIDGE_OP", op);
-    cmd.env("GENESIS_HOST_BRIDGE_FAMILY", family);
-    cmd.stdin(Stdio::piped());
-    cmd.stdout(Stdio::piped());
-    cmd.stderr(Stdio::piped());
-    let mut child = cmd.spawn().map_err(|e| BridgeError {
-        code: format!("{family}/bridge-spawn"),
-        message: e.to_string(),
-    })?;
-    let write_result = child
-        .stdin
-        .take()
-        .map(|mut stdin| stdin.write_all(payload_frame.as_bytes()))
-        .unwrap_or(Ok(()));
-    let out = child.wait_with_output().map_err(|e| BridgeError {
-        code: format!("{family}/bridge-exec"),
-        message: e.to_string(),
-    })?;
-    if !out.status.success() {
-        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
-        let msg = if stderr.is_empty() {
-            format!("bridge command exited with status {}", out.status)
-        } else {
-            format!("bridge command exited with status {}: {stderr}", out.status)
-        };
-        return Err(BridgeError {
-            code: format!("{family}/bridge-exit"),
-            message: msg,
-        });
-    }
-    validate_bridge_stdin_write(family, write_result)?;
-    Ok(out)
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -226,14 +178,14 @@ fn validate_bridge_stdin_write(
 }
 
 #[cfg(not(target_os = "wasi"))]
-fn run_bridge_process_once_with_timeout(
+fn run_bridge_process_once(
     family: &str,
     op: &str,
     payload_frame: &str,
     base_dir: &std::path::Path,
     cmd_path: &std::path::Path,
     args: &[String],
-    timeout_ms: u64,
+    timeout_ms: Option<u64>,
 ) -> Result<std::process::Output, BridgeError> {
     use std::io::{Read as _, Write as _};
     use std::process::{Command, Stdio};
@@ -322,14 +274,13 @@ fn run_bridge_process_once_with_timeout(
             });
         }
     };
-    let deadline = Instant::now()
-        .checked_add(Duration::from_millis(timeout_ms))
-        .unwrap_or_else(Instant::now);
+    let deadline = timeout_ms.and_then(|ms| Instant::now().checked_add(Duration::from_millis(ms)));
     let status = loop {
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) => {
-                if Instant::now() >= deadline {
+                if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                    let timeout_ms = timeout_ms.unwrap_or_default();
                     let termination = terminate_and_reap(&mut child);
                     let _ = writer.join();
                     let _ = reader.join();
