@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**309 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**273 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `4ac66c9a03a9` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `ff9b84e2c40c` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `80368c73cde9` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `9a9ecec5750a` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `b34c38e8bb91` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-04) | md | `f00e4367230d` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `45353d016626` |
@@ -35,7 +35,7 @@ toc-depth: 2
 | [`docs/STACKS_v0.2.md`](../docs/STACKS_v0.2.md) | GenesisCode Stacks (Levels 0–2) v0.2 | md | `8c0df911adeb` |
 | [`docs/STYLE_GUIDE_v0.2.md`](../docs/STYLE_GUIDE_v0.2.md) | GenesisCode Style Guide v0.2 | md | `9a7b0fd16ea1` |
 | [`docs/TECH_HANDOFF.md`](../docs/TECH_HANDOFF.md) | GenesisCode v0.2 Historical Technical Handoff | md | `cd1bf7cb4ee2` |
-| [`docs/write_genesisCode_skill.md`](../docs/write_genesisCode_skill.md) | write_genesisCode_skill | md | `56c21401f69c` |
+| [`docs/write_genesisCode_skill.md`](../docs/write_genesisCode_skill.md) | write_genesisCode_skill | md | `d4e964234546` |
 
 ## docs/policies
 
@@ -60,7 +60,7 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
 | [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `43c9bb63cf5a` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `10addd4f51f9` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `efadfa89a0fe` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -78,52 +78,16 @@ toc-depth: 2
 
 | Source | Title / kind | Type | SHA-256 |
 |---|---|---|---|
-| [`docs/skill_pack/write_genesiscode_v1/manifest.json`](../docs/skill_pack/write_genesiscode_v1/manifest.json) | genesis/write-genesiscode-skill-distribution-v1 | json | `08aacd230b07` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/assurance_release.md`](../docs/skill_pack/write_genesiscode_v1/prompts/assurance_release.md) | Prompt: Assurance Release | md | `6fd8ff49a7eb` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/backlog_slice.md`](../docs/skill_pack/write_genesiscode_v1/prompts/backlog_slice.md) | Prompt: Backlog Slice | md | `52700efcd0ef` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/capability_addition.md`](../docs/skill_pack/write_genesiscode_v1/prompts/capability_addition.md) | Prompt: Capability Addition | md | `2a3fa62c8035` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/complex_ui_app_stacks.md`](../docs/skill_pack/write_genesiscode_v1/prompts/complex_ui_app_stacks.md) | Prompt: Complex UI/App Stacks | md | `1a696b50aae5` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/data_pipeline.md`](../docs/skill_pack/write_genesiscode_v1/prompts/data_pipeline.md) | Prompt: Data Pipeline | md | `e7d9ff4e3019` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/deployment_targets.md`](../docs/skill_pack/write_genesiscode_v1/prompts/deployment_targets.md) | Prompt: Deployment Targets | md | `db5f2bf50d41` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/failure_recovery.md`](../docs/skill_pack/write_genesiscode_v1/prompts/failure_recovery.md) | Prompt: Failure Recovery | md | `21561f37cb55` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/hardware_device_integration.md`](../docs/skill_pack/write_genesiscode_v1/prompts/hardware_device_integration.md) | Prompt: Hardware Device Integration | md | `90cdf3c103a9` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/ml_data_engineering.md`](../docs/skill_pack/write_genesiscode_v1/prompts/ml_data_engineering.md) | Prompt: ML/Data Engineering | md | `9493cad66398` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/performance_triage.md`](../docs/skill_pack/write_genesiscode_v1/prompts/performance_triage.md) | Prompt: Performance Triage | md | `650f095e80b0` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/plugin_ffi.md`](../docs/skill_pack/write_genesiscode_v1/prompts/plugin_ffi.md) | Prompt: Plugin/FFI | md | `7ecf1a726e9b` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/security_auth_services.md`](../docs/skill_pack/write_genesiscode_v1/prompts/security_auth_services.md) | Prompt: Security/Auth Services | md | `f1bb3a751eda` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/selfhost_cutover.md`](../docs/skill_pack/write_genesiscode_v1/prompts/selfhost_cutover.md) | Prompt: Selfhost Cutover | md | `5ee1e85ac543` |
-| [`docs/skill_pack/write_genesiscode_v1/prompts/xr_experience.md`](../docs/skill_pack/write_genesiscode_v1/prompts/xr_experience.md) | Prompt: XR Experience | md | `b44f123d1a0a` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/assurance_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/assurance_workflow.md) | Recipe: Assurance Workflow | md | `73258daea446` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/backend_topology_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/backend_topology_workflow.md) | Recipe: Backend Topology Workflow | md | `a41192cb3224` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/browser_runtime_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/browser_runtime_workflow.md) | Recipe: Browser Runtime Workflow | md | `8a5d762dd884` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/complex_ui_app_stacks_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/complex_ui_app_stacks_workflow.md) | Recipe: Complex UI/App Stacks Workflow | md | `04bb67d7a401` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/data_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/data_workflow.md) | Recipe: Data Workflow | md | `a292456d4d30` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/deployment_targets_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/deployment_targets_workflow.md) | Recipe: Deployment Targets Workflow | md | `84ef342af314` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/failure_recovery_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/failure_recovery_workflow.md) | Recipe: Failure Recovery Workflow | md | `8e44ef07f4bb` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/filesystem_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/filesystem_workflow.md) | Recipe: Filesystem Workflow | md | `c57685abbb11` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/game_loop_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/game_loop_workflow.md) | Recipe: Game Loop Workflow | md | `ec232b8edcca` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md) | Recipe: GPU Compute Workflow | md | `2be32061731d` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/hardware_device_integration_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/hardware_device_integration_workflow.md) | Recipe: Hardware Device Integration Workflow | md | `5eeedd20220b` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/inbound_server_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/inbound_server_workflow.md) | Recipe: Inbound Server Workflow | md | `27685c81f6e9` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/ml_data_engineering_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/ml_data_engineering_workflow.md) | Recipe: ML/Data Engineering Workflow | md | `84e2de917d9a` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/multi_agent_orchestration_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/multi_agent_orchestration_workflow.md) | Recipe: Multi-Agent Orchestration Workflow | md | `4a002779090b` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/network_process_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/network_process_workflow.md) | Recipe: Network Process Workflow | md | `5a25c34b7fdc` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/package_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/package_workflow.md) | Recipe: Package Workflow | md | `733bfab457fe` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/performance_triage_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/performance_triage_workflow.md) | Recipe: Performance Triage Workflow | md | `eafca6f6aa3d` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/plugin_ffi_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/plugin_ffi_workflow.md) | Recipe: Plugin/FFI Workflow | md | `92ccf4de79e4` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/process_lifecycle_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/process_lifecycle_workflow.md) | Recipe: Process Lifecycle Workflow | md | `67fd7c500a0d` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/raw_network_sockets_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/raw_network_sockets_workflow.md) | Recipe: Raw Network Sockets Workflow | md | `029e7467fc8d` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/realtime_collaboration_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/realtime_collaboration_workflow.md) | Recipe: Realtime Collaboration Workflow | md | `1fc2fa67d7eb` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/security_auth_services_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/security_auth_services_workflow.md) | Recipe: Security/Auth Services Workflow | md | `80662133c8ff` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/service_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/service_workflow.md) | Recipe: Service Workflow | md | `8552c3bffb98` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/time_control_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/time_control_workflow.md) | Recipe: Time Control Workflow | md | `5f0104194fa3` |
-| [`docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md`](../docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md) | Recipe: XR Workflow | md | `7d5b0c4d710c` |
+| [`docs/skill_pack/write_genesiscode_v1/authoring-card.md`](../docs/skill_pack/write_genesiscode_v1/authoring-card.md) | GenesisCode Authoring Card | md | `10bbe89753f3` |
+| [`docs/skill_pack/write_genesiscode_v1/manifest.json`](../docs/skill_pack/write_genesiscode_v1/manifest.json) | genesis/write-genesiscode-skill-distribution-v1 | json | `28fbc6007e1c` |
+| [`docs/skill_pack/write_genesiscode_v1/prompt-cards.json`](../docs/skill_pack/write_genesiscode_v1/prompt-cards.json) | genesis/write-genesiscode-prompt-cards-v1 | json | `6f3e662814c2` |
+| [`docs/skill_pack/write_genesiscode_v1/recipe-cards.json`](../docs/skill_pack/write_genesiscode_v1/recipe-cards.json) | genesis/write-genesiscode-recipe-cards-v1 | json | `0011302d02f9` |
 
 ## docs/spec
 
 | Source | Title / kind | Type | SHA-256 |
 |---|---|---|---|
-| [`docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`](../docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md) | Agent Authoring Bundle v0.1 | md | `b614aba7b616` |
+| [`docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`](../docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md) | Agent Authoring Bundle v0.1 | md | `7e97fcb8ff09` |
 | [`docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`](../docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md) | Agent Capability Gauntlet v0.1 | md | `a02ff4a66179` |
 | [`docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`](../docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md) | Agent Generative Workloads v0.1 | md | `c3693b1a3d20` |
 | [`docs/spec/AGENT_INDEX_v0.1.md`](../docs/spec/AGENT_INDEX_v0.1.md) | Agent Index v0.1 | md | `00469484d90e` |
@@ -145,7 +109,7 @@ toc-depth: 2
 | [`docs/spec/CAPS_TOML.md`](../docs/spec/CAPS_TOML.md) | caps.toml (Capability Policy) v0.2 | md | `e718c78fd6de` |
 | [`docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json`](../docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json) | GenesisCode Cargo Cache Policy v0.1 | schema | `10c82a4c531b` |
 | [`docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json`](../docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json) | GenesisCode Changed Impact Policy v0.1 | schema | `dd72983c147a` |
-| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `eecf80f68c6d` |
+| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `29fa2242f0f3` |
 | [`docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`](../docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md) | Check/Update Boundary v0.1 | md | `a89e1d31940b` |
 | [`docs/spec/CLI.md`](../docs/spec/CLI.md) | Genesis CLI v0.2 (Exit Codes + JSON) | md | `a37c7bfc8ee0` |
 | [`docs/spec/CLI_JSON_SCHEMAS_v0.1.md`](../docs/spec/CLI_JSON_SCHEMAS_v0.1.md) | CLI JSON Schemas v0.1 (Non-GCPM) | md | `17a47959003b` |
@@ -276,7 +240,7 @@ toc-depth: 2
 | [`docs/spec/GENESIS_SLSA_BUILD_v1.schema.json`](../docs/spec/GENESIS_SLSA_BUILD_v1.schema.json) | GenesisCode SLSA Provenance v1 Producer Profile | schema | `8b8b92de0391` |
 | [`docs/spec/GFX_CAPS.md`](../docs/spec/GFX_CAPS.md) | Genesis Graphics Capability Surface (Draft v0.1) | md | `22983321313d` |
 | [`docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`](../docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md) | GFX Runtime Bundle v0.1 | md | `2690d438d48e` |
-| [`docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`](../docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md) | GPU Compute Bundle v0.1 | md | `7207bf996009` |
+| [`docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`](../docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md) | GPU Compute Bundle v0.1 | md | `5c0bb832fd5f` |
 | [`docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`](../docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md) | GPU Compute Runtime Profile v0.1 | md | `a68c3b654c1a` |
 | [`docs/spec/GPU_GFX_BUNDLE_v0.1.md`](../docs/spec/GPU_GFX_BUNDLE_v0.1.md) | GPU/GFX Bundle v0.1 | md | `0940fd587b80` |
 | [`docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json`](../docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json) | GenesisCode Health Profile Evidence Bundle v0.2 | schema | `4a5b45c6d138` |
@@ -338,9 +302,9 @@ toc-depth: 2
 | [`docs/spec/WASM.md`](../docs/spec/WASM.md) | WASM Build (Pure Kernel) v0.2 | md | `5137977e4247` |
 | [`docs/spec/WASM_HOST_BRIDGE.md`](../docs/spec/WASM_HOST_BRIDGE.md) | WASM Host Bridge (Effectful Stepping) v0.2 | md | `93f5a2acfa16` |
 | [`docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md`](../docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md) | Write GenesisCode Skill Conformance v0.1 | md | `365e2c5ab1f2` |
-| [`docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`](../docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md) | Write GenesisCode Skill Distribution Kit v1 | md | `66982a54f2e4` |
+| [`docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`](../docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md) | Write GenesisCode Skill Distribution Kit v1 | md | `bc84523de4d3` |
 | [`docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`](../docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json) | genesis/write-genesiscode-skill-pack-v0.1 | json | `9957ace0506f` |
-| [`docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`](../docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md) | Write GenesisCode Skill Pack v0.1 | md | `edc2714d6879` |
+| [`docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`](../docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md) | Write GenesisCode Skill Pack v0.1 | md | `4f4482a0c52b` |
 | [`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`](../docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json) | genesis/write-genesiscode-skill-contract-v0.1 | json | `f00a8fe48426` |
 | [`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`](../docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md) | Write GenesisCode Skill Contract v0.1 | md | `49315bffae0c` |
 | [`docs/spec/XR_HOST_RUNTIME_v0.1.md`](../docs/spec/XR_HOST_RUNTIME_v0.1.md) | XR Host Runtime v0.1 | md | `2576e2d79384` |

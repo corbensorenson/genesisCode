@@ -13,31 +13,16 @@ This package is the runnable companion to:
 
 ## Kit Contents
 
-- Canonical prompts:
-  - `docs/skill_pack/write_genesiscode_v1/prompts/backlog_slice.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/capability_addition.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/selfhost_cutover.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/deployment_targets.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/failure_recovery.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/performance_triage.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/assurance_release.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/plugin_ffi.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/xr_experience.md`
-  - `docs/skill_pack/write_genesiscode_v1/prompts/data_pipeline.md`
-- Runnable domain recipes:
-  - `docs/skill_pack/write_genesiscode_v1/recipes/service_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/game_loop_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/package_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/deployment_targets_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/failure_recovery_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/performance_triage_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/assurance_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/plugin_ffi_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/data_workflow.md`
-  - `docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md` (also used for non-graphics `gpu_data_simulation_workflow`)
-  - `docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md` (also used for `xr_deploy_test_workflow`)
+- Hand-owned workflow source: `policies/genesiscode_authoring_workflow_v0.1.json`
+- Generated compact index: `docs/skill_pack/write_genesiscode_v1/authoring-card.md`
+- Generated prompt registry: `docs/skill_pack/write_genesiscode_v1/prompt-cards.json`
+- Generated executable recipe registry: `docs/skill_pack/write_genesiscode_v1/recipe-cards.json`
+- Generated provenance manifest: `docs/skill_pack/write_genesiscode_v1/manifest.json`
+- Deterministic renderer/checker: `scripts/lib/genesiscode_authoring_skill.py`
+- Transactional update entrypoint: `bash scripts/update_agent_authoring_bundle.sh authoring-skill`
+
+The registries replace per-card prose files. Their source digest and every canonical
+input identity are bound in the manifest, and stale output fails closed.
 - Deterministic verification entrypoint:
   - `scripts/check_write_genesiscode_skill_distribution.sh`
 

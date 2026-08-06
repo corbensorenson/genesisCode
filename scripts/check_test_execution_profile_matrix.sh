@@ -1696,21 +1696,20 @@ cleanup_write_skill_fixture() {
 trap cleanup_write_skill_fixture EXIT INT TERM
 mkdir -p \
   "$WRITE_SKILL_FIXTURE/evidence" \
-  "$WRITE_SKILL_FIXTURE/kit/prompts" \
-  "$WRITE_SKILL_FIXTURE/kit/recipes"
-printf 'fixture\n' >"$WRITE_SKILL_FIXTURE/kit/prompts/prompt.md"
-printf 'fixture\n' >"$WRITE_SKILL_FIXTURE/kit/recipes/recipe.md"
-cat >"$WRITE_SKILL_FIXTURE/kit/manifest.json" <<JSON
-{
-  "kind": "genesis/write-genesiscode-skill-distribution-v1",
-  "version": "1",
-  "prompts": [{"path": "prompts/prompt.md"}],
-  "recipes": [{"path": "recipes/recipe.md", "workflow": "scripts/check_write_genesiscode_skill_conformance.sh", "domain": "fixture", "mode": "standard"}],
-  "expected_reports": [{"id": "fixture", "kind": "genesis/write-genesiscode-skill-conformance-v0.1", "path": "$WRITE_SKILL_FIXTURE/missing-retained-report.json", "min_score": 100}],
-  "verification_scripts": ["scripts/check_write_genesiscode_skill_conformance.sh"],
-  "distribution_requirements": {"min_prompts": 1, "min_recipes": 1, "required_recipe_domains": ["fixture"], "require_fault_injection_recipe": false, "min_report_score": 100}
-}
-JSON
+  "$WRITE_SKILL_FIXTURE/kit"
+cp docs/skill_pack/write_genesiscode_v1/manifest.json "$WRITE_SKILL_FIXTURE/kit/manifest.json"
+cp docs/skill_pack/write_genesiscode_v1/prompt-cards.json "$WRITE_SKILL_FIXTURE/kit/prompt-cards.json"
+cp docs/skill_pack/write_genesiscode_v1/recipe-cards.json "$WRITE_SKILL_FIXTURE/kit/recipe-cards.json"
+python3 - "$WRITE_SKILL_FIXTURE/kit/manifest.json" "$WRITE_SKILL_FIXTURE/missing-retained-report.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+document = json.loads(path.read_text(encoding="utf-8"))
+document["expected_reports"][0]["path"] = sys.argv[2]
+path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
 PYTHONPATH="$ROOT_DIR/scripts/lib" python3 - "$ROOT_DIR" "$WRITE_SKILL_FIXTURE/evidence" <<'PY'
 import json
 from pathlib import Path

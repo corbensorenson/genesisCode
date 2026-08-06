@@ -1,276 +1,282 @@
 {
-  "authoring_card": "authoring-card.md",
-  "distribution_requirements": {
-    "min_prompts": 14,
-    "min_recipes": 27,
-    "min_report_score": 100,
-    "require_fault_injection_recipe": true,
-    "required_recipe_domains": [
-      "service",
-      "graphics",
-      "gpu_compute",
-      "gpu_non_graphics",
-      "package_publish_sync",
-      "deployment_targets",
-      "failure_recovery",
-      "performance_triage",
-      "assurance",
-      "plugin_ffi",
-      "xr_runtime",
-      "xr_productization",
-      "durable_data",
-      "process_lifecycle",
-      "filesystem",
-      "network_process",
-      "raw_network_sockets",
-      "inbound_server",
-      "time_control",
-      "multi_agent_orchestration",
-      "realtime_collaboration",
-      "backend_topology",
-      "browser_runtime",
-      "ml_data_engineering",
-      "complex_ui_app_stacks",
-      "hardware_device_integration",
-      "security_auth_services"
-    ]
-  },
-  "expected_reports": [
+  "cards": [
     {
-      "id": "skill_conformance",
-      "kind": "genesis/write-genesiscode-skill-conformance-v0.1",
-      "min_score": 100,
-      "path": ".genesis/perf/write_genesiscode_skill_conformance_report.json"
-    }
-  ],
-  "input_identities": {
-    "docs/spec/GC_AGENT_CORE_CARD_v0.3.md": "8dbb6c267b3cbeb0fb488744a5584a9d46a51da9c0c72ec695db84d7ce335fcf",
-    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "49442477fcd21130689c00fe4ea16b012298328e485987867ad0595fdef855fc",
-    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "9ec74831d68bc438c772f2b8fc06a311892dc827a615ceab0e38b97deaad30f7",
-    "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json": "60ad36909e1b34d161dff018c61073497236ef0cecd390b88a438c7edfba1db9",
-    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "c9fef8c1ef435bde4ee594b088d3a92830f9167eace244ff8cfed38c9378e42a",
-    "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2",
-    "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json": "34eb570715c0947a7b3fccf15ba4fbf7d182badfa5ae8fe771e902b2d9026fe3",
-    "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json": "f00a8fe48426c104cd05ad27cd8faf140d0d347b5433c36677b3ad1437ce0ee2",
-    "policies/genesiscode_authoring_workflow_v0.1.json": "c713bc35071552cdcc3eb313d988ca7ce7fba8098f550b423d018484ff909132"
-  },
-  "kind": "genesis/write-genesiscode-skill-distribution-v1",
-  "prompt_cards": "prompt-cards.json",
-  "prompts": [
-    {
-      "id": "backlog_slice"
-    },
-    {
-      "id": "capability_addition"
-    },
-    {
-      "id": "selfhost_cutover"
-    },
-    {
-      "id": "deployment_targets"
-    },
-    {
-      "id": "failure_recovery"
-    },
-    {
-      "id": "performance_triage"
-    },
-    {
-      "id": "assurance_release"
-    },
-    {
-      "id": "plugin_ffi"
-    },
-    {
-      "id": "xr_experience"
-    },
-    {
-      "id": "data_pipeline"
-    },
-    {
-      "id": "ml_data_engineering"
-    },
-    {
-      "id": "complex_ui_app_stacks"
-    },
-    {
-      "id": "hardware_device_integration"
-    },
-    {
-      "id": "security_auth_services"
-    }
-  ],
-  "recipe_cards": "recipe-cards.json",
-  "recipes": [
-    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "service",
       "id": "service_workflow",
       "mode": "standard",
+      "title": "Service Workflow",
       "workflow": "examples/agent_service_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "graphics",
       "id": "game_loop_workflow",
       "mode": "standard",
+      "title": "Game Loop Workflow",
       "workflow": "examples/agent_long_running_gfx_loop_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
       "domain": "gpu_compute",
       "id": "gpu_compute_workflow",
       "mode": "standard",
+      "title": "Gpu Compute Workflow",
       "workflow": "examples/agent_gpu_compute_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "package_publish_sync",
       "id": "package_workflow",
       "mode": "standard",
+      "title": "Package Workflow",
       "workflow": "examples/agent_multi_package_publish_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "deployment_targets",
       "id": "deployment_targets_workflow",
       "mode": "standard",
+      "title": "Deployment Targets Workflow",
       "workflow": "examples/agent_deploy_bundle_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_host_bridge_fault_injection.sh"
+      ],
       "domain": "failure_recovery",
       "id": "failure_recovery_workflow",
       "mode": "fault-injection",
+      "title": "Failure Recovery Workflow",
       "workflow": "scripts/check_host_bridge_fault_injection.sh"
     },
     {
+      "checks": [
+        "scripts/check_runtime_backend_feature_matrix.sh"
+      ],
       "domain": "performance_triage",
       "id": "performance_triage_workflow",
       "mode": "standard",
+      "title": "Performance Triage Workflow",
       "workflow": "scripts/check_runtime_backend_feature_matrix.sh"
     },
     {
+      "checks": [
+        "scripts/check_assurance_profile_packs.sh"
+      ],
       "domain": "assurance",
       "id": "assurance_workflow",
       "mode": "standard",
+      "title": "Assurance Workflow",
       "workflow": "scripts/check_assurance_profile_packs.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "plugin_ffi",
       "id": "plugin_ffi_workflow",
       "mode": "standard",
+      "title": "Plugin Ffi Workflow",
       "workflow": "examples/agent_plugin_runtime_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
       "domain": "xr_runtime",
       "id": "xr_workflow",
       "mode": "standard",
+      "title": "Xr Workflow",
       "workflow": "examples/agent_xr_runtime_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "durable_data",
       "id": "data_workflow",
       "mode": "standard",
+      "title": "Data Workflow",
       "workflow": "examples/agent_durable_data_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
       "domain": "gpu_non_graphics",
       "id": "gpu_data_simulation_workflow",
       "mode": "standard",
+      "title": "Gpu Data Simulation Workflow",
       "workflow": "examples/agent_compute_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
       "domain": "xr_productization",
       "id": "xr_deploy_test_workflow",
       "mode": "standard",
+      "title": "Xr Deploy Test Workflow",
       "workflow": "scripts/check_gpu_xr_productization_kits.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "process_lifecycle",
       "id": "process_lifecycle_workflow",
       "mode": "standard",
+      "title": "Process Lifecycle Workflow",
       "workflow": "examples/agent_process_lifecycle_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "filesystem",
       "id": "filesystem_workflow",
       "mode": "standard",
+      "title": "Filesystem Workflow",
       "workflow": "examples/agent_filesystem_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "network_process",
       "id": "network_process_workflow",
       "mode": "standard",
+      "title": "Network Process Workflow",
       "workflow": "examples/agent_network_process_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "raw_network_sockets",
       "id": "raw_network_sockets_workflow",
       "mode": "standard",
+      "title": "Raw Network Sockets Workflow",
       "workflow": "examples/agent_raw_network_sockets_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "inbound_server",
       "id": "inbound_server_workflow",
       "mode": "standard",
+      "title": "Inbound Server Workflow",
       "workflow": "examples/agent_inbound_server_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "time_control",
       "id": "time_control_workflow",
       "mode": "standard",
+      "title": "Time Control Workflow",
       "workflow": "examples/agent_time_control_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "multi_agent_orchestration",
       "id": "multi_agent_orchestration_workflow",
       "mode": "standard",
+      "title": "Multi Agent Orchestration Workflow",
       "workflow": "examples/agent_multi_agent_orchestration_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "realtime_collaboration",
       "id": "realtime_collaboration_workflow",
       "mode": "standard",
+      "title": "Realtime Collaboration Workflow",
       "workflow": "examples/agent_realtime_collaboration_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "backend_topology",
       "id": "backend_topology_workflow",
       "mode": "standard",
+      "title": "Backend Topology Workflow",
       "workflow": "examples/agent_backend_topology_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "browser_runtime",
       "id": "browser_runtime_workflow",
       "mode": "standard",
+      "title": "Browser Runtime Workflow",
       "workflow": "examples/agent_browser_runtime_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "ml_data_engineering",
       "id": "ml_data_engineering_workflow",
       "mode": "standard",
+      "title": "Ml Data Engineering Workflow",
       "workflow": "examples/agent_ml_pipeline_variant_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_workflow_runtime_parity.sh"
+      ],
       "domain": "complex_ui_app_stacks",
       "id": "complex_ui_app_stacks_workflow",
       "mode": "standard",
+      "title": "Complex Ui App Stacks Workflow",
       "workflow": "examples/agent_browser_runtime_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
       "domain": "hardware_device_integration",
       "id": "hardware_device_integration_workflow",
       "mode": "standard",
+      "title": "Hardware Device Integration Workflow",
       "workflow": "examples/agent_gpu_compute_workflow/workflow.sh"
     },
     {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
       "domain": "security_auth_services",
       "id": "security_auth_services_workflow",
       "mode": "standard",
+      "title": "Security Auth Services Workflow",
       "workflow": "examples/agent_backend_topology_workflow/workflow.sh"
     }
   ],
-  "skill": ".agents/skills/genesiscode-authoring/SKILL.md",
+  "kind": "genesis/write-genesiscode-recipe-cards-v1",
   "source": "policies/genesiscode_authoring_workflow_v0.1.json",
   "source_sha256": "c713bc35071552cdcc3eb313d988ca7ce7fba8098f550b423d018484ff909132",
-  "verification_scripts": [
-    "scripts/check_write_genesiscode_skill_distribution.sh",
-    "scripts/check_write_genesiscode_skill_conformance.sh"
-  ],
   "version": "1"
 }

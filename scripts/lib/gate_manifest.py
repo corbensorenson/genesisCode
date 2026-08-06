@@ -55,7 +55,7 @@ GATE_FIELDS = {
     "diskBudgetMiB", "network", "platforms", "tools", "sharding", "compilation", "readOnly",
 }
 REPO_REF_RE = re.compile(
-    r"(?<![A-Za-z0-9_.-])((?:scripts|policies|docs|crates|tools|benchmarks|prelude|selfhost|examples|tests)/[A-Za-z0-9_./*-]+)"
+    r"(?<![A-Za-z0-9_.-])((?:\.agents|scripts|policies|docs|crates|tools|benchmarks|prelude|selfhost|examples|tests)/[A-Za-z0-9_./*-]+)"
 )
 ROOT_REF_RE = re.compile(
     r"(?<![A-Za-z0-9_.-])((?:Cargo\.(?:toml|lock)|README\.md|ROADMAP\.md|CHANGELOG\.md|rust-toolchain\.toml|genesis\.[A-Za-z0-9_.-]+))"

@@ -23,8 +23,7 @@ REQUIRE_WEBXR_RUNTIME_EVIDENCE="${GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE:
 required_files=(
   "$MANIFEST"
   "$SPEC"
-  "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md"
-  "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md"
+  "docs/skill_pack/write_genesiscode_v1/recipe-cards.json"
   "examples/agent_compute_workflow/workflow.sh"
   "examples/agent_gpu_compute_workflow/workflow.sh"
   "examples/agent_xr_runtime_workflow/workflow.sh"

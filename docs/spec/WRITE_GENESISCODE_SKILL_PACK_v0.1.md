@@ -112,8 +112,10 @@ Canonical executable distribution kit root:
 
 Normative content:
 
-- prompt templates under `docs/skill_pack/write_genesiscode_v1/prompts/`
-- runnable domain recipes under `docs/skill_pack/write_genesiscode_v1/recipes/`
+- generated prompt cards in `docs/skill_pack/write_genesiscode_v1/prompt-cards.json`
+- generated executable recipe cards in `docs/skill_pack/write_genesiscode_v1/recipe-cards.json`
+- compact progressive-disclosure index in `docs/skill_pack/write_genesiscode_v1/authoring-card.md`
+- hand-owned source policy in `policies/genesiscode_authoring_workflow_v0.1.json`
 - project templates under `docs/skill_pack/write_genesiscode_v1/templates/`
 - deterministic distribution verifier:
   `scripts/check_write_genesiscode_skill_distribution.sh`

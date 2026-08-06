@@ -135,8 +135,8 @@ if not any("llms.txt" in paths for paths in roadmap_evidence.BUNDLES.values()):
     raise SystemExit("capability-evidence-ledger-contract: fixed-point fixture lost coverage")
 PY
 roadmap_identity_count="$(python3 scripts/lib/roadmap_evidence.py --print | wc -l | tr -d ' ')"
-[[ "$roadmap_identity_count" == "56" ]] || {
-  echo "capability-evidence-ledger-contract: expected 56 roadmap identities, got $roadmap_identity_count" >&2
+[[ "$roadmap_identity_count" == "57" ]] || {
+  echo "capability-evidence-ledger-contract: expected 57 roadmap identities, got $roadmap_identity_count" >&2
   exit 1
 }
 cp ROADMAP.md "$TMP_DIR/roadmap-stale.md"

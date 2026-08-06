@@ -12,6 +12,7 @@ components:
   profile
   diagnostics
   derived-agent-surfaces
+  authoring-skill
   canonical-examples
   task-benchmarks
   analysis-fixtures
@@ -79,6 +80,14 @@ update_derived_agent_surfaces() {
   python3 scripts/lib/genesisbench_reference_agent.py --write
   python3 scripts/lib/genesisbench_reference_agent.py --check --self-test
   echo "update-agent-authoring-bundle: refreshed derived agent surfaces"
+}
+
+update_authoring_skill() {
+  python3 scripts/lib/genesiscode_authoring_skill.py --write --check --self-test
+  validate_unless_staged bash scripts/check_genesiscode_authoring_skill.sh
+  validate_unless_staged bash scripts/check_write_genesiscode_skill_pack.sh
+  validate_unless_staged bash scripts/check_write_genesiscode_skill_distribution.sh
+  echo "update-agent-authoring-bundle: refreshed generated authoring skill and cards"
 }
 
 update_canonical_examples() {
@@ -191,6 +200,7 @@ case "$component" in
   profile) update_profile ;;
   diagnostics) update_diagnostics ;;
   derived-agent-surfaces) update_derived_agent_surfaces ;;
+  authoring-skill) update_authoring_skill ;;
   canonical-examples) update_canonical_examples ;;
   task-benchmarks) update_task_benchmarks ;;
   analysis-fixtures) update_analysis_fixtures ;;
@@ -205,6 +215,7 @@ case "$component" in
     update_profile
     update_diagnostics
     update_derived_agent_surfaces
+    update_authoring_skill
     update_canonical_examples
     update_task_benchmarks
     update_analysis_fixtures
