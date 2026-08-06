@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "9642f29b9ae375a1d3f922f02f3201fa0acf081277b1a943217c952d0f4aca90",
-    "roadmap_sha256": "096d5f7a8b6acb8ff18393f52c1578387d77f61e5ab392b7aa9ecf711472480b",
+    "roadmap_sha256": "bd3e97c637acd6527efd6aa508747ac151b18f0593540c5c936ee5f11f0045e3",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -1040,7 +1040,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "test-hermeticity-bundle-sha256:3bcbbdb63a47b2754ba3cec5fa29e337fdec1221cda0c91658d0699cfffa8f2d"
+          "input_identity": "test-hermeticity-bundle-sha256:e1377f54d316e721f9f0d5823cf697e5fa1117b2f3c1c3cd374c5d504887b7c3"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1942,7 +1942,7 @@
             "scripts/check_cargo_target_dir_policy.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "engineering-gate-budget-bundle-sha256:89adb16cc5870f26e45108d62c386846868657846b0e736a4ae997b61958698f"
+          "input_identity": "engineering-gate-budget-bundle-sha256:c2977e471179644a15062953b998571553e69ba07edf32877c80487509458156"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2175,7 +2175,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "generated-authority-closure-bundle-sha256:3e210bdf3bbd828b91ef646de1c0e652798a5d9092177349304d3c1d4ab2b588"
+          "input_identity": "generated-authority-closure-bundle-sha256:c30a7d153ec8b523fb3106640dca197050c1e2a6b00f10dae55a669165b8c4f9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2255,7 +2255,7 @@
             "30826800834"
           ],
           "completed_date": "2026-08-03",
-          "input_identity": "generated-authority-closure-bundle-sha256:3e210bdf3bbd828b91ef646de1c0e652798a5d9092177349304d3c1d4ab2b588"
+          "input_identity": "generated-authority-closure-bundle-sha256:c30a7d153ec8b523fb3106640dca197050c1e2a6b00f10dae55a669165b8c4f9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3096,7 +3096,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-diagnostic-catalog-bundle-sha256:5a4b628c402a97e35d9a887a27bf8488690259a294685c9f324fc35ba0d8235b"
+          "input_identity": "gc-diagnostic-catalog-bundle-sha256:a9bba98521a945dc78e138807cb5f3687264607ecde5e3439fc0fc8ff6969919"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3390,7 +3390,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "diagnostic-repair-utility-bundle-sha256:e84c75acc13ededac3abbcce454a3d6991cd237c7864f6be541a06d497b27176"
+          "input_identity": "diagnostic-repair-utility-bundle-sha256:4d91da1363667a93d09c5aa3a152900fc07d21150c87cb138035be30ed3ad2c9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,

@@ -748,37 +748,75 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             && perf_lane.contains("bash scripts/test_perf_gates.sh"),
         "standard CI must declare its cold dev-fast envelope; full CI must exclude the aggregate owned by its paired release measurement lane"
     );
-    let pair_job = workflow
-        .find("  release_full_measurement_pair:")
-        .expect("release measurement pair job");
+    let cold_job = workflow
+        .find("  release_evidence_cold_worker:")
+        .expect("cold release evidence worker job");
+    let warm_job = workflow
+        .find("  release_evidence_warm_worker:")
+        .expect("warm release evidence worker job");
+    let invariant_job = workflow
+        .find("  release_evidence_invariant_worker:")
+        .expect("invariant release evidence worker job");
+    let stress_job = workflow
+        .find("  release_evidence_stress_worker:")
+        .expect("stress release evidence worker job");
     let aggregate_job = workflow
         .find("  release_full_measurement:")
         .expect("release measurement aggregate job");
     let test_suite_job = workflow
         .find("  test_suite:")
         .expect("test suite job after release measurement jobs");
-    let pair_lane = &workflow[pair_job..aggregate_job];
+    assert!(
+        cold_job < warm_job
+            && warm_job < invariant_job
+            && invariant_job < stress_job
+            && stress_job < aggregate_job,
+        "release evidence worker and aggregate job identities must remain unique"
+    );
+    let cold_lane = &workflow[cold_job..warm_job];
+    let warm_lane = &workflow[warm_job..invariant_job];
+    let invariant_lane = &workflow[invariant_job..stress_job];
+    let stress_lane = &workflow[stress_job..aggregate_job];
     let aggregate_lane = &workflow[aggregate_job..test_suite_job];
     assert!(
-        pair_lane.contains("pair: [1, 2]")
-            && pair_lane.contains("Cold/Warm Release Measurement Pair ${{ matrix.pair }}")
-            && pair_lane.contains("--pair-index ${{ matrix.pair }}")
-            && pair_lane.contains("release-full-measurement-pair-${{ matrix.pair }}"),
-        "full CI must run two independently uploaded cold/warm measurement pairs"
+        cold_lane.contains("index: [1, 2, 3]")
+            && cold_lane.contains("release-evidence-environment")
+            && cold_lane.contains("Publish Same-Run Cold-1 Fanout")
+            && cold_lane.contains("GENESIS_RELEASE_FANOUT_DIGEST")
+            && warm_lane.contains("index: [1, 2, 3]")
+            && warm_lane.contains("Prove Warm Precondition And Measure Setup")
+            && invariant_lane.contains("Fetch Authenticated Same-Run Fanout")
+            && invariant_lane.contains("--evidence-class invariant")
+            && stress_lane.contains("index: [1, 2, 3]")
+            && stress_lane.contains("Fetch Authenticated Same-Run Fanout")
+            && stress_lane.contains("--evidence-class stress-performance"),
+        "full CI must run the closed v0.2 release-evidence worker partition"
     );
     assert!(
         aggregate_lane.contains("- release_target_reference_readiness")
-            && aggregate_lane.contains("- release_full_measurement_pair")
-            && aggregate_lane.contains("Aggregate Paired Release Measurements")
+            && aggregate_lane.contains("- release_evidence_cold_worker")
+            && aggregate_lane.contains("- release_evidence_warm_worker")
+            && aggregate_lane.contains("- release_evidence_invariant_worker")
+            && aggregate_lane.contains("- release_evidence_stress_worker")
+            && aggregate_lane.contains("timeout-minutes: 5")
+            && aggregate_lane.contains("Aggregate Release Evidence DAG")
             && aggregate_lane.contains("reference-target-android.json")
             && aggregate_lane.contains("reference-target-edge.json")
             && aggregate_lane.contains("reference-target-ios.json")
             && aggregate_lane.contains("reference-target-service-runtime.json")
-            && aggregate_lane
-                .contains("--pair-output .genesis/release-pairs/release-full-measurement-pair-1")
-            && aggregate_lane
-                .contains("--pair-output .genesis/release-pairs/release-full-measurement-pair-2"),
-        "full CI must aggregate both measurement pairs after every named target shard"
+            && aggregate_lane.contains(
+                "--worker-output .genesis/release-workers/release-evidence-worker-cold-1"
+            )
+            && aggregate_lane.contains(
+                "--worker-output .genesis/release-workers/release-evidence-worker-warm-3"
+            )
+            && aggregate_lane.contains(
+                "--worker-output .genesis/release-workers/release-evidence-worker-invariant-1"
+            )
+            && aggregate_lane.contains(
+                "--worker-output .genesis/release-workers/release-evidence-worker-stress-3"
+            ),
+        "full CI must aggregate all ten v0.2 workers after every named target shard"
     );
     assert!(
         workflow.contains("reactivecircus/android-emulator-runner@v2")
