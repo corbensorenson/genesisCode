@@ -47,7 +47,9 @@ STAGE_BUILD_ENVIRONMENT = {
     "CARGO_PROFILE_TEST_DEBUG": "0",
 }
 CHECK_WORKERS = 4
-COMPILATION_CHECK_WORKERS = 2
+# Compilation checks share one content-addressed Cargo target. Keep them
+# single-writer so independent Cargo processes cannot race generated outputs.
+COMPILATION_CHECK_WORKERS = 1
 SHA_RE_LENGTH = 64
 NODE_FIELDS = {
     "id", "command", "dependencies", "inputs", "outputs", "checks", "mode",
@@ -843,8 +845,14 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
         next_check_position([static, compilation], []) == 0
         and next_check_position([compilation], [False]) is None
         and next_check_position([static], [True]) is None
-        and next_check_position([compilation], [True]) == 0
-        and next_check_position([compilation], [True, True]) is None,
+        and next_check_position(
+            [compilation], [True] * (COMPILATION_CHECK_WORKERS - 1)
+        )
+        == 0
+        and next_check_position(
+            [compilation], [True] * COMPILATION_CHECK_WORKERS
+        )
+        is None,
         "generated check scheduler mixed lanes or exceeded its compiler bound",
     )
     controls += 1
