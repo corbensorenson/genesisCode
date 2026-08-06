@@ -181,10 +181,12 @@ Strict/full profile runtime reports:
     health profile and gate names never participate in the directory identity.
   - gate scheduler partitions cargo-backed commands from non-cargo commands and runs cargo lanes
     with dedicated shard control (`GENESIS_HEALTH_CARGO_GATE_SHARDS`, default `1`) to avoid
-    lock contention while preserving full gate coverage. Each isolated release-pair worker sets
-    this control to exactly `2`: Cargo retains exclusive compilation writes in the pair-local
-    content-addressed target while independent post-build gate processes overlap. The pair runner
-    rejects cache sharing across workers, and no release gate may delete or replace that target.
+    lock contention while preserving full gate coverage. Release-pair workers retain exactly one
+    Cargo gate shard because performance, stress, and evidence-producing gates require exclusive
+    execution and share a pair-local content-addressed target. Pair workers remain independent CI
+    jobs with disjoint caches. Within each pair, source-decomposition parity validates the sealed
+    parity evidence produced by the serialized setup gate instead of rerunning the native/WASI
+    gauntlets; manifest-bound reuse removes duplicate work without overlapping benchmark lanes.
   - `release-full` first runs `scripts/render_health_profile_evidence_bundle.sh` as a serialized
     setup gate, before common gates can expand shared build caches. It renders gauntlet,
     native/WASI parity, generative, runtime-backend, host-bridge,

@@ -1476,7 +1476,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_domain_starter_registry_bootstrap.sh")
     PROFILE_GATES+=("cargo clippy --workspace --all-targets --locked --offline -- -D warnings")
     PROFILE_GATES+=("bash scripts/check_no_user_panics_compiler.sh")
-    PROFILE_GATES+=("bash scripts/check_source_decomposition_tracked_parity.sh")
+    PROFILE_GATES+=("GENESIS_HEALTH_EVIDENCE_REQUIRED=1 GENESIS_HEALTH_EVIDENCE_MANIFEST='$HEALTH_EVIDENCE_ROOT/manifest.json' GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=release-full GENESIS_AGENT_PARITY_REUSE_REPORTS=1 GENESIS_AGENT_PARITY_PREBUILT_REPORT='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_report.json' GENESIS_AGENT_PARITY_NATIVE_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_report.json' GENESIS_AGENT_PARITY_NATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_native_history.jsonl' GENESIS_AGENT_PARITY_WASI_REPORT='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_report.json' GENESIS_AGENT_PARITY_WASI_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_capability_gauntlet_wasi_history.jsonl' GENESIS_AGENT_PARITY_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_workflow_runtime_parity_history.jsonl' GENESIS_AGENT_PARITY_GENERATIVE_HISTORY='$HEALTH_EVIDENCE_ROOT/agent_generative_workloads_history.jsonl' bash scripts/check_source_decomposition_tracked_parity.sh")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
