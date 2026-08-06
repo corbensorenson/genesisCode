@@ -26,6 +26,15 @@ input identity are bound in the manifest, and stale output fails closed.
 - Deterministic verification entrypoint:
   - `scripts/check_write_genesiscode_skill_distribution.sh`
 
+## Work Routing
+
+The installed skill must preserve the closed `user-task`, `active-defect`,
+`roadmap-task`, and `exploratory-work` route set. In particular, an empty
+`upgrade_plan.md` disables the defect route; it never redirects an agent to wait,
+invent defects, or treat status views as task authority. General roadmap work is
+selected from the machine-generated execution slice, while exploration carries no
+completion authority.
+
 ## Runtime Verification Contract
 
 When `GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1`, the verification script must enforce:

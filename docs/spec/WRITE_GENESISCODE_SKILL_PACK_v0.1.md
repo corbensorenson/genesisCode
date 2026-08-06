@@ -21,17 +21,26 @@ and tooling evolution code.
 - Distribution manifest: `docs/skill_pack/write_genesiscode_v1/manifest.json`
 - Schema refs: `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`, `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
 - Test/profile refs: `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
-- Strategic execution source: `ROADMAP.md`
-- Unresolved P0/P1 compatibility queue: `upgrade_plan.md`
+- Strategic execution source: the generated slice from `ROADMAP.md` and `policies/roadmap_execution_v0.1.json`
+- Conditional unresolved P0/P1 defect source: open checklist IDs in `upgrade_plan.md`; an empty file supplies no work
 
 ## Pack Objectives
 
 1. Keep agent authoring deterministic and contract-first.
 2. Keep language/runtime evolution selfhost-biased.
 3. Keep edits machine-reviewable with explicit acceptance evidence.
-4. Keep plan-driven iteration (open backlog -> implement -> verify -> mark complete).
+4. Route user tasks, active defects, generated-roadmap work, and exploration through distinct authority and closure rules.
 5. Freeze authoring assumptions by negotiating `GC-AGENT-v0.3` before source generation.
 6. Enforce all five unsupported classes and their safe alternatives without prompt- or index-derived authority.
+
+## Work Routing
+
+- `user-task`: preserve the current concrete request while enforcing normative constraints.
+- `active-defect`: select only an open, reproduced P0/P1 ID; unavailable when the defect ledger is empty.
+- `roadmap-task`: select only from the machine-generated roadmap execution slice.
+- `exploratory-work`: retain bounded observations or proposals without status-closure authority.
+
+The selected route, authority source, empty-source behavior, and stop conditions are part of the agent's work report.
 
 ## Distribution Layout (Normative)
 
@@ -49,12 +58,13 @@ and tooling evolution code.
 ## Prompt Templates
 
 ### `backlog_slice`
-- Intent: complete the highest-impact ready `ROADMAP.md` task end-to-end, except unresolved P0/P1 compatibility work remains sourced from `upgrade_plan.md`.
+- Intent: classify one concrete request as `user-task`, `active-defect`, `roadmap-task`, or `exploratory-work`, then execute only that route's authority-compatible transaction.
+- Empty-source rule: no open P0/P1 ID means the defect route is unavailable; roadmap progression comes only from the generated execution slice.
 - Required output:
-  - explicit task list
+  - selected route ID, authority source, and coherent transaction ID
   - changed files
   - command evidence and pass/fail
-  - updated remaining checklist count.
+  - updated remaining roadmap and P0/P1 counts without invented work.
 
 ### `capability_addition`
 - Intent: add/expand capability wrappers with policy + replay + docs.

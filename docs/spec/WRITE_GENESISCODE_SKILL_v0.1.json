@@ -42,6 +42,7 @@
     "## Required references (must stay synchronized)",
     "## Required contract IDs (must stay present)",
     "## Ground rules (non-negotiable)",
+    "## Work selection and authority routing",
     "## Canonical workflow (agent prompt protocol)",
     "## Effects, capabilities, and policies",
     "## GenesisGraph / GenesisPkg expectations",
@@ -64,6 +65,12 @@
     "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
     "ROADMAP.md",
     "upgrade_plan.md"
+  ],
+  "required_work_routes": [
+    "user-task",
+    "active-defect",
+    "roadmap-task",
+    "exploratory-work"
   ],
   "skill_file": ".agents/skills/genesiscode-authoring/SKILL.md",
   "version": "0.1"

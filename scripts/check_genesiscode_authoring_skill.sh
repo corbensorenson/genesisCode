@@ -72,6 +72,7 @@ required_refs = contract.get("required_spec_refs", [])
 required_contract_ids = contract.get("required_contract_ids", [])
 required_indices = contract.get("required_capability_indices", [])
 required_schema_docs = contract.get("required_schema_docs", [])
+required_work_routes = contract.get("required_work_routes", [])
 
 missing_sections = [s for s in required_sections if s not in skill]
 if missing_sections:
@@ -100,6 +101,28 @@ if missing_ids:
         "genesiscode-authoring-skill: missing required contract ID(s): "
         + ", ".join(missing_ids)
     )
+
+if required_work_routes != ["user-task", "active-defect", "roadmap-task", "exploratory-work"]:
+    raise SystemExit(
+        "genesiscode-authoring-skill: required_work_routes must define the closed routing set"
+    )
+missing_routes = [route for route in required_work_routes if f"### `{route}`:" not in skill]
+if missing_routes:
+    raise SystemExit(
+        "genesiscode-authoring-skill: missing work route(s): " + ", ".join(missing_routes)
+    )
+for required_routing_fact in (
+    "Selection source: `upgrade-plan-open-p0-p1`",
+    "Empty-source behavior: `route-unavailable`",
+    "Selection source: `roadmap-generated-slice`",
+    "Closure authority: `none`",
+    "an empty defect queue is not an ordinary work queue",
+):
+    if required_routing_fact not in skill:
+        raise SystemExit(
+            "genesiscode-authoring-skill: missing routing safety fact: "
+            + required_routing_fact
+        )
 
 for item in required_indices:
     path = item.get("path")
@@ -175,6 +198,7 @@ if "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md" not in bundle:
 print(
     "genesiscode-authoring-skill: ok "
     f"(sections={len(required_sections)} refs={len(required_refs)} "
-    f"contract_ids={len(required_contract_ids)} indices={len(required_indices)})"
+    f"contract_ids={len(required_contract_ids)} indices={len(required_indices)} "
+    f"work_routes={len(required_work_routes)})"
 )
 PY

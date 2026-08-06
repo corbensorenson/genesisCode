@@ -51,8 +51,8 @@
     "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "c9fef8c1ef435bde4ee594b088d3a92830f9167eace244ff8cfed38c9378e42a",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2",
     "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json": "34eb570715c0947a7b3fccf15ba4fbf7d182badfa5ae8fe771e902b2d9026fe3",
-    "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json": "f00a8fe48426c104cd05ad27cd8faf140d0d347b5433c36677b3ad1437ce0ee2",
-    "policies/genesiscode_authoring_workflow_v0.1.json": "c713bc35071552cdcc3eb313d988ca7ce7fba8098f550b423d018484ff909132"
+    "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json": "0fc989913bb1ac06af8f3f96f4a6a9e5b98c73153238f0fd81e68f9dbef64c17",
+    "policies/genesiscode_authoring_workflow_v0.1.json": "2163929e7a4ebd06e1e1a14ca0092031405ef9cbb8073e273b23d3ee0c505d71"
   },
   "kind": "genesis/write-genesiscode-skill-distribution-v1",
   "prompt_cards": "prompt-cards.json",
@@ -267,7 +267,7 @@
   ],
   "skill": ".agents/skills/genesiscode-authoring/SKILL.md",
   "source": "policies/genesiscode_authoring_workflow_v0.1.json",
-  "source_sha256": "c713bc35071552cdcc3eb313d988ca7ce7fba8098f550b423d018484ff909132",
+  "source_sha256": "2163929e7a4ebd06e1e1a14ca0092031405ef9cbb8073e273b23d3ee0c505d71",
   "verification_scripts": [
     "scripts/check_write_genesiscode_skill_distribution.sh",
     "scripts/check_write_genesiscode_skill_conformance.sh"

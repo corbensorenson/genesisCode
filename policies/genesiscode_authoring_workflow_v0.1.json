@@ -51,18 +51,19 @@
       ],
       "id": "backlog_slice",
       "inputs": [
-        "Current `upgrade_plan.md`",
-        "Current `feature_matrix.md`",
-        "Current `docs/status/REDTEAM_REPORT.md`"
+        "current explicit user request or reproduced defect report, when present",
+        "generated `python3 scripts/lib/roadmap_execution_manifest.py --slice` result",
+        "open P0/P1 IDs from `upgrade_plan.md`, only when at least one exists",
+        "current `feature_matrix.md` and `docs/status/REDTEAM_REPORT.md` as status evidence, not task authority"
       ],
-      "objective": "Use this prompt to complete the highest-impact unresolved `upgrade_plan.md` items.",
+      "objective": "Classify the requested work as a user task, active P0/P1 defect, generated-roadmap task, or exploratory proposal, then complete one authority-compatible transaction without treating an empty defect ledger as a queue.",
       "outputs": [
-        "explicit checklist of selected IDs",
+        "selected route ID, authority source, and coherent transaction ID",
         "code/doc changes with file paths",
         "deterministic verification commands and outcomes",
-        "updated remaining-open item count"
+        "updated remaining-open roadmap and P0/P1 counts without invented work"
       ],
-      "title": "Backlog Slice"
+      "title": "Work Selection"
     },
     {
       "checks": [
@@ -94,7 +95,7 @@
       "id": "selfhost_cutover",
       "inputs": [
         "strict selfhost boundary docs",
-        "active upgrade plan IDs related to selfhost parity/cutover",
+        "relevant open P0/P1 defect IDs when present, otherwise the selected generated-roadmap task",
         "affected runtime/CLI contracts"
       ],
       "objective": "Use this prompt when migrating behavior from bootstrap/runtime boundaries into `.gc`.",
@@ -632,10 +633,77 @@
       "Use generated core, task, symbol, capability, and diagnostic cards as reference authority; do not duplicate their content here.",
       "Use generated-authority update commands only to produce candidates; only read-only checks and independently reviewed evidence can close work."
     ],
+    "task_routing": {
+      "routes": [
+        {
+          "action": "Translate the request into a falsifiable acceptance condition, preserve its scope, and execute one compatible transaction; consult roadmap and defect authorities for constraints rather than silently replacing the request with their queue.",
+          "closure_authority": "task-specific-evidence",
+          "empty_source_behavior": "ask-or-abstain-if-no-actionable-request",
+          "id": "user-task",
+          "selection_source": "current-user-request",
+          "stop_conditions": [
+            "the request conflicts with a normative specification, security invariant, dependency prerequisite, or in-flight transaction",
+            "required scope or acceptance evidence is ambiguous enough that a reasonable assumption would be unsafe",
+            "the requested outcome would require unsupported capability, authority, credentials, or target behavior"
+          ],
+          "title": "Explicit user task",
+          "when": "The current user has requested a concrete implementation, review, repair, or documentation outcome."
+        },
+        {
+          "action": "Select only a reproduced open P0/P1 checklist ID, bind its linked roadmap acceptance, and close neither record until both defect-specific and roadmap evidence pass.",
+          "closure_authority": "defect-and-roadmap-evidence",
+          "empty_source_behavior": "route-unavailable",
+          "id": "active-defect",
+          "selection_source": "upgrade-plan-open-p0-p1",
+          "stop_conditions": [
+            "`upgrade_plan.md` contains no open P0/P1 checklist ID; an empty defect queue is not an ordinary work queue",
+            "the reported failure cannot be reproduced or its retained evidence does not identify the claimed defect",
+            "the linked roadmap task is not dependency-ready or requires unavailable independent evidence"
+          ],
+          "title": "Active P0/P1 defect",
+          "when": "A user request, generated execution slice, or current concentration selects a concrete open P0/P1 defect."
+        },
+        {
+          "action": "Run the generated execution-slice command, choose its current coherent focus or permitted local frontier, and obey prerequisites, WIP limits, owner paths, non-claims, and durable-evidence requirements.",
+          "closure_authority": "roadmap-durable-evidence",
+          "empty_source_behavior": "report-no-ready-task-without-inventing-one",
+          "id": "roadmap-task",
+          "selection_source": "roadmap-generated-slice",
+          "stop_conditions": [
+            "the selected task is not start-ready or another overlapping production transaction is in progress",
+            "completion requires hosted, private, cross-host, or independently reviewed evidence that is unavailable locally",
+            "the proposed edit falls outside declared owner paths or broadens a future product lane prematurely"
+          ],
+          "title": "Generated roadmap task",
+          "when": "The objective is general program advancement and no concrete user task selects a different compatible transaction."
+        },
+        {
+          "action": "State the question, hypothesis, bounded inputs, and non-claim; keep outputs quarantined as observations or proposals until a separately authorized task promotes them.",
+          "closure_authority": "none",
+          "empty_source_behavior": "finish-with-explicit-unknowns-and-no-status-mutation",
+          "id": "exploratory-work",
+          "selection_source": "user-approved-exploration",
+          "stop_conditions": [
+            "the exploration would mutate normative policy, generated evidence, signing roots, benchmark custody, or release status",
+            "the next step requires undeclared network, secret, model, device, or production authority",
+            "an observation is being used to claim roadmap, defect, benchmark, or release completion"
+          ],
+          "title": "Exploratory work",
+          "when": "The user asks a question, comparison, prototype, or investigation whose acceptance is not yet a governed production task."
+        }
+      ],
+      "selection_rules": [
+        "Classify incoming intent into exactly one route before selecting files or tools; record that route in the work report.",
+        "A concrete user request selects intent but cannot override normative specifications, invariants, dependency prerequisites, or an overlapping in-flight transaction.",
+        "Use `upgrade_plan.md` only as the conditional source of currently open P0/P1 defect IDs; when it has no open IDs, skip that route without waiting or inventing work.",
+        "Use `python3 scripts/lib/roadmap_execution_manifest.py --slice` rather than scanning unchecked roadmap boxes as an ordinary queue.",
+        "Exploration produces non-authoritative observations or proposals and cannot close roadmap, defect, benchmark, or release status."
+      ]
+    },
     "steps": [
       {
         "actions": [
-          "Inspect the generated roadmap execution slice and choose its current coherent transaction.",
+          "Classify the incoming work with the task-routing contract, then inspect only the selected route's authority and current coherent transaction.",
           "Load the compact core card, matching task card, exact symbols, capability indices, and affected normative specs.",
           "State a falsifiable acceptance condition or reproduce the defect before editing."
         ],
