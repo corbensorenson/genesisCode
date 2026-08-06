@@ -126,6 +126,7 @@ genesis --json agent-index --diagnostic <exact-code>
     `genesisbench_local_model_preselection = "benchmarks/genesisbench/v0.1/local-models/preselection.json"`,
     `genesisbench_local_model_inventory = "benchmarks/genesisbench/v0.1/local-models/inventory.json"`,
     `genesisbench_local_model_custody_qwen3_4b = "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-4b-4bit-v0.1.json"`,
+    `genesisbench_local_model_custody_qwen3_8b = "benchmarks/genesisbench/v0.1/local-models/custody/qwen3-8b-4bit-v0.1.json"`,
     `genesisbench_adapters = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.json"`,
     `genesisbench_adapters_schema = "docs/spec/GENESISBENCH_ADAPTERS_v0.1.schema.json"`,
     `genesisbench_adapter_schema = "docs/spec/GENESISBENCH_ADAPTER_v0.1.schema.json"`,
