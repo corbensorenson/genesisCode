@@ -1,22 +1,22 @@
 {
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
-  "audit_date": "2026-08-04",
+  "audit_date": "2026-08-05",
   "execution_frontier": {
     "wip_limit": 1,
     "ordered_task_ids": [
       "R0.4.j",
-      "R2.2.f",
-      "R1.5.a",
       "R1.4.o",
       "R1.4.q",
+      "R2.2.f",
+      "R1.5.a",
       "R2.1.h",
       "R1.6.a",
       "R1.7.a",
       "R1.4.p",
       "R2.3.a"
     ],
-    "rationale": "Finish R0.4.j and its P1.6 CI-liveness counterexample, close P1.5 through R2.2.f, then concentrate on M1-A, M1-B, and startup without opening Foundry, model, or platform breadth.",
+    "rationale": "Finish R0.4.j through the hosted v0.2 release-evidence cutover, execute the frozen Qwen3 4B product-proof campaign next, keep disjoint private-lineage commissioning explicitly dispositioned, then close M1-A and remaining M1-B work before startup without opening Foundry, model, or platform breadth.",
     "task_context": {
       "R0.4.j": {
         "product_lanes": ["GenesisCode", "GenesisBench"],
@@ -102,11 +102,12 @@
     "allowed_parallel_lanes": [
       {
         "id": "immutable-benchmark-custody",
-        "description": "One predeclared benchmark custody or execution campaign may run beside the production task.",
+        "description": "One predeclared benchmark custody, execution, or no-target-access private-lineage commissioning campaign may run beside the production task.",
         "conditions": [
           "its files, credentials, operators, storage, and generated authorities are disjoint from the production task",
           "its task, cohort, attempt, scoring, and publication authorities were frozen before target-model access",
-          "it cannot modify the repository transaction or delay the selected production frontier"
+          "it cannot modify the repository transaction or delay the selected production frontier",
+          "after 72 hours or two independent reviews of the production task it has a dated active, externally-blocked, or explicitly-deferred disposition"
         ]
       }
     ]

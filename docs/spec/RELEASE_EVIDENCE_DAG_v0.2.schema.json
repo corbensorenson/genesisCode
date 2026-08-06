@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/release-evidence-dag-v0.2.schema.json",
+  "title": "GenesisCode release evidence DAG v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "aggregate",
+    "budgets",
+    "commands",
+    "executionClasses",
+    "fanout",
+    "kind",
+    "profile",
+    "version",
+    "warmPrecondition",
+    "watchdog"
+  ],
+  "properties": {
+    "$schema": {"const": "../docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json"},
+    "kind": {"const": "genesis/release-evidence-dag-v0.2"},
+    "version": {"const": "0.2.0"},
+    "profile": {"const": "release-full"},
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aggregateWallMs",
+        "artifactBytesPerWorker",
+        "diagnosticTailBytes",
+        "diagnosticTailLines",
+        "measuredWorkerWallMs",
+        "workflowWallMs"
+      ],
+      "properties": {
+        "aggregateWallMs": {"const": 300000},
+        "artifactBytesPerWorker": {"const": 21474836480},
+        "diagnosticTailBytes": {"const": 4096},
+        "diagnosticTailLines": {"const": 40},
+        "measuredWorkerWallMs": {"const": 2700000},
+        "workflowWallMs": {"const": 3600000}
+      }
+    },
+    "executionClasses": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/executionClass"}
+    },
+    "warmPrecondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactInventoryMustMatch",
+        "cacheKeyMustMatch",
+        "featureSetMustMatch",
+        "measured",
+        "network",
+        "ownedEmptyRootRequired",
+        "sourceMustMatch",
+        "toolchainMustMatch"
+      ],
+      "properties": {
+        "artifactInventoryMustMatch": {"const": true},
+        "cacheKeyMustMatch": {"const": true},
+        "featureSetMustMatch": {"const": true},
+        "measured": {"const": false},
+        "network": {"const": "deny"},
+        "ownedEmptyRootRequired": {"const": true},
+        "sourceMustMatch": {"const": true},
+        "toolchainMustMatch": {"const": true}
+      }
+    },
+    "fanout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["consumers", "crossRunReuseAllowed", "producer", "sameRunOnly", "sourceSample"],
+      "properties": {
+        "producer": {"const": "setup/evidence-bundle"},
+        "sourceSample": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["class", "index"],
+          "properties": {
+            "class": {"const": "cold"},
+            "index": {"const": 1}
+          }
+        },
+        "sameRunOnly": {"const": true},
+        "crossRunReuseAllowed": {"const": false},
+        "consumers": {
+          "type": "array",
+          "prefixItems": [{"const": "invariant"}, {"const": "stress-performance"}],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/command"}
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readOnly", "reject", "requiredTargetDispositions"],
+      "properties": {
+        "readOnly": {"const": true},
+        "reject": {
+          "type": "array",
+          "minItems": 10,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "requiredTargetDispositions": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "android"},
+            {"const": "edge"},
+            {"const": "ios"},
+            {"const": "service-runtime"}
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "watchdog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority",
+        "freshnessSeconds",
+        "fullRunDeadlineSeconds",
+        "latestMainStandardDeadlineSeconds",
+        "selfReportingAllowed"
+      ],
+      "properties": {
+        "authority": {"const": "independent"},
+        "freshnessSeconds": {"const": 172800},
+        "fullRunDeadlineSeconds": {"const": 3600},
+        "latestMainStandardDeadlineSeconds": {"const": 7200},
+        "selfReportingAllowed": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "executionClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cacheStates",
+        "dependencies",
+        "id",
+        "isolation",
+        "minimumSamplesPerState",
+        "oddSamplesRequired",
+        "repeatPolicy"
+      ],
+      "properties": {
+        "id": {"enum": ["cache-sensitive", "invariant", "stress-performance"]},
+        "cacheStates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["cold", "warm", "not-measured"]}
+        },
+        "minimumSamplesPerState": {"type": "integer", "minimum": 1},
+        "oddSamplesRequired": {"const": true},
+        "isolation": {"enum": ["owned-ephemeral-root", "exclusive-owned-ephemeral-root"]},
+        "repeatPolicy": {
+          "enum": ["exactly-once", "independent-matched-cohorts", "independent-odd-cohort"]
+        },
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dependencies", "evidenceClass", "group", "id", "selector"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9./-]*$"},
+        "group": {"enum": ["common", "profile", "setup"]},
+        "evidenceClass": {
+          "enum": ["cache-sensitive", "invariant", "stress-performance", "superseded"]
+        },
+        "selector": {"type": "string", "minLength": 4},
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9./-]*$"}
+        },
+        "condition": {"enum": ["agent-gpu-strict"]},
+        "replacement": {"type": "string", "pattern": "^[a-z0-9][a-z0-9./-]*$"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"evidenceClass": {"const": "superseded"}}},
+          "then": {"required": ["replacement"]},
+          "else": {"not": {"required": ["replacement"]}}
+        }
+      ]
+    }
+  }
+}

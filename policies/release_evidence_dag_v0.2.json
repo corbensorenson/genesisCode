@@ -1,0 +1,745 @@
+{
+  "$schema": "../docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
+  "aggregate": {
+    "readOnly": true,
+    "reject": [
+      "cross-class-reuse",
+      "duplicate-execution",
+      "forged-cache-state",
+      "identity-drift",
+      "incomplete-cleanup",
+      "missing-node",
+      "overlapping-exclusive-lanes",
+      "producer-authored-verdict",
+      "stale-evidence",
+      "undeclared-command"
+    ],
+    "requiredTargetDispositions": [
+      "android",
+      "edge",
+      "ios",
+      "service-runtime"
+    ]
+  },
+  "budgets": {
+    "aggregateWallMs": 300000,
+    "artifactBytesPerWorker": 21474836480,
+    "diagnosticTailBytes": 4096,
+    "diagnosticTailLines": 40,
+    "measuredWorkerWallMs": 2700000,
+    "workflowWallMs": 3600000
+  },
+  "commands": [
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-selfhost-boundary",
+      "selector": "scripts/check_selfhost_boundary.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-host-abi-conformance",
+      "selector": "scripts/check_host_abi_conformance.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-agent-gpu-profile-contract",
+      "selector": "scripts/check_agent_gpu_profile_contract.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-runner-high-level-op-guard",
+      "selector": "scripts/check_runner_high_level_op_guard.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-prelude-capability-coverage",
+      "selector": "scripts/check_prelude_capability_coverage.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-foundation-stdlib-conformance",
+      "selector": "scripts/check_foundation_stdlib_conformance.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-capability-indices",
+      "selector": "scripts/check_capability_indices.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-capability-coverage-audit",
+      "selector": "scripts/check_capability_coverage_audit.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-host-api-evolution-contracts",
+      "selector": "scripts/check_host_api_evolution_contracts.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-gcpm-operation-contract-pack",
+      "selector": "scripts/check_gcpm_operation_contract_pack.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-assurance-profile-packs",
+      "selector": "scripts/check_assurance_profile_packs.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-assurance-standards-crosswalk",
+      "selector": "scripts/check_assurance_standards_crosswalk.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-tool-qualification-lineage",
+      "selector": "scripts/check_tool_qualification_lineage.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-cargo-target-dir-policy",
+      "selector": "scripts/check_cargo_target_dir_policy.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-selfhost-symbol-ownership",
+      "selector": "scripts/check_selfhost_symbol_ownership.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-agent-authoring-bundle",
+      "selector": "scripts/check_agent_authoring_bundle.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-genesiscode-authoring-skill",
+      "selector": "scripts/check_genesiscode_authoring_skill.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-domain-kit-workflows",
+      "selector": "scripts/check_domain_kit_workflows.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-selfhost-refactor-guard",
+      "selector": "scripts/check_selfhost_refactor_guard.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-selfhost-artifact-fresh",
+      "selector": "scripts/check_selfhost_artifact_fresh.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-selfhost-toolchain-review-fresh",
+      "selector": "scripts/check_selfhost_toolchain_review_fresh.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-selfhost-dashboard-fresh",
+      "selector": "scripts/check_selfhost_dashboard_fresh.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-selfhost-readiness-scorecard",
+      "selector": "scripts/check_selfhost_readiness_scorecard.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-selfhost-doc-runtime-parity",
+      "selector": "scripts/check_selfhost_doc_runtime_parity.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-redteam-report",
+      "selector": "scripts/check_redteam_report.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-feature-matrix-gap-hygiene",
+      "selector": "scripts/check_feature_matrix_gap_hygiene.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-capability-evidence-ledger",
+      "selector": "scripts/check_capability_evidence_ledger.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-capability-evidence-ledger-contract",
+      "selector": "scripts/check_capability_evidence_ledger_contract.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-check-update-boundary",
+      "selector": "scripts/check_check_update_boundary.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-engineering-gate-contract",
+      "selector": "scripts/check_engineering_gate_contract.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-planning-docs-fresh",
+      "selector": "scripts/check_planning_docs_fresh.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-doc-hygiene",
+      "selector": "scripts/check_doc_hygiene.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-doc-topology-drift",
+      "selector": "scripts/check_doc_topology_drift.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-doc-complexity-budget",
+      "selector": "scripts/check_doc_complexity_budget.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-write-genesiscode-skill-pack",
+      "selector": "scripts/check_write_genesiscode_skill_pack.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-write-genesiscode-skill-guide",
+      "selector": "scripts/check_write_genesiscode_skill_guide.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "superseded",
+      "group": "common",
+      "id": "common/check-write-genesiscode-skill-distribution",
+      "replacement": "profile/write-skill-distribution",
+      "selector": "scripts/check_write_genesiscode_skill_distribution.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "superseded",
+      "group": "common",
+      "id": "common/check-host-bridge-fault-injection",
+      "replacement": "profile/host-bridge-fault-injection",
+      "selector": "scripts/check_host_bridge_fault_injection.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-no-user-panics",
+      "selector": "scripts/check_no_user_panics.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-rust-engine-compat",
+      "selector": "scripts/check_rust_engine_compat.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "superseded",
+      "group": "common",
+      "id": "common/check-kernel-tcb-contract",
+      "replacement": "profile/kernel-tail-stress",
+      "selector": "scripts/check_kernel_tcb_contract.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-vcs-selfhost-contract",
+      "selector": "scripts/check_vcs_selfhost_contract.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-no-production-rust-frontend-refs",
+      "selector": "scripts/check_no_production_rust_frontend_refs.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-cli-diagnostics-contract",
+      "selector": "scripts/check_cli_diagnostics_contract.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "common",
+      "id": "common/check-fuzz-differential-hardening",
+      "selector": "scripts/check_fuzz_differential_hardening.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-test-execution-profile-matrix",
+      "selector": "scripts/check_test_execution_profile_matrix.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-gpu-conformance-lane-matrix",
+      "selector": "scripts/check_gpu_conformance_lane_matrix.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-gpu-stack-decoupling",
+      "selector": "scripts/check_gpu_stack_decoupling.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-webxr-browser-conformance-lane",
+      "selector": "scripts/check_webxr_browser_conformance_lane.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-gc-source-size-budget",
+      "selector": "scripts/check_gc_source_size_budget.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-source-size-budget",
+      "selector": "scripts/check_source_size_budget.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-source-decomposition-progress",
+      "selector": "scripts/check_source_decomposition_progress.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-selfhost-gc-migration-plan",
+      "selector": "scripts/check_selfhost_gc_migration_plan.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "common",
+      "id": "common/check-test-size-budget",
+      "selector": "scripts/check_test_size_budget.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "setup",
+      "id": "setup/evidence-bundle",
+      "selector": "render_health_profile_evidence_bundle.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/generated-authority-freshness",
+      "selector": "generated_authority.py --freshness"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/kernel-tail-stress",
+      "selector": "test_perf_gates.sh --kernel-tail-stress"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/domain-starter-registry",
+      "selector": "check_domain_starter_registry_bootstrap.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/clippy-all-targets",
+      "selector": "cargo clippy --workspace --all-targets"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/no-user-panics-compiler",
+      "selector": "check_no_user_panics_compiler.sh"
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/source-decomposition-parity",
+      "selector": "check_source_decomposition_tracked_parity.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/cli-smoke",
+      "selector": "cargo test -p gc_cli --test cli_smoke"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/gcpm-selfhost-acceptance",
+      "selector": "cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/gcpm-reproducible-build",
+      "selector": "gcpm_build_target_is_reproducible_and_emits_provenance_bundle"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/gcpm-mobile-edge-contracts",
+      "selector": "gcpm_build_supports_mobile_and_edge_target_contracts"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/target-runtime-pipelines",
+      "selector": "GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1"
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/runtime-backend-matrix",
+      "selector": "GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT="
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/bootstrap-retirement",
+      "selector": "check_bootstrap_retirement_gate.sh"
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/gpu-xr-productization",
+      "selector": "GENESIS_GPU_XR_PRODUCTIZATION_PREBUILT_REPORT="
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/agent-scenario-perf",
+      "selector": "check_agent_scenario_perf.sh"
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/write-skill-distribution",
+      "selector": "GENESIS_WRITE_SKILL_GAUNTLET_REPORT="
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/agent-workflow-runtime-parity",
+      "selector": "check_agent_workflow_runtime_parity.sh"
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/agent-generative-workloads",
+      "selector": "GENESIS_AGENT_GENERATIVE_PREBUILT_REPORT="
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/production-cli-help-parity",
+      "selector": "GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=1"
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "invariant",
+      "group": "profile",
+      "id": "profile/slo-report-contracts",
+      "selector": "GENESIS_SLO_REQUIRE_PARITY_REPORT=1"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/task-concurrency-stress",
+      "selector": "GENESIS_TASK_STRESS_RUNS=3"
+    },
+    {
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/host-bridge-fault-injection",
+      "selector": "GENESIS_CHECK_HOST_BRIDGE_FAULT_REPORT="
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/perf-budgets",
+      "selector": "check_perf_budgets.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/ai-iteration-slo",
+      "selector": "check_ai_iteration_slo.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/large-workspace-agent-perf",
+      "selector": "check_large_workspace_agent_perf.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/ai-stress-suite",
+      "selector": "check_ai_stress_suite.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/hot-path-budgets",
+      "selector": "check_hot_path_budgets.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/runtime-microbench-budgets",
+      "selector": "check_runtime_microbench_budgets.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/gpu-compute-runtime",
+      "selector": "check_gpu_compute_runtime_profile.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/gfx-runtime",
+      "selector": "check_gfx_runtime_profile.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/gpu-gfx-headroom",
+      "selector": "check_gpu_gfx_headroom_conformance.sh"
+    },
+    {
+      "dependencies": [],
+      "evidenceClass": "cache-sensitive",
+      "group": "profile",
+      "id": "profile/wasm-production-surface",
+      "selector": "check_wasm_production_surface.sh"
+    },
+    {
+      "condition": "agent-gpu-strict",
+      "dependencies": [],
+      "evidenceClass": "stress-performance",
+      "group": "profile",
+      "id": "profile/gpu-device-conformance",
+      "selector": "render_gpu_compute_device_conformance_report.sh"
+    }
+  ],
+  "executionClasses": [
+    {
+      "cacheStates": [
+        "cold",
+        "warm"
+      ],
+      "dependencies": [],
+      "id": "cache-sensitive",
+      "isolation": "owned-ephemeral-root",
+      "minimumSamplesPerState": 3,
+      "oddSamplesRequired": true,
+      "repeatPolicy": "independent-matched-cohorts"
+    },
+    {
+      "cacheStates": [
+        "not-measured"
+      ],
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "id": "invariant",
+      "isolation": "owned-ephemeral-root",
+      "minimumSamplesPerState": 1,
+      "oddSamplesRequired": true,
+      "repeatPolicy": "exactly-once"
+    },
+    {
+      "cacheStates": [
+        "not-measured"
+      ],
+      "dependencies": [
+        "setup/evidence-bundle"
+      ],
+      "id": "stress-performance",
+      "isolation": "exclusive-owned-ephemeral-root",
+      "minimumSamplesPerState": 3,
+      "oddSamplesRequired": true,
+      "repeatPolicy": "independent-odd-cohort"
+    }
+  ],
+  "fanout": {
+    "consumers": [
+      "invariant",
+      "stress-performance"
+    ],
+    "crossRunReuseAllowed": false,
+    "producer": "setup/evidence-bundle",
+    "sameRunOnly": true,
+    "sourceSample": {
+      "class": "cold",
+      "index": 1
+    }
+  },
+  "kind": "genesis/release-evidence-dag-v0.2",
+  "profile": "release-full",
+  "version": "0.2.0",
+  "warmPrecondition": {
+    "artifactInventoryMustMatch": true,
+    "cacheKeyMustMatch": true,
+    "featureSetMustMatch": true,
+    "measured": false,
+    "network": "deny",
+    "ownedEmptyRootRequired": true,
+    "sourceMustMatch": true,
+    "toolchainMustMatch": true
+  },
+  "watchdog": {
+    "authority": "independent",
+    "freshnessSeconds": 172800,
+    "fullRunDeadlineSeconds": 3600,
+    "latestMainStandardDeadlineSeconds": 7200,
+    "selfReportingAllowed": false
+  }
+}
