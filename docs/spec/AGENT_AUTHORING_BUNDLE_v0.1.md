@@ -87,6 +87,10 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json`
 - `docs/spec/GENESISBENCH_SCAFFOLD_MANIFEST_v0.1.schema.json`
 - `docs/skill_pack/write_genesiscode_v1/manifest.json`
+- `docs/skill_pack/write_genesiscode_v1/authoring-card.md`
+- `docs/skill_pack/write_genesiscode_v1/prompt-cards.json`
+- `docs/skill_pack/write_genesiscode_v1/recipe-cards.json`
+- `policies/genesiscode_authoring_workflow_v0.1.json`
 - `docs/write_genesisCode_skill.md`
 - `examples/canonical_language/v0.1/README.md`
 - `examples/canonical_language/v0.1/suite.json`

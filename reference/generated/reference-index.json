@@ -5,7 +5,7 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 309,
+    "canonicalSources": 273,
     "diagnostics": 196,
     "exampleFiles": 189,
     "hostOperations": 188,
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "9a9ecec5750ab25462bc99000cb2c355bb738ef3189adcb67571bedb5f60b940"
+      "sha256": "b34c38e8bb91d348d335bb0ad5a6934823e9615254b367e1b1fa7408d14dc5ce"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "10addd4f51f92dcf0866555cd0caa8c01bbb03427351cda53c80e69af111bee9"
+      "sha256": "efadfa89a0fed07c35c46c4f135c8c2880e5f62271034dd1157f8f27549fa7fd"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -179,168 +179,24 @@
       "sha256": "f75cfa079e5bed93de12ee9d2e77654f7a65c31523a61af1592eaf772791f005"
     },
     {
+      "path": "docs/skill_pack/write_genesiscode_v1/authoring-card.md",
+      "sha256": "10bbe89753f3bba9ff80a00d6fd481abef075bc1a95331aae735326d56b1e2ef"
+    },
+    {
       "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
-      "sha256": "08aacd230b0765844e4508db9d85d4558f3db61f9130d91bf167bfb147649d37"
+      "sha256": "28fbc6007e1cdcdcf7f4f0f3f0600175461fa4b0e6e56331b7fd02a0a147ffda"
     },
     {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/assurance_release.md",
-      "sha256": "6fd8ff49a7ebb4a39b141e24d1caf9b6e05c58a94c51fe98a13391a060de4901"
+      "path": "docs/skill_pack/write_genesiscode_v1/prompt-cards.json",
+      "sha256": "6f3e662814c2df8f7d8794b2f4b5e97f1bdb9f4923eb9ed562735e6da74880d4"
     },
     {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/backlog_slice.md",
-      "sha256": "52700efcd0ef8fbecfab97065d887144553467d04a416073ea0117c7d1307f5e"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/capability_addition.md",
-      "sha256": "2a3fa62c803520b52abd39e93bd186ce4c225e1e196616eba1c02964c944b8b3"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/complex_ui_app_stacks.md",
-      "sha256": "1a696b50aae5c811bfd7d615e9ee0a0eb93f11839fb8411a062e60aaf5e7a21c"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/data_pipeline.md",
-      "sha256": "e7d9ff4e3019724a94fb5e68106eae5489bf35154d71e68ddd12405c9c96f973"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/deployment_targets.md",
-      "sha256": "db5f2bf50d411b68c73076e7ad459b885060f518c7bb3d844c31400f65464ced"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/failure_recovery.md",
-      "sha256": "21561f37cb551899dc358a335601246d634080d43352a9925e547443c883bd80"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/hardware_device_integration.md",
-      "sha256": "90cdf3c103a90b2992c2e9e461fd4644bbdc9471131046f3761c2edddb2ee4e5"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/ml_data_engineering.md",
-      "sha256": "9493cad663982e8a7255430d91ed298c8a453231da10fa7b2712a6858a45b4a1"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/performance_triage.md",
-      "sha256": "650f095e80b032978e726f0e15c4a9ca7b7a63bb106299abb7152ac3e7c8245a"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/plugin_ffi.md",
-      "sha256": "7ecf1a726e9bdbe7d3bb3d0848d68a6900cea94350b8e00b70e24915e7010e22"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/security_auth_services.md",
-      "sha256": "f1bb3a751eda34ef40df54a76d52c31ad911b1488a98a88b916a1b16f3c4a88e"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/selfhost_cutover.md",
-      "sha256": "5ee1e85ac5434ce66e125a0622b0d0b590e70e0e8a6ac78a50a5bb889a44833b"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/prompts/xr_experience.md",
-      "sha256": "b44f123d1a0a1c4cc8d443a51e2c27466e12f2c94b00504f2500ef9fab7911c2"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/assurance_workflow.md",
-      "sha256": "73258daea44644bf0a1794eb84cd50d41557e97cc703b4dff13ddffb472bc7ff"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/backend_topology_workflow.md",
-      "sha256": "a41192cb3224e02c3dc6d1be6b8481a766d5f94814404d7e9a38b42d891f824e"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/browser_runtime_workflow.md",
-      "sha256": "8a5d762dd884158ce13c34307a4740d48e0252cbf17c45e73f3f572419e3983a"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/complex_ui_app_stacks_workflow.md",
-      "sha256": "04bb67d7a4019c0fdcbf4a53d977c016b3f181528c1e3aef7ac3f6b184eed427"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/data_workflow.md",
-      "sha256": "a292456d4d3030d67651f72a1d7f5c40bb11162924fb3653852a64f43072f259"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/deployment_targets_workflow.md",
-      "sha256": "84ef342af314827e4bc3ffaef207542a01bb1fe20ed0551c3bb39c3f82bb1bb7"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/failure_recovery_workflow.md",
-      "sha256": "8e44ef07f4bbb02d87d2869512d9ec608216baf71375b21fb1f1009cfd7020fe"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/filesystem_workflow.md",
-      "sha256": "c57685abbb118d0460ce632396fde5c7cdeb6144c0c8c467d625f75525898a37"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/game_loop_workflow.md",
-      "sha256": "ec232b8edcca410d1430dac0d0dcfb4caa0a2c2aebfaa3496a5a218ca3b53258"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
-      "sha256": "2be32061731d56e1bf01ac4b01d7b707ac415a6f95c4f917c41abb8ad132fd52"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/hardware_device_integration_workflow.md",
-      "sha256": "5eeedd20220bddcccae2f212f833b17a9f00f94c2fd20ef42ee435216f0aa644"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/inbound_server_workflow.md",
-      "sha256": "27685c81f6e9996fbd0742d311e9105db9fff829e9802da333557afdd22034fc"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/ml_data_engineering_workflow.md",
-      "sha256": "84e2de917d9a9dd396f417b87eb45bd3cf226ca7470014fb16f2453d662f7419"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/multi_agent_orchestration_workflow.md",
-      "sha256": "4a002779090b05747b079be3a1f8eee2e88443a69bc2bb1e56a424708c649416"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/network_process_workflow.md",
-      "sha256": "5a25c34b7fdc89d9075208dedf4f425c67320b2396c6f895fc892afeeda3043c"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/package_workflow.md",
-      "sha256": "733bfab457fe72c2a40f26a760ef19ff6a5bb27e33de32d66cda8a06e339100a"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/performance_triage_workflow.md",
-      "sha256": "eafca6f6aa3d6add869429f4ce8d96d7ef8760c9d0532c7fd92dbdcfd43aa3c8"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/plugin_ffi_workflow.md",
-      "sha256": "92ccf4de79e49c24b91665488e92b4cb83fb47fc1158372060082b3789f0992c"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/process_lifecycle_workflow.md",
-      "sha256": "67fd7c500a0d408beb25cf66e9a302a7959415b7943813d32effe02d4401c87e"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/raw_network_sockets_workflow.md",
-      "sha256": "029e7467fc8d28c85598e7199f28b0f9d213d1719b28526c80f231dc5631dcec"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/realtime_collaboration_workflow.md",
-      "sha256": "1fc2fa67d7eb3c25b16852e0e392b9fea719d68ce8621d90993bd2e7d7525c68"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/security_auth_services_workflow.md",
-      "sha256": "80662133c8ffcaf2a3684de9e8dd40d3134abf2b6bf848df895e43ba6d109cc1"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/service_workflow.md",
-      "sha256": "8552c3bffb983b595fc2cd2644394ab06e40599ab4e7d828433f71cb375ddb71"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/time_control_workflow.md",
-      "sha256": "5f0104194fa3787ba7770e2db20053b20b0aef0af3fec1e982a92f72d18e5d4e"
-    },
-    {
-      "path": "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
-      "sha256": "7d5b0c4d710ca0542ed3bb8e8cea0bc7c815b9e2893164362354b5f38d2ba8f1"
+      "path": "docs/skill_pack/write_genesiscode_v1/recipe-cards.json",
+      "sha256": "0011302d02f994972b2876bbd6852eb5a1092ac4aab3b70f8aaf31bd3e56a1d0"
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "b614aba7b616deb7c7545474529e9b48676270e518a39f034e3f74b4f0a4e674"
+      "sha256": "7e97fcb8ff093f4048b1f4b850b9db6cea36556c23ab55ed729faea934e8b62e"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -428,7 +284,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "eecf80f68c6d69169c9e4b4e9cf16bf1f7a670f2d5367d233524fe604b2a5be4"
+      "sha256": "29fa2242f0f376723179b44a7f4ae69db20a1bb9098a7168d5cab438183ae5ce"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -952,7 +808,7 @@
     },
     {
       "path": "docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md",
-      "sha256": "7207bf996009c748b2b000c96f5f9bf86d70c874e71cc2ac1d88b5479767b556"
+      "sha256": "5c0bb832fd5f6e687baf590f19916d73fe51c4d1f275475f4a486bc888fe5404"
     },
     {
       "path": "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
@@ -1200,7 +1056,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
-      "sha256": "66982a54f2e441865c6bf0935d2e106317f366b7f112abd4913ce5193fcbe14a"
+      "sha256": "bc84523de4d3e155baaff91ab9090a561c05ec82ddeb2e0a32bb77e9c33a0651"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json",
@@ -1208,7 +1064,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
-      "sha256": "edc2714d687991717de518cdf26e972902019b127c11915ad274f36b542ee26f"
+      "sha256": "4f4482a0c52b4dbf6df076ff8e16449c85e2fb729d7df21687f9b3bd836ff714"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
@@ -1236,7 +1092,7 @@
     },
     {
       "path": "docs/write_genesisCode_skill.md",
-      "sha256": "56c21401f69cb9daf758b66ffbdec488224df28ab6b39f7d80949439fa9a80ca"
+      "sha256": "d4e96423454608920ba92771e97fe998f006d4f0c1c1c1d67e3d6c0848eaa9f9"
     },
     {
       "path": "feature_matrix.md",

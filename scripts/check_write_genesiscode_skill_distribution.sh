@@ -24,7 +24,10 @@ ASSURANCE_INPUT="${GENESIS_WRITE_SKILL_ASSURANCE_REPORT:-.genesis/perf/assurance
   exit 1
 }
 
+python3 scripts/lib/genesiscode_authoring_skill.py --check --self-test
+
 python3 - "$MANIFEST_PATH" "$ROOT_DIR" "$KIT_ROOT" <<'PY'
+from hashlib import sha256
 import json
 import pathlib
 import sys
@@ -33,6 +36,26 @@ manifest_path = pathlib.Path(sys.argv[1])
 root = pathlib.Path(sys.argv[2])
 kit_root = pathlib.Path(sys.argv[3])
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+def fail(message):
+    raise SystemExit("write-genesiscode-skill-distribution: " + message)
+
+def load_cards(key, expected_kind):
+    relative = manifest.get(key)
+    if not isinstance(relative, str) or not relative:
+        fail(f"{key} must identify a card registry")
+    path = kit_root / relative
+    if not path.is_file():
+        fail(f"missing card registry: {path.as_posix()}")
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if document.get("kind") != expected_kind or str(document.get("version")) != "1":
+        fail(f"invalid card registry identity: {path.as_posix()}")
+    if document.get("source") != manifest.get("source") or document.get("source_sha256") != manifest.get("source_sha256"):
+        fail(f"card registry source identity drift: {path.as_posix()}")
+    cards = document.get("cards")
+    if not isinstance(cards, list) or not cards:
+        fail(f"empty card registry: {path.as_posix()}")
+    return cards
 
 if manifest.get("kind") != "genesis/write-genesiscode-skill-distribution-v1":
     raise SystemExit(
@@ -43,6 +66,15 @@ if str(manifest.get("version")) != "1":
         "write-genesiscode-skill-distribution: manifest version must be '1'"
     )
 
+source = manifest.get("source")
+if not isinstance(source, str) or not source or not (root / source).is_file():
+    fail("manifest source is missing")
+actual_source_sha = sha256((root / source).read_bytes()).hexdigest()
+if manifest.get("source_sha256") != actual_source_sha:
+    fail("manifest source identity is stale")
+
+prompt_cards = load_cards("prompt_cards", "genesis/write-genesiscode-prompt-cards-v1")
+recipe_cards = load_cards("recipe_cards", "genesis/write-genesiscode-recipe-cards-v1")
 prompts = manifest.get("prompts")
 recipes = manifest.get("recipes")
 expected_reports = manifest.get("expected_reports")
@@ -89,17 +121,10 @@ if len(recipes) < min_recipes:
         f"{len(recipes)} < {min_recipes}"
     )
 
-for item in prompts:
-    if not isinstance(item, dict):
-        raise SystemExit("write-genesiscode-skill-distribution: prompt entry must be an object")
-    prompt_path = item.get("path")
-    if not isinstance(prompt_path, str) or not prompt_path:
-        raise SystemExit("write-genesiscode-skill-distribution: prompt path must be a non-empty string")
-    full = kit_root / prompt_path
-    if not full.is_file():
-        raise SystemExit(
-            f"write-genesiscode-skill-distribution: missing prompt file: {full.as_posix()}"
-        )
+prompt_ids = [item.get("id") for item in prompts if isinstance(item, dict)]
+card_prompt_ids = [item.get("id") for item in prompt_cards if isinstance(item, dict)]
+if prompt_ids != card_prompt_ids or len(prompt_ids) != len(set(prompt_ids)):
+    fail("prompt inventory and generated cards disagree")
 
 seen_domains = set()
 fault_injection_count = 0
@@ -107,12 +132,9 @@ fault_injection_count = 0
 for item in recipes:
     if not isinstance(item, dict):
         raise SystemExit("write-genesiscode-skill-distribution: recipe entry must be an object")
-    recipe_path = item.get("path")
     workflow_path = item.get("workflow")
     domain = item.get("domain")
     mode = item.get("mode", "standard")
-    if not isinstance(recipe_path, str) or not recipe_path:
-        raise SystemExit("write-genesiscode-skill-distribution: recipe path must be a non-empty string")
     if not isinstance(workflow_path, str) or not workflow_path:
         raise SystemExit("write-genesiscode-skill-distribution: recipe workflow must be a non-empty string")
     if not isinstance(domain, str) or not domain:
@@ -124,16 +146,16 @@ for item in recipes:
     seen_domains.add(domain)
     if mode == "fault-injection":
         fault_injection_count += 1
-    recipe_full = kit_root / recipe_path
-    if not recipe_full.is_file():
-        raise SystemExit(
-            f"write-genesiscode-skill-distribution: missing recipe file: {recipe_full.as_posix()}"
-        )
     workflow_full = root / workflow_path
     if not workflow_full.is_file():
         raise SystemExit(
             f"write-genesiscode-skill-distribution: missing workflow script: {workflow_full.as_posix()}"
         )
+
+recipe_ids = [item.get("id") for item in recipes if isinstance(item, dict)]
+card_recipe_ids = [item.get("id") for item in recipe_cards if isinstance(item, dict)]
+if recipe_ids != card_recipe_ids or len(recipe_ids) != len(set(recipe_ids)):
+    fail("recipe inventory and generated cards disagree")
 
 missing_domains = [d for d in required_domains if d not in seen_domains]
 if missing_domains:

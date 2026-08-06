@@ -32,12 +32,12 @@ Canonical authoring assets are intentionally consolidated into existing distribu
 avoid markdown sprawl:
 
 - non-graphics GPU data/simulation recipe:
-  - `docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md`
+  - `docs/skill_pack/write_genesiscode_v1/recipe-cards.json` (`gpu_compute_workflow` and `gpu_data_simulation_workflow`)
   - manifest id: `gpu_data_simulation_workflow`
   - workflow: `examples/agent_compute_workflow/workflow.sh`
   - heavy-compute variant workflow: `examples/agent_gpu_compute_workflow/workflow.sh`
 - XR deploy/test recipe:
-  - `docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md`
+  - `docs/skill_pack/write_genesiscode_v1/recipe-cards.json` (`xr_workflow` and `xr_deploy_test_workflow`)
   - manifest id: `xr_deploy_test_workflow`
   - workflow: `scripts/check_gpu_xr_productization_kits.sh`
   - runtime workflow: `examples/agent_xr_runtime_workflow/workflow.sh`

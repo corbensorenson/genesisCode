@@ -1,0 +1,675 @@
+{
+  "distribution_requirements": {
+    "min_prompts": 14,
+    "min_recipes": 27,
+    "min_report_score": 100,
+    "require_fault_injection_recipe": true,
+    "required_recipe_domains": [
+      "service",
+      "graphics",
+      "gpu_compute",
+      "gpu_non_graphics",
+      "package_publish_sync",
+      "deployment_targets",
+      "failure_recovery",
+      "performance_triage",
+      "assurance",
+      "plugin_ffi",
+      "xr_runtime",
+      "xr_productization",
+      "durable_data",
+      "process_lifecycle",
+      "filesystem",
+      "network_process",
+      "raw_network_sockets",
+      "inbound_server",
+      "time_control",
+      "multi_agent_orchestration",
+      "realtime_collaboration",
+      "backend_topology",
+      "browser_runtime",
+      "ml_data_engineering",
+      "complex_ui_app_stacks",
+      "hardware_device_integration",
+      "security_auth_services"
+    ]
+  },
+  "expected_reports": [
+    {
+      "id": "skill_conformance",
+      "kind": "genesis/write-genesiscode-skill-conformance-v0.1",
+      "min_score": 100,
+      "path": ".genesis/perf/write_genesiscode_skill_conformance_report.json"
+    }
+  ],
+  "kind": "genesis/genesiscode-authoring-workflow-policy-v0.1",
+  "prompts": [
+    {
+      "checks": [
+        "bash scripts/check_write_genesiscode_skill_distribution.sh",
+        "bash scripts/check_write_genesiscode_skill_conformance.sh"
+      ],
+      "id": "backlog_slice",
+      "inputs": [
+        "Current `upgrade_plan.md`",
+        "Current `feature_matrix.md`",
+        "Current `docs/status/REDTEAM_REPORT.md`"
+      ],
+      "objective": "Use this prompt to complete the highest-impact unresolved `upgrade_plan.md` items.",
+      "outputs": [
+        "explicit checklist of selected IDs",
+        "code/doc changes with file paths",
+        "deterministic verification commands and outcomes",
+        "updated remaining-open item count"
+      ],
+      "title": "Backlog Slice"
+    },
+    {
+      "checks": [
+        "bash scripts/check_capability_indices.sh",
+        "bash scripts/check_host_abi_conformance.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "capability_addition",
+      "inputs": [
+        "host ABI capability op contract docs",
+        "capability index docs/contracts",
+        "affected prelude module(s) under `prelude/modules/`"
+      ],
+      "objective": "Use this prompt when adding or extending host capability wrappers/contracts.",
+      "outputs": [
+        "deterministic wrapper contract and payload schema",
+        "fail-closed policy requirements",
+        "replay determinism evidence path",
+        "updated docs/spec + capability indices"
+      ],
+      "title": "Capability Addition"
+    },
+    {
+      "checks": [
+        "bash scripts/check_selfhost_boundary.sh --strict",
+        "bash scripts/check_selfhost_toolchain_review_fresh.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "selfhost_cutover",
+      "inputs": [
+        "strict selfhost boundary docs",
+        "active upgrade plan IDs related to selfhost parity/cutover",
+        "affected runtime/CLI contracts"
+      ],
+      "objective": "Use this prompt when migrating behavior from bootstrap/runtime boundaries into `.gc`.",
+      "outputs": [
+        "removed fallback/deprecated path list",
+        "parity and replay verification evidence",
+        "updated plan/matrix status deltas"
+      ],
+      "title": "Selfhost Cutover"
+    },
+    {
+      "checks": [
+        "cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts -- --exact",
+        "bash scripts/check_capability_evidence_ledger.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "deployment_targets",
+      "inputs": [
+        "`docs/spec/CLI.md` target contract section",
+        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+        "existing target tests in `crates/gc_cli/tests/cli_pkg_workspace.rs`"
+      ],
+      "objective": "Use this prompt when extending `gcpm build` target coverage and deployment contracts.",
+      "outputs": [
+        "target-specific artifact contract deltas",
+        "deterministic per-target verification steps",
+        "updated test/gate coverage proving target behavior"
+      ],
+      "title": "Deployment Targets"
+    },
+    {
+      "checks": [
+        "bash scripts/check_host_bridge_fault_injection.sh",
+        "bash scripts/check_no_user_panics.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "failure_recovery",
+      "inputs": [
+        "affected capability/effect contract docs",
+        "failure injection gate outputs",
+        "relevant policy profile docs"
+      ],
+      "objective": "Use this prompt when adding fail-closed error handling, rollback, or recovery behavior.",
+      "outputs": [
+        "explicit failure taxonomy and sealed error expectations",
+        "deterministic recovery path (or fail-closed rejection) with no silent fallback",
+        "regression tests for injected failure classes"
+      ],
+      "title": "Failure Recovery"
+    },
+    {
+      "checks": [
+        "bash scripts/check_runtime_backend_feature_matrix.sh",
+        "bash scripts/check_perf_budgets.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "performance_triage",
+      "inputs": [
+        "`.genesis/perf/*` reports for impacted lanes",
+        "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
+        "affected gate scripts in `scripts/`"
+      ],
+      "objective": "Use this prompt when reducing runtime/profile gate latency without reducing determinism.",
+      "outputs": [
+        "top hotspot list with elapsed/budget deltas",
+        "concrete runtime/cache/sharding changes",
+        "SLO guard updates with fail-closed regression checks"
+      ],
+      "title": "Performance Triage"
+    },
+    {
+      "checks": [
+        "bash scripts/check_assurance_profile_packs.sh",
+        "bash scripts/check_assurance_standards_crosswalk.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "assurance_release",
+      "inputs": [
+        "assurance pack/profile docs and policies",
+        "active release profile gates",
+        "latest assurance artifacts/reports"
+      ],
+      "objective": "Use this prompt when strengthening requirements traceability, qualification, and release evidence.",
+      "outputs": [
+        "standards profile delta (DO-178C/NASA/IEC) for the change",
+        "updated assurance artifact schema references",
+        "deterministic gate updates and evidence outputs"
+      ],
+      "title": "Assurance Release"
+    },
+    {
+      "checks": [
+        "bash scripts/check_host_abi_conformance.sh",
+        "bash scripts/check_capability_indices.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "plugin_ffi",
+      "inputs": [
+        "docs/spec/HOST_ABI.md",
+        "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md",
+        "affected capability wrappers and policy docs"
+      ],
+      "objective": "Use this prompt when extending host plugin/FFI contracts or bridge semantics.",
+      "outputs": [
+        "typed request/response schema deltas",
+        "command allowlist + bridge digest pinning changes",
+        "deterministic host-bridge replay expectations"
+      ],
+      "title": "Plugin/FFI"
+    },
+    {
+      "checks": [
+        "bash scripts/check_webxr_browser_conformance_lane.sh",
+        "bash scripts/check_agent_reference_workflows.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "xr_experience",
+      "inputs": [
+        "docs/spec/XR_HOST_RUNTIME_v0.1.md",
+        "docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md",
+        "relevant XR workflow/example scripts"
+      ],
+      "objective": "Use this prompt when implementing XR runtime features, contracts, or workflows.",
+      "outputs": [
+        "XR capability contract deltas",
+        "deterministic replay and parity behavior notes",
+        "updated runtime profile checks for XR pathways"
+      ],
+      "title": "XR Experience"
+    },
+    {
+      "checks": [
+        "bash scripts/check_agent_reference_workflows.sh",
+        "bash scripts/check_capability_evidence_ledger.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "data_pipeline",
+      "inputs": [
+        "docs/spec/DOMAIN_KITS_v0.1.md",
+        "durable data capability docs",
+        "relevant workflow examples and policy files"
+      ],
+      "objective": "Use this prompt when implementing durable data and IO-heavy workflows.",
+      "outputs": [
+        "deterministic data contract/shape updates",
+        "policy and bounds changes for data operations",
+        "replay-consistent workflow verification evidence"
+      ],
+      "title": "Data Pipeline"
+    },
+    {
+      "checks": [
+        "bash scripts/check_agent_reference_workflows.sh",
+        "bash scripts/check_agent_generative_workloads.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "ml_data_engineering",
+      "inputs": [
+        "data sources/contracts and schema constraints",
+        "model/pipeline stages and replay requirements",
+        "deployment/runtime targets"
+      ],
+      "objective": "Use this prompt for AI-authored data and model pipeline systems.",
+      "outputs": [
+        "deterministic ingestion + transform contracts",
+        "pipeline orchestration and provenance evidence paths",
+        "reproducible verification recipe and runtime report references"
+      ],
+      "title": "ML/Data Engineering"
+    },
+    {
+      "checks": [
+        "bash scripts/check_agent_reference_workflows.sh",
+        "bash scripts/check_agent_workflow_runtime_parity.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "complex_ui_app_stacks",
+      "inputs": [
+        "target UX/runtime surfaces (browser/native/xr)",
+        "interaction + state management requirements",
+        "deployment topology and policy constraints"
+      ],
+      "objective": "Use this prompt when an agent must deliver full-stack interactive UI systems.",
+      "outputs": [
+        "deterministic render/input/state contracts",
+        "integration plan for runtime and deployment lanes",
+        "replay-safe test path across required domains"
+      ],
+      "title": "Complex UI/App Stacks"
+    },
+    {
+      "checks": [
+        "bash scripts/check_gpu_compute_device_conformance.sh",
+        "bash scripts/check_gpu_xr_productization_kits.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "hardware_device_integration",
+      "inputs": [
+        "target hardware/runtime constraints",
+        "device capability policy requirements",
+        "deterministic replay and safety obligations"
+      ],
+      "objective": "Use this prompt for GPU/XR/device-facing systems that require strict runtime evidence.",
+      "outputs": [
+        "capability-safe device contracts",
+        "deterministic runtime + replay evidence references",
+        "fallback posture and fault-injection validation lane"
+      ],
+      "title": "Hardware Device Integration"
+    },
+    {
+      "checks": [
+        "bash scripts/check_agent_reference_workflows.sh",
+        "bash scripts/check_host_bridge_fault_injection.sh",
+        "bash scripts/check_write_genesiscode_skill_distribution.sh"
+      ],
+      "id": "security_auth_services",
+      "inputs": [
+        "trust boundaries and identity/auth requirements",
+        "service topology and policy constraints",
+        "required audit/replay evidence obligations"
+      ],
+      "objective": "Use this prompt for security-critical auth/service boundary design.",
+      "outputs": [
+        "explicit capability boundary contracts",
+        "deterministic service/auth workflow plan",
+        "audit-ready verification and failure-path checks"
+      ],
+      "title": "Security/Auth Services"
+    }
+  ],
+  "recipes": [
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "service",
+      "id": "service_workflow",
+      "mode": "standard",
+      "title": "Service Workflow",
+      "workflow": "examples/agent_service_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "graphics",
+      "id": "game_loop_workflow",
+      "mode": "standard",
+      "title": "Game Loop Workflow",
+      "workflow": "examples/agent_long_running_gfx_loop_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
+      "domain": "gpu_compute",
+      "id": "gpu_compute_workflow",
+      "mode": "standard",
+      "title": "Gpu Compute Workflow",
+      "workflow": "examples/agent_gpu_compute_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "package_publish_sync",
+      "id": "package_workflow",
+      "mode": "standard",
+      "title": "Package Workflow",
+      "workflow": "examples/agent_multi_package_publish_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "deployment_targets",
+      "id": "deployment_targets_workflow",
+      "mode": "standard",
+      "title": "Deployment Targets Workflow",
+      "workflow": "examples/agent_deploy_bundle_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_host_bridge_fault_injection.sh"
+      ],
+      "domain": "failure_recovery",
+      "id": "failure_recovery_workflow",
+      "mode": "fault-injection",
+      "title": "Failure Recovery Workflow",
+      "workflow": "scripts/check_host_bridge_fault_injection.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_runtime_backend_feature_matrix.sh"
+      ],
+      "domain": "performance_triage",
+      "id": "performance_triage_workflow",
+      "mode": "standard",
+      "title": "Performance Triage Workflow",
+      "workflow": "scripts/check_runtime_backend_feature_matrix.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_assurance_profile_packs.sh"
+      ],
+      "domain": "assurance",
+      "id": "assurance_workflow",
+      "mode": "standard",
+      "title": "Assurance Workflow",
+      "workflow": "scripts/check_assurance_profile_packs.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "plugin_ffi",
+      "id": "plugin_ffi_workflow",
+      "mode": "standard",
+      "title": "Plugin Ffi Workflow",
+      "workflow": "examples/agent_plugin_runtime_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
+      "domain": "xr_runtime",
+      "id": "xr_workflow",
+      "mode": "standard",
+      "title": "Xr Workflow",
+      "workflow": "examples/agent_xr_runtime_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "durable_data",
+      "id": "data_workflow",
+      "mode": "standard",
+      "title": "Data Workflow",
+      "workflow": "examples/agent_durable_data_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
+      "domain": "gpu_non_graphics",
+      "id": "gpu_data_simulation_workflow",
+      "mode": "standard",
+      "title": "Gpu Data Simulation Workflow",
+      "workflow": "examples/agent_compute_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
+      "domain": "xr_productization",
+      "id": "xr_deploy_test_workflow",
+      "mode": "standard",
+      "title": "Xr Deploy Test Workflow",
+      "workflow": "scripts/check_gpu_xr_productization_kits.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "process_lifecycle",
+      "id": "process_lifecycle_workflow",
+      "mode": "standard",
+      "title": "Process Lifecycle Workflow",
+      "workflow": "examples/agent_process_lifecycle_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "filesystem",
+      "id": "filesystem_workflow",
+      "mode": "standard",
+      "title": "Filesystem Workflow",
+      "workflow": "examples/agent_filesystem_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "network_process",
+      "id": "network_process_workflow",
+      "mode": "standard",
+      "title": "Network Process Workflow",
+      "workflow": "examples/agent_network_process_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "raw_network_sockets",
+      "id": "raw_network_sockets_workflow",
+      "mode": "standard",
+      "title": "Raw Network Sockets Workflow",
+      "workflow": "examples/agent_raw_network_sockets_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "inbound_server",
+      "id": "inbound_server_workflow",
+      "mode": "standard",
+      "title": "Inbound Server Workflow",
+      "workflow": "examples/agent_inbound_server_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "time_control",
+      "id": "time_control_workflow",
+      "mode": "standard",
+      "title": "Time Control Workflow",
+      "workflow": "examples/agent_time_control_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "multi_agent_orchestration",
+      "id": "multi_agent_orchestration_workflow",
+      "mode": "standard",
+      "title": "Multi Agent Orchestration Workflow",
+      "workflow": "examples/agent_multi_agent_orchestration_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "realtime_collaboration",
+      "id": "realtime_collaboration_workflow",
+      "mode": "standard",
+      "title": "Realtime Collaboration Workflow",
+      "workflow": "examples/agent_realtime_collaboration_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "backend_topology",
+      "id": "backend_topology_workflow",
+      "mode": "standard",
+      "title": "Backend Topology Workflow",
+      "workflow": "examples/agent_backend_topology_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "browser_runtime",
+      "id": "browser_runtime_workflow",
+      "mode": "standard",
+      "title": "Browser Runtime Workflow",
+      "workflow": "examples/agent_browser_runtime_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "ml_data_engineering",
+      "id": "ml_data_engineering_workflow",
+      "mode": "standard",
+      "title": "Ml Data Engineering Workflow",
+      "workflow": "examples/agent_ml_pipeline_variant_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_workflow_runtime_parity.sh"
+      ],
+      "domain": "complex_ui_app_stacks",
+      "id": "complex_ui_app_stacks_workflow",
+      "mode": "standard",
+      "title": "Complex Ui App Stacks Workflow",
+      "workflow": "examples/agent_browser_runtime_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_gpu_xr_productization_kits.sh"
+      ],
+      "domain": "hardware_device_integration",
+      "id": "hardware_device_integration_workflow",
+      "mode": "standard",
+      "title": "Hardware Device Integration Workflow",
+      "workflow": "examples/agent_gpu_compute_workflow/workflow.sh"
+    },
+    {
+      "checks": [
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "domain": "security_auth_services",
+      "id": "security_auth_services_workflow",
+      "mode": "standard",
+      "title": "Security Auth Services Workflow",
+      "workflow": "examples/agent_backend_topology_workflow/workflow.sh"
+    }
+  ],
+  "skill": {
+    "description": "Author, modify, review, test, and evolve GenesisCode source, packages, language semantics, runtime bridges, capabilities, self-hosted tooling, and agent workflows with deterministic evidence and fail-closed policy controls. Use for .gc implementation and GenesisCode repository changes.",
+    "mission": "Deliver the smallest complete deterministic, obligation-gated change while preserving kernel purity, sealed boundaries, capability least privilege, replay equivalence, and self-hosting direction.",
+    "name": "genesiscode-authoring"
+  },
+  "verification_scripts": [
+    "scripts/check_write_genesiscode_skill_distribution.sh",
+    "scripts/check_write_genesiscode_skill_conformance.sh"
+  ],
+  "version": "0.1",
+  "workflow_policy": {
+    "review_output": [
+      "Findings before summary for reviews.",
+      "Changed files and semantic intent.",
+      "Validation commands with pass/fail outcomes.",
+      "Residual risks and concrete blockers.",
+      "Completed task IDs and remaining roadmap/P0/P1 counts."
+    ],
+    "rules": [
+      "Keep the G-lambda kernel pure; ambient filesystem, time, randomness, network, process, UI, and model access belong behind explicit effects.",
+      "Preserve unforgeable UNHANDLED, EFFECT, and ERROR seals, and return explicit errors for every user-controlled failure.",
+      "Require deny-by-default capability policy, bounded resources, hard cancellation where promised, deterministic logs, and strict replay.",
+      "Load and verify GC-AGENT-v0.3 before authoring; unsupported syntax, targets, and capabilities fail closed.",
+      "Use exact diagnostic catalog codes and agent-index lookup; never infer contracts from message prose.",
+      "Keep public development references separate from held-out evidence and never expose private custody material.",
+      "Optimizers, models, and benchmark solvers may propose but never verify, promote, grant authority, or rewrite evaluators.",
+      "Prefer GenesisCode libraries and self-hosted modules; restrict Rust changes to measured bootstrap, host, and safety boundaries.",
+      "Use generated core, task, symbol, capability, and diagnostic cards as reference authority; do not duplicate their content here.",
+      "Use generated-authority update commands only to produce candidates; only read-only checks and independently reviewed evidence can close work."
+    ],
+    "steps": [
+      {
+        "actions": [
+          "Inspect the generated roadmap execution slice and choose its current coherent transaction.",
+          "Load the compact core card, matching task card, exact symbols, capability indices, and affected normative specs.",
+          "State a falsifiable acceptance condition or reproduce the defect before editing."
+        ],
+        "name": "Orient"
+      },
+      {
+        "actions": [
+          "Choose the smallest complete vertical slice and identify schemas, policies, resource bounds, replay facts, and negative controls.",
+          "Prefer library behavior over CLI special cases and explicit data contracts over prompt-dependent convention."
+        ],
+        "name": "Design"
+      },
+      {
+        "actions": [
+          "Preserve unrelated work and edit only declared owner paths.",
+          "For package changes use genesis session begin/stage/test/apply; stop on stale snapshots or verification drift.",
+          "Add focused positive, malformed-input, policy-denial, replay, and resource-lifecycle coverage as applicable."
+        ],
+        "name": "Patch"
+      },
+      {
+        "actions": [
+          "Run focused checks first, then the task guard set and bash scripts/test_changed_fast.sh.",
+          "Use canonical updaters for derived files, inspect the full diff, rerun read-only freshness checks, and prove a second update is byte-identical."
+        ],
+        "name": "Verify"
+      },
+      {
+        "actions": [
+          "Report changed semantics, exact commands and outcomes, residual risks, open roadmap and P0/P1 counts, and durable evidence paths.",
+          "Close roadmap work only with the required dated independent evidence; never treat mutable local reports as release proof."
+        ],
+        "name": "Report"
+      }
+    ]
+  }
+}

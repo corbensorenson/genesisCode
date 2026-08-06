@@ -764,7 +764,7 @@
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "705da23ba5ee6f735a3cc5e8c1a9412dd8166b084ad8ad17e33165e32b155f9b",
+      "execution_identity_sha256": "afde6f9e2921a4066cf120c7322504e65bce8423ab354193ccb7f095c2bd6799",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -775,7 +775,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "74d6161c2b79101a3e71ddf0739f027a84fbcd03a780ea1424041387097a2be1",
+      "sha256": "125b3175f0d3f31159f3de341aaa342c534c7a937675116e633ea4b82fd81510",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -3045,7 +3045,7 @@
         },
         {
           "path": "scripts/render_gpu_xr_productization_kits_report.sh",
-          "sha256": "9509ce9271e151c0322492c87c1df883093742af9eeec17f876b57c3a07e6c18"
+          "sha256": "7b05fd489d284c757422bf43438ea1ec91259e43ecb91d7949d878b93c6122a9"
         },
         {
           "path": "scripts/render_webxr_browser_conformance_report.sh",
@@ -3058,7 +3058,7 @@
         "scripts/render_gpu_xr_productization_kits_report.sh",
         "scripts/render_webxr_browser_conformance_report.sh"
       ],
-      "execution_identity_sha256": "d60530979a929879d65612ef0c41f028fb304df085b0e4dcde48254614f08350",
+      "execution_identity_sha256": "e8c39e351f7248a80e11baa8a91d47b4cf694dea82210113409010ee4f0298bc",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5546,6 +5546,7 @@
         "pair_dir.mkdir()",
         "path.write_text(",
         "path.write_text('{\"fixture\":true}\\n', encoding=\"utf-8\")",
+        "path.write_text(json.dumps(document, indent=2, sort_keys=True) + \"\\n\", encoding=\"utf-8\")",
         "path.write_text(json.dumps({\"targets\": [{\"target\": target}]}) + \"\\n\", encoding=\"utf-8\")",
         "rm -rf \"$HEALTH_OUTPUT_FIXTURE\"",
         "rm -rf \"$WRITE_SKILL_FIXTURE\""
@@ -5559,7 +5560,7 @@
       "execution_helper_invocations": [
         "scripts/test_prepare_release_target_reference.sh"
       ],
-      "execution_identity_sha256": "16e6d1aa31bbd9587bd7939fa32a338c15e7875551f30afdbcd8aee72a3c29a5",
+      "execution_identity_sha256": "69f47b22218e236b3ba9d9dcc1863b96eff86dbad6c87e4c63cffe23578487fd",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5570,7 +5571,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "3c8bed1c6987eea73b3690fe3d94f16b4d14dc991131f7aac73e4fa830548c98",
+      "sha256": "9feb51b80aedbd020f0ce5864cb491942c8055281a7c70b00aaf92eaeb5a9f03",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -5585,6 +5586,7 @@
         "pair_dir.mkdir()",
         "path.write_text(",
         "path.write_text('{\"fixture\":true}\\n', encoding=\"utf-8\")",
+        "path.write_text(json.dumps(document, indent=2, sort_keys=True) + \"\\n\", encoding=\"utf-8\")",
         "path.write_text(json.dumps({\"targets\": [{\"target\": target}]}) + \"\\n\", encoding=\"utf-8\")",
         "rm -rf \"$HEALTH_OUTPUT_FIXTURE\"",
         "rm -rf \"$WRITE_SKILL_FIXTURE\"",
@@ -5829,7 +5831,7 @@
         },
         {
           "path": "scripts/render_gpu_xr_productization_kits_report.sh",
-          "sha256": "9509ce9271e151c0322492c87c1df883093742af9eeec17f876b57c3a07e6c18"
+          "sha256": "7b05fd489d284c757422bf43438ea1ec91259e43ecb91d7949d878b93c6122a9"
         },
         {
           "path": "scripts/render_health_profile_evidence_bundle.sh",
@@ -5867,7 +5869,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "c565c37a12c04bcb127e577d11a325fb706fed5181777163b7112dbc2e1a40f0",
+      "execution_identity_sha256": "af671cf32503da52839cbb818d0edeac8e301a4bef4150379c8bcbbd190295b6",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -6380,7 +6382,7 @@
       "execution_helper_invocations": [
         "scripts/lib/health_profile_evidence.sh"
       ],
-      "execution_identity_sha256": "fb5873b585d0bbdf67528bc4e9b315953250f3eb2904eac89e64988ce8d9ab2e",
+      "execution_identity_sha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -6391,7 +6393,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "2f8518d3f7e8ffd50878d74612038e8f3719a8fa7d1eb45c60f384d6b53d3c26",
+      "sha256": "93016e61744e9fef8f8356c992fed8696cc44662284a4d40168ed34952c817f5",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []
@@ -6413,7 +6415,7 @@
       "direct_write_candidates": [],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
+      "execution_identity_sha256": "352025cc70b36a3be61f30d540c703e68cd628f85dd842ac902f78dacb6f2a9b",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -6424,7 +6426,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "2a1a8d26472bc1dfdc4f015a57a3aa1d9b2e5a4ffe741f5cbd852d8bdc3ef394",
+      "sha256": "220cac9050dad0d029d9efd708a889fbbda07fcbb02e7f0fdc605dd60d4ad598",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": []
