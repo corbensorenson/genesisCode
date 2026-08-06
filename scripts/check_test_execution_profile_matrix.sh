@@ -68,6 +68,12 @@ HEALTH_UPDATE_SCRIPT="scripts/update_upgrade_plan_health_report.sh"
 RELEASE_MEASUREMENT_SCRIPT="scripts/measure_release_full_profile.sh"
 RELEASE_MEASUREMENT_RUNNER="scripts/lib/release_full_measurement.py"
 RELEASE_MEASUREMENT_SCHEMA="docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json"
+RELEASE_EVIDENCE_EXECUTION_SCRIPT="scripts/measure_release_evidence_v02.sh"
+RELEASE_EVIDENCE_EXECUTION_RUNNER="scripts/lib/release_evidence_execution.py"
+RELEASE_EVIDENCE_FANOUT_RUNNER="scripts/lib/release_evidence_fanout.py"
+RELEASE_EVIDENCE_FANOUT_SCHEMA="docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json"
+RELEASE_EVIDENCE_WORKER_SCHEMA="docs/spec/RELEASE_EVIDENCE_WORKER_v0.2.schema.json"
+RELEASE_EVIDENCE_AGGREGATE_SCHEMA="docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json"
 RELEASE_EVIDENCE_DAG_POLICY="policies/release_evidence_dag_v0.2.json"
 RELEASE_EVIDENCE_DAG_SCHEMA="docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json"
 RELEASE_EVIDENCE_DAG_RUNNER="scripts/lib/release_evidence_dag.py"
@@ -157,6 +163,12 @@ for path in \
   "$RELEASE_MEASUREMENT_SCRIPT" \
   "$RELEASE_MEASUREMENT_RUNNER" \
   "$RELEASE_MEASUREMENT_SCHEMA" \
+  "$RELEASE_EVIDENCE_EXECUTION_SCRIPT" \
+  "$RELEASE_EVIDENCE_EXECUTION_RUNNER" \
+  "$RELEASE_EVIDENCE_FANOUT_RUNNER" \
+  "$RELEASE_EVIDENCE_FANOUT_SCHEMA" \
+  "$RELEASE_EVIDENCE_WORKER_SCHEMA" \
+  "$RELEASE_EVIDENCE_AGGREGATE_SCHEMA" \
   "$RELEASE_EVIDENCE_DAG_POLICY" \
   "$RELEASE_EVIDENCE_DAG_SCHEMA" \
   "$RELEASE_EVIDENCE_DAG_RUNNER" \
@@ -196,6 +208,7 @@ done
 
 python3 "$RELEASE_EVIDENCE_DAG_RUNNER" --root "$ROOT_DIR" check
 python3 "$RELEASE_EVIDENCE_DAG_RUNNER" --root "$ROOT_DIR" self-test
+python3 "$RELEASE_EVIDENCE_EXECUTION_RUNNER" --root "$ROOT_DIR" self-test
 
 require_doc_pattern() {
   local pattern="$1"
@@ -252,9 +265,10 @@ require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY'
-require_doc_pattern 'scripts/measure_release_full_profile.sh'
-require_doc_pattern 'genesis/release-full-measurement-v0.1'
-require_doc_pattern 'two to five independently scheduled pair workers'
+require_doc_pattern 'scripts/measure_release_evidence_v02.sh'
+require_doc_pattern 'genesis/release-evidence-worker-observation-v0.2'
+require_doc_pattern 'three independently scheduled cold cache-sensitive workers'
+require_doc_pattern 'genesis/release-evidence-aggregate-v0.2'
 require_doc_pattern 'GENESIS_HEALTH_SHARDS'
 require_doc_pattern 'content-addressed `root-host` cache'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_GATE_SHARDS'
@@ -388,9 +402,12 @@ require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=420000'
 require_ci_pattern 'GENESIS_HEALTH_PROFILE=dev-fast'
 require_ci_pattern 'bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health'
 require_ci_pattern 'release_full_measurement:'
-require_ci_pattern 'release_full_measurement_pair:'
-require_ci_pattern 'Cold/Warm Release Measurement Pair'
-require_ci_pattern 'Aggregate Paired Release Measurements'
+require_ci_pattern 'release_evidence_cold_worker:'
+require_ci_pattern 'release_evidence_warm_worker:'
+require_ci_pattern 'release_evidence_invariant_worker:'
+require_ci_pattern 'release_evidence_stress_worker:'
+require_ci_pattern 'Publish Same-Run Cold-1 Fanout'
+require_ci_pattern 'Aggregate Release Evidence DAG'
 require_ci_pattern 'Local Workspace Test Contract (CI unset)'
 require_ci_pattern 'env -u CI cargo test --workspace --profile selfhost-strict'
 python3 - "$CI" <<'PY'
@@ -939,11 +956,17 @@ schema_path = root / "docs/spec/RELEASE_TARGET_REFERENCE_SET_v0.1.schema.json"
 evidence_schema_path = root / "docs/spec/HEALTH_PROFILE_EVIDENCE_BUNDLE_v0.2.schema.json"
 measurement_schema_path = root / "docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json"
 pair_measurement_schema_path = root / "docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json"
+worker_schema_path = root / "docs/spec/RELEASE_EVIDENCE_WORKER_v0.2.schema.json"
+fanout_schema_path = root / "docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json"
+aggregate_schema_path = root / "docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json"
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 evidence_schema = json.loads(evidence_schema_path.read_text(encoding="utf-8"))
 measurement_schema = json.loads(measurement_schema_path.read_text(encoding="utf-8"))
 pair_measurement_schema = json.loads(pair_measurement_schema_path.read_text(encoding="utf-8"))
+worker_schema = json.loads(worker_schema_path.read_text(encoding="utf-8"))
+fanout_schema = json.loads(fanout_schema_path.read_text(encoding="utf-8"))
+aggregate_schema = json.loads(aggregate_schema_path.read_text(encoding="utf-8"))
 if schema.get("$id") != "https://genesiscode.dev/schemas/release-target-reference-set-v0.1.json":
     raise SystemExit("test-execution-profile-matrix: release target reference schema id mismatch")
 if evidence_schema.get("$id") != "https://genesiscode.dev/schemas/health-profile-evidence-bundle-v0.2.json":
@@ -952,6 +975,12 @@ if measurement_schema.get("$id") != "https://genesiscode.dev/schemas/release-ful
     raise SystemExit("test-execution-profile-matrix: release measurement schema id mismatch")
 if pair_measurement_schema.get("$id") != "https://genesiscode.dev/schemas/release-full-measurement-pair-v0.1.schema.json":
     raise SystemExit("test-execution-profile-matrix: release pair measurement schema id mismatch")
+if worker_schema.get("$id") != "https://genesiscode.dev/schemas/release-evidence-worker-v0.2.schema.json":
+    raise SystemExit("test-execution-profile-matrix: release evidence worker schema id mismatch")
+if fanout_schema.get("$id") != "https://genesiscode.dev/schemas/release-evidence-fanout-auth-v0.2.schema.json":
+    raise SystemExit("test-execution-profile-matrix: release evidence fanout schema id mismatch")
+if aggregate_schema.get("$id") != "https://genesiscode.dev/schemas/release-evidence-aggregate-v0.2.schema.json":
+    raise SystemExit("test-execution-profile-matrix: release evidence aggregate schema id mismatch")
 if policy.get("kind") != "genesis/release-target-reference-set-v0.1":
     raise SystemExit("test-execution-profile-matrix: release target reference policy kind mismatch")
 if policy.get("lifecycleSteps") != ["install", "launch", "smoke", "teardown", "reap"]:
@@ -1013,7 +1042,10 @@ for marker in [
         )
 for marker in [
     "release_target_reference_readiness:",
-    "release_full_measurement_pair:",
+    "release_evidence_cold_worker:",
+    "release_evidence_warm_worker:",
+    "release_evidence_invariant_worker:",
+    "release_evidence_stress_worker:",
     "release_full_measurement:",
     "macos-15",
     "ubuntu-24.04",
@@ -1025,11 +1057,20 @@ for marker in [
     "Enable Android KVM",
     "wasmtime/setup@v1",
     "--exclude-test upgrade_plan_health",
-    "pair: [1, 2]",
-    "--pair-index ${{ matrix.pair }}",
-    "--aggregate",
+    "index: [1, 2, 3]",
+    "--state cold",
+    "--state warm",
+    "--evidence-class invariant",
+    "--evidence-class stress-performance",
+    "release-evidence-fanout-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}",
+    "scripts/lib/release_evidence_fanout.py",
+    "scripts/measure_release_evidence_v02.sh aggregate",
+    "scripts/measure_release_evidence_v02.sh initialize-worker",
+    "orchestration/fanout.stderr.log",
+    "if-no-files-found: error",
     "--target-report .genesis/reference-targets/reference-target-android.json",
-    "--pair-output .genesis/release-pairs/release-full-measurement-pair-1",
+    "--worker-output .genesis/release-workers/release-evidence-worker-cold-1",
+    "--worker-output .genesis/release-workers/release-evidence-worker-stress-3",
     "RELEASE_FULL_MEASUREMENT_REQUIRED",
     "required release_full_measurement result",
     "gpu_runner_preflight:",
@@ -1054,13 +1095,26 @@ def workflow_job(name):
         raise SystemExit(f"test-execution-profile-matrix: missing CI job: {name}")
     return match.group("section")
 
-pair_section = workflow_job("release_full_measurement_pair")
-if "needs:" in pair_section or "reference-target" in pair_section:
-    raise SystemExit(
-        "test-execution-profile-matrix: release pair workers must start independently of target readiness"
-    )
+release_worker_jobs = [
+    "release_evidence_cold_worker",
+    "release_evidence_warm_worker",
+    "release_evidence_invariant_worker",
+    "release_evidence_stress_worker",
+]
+for job in release_worker_jobs:
+    section = workflow_job(job)
+    if "needs:" in section or "release_target_reference_readiness" in section:
+        raise SystemExit(
+            f"test-execution-profile-matrix: {job} must start independently of target readiness"
+        )
 aggregate_section = workflow_job("release_full_measurement")
-for dependency in ("- release_target_reference_readiness", "- release_full_measurement_pair"):
+for dependency in (
+    "- release_target_reference_readiness",
+    "- release_evidence_cold_worker",
+    "- release_evidence_warm_worker",
+    "- release_evidence_invariant_worker",
+    "- release_evidence_stress_worker",
+):
     if dependency not in aggregate_section:
         raise SystemExit(
             f"test-execution-profile-matrix: release aggregate lacks dependency: {dependency}"
@@ -1105,7 +1159,10 @@ for job, dispatch in {
 for job, timeout in {
     "gpu_runner_preflight": "timeout-minutes: 5",
     "release_target_reference_readiness": "timeout-minutes: 20",
-    "release_full_measurement_pair": "timeout-minutes: 55",
+    "release_evidence_cold_worker": "timeout-minutes: 55",
+    "release_evidence_warm_worker": "timeout-minutes: 55",
+    "release_evidence_invariant_worker": "timeout-minutes: 55",
+    "release_evidence_stress_worker": "timeout-minutes: 55",
     "release_full_measurement": "timeout-minutes: 5",
     "local_workspace_test_contract": "timeout-minutes: 45",
     "test": "timeout-minutes: 5",
@@ -1237,6 +1294,33 @@ for marker in [
 ]:
     if marker not in measurement:
         raise SystemExit(f"test-execution-profile-matrix: release measurement marker missing: {marker}")
+
+release_execution = (root / "scripts/lib/release_evidence_execution.py").read_text(encoding="utf-8")
+release_fanout = (root / "scripts/lib/release_evidence_fanout.py").read_text(encoding="utf-8")
+for marker in [
+    'WORKER_KIND = "genesis/release-evidence-worker-observation-v0.2"',
+    'AGGREGATE_KIND = "genesis/release-evidence-aggregate-v0.2"',
+    '"commandCoverageExact"',
+    '"exclusive-owned-ephemeral-root"',
+    "dependency_mirror.prove_network_denial(prefix)",
+    '"measured": False',
+    "genesis/release-evidence-worker-start-v0.2",
+    "require_initialized_output",
+    "release aggregate has a missing or duplicate execution node",
+    "fanout consumer does not bind the cold-1 producer",
+    "worker cleanup is incomplete",
+]:
+    if marker not in release_execution:
+        raise SystemExit(f"test-execution-profile-matrix: v0.2 execution marker missing: {marker}")
+for marker in [
+    'KIND = "genesis/release-evidence-fanout-auth-v0.2"',
+    "same-run cold-1 fanout artifact did not become available before deadline",
+    "fanout archive path is unsafe or duplicated",
+    "fanout authentication is from another workflow run, attempt, or revision",
+    "downloaded fanout archive digest does not match GitHub",
+]:
+    if marker not in release_fanout:
+        raise SystemExit(f"test-execution-profile-matrix: v0.2 fanout marker missing: {marker}")
 
 ai_slo = (root / "scripts/render_ai_iteration_slo_report.sh").read_text(encoding="utf-8")
 for marker in [

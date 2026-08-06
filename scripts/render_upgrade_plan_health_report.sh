@@ -91,6 +91,7 @@ RELEASE_EVIDENCE_FANOUT_TOKEN="${GENESIS_RELEASE_EVIDENCE_FANOUT_TOKEN:-}"
 RELEASE_EVIDENCE_DAG_POLICY="${GENESIS_RELEASE_EVIDENCE_DAG_POLICY:-policies/release_evidence_dag_v0.2.json}"
 RELEASE_EVIDENCE_DESCRIBE_ONLY="${GENESIS_RELEASE_EVIDENCE_DESCRIBE_ONLY:-0}"
 RELEASE_EVIDENCE_DESCRIBE_OUTPUT="${GENESIS_RELEASE_EVIDENCE_DESCRIBE_OUTPUT:-}"
+RELEASE_EVIDENCE_PHASE="${GENESIS_RELEASE_EVIDENCE_PHASE:-all}"
 RELEASE_EVIDENCE_DAG_IDENTITY=""
 RELEASE_EVIDENCE_COMMAND_IDS_IDENTITY=""
 RELEASE_EVIDENCE_SELECTED_IDS=()
@@ -102,7 +103,15 @@ cleanup_health_temp_roots() {
 trap cleanup_health_temp_roots EXIT
 
 release_evidence_resolve_input_root() {
-  python3 - "$1" <<'PY'
+  local input_root="$1"
+  local fanout_token="$2"
+  python3 scripts/lib/release_evidence_fanout.py \
+    --root "$ROOT_DIR" \
+    verify \
+    --bundle "$input_root" \
+    --auth "$(dirname "$input_root")/fanout-auth.json" \
+    --token "$fanout_token" >/dev/null
+  python3 - "$input_root" <<'PY'
 import pathlib
 import sys
 
@@ -714,9 +723,11 @@ enforce_release_full_history_budget() {
     --elapsed-ms "$elapsed_ms"
     --budget-ms "$RELEASE_FULL_WALL_BUDGET_MS"
     --min-history "$min_history"
-    "${baseline_args[@]}"
     --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$RELEASE_FULL_WALL_BUDGET_MS,\"generated_disk_delta_bytes\":$profile_generated_disk_delta_bytes,\"artifact_bytes\":$profile_artifact_bytes,\"artifact_budget_bytes\":$RELEASE_ARTIFACT_BUDGET_BYTES,\"measurement_run_class\":\"$measurement_run_class\",\"agent_gpu_profile\":\"$agent_gpu_profile\",\"release_evidence_partial\":$partial_json,\"release_evidence_node_class\":\"$RELEASE_EVIDENCE_NODE_CLASS\",\"release_evidence_dag_identity_sha256\":\"$RELEASE_EVIDENCE_DAG_IDENTITY\",\"release_evidence_command_ids_sha256\":\"$RELEASE_EVIDENCE_COMMAND_IDS_IDENTITY\",\"release_evidence_command_count\":$command_count}"
   )
+  if [[ -n "${baseline_args[0]:-}" ]]; then
+    args+=("${baseline_args[@]}")
+  fi
   if [[ -n "$history_scope_key" ]]; then
     args+=(--history-scope-key "$history_scope_key")
   fi
@@ -1619,7 +1630,7 @@ case "$PROFILE" in
         echo "upgrade-plan-health: invariant/stress release nodes require authenticated fanout input and token" >&2
         exit 2
       }
-      HEALTH_EVIDENCE_ROOT="$(release_evidence_resolve_input_root "$RELEASE_EVIDENCE_INPUT_ROOT")"
+      HEALTH_EVIDENCE_ROOT="$(release_evidence_resolve_input_root "$RELEASE_EVIDENCE_INPUT_ROOT" "$RELEASE_EVIDENCE_FANOUT_TOKEN")"
     else
       HEALTH_TEMP_ROOT="$(mktemp -d)"
       HEALTH_EVIDENCE_ROOT="$HEALTH_TEMP_ROOT/release-evidence"
@@ -1689,6 +1700,31 @@ if [[ -n "$RELEASE_EVIDENCE_NODE_CLASS" ]]; then
   fi
   release_evidence_filter_commands "common" "COMMON_GATES" "${COMMON_GATES[@]}"
   release_evidence_filter_commands "profile" "PROFILE_GATES" "${PROFILE_GATES[@]}"
+  case "$RELEASE_EVIDENCE_PHASE" in
+    all) ;;
+    setup)
+      [[ "$RELEASE_EVIDENCE_NODE_CLASS" == "cache-sensitive" ]] || {
+        echo "upgrade-plan-health: only cache-sensitive evidence may select the setup phase" >&2
+        exit 2
+      }
+      COMMON_GATES=()
+      PROFILE_GATES=()
+      RELEASE_EVIDENCE_SELECTED_IDS=("setup/evidence-bundle")
+      ;;
+    commands)
+      PROFILE_SETUP_GATES=()
+      RELEASE_EVIDENCE_SELECTED_IDS=("${RELEASE_EVIDENCE_SELECTED_IDS[@]/setup\/evidence-bundle}")
+      local_release_ids=()
+      for release_id in "${RELEASE_EVIDENCE_SELECTED_IDS[@]}"; do
+        [[ -z "$release_id" ]] || local_release_ids+=("$release_id")
+      done
+      RELEASE_EVIDENCE_SELECTED_IDS=("${local_release_ids[@]}")
+      ;;
+    *)
+      echo "upgrade-plan-health: invalid GENESIS_RELEASE_EVIDENCE_PHASE: $RELEASE_EVIDENCE_PHASE" >&2
+      exit 2
+      ;;
+  esac
   (( ${#RELEASE_EVIDENCE_SELECTED_IDS[@]} > 0 )) || {
     echo "upgrade-plan-health: release evidence node class selected no commands: $RELEASE_EVIDENCE_NODE_CLASS" >&2
     exit 2
@@ -1713,7 +1749,7 @@ payload = (json.dumps(sys.argv[1:], sort_keys=True, separators=(",", ":")) + "\n
 print(hashlib.sha256(payload).hexdigest())
 PY
 )"
-  echo "upgrade-plan-health: release evidence node class=$RELEASE_EVIDENCE_NODE_CLASS commands=${#RELEASE_EVIDENCE_SELECTED_IDS[@]} dag=$RELEASE_EVIDENCE_DAG_IDENTITY"
+  echo "upgrade-plan-health: release evidence node class=$RELEASE_EVIDENCE_NODE_CLASS phase=$RELEASE_EVIDENCE_PHASE commands=${#RELEASE_EVIDENCE_SELECTED_IDS[@]} dag=$RELEASE_EVIDENCE_DAG_IDENTITY"
   if [[ "$RELEASE_EVIDENCE_DESCRIBE_ONLY" == "1" ]]; then
     python3 - \
       "$RELEASE_EVIDENCE_DESCRIBE_OUTPUT" \
