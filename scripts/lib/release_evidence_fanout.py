@@ -125,6 +125,31 @@ def artifact_name(context: Mapping[str, str]) -> str:
     )
 
 
+def compatible_execution_environment(
+    producer: Mapping[str, Any], consumer: Mapping[str, Any]
+) -> bool:
+    expected = {
+        "architecture", "identitySha256", "operatingSystem",
+        "operatingSystemRelease", "profile", "toolchains",
+    }
+    stable = {"architecture", "operatingSystem", "profile", "toolchains"}
+    contracts = []
+    for label, environment in (("producer", producer), ("consumer", consumer)):
+        exact_keys(environment, expected, f"fanout {label} execution environment")
+        core = {name: environment[name] for name in expected - {"identitySha256"}}
+        if (
+            not is_sha256(environment["identitySha256"])
+            or environment["identitySha256"] != sha256_bytes(canonical(core))
+        ):
+            fail(f"fanout {label} execution environment identity mismatch")
+        if any(not isinstance(environment[name], str) or not environment[name] for name in (
+            "architecture", "operatingSystem", "operatingSystemRelease", "profile",
+        )) or not isinstance(environment["toolchains"], list):
+            fail(f"fanout {label} execution environment is malformed")
+        contracts.append({name: environment[name] for name in stable})
+    return contracts[0] == contracts[1]
+
+
 def load_manifest(root: Path, bundle: Path) -> dict[str, Any]:
     manifest_path = bundle / "manifest.json"
     try:
@@ -136,7 +161,10 @@ def load_manifest(root: Path, bundle: Path) -> dict[str, Any]:
         fail("fanout evidence profile is not release-full")
     if manifest["source"] != health_evidence.source_inventory(root):
         fail("fanout evidence source does not match the checkout")
-    if manifest["executionEnvironment"] != health_evidence.execution_environment("release-full"):
+    if not compatible_execution_environment(
+        manifest["executionEnvironment"],
+        health_evidence.execution_environment("release-full"),
+    ):
         fail("fanout evidence toolchain environment does not match the consumer")
     generated = health_evidence.parse_time(manifest["generatedAtUtc"], "generatedAtUtc")
     expires = health_evidence.parse_time(manifest["expiresAtUtc"], "expiresAtUtc")
