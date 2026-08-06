@@ -1,0 +1,54 @@
+name: Prepare release evidence environment
+description: Install the exact hosted toolchain used by every release-evidence worker
+runs:
+  using: composite
+  steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: 1.90.0
+        components: rustfmt, clippy
+        targets: wasm32-unknown-unknown, wasm32-wasip1
+    - name: Cache WASI SDK
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.tool_cache }}/genesis/wasi-sdk
+        key: wasi-sdk-33.0-${{ runner.os }}-${{ runner.arch }}
+    - name: Install Verified WASI SDK
+      shell: bash
+      run: |
+        bash scripts/install_wasi_sdk.sh \
+          --install-base "$RUNNER_TOOL_CACHE/genesis/wasi-sdk" \
+          --github-env "$GITHUB_ENV"
+    - name: Install cargo-nextest
+      uses: taiki-e/install-action@v2
+      with:
+        tool: nextest@0.9.137
+    - name: Install cargo-deny
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-deny@0.19.0
+    - name: Install wasmtime
+      uses: bytecodealliance/actions/wasmtime/setup@v1
+      with:
+        version: 36.0.9
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - name: Install JS Dependencies
+      shell: bash
+      run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
+    - name: Install Playwright Chromium
+      shell: bash
+      run: npx playwright install --with-deps chromium
+    - name: Install wasm-bindgen-cli
+      shell: bash
+      run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
+    - name: Fetch Offline Gate Dependencies
+      shell: bash
+      run: |
+        cargo fetch --locked
+        cargo fetch --manifest-path tools/genesis-evidence-producer/Cargo.toml --locked
+        cargo fetch --manifest-path tools/genesis-evidence-verifier/Cargo.toml --locked

@@ -343,6 +343,126 @@ fn closed_release_evidence_rejects_tamper_staleness_environment_and_unknown_fiel
 }
 
 #[test]
+fn release_fanout_auth_rejects_cross_run_token_producer_and_open_fields() {
+    let root = repo_root();
+    let temp = tempfile::tempdir().expect("create fanout fixture");
+    write_fixture_bundle(temp.path());
+    let output_root = temp.path().to_str().expect("UTF-8 fixture path");
+    let build = run_helper(
+        &root,
+        &[
+            "build",
+            "--root",
+            ".",
+            "--profile",
+            "release-full",
+            "--output-root",
+            output_root,
+        ],
+    );
+    assert!(
+        build.status.success(),
+        "{}",
+        String::from_utf8_lossy(&build.stderr)
+    );
+    let script = r#"
+import copy, datetime, json, pathlib, sys
+root, bundle = map(pathlib.Path, sys.argv[1:])
+sys.path.insert(0, str(root / 'scripts/lib'))
+import release_evidence_fanout as f
+
+request = f.urllib.request.Request(
+    'https://api.github.com/repos/example/project/actions/artifacts/7/zip',
+    headers={'Authorization': 'Bearer secret'},
+)
+handler = f.CredentialStrippingRedirect()
+same_origin = handler.redirect_request(
+    request, None, 302, 'Found', {}, 'https://api.github.com/signed-artifact'
+)
+cross_origin = handler.redirect_request(
+    request, None, 302, 'Found', {}, 'https://results-receiver.actions.githubusercontent.com/signed-artifact'
+)
+assert same_origin.get_header('Authorization') == 'Bearer secret'
+assert cross_origin.get_header('Authorization') is None
+
+manifest = json.loads((bundle / 'manifest.json').read_text())
+context = {
+    'repository': 'corbensorenson/genesisCode',
+    'runAttempt': '1',
+    'runId': '42',
+    'sha': manifest['source']['gitCommit'],
+}
+token = 'd' * 64
+auth = {
+    'artifact': {
+        'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'digestSha256': token,
+        'id': 7,
+        'name': f.artifact_name(context),
+    },
+    'contentIdentitySha256': '',
+    'github': context,
+    'kind': f.KIND,
+    'producer': {
+        'bundleIdentitySha256': manifest['contentIdentitySha256'],
+        'dagIdentitySha256': f.dag_identity(root),
+        'evidenceClass': 'cache-sensitive',
+        'index': 1,
+        'manifestSha256': f.sha256_file(bundle / 'manifest.json'),
+    },
+    'version': f.VERSION,
+}
+auth['contentIdentitySha256'] = f.identity(auth)
+auth_path = bundle.parent / 'fanout-auth.json'
+
+def check(candidate, supplied_token, expected):
+    candidate['contentIdentitySha256'] = f.identity(candidate)
+    auth_path.write_text(json.dumps(candidate, sort_keys=True) + '\n')
+    try:
+        f.validate_auth(root, bundle, auth_path, supplied_token, {
+            'GITHUB_REPOSITORY': context['repository'],
+            'GITHUB_RUN_ATTEMPT': context['runAttempt'],
+            'GITHUB_RUN_ID': context['runId'],
+            'GITHUB_SHA': context['sha'],
+        })
+    except f.FanoutError as exc:
+        if expected not in str(exc):
+            raise
+    else:
+        raise SystemExit(f'accepted invalid fanout auth: {expected}')
+
+auth_path.write_text(json.dumps(auth, sort_keys=True) + '\n')
+f.validate_auth(root, bundle, auth_path, token, {
+    'GITHUB_REPOSITORY': context['repository'],
+    'GITHUB_RUN_ATTEMPT': context['runAttempt'],
+    'GITHUB_RUN_ID': context['runId'],
+    'GITHUB_SHA': context['sha'],
+})
+for mutate, expected in (
+    (lambda d: d['github'].__setitem__('runId', '43'), 'another workflow run'),
+    (lambda d: d['producer'].__setitem__('index', 2), 'producer binding mismatch'),
+    (lambda d: d['artifact'].__setitem__('digestSha256', 'e' * 64), 'token or identity mismatch'),
+    (lambda d: d.__setitem__('verdict', 'pass'), 'fields mismatch'),
+):
+    candidate = copy.deepcopy(auth)
+    mutate(candidate)
+    check(candidate, token, expected)
+"#;
+    let output = Command::new("python3")
+        .args(["-c", script])
+        .arg(&root)
+        .arg(temp.path())
+        .current_dir(&root)
+        .output()
+        .expect("run fanout authentication controls");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn unsupported_product_cannot_execute_or_relabel_a_synthetic_target_adapter() {
     let root = repo_root();
     let temp = tempfile::tempdir().expect("create target fixture");
@@ -714,6 +834,12 @@ fn release_evidence_v02_partition_is_closed_and_adversarially_checked() {
         .expect("read release evidence DAG schema");
     let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
         .expect("read release health runner");
+    let execution = fs::read_to_string(root.join("scripts/lib/release_evidence_execution.py"))
+        .expect("read release evidence execution runner");
+    let fanout = fs::read_to_string(root.join("scripts/lib/release_evidence_fanout.py"))
+        .expect("read release evidence fanout runner");
+    let workflow = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read release evidence workflow");
     for marker in [
         "genesis/release-evidence-dag-v0.2",
         "independent-matched-cohorts",
@@ -744,12 +870,70 @@ fn release_evidence_v02_partition_is_closed_and_adversarially_checked() {
         "GENESIS_RELEASE_EVIDENCE_FANOUT_TOKEN",
         "release_evidence_partial",
         "release_evidence_command_ids_sha256",
+        "GENESIS_RELEASE_EVIDENCE_PHASE",
+        "release_evidence_fanout.py",
     ] {
         assert!(
             health.contains(marker),
             "missing DAG runner marker: {marker}"
         );
     }
+    for marker in [
+        "genesis/release-evidence-worker-observation-v0.2",
+        "genesis/release-evidence-aggregate-v0.2",
+        "commandCoverageExact",
+        "dependency_mirror.prove_network_denial(prefix)",
+        "genesis/release-evidence-worker-start-v0.2",
+        "require_initialized_output",
+        "fanout consumer does not bind the cold-1 producer",
+        "release aggregate has a missing or duplicate execution node",
+        "precondition.update(",
+        "artifactInventoryAtMeasuredStartSha256\": measured_inventory",
+    ] {
+        assert!(
+            execution.contains(marker),
+            "missing v0.2 execution control: {marker}"
+        );
+    }
+    for marker in [
+        "genesis/release-evidence-fanout-auth-v0.2",
+        "same-run cold-1 fanout artifact",
+        "fanout archive path is unsafe or duplicated",
+        "another workflow run, attempt, or revision",
+    ] {
+        assert!(
+            fanout.contains(marker),
+            "missing v0.2 fanout control: {marker}"
+        );
+    }
+    for marker in [
+        "release_evidence_cold_worker:",
+        "release_evidence_warm_worker:",
+        "release_evidence_invariant_worker:",
+        "release_evidence_stress_worker:",
+        "index: [1, 2, 3]",
+        "Publish Same-Run Cold-1 Fanout",
+        "Aggregate Release Evidence DAG",
+        "initialize-worker",
+        "orchestration/fanout.stderr.log",
+        "Install Aggregate Rust",
+        "Install Aggregate Node",
+    ] {
+        assert!(
+            workflow.contains(marker),
+            "missing v0.2 workflow topology: {marker}"
+        );
+    }
+    let measured_boundary = execution
+        .find("artifactInventoryAtMeasuredStartSha256\": measured_inventory")
+        .expect("warm measured-boundary inventory capture");
+    let setup_start = execution[measured_boundary..]
+        .find("setup = run_phase(")
+        .expect("measured setup after warm-boundary capture");
+    assert!(
+        setup_start > 0,
+        "warm inventory must be resampled before measured setup"
+    );
 
     for action in ["check", "self-test"] {
         let output = Command::new("python3")
@@ -766,4 +950,17 @@ fn release_evidence_v02_partition_is_closed_and_adversarially_checked() {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+    let execution_self_test = Command::new("python3")
+        .arg(root.join("scripts/lib/release_evidence_execution.py"))
+        .arg("--root")
+        .arg(&root)
+        .arg("self-test")
+        .current_dir(&root)
+        .output()
+        .expect("run release evidence execution self-test");
+    assert!(
+        execution_self_test.status.success(),
+        "{}",
+        String::from_utf8_lossy(&execution_self_test.stderr)
+    );
 }

@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/release-evidence-aggregate-v0.2.schema.json",
+  "title": "GenesisCode release evidence aggregate v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contentIdentitySha256",
+    "dag",
+    "derivedAtUtc",
+    "derivation",
+    "fanout",
+    "github",
+    "history",
+    "kind",
+    "productReleaseQualified",
+    "profileOperational",
+    "readinessStatus",
+    "source",
+    "status",
+    "targetDispositions",
+    "version",
+    "workers"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/release-evidence-aggregate-v0.2"},
+    "version": {"const": "0.2.0"},
+    "status": {"const": "pass"},
+    "profileOperational": {"const": true},
+    "productReleaseQualified": {"const": false},
+    "readinessStatus": {"const": "unsupported-product"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "derivedAtUtc": {"type": "string", "format": "date-time"},
+    "source": {"type": "object"},
+    "dag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identitySha256", "path"],
+      "properties": {
+        "identitySha256": {"$ref": "#/$defs/sha256"},
+        "path": {"const": "policies/release_evidence_dag_v0.2.json"}
+      }
+    },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "runAttempt", "runId", "sha"],
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+        "runAttempt": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "runId": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "fanout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactName",
+        "bundleIdentitySha256",
+        "digestSha256",
+        "manifestSha256",
+        "producer"
+      ],
+      "properties": {
+        "artifactName": {"type": "string", "minLength": 1},
+        "bundleIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "digestSha256": {"$ref": "#/$defs/sha256"},
+        "manifestSha256": {"$ref": "#/$defs/sha256"},
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cacheState", "evidenceClass", "index"],
+          "properties": {
+            "cacheState": {"const": "cold"},
+            "evidenceClass": {"const": "cache-sensitive"},
+            "index": {"const": 1}
+          }
+        }
+      }
+    },
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readOnly", "rejectedConditions", "wallMs"],
+      "properties": {
+        "readOnly": {"const": true},
+        "rejectedConditions": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "wallMs": {"type": "integer", "minimum": 1, "maximum": 300000}
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coldP95ArtifactBytes",
+        "coldP95PeakRssBytes",
+        "coldP95WallMs",
+        "samplesPerCacheState",
+        "warmP95ArtifactBytes",
+        "warmP95PeakRssBytes",
+        "warmP95WallMs"
+      ],
+      "properties": {
+        "coldP95ArtifactBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21474836480
+        },
+        "coldP95PeakRssBytes": {"type": "integer", "minimum": 1},
+        "coldP95WallMs": {"type": "integer", "minimum": 1, "maximum": 2700000},
+        "samplesPerCacheState": {"const": 3},
+        "warmP95ArtifactBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21474836480
+        },
+        "warmP95PeakRssBytes": {"type": "integer", "minimum": 1},
+        "warmP95WallMs": {"type": "integer", "minimum": 1, "maximum": 2700000}
+      }
+    },
+    "workers": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cacheState",
+          "contentIdentitySha256",
+          "evidenceClass",
+          "index",
+          "manifestSha256"
+        ],
+        "properties": {
+          "cacheState": {"enum": ["cold", "warm", "not-measured"]},
+          "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+          "evidenceClass": {
+            "enum": ["cache-sensitive", "invariant", "stress-performance"]
+          },
+          "index": {"type": "integer", "minimum": 1, "maximum": 3},
+          "manifestSha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "targetDispositions": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedOutcome",
+          "githubRunAttempt",
+          "githubRunId",
+          "githubSha",
+          "releaseQualified",
+          "reportArtifact",
+          "reportSha256",
+          "runner",
+          "target"
+        ],
+        "properties": {
+          "expectedOutcome": {"const": "unsupported-product"},
+          "githubRunAttempt": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+          "githubRunId": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+          "githubSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "releaseQualified": {"const": false},
+          "reportArtifact": {"type": "string", "minLength": 1},
+          "reportSha256": {"$ref": "#/$defs/sha256"},
+          "runner": {"enum": ["macos-15", "ubuntu-24.04"]},
+          "target": {"enum": ["android", "edge", "ios", "service-runtime"]}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/release-evidence-fanout-auth-v0.2.schema.json",
+  "title": "GenesisCode same-run release evidence fanout authentication v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "contentIdentitySha256",
+    "github",
+    "kind",
+    "producer",
+    "version"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/release-evidence-fanout-auth-v0.2"},
+    "version": {"const": "0.2.0"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["createdAt", "digestSha256", "id", "name"],
+      "properties": {
+        "createdAt": {"type": "string", "format": "date-time"},
+        "digestSha256": {"$ref": "#/$defs/sha256"},
+        "id": {"type": "integer", "minimum": 1},
+        "name": {"type": "string", "minLength": 1}
+      }
+    },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "runAttempt", "runId", "sha"],
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+        "runAttempt": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "runId": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundleIdentitySha256",
+        "dagIdentitySha256",
+        "evidenceClass",
+        "index",
+        "manifestSha256"
+      ],
+      "properties": {
+        "bundleIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "dagIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "evidenceClass": {"const": "cache-sensitive"},
+        "index": {"const": 1},
+        "manifestSha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

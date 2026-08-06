@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/release-evidence-worker-v0.2.schema.json",
+  "title": "GenesisCode release evidence worker observation v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifacts",
+    "budgets",
+    "cleanup",
+    "contentIdentitySha256",
+    "dag",
+    "executionEnvironment",
+    "fanout",
+    "generatedAtUtc",
+    "github",
+    "kind",
+    "measurement",
+    "node",
+    "precondition",
+    "source",
+    "version"
+  ],
+  "properties": {
+    "kind": {"const": "genesis/release-evidence-worker-observation-v0.2"},
+    "version": {"const": "0.2.0"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "generatedAtUtc": {"type": "string", "format": "date-time"},
+    "source": {"type": "object"},
+    "executionEnvironment": {"type": "object"},
+    "dag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identitySha256", "path"],
+      "properties": {
+        "identitySha256": {"$ref": "#/$defs/sha256"},
+        "path": {"const": "policies/release_evidence_dag_v0.2.json"}
+      }
+    },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job", "repository", "runAttempt", "runId", "sha"],
+      "properties": {
+        "job": {
+          "enum": [
+            "release_evidence_cold_worker",
+            "release_evidence_warm_worker",
+            "release_evidence_invariant_worker",
+            "release_evidence_stress_worker"
+          ]
+        },
+        "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+        "runAttempt": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "runId": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactBytes",
+        "diagnosticTailBytes",
+        "diagnosticTailLines",
+        "measuredWallMs"
+      ],
+      "properties": {
+        "artifactBytes": {"const": 21474836480},
+        "diagnosticTailBytes": {"const": 4096},
+        "diagnosticTailLines": {"const": 40},
+        "measuredWallMs": {"const": 2700000}
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cacheState",
+        "commandIds",
+        "commandIdsSha256",
+        "evidenceClass",
+        "index",
+        "isolation"
+      ],
+      "properties": {
+        "cacheState": {"enum": ["cold", "warm", "not-measured"]},
+        "commandIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "commandIdsSha256": {"$ref": "#/$defs/sha256"},
+        "evidenceClass": {
+          "enum": ["cache-sensitive", "invariant", "stress-performance"]
+        },
+        "index": {"type": "integer", "minimum": 1, "maximum": 3},
+        "isolation": {"$ref": "#/$defs/isolation"}
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactPeakBytes",
+        "commandCoverageExact",
+        "elapsedMs",
+        "exitCode",
+        "peakRssBytes",
+        "phases",
+        "timedOut"
+      ],
+      "properties": {
+        "artifactPeakBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21474836480
+        },
+        "commandCoverageExact": {"const": true},
+        "elapsedMs": {"type": "integer", "minimum": 1, "maximum": 2700000},
+        "exitCode": {"const": 0},
+        "peakRssBytes": {"type": "integer", "minimum": 1},
+        "phases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {"$ref": "#/$defs/phase"}
+        },
+        "timedOut": {"const": false}
+      }
+    },
+    "precondition": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/warmPrecondition"}
+      ]
+    },
+    "fanout": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/fanoutProducer"},
+        {"$ref": "#/$defs/fanoutConsumer"}
+      ]
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "recoveredBytes",
+        "remainingBytes",
+        "rootRemoved",
+        "rootStartedEmpty"
+      ],
+      "properties": {
+        "method": {"const": "owned-ephemeral-root-removal"},
+        "recoveredBytes": {"type": "integer", "minimum": 1},
+        "remainingBytes": {"const": 0},
+        "rootRemoved": {"const": true},
+        "rootStartedEmpty": {"const": true}
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/artifact"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "path", "sha256"],
+      "properties": {
+        "bytes": {"type": "integer", "minimum": 0},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cacheState",
+        "evidenceClass",
+        "githubJob",
+        "githubRunAttempt",
+        "githubRunId",
+        "identitySha256",
+        "index",
+        "method",
+        "nonceSha256"
+      ],
+      "properties": {
+        "cacheState": {"enum": ["cold", "warm", "not-measured"]},
+        "evidenceClass": {
+          "enum": ["cache-sensitive", "invariant", "stress-performance"]
+        },
+        "githubJob": {"type": "string", "minLength": 1},
+        "githubRunAttempt": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "githubRunId": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "identitySha256": {"$ref": "#/$defs/sha256"},
+        "index": {"type": "integer", "minimum": 1, "maximum": 3},
+        "method": {
+          "enum": ["owned-ephemeral-root", "exclusive-owned-ephemeral-root"]
+        },
+        "nonceSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactAttributionBytes",
+        "artifactPeakBytes",
+        "commandIds",
+        "commandIdsSha256",
+        "elapsedMs",
+        "exitCode",
+        "logArtifacts",
+        "name",
+        "peakRssBytes",
+        "profileReportArtifact",
+        "profileReportSha256",
+        "timedOut"
+      ],
+      "properties": {
+        "artifactAttributionBytes": {"type": "object"},
+        "artifactPeakBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21474836480
+        },
+        "commandIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "commandIdsSha256": {"$ref": "#/$defs/sha256"},
+        "elapsedMs": {"type": "integer", "minimum": 1, "maximum": 2700000},
+        "exitCode": {"const": 0},
+        "logArtifacts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "name": {"enum": ["setup", "commands", "all", "precondition"]},
+        "peakRssBytes": {"type": "integer", "minimum": 1},
+        "profileReportArtifact": {"type": "string", "minLength": 1},
+        "profileReportSha256": {"$ref": "#/$defs/sha256"},
+        "timedOut": {"const": false}
+      }
+    },
+    "warmPrecondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactInventoryAtMeasuredStartSha256",
+        "artifactInventoryAtPreconditionEndSha256",
+        "artifactInventoryMatched",
+        "cacheKeyMatched",
+        "cacheKeySha256",
+        "commandIds",
+        "commandIdsSha256",
+        "executionEnvironmentMatched",
+        "featureSetMatched",
+        "featureSetSha256",
+        "measured",
+        "network",
+        "phase",
+        "rootStartedEmpty",
+        "sourceMatched",
+        "toolchainMatched"
+      ],
+      "properties": {
+        "artifactInventoryAtMeasuredStartSha256": {"$ref": "#/$defs/sha256"},
+        "artifactInventoryAtPreconditionEndSha256": {"$ref": "#/$defs/sha256"},
+        "artifactInventoryMatched": {"const": true},
+        "cacheKeyMatched": {"const": true},
+        "cacheKeySha256": {"$ref": "#/$defs/sha256"},
+        "commandIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "commandIdsSha256": {"$ref": "#/$defs/sha256"},
+        "executionEnvironmentMatched": {"const": true},
+        "featureSetMatched": {"const": true},
+        "featureSetSha256": {"$ref": "#/$defs/sha256"},
+        "measured": {"const": false},
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["backend", "mode", "proofExecuted"],
+          "properties": {
+            "backend": {
+              "enum": ["sandbox-exec", "unshare-user-net", "unshare-sudo-net"]
+            },
+            "mode": {"const": "deny"},
+            "proofExecuted": {"const": true}
+          }
+        },
+        "phase": {"$ref": "#/$defs/phase"},
+        "rootStartedEmpty": {"const": true},
+        "sourceMatched": {"const": true},
+        "toolchainMatched": {"const": true}
+      }
+    },
+    "fanoutCore": {
+      "type": "object",
+      "required": [
+        "artifactName",
+        "bundleIdentitySha256",
+        "dagIdentitySha256",
+        "digestSha256",
+        "evidenceClass",
+        "index",
+        "manifestSha256",
+        "role"
+      ]
+    },
+    "fanoutProducer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactName",
+        "bundleIdentitySha256",
+        "dagIdentitySha256",
+        "digestSha256",
+        "evidenceClass",
+        "index",
+        "manifestSha256",
+        "role"
+      ],
+      "properties": {
+        "artifactName": {"type": "string", "minLength": 1},
+        "bundleIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "dagIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "digestSha256": {"$ref": "#/$defs/sha256"},
+        "evidenceClass": {"const": "cache-sensitive"},
+        "index": {"const": 1},
+        "manifestSha256": {"$ref": "#/$defs/sha256"},
+        "role": {"const": "producer"}
+      }
+    },
+    "fanoutConsumer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactName",
+        "bundleIdentitySha256",
+        "dagIdentitySha256",
+        "digestSha256",
+        "evidenceClass",
+        "index",
+        "manifestSha256",
+        "role"
+      ],
+      "properties": {
+        "artifactName": {"type": "string", "minLength": 1},
+        "bundleIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "dagIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "digestSha256": {"$ref": "#/$defs/sha256"},
+        "evidenceClass": {"const": "cache-sensitive"},
+        "index": {"const": 1},
+        "manifestSha256": {"$ref": "#/$defs/sha256"},
+        "role": {"const": "consumer"}
+      }
+    }
+  }
+}

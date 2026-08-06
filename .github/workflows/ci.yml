@@ -192,14 +192,16 @@ jobs:
             .genesis/perf/reference-target-${{ matrix.target }}/
           if-no-files-found: warn
 
-  release_full_measurement_pair:
+  release_evidence_cold_worker:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
-        pair: [1, 2]
-    # Each independent pair owns a 50-minute session and five-minute diagnostic margin.
+        index: [1, 2, 3]
     timeout-minutes: 55
     env:
       GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
@@ -207,84 +209,269 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.90.0
-          components: rustfmt, clippy
-          targets: wasm32-unknown-unknown, wasm32-wasip1
-      - name: Resolve Cargo Cache
-        shell: bash
-        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
-      - name: Cache WASI SDK
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.tool_cache }}/genesis/wasi-sdk
-          key: wasi-sdk-33.0-${{ runner.os }}-${{ runner.arch }}
-      - name: Install Verified WASI SDK
+      - uses: ./.github/actions/release-evidence-environment
+      - name: Initialize Cold Worker Observation ${{ matrix.index }}
         run: |
-          bash scripts/install_wasi_sdk.sh \
-            --install-base "$RUNNER_TOOL_CACHE/genesis/wasi-sdk" \
-            --github-env "$GITHUB_ENV"
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@v2
-        with:
-          tool: nextest@0.9.137
-      - name: Install cargo-deny
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deny@0.19.0
-      - name: Install wasmtime
-        uses: bytecodealliance/actions/wasmtime/setup@v1
-        with:
-          version: 36.0.9
-      - name: Install Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install JS Dependencies
-        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-      - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
-      - name: Fetch Offline Gate Dependencies
+          bash scripts/measure_release_evidence_v02.sh initialize-worker \
+            --evidence-class cache-sensitive \
+            --state cold \
+            --index ${{ matrix.index }} \
+            --output .genesis/perf/release-evidence-worker-cold-${{ matrix.index }}
+      - name: Measure Cold Setup ${{ matrix.index }}
+        id: prepare
+        continue-on-error: true
         run: |
-          cargo fetch --locked
-          cargo fetch --manifest-path tools/genesis-evidence-producer/Cargo.toml --locked
-          cargo fetch --manifest-path tools/genesis-evidence-verifier/Cargo.toml --locked
-      - name: Cold/Warm Release Measurement Pair ${{ matrix.pair }}
+          bash scripts/measure_release_evidence_v02.sh prepare-cache \
+            --state cold \
+            --index ${{ matrix.index }} \
+            --output .genesis/perf/release-evidence-worker-cold-${{ matrix.index }} \
+            > >(tee .genesis/perf/release-evidence-worker-cold-${{ matrix.index }}/orchestration/prepare.stdout.log) \
+            2> >(tee .genesis/perf/release-evidence-worker-cold-${{ matrix.index }}/orchestration/prepare.stderr.log >&2)
+      - name: Publish Same-Run Cold-1 Fanout
+        id: fanout_upload
+        if: ${{ matrix.index == 1 && steps.prepare.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-fanout-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: .genesis/perf/release-evidence-worker-cold-1/fanout-bundle/
+          if-no-files-found: error
+          retention-days: 2
+      - name: Measure Remaining Cold Commands ${{ matrix.index }}
+        id: finish
+        if: ${{ steps.prepare.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          GENESIS_RELEASE_FANOUT_DIGEST: ${{ steps.fanout_upload.outputs.artifact-digest }}
         run: |
-          bash scripts/measure_release_full_profile.sh \
-            .genesis/perf/release-full-measurement-pair-${{ matrix.pair }} \
-            --pair-index ${{ matrix.pair }}
-      - name: Upload Release Measurement Pair ${{ matrix.pair }}
+          bash scripts/measure_release_evidence_v02.sh finish-cache \
+            --state cold \
+            --index ${{ matrix.index }} \
+            --output .genesis/perf/release-evidence-worker-cold-${{ matrix.index }} \
+            > >(tee .genesis/perf/release-evidence-worker-cold-${{ matrix.index }}/orchestration/finish.stdout.log) \
+            2> >(tee .genesis/perf/release-evidence-worker-cold-${{ matrix.index }}/orchestration/finish.stderr.log >&2)
+      - name: Upload Cold Worker Observation ${{ matrix.index }}
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: release-full-measurement-pair-${{ matrix.pair }}
-          path: .genesis/perf/release-full-measurement-pair-${{ matrix.pair }}/
-          if-no-files-found: warn
+          name: release-evidence-worker-cold-${{ matrix.index }}
+          path: .genesis/perf/release-evidence-worker-cold-${{ matrix.index }}/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce Cold Worker Result ${{ matrix.index }}
+        if: ${{ always() }}
+        env:
+          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          FINISH_OUTCOME: ${{ steps.finish.outcome }}
+        run: |
+          [[ "$PREPARE_OUTCOME" == "success" && "$FINISH_OUTCOME" == "success" ]]
+
+  release_evidence_warm_worker:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        index: [1, 2, 3]
+    timeout-minutes: 55
+    env:
+      GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/release-evidence-environment
+      - name: Initialize Warm Worker Observation ${{ matrix.index }}
+        run: |
+          bash scripts/measure_release_evidence_v02.sh initialize-worker \
+            --evidence-class cache-sensitive \
+            --state warm \
+            --index ${{ matrix.index }} \
+            --output .genesis/perf/release-evidence-worker-warm-${{ matrix.index }}
+      - name: Prove Warm Precondition And Measure Setup ${{ matrix.index }}
+        id: prepare
+        continue-on-error: true
+        run: |
+          bash scripts/measure_release_evidence_v02.sh prepare-cache \
+            --state warm \
+            --index ${{ matrix.index }} \
+            --output .genesis/perf/release-evidence-worker-warm-${{ matrix.index }} \
+            > >(tee .genesis/perf/release-evidence-worker-warm-${{ matrix.index }}/orchestration/prepare.stdout.log) \
+            2> >(tee .genesis/perf/release-evidence-worker-warm-${{ matrix.index }}/orchestration/prepare.stderr.log >&2)
+      - name: Measure Remaining Warm Commands ${{ matrix.index }}
+        id: finish
+        if: ${{ steps.prepare.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          bash scripts/measure_release_evidence_v02.sh finish-cache \
+            --state warm \
+            --index ${{ matrix.index }} \
+            --output .genesis/perf/release-evidence-worker-warm-${{ matrix.index }} \
+            > >(tee .genesis/perf/release-evidence-worker-warm-${{ matrix.index }}/orchestration/finish.stdout.log) \
+            2> >(tee .genesis/perf/release-evidence-worker-warm-${{ matrix.index }}/orchestration/finish.stderr.log >&2)
+      - name: Upload Warm Worker Observation ${{ matrix.index }}
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-worker-warm-${{ matrix.index }}
+          path: .genesis/perf/release-evidence-worker-warm-${{ matrix.index }}/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce Warm Worker Result ${{ matrix.index }}
+        if: ${{ always() }}
+        env:
+          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          FINISH_OUTCOME: ${{ steps.finish.outcome }}
+        run: |
+          [[ "$PREPARE_OUTCOME" == "success" && "$FINISH_OUTCOME" == "success" ]]
+
+  release_evidence_invariant_worker:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    timeout-minutes: 55
+    env:
+      GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/release-evidence-environment
+      - name: Initialize Invariant Worker Observation
+        run: |
+          bash scripts/measure_release_evidence_v02.sh initialize-worker \
+            --evidence-class invariant \
+            --state not-measured \
+            --index 1 \
+            --output .genesis/perf/release-evidence-worker-invariant-1
+      - name: Fetch Authenticated Same-Run Fanout
+        id: fanout
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          token="$(python3 scripts/lib/release_evidence_fanout.py --root . fetch \
+            --output .genesis/release-fanout/bundle \
+            2> >(tee .genesis/perf/release-evidence-worker-invariant-1/orchestration/fanout.stderr.log >&2))"
+          printf '%s\n' "$token" > .genesis/perf/release-evidence-worker-invariant-1/orchestration/fanout.digest
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+      - name: Measure Invariant Node
+        id: measure
+        if: ${{ steps.fanout.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          bash scripts/measure_release_evidence_v02.sh run-node \
+            --evidence-class invariant \
+            --index 1 \
+            --fanout-root .genesis/release-fanout/bundle \
+            --fanout-token "${{ steps.fanout.outputs.token }}" \
+            --output .genesis/perf/release-evidence-worker-invariant-1 \
+            > >(tee .genesis/perf/release-evidence-worker-invariant-1/orchestration/measure.stdout.log) \
+            2> >(tee .genesis/perf/release-evidence-worker-invariant-1/orchestration/measure.stderr.log >&2)
+      - name: Upload Invariant Worker Observation
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-worker-invariant-1
+          path: .genesis/perf/release-evidence-worker-invariant-1/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce Invariant Worker Result
+        if: ${{ always() }}
+        env:
+          FANOUT_OUTCOME: ${{ steps.fanout.outcome }}
+          MEASURE_OUTCOME: ${{ steps.measure.outcome }}
+        run: |
+          [[ "$FANOUT_OUTCOME" == "success" && "$MEASURE_OUTCOME" == "success" ]]
+
+  release_evidence_stress_worker:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        index: [1, 2, 3]
+    timeout-minutes: 55
+    env:
+      GENESIS_AGENT_GPU_PROFILE: agent-gpu-fallback
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/release-evidence-environment
+      - name: Initialize Stress Worker Observation ${{ matrix.index }}
+        run: |
+          bash scripts/measure_release_evidence_v02.sh initialize-worker \
+            --evidence-class stress-performance \
+            --state not-measured \
+            --index ${{ matrix.index }} \
+            --output .genesis/perf/release-evidence-worker-stress-${{ matrix.index }}
+      - name: Fetch Authenticated Same-Run Fanout
+        id: fanout
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          token="$(python3 scripts/lib/release_evidence_fanout.py --root . fetch \
+            --output .genesis/release-fanout/bundle \
+            2> >(tee .genesis/perf/release-evidence-worker-stress-${{ matrix.index }}/orchestration/fanout.stderr.log >&2))"
+          printf '%s\n' "$token" > .genesis/perf/release-evidence-worker-stress-${{ matrix.index }}/orchestration/fanout.digest
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+      - name: Measure Stress Node ${{ matrix.index }}
+        id: measure
+        if: ${{ steps.fanout.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          bash scripts/measure_release_evidence_v02.sh run-node \
+            --evidence-class stress-performance \
+            --index ${{ matrix.index }} \
+            --fanout-root .genesis/release-fanout/bundle \
+            --fanout-token "${{ steps.fanout.outputs.token }}" \
+            --output .genesis/perf/release-evidence-worker-stress-${{ matrix.index }} \
+            > >(tee .genesis/perf/release-evidence-worker-stress-${{ matrix.index }}/orchestration/measure.stdout.log) \
+            2> >(tee .genesis/perf/release-evidence-worker-stress-${{ matrix.index }}/orchestration/measure.stderr.log >&2)
+      - name: Upload Stress Worker Observation ${{ matrix.index }}
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-worker-stress-${{ matrix.index }}
+          path: .genesis/perf/release-evidence-worker-stress-${{ matrix.index }}/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce Stress Worker Result ${{ matrix.index }}
+        if: ${{ always() }}
+        env:
+          FANOUT_OUTCOME: ${{ steps.fanout.outcome }}
+          MEASURE_OUTCOME: ${{ steps.measure.outcome }}
+        run: |
+          [[ "$FANOUT_OUTCOME" == "success" && "$MEASURE_OUTCOME" == "success" ]]
 
   release_full_measurement:
     if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
     needs:
       - release_target_reference_readiness
-      - release_full_measurement_pair
+      - release_evidence_cold_worker
+      - release_evidence_warm_worker
+      - release_evidence_invariant_worker
+      - release_evidence_stress_worker
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install Rust
+      - name: Install Aggregate Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.90.0
-      - name: Resolve Cargo Cache
-        shell: bash
-        run: python3 scripts/lib/cargo_cache.py --root . --scope root-host --format github-env >> "$GITHUB_ENV"
-      - name: Install Node
+      - name: Install Aggregate Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -294,22 +481,29 @@ jobs:
           pattern: release-target-readiness-*
           path: .genesis/reference-targets
           merge-multiple: true
-      - name: Download Release Measurement Pairs
+      - name: Download Release Evidence Workers
         uses: actions/download-artifact@v4
         with:
-          pattern: release-full-measurement-pair-*
-          path: .genesis/release-pairs
-      - name: Aggregate Paired Release Measurements
+          pattern: release-evidence-worker-*
+          path: .genesis/release-workers
+      - name: Aggregate Release Evidence DAG
         run: |
-          bash scripts/measure_release_full_profile.sh \
-            .genesis/perf/release-full-measurement \
-            --aggregate \
+          bash scripts/measure_release_evidence_v02.sh aggregate \
+            --output .genesis/perf/release-full-measurement \
             --target-report .genesis/reference-targets/reference-target-android.json \
             --target-report .genesis/reference-targets/reference-target-edge.json \
             --target-report .genesis/reference-targets/reference-target-ios.json \
             --target-report .genesis/reference-targets/reference-target-service-runtime.json \
-            --pair-output .genesis/release-pairs/release-full-measurement-pair-1 \
-            --pair-output .genesis/release-pairs/release-full-measurement-pair-2
+            --worker-output .genesis/release-workers/release-evidence-worker-cold-1 \
+            --worker-output .genesis/release-workers/release-evidence-worker-cold-2 \
+            --worker-output .genesis/release-workers/release-evidence-worker-cold-3 \
+            --worker-output .genesis/release-workers/release-evidence-worker-warm-1 \
+            --worker-output .genesis/release-workers/release-evidence-worker-warm-2 \
+            --worker-output .genesis/release-workers/release-evidence-worker-warm-3 \
+            --worker-output .genesis/release-workers/release-evidence-worker-invariant-1 \
+            --worker-output .genesis/release-workers/release-evidence-worker-stress-1 \
+            --worker-output .genesis/release-workers/release-evidence-worker-stress-2 \
+            --worker-output .genesis/release-workers/release-evidence-worker-stress-3
       - name: Upload Release Measurement Aggregate
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

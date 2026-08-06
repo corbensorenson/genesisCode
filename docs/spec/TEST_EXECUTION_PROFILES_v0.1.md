@@ -302,43 +302,60 @@ Strict/full profile runtime reports:
     - one `genesis/health-profile-evidence-bundle-v0.2` manifest binds source, environment, toolchain, producer, report/history, freshness, and consumer identities;
     - every prebuilt consumer validates the exact manifest and artifact set at its report-read boundary;
     - native/WASI gauntlets, generative parity, GPU/XR aggregation, host-bridge fault injection, and runtime-backend compilation execute once per profile rather than once per consumer.
-  - GB-4 qualification is measured only by `scripts/measure_release_full_profile.sh` and
-    `scripts/lib/release_full_measurement.py`, under the closed
-    `docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json` worker and
-    `docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json` aggregate contracts:
-    - the retained manifest kind is `genesis/release-full-measurement-v0.1`;
-    - two to five independently scheduled pair workers each run a genuinely cold profile
-      against a new, empty, external Cargo/cache root and then a warm profile against the
-      same root; result caching remains disabled, so every gate executes in both classes;
-    - each worker emits only a closed observation manifest. It binds exact source,
-      execution environment, workflow run/attempt/job, ordered run
-      pair, artifact inventory, owned-root cleanup, and an opaque nonce-bound cache-isolation
-      identity. The nonce is selected before execution and names the exclusively created
-      owned root, so retained identities cannot be invented after cleanup. Worker
-      observations cannot authorize the final result;
-    - every run retains its profile report and logs, samples process-tree peak RSS and
-      non-overlapping artifact roots, and enforces the GB-4 `2700000ms` and
-      `21474836480`-byte ceilings;
-    - every pair worker has a separate 50-minute session deadline inside a 55-minute job
-      envelope. A read-only five-minute aggregate runs after all workers, validates and
-      copies their complete artifacts, and leaves diagnostic publication time before the
-      independent 60-minute full-run watchdog; no orchestration timeout may preempt the
-      45-minute per-profile ceiling without a typed failure;
-    - the aggregate requires ordered complete pair coverage, distinct cache-isolation
-      identities, one workflow run/attempt, exact source/environment/target agreement,
-      byte-exact worker manifests and artifact inventories, and complete cleanup. It derives
-      cold and warm p95 wall, peak-RSS, and artifact values from the retained runs and rejects
-      missing/duplicate workers, cache reuse, cache-class or GPU-profile relabeling, artifact
-      tampering, or a false success after `unsupported-product`;
+  - GB-4 qualification is measured only by
+    `scripts/measure_release_evidence_v02.sh` and
+    `scripts/lib/release_evidence_execution.py`, under the closed
+    `docs/spec/RELEASE_EVIDENCE_WORKER_v0.2.schema.json` observation and
+    `docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json` decision contracts:
+    - the retained worker kind is
+      `genesis/release-evidence-worker-observation-v0.2`; its closed top level has
+      no `ok`, `status`, `verdict`, qualification, or promotion field;
+    - three independently scheduled cold cache-sensitive workers and three
+      independently scheduled warm cache-sensitive workers form matched odd cohorts.
+      The invariant class executes exactly once, and three independently isolated
+      stress/performance workers form its odd cohort. The aggregate rejects any
+      missing, duplicated, even, relabeled, or cross-class execution;
+    - every worker owns a nonce-bound external ephemeral root, retains byte-bound
+      profile reports and bounded logs, samples process-tree peak RSS and
+      non-overlapping artifact roots, and proves complete root removal. Stress workers
+      use exclusive identities, and the aggregate rejects any reused isolation nonce;
+    - each warm worker starts with an empty owned root and executes the exact
+      cache-sensitive command set as an unmeasured precondition under a proved kernel
+      network-denial backend. Source, toolchain, feature-set, cache-key, and artifact
+      inventory identities must remain equal at measured start. Only the subsequent
+      setup and command phases contribute to the 2,700,000ms measured-worker ceiling;
+    - cold sample 1 splits its measured setup and command phases at the workflow
+      boundary. After setup produces the sole health-evidence bundle, the workflow
+      publishes it under a name bound to run id, attempt, and revision; cold sample 1
+      then completes its remaining measured commands. This split executes
+      `setup/evidence-bundle` once and permits dependent workers to proceed without a
+      serial producer job;
+    - invariant and stress workers query only the current workflow run, require exactly
+      one unexpired artifact with the canonical name, verify GitHub's archive digest,
+      safely extract it under the 20GiB limit, and bind its manifest, DAG, source,
+      toolchain, producer class, and cold-sample index. The renderer reauthenticates
+      that sidecar, the aggregate matches every consumer digest to cold sample 1's
+      service-issued upload receipt, and every evidence consumer rechecks its exact
+      manifest inputs;
+    - all ten measured workers have 55-minute job envelopes and 45-minute measured
+      ceilings. Each initializes a run/attempt/revision-bound start observation before
+      fanout or measurement, and its `always()` upload retains bounded orchestration
+      and child diagnostics even when setup never begins. A read-only five-minute
+      aggregate follows; producer reports cannot authorize the final result;
+    - the aggregate requires exact command coverage from the v0.2 DAG, one workflow
+      run/attempt/revision, distinct isolation identities, same-run cold-1 fanout
+      custody, byte-exact artifacts, complete cleanup, and the exact named-target
+      dispositions. It derives cold/warm p95 wall, peak-RSS, and artifact observations
+      and alone emits `genesis/release-evidence-aggregate-v0.2 status=pass`;
     - the producer requires one CI-provenanced report from every named target shard, with
       the exact runner label, complete reference shard, product-matrix limitation, build and
       runtime-log identities, source commit, and shared workflow run attempt. Those expected blockers keep
       `productReleaseQualified = false`, `profileOperational = true`, and
       `readinessStatus = unsupported-product`; they prove profile operation and readiness
       classification, not product support;
-    - scheduled and manually dispatched full CI start pair indices 1 and 2 concurrently with
-      the named-target shards. The isolated pair workers run on `ubuntu-24.04`, the iOS
-      readiness shard remains on `macos-15`, and the aggregate joins both branches on
+    - scheduled and manually dispatched full CI start all ten workers concurrently with
+      the named-target shards. Hosted evidence workers run on `ubuntu-24.04`, the iOS
+      readiness shard remains on `macos-15`, and the aggregate joins every branch on
       `ubuntu-24.04`. The required `test` disposition binds the
       aggregate result for full runs and accepts only `skipped|success` outside full runs.
       The generic ignored-perf lane excludes `upgrade_plan_health`, preventing nested
@@ -530,7 +547,8 @@ is not reference evidence.
   `releaseQualified = false`.
 - The full-profile dependency graph also enforces the 3,600-second ceiling rather
   than relying on observation alone. Named-target preparation is limited to 20
-  minutes in parallel with each 55-minute release pair, followed by a 5-minute aggregate;
+  minutes in parallel with each 55-minute release-evidence worker, followed by a
+  5-minute aggregate;
   the full test and local
   workspace lanes are limited to 55 minutes with a 5-minute aggregate; hosted
   and selected self-hosted GPU paths use a 5-minute preflight, 50-minute lane,
