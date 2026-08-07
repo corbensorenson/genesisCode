@@ -3374,14 +3374,14 @@
         },
         {
           "path": "scripts/render_host_bridge_fault_injection_report.sh",
-          "sha256": "75fe892dea728da79d6c157a3b6261acd6ff2f759902deb5afff4792f8e81c3e"
+          "sha256": "97ee432394ce62235b81f2b6adf0008bc561737de61fb26ee62c30b770c8f536"
         }
       ],
       "execution_helper_invocations": [
         "scripts/lib/health_profile_evidence.sh",
         "scripts/render_host_bridge_fault_injection_report.sh"
       ],
-      "execution_identity_sha256": "4fcec6309521213c455d809741a57f873020d628560872a84954ffa467ab98e1",
+      "execution_identity_sha256": "1b9e7faec732181d7ac60634924afda68d061615e77e76f26292085184e0136c",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5839,7 +5839,7 @@
         },
         {
           "path": "scripts/render_host_bridge_fault_injection_report.sh",
-          "sha256": "75fe892dea728da79d6c157a3b6261acd6ff2f759902deb5afff4792f8e81c3e"
+          "sha256": "97ee432394ce62235b81f2b6adf0008bc561737de61fb26ee62c30b770c8f536"
         },
         {
           "path": "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -5869,7 +5869,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "af671cf32503da52839cbb818d0edeac8e301a4bef4150379c8bcbbd190295b6",
+      "execution_identity_sha256": "6e8e8be523ccf08cefabe90ada725c7a7459697107f05ac637ef56f188a5476f",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],

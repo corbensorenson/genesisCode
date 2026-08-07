@@ -42,13 +42,13 @@ genesis_configure_cargo_target_dir \
   "host-bridge-fault-injection" \
   root-host
 
-if rg -n 'static SESSIONS|persistent_bridge_session_map' \
+if grep -En 'static SESSIONS|persistent_bridge_session_map' \
   crates/gc_effects/src/runner_host_bridge_persistent.rs; then
   echo "host-bridge-fault-injection: process-global persistent bridge ownership is forbidden" >&2
   exit 1
 fi
-rg -q 'struct HostBridgeRuntime' crates/gc_effects/src/runner_host_bridge.rs
-rg -q 'bridge_runtime: &mut HostBridgeRuntime' \
+grep -Eq 'struct HostBridgeRuntime' crates/gc_effects/src/runner_host_bridge.rs
+grep -Eq 'bridge_runtime: &mut HostBridgeRuntime' \
   crates/gc_effects/src/runner_capability_dispatch.rs
 
 start_ns="$(python3 - <<'PY'
