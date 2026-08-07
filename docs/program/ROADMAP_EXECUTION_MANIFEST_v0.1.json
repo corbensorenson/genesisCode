@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "29feb0f30108e23e467b9741bc8a478fd5c94e040e61578e4db4623cf8448d73",
-    "roadmap_sha256": "44d6d51806421f4f2211dd268cc8a0cf7dee6de76ef932798af713acd7684f7b",
+    "roadmap_sha256": "7aa5425de4e7853e3a4ba2c10b18a82e4d646a29900a2be6da14b3c4b2fa799a",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -2173,7 +2173,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "generated-authority-closure-bundle-sha256:961c4da55e0bfd35125c498d0bdb3b6bd89bdf72c0fc742420082831a2d13b83"
+          "input_identity": "generated-authority-closure-bundle-sha256:59edae2584999a21ee9ddd270cb8e87e52b4ac0772dc45d5976d8e33652efb3e"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2253,7 +2253,7 @@
             "30826800834"
           ],
           "completed_date": "2026-08-03",
-          "input_identity": "generated-authority-closure-bundle-sha256:961c4da55e0bfd35125c498d0bdb3b6bd89bdf72c0fc742420082831a2d13b83"
+          "input_identity": "generated-authority-closure-bundle-sha256:59edae2584999a21ee9ddd270cb8e87e52b4ac0772dc45d5976d8e33652efb3e"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3094,7 +3094,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-diagnostic-catalog-bundle-sha256:5d018b01554e69ce4e73522e12ec8d6565d80a62f3ba1df1c29a50300887491d"
+          "input_identity": "gc-diagnostic-catalog-bundle-sha256:d6fd059b16ff4b44efa65a3fbff797b8645390fbd713561fe66407a2198d3666"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3388,7 +3388,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "diagnostic-repair-utility-bundle-sha256:851138db266b671fbd0afe4192bca96229d42910e986c77876b28c67b7ca33f7"
+          "input_identity": "diagnostic-repair-utility-bundle-sha256:f2ada94f9f92109164c0eb165a08f47b960a785937c6edbe41677ea2255833f2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
