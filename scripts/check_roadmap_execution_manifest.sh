@@ -47,11 +47,19 @@ if [task["id"] for task in execution_slice["queued_tasks"]] != execution_slice["
 for task in execution_slice["queued_tasks"]:
     if not task["product_lanes"] or not task["milestones"] or not task["nonclaims"]:
         raise SystemExit("roadmap-execution-manifest: queued task context is incomplete")
-if len(execution_slice["allowed_parallel_lanes"]) != 1:
+scope_freeze = execution_slice.get("scope_freeze")
+if not isinstance(scope_freeze, dict) or scope_freeze.get("until_task_id") != "R9.4.f":
+    raise SystemExit("roadmap-execution-manifest: scope freeze drift")
+if scope_freeze.get("frozen_program_concepts") != [
+    "GenesisCode", "GenesisBench", "GenesisChallenge", "Genesis Foundry", "Genesis Model"
+]:
+    raise SystemExit("roadmap-execution-manifest: frozen program concept drift")
+if len(execution_slice["allowed_parallel_lanes"]) != 2:
     raise SystemExit("roadmap-execution-manifest: allowed parallel lane drift")
-parallel_lane = execution_slice["allowed_parallel_lanes"][0]
-if parallel_lane["id"] != "read-only-selfhost-assurance" or len(parallel_lane["conditions"]) < 4:
+parallel_lanes = {lane["id"]: lane for lane in execution_slice["allowed_parallel_lanes"]}
+if set(parallel_lanes) != {"read-only-selfhost-assurance", "model-interface-portability-canary"}:
     raise SystemExit("roadmap-execution-manifest: allowed parallel lane contract drift")
+parallel_lane = parallel_lanes["read-only-selfhost-assurance"]
 parallel_contract = " ".join(parallel_lane["conditions"])
 for forbidden in (
     "cannot modify repository files",
@@ -61,6 +69,16 @@ for forbidden in (
     if forbidden not in parallel_contract:
         raise SystemExit(
             f"roadmap-execution-manifest: read-only parallel lane lost {forbidden!r}"
+        )
+canary_contract = " ".join(parallel_lanes["model-interface-portability-canary"]["conditions"])
+for required in (
+    "no GenesisBench task, private payload, scorer",
+    "cannot modify repository files",
+    "creates no benchmark attempt, score, cohort, rank, result",
+):
+    if required not in canary_contract:
+        raise SystemExit(
+            f"roadmap-execution-manifest: portability canary lost {required!r}"
         )
 if explanation["id"] != "R0.4.j" or explanation["state"] != "open":
     raise SystemExit("roadmap-execution-manifest: task explanation drift")
@@ -98,6 +116,51 @@ if python3 scripts/lib/roadmap_execution_manifest.py \
   exit 1
 fi
 
+cp policies/roadmap_execution_v0.1.json "$TMP_DIR/scope-broadened-policy.json"
+python3 - "$TMP_DIR/scope-broadened-policy.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+policy["execution_frontier"]["scope_freeze"]["frozen_program_concepts"].append("New Program")
+path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+PY
+if python3 scripts/lib/roadmap_execution_manifest.py \
+  --render \
+  --policy "$TMP_DIR/scope-broadened-policy.json" \
+  --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
+  echo "roadmap-execution-manifest: broadened conceptual scope was accepted" >&2
+  exit 1
+fi
+
+cp policies/roadmap_execution_v0.1.json "$TMP_DIR/canary-broadened-policy.json"
+python3 - "$TMP_DIR/canary-broadened-policy.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+lane = next(
+    lane for lane in policy["execution_frontier"]["allowed_parallel_lanes"]
+    if lane["id"] == "model-interface-portability-canary"
+)
+lane["conditions"] = [
+    condition.replace("no GenesisBench task, private payload, scorer", "fixed public task and scorer")
+    for condition in lane["conditions"]
+]
+path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+PY
+if python3 scripts/lib/roadmap_execution_manifest.py \
+  --render \
+  --policy "$TMP_DIR/canary-broadened-policy.json" \
+  --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
+  echo "roadmap-execution-manifest: scoring portability canary was accepted" >&2
+  exit 1
+fi
+
 before="$(cksum docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json)"
 python3 scripts/lib/roadmap_execution_manifest.py --check
 after="$(cksum docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json)"
@@ -106,4 +169,4 @@ after="$(cksum docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json)"
   exit 1
 }
 
-echo "roadmap-execution-manifest-contract: ok (negative_controls=28 query_views=2 lane_isolation=13 check_mode=read_only)"
+echo "roadmap-execution-manifest-contract: ok (negative_controls=28 query_views=2 lane_isolation=13 parallel_lanes=2 scope_freeze=active check_mode=read_only)"

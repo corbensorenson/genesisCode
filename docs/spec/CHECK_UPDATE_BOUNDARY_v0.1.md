@@ -844,7 +844,8 @@ Authority, in descending order:
    `done YYYY-MM-DD; evidence: ...; input: ...` annotation.
 2. `policies/roadmap_execution_v0.1.json` owns execution profiles,
    prerequisites, risk/resource classes, owner surfaces, invariant guards,
-   negative controls, rollback strategy, and task-specific dependency edges.
+   negative controls, rollback strategy, task-specific dependency edges, the
+   active conceptual-scope freeze, and closed non-production parallel lanes.
 3. `docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json` owns serialization.
 
 The renderer hashes all three inputs and excludes timestamps and host paths.
