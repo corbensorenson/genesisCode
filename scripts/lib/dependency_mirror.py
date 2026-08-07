@@ -872,11 +872,47 @@ def verify_mirror(
     return manifest
 
 
-def network_guard_prefix() -> Tuple[str, List[str]]:
+def _loopback_namespace_prefix(
+    backend: str,
+    prefix: Sequence[str],
+    *,
+    ip_tool: str,
+    setpriv_tool: Optional[str] = None,
+) -> List[str]:
+    shell = shutil.which("sh") or "/bin/sh"
+    if backend == "unshare-user-net":
+        script = '"$1" link set lo up && shift && exec "$@"'
+        return list(prefix) + [shell, "-c", script, "genesis-loopback", ip_tool]
+    if backend == "unshare-sudo-net":
+        if setpriv_tool is None:
+            raise MirrorError("Linux loopback isolation requires setpriv")
+        script = (
+            '"$1" link set lo up || exit 125; shift; '
+            'setpriv="$1"; shift; uid="$1"; shift; gid="$1"; shift; '
+            'exec "$setpriv" --reuid="$uid" --regid="$gid" --clear-groups -- "$@"'
+        )
+        return list(prefix) + [
+            shell,
+            "-c",
+            script,
+            "genesis-loopback",
+            ip_tool,
+            setpriv_tool,
+            str(os.getuid()),
+            str(os.getgid()),
+        ]
+    raise MirrorError("loopback isolation requires a Linux network namespace")
+
+
+def network_guard_prefix(*, allow_loopback: bool = False) -> Tuple[str, List[str]]:
     if sys.platform == "darwin":
         executable = shutil.which("sandbox-exec")
         if executable is None:
             raise MirrorError("Darwin network isolation backend is unavailable")
+        if allow_loopback:
+            raise MirrorError(
+                "loopback-preserving hard network isolation is unsupported on Darwin"
+            )
         return "sandbox-exec", [
             executable,
             "-p",
@@ -894,7 +930,16 @@ def network_guard_prefix() -> Tuple[str, List[str]]:
             check=False,
         )
         if unprivileged.returncode == 0:
-            return "unshare-user-net", [unshare, "--user", "--map-root-user", "--net", "--"]
+            backend = "unshare-user-net"
+            prefix = [unshare, "--user", "--map-root-user", "--net", "--"]
+            if allow_loopback:
+                ip_tool = shutil.which("ip")
+                if ip_tool is None:
+                    raise MirrorError("Linux loopback isolation requires iproute2")
+                prefix = _loopback_namespace_prefix(
+                    backend, prefix, ip_tool=ip_tool
+                )
+            return backend, prefix
         sudo = shutil.which("sudo")
         if sudo is not None:
             allowed = subprocess.run(
@@ -905,22 +950,40 @@ def network_guard_prefix() -> Tuple[str, List[str]]:
                 check=False,
             )
             if allowed.returncode == 0:
-                return "unshare-sudo-net", [
+                backend = "unshare-sudo-net"
+                prefix = [
                     sudo,
                     "-n",
                     unshare,
                     "--net",
-                    "--setuid",
-                    str(os.getuid()),
-                    "--setgid",
-                    str(os.getgid()),
                     "--",
                 ]
+                if allow_loopback:
+                    ip_tool = shutil.which("ip")
+                    setpriv_tool = shutil.which("setpriv")
+                    if ip_tool is None:
+                        raise MirrorError("Linux loopback isolation requires iproute2")
+                    prefix = _loopback_namespace_prefix(
+                        backend,
+                        prefix,
+                        ip_tool=ip_tool,
+                        setpriv_tool=setpriv_tool,
+                    )
+                else:
+                    prefix[-1:-1] = [
+                        "--setuid",
+                        str(os.getuid()),
+                        "--setgid",
+                        str(os.getgid()),
+                    ]
+                return backend, prefix
         raise MirrorError("Linux network namespace creation is not permitted")
     raise MirrorError("hard network isolation is unsupported on this host")
 
 
-def prove_network_denial(prefix: Sequence[str]) -> None:
+def prove_network_denial(
+    prefix: Sequence[str], *, require_loopback: bool = False
+) -> None:
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listener.bind(("127.0.0.1", 0))
@@ -961,6 +1024,27 @@ def prove_network_denial(prefix: Sequence[str]) -> None:
         output = result.stdout.decode("utf-8", errors="replace").strip()
         if result.returncode != 17 or not output.startswith("DENIED:"):
             raise MirrorError("network isolation canary did not fail at connect")
+        if require_loopback:
+            loopback_code = (
+                "import socket\n"
+                "listener=socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n"
+                "listener.bind(('127.0.0.1',0)); listener.listen(1)\n"
+                "peer=socket.create_connection(listener.getsockname(),1)\n"
+                "accepted,_=listener.accept()\n"
+                "accepted.close(); peer.close(); listener.close()\n"
+            )
+            loopback = subprocess.run(
+                list(prefix) + [sys.executable, "-c", loopback_code],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=5,
+                check=False,
+            )
+            if loopback.returncode != 0:
+                raise MirrorError(
+                    "network isolation blocked required in-namespace loopback"
+                )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise MirrorError("network isolation canary was inconclusive: " + str(exc)) from exc
     finally:
