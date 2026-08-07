@@ -474,7 +474,7 @@ jobs:
       - name: Install Aggregate Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.2
       - name: Download Named Target Readiness
         uses: actions/download-artifact@v4
         with:
@@ -861,7 +861,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 
       - name: Runtime Backend Feature Matrix Guard
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'runtime') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'runtime') }}
         run: bash scripts/update_runtime_backend_feature_matrix_report.sh
 
       - name: Test
@@ -911,7 +911,7 @@ jobs:
         if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.2
 
       - name: Install JS Deps (Playwright Release Evidence)
         if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
@@ -944,30 +944,26 @@ jobs:
           if-no-files-found: error
 
       - name: Performance Budgets
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_perf_budgets_report.sh
 
       - name: AI Iteration SLO
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
-          if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
+          # Preserve the 15s local/full target while allowing bounded hosted jitter.
+          GENESIS_BUDGET_CHANGED_FAST_MS=20000 \
             bash scripts/update_ai_iteration_slo_report.sh
-          else
-            # Preserve the 15s local/full target while allowing bounded hosted jitter.
-            GENESIS_BUDGET_CHANGED_FAST_MS=20000 \
-              bash scripts/update_ai_iteration_slo_report.sh
-          fi
 
       - name: AI Stress Suite (Tasks + Bridge + GPU/Compute)
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_ai_stress_suite_report.sh
 
       - name: Hot Path Budgets
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_hot_path_budgets_report.sh
 
       - name: Runtime Microbench Budgets
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_runtime_microbench_budgets_report.sh
 
       - name: Runtime Workload Budgets
@@ -975,7 +971,7 @@ jobs:
         run: bash scripts/update_runtime_workload_budgets_report.sh
 
       - name: GPU Compute Runtime Profile (Compute-Only)
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_gpu_compute_runtime_profile_report.sh
 
       - name: Selfhost Strict Smoke (Native + WASI CLI)
@@ -983,30 +979,19 @@ jobs:
         run: bash scripts/selfhost_strict_smoke.sh
 
       - name: Agent Capability Gauntlet (Selfhost-Only)
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
-        run: |
-          bash scripts/update_agent_reference_workflows_report.sh
-          if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
-            bash scripts/update_agent_workflow_runtime_parity_report.sh
-          fi
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        run: bash scripts/update_agent_reference_workflows_report.sh
 
       - name: Agent End-to-End Scenario Perf Gate
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: bash scripts/update_agent_scenario_perf_report.sh
 
       - name: Agent Generative Workload Gate
-        if: ${{ (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
         run: |
-          if [[ "$GENESIS_CI_PROFILE" == "full" ]]; then
-            GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_native_report.json \
-              GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT=.genesis/perf/agent_capability_gauntlet_wasi_report.json \
-              GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 \
-              bash scripts/update_agent_generative_workloads_report.sh
-          else
-            GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_report.json \
-              GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=0 \
-              bash scripts/update_agent_generative_workloads_report.sh
-          fi
+          GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_report.json \
+            GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=0 \
+            bash scripts/update_agent_generative_workloads_report.sh
 
       - name: Upload Perf Trend Artifacts
         if: ${{ (always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full')) && (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'platform') }}
@@ -1189,7 +1174,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.2
 
       - name: Install wasm-bindgen-cli
         run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
@@ -1214,7 +1199,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.2
 
       - name: Install JS Deps (Playwright)
         run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit

@@ -29,6 +29,12 @@ VERSION = "0.2.0"
 AUTH_NAME = "fanout-auth.json"
 MAX_ARTIFACT_BYTES = 20 * 1024 * 1024 * 1024
 MAX_API_RESPONSE_BYTES = 4 * 1024 * 1024
+EXECUTION_ENVIRONMENT_FIELDS = {
+    "architecture", "identitySha256", "operatingSystem",
+    "operatingSystemRelease", "profile", "toolchains",
+}
+STABLE_EXECUTION_FIELDS = ("architecture", "operatingSystem", "profile")
+TOOLCHAIN_FIELDS = {"executableSha256", "name", "versionSha256"}
 
 
 class FanoutError(ValueError):
@@ -128,26 +134,163 @@ def artifact_name(context: Mapping[str, str]) -> str:
 def compatible_execution_environment(
     producer: Mapping[str, Any], consumer: Mapping[str, Any]
 ) -> bool:
-    expected = {
-        "architecture", "identitySha256", "operatingSystem",
-        "operatingSystemRelease", "profile", "toolchains",
+    return not execution_environment_mismatches(producer, consumer)
+
+
+def validated_execution_environment(
+    label: str, environment: Mapping[str, Any]
+) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+    exact_keys(
+        environment,
+        EXECUTION_ENVIRONMENT_FIELDS,
+        f"fanout {label} execution environment",
+    )
+    core = {
+        name: environment[name]
+        for name in EXECUTION_ENVIRONMENT_FIELDS - {"identitySha256"}
     }
-    stable = {"architecture", "operatingSystem", "profile", "toolchains"}
-    contracts = []
-    for label, environment in (("producer", producer), ("consumer", consumer)):
-        exact_keys(environment, expected, f"fanout {label} execution environment")
-        core = {name: environment[name] for name in expected - {"identitySha256"}}
+    if (
+        not is_sha256(environment["identitySha256"])
+        or environment["identitySha256"] != sha256_bytes(canonical(core))
+    ):
+        fail(f"fanout {label} execution environment identity mismatch")
+    if any(
+        not isinstance(environment[name], str) or not environment[name]
+        for name in (*STABLE_EXECUTION_FIELDS, "operatingSystemRelease")
+    ) or not isinstance(environment["toolchains"], list):
+        fail(f"fanout {label} execution environment is malformed")
+
+    tools: dict[str, dict[str, str]] = {}
+    observed_names = []
+    for index, raw in enumerate(environment["toolchains"]):
+        row = exact_keys(raw, TOOLCHAIN_FIELDS, f"fanout {label} toolchain {index}")
+        name = row["name"]
         if (
-            not is_sha256(environment["identitySha256"])
-            or environment["identitySha256"] != sha256_bytes(canonical(core))
+            not isinstance(name, str)
+            or not name
+            or not is_sha256(row["executableSha256"])
+            or not is_sha256(row["versionSha256"])
+            or name in tools
         ):
-            fail(f"fanout {label} execution environment identity mismatch")
-        if any(not isinstance(environment[name], str) or not environment[name] for name in (
-            "architecture", "operatingSystem", "operatingSystemRelease", "profile",
-        )) or not isinstance(environment["toolchains"], list):
-            fail(f"fanout {label} execution environment is malformed")
-        contracts.append({name: environment[name] for name in stable})
-    return contracts[0] == contracts[1]
+            fail(f"fanout {label} toolchain inventory is malformed")
+        observed_names.append(name)
+        tools[name] = dict(row)
+    if not tools or observed_names != sorted(observed_names):
+        fail(f"fanout {label} toolchain inventory is malformed")
+    stable = {name: environment[name] for name in STABLE_EXECUTION_FIELDS}
+    return stable, tools
+
+
+def execution_environment_mismatches(
+    producer: Mapping[str, Any], consumer: Mapping[str, Any]
+) -> list[str]:
+    producer_fields, producer_tools = validated_execution_environment("producer", producer)
+    consumer_fields, consumer_tools = validated_execution_environment("consumer", consumer)
+    mismatches = []
+    for name in STABLE_EXECUTION_FIELDS:
+        if producer_fields[name] != consumer_fields[name]:
+            mismatches.append(
+                f"{name} producer={producer_fields[name]!r} consumer={consumer_fields[name]!r}"
+            )
+    producer_names = set(producer_tools)
+    consumer_names = set(consumer_tools)
+    if producer_names != consumer_names:
+        mismatches.append(
+            "toolchain names "
+            f"producer={sorted(producer_names)!r} consumer={sorted(consumer_names)!r}"
+        )
+    for name in sorted(producer_names & consumer_names):
+        for field in ("executableSha256", "versionSha256"):
+            if producer_tools[name][field] != consumer_tools[name][field]:
+                mismatches.append(
+                    f"toolchain {name!r} {field} "
+                    f"producer={producer_tools[name][field]} "
+                    f"consumer={consumer_tools[name][field]}"
+                )
+    return mismatches
+
+
+def execution_environment_fixture() -> dict[str, Any]:
+    core = {
+        "architecture": "x86_64",
+        "operatingSystem": "Linux",
+        "operatingSystemRelease": "fixture-kernel-a",
+        "profile": "release-full",
+        "toolchains": [
+            {
+                "executableSha256": "a" * 64,
+                "name": "python3",
+                "versionSha256": "b" * 64,
+            },
+            {
+                "executableSha256": "c" * 64,
+                "name": "rustc",
+                "versionSha256": "d" * 64,
+            },
+        ],
+    }
+    return {**core, "identitySha256": sha256_bytes(canonical(core))}
+
+
+def reidentify_execution_environment(environment: Mapping[str, Any]) -> dict[str, Any]:
+    result = json.loads(json.dumps(environment))
+    core = {
+        name: result[name]
+        for name in EXECUTION_ENVIRONMENT_FIELDS - {"identitySha256"}
+    }
+    result["identitySha256"] = sha256_bytes(canonical(core))
+    return result
+
+
+def self_test() -> int:
+    producer = execution_environment_fixture()
+    if not compatible_execution_environment(producer, producer):
+        fail("fanout self-test rejected an identical execution environment")
+
+    kernel_variant = dict(producer)
+    kernel_variant["operatingSystemRelease"] = "fixture-kernel-b"
+    kernel_variant = reidentify_execution_environment(kernel_variant)
+    if not compatible_execution_environment(producer, kernel_variant):
+        fail("fanout self-test rejected the declared kernel-release variance")
+
+    controls = 0
+    mutations = [
+        lambda row: row.__setitem__("architecture", "aarch64"),
+        lambda row: row.__setitem__("operatingSystem", "Darwin"),
+        lambda row: row.__setitem__("profile", "prepush-standard"),
+        lambda row: row["toolchains"][0].__setitem__("executableSha256", "e" * 64),
+        lambda row: row["toolchains"][0].__setitem__("versionSha256", "f" * 64),
+        lambda row: row["toolchains"].pop(),
+    ]
+    for mutate in mutations:
+        candidate = json.loads(json.dumps(producer))
+        mutate(candidate)
+        candidate = reidentify_execution_environment(candidate)
+        if not execution_environment_mismatches(producer, candidate):
+            fail(f"fanout self-test accepted compatibility mutation {controls + 1}")
+        controls += 1
+
+    malformed = []
+    duplicate = json.loads(json.dumps(producer))
+    duplicate["toolchains"].append(dict(duplicate["toolchains"][0]))
+    malformed.append(reidentify_execution_environment(duplicate))
+    unsorted = json.loads(json.dumps(producer))
+    unsorted["toolchains"].reverse()
+    malformed.append(reidentify_execution_environment(unsorted))
+    bad_hash = json.loads(json.dumps(producer))
+    bad_hash["toolchains"][0]["versionSha256"] = "not-a-hash"
+    malformed.append(reidentify_execution_environment(bad_hash))
+    stale_identity = dict(producer)
+    stale_identity["identitySha256"] = "0" * 64
+    malformed.append(stale_identity)
+    for candidate in malformed:
+        try:
+            execution_environment_mismatches(producer, candidate)
+        except FanoutError:
+            controls += 1
+        else:
+            fail(f"fanout self-test accepted malformed environment {controls + 1}")
+    return controls
 
 
 def load_manifest(root: Path, bundle: Path) -> dict[str, Any]:
@@ -161,11 +304,15 @@ def load_manifest(root: Path, bundle: Path) -> dict[str, Any]:
         fail("fanout evidence profile is not release-full")
     if manifest["source"] != health_evidence.source_inventory(root):
         fail("fanout evidence source does not match the checkout")
-    if not compatible_execution_environment(
+    mismatches = execution_environment_mismatches(
         manifest["executionEnvironment"],
         health_evidence.execution_environment("release-full"),
-    ):
-        fail("fanout evidence toolchain environment does not match the consumer")
+    )
+    if mismatches:
+        fail(
+            "fanout evidence execution environment does not match the consumer: "
+            + "; ".join(mismatches)
+        )
     generated = health_evidence.parse_time(manifest["generatedAtUtc"], "generatedAtUtc")
     expires = health_evidence.parse_time(manifest["expiresAtUtc"], "expiresAtUtc")
     now = dt.datetime.now(dt.timezone.utc)
@@ -438,6 +585,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
     sub = parser.add_subparsers(dest="action", required=True)
+    sub.add_parser("self-test")
     fetch_parser = sub.add_parser("fetch")
     fetch_parser.add_argument("--output", type=Path, required=True)
     fetch_parser.add_argument("--timeout-seconds", type=int, default=2400)
@@ -449,7 +597,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
     try:
         root = args.root.resolve(strict=True)
-        if args.action == "fetch":
+        if args.action == "self-test":
+            controls = self_test()
+            print(f"release-evidence-fanout: self-test ok (negative_controls={controls})")
+        elif args.action == "fetch":
             if not 1 <= args.timeout_seconds <= 2700 or not 1 <= args.poll_seconds <= 60:
                 fail("fanout polling limits are invalid")
             auth = fetch(root, args.output.resolve(), args.timeout_seconds, args.poll_seconds)

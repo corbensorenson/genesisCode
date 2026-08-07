@@ -1005,6 +1005,11 @@ for marker in ["bundletool", "install-apks", '--device-id="$(adb get-serialno)"'
 
 health = (root / "scripts/render_upgrade_plan_health_report.sh").read_text(encoding="utf-8")
 workflow = (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+node_versions = re.findall(r"(?m)^\s+node-version: ([^\s]+)\s*$", workflow)
+if not node_versions or set(node_versions) != {"22.23.2"}:
+    raise SystemExit(
+        "test-execution-profile-matrix: every hosted Node setup must use exact pin 22.23.2"
+    )
 for marker in [
     "GENESIS_HEALTH_EVIDENCE_REQUIRED=1",
     "GENESIS_HEALTH_EVIDENCE_MANIFEST=",
@@ -1223,14 +1228,16 @@ lane_end = {
     "WASI Build + Smoke (genesis_wasi.wasm)",
 }
 named_steps = list(re.finditer(r"(?m)^      - name: (?P<name>.+)$", test_suite_section))
+step_blocks = {}
 lane = None
 for index, step in enumerate(named_steps):
     name = step.group("name")
+    end = named_steps[index + 1].start() if index + 1 < len(named_steps) else len(test_suite_section)
+    block = test_suite_section[step.start():end]
+    step_blocks[name] = block
     if name in lane_start:
         lane = lane_start[name]
     if lane is not None:
-        end = named_steps[index + 1].start() if index + 1 < len(named_steps) else len(test_suite_section)
-        block = test_suite_section[step.start():end]
         required = (
             "env.GENESIS_CI_LANE == 'standard' || "
             f"env.GENESIS_CI_LANE == '{lane}'"
@@ -1241,6 +1248,29 @@ for index, step in enumerate(named_steps):
             )
     if name in lane_end:
         lane = None
+
+release_dag_owned_steps = {
+    "Runtime Backend Feature Matrix Guard",
+    "Performance Budgets",
+    "AI Iteration SLO",
+    "AI Stress Suite (Tasks + Bridge + GPU/Compute)",
+    "Hot Path Budgets",
+    "Runtime Microbench Budgets",
+    "GPU Compute Runtime Profile (Compute-Only)",
+    "Agent Capability Gauntlet (Selfhost-Only)",
+    "Agent End-to-End Scenario Perf Gate",
+    "Agent Generative Workload Gate",
+}
+for name in sorted(release_dag_owned_steps):
+    block = step_blocks.get(name, "")
+    if "env.GENESIS_CI_PROFILE == 'standard' &&" not in block:
+        raise SystemExit(
+            f"test-execution-profile-matrix: {name} is not standard-only outside the full DAG"
+        )
+    if "GENESIS_CI_PROFILE == \"full\"" in block or "GENESIS_CI_PROFILE == 'full'" in block:
+        raise SystemExit(
+            f"test-execution-profile-matrix: {name} duplicates a release-evidence DAG producer"
+        )
 
 watchdog = (root / ".github/workflows/ci-watchdog.yml").read_text(encoding="utf-8")
 for marker in [
@@ -1829,6 +1859,7 @@ python3 scripts/lib/ci_runner_preflight.py self-test \
   --policy policies/ci_control_plane_v0.1.json
 python3 scripts/lib/ci_liveness_watchdog.py self-test \
   --policy policies/ci_control_plane_v0.1.json
+python3 "$RELEASE_EVIDENCE_FANOUT_RUNNER" self-test
 
 python3 "$LINT_SUPPRESSION_POLICY" --root "$ROOT_DIR"
 

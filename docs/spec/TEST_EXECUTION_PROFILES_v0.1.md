@@ -362,6 +362,11 @@ Strict/full profile runtime reports:
       readiness shard remains on `macos-15`, and the aggregate joins every branch on
       `ubuntu-24.04`. The required `test` disposition binds the
       aggregate result for full runs and accepts only `skipped|success` outside full runs.
+      Release-evidence-owned report producers run only in the v0.2 DAG during full CI;
+      the ordinary `test_suite` matrix retains those direct updater steps only for
+      standard CI. The topology gate rejects reintroducing duplicate full-profile
+      runtime-backend, performance, agent-gauntlet/parity, scenario, or generative
+      producers while preserving their exact DAG selectors and coverage.
       The generic ignored-perf lane excludes `upgrade_plan_health`, preventing nested
       duplicate execution while retaining every other required perf target.
   - The v0.2 migration authority is `policies/release_evidence_dag_v0.2.json`, validated
