@@ -75,6 +75,9 @@ fn release_evidence_v02_partition_is_closed_and_adversarially_checked() {
         "same-run cold-1 fanout artifact",
         "fanout archive path is unsafe or duplicated",
         "another workflow run, attempt, or revision",
+        "TRANSIENT_HTTP_STATUSES",
+        "sleep_for_retry(deadline",
+        "archive_path.unlink(missing_ok=True)",
     ] {
         assert!(
             fanout.contains(marker),

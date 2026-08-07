@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import email.utils
 import hashlib
 import json
 import os
@@ -35,10 +36,18 @@ EXECUTION_ENVIRONMENT_FIELDS = {
 }
 STABLE_EXECUTION_FIELDS = ("architecture", "operatingSystem", "profile")
 TOOLCHAIN_FIELDS = {"executableSha256", "name", "versionSha256"}
+TRANSIENT_HTTP_STATUSES = {429, 500, 502, 503, 504}
+MAX_RETRY_DELAY_SECONDS = 60
 
 
 class FanoutError(ValueError):
     pass
+
+
+class TransientFanoutError(FanoutError):
+    def __init__(self, message: str, retry_after_seconds: int = 0) -> None:
+        super().__init__(message)
+        self.retry_after_seconds = retry_after_seconds
 
 
 class CredentialStrippingRedirect(urllib.request.HTTPRedirectHandler):
@@ -290,6 +299,40 @@ def self_test() -> int:
             controls += 1
         else:
             fail(f"fanout self-test accepted malformed environment {controls + 1}")
+    for status in sorted(TRANSIENT_HTTP_STATUSES):
+        if not transient_http_status(status):
+            fail(f"fanout self-test rejected transient HTTP status {status}")
+        controls += 1
+    for status in (400, 401, 403, 404, 409, 422):
+        if transient_http_status(status):
+            fail(f"fanout self-test accepted permanent HTTP status {status}")
+        controls += 1
+    for value, expected in (("17", 17), ("9999", 60), ("invalid", 0)):
+        if retry_after_seconds(value) != expected:
+            fail(f"fanout self-test misparsed Retry-After {value!r}")
+        controls += 1
+    transient = urllib.error.HTTPError(
+        "https://api.github.test/artifacts", 503, "unavailable", {"Retry-After": "7"}, None
+    )
+    try:
+        transient_http_error("fixture", transient)
+    except TransientFanoutError as exc:
+        if exc.retry_after_seconds != 7:
+            fail("fanout self-test lost the transient Retry-After bound")
+        controls += 1
+    else:
+        fail("fanout self-test accepted a transient HTTP failure without retry signaling")
+    permanent = urllib.error.HTTPError(
+        "https://api.github.test/artifacts", 401, "unauthorized", {}, None
+    )
+    try:
+        transient_http_error("fixture", permanent)
+    except TransientFanoutError:
+        fail("fanout self-test retried a permanent authentication failure")
+    except FanoutError:
+        controls += 1
+    else:
+        fail("fanout self-test accepted a permanent authentication failure")
     return controls
 
 
@@ -408,6 +451,43 @@ def validate_auth(
     return auth
 
 
+def transient_http_status(status: int) -> bool:
+    return status in TRANSIENT_HTTP_STATUSES
+
+
+def retry_after_seconds(value: Optional[str]) -> int:
+    if not value:
+        return 0
+    try:
+        seconds = int(value)
+    except ValueError:
+        try:
+            retry_at = email.utils.parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return 0
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=dt.timezone.utc)
+        seconds = max(0, int((retry_at - dt.datetime.now(dt.timezone.utc)).total_seconds()))
+    return min(max(0, seconds), MAX_RETRY_DELAY_SECONDS)
+
+
+def transient_http_error(label: str, error: urllib.error.HTTPError) -> None:
+    if transient_http_status(error.code):
+        raise TransientFanoutError(
+            f"{label} transient HTTP {error.code}",
+            retry_after_seconds(error.headers.get("Retry-After") if error.headers else None),
+        ) from error
+    fail(f"{label} failed: {error}")
+
+
+def sleep_for_retry(deadline: float, poll_seconds: int, error: TransientFanoutError) -> None:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        fail(f"{error} at the fanout deadline")
+    delay = max(poll_seconds, error.retry_after_seconds)
+    time.sleep(min(delay, remaining))
+
+
 def api_json(url: str, token: str) -> dict[str, Any]:
     require_https_url(url, "GitHub artifact API")
     request = urllib.request.Request(
@@ -424,7 +504,9 @@ def api_json(url: str, token: str) -> dict[str, Any]:
             if len(payload) > MAX_API_RESPONSE_BYTES:
                 fail("GitHub artifact API response exceeds the metadata bound")
             value = json.loads(payload)
-    except (OSError, UnicodeError, json.JSONDecodeError, urllib.error.HTTPError) as exc:
+    except urllib.error.HTTPError as exc:
+        transient_http_error("GitHub artifact API request", exc)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         fail(f"GitHub artifact API request failed: {exc}")
     if not isinstance(value, dict):
         fail("GitHub artifact API response is not an object")
@@ -456,7 +538,9 @@ def api_download(url: str, token: str, destination: Path) -> str:
                     digest.update(chunk)
                     handle.write(chunk)
         return digest.hexdigest()
-    except (OSError, urllib.error.HTTPError) as exc:
+    except urllib.error.HTTPError as exc:
+        transient_http_error("GitHub artifact download", exc)
+    except OSError as exc:
         fail(f"GitHub artifact download failed: {exc}")
 
 
@@ -521,8 +605,14 @@ def fetch(root: Path, output: Path, timeout_seconds: int, poll_seconds: int) -> 
     )
     deadline = time.monotonic() + timeout_seconds
     artifact: Optional[dict[str, Any]] = None
+    last_transient: Optional[str] = None
     while time.monotonic() < deadline:
-        response = api_json(url, token)
+        try:
+            response = api_json(url, token)
+        except TransientFanoutError as exc:
+            last_transient = str(exc)
+            sleep_for_retry(deadline, poll_seconds, exc)
+            continue
         rows = response.get("artifacts")
         if not isinstance(rows, list):
             fail("GitHub artifact API lacks an artifacts array")
@@ -537,7 +627,8 @@ def fetch(root: Path, output: Path, timeout_seconds: int, poll_seconds: int) -> 
             break
         time.sleep(poll_seconds)
     if artifact is None:
-        fail("same-run cold-1 fanout artifact did not become available before deadline")
+        suffix = f"; last transient error: {last_transient}" if last_transient else ""
+        fail(f"same-run cold-1 fanout artifact did not become available before deadline{suffix}")
     digest = artifact.get("digest")
     if not isinstance(digest, str) or not digest.startswith("sha256:") or not is_sha256(digest[7:]):
         fail("GitHub fanout artifact lacks an authenticated SHA-256 digest")
@@ -546,11 +637,16 @@ def fetch(root: Path, output: Path, timeout_seconds: int, poll_seconds: int) -> 
         fail("GitHub fanout artifact id is invalid")
     with tempfile.TemporaryDirectory(prefix="genesis-release-fanout-") as temp:
         archive_path = Path(temp) / "fanout.zip"
-        observed_digest = api_download(
-            f"{base}/repos/{context['repository']}/actions/artifacts/{artifact_id}/zip",
-            token,
-            archive_path,
+        download_url = (
+            f"{base}/repos/{context['repository']}/actions/artifacts/{artifact_id}/zip"
         )
+        while True:
+            try:
+                observed_digest = api_download(download_url, token, archive_path)
+                break
+            except TransientFanoutError as exc:
+                archive_path.unlink(missing_ok=True)
+                sleep_for_retry(deadline, poll_seconds, exc)
         if observed_digest != digest[7:]:
             fail("downloaded fanout archive digest does not match GitHub")
         safe_extract(archive_path, output)
