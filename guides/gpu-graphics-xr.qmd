@@ -29,4 +29,4 @@ Never let a fallback satisfy a device-required release claim. Read [runtime back
 
 Capture adapter/backend identity, fallback mode, workload identity, output hashes, timing distribution, warmup policy, and negative controls. Hardware microbench evidence belongs on the declared device runner, not on a generic CI fallback.
 
-Start with the [GPU compute](../docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md), [game loop](../docs/skill_pack/write_genesiscode_v1/recipes/game_loop_workflow.md), [browser](../docs/skill_pack/write_genesiscode_v1/recipes/browser_runtime_workflow.md), and [XR](../docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md) recipes.
+Start with the executable [GPU compute](../reference/examples.qmd#agent_gpu_compute_workflow), [game loop](../reference/examples.qmd#agent_long_running_gfx_loop_workflow), [browser](../reference/examples.qmd#agent_browser_runtime_workflow), and [XR](../reference/examples.qmd#agent_xr_runtime_workflow) examples. Agents should select the corresponding stable recipe ID from the canonical [recipe-card catalog](../docs/skill_pack/write_genesiscode_v1/recipe-cards.json).

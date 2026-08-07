@@ -1,4 +1,4 @@
-pub(super) fn call_capability(op_eff: &str) {
+pub(super) fn call_capability_with_runtime(op_eff: &str) {
     match op_eff {
         "gfx/window::open" => {}
         "gpu/compute::create-buffer"
