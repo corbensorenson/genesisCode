@@ -696,8 +696,8 @@ def prepare_cache(root: Path, output: Path, cache_state: str, index: int) -> int
     phases: list[dict[str, Any]] = []
     if cache_state == "warm":
         root_started_empty = not cache_root.exists()
-        backend, prefix = dependency_mirror.network_guard_prefix()
-        dependency_mirror.prove_network_denial(prefix)
+        backend, prefix = dependency_mirror.network_guard_prefix(allow_loopback=True)
+        dependency_mirror.prove_network_denial(prefix, require_loopback=True)
         expected_all = active_command_ids(policy, "cache-sensitive", "all", gpu_profile)
         before_source = health_evidence.source_inventory(root)
         before_execution = health_evidence.execution_environment("release-full")
@@ -1687,9 +1687,15 @@ def self_test(root: Path) -> int:
         }
     )
     relay = sudo_relay_environment(root, required_env)
+    loopback_prefix = dependency_mirror._loopback_namespace_prefix(
+        "unshare-sudo-net",
+        ["/usr/bin/sudo", "-n", "/usr/bin/unshare", "--net", "--"],
+        ip_tool="/usr/sbin/ip",
+        setpriv_tool="/usr/bin/setpriv",
+    )
     command, process_env = guarded_process_command(
         root,
-        ["/usr/bin/sudo", "-n", "/usr/bin/unshare", "--net", "--"],
+        loopback_prefix,
         ["bash", "-c", "true"],
         required_env,
     )
@@ -1699,6 +1705,8 @@ def self_test(root: Path) -> int:
         or any("SUPER_SECRET_SENTINEL" in argument for argument in command)
         or process_env != {"LANG": "C", "PATH": "/usr/bin:/bin"}
         or shutil.which("rustc", path=relay["PATH"]) is None
+        or not any("link set lo up" in argument for argument in command)
+        or "/usr/bin/setpriv" not in command
     ):
         fail("release execution self-test found an open or incomplete sudo relay")
     controls += 1
