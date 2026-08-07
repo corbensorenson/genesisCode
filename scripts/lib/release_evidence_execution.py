@@ -1015,8 +1015,10 @@ def validate_worker(root: Path, output: Path, policy: Mapping[str, Any], dag_sha
         fail("worker observation is stale")
     if report["source"] != health_evidence.source_inventory(root):
         fail("worker source identity drift")
-    if report["executionEnvironment"] != health_evidence.execution_environment("release-full"):
-        fail("worker execution environment identity drift")
+    try:
+        fanout.validated_execution_environment("worker", report["executionEnvironment"])
+    except fanout.FanoutError as exc:
+        fail(str(exc))
     if report["dag"] != {
         "identitySha256": dag_sha,
         "path": "policies/release_evidence_dag_v0.2.json",
@@ -1177,6 +1179,24 @@ def validate_worker(root: Path, output: Path, policy: Mapping[str, Any], dag_sha
     return dict(report)
 
 
+def validate_worker_environment_cohort(workers: Sequence[Mapping[str, Any]]) -> None:
+    if not workers:
+        fail("release worker environment cohort is empty")
+    expected = workers[0]["executionEnvironment"]
+    for worker in workers[1:]:
+        observed = worker["executionEnvironment"]
+        if observed == expected:
+            continue
+        mismatches = fanout.execution_environment_mismatches(expected, observed)
+        if not mismatches:
+            mismatches = [
+                "operatingSystemRelease "
+                f"expected={expected['operatingSystemRelease']!r} "
+                f"observed={observed['operatingSystemRelease']!r}"
+            ]
+        fail("worker execution environment identity drift: " + "; ".join(mismatches))
+
+
 def percentile95(values: Sequence[int]) -> int:
     return sorted(values)[max(0, math.ceil(len(values) * 0.95) - 1)]
 
@@ -1277,6 +1297,7 @@ def aggregate(
     output.mkdir(parents=True, exist_ok=True)
     policy, dag_sha = policy_context(root)
     workers = [validate_worker(root, path.resolve(strict=True), policy, dag_sha) for path in worker_outputs]
+    validate_worker_environment_cohort(workers)
     expected_nodes = expected_node_keys()
     validate_node_topology(workers)
     workers.sort(
@@ -1602,6 +1623,25 @@ def self_test(root: Path) -> int:
             controls += 1
         else:
             fail("release execution self-test accepted invalid node topology")
+    environment = fanout.execution_environment_fixture()
+    environment_workers = [
+        {"executionEnvironment": copy.deepcopy(environment)} for _ in range(3)
+    ]
+    validate_worker_environment_cohort(environment_workers)
+    environment_workers[1]["executionEnvironment"]["architecture"] = "forged-arch"
+    environment_workers[1]["executionEnvironment"] = (
+        fanout.reidentify_execution_environment(
+            environment_workers[1]["executionEnvironment"]
+        )
+    )
+    try:
+        validate_worker_environment_cohort(environment_workers)
+    except ExecutionError as exc:
+        if "architecture" not in str(exc):
+            fail("release execution self-test lost environment drift diagnostics")
+        controls += 1
+    else:
+        fail("release execution self-test accepted worker environment drift")
     candidate = copy.deepcopy(workers)
     candidate[1]["node"]["isolation"]["nonceSha256"] = candidate[0]["node"]["isolation"][
         "nonceSha256"
