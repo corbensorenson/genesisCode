@@ -4,6 +4,26 @@
   "audit_date": "2026-08-06",
   "execution_frontier": {
     "wip_limit": 1,
+    "scope_freeze": {
+      "until_task_id": "R9.4.f",
+      "frozen_program_concepts": [
+        "GenesisCode",
+        "GenesisBench",
+        "GenesisChallenge",
+        "Genesis Foundry",
+        "Genesis Model"
+      ],
+      "forbidden_addition_classes": [
+        "product",
+        "program",
+        "benchmark-track",
+        "research-lane",
+        "milestone-family",
+        "task-family",
+        "governed-gate-family"
+      ],
+      "exception_rule": "Only a reproduced P0/P1 correction may replace one equivalent concept one-for-one with a recorded deletion, dependency impact, acceptance delta, and no increase in WIP or release ancestry."
+    },
     "ordered_task_ids": [
       "R0.4.j",
       "R2.2.f",
@@ -90,6 +110,17 @@
           "it exercises only frozen GenesisCode inputs and independently reports pass, fail, unknown, or infrastructure failure",
           "it performs no target-model inference, benchmark custody or commissioning, result publication, Foundry implementation, or Genesis Model work",
           "it cannot authorize completion, promotion, capability, policy, signing, or release"
+        ]
+      },
+      {
+        "id": "model-interface-portability-canary",
+        "description": "One read-only, non-scoring local canary may test whether a materially different model family crosses the transport-neutral interface without provider imitation.",
+        "conditions": [
+          "it runs only after model-free adapter fixtures pass and uses an already inventoried digest-pinned local model plus a direct-runtime or generic JSON-stdio stack",
+          "it receives fixed protocol canary content only and no GenesisBench task, private payload, scorer, answer, repair loop, tool authority, or language-change signal",
+          "it cannot modify repository files, generated authorities, release state, benchmark custody, or the active production transaction",
+          "it emits only pass, fail, unsupported, or infrastructure-failure with exact model, runtime, adapter, input, output, cancellation, cleanup, and transcript identities",
+          "it creates no benchmark attempt, score, cohort, rank, result, adoption claim, task completion, capability, policy, signing, publication, or release authority"
         ]
       }
     ]
@@ -611,11 +642,11 @@
     "R3.3": {"profile": "validated-tier", "start_after": ["R2.4", "R3.1", "R3.2"], "sequential": true},
     "R3.4": {"profile": "validated-tier", "start_after": ["R2.3", "R3.3"], "sequential": true},
     "R4.1": {"profile": "selfhost-authority", "start_after": ["R0.1.f", "R0.2"], "sequential": true},
-    "R4.2": {"profile": "selfhost-authority", "start_after": ["R4.1", "R3.1", "R3.2", "R3.3", "R5.1", "R5.3"], "sequential": true},
+    "R4.2": {"profile": "selfhost-authority", "start_after": ["R4.1", "R5.1", "R5.3"], "sequential": true},
     "R4.3": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
-    "R4.4": {"profile": "selfhost-authority", "start_after": ["R4.2", "R4.3"], "sequential": true},
-    "R4.5": {"profile": "selfhost-authority", "start_after": ["R4.2"], "sequential": true},
-    "R5.1": {"profile": "language-contract", "start_after": ["R0.3", "R2.1", "R3.2"], "sequential": true},
+    "R4.4": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
+    "R4.5": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
+    "R5.1": {"profile": "language-contract", "start_after": ["R0.3", "R2.1"], "sequential": true},
     "R5.2": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
     "R5.3": {"profile": "language-contract", "start_after": ["R0.3", "R5.1"], "sequential": true},
     "R5.4": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
@@ -708,6 +739,18 @@
     ],
     "R1.7.f": [
       "R0.1.h"
+    ],
+    "R4.2.f": [
+      "R3.1",
+      "R3.2",
+      "R3.3"
+    ],
+    "R4.4.c": [
+      "R4.2.g",
+      "R4.3.d"
+    ],
+    "R4.5.c": [
+      "R4.2.g"
     ],
     "R5.7.b": [
       "R5.7.a"

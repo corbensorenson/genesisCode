@@ -43,6 +43,34 @@ RELEASE_LANE_IDS = {
     "genesis-model-readiness",
     "genesis-model-release",
 }
+FROZEN_PROGRAM_CONCEPTS = [
+    "GenesisCode",
+    "GenesisBench",
+    "GenesisChallenge",
+    "Genesis Foundry",
+    "Genesis Model",
+]
+FORBIDDEN_SCOPE_ADDITION_CLASSES = [
+    "product",
+    "program",
+    "benchmark-track",
+    "research-lane",
+    "milestone-family",
+    "task-family",
+    "governed-gate-family",
+]
+PARALLEL_LANE_REQUIRED_PHRASES = {
+    "read-only-selfhost-assurance": [
+        "cannot modify repository files",
+        "performs no target-model inference, benchmark custody or commissioning, result publication, Foundry implementation",
+        "cannot authorize completion",
+    ],
+    "model-interface-portability-canary": [
+        "no GenesisBench task, private payload, scorer",
+        "cannot modify repository files",
+        "creates no benchmark attempt, score, cohort, rank, result",
+    ],
+}
 
 
 class ManifestError(ValueError):
@@ -395,6 +423,7 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
         frontier,
         (
             "wip_limit",
+            "scope_freeze",
             "ordered_task_ids",
             "rationale",
             "task_context",
@@ -407,6 +436,45 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
         raise ManifestError("execution_frontier.wip_limit must be an integer")
     if wip_limit < 1 or wip_limit > 3:
         raise ManifestError("execution_frontier.wip_limit must be between 1 and 3")
+    scope_freeze = require_object(
+        frontier.get("scope_freeze"), "execution_frontier.scope_freeze"
+    )
+    reject_unknown_fields(
+        scope_freeze,
+        (
+            "until_task_id",
+            "frozen_program_concepts",
+            "forbidden_addition_classes",
+            "exception_rule",
+        ),
+        "execution_frontier.scope_freeze",
+    )
+    freeze_task_id = require_string(
+        scope_freeze.get("until_task_id"),
+        "execution_frontier.scope_freeze.until_task_id",
+    )
+    if freeze_task_id not in task_ids:
+        raise ManifestError(
+            f"execution_frontier.scope_freeze names unknown task: {freeze_task_id}"
+        )
+    frozen_concepts = require_string_list(
+        scope_freeze.get("frozen_program_concepts"),
+        "execution_frontier.scope_freeze.frozen_program_concepts",
+        non_empty=True,
+    )
+    if frozen_concepts != FROZEN_PROGRAM_CONCEPTS:
+        raise ManifestError("execution_frontier.scope_freeze concept set drift")
+    forbidden_additions = require_string_list(
+        scope_freeze.get("forbidden_addition_classes"),
+        "execution_frontier.scope_freeze.forbidden_addition_classes",
+        non_empty=True,
+    )
+    if forbidden_additions != FORBIDDEN_SCOPE_ADDITION_CLASSES:
+        raise ManifestError("execution_frontier.scope_freeze addition-class drift")
+    require_string(
+        scope_freeze.get("exception_rule"),
+        "execution_frontier.scope_freeze.exception_rule",
+    )
     frontier_ids = require_string_list(
         frontier.get("ordered_task_ids"),
         "execution_frontier.ordered_task_ids",
@@ -482,6 +550,25 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
             f"execution_frontier.allowed_parallel_lanes[{index}].conditions",
             non_empty=True,
         )
+    if observed_parallel_lane_ids != set(PARALLEL_LANE_REQUIRED_PHRASES):
+        raise ManifestError("execution_frontier allowed parallel lane set drift")
+    parallel_lane_by_id = {
+        str(lane["id"]): require_object(lane, "allowed parallel lane")
+        for lane in parallel_lanes
+    }
+    for lane_id, required_phrases in PARALLEL_LANE_REQUIRED_PHRASES.items():
+        contract = " ".join(
+            require_string_list(
+                parallel_lane_by_id[lane_id].get("conditions"),
+                f"execution_frontier.allowed_parallel_lanes[{lane_id}].conditions",
+                non_empty=True,
+            )
+        )
+        for phrase in required_phrases:
+            if phrase not in contract:
+                raise ManifestError(
+                    f"execution_frontier parallel lane {lane_id} lost {phrase!r}"
+                )
     task_prerequisites = require_object(
         policy.get("task_prerequisites"), "policy.task_prerequisites"
     )
@@ -1358,6 +1445,7 @@ def build_execution_slice(
         },
         "input_identities": manifest["input_identities"],
         "wip_limit": wip_limit,
+        "scope_freeze": frontier["scope_freeze"],
         "rationale": require_string(
             frontier.get("rationale"), "execution_frontier.rationale"
         ),
