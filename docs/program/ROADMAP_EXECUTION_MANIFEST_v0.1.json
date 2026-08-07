@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "29feb0f30108e23e467b9741bc8a478fd5c94e040e61578e4db4623cf8448d73",
-    "roadmap_sha256": "b92b0941e0b0a1c958ae46dc18f71697f05a84b47e1526e0efd7fed18c3ad9de",
+    "roadmap_sha256": "aa7e479393bbb2fb7d6210f2f99e209ca141a76e746953d1aa956aabe16a43cc",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -1038,7 +1038,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "test-hermeticity-bundle-sha256:2ed2a7cd85daf7911c10825c21e05b958030c2af2259df203ff790bb453e7fec"
+          "input_identity": "test-hermeticity-bundle-sha256:f99be1400fed5b384f238bdfa8ff07b0de50171483e69879c5e8f22974acb88e"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,

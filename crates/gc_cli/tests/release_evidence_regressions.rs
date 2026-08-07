@@ -399,7 +399,6 @@ for field, value in (
     ('profile', 'release-standard'),
     ('architecture', 'incompatible-architecture'),
     ('operatingSystem', 'incompatible-operating-system'),
-    ('toolchains', []),
 ):
     incompatible = copy.deepcopy(consumer_environment)
     incompatible[field] = value
@@ -409,6 +408,19 @@ for field, value in (
     }
     incompatible['identitySha256'] = f.sha256_bytes(f.canonical(incompatible_core))
     assert not f.compatible_execution_environment(producer_environment, incompatible)
+malformed = copy.deepcopy(consumer_environment)
+malformed['toolchains'] = []
+malformed_core = {
+    key: item for key, item in malformed.items()
+    if key != 'identitySha256'
+}
+malformed['identitySha256'] = f.sha256_bytes(f.canonical(malformed_core))
+try:
+    f.compatible_execution_environment(producer_environment, malformed)
+except f.FanoutError as exc:
+    assert 'toolchain inventory is malformed' in str(exc)
+else:
+    raise SystemExit('accepted empty fanout toolchain inventory')
 forged = copy.deepcopy(consumer_environment)
 forged['identitySha256'] = 'f' * 64
 try:

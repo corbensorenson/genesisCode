@@ -622,6 +622,8 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         .expect("read render_upgrade_plan_health_report.sh");
     let bundle = fs::read_to_string(root.join("scripts/render_health_profile_evidence_bundle.sh"))
         .expect("read render_health_profile_evidence_bundle.sh");
+    let release_dag = fs::read_to_string(root.join("policies/release_evidence_dag_v0.2.json"))
+        .expect("read release evidence DAG");
     let webxr = fs::read_to_string(root.join("scripts/render_webxr_browser_conformance_report.sh"))
         .expect("read render_webxr_browser_conformance_report.sh");
     let parity =
@@ -834,13 +836,16 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         .expect("AI stress lane after iteration SLO");
     let ai_slo_lane = &workflow[ai_slo..ai_stress];
     assert!(
-        ai_slo_lane.contains("if [[ \"$GENESIS_CI_PROFILE\" == \"full\" ]]")
+        ai_slo_lane.contains("env.GENESIS_CI_PROFILE == 'standard' &&")
             && ai_slo_lane.contains("GENESIS_BUDGET_CHANGED_FAST_MS=20000")
             && ai_slo_lane
                 .matches("bash scripts/update_ai_iteration_slo_report.sh")
                 .count()
-                == 2,
-        "standard hosted CI may declare bounded jitter, but full CI must retain the local AI-loop target"
+                == 1
+            && !ai_slo_lane.contains("GENESIS_CI_PROFILE == \"full\"")
+            && release_dag.contains("\"id\": \"profile/ai-iteration-slo\"")
+            && release_dag.contains("\"selector\": \"check_ai_iteration_slo.sh\""),
+        "standard hosted jitter and the full DAG's unchanged AI-loop target must have disjoint ownership"
     );
     let agent_gauntlet = workflow
         .find("- name: Agent Capability Gauntlet (Selfhost-Only)")
@@ -860,13 +865,16 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
             && agent_scenario < agent_generative
             && agent_generative < perf_upload
             && agent_lane.contains("bash scripts/update_agent_reference_workflows_report.sh")
-            && agent_lane.contains("bash scripts/update_agent_workflow_runtime_parity_report.sh")
             && agent_lane.contains("bash scripts/update_agent_scenario_perf_report.sh")
-            && agent_lane.contains("GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1")
             && agent_lane.contains("GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=0")
             && agent_lane.contains("bash scripts/update_agent_generative_workloads_report.sh")
-            && !agent_lane.contains("bash scripts/check_agent_reference_workflows.sh"),
-        "CI must provision and retain gauntlet, scenario, parity, and generative evidence in dependency order"
+            && !agent_lane.contains("bash scripts/update_agent_workflow_runtime_parity_report.sh")
+            && !agent_lane.contains("GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1")
+            && !agent_lane.contains("bash scripts/check_agent_reference_workflows.sh")
+            && release_dag.contains("\"id\": \"profile/agent-scenario-perf\"")
+            && release_dag.contains("\"id\": \"profile/agent-workflow-runtime-parity\"")
+            && release_dag.contains("\"id\": \"profile/agent-generative-workloads\""),
+        "standard agent evidence and full-DAG parity evidence must remain ordered without duplicate execution"
     );
     let local_workspace_job = workflow
         .find("  local_workspace_test_contract:")
