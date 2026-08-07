@@ -13,6 +13,8 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from xml.etree import ElementTree
 
+from lib.quarto_site_contract import canonical_render_sources, verify_html_inventory
+
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "_site"
 SITE_URL = "https://corbensorenson.github.io/genesisCode/"
@@ -87,15 +89,17 @@ for key, minimum in minimums.items():
     if not isinstance(value, int) or value < minimum:
         fail(f"reference index {key}={value!r} below completeness floor {minimum}")
 
-canonical_md = sorted(p for p in (ROOT / "docs").rglob("*.md") if p.name != ".DS_Store")
-for source in canonical_md:
+render_sources = canonical_render_sources(ROOT)
+for source in render_sources:
     rel = source.relative_to(ROOT).with_suffix(".html")
     if not (SITE / rel).is_file():
-        fail(f"canonical Markdown was not rendered: {source.relative_to(ROOT)}")
+        fail(f"declared source was not rendered: {source.relative_to(ROOT)}")
 
 html_files = sorted(SITE.rglob("*.html"))
-if len(html_files) < len(canonical_md) + 20:
-    fail(f"rendered HTML inventory unexpectedly small: {len(html_files)}")
+try:
+    verify_html_inventory(len(html_files), ROOT)
+except ValueError as error:
+    fail(str(error))
 
 forbidden_paths = sorted(
     path.relative_to(SITE) for path in SITE.rglob("*")
@@ -211,7 +215,7 @@ for needle in [
 
 print(
     "quarto-site: ok "
-    f"(html={len(html_files)} canonical_md={len(canonical_md)} "
+    f"(html={len(html_files)} render_sources={len(render_sources)} "
     f"symbols={counts['symbols']} host_ops={counts['hostOperations']} "
     f"diagnostics={counts['diagnostics']})"
 )

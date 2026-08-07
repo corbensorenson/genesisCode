@@ -980,7 +980,7 @@
       "executionIdentitySha256": "057623bf88ddbfcc1bcc06d79016ec18b5a0841b91d77d465babfd292082527d",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1604,6 +1604,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -1721,6 +1722,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -2379,7 +2381,7 @@
       "executionIdentitySha256": "82d2d68426c3ae14a3e23bdc7a966b557f555377087097977d2852ab4cd936ed",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3003,6 +3005,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -3120,6 +3123,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -3487,7 +3491,7 @@
       "executionIdentitySha256": "413a261bef8019890d3ecef40d7030e2af4ef612abb636f6c69bf63078766212",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4111,6 +4115,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -4228,6 +4233,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -4470,7 +4476,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5094,6 +5100,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -5211,6 +5218,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -5532,7 +5540,7 @@
       "executionIdentitySha256": "5d7fcca0e4a1109fa79c1d828aa09ebefb4eb1bd2cb1cd143f819300fc4a8cca",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6156,6 +6164,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -6273,6 +6282,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -6800,10 +6810,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_doc_topology_drift.sh",
-      "executionIdentitySha256": "8109d1c353cd02cdfd4f438e94ab9452f38301d64fab0120238edcbcaa54764c",
+      "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "60fe8ce4a09cad595e366254abf79d0965dd7e64c35bfc95870b8b3443d31b90",
+      "inputIdentitySha256": "1c403520e2f23378fee3e8371c72f71a4afcc5cf1182828f83e2c17bfd2b6c65",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6841,7 +6851,9 @@
           "policies/check_update_boundary_v0.1.json",
           "policies/genesisbench_construct_validity_v0.1.json",
           "scripts/check_doc_topology_drift.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/render_quarto_reference.py"
         ],
         "sets": [
@@ -6871,7 +6883,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "ea4200d6748caa6f1d9d4e52d775e8b265507a9f812fda9ed0297e80470d9025",
+      "sourceSha256": "2bda2a466dc4c87c0837397756c9960f84921d32834a5129c388411e9fbf7b3a",
       "tools": [
         "bash",
         "git",
@@ -7084,7 +7096,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7708,6 +7720,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -7825,6 +7838,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -8653,7 +8667,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "8687fbafb4228bbba5c131229ab3467f119d05422fc0e7ac96ec6b6ced7ba749",
+      "inputIdentitySha256": "8ae3ac47819d9e8566973df2dd1e7d31a40587d757fcb16666f236830001efe9",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8840,7 +8854,7 @@
       "executionIdentitySha256": "969f063c2bb464130de2dc61013286e16ddaf028bc31c8b8bc99dabe3e95398d",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9464,6 +9478,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -9581,6 +9596,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -11432,7 +11448,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12056,6 +12072,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -12173,6 +12190,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -13055,7 +13073,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13679,6 +13697,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -13796,6 +13815,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -14225,7 +14245,7 @@
       "executionIdentitySha256": "b5a5877112d47b1cd04e2b00c868b18e79a5d2572677ca2682ca66137324f9b1",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14849,6 +14869,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -14966,6 +14987,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -15777,7 +15799,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16401,6 +16423,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -16518,6 +16541,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -17041,7 +17065,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17665,6 +17689,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -17782,6 +17807,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -20303,7 +20329,7 @@
       "executionIdentitySha256": "c1eb5152a478fa5c6f9c5682a1bab2f2bd710441fdba7256367b9053823f76c7",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20927,6 +20953,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -21044,6 +21071,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -21388,7 +21416,7 @@
       "executionIdentitySha256": "6e8e8be523ccf08cefabe90ada725c7a7459697107f05ac637ef56f188a5476f",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "8cae29fd222b468d5fe1a37bf2f4b91a982d28500d426c2f82723ad03bbc301d",
+      "inputIdentitySha256": "fe72f69060c9f10395e699f10f8e4e75e3e55ae36f9d4b9bc9b66156446b0d9f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22012,6 +22040,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_deployment.py",
           "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
@@ -22129,6 +22158,7 @@
           "scripts/lib/prerequisite_manifest.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/quarto_site_contract.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/release_evidence_dag.py",
@@ -23383,7 +23413,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "3bd972bcf3a3e80dd9ca207c385e43602a14bfd09a2cbdfd264af57955508d05"
+        "sha256": "bbf8e352e06a2527cd4029db6c267c5f9d90e7a3cc4bcf1dfd523c0e62234b26"
       },
       {
         "path": "genesis.prerequisites.json",

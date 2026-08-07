@@ -78,6 +78,7 @@ for required_ref in (
     "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
     "scripts/render_quarto_reference.py",
     "scripts/check_quarto_site.py",
+    "scripts/check_quarto_deployment.py",
     ".github/workflows/docs-site.yml",
     "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md",
     "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
@@ -184,4 +185,5 @@ print(
 )
 PY
 
+python3 scripts/check_quarto_deployment.py --self-test
 python3 scripts/render_quarto_reference.py --check
