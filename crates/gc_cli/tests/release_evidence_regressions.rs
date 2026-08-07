@@ -913,7 +913,7 @@ fn release_evidence_v02_partition_is_closed_and_adversarially_checked() {
         "genesis/release-evidence-worker-observation-v0.2",
         "genesis/release-evidence-aggregate-v0.2",
         "commandCoverageExact",
-        "dependency_mirror.prove_network_denial(prefix)",
+        "dependency_mirror.prove_network_denial(prefix, require_loopback=True)",
         "genesis/release-evidence-worker-start-v0.2",
         "require_initialized_output",
         "fanout consumer does not bind the cold-1 producer",

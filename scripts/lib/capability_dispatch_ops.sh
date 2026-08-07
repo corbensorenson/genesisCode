@@ -11,7 +11,7 @@ extract_call_capability_ops() {
   fi
 
   awk '
-    /fn call_capability\(/ { in_fn = 1; }
+    /fn call_capability(_with_runtime)?\(/ { in_fn = 1; }
     in_fn && /match op(_eff)? \{/ { in_match = 1; next; }
     in_match {
       if ($0 ~ /^[[:space:]]*_[[:space:]]*=>/) {
