@@ -30,6 +30,28 @@ fn measure_helper_fails_closed_on_command_error() {
 }
 
 #[test]
+fn host_bridge_fault_renderer_does_not_require_ripgrep() {
+    let root = repo_root();
+    let renderer =
+        fs::read_to_string(root.join("scripts/render_host_bridge_fault_injection_report.sh"))
+            .expect("read render_host_bridge_fault_injection_report.sh");
+
+    assert!(
+        renderer.contains("grep -En 'static SESSIONS|persistent_bridge_session_map'")
+            && renderer.contains("grep -Eq 'struct HostBridgeRuntime'")
+            && renderer.contains("grep -Eq 'bridge_runtime: &mut HostBridgeRuntime'"),
+        "host-bridge structural checks must use baseline grep available on hosted runners"
+    );
+    assert!(
+        !renderer.lines().any(|line| {
+            let command = line.trim_start();
+            command.starts_with("rg ") || command.starts_with("if rg ")
+        }),
+        "host-bridge renderer must not require optional ripgrep"
+    );
+}
+
+#[test]
 fn perf_scripts_use_shared_fail_closed_primitives() {
     let root = repo_root();
     let hot = fs::read_to_string(root.join("scripts/render_hot_path_budgets_report.sh"))
