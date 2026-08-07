@@ -1608,7 +1608,7 @@ def self_test(root: Path) -> int:
     validate_node_topology(workers)
     validate_isolation_set(workers)
     validate_fanout_custody(workers, dag_sha)
-    controls = 0
+    controls = health_evidence.source_inventory_self_test()
     mutations = [
         lambda rows: rows.pop(),
         lambda rows: rows.append(copy.deepcopy(rows[0])),

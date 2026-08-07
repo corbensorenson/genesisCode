@@ -13,6 +13,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Any
 
 
@@ -291,13 +292,27 @@ def source_inventory(root: pathlib.Path) -> dict[str, Any]:
     byte_count = 0
     for rel in paths:
         path = root / rel
-        if not path.is_file():
+        if path.is_symlink():
+            try:
+                payload = os.readlink(path).encode("utf-8")
+            except (OSError, UnicodeEncodeError) as exc:
+                fail(f"cannot read semantic source symlink {rel.as_posix()}: {exc}")
+            mode = "120000"
+        elif path.is_file():
+            try:
+                payload = path.read_bytes()
+                executable = bool(path.stat().st_mode & 0o111)
+            except OSError as exc:
+                fail(f"cannot read semantic source input {rel.as_posix()}: {exc}")
+            # Git records only the executable bit for regular files. Atomic
+            # producers commonly leave 0600 files that checkout as 0644; those
+            # host permission differences are not repository identity.
+            mode = "755" if executable else "644"
+        else:
             continue
-        payload = path.read_bytes()
-        mode = path.stat().st_mode & 0o777
         digest.update(rel.as_posix().encode())
         digest.update(b"\0")
-        digest.update(f"{mode:o}".encode())
+        digest.update(mode.encode())
         digest.update(b"\0")
         digest.update(payload)
         digest.update(b"\0")
@@ -310,6 +325,72 @@ def source_inventory(root: pathlib.Path) -> dict[str, Any]:
         "gitCommit": head,
         "semanticInputsSha256": digest.hexdigest(),
     }
+
+
+def source_inventory_self_test() -> int:
+    with tempfile.TemporaryDirectory(prefix="genesis-source-inventory-") as directory:
+        root = pathlib.Path(directory)
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        plain = root / "plain.txt"
+        executable = root / "tool.sh"
+        link = root / "plain-link"
+        untracked = root / "untracked.txt"
+        plain.write_text("plain\n", encoding="utf-8")
+        executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        executable.chmod(0o755)
+        try:
+            link.symlink_to("plain.txt")
+        except OSError:
+            symlink_supported = False
+        else:
+            symlink_supported = True
+        tracked = ["plain.txt", "tool.sh"]
+        if symlink_supported:
+            tracked.append("plain-link")
+        subprocess.run(["git", "add", *tracked], cwd=root, check=True)
+        subprocess.run(
+            [
+                "git", "-c", "user.name=Genesis Evidence", "-c",
+                "user.email=evidence@example.invalid", "commit", "-qm", "fixture",
+            ],
+            cwd=root,
+            check=True,
+        )
+        untracked.write_text("untracked\n", encoding="utf-8")
+        baseline = source_inventory(root)
+
+        plain.chmod(0o600)
+        executable.chmod(0o700)
+        untracked.chmod(0o600)
+        if source_inventory(root) != baseline:
+            fail("source inventory depends on non-Git permission bits")
+
+        plain.chmod(0o700)
+        if (
+            source_inventory(root)["semanticInputsSha256"]
+            == baseline["semanticInputsSha256"]
+        ):
+            fail("source inventory ignored an executable-bit change")
+        plain.chmod(0o600)
+        untracked.write_text("changed\n", encoding="utf-8")
+        if (
+            source_inventory(root)["semanticInputsSha256"]
+            == baseline["semanticInputsSha256"]
+        ):
+            fail("source inventory ignored a byte change")
+        controls = 3
+        if symlink_supported:
+            untracked.write_text("untracked\n", encoding="utf-8")
+            untracked.chmod(0o600)
+            link.unlink()
+            link.symlink_to("tool.sh")
+            if (
+                source_inventory(root)["semanticInputsSha256"]
+                == baseline["semanticInputsSha256"]
+            ):
+                fail("source inventory ignored a symlink-target change")
+            controls += 1
+    return controls
 
 
 def producer_environment(profile: str) -> dict[str, Any]:
