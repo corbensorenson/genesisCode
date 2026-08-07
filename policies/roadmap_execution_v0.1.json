@@ -8,6 +8,7 @@
       "R0.4.j",
       "R1.4.o",
       "R1.4.q",
+      "R1.4.r",
       "R2.2.f",
       "R1.5.a",
       "R2.1.h",
@@ -16,7 +17,7 @@
       "R1.4.p",
       "R2.3.a"
     ],
-    "rationale": "Finish R0.4.j through the hosted v0.2 release-evidence cutover, execute the frozen Qwen3 4B product-proof campaign next, keep disjoint private-lineage commissioning explicitly dispositioned, then close M1-A and remaining M1-B work before startup without opening Foundry, model, or platform breadth.",
+    "rationale": "Finish R0.4.j through the hosted v0.2 release-evidence cutover, execute the frozen Qwen3 4B product-proof campaign next, keep disjoint private-lineage commissioning explicitly dispositioned, prove model-neutral adapter portability and failure attribution, then close M1-A and remaining M1-B work before startup without opening Foundry, model, or platform breadth.",
     "task_context": {
       "R0.4.j": {
         "product_lanes": ["GenesisCode", "GenesisBench"],
@@ -56,6 +57,14 @@
         "nonclaims": [
           "does not count commitments without custody-verified private payload and oracle bytes",
           "does not expose active held-out material or admit it to training"
+        ]
+      },
+      "R1.4.r": {
+        "product_lanes": ["GenesisBench"],
+        "milestones": ["M1-B"],
+        "nonclaims": [
+          "does not make provider-specific features part of the semantic benchmark contract",
+          "does not retroactively reclassify historical campaigns or blame invalid harness outcomes on models"
         ]
       },
       "R2.1.h": {
@@ -692,9 +701,14 @@
     "R1.4.q": [
       "R1.4.j"
     ],
+    "R1.4.r": [
+      "R1.4.l",
+      "R1.4.n"
+    ],
     "R1.4.p": [
       "R1.4.o",
-      "R1.4.q"
+      "R1.4.q",
+      "R1.4.r"
     ],
     "R1.7.b": [
       "R1.4.l"
@@ -761,7 +775,8 @@
       "R1.4.n",
       "R1.4.o",
       "R1.4.q",
-      "R1.4.p"
+      "R1.4.p",
+      "R1.4.r"
     ],
     "R8.5.u": [
       "R1.4.p",
