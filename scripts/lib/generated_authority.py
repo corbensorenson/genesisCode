@@ -472,16 +472,20 @@ def file_identity(path: Path) -> str:
     return sha256(payload).hexdigest()
 
 
-def content_snapshot(root: Path) -> Mapping[str, str]:
-    paths = set(git(root, "ls-files").splitlines()) | set(
-        git(root, "ls-files", "--others", "--exclude-standard").splitlines()
-    )
+def changed_content_snapshot(root: Path) -> Mapping[str, str]:
+    # Git identifies every observable repository write. Hashing only that
+    # frontier preserves detection of clean, dirty, untracked, and deleted-path
+    # mutations without rereading the complete repository around every node.
     result: dict[str, str] = {}
-    for rel in sorted(path for path in paths if path and not path.startswith(".genesis/")):
+    for rel in sorted(
+        path for path in worktree_changes(root)
+        if path and not path.startswith(".genesis/")
+    ):
         path = root / rel
         if not path.is_symlink() and not path.is_file():
-            continue
-        result[rel] = file_identity(path)
+            result[rel] = "missing"
+        else:
+            result[rel] = file_identity(path)
     return result
 
 
@@ -548,7 +552,7 @@ def next_check_position(
 
 
 def run_node(stage: Path, node: Mapping[str, Any]) -> None:
-    before = content_snapshot(stage)
+    before = changed_content_snapshot(stage)
     command = list(node["command"])
     if command == ["internal:roadmap-evidence"]:
         refresh_roadmap_evidence(stage)
@@ -558,7 +562,7 @@ def run_node(stage: Path, node: Mapping[str, Any]) -> None:
             environment=stage_environment("GENESIS_GENERATED_AUTHORITY_STAGE"),
             timeout=node["timeoutSeconds"],
         )
-    after = content_snapshot(stage)
+    after = changed_content_snapshot(stage)
     writes = {
         path for path in set(before) | set(after) if before.get(path) != after.get(path)
     }
@@ -1011,6 +1015,17 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
         else:
             raise AuthorityError("self-test accepted an undeclared write")
 
+        (repository / "declared").write_text("old\n", encoding="utf-8")
+        (repository / "undeclared").write_text("dirty-before\n", encoding="utf-8")
+        try:
+            run_node(repository, fixture_node)
+        except AuthorityError:
+            controls += 1
+        else:
+            raise AuthorityError(
+                "self-test accepted mutation of an already-dirty undeclared path"
+            )
+
     with tempfile.TemporaryDirectory(prefix="generated-authority-self-test-") as temporary:
         base = Path(temporary)
         live = base / "live"
@@ -1100,7 +1115,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 21, "generated-authority self-test inventory drift")
+    require(controls == 22, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 
