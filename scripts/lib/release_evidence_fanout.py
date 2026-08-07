@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import email.utils
 import hashlib
 import json
 import os
@@ -462,11 +461,11 @@ def retry_after_seconds(value: Optional[str]) -> int:
         seconds = int(value)
     except ValueError:
         try:
-            retry_at = email.utils.parsedate_to_datetime(value)
-        except (TypeError, ValueError):
+            retry_at = dt.datetime.strptime(value, "%a, %d %b %Y %H:%M:%S GMT").replace(
+                tzinfo=dt.timezone.utc
+            )
+        except ValueError:
             return 0
-        if retry_at.tzinfo is None:
-            retry_at = retry_at.replace(tzinfo=dt.timezone.utc)
         seconds = max(0, int((retry_at - dt.datetime.now(dt.timezone.utc)).total_seconds()))
     return min(max(0, seconds), MAX_RETRY_DELAY_SECONDS)
 
