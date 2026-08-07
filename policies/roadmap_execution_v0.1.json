@@ -6,18 +6,15 @@
     "wip_limit": 1,
     "ordered_task_ids": [
       "R0.4.j",
-      "R1.4.o",
-      "R1.4.q",
-      "R1.4.r",
       "R2.2.f",
       "R1.5.a",
       "R2.1.h",
       "R1.6.a",
       "R1.7.a",
-      "R1.4.p",
-      "R2.3.a"
+      "R2.3.a",
+      "R4.1.a"
     ],
-    "rationale": "Finish R0.4.j through the hosted v0.2 release-evidence cutover, execute the frozen Qwen3 4B product-proof campaign next, keep disjoint private-lineage commissioning explicitly dispositioned, prove model-neutral adapter portability and failure attribution, then close M1-A and remaining M1-B work before startup without opening Foundry, model, or platform breadth.",
+    "rationale": "Finish R0.4.j, close the GenesisCode agent/runtime frontier, freeze Core contracts, establish self-host semantic ownership and bootstrap closure, and carry the finite Core through exact reviewed R9.4.f before reactivating any GenesisBench campaign, custody, publication, governance, GenesisChallenge, Foundry implementation, or Genesis Model work.",
     "task_context": {
       "R0.4.j": {
         "product_lanes": ["GenesisCode", "GenesisBench"],
@@ -41,30 +38,6 @@
         "nonclaims": [
           "does not close the generated authoring skill or its clean-install distribution proof",
           "does not make benchmark or model output authoritative"
-        ]
-      },
-      "R1.4.o": {
-        "product_lanes": ["GenesisBench"],
-        "milestones": ["M1-B"],
-        "nonclaims": [
-          "does not establish temporal cleanliness from a mutable provider alias",
-          "does not publish a rank until every predeclared cell and invalid disposition is retained"
-        ]
-      },
-      "R1.4.q": {
-        "product_lanes": ["GenesisBench"],
-        "milestones": ["M1-B"],
-        "nonclaims": [
-          "does not count commitments without custody-verified private payload and oracle bytes",
-          "does not expose active held-out material or admit it to training"
-        ]
-      },
-      "R1.4.r": {
-        "product_lanes": ["GenesisBench"],
-        "milestones": ["M1-B"],
-        "nonclaims": [
-          "does not make provider-specific features part of the semantic benchmark contract",
-          "does not retroactively reclassify historical campaigns or blame invalid harness outcomes on models"
         ]
       },
       "R2.1.h": {
@@ -91,14 +64,6 @@
           "does not require or authorize a Genesis Model"
         ]
       },
-      "R1.4.p": {
-        "product_lanes": ["GenesisBench"],
-        "milestones": ["M1-B"],
-        "nonclaims": [
-          "does not claim the later GenesisBench Trust release",
-          "does not rewrite prior epochs, attempts, invalids, or scores"
-        ]
-      },
       "R2.3.a": {
         "product_lanes": ["GenesisCode"],
         "milestones": ["M2"],
@@ -106,17 +71,25 @@
           "does not claim PB-6 until cold and warm startup evidence passes",
           "does not make cached or host-specific state part of canonical semantics"
         ]
+      },
+      "R4.1.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not establish self-host closure without H2 production authority and H3 bootstrap evidence",
+          "does not broaden stage0 or authorize GenesisBench, Foundry, or Genesis Model work"
+        ]
       }
     },
     "allowed_parallel_lanes": [
       {
-        "id": "immutable-benchmark-custody",
-        "description": "One predeclared benchmark custody, execution, or no-target-access private-lineage commissioning campaign may run beside the production task.",
+        "id": "read-only-selfhost-assurance",
+        "description": "One read-only, independently custodied conformance or reproduction observation may run beside the GenesisCode production task.",
         "conditions": [
-          "its files, credentials, operators, storage, and generated authorities are disjoint from the production task",
-          "its task, cohort, attempt, scoring, and publication authorities were frozen before target-model access",
-          "it cannot modify the repository transaction or delay the selected production frontier",
-          "after 72 hours or two independent reviews of the production task it has a dated active, externally-blocked, or explicitly-deferred disposition"
+          "it cannot modify repository files, generated authorities, release state, or the active production transaction",
+          "it exercises only frozen GenesisCode inputs and independently reports pass, fail, unknown, or infrastructure failure",
+          "it performs no target-model inference, benchmark custody or commissioning, result publication, Foundry implementation, or Genesis Model work",
+          "it cannot authorize completion, promotion, capability, policy, signing, or release"
         ]
       }
     ]
@@ -146,6 +119,7 @@
         "R1.4.o",
         "R1.4.p",
         "R1.4.q",
+        "R1.4.r",
         "R5.7.e",
         "R7.1.f",
         "R7.3.f",
@@ -171,6 +145,7 @@
     "genesisbench-trust": {
       "root_task_id": "R8.5.s",
       "required_ancestor_task_ids": [
+        "R9.4.f",
         "R8.5.a",
         "R8.5.b",
         "R8.5.c",
@@ -199,6 +174,8 @@
       ],
       "forbidden_task_prefixes": ["R8.2."],
       "allowed_task_ids": [
+        "R8.2.a",
+        "R8.2.b",
         "R8.5.a",
         "R8.5.b",
         "R8.5.c",
@@ -209,7 +186,7 @@
     },
     "foundry-calibration": {
       "root_task_id": "F2.q",
-      "required_ancestor_task_ids": ["R9.4.f"],
+      "required_ancestor_task_ids": ["R9.4.f", "R8.5.s"],
       "forbidden_task_ids": [
         "R5.7.e",
         "R7.1.f",
@@ -239,7 +216,16 @@
         "F4"
       ],
       "forbidden_task_prefixes": ["R8.2."],
-      "allowed_task_ids": ["R8.2.a", "R8.2.b"]
+      "allowed_task_ids": [
+        "R8.2.a",
+        "R8.2.b",
+        "R8.5.a",
+        "R8.5.b",
+        "R8.5.c",
+        "R8.5.d",
+        "R8.5.e",
+        "R8.5.s"
+      ]
     },
     "genesis-model-readiness": {
       "root_task_id": "R8.5.t",
@@ -653,13 +639,13 @@
     "R8.2": {"profile": "product-proof", "start_after": ["R8.1", "R7.3.e", "R6.4"], "sequential": false},
     "R8.3": {"profile": "product-proof", "start_after": [], "sequential": true},
     "R8.4": {"profile": "product-proof", "start_after": ["R1.2", "R2.3"], "sequential": true},
-    "R8.5": {"profile": "product-proof", "start_after": ["R1.6", "R7.1.e", "R8.1"], "sequential": false},
+    "R8.5": {"profile": "product-proof", "start_after": ["R1.6", "R7.1.e", "R8.1", "R9.4"], "sequential": false},
     "R9.1": {"profile": "trust-release", "start_after": ["R3.4", "R4.5", "R5.5", "R6.4", "R8.1", "R8.4"], "sequential": true},
     "R9.2": {"profile": "trust-release", "start_after": ["R4.4", "R6.3", "R7.3.e", "R9.1"], "sequential": true},
     "R9.3": {"profile": "trust-release", "start_after": ["R6.4", "R7.3.e", "R9.1"], "sequential": true},
     "R9.4": {"profile": "trust-release", "start_after": ["R9.1", "R9.2", "R9.3"], "sequential": true},
     "F1": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true},
-    "F2": {"profile": "frontier-research", "start_after": ["R3.4", "R9.4"], "sequential": true},
+    "F2": {"profile": "frontier-research", "start_after": ["R3.4", "R9.4", "R8.5.s"], "sequential": true},
     "F3": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true},
     "F4": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true}
   },
@@ -680,7 +666,8 @@
     ],
     "R1.4.o": [
       "R0.4.k",
-      "R1.4.n"
+      "R1.4.n",
+      "R9.4.f"
     ],
     "R1.5.a": [
       "R1.4.a",
@@ -699,16 +686,19 @@
       "R1.4.n"
     ],
     "R1.4.q": [
-      "R1.4.j"
+      "R1.4.j",
+      "R9.4.f"
     ],
     "R1.4.r": [
       "R1.4.l",
-      "R1.4.n"
+      "R1.4.n",
+      "R9.4.f"
     ],
     "R1.4.p": [
       "R1.4.o",
       "R1.4.q",
-      "R1.4.r"
+      "R1.4.r",
+      "R9.4.f"
     ],
     "R1.7.b": [
       "R1.4.l"
@@ -759,6 +749,7 @@
       "R8.2.r"
     ],
     "R8.5.a": [
+      "R9.4.f",
       "R1.4.a",
       "R1.4.b",
       "R1.4.c",
