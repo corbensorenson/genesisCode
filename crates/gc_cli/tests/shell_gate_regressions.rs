@@ -1,4 +1,3 @@
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -618,6 +617,9 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
     let root = repo_root();
     let workflow = fs::read_to_string(root.join(".github/workflows/ci.yml"))
         .expect("read .github/workflows/ci.yml");
+    let worker_environment =
+        fs::read_to_string(root.join(".github/actions/release-evidence-environment/action.yml"))
+            .expect("read release evidence worker environment");
     let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
         .expect("read render_upgrade_plan_health_report.sh");
     let bundle = fs::read_to_string(root.join("scripts/render_health_profile_evidence_bundle.sh"))
@@ -736,6 +738,12 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
                 .count()
                 == 3,
         "standard and full release profiles must provision the declared browser runtime"
+    );
+    assert!(
+        worker_environment.contains("uses: actions/setup-node@v4")
+            && worker_environment.contains("node-version: 22.23.2")
+            && !worker_environment.contains("node-version: 22\n"),
+        "release workers must pin the same exact Node build as every hosted workflow lane"
     );
     let perf_budgets = workflow
         .find("- name: Performance Budgets")
@@ -924,82 +932,5 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
     );
 }
 
-#[test]
-fn runtime_backend_ephemeral_target_rejects_paths_outside_report_root() {
-    let root = repo_root();
-    let temp = tempfile::tempdir().expect("create runtime-matrix target fixture");
-    let report_root = temp.path().join("evidence");
-    fs::create_dir_all(&report_root).expect("create evidence fixture root");
-    let outside = temp.path().join("outside-target");
-    let output = Command::new("bash")
-        .arg(root.join("scripts/render_runtime_backend_feature_matrix_report.sh"))
-        .arg(report_root.join("report.json"))
-        .arg(report_root.join("history.jsonl"))
-        .arg(report_root.join("baseline.jsonl"))
-        .env(
-            "GENESIS_RUNTIME_BACKEND_MATRIX_EPHEMERAL_TARGET_DIR",
-            &outside,
-        )
-        .current_dir(&root)
-        .output()
-        .expect("run runtime-matrix target containment rejection");
-    assert_eq!(output.status.code(), Some(1));
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("ephemeral target must be a direct child of the report directory"),
-        "runtime matrix must explain the containment violation"
-    );
-    assert!(
-        !outside.exists(),
-        "rejected runtime-matrix target must never be materialized"
-    );
-}
-
-#[test]
-fn runtime_backend_prebuilt_report_requires_matching_release_manifest() {
-    let root = repo_root();
-    let temp = tempfile::tempdir().expect("create prebuilt runtime-matrix fixture");
-    let report = temp
-        .path()
-        .join("runtime_backend_feature_matrix_report.json");
-    let manifest = temp.path().join("manifest.json");
-    let report_bytes = b"{\"kind\":\"genesis/runtime-backend-feature-matrix-v0.1\",\"ok\":true}\n";
-    fs::write(&report, report_bytes).expect("write prebuilt runtime-matrix report");
-    let report_hash = format!("{:x}", Sha256::digest(report_bytes));
-    fs::write(
-        &manifest,
-        format!(
-            "{{\"evidence\":{{\"runtime_backend_feature_matrix_report.json\":{{\"kind\":\"genesis/runtime-backend-feature-matrix-v0.1\",\"sha256\":\"{report_hash}\"}}}},\"kind\":\"genesis/health-profile-evidence-bundle-v0.1\",\"ok\":true,\"profile\":\"release-full\"}}\n"
-        ),
-    )
-    .expect("write prebuilt evidence manifest");
-
-    let run = |manifest_path: Option<&Path>| {
-        let mut command = Command::new("bash");
-        command
-            .arg(root.join("scripts/check_runtime_backend_feature_matrix.sh"))
-            .env("GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_REPORT", &report)
-            .current_dir(&root);
-        if let Some(path) = manifest_path {
-            command.env("GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST", path);
-        }
-        command.output().expect("run prebuilt runtime-matrix check")
-    };
-
-    assert!(run(Some(&manifest)).status.success());
-    let missing_manifest = run(None);
-    assert_eq!(missing_manifest.status.code(), Some(2));
-    assert!(
-        String::from_utf8_lossy(&missing_manifest.stderr)
-            .contains("prebuilt report requires GENESIS_CHECK_RUNTIME_BACKEND_MATRIX_MANIFEST")
-    );
-
-    fs::write(
-        &report,
-        b"{\"kind\":\"genesis/runtime-backend-feature-matrix-v0.1\",\"ok\":true,\"tampered\":true}\n",
-    )
-    .expect("tamper prebuilt runtime-matrix report");
-    let tampered = run(Some(&manifest));
-    assert_eq!(tampered.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&tampered.stderr).contains("prebuilt report hash mismatch"));
-}
+#[path = "shell_gate_regressions/runtime_backend_evidence.rs"]
+mod runtime_backend_evidence;

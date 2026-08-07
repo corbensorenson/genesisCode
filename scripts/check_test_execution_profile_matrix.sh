@@ -1005,7 +1005,16 @@ for marker in ["bundletool", "install-apks", '--device-id="$(adb get-serialno)"'
 
 health = (root / "scripts/render_upgrade_plan_health_report.sh").read_text(encoding="utf-8")
 workflow = (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-node_versions = re.findall(r"(?m)^\s+node-version: ([^\s]+)\s*$", workflow)
+node_setup_surfaces = [workflow]
+node_setup_surfaces.extend(
+    path.read_text(encoding="utf-8")
+    for path in sorted((root / ".github/actions").glob("*/action.yml"))
+)
+node_versions = [
+    version
+    for surface in node_setup_surfaces
+    for version in re.findall(r"(?m)^\s+node-version: ([^\s]+)\s*$", surface)
+]
 if not node_versions or set(node_versions) != {"22.23.2"}:
     raise SystemExit(
         "test-execution-profile-matrix: every hosted Node setup must use exact pin 22.23.2"
