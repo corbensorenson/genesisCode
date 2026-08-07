@@ -133,6 +133,22 @@ if roadmap_evidence.DERIVED_FIXED_POINT_EXCLUSIONS != frozenset({"llms.txt"}):
     raise SystemExit("capability-evidence-ledger-contract: roadmap fixed-point exclusion drift")
 if not any("llms.txt" in paths for paths in roadmap_evidence.BUNDLES.values()):
     raise SystemExit("capability-evidence-ledger-contract: fixed-point fixture lost coverage")
+authoring_inputs = roadmap_evidence.BUNDLES["authoring-skill-bundle"]
+if "genesis.gates.json" in authoring_inputs:
+    raise SystemExit(
+        "capability-evidence-ledger-contract: authoring skill evidence reintroduced "
+        "the roadmap-dependent gate-manifest fixed point"
+    )
+for required in (
+    "policies/genesiscode_authoring_workflow_v0.1.json",
+    ".agents/skills/genesiscode-authoring/SKILL.md",
+    "docs/skill_pack/write_genesiscode_v1/manifest.json",
+    "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
+):
+    if required not in authoring_inputs:
+        raise SystemExit(
+            f"capability-evidence-ledger-contract: authoring skill evidence lost {required}"
+        )
 PY
 roadmap_identity_count="$(python3 scripts/lib/roadmap_evidence.py --print | wc -l | tr -d ' ')"
 [[ "$roadmap_identity_count" == "57" ]] || {

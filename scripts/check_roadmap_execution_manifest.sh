@@ -50,8 +50,18 @@ for task in execution_slice["queued_tasks"]:
 if len(execution_slice["allowed_parallel_lanes"]) != 1:
     raise SystemExit("roadmap-execution-manifest: allowed parallel lane drift")
 parallel_lane = execution_slice["allowed_parallel_lanes"][0]
-if parallel_lane["id"] != "immutable-benchmark-custody" or not parallel_lane["conditions"]:
+if parallel_lane["id"] != "read-only-selfhost-assurance" or len(parallel_lane["conditions"]) < 4:
     raise SystemExit("roadmap-execution-manifest: allowed parallel lane contract drift")
+parallel_contract = " ".join(parallel_lane["conditions"])
+for forbidden in (
+    "cannot modify repository files",
+    "performs no target-model inference, benchmark custody or commissioning, result publication, Foundry implementation",
+    "cannot authorize completion",
+):
+    if forbidden not in parallel_contract:
+        raise SystemExit(
+            f"roadmap-execution-manifest: read-only parallel lane lost {forbidden!r}"
+        )
 if explanation["id"] != "R0.4.j" or explanation["state"] != "open":
     raise SystemExit("roadmap-execution-manifest: task explanation drift")
 PY

@@ -664,7 +664,8 @@ BUNDLES: Mapping[str, Sequence[str]] = {
         "docs/skill_pack/write_genesiscode_v1/manifest.json",
         "policies/check_update_boundary_v0.1.json",
         "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "genesis.gates.json",
+        # The gate manifest depends on roadmap evidence. Including that derived
+        # aggregate here would make this ROADMAP-cited identity self-referential.
         "scripts/lib/roadmap_evidence.py",
     ),
     "gc-agent-core-card-bundle": (
