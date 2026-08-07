@@ -294,8 +294,25 @@ def undeclared_python_modules(
     return unknown
 
 
+def repository_python_modules() -> Set[str]:
+    """Return modules provided by repository paths used as script import roots."""
+    modules: Set[str] = set()
+    for import_root in (ROOT / "scripts", ROOT / "tools", ROOT / "scripts/lib"):
+        if not import_root.is_dir():
+            continue
+        for candidate in import_root.iterdir():
+            module = ""
+            if candidate.is_file() and candidate.suffix == ".py":
+                module = candidate.stem
+            elif candidate.is_dir() and any(candidate.rglob("*.py")):
+                module = candidate.name
+            if module.isidentifier():
+                modules.add(module)
+    return modules
+
+
 def check_python_closure() -> int:
-    repo_modules = {path.stem for path in (ROOT / "scripts/lib").glob("*.py")} | {"vendor"}
+    repo_modules = repository_python_modules()
     sources: List[Tuple[str, str]] = []
     scanned = 0
     for base in (ROOT / "scripts", ROOT / "tools"):
@@ -412,6 +429,16 @@ def self_test() -> int:
     platform_stdlib = "import contextlib\nimport errno\nimport fcntl\nimport msvcrt\n"
     if undeclared_python_modules((("platform.py", platform_stdlib),), set()):
         raise BudgetError("declared cross-platform Python standard-library modules were rejected")
+    controls += 1
+    repo_modules = repository_python_modules()
+    if "lib" not in repo_modules or "quarto_site_contract" not in repo_modules:
+        raise BudgetError("repository Python module discovery omitted a governed import root")
+    local_namespace = undeclared_python_modules(
+        (("local.py", "from lib.quarto_site_contract import verify_html_inventory\n"),),
+        repo_modules,
+    )
+    if local_namespace:
+        raise BudgetError("repository namespace-package import was treated as a host prerequisite")
     controls += 1
     unknown = undeclared_python_modules(
         (("external.py", "import genesis_undeclared_dependency\n"),), set()
