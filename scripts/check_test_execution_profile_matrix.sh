@@ -677,6 +677,21 @@ for probe_marker in \
   fi
 done
 
+for lifecycle_probe in \
+  'browser_xr::first_party_browser_and_xr_reject_repeated_close' \
+  'editor_first_party_core_ops_are_replayable_without_bridge' \
+  'runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces' \
+  '--features gfx-desktop-backend' \
+  '--features gpu-device-backend' \
+  'device_runtime_resources_are_scoped_and_reaped' \
+  '"coverage_complete": False' \
+  '"status": "not-implemented"'; do
+  if ! grep -Fq -- "$lifecycle_probe" scripts/render_host_bridge_fault_injection_report.sh; then
+    echo "test-execution-profile-matrix: host lifecycle renderer is missing probe $lifecycle_probe" >&2
+    exit 1
+  fi
+done
+
 if ! grep -B 2 -F 'fn task_cards_python_and_planner_selection_remain_stable_under_parallel_load' \
   crates/gc_cli/tests/cli_agent_plan.rs | grep -Fq '#[ignore = "stress-gate"]' || \
    ! grep -Fq 'task_cards_python_and_planner_selection_remain_stable_under_parallel_load' \

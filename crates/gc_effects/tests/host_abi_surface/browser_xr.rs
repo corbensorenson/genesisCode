@@ -90,6 +90,80 @@ allow = [
 }
 
 #[test]
+fn first_party_browser_and_xr_reject_repeated_close() {
+    let run_once = |src: &str, allow: &[&str]| -> Value {
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        let policy = CapsPolicy::from_toml_str(&format!(
+            "allow = [{}]",
+            allow
+                .iter()
+                .map(|op| format!("\"{op}\""))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ))
+        .expect("policy");
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+        run(&mut ctx, &policy, prog, h, "host-abi-test".to_string())
+            .expect("run")
+            .value
+    };
+
+    let browser = run_once(
+        r#"
+        (def prog
+          ((core/effect::bind
+             (core/effect::perform 'browser/window::open {} (fn (x) (core/effect::pure x))))
+            (fn (opened)
+              (let ((wid ((core/map::get opened) ':window-id)))
+                ((core/effect::bind
+                   (core/effect::perform 'browser/window::close {:window-id wid}
+                                         (fn (x) (core/effect::pure x))))
+                  (fn (_)
+                    (core/effect::perform 'browser/window::close {:window-id wid}
+                                          (fn (x) (core/effect::pure x)))))))))
+        prog
+        "#,
+        &["browser/window::open", "browser/window::close"],
+    );
+    let Some(Term::Map(browser)) = browser.as_data() else {
+        panic!("expected repeated browser close response map");
+    };
+    assert_eq!(
+        browser.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("browser/first-party-window-closed".to_string()))
+    );
+
+    let xr = run_once(
+        r#"
+        (def prog
+          ((core/effect::bind
+             (core/effect::perform 'gfx/xr::session-open {} (fn (x) (core/effect::pure x))))
+            (fn (opened)
+              (let ((sid ((core/map::get opened) ':session-id)))
+                ((core/effect::bind
+                   (core/effect::perform 'gfx/xr::session-close {:session-id sid}
+                                         (fn (x) (core/effect::pure x))))
+                  (fn (_)
+                    (core/effect::perform 'gfx/xr::session-close {:session-id sid}
+                                          (fn (x) (core/effect::pure x)))))))))
+        prog
+        "#,
+        &["gfx/xr::session-open", "gfx/xr::session-close"],
+    );
+    let Some(Term::Map(xr)) = xr.as_data() else {
+        panic!("expected repeated XR close response map");
+    };
+    assert_eq!(
+        xr.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("gfx/xr-first-party-session-closed".to_string()))
+    );
+}
+
+#[test]
 fn browser_host_ops_are_replay_deterministic_with_wasi_bridge_profile() {
     let src = r#"
         (def prog

@@ -513,6 +513,9 @@ fn first_party_session_close(runtime: &mut XrHostRuntime, payload: &Term) -> Ter
     let Some(session) = runtime.sessions.get_mut(&session_id) else {
         return unknown_session_error("gfx/xr::session-close", &session_id);
     };
+    if !session.open {
+        return closed_session_error("gfx/xr::session-close", &session_id);
+    }
     session.open = false;
     map_term(vec![
         (":ok", Term::Bool(true)),

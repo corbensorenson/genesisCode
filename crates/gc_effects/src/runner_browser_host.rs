@@ -157,6 +157,9 @@ fn first_party_window_close(runtime: &mut BrowserHostRuntime, payload: &Term) ->
     let Some(window) = runtime.windows.get_mut(&window_id) else {
         return unknown_window_error("browser/window::close", &window_id);
     };
+    if !window.open {
+        return closed_window_error("browser/window::close", &window_id);
+    }
     window.open = false;
     map_term(vec![
         (":ok", Term::Bool(true)),
@@ -359,6 +362,18 @@ fn unknown_window_error(op: &str, window_id: &str) -> Term {
         (
             ":error/code",
             Term::Str("browser/first-party-unknown-window".to_string()),
+        ),
+        (":error/op", Term::symbol(op)),
+        (":window-id", Term::Str(window_id.to_string())),
+    ])
+}
+
+fn closed_window_error(op: &str, window_id: &str) -> Term {
+    map_term(vec![
+        (":ok", Term::Bool(false)),
+        (
+            ":error/code",
+            Term::Str("browser/first-party-window-closed".to_string()),
         ),
         (":error/op", Term::symbol(op)),
         (":window-id", Term::Str(window_id.to_string())),

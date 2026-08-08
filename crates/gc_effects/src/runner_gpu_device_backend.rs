@@ -1,20 +1,27 @@
 use gc_coreform::Term;
 
+#[cfg(all(not(target_os = "wasi"), feature = "gpu-device-backend"))]
+use std::collections::BTreeMap;
+
 #[derive(Debug, Clone)]
 pub(crate) struct DeviceBackendError {
     pub code: String,
     pub message: String,
 }
 
-pub(crate) fn call_device_backend(op: &str, payload: &Term) -> Result<Term, DeviceBackendError> {
+pub(crate) fn call_device_backend(
+    runtime: &mut DeviceResourceRuntime,
+    op: &str,
+    payload: &Term,
+) -> Result<Term, DeviceBackendError> {
     match canonical_device_op(op) {
-        Some(DeviceOp::Submit(kind)) => device_submit_response(kind, op, payload),
-        Some(DeviceOp::Create(kind)) => device_create_response(kind, op, payload),
-        Some(DeviceOp::WriteBuffer) => device_write_buffer_response(op, payload),
-        Some(DeviceOp::ReadBuffer) => device_read_buffer_response(op, payload),
-        Some(DeviceOp::WriteTexture) => device_write_texture_response(op, payload),
-        Some(DeviceOp::ReadTexture) => device_read_texture_response(op, payload),
-        Some(DeviceOp::DestroyResource) => device_destroy_resource_response(op, payload),
+        Some(DeviceOp::Submit(kind)) => device_submit_response(runtime, kind, op, payload),
+        Some(DeviceOp::Create(kind)) => device_create_response(runtime, kind, op, payload),
+        Some(DeviceOp::WriteBuffer) => device_write_buffer_response(runtime, op, payload),
+        Some(DeviceOp::ReadBuffer) => device_read_buffer_response(runtime, op, payload),
+        Some(DeviceOp::WriteTexture) => device_write_texture_response(runtime, op, payload),
+        Some(DeviceOp::ReadTexture) => device_read_texture_response(runtime, op, payload),
+        Some(DeviceOp::DestroyResource) => device_destroy_resource_response(runtime, op, payload),
         Some(DeviceOp::Limits) => device_limits_response(op),
         Some(DeviceOp::Features) => device_features_response(op),
         None => Err(DeviceBackendError {
@@ -23,6 +30,28 @@ pub(crate) fn call_device_backend(op: &str, payload: &Term) -> Result<Term, Devi
         }),
     }
 }
+
+#[cfg(all(not(target_os = "wasi"), feature = "gpu-device-backend"))]
+#[derive(Debug, Clone)]
+enum DeviceResourceState {
+    Buffer(Vec<u8>),
+    Texture(Vec<u8>),
+    Opaque {
+        kind: DeviceResourceKind,
+        descriptor: Term,
+    },
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gpu-device-backend"))]
+#[derive(Debug, Default)]
+pub(crate) struct DeviceResourceRuntime {
+    next_id: u64,
+    resources: BTreeMap<String, DeviceResourceState>,
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
+#[derive(Debug, Default)]
+pub(crate) struct DeviceResourceRuntime;
 
 #[derive(Debug, Clone, Copy)]
 enum DeviceOp {
@@ -117,8 +146,7 @@ fn canonical_device_op(op: &str) -> Option<DeviceOp> {
 
 #[cfg(all(not(target_os = "wasi"), feature = "gpu-device-backend"))]
 mod imp {
-    use std::collections::BTreeMap;
-    use std::sync::{Mutex, OnceLock, mpsc};
+    use std::sync::{OnceLock, mpsc};
 
     use bytemuck::cast_slice;
     use gc_coreform::{TermOrdKey, print_term};
@@ -142,34 +170,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 "#;
 
     static DEVICE_CONTEXT: OnceLock<Result<DeviceContext, String>> = OnceLock::new();
-    static DEVICE_RESOURCES: OnceLock<Mutex<DeviceResourceRuntime>> = OnceLock::new();
-
     const DEVICE_BUFFER_MAX_BYTES: usize = 8 * 1024 * 1024;
     const DEVICE_TEXTURE_MAX_BYTES: usize = 16 * 1024 * 1024;
 
-    #[derive(Debug, Clone)]
-    enum DeviceResourceState {
-        Buffer(Vec<u8>),
-        Texture(Vec<u8>),
-        Opaque {
-            kind: DeviceResourceKind,
-            descriptor: Term,
-        },
-    }
-
-    #[derive(Debug, Default)]
-    struct DeviceResourceRuntime {
-        next_id: u64,
-        resources: BTreeMap<String, DeviceResourceState>,
-    }
-
     pub(super) fn device_create_response(
+        rt: &mut DeviceResourceRuntime,
         kind: DeviceResourceKind,
         op: &str,
         payload: &Term,
     ) -> Result<Term, DeviceBackendError> {
-        let mut rt = device_resource_runtime()?;
-        let id = alloc_resource_id(&mut rt, kind.id_prefix());
+        let id = alloc_resource_id(rt, kind.id_prefix());
         match kind {
             DeviceResourceKind::Buffer => {
                 let size = payload_desc_size(payload).unwrap_or(0);
@@ -240,6 +250,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     pub(super) fn device_write_buffer_response(
+        rt: &mut DeviceResourceRuntime,
         op: &str,
         payload: &Term,
     ) -> Result<Term, DeviceBackendError> {
@@ -257,7 +268,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             .and_then(term_to_bytes)
             .unwrap_or_default();
 
-        let mut rt = device_resource_runtime()?;
         let Some(resource) = rt.resources.get_mut(&id) else {
             return Ok(device_error(op, "resource-not-found"));
         };
@@ -284,6 +294,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     pub(super) fn device_read_buffer_response(
+        rt: &mut DeviceResourceRuntime,
         op: &str,
         payload: &Term,
     ) -> Result<Term, DeviceBackendError> {
@@ -297,7 +308,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         };
         let offset = map_get_nonnegative_usize(payload, ":offset").unwrap_or(0);
 
-        let rt = device_resource_runtime()?;
         let Some(resource) = rt.resources.get(&id) else {
             return Ok(device_error(op, "resource-not-found"));
         };
@@ -329,6 +339,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     pub(super) fn device_write_texture_response(
+        rt: &mut DeviceResourceRuntime,
         op: &str,
         payload: &Term,
     ) -> Result<Term, DeviceBackendError> {
@@ -351,7 +362,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             .and_then(term_to_bytes)
             .unwrap_or_default();
 
-        let mut rt = device_resource_runtime()?;
         let Some(resource) = rt.resources.get_mut(&id) else {
             return Ok(device_error(op, "resource-not-found"));
         };
@@ -378,6 +388,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     pub(super) fn device_read_texture_response(
+        rt: &mut DeviceResourceRuntime,
         op: &str,
         payload: &Term,
     ) -> Result<Term, DeviceBackendError> {
@@ -396,7 +407,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             .or_else(|| map_get_nonnegative_usize(payload, ":offset"))
             .unwrap_or(0);
 
-        let rt = device_resource_runtime()?;
         let Some(resource) = rt.resources.get(&id) else {
             return Ok(device_error(op, "resource-not-found"));
         };
@@ -432,6 +442,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     pub(super) fn device_destroy_resource_response(
+        rt: &mut DeviceResourceRuntime,
         op: &str,
         payload: &Term,
     ) -> Result<Term, DeviceBackendError> {
@@ -443,7 +454,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         else {
             return Ok(device_error(op, "missing-resource-id"));
         };
-        let mut rt = device_resource_runtime()?;
         let Some(resource) = rt.resources.remove(&id) else {
             return Ok(device_error(op, "resource-not-found"));
         };
@@ -492,11 +502,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     pub(super) fn device_submit_response(
+        rt: &mut DeviceResourceRuntime,
         kind: &str,
         op: &str,
         payload: &Term,
     ) -> Result<Term, DeviceBackendError> {
-        if let Some(interop) = device_submit_via_resource_interop(kind, op, payload)? {
+        if let Some(interop) = device_submit_via_resource_interop(rt, kind, op, payload)? {
             return Ok(interop);
         }
         let ctx = device_context()?;
@@ -751,6 +762,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     fn device_submit_via_resource_interop(
+        rt: &mut DeviceResourceRuntime,
         kind: &str,
         op: &str,
         payload: &Term,
@@ -766,7 +778,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         };
         let requested_count = map_get_nonnegative_usize(payload_map, ":count");
 
-        let mut rt = device_resource_runtime()?;
         let Some(DeviceResourceState::Buffer(in_buf)) = rt.resources.get(&in_id) else {
             return Ok(Some(device_error(op, "interop-in-buffer-not-found")));
         };
@@ -847,15 +858,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             .chunks_exact(4)
             .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
             .collect()
-    }
-
-    fn device_resource_runtime()
-    -> Result<std::sync::MutexGuard<'static, DeviceResourceRuntime>, DeviceBackendError> {
-        let runtime = DEVICE_RESOURCES.get_or_init(|| Mutex::new(DeviceResourceRuntime::default()));
-        runtime.lock().map_err(|_| DeviceBackendError {
-            code: "gpu/device-backend-resource-lock".to_string(),
-            message: "device backend resource lock poisoned".to_string(),
-        })
     }
 
     fn alloc_resource_id(runtime: &mut DeviceResourceRuntime, prefix: &str) -> String {
@@ -1017,6 +1019,7 @@ use imp::{
 
 #[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
 fn device_submit_response(
+    _runtime: &mut DeviceResourceRuntime,
     _kind: &str,
     _op: &str,
     _payload: &Term,
@@ -1045,6 +1048,7 @@ fn device_features_response(_op: &str) -> Result<Term, DeviceBackendError> {
 
 #[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
 fn device_create_response(
+    _runtime: &mut DeviceResourceRuntime,
     _kind: DeviceResourceKind,
     _op: &str,
     _payload: &Term,
@@ -1056,7 +1060,11 @@ fn device_create_response(
 }
 
 #[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
-fn device_write_buffer_response(_op: &str, _payload: &Term) -> Result<Term, DeviceBackendError> {
+fn device_write_buffer_response(
+    _runtime: &mut DeviceResourceRuntime,
+    _op: &str,
+    _payload: &Term,
+) -> Result<Term, DeviceBackendError> {
     Err(DeviceBackendError {
         code: "gpu/device-backend-unavailable".to_string(),
         message: "gc_effects built without `gpu-device-backend` feature".to_string(),
@@ -1064,7 +1072,11 @@ fn device_write_buffer_response(_op: &str, _payload: &Term) -> Result<Term, Devi
 }
 
 #[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
-fn device_read_buffer_response(_op: &str, _payload: &Term) -> Result<Term, DeviceBackendError> {
+fn device_read_buffer_response(
+    _runtime: &mut DeviceResourceRuntime,
+    _op: &str,
+    _payload: &Term,
+) -> Result<Term, DeviceBackendError> {
     Err(DeviceBackendError {
         code: "gpu/device-backend-unavailable".to_string(),
         message: "gc_effects built without `gpu-device-backend` feature".to_string(),
@@ -1072,7 +1084,11 @@ fn device_read_buffer_response(_op: &str, _payload: &Term) -> Result<Term, Devic
 }
 
 #[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
-fn device_write_texture_response(_op: &str, _payload: &Term) -> Result<Term, DeviceBackendError> {
+fn device_write_texture_response(
+    _runtime: &mut DeviceResourceRuntime,
+    _op: &str,
+    _payload: &Term,
+) -> Result<Term, DeviceBackendError> {
     Err(DeviceBackendError {
         code: "gpu/device-backend-unavailable".to_string(),
         message: "gc_effects built without `gpu-device-backend` feature".to_string(),
@@ -1080,7 +1096,11 @@ fn device_write_texture_response(_op: &str, _payload: &Term) -> Result<Term, Dev
 }
 
 #[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
-fn device_read_texture_response(_op: &str, _payload: &Term) -> Result<Term, DeviceBackendError> {
+fn device_read_texture_response(
+    _runtime: &mut DeviceResourceRuntime,
+    _op: &str,
+    _payload: &Term,
+) -> Result<Term, DeviceBackendError> {
     Err(DeviceBackendError {
         code: "gpu/device-backend-unavailable".to_string(),
         message: "gc_effects built without `gpu-device-backend` feature".to_string(),
@@ -1089,6 +1109,7 @@ fn device_read_texture_response(_op: &str, _payload: &Term) -> Result<Term, Devi
 
 #[cfg(any(target_os = "wasi", not(feature = "gpu-device-backend")))]
 fn device_destroy_resource_response(
+    _runtime: &mut DeviceResourceRuntime,
     _op: &str,
     _payload: &Term,
 ) -> Result<Term, DeviceBackendError> {

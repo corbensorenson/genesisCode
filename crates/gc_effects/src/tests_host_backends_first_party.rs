@@ -721,6 +721,7 @@ allow = [
   "editor/dialog::save",
   "editor/watch::subscribe",
   "editor/watch::poll",
+  "editor/watch::unsubscribe",
   "io/fs::write",
   "editor/task::spawn",
   "editor/task::poll",
@@ -851,6 +852,34 @@ create_dirs = true
     assert!(
         first_event.contains_key(&TermOrdKey(Term::symbol(":stamp"))),
         "watch event should include :stamp"
+    );
+
+    let unsubscribe_src = format!(
+        r#"
+        (def prog
+          ((core/effect::bind
+             (core/effect::perform 'editor/watch::subscribe
+                                   {{:globs ["*.gc"] :root "{}"}}
+                                   (fn (x) (core/effect::pure x))))
+            (fn (subscribed)
+              (let ((watch-id ((core/map::get subscribed) ':watch-id)))
+                ((core/effect::bind
+                   (core/effect::perform 'editor/watch::unsubscribe {{:watch-id watch-id}}
+                                         (fn (x) (core/effect::pure x))))
+                  (fn (_)
+                    (core/effect::perform 'editor/watch::unsubscribe {{:watch-id watch-id}}
+                                          (fn (x) (core/effect::pure x)))))))))
+        prog
+        "#,
+        root.display()
+    );
+    let unsubscribe_v = run_once(&unsubscribe_src);
+    let Some(Term::Map(unsubscribe_resp)) = unsubscribe_v.as_data() else {
+        panic!("expected repeated watch unsubscribe response map");
+    };
+    assert_eq!(
+        unsubscribe_resp.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("editor/first-party-watch-not-found".to_string()))
     );
 
     let task_src = r#"

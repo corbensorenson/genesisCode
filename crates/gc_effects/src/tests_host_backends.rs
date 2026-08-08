@@ -985,30 +985,8 @@ gpu_backend_policy = "require-device"
 
 #[cfg(feature = "gpu-device-backend")]
 #[test]
-fn gpu_compute_device_runtime_full_buffer_interop_is_replayable() {
-    let pol = CapsPolicy::from_toml_str(
-        r#"
-allow = [
-  "gpu/compute::create-buffer",
-  "gpu/compute::write-buffer",
-  "gpu/compute::submit",
-  "gpu/compute::read-buffer"
-]
-
-[op."gpu/compute::create-buffer"]
-gpu_backend = "device-runtime-full"
-gpu_backend_policy = "require-device"
-
-[op."gpu/compute::write-buffer"]
-gpu_backend = "device-runtime-full"
-gpu_backend_policy = "require-device"
-
-[op."gpu/compute::submit"]
-gpu_backend = "device-runtime-full"
-gpu_backend_policy = "require-device"
-"#,
-    )
-    .expect("parse caps");
+fn gpu_compute_device_runtime_resources_are_scoped_and_reaped() {
+    let mut backend_runtime = crate::runner_gpu_device_backend::DeviceResourceRuntime::default();
     let term_map = |entries: Vec<(&str, Term)>| -> Term {
         Term::Map(
             entries
@@ -1032,11 +1010,13 @@ gpu_backend_policy = "require-device"
         term_map(vec![(":size", Term::Int(16_i64.into()))]),
     )]);
     let create_in = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gpu/compute::create-buffer",
         &create_payload,
     )
     .expect("create input buffer");
     let create_out = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gpu/compute::create-buffer",
         &create_payload,
     )
@@ -1053,26 +1033,24 @@ gpu_backend_policy = "require-device"
         ),
     ]);
     crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gpu/compute::write-buffer",
         &write_payload,
     )
     .expect("seed input buffer");
 
-    let submit_payload =
-        format!("{{:in-buffer-id \"{in_id}\" :out-buffer-id \"{out_id}\" :count 4}}");
-    let (forms, h) = mk_prog_for("gpu/compute::submit", &submit_payload);
-
-    let mut ctx1 = EvalCtx::new();
-    let prelude1 = build_prelude(&mut ctx1);
-    let mut env1 = prelude1.env;
-    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
-    let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
-
-    let Some(Term::Map(submit)) = run_out.value.as_data() else {
-        panic!(
-            "expected submit map in interop response, got {}",
-            run_out.value.debug_repr()
-        );
+    let submit = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
+        "gpu/compute::submit",
+        &term_map(vec![
+            (":in-buffer-id", Term::Str(in_id.clone())),
+            (":out-buffer-id", Term::Str(out_id.clone())),
+            (":count", Term::Int(4_i64.into())),
+        ]),
+    )
+    .expect("submit resource interop");
+    let Term::Map(submit) = submit else {
+        panic!("expected submit map in interop response");
     };
     assert_eq!(
         submit.get(&TermOrdKey(Term::symbol(":interop"))),
@@ -1083,14 +1061,8 @@ gpu_backend_policy = "require-device"
         Some(&Term::Str("device-runtime".to_string()))
     );
 
-    let mut ctx2 = EvalCtx::new();
-    let prelude2 = build_prelude(&mut ctx2);
-    let mut env2 = prelude2.env;
-    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
-    let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
-    assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
-
     let read_out = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gpu/compute::read-buffer",
         &term_map(vec![
             (":id", Term::Str(out_id.clone())),
@@ -1111,41 +1083,62 @@ gpu_backend_policy = "require-device"
     );
 
     let _ = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gpu/compute::destroy-resource",
         &term_map(vec![(":id", Term::Str(in_id))]),
     );
-    let _ = crate::runner_gpu_device_backend::call_device_backend(
+    let destroyed = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gpu/compute::destroy-resource",
+        &term_map(vec![(":id", Term::Str(out_id.clone()))]),
+    )
+    .expect("destroy output buffer");
+    let Term::Map(destroyed) = destroyed else {
+        panic!("expected destroy-resource map");
+    };
+    assert_eq!(
+        destroyed.get(&TermOrdKey(Term::symbol(":destroyed"))),
+        Some(&Term::Bool(true))
+    );
+
+    let repeated_destroy = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
+        "gpu/compute::destroy-resource",
+        &term_map(vec![(":id", Term::Str(out_id.clone()))]),
+    )
+    .expect("repeated destroy returns a sealed device response");
+    let Term::Map(repeated_destroy) = repeated_destroy else {
+        panic!("expected repeated destroy-resource map");
+    };
+    assert_eq!(
+        repeated_destroy.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str(
+            "gpu/device-runtime-resource-not-found".to_string()
+        ))
+    );
+
+    let mut restarted_runtime = crate::runner_gpu_device_backend::DeviceResourceRuntime::default();
+    let stale = crate::runner_gpu_device_backend::call_device_backend(
+        &mut restarted_runtime,
+        "gpu/compute::read-buffer",
         &term_map(vec![(":id", Term::Str(out_id))]),
+    )
+    .expect("stale read returns a sealed device response");
+    let Term::Map(stale) = stale else {
+        panic!("expected stale read-buffer map");
+    };
+    assert_eq!(
+        stale.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str(
+            "gpu/device-runtime-resource-not-found".to_string()
+        ))
     );
 }
 
 #[cfg(feature = "gpu-device-backend")]
 #[test]
-fn gfx_gpu_device_runtime_full_submit_interop_is_replayable() {
-    let pol = CapsPolicy::from_toml_str(
-        r#"
-allow = [
-  "gfx/gpu::create-buffer",
-  "gfx/gpu::write-buffer",
-  "gfx/gpu::submit-frame-graph",
-  "gfx/gpu::read-buffer"
-]
-
-[op."gfx/gpu::create-buffer"]
-gpu_backend = "device-runtime-full"
-gpu_backend_policy = "require-device"
-
-[op."gfx/gpu::write-buffer"]
-gpu_backend = "device-runtime-full"
-gpu_backend_policy = "require-device"
-
-[op."gfx/gpu::submit-frame-graph"]
-gpu_backend = "device-runtime-full"
-gpu_backend_policy = "require-device"
-"#,
-    )
-    .expect("parse caps");
+fn gfx_gpu_device_runtime_resources_are_scoped_and_reaped() {
+    let mut backend_runtime = crate::runner_gpu_device_backend::DeviceResourceRuntime::default();
     let term_map = |entries: Vec<(&str, Term)>| -> Term {
         Term::Map(
             entries
@@ -1169,11 +1162,13 @@ gpu_backend_policy = "require-device"
         term_map(vec![(":size", Term::Int(16_i64.into()))]),
     )]);
     let create_in = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gfx/gpu::create-buffer",
         &create_payload,
     )
     .expect("create gfx input buffer");
     let create_out = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gfx/gpu::create-buffer",
         &create_payload,
     )
@@ -1189,24 +1184,26 @@ gpu_backend_policy = "require-device"
             Term::Bytes(vec![1_u8, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0, 7, 0, 0, 0].into()),
         ),
     ]);
-    crate::runner_gpu_device_backend::call_device_backend("gfx/gpu::write-buffer", &write_payload)
-        .expect("seed gfx input buffer");
+    crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
+        "gfx/gpu::write-buffer",
+        &write_payload,
+    )
+    .expect("seed gfx input buffer");
 
-    let submit_payload =
-        format!("{{:graph {{}} :in-buffer-id \"{in_id}\" :out-buffer-id \"{out_id}\" :count 4}}");
-    let (forms, h) = mk_prog_for("gfx/gpu::submit-frame-graph", &submit_payload);
-
-    let mut ctx1 = EvalCtx::new();
-    let prelude1 = build_prelude(&mut ctx1);
-    let mut env1 = prelude1.env;
-    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
-    let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
-
-    let Some(Term::Map(submit)) = run_out.value.as_data() else {
-        panic!(
-            "expected submit map in gfx interop response, got {}",
-            run_out.value.debug_repr()
-        );
+    let submit = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
+        "gfx/gpu::submit-frame-graph",
+        &term_map(vec![
+            (":graph", term_map(vec![])),
+            (":in-buffer-id", Term::Str(in_id.clone())),
+            (":out-buffer-id", Term::Str(out_id.clone())),
+            (":count", Term::Int(4_i64.into())),
+        ]),
+    )
+    .expect("submit gfx resource interop");
+    let Term::Map(submit) = submit else {
+        panic!("expected submit map in gfx interop response");
     };
     assert_eq!(
         submit.get(&TermOrdKey(Term::symbol(":kind"))),
@@ -1217,14 +1214,8 @@ gpu_backend_policy = "require-device"
         Some(&Term::Bool(true))
     );
 
-    let mut ctx2 = EvalCtx::new();
-    let prelude2 = build_prelude(&mut ctx2);
-    let mut env2 = prelude2.env;
-    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
-    let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
-    assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
-
     let read_out = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gfx/gpu::read-buffer",
         &term_map(vec![
             (":id", Term::Str(out_id.clone())),
@@ -1245,10 +1236,12 @@ gpu_backend_policy = "require-device"
     );
 
     let _ = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gfx/gpu::destroy-resource",
         &term_map(vec![(":id", Term::Str(in_id))]),
     );
     let _ = crate::runner_gpu_device_backend::call_device_backend(
+        &mut backend_runtime,
         "gfx/gpu::destroy-resource",
         &term_map(vec![(":id", Term::Str(out_id))]),
     );

@@ -34,6 +34,12 @@ pub(crate) fn create_surface(surface: &str, width: i64, height: i64, title: &str
     true
 }
 
+pub(crate) fn destroy_surface(surface: &str) {
+    DESKTOP_SURFACES.with(|registry| {
+        registry.borrow_mut().remove(surface);
+    });
+}
+
 pub(crate) fn query_surface_size(surface: &str) -> Option<(i64, i64)> {
     DESKTOP_SURFACES.with(|registry| {
         let mut registry = registry.borrow_mut();

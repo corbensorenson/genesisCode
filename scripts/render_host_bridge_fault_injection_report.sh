@@ -89,7 +89,12 @@ PY
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_reaps_residual_descendants_after_success_and_error --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
-     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact; then
+     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact && \
+     cargo test -p gc_effects --test host_abi_surface browser_xr::first_party_browser_and_xr_reject_repeated_close --quiet -- --exact && \
+     cargo test -p gc_effects --lib tests::tests_host_backends::tests_host_backends_first_party::editor_first_party_core_ops_are_replayable_without_bridge --quiet -- --exact && \
+     cargo test -p gc_effects --lib runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces --quiet -- --exact && \
+     cargo test -p gc_effects --lib --no-default-features --features gfx-desktop-backend runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces --quiet -- --exact && \
+     cargo test -p gc_effects --lib --no-default-features --features gpu-device-backend device_runtime_resources_are_scoped_and_reaped --quiet; then
     run_ok=1
     passed_runs=$((passed_runs + 1))
   else
@@ -176,6 +181,25 @@ report = {
     },
     "families": ["fs", "net", "process", "plugin"],
     "deterministic_replay_verified": True,
+    "host_handle_lifecycle": {
+        "coverage_complete": False,
+        "r2_2_f_closeable": False,
+        "runtime_owner_scope": "per-run",
+        "verified_controls": [
+            "bridge-success-error-cancellation-timeout-drop-restart",
+            "browser-repeated-close-rejected",
+            "editor-repeated-unsubscribe-rejected",
+            "graphics-runtime-drop-dispatches-desktop-destroy",
+            "gpu-device-explicit-destroy-rejected-after-close",
+            "gpu-device-restart-rejects-stale-handles",
+            "xr-repeated-close-rejected",
+        ],
+        "model_sessions": {
+            "status": "not-implemented",
+            "verified": False,
+        },
+        "independent_cross_host_evidence": False,
+    },
     "hard_cancellation": {
         "transports": ["persistent-stdio", "spawn-per-op"],
         "repeated_hang_cases": 49,
@@ -196,12 +220,10 @@ report = {
             "repeated-load",
         ],
         "resource_families": [
+            "filesystem",
             "network",
             "process",
             "plugin",
-            "graphics",
-            "gpu",
-            "model",
         ],
     },
     "runs_detail": run_records,

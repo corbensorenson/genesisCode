@@ -9,7 +9,7 @@ use crate::runner_gpu_backend_policy::{
     GpuBackendFallbackPolicy, GpuBackendKind, gpu_backend_fallback_policy, gpu_backend_kind,
     gpu_backend_kind_label, gpu_op_prefers_device_backend, inject_backend_fallback_metadata,
 };
-use crate::runner_gpu_device_backend::call_device_backend;
+use crate::runner_gpu_device_backend::{DeviceResourceRuntime, call_device_backend};
 use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 
 const FIRST_PARTY_GPU_BUFFER_MAX_BYTES: usize = 8 * 1024 * 1024;
@@ -32,10 +32,11 @@ enum GpuResourceState {
     Opaque { kind: String, descriptor: Term },
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub(crate) struct GpuHostRuntime {
     next_resource: u64,
     resources: BTreeMap<String, GpuResourceState>,
+    device_resources: DeviceResourceRuntime,
 }
 
 pub(crate) fn gpu_host_call(
@@ -54,28 +55,30 @@ pub(crate) fn gpu_host_call(
         if backend_kind != GpuBackendKind::FirstParty
             && gpu_op_prefers_device_backend(op, backend_kind)
         {
-            return Some(match call_device_backend(op, payload) {
-                Ok(resp) => Value::data(resp),
-                Err(err) => match gpu_backend_fallback_policy(pol) {
-                    GpuBackendFallbackPolicy::RequireDevice => mk_error(
-                        error_tok,
-                        &BridgeError {
-                            code: err.code,
-                            message: err.message,
-                        },
-                        Some(op),
-                    ),
-                    GpuBackendFallbackPolicy::AllowFallback => {
-                        let fallback = first_party_gpu_response(runtime, op, payload);
-                        let decorated = inject_backend_fallback_metadata(
-                            fallback,
-                            gpu_backend_kind_label(backend_kind),
-                            &err.message,
-                        );
-                        Value::data(decorated)
-                    }
+            return Some(
+                match call_device_backend(&mut runtime.device_resources, op, payload) {
+                    Ok(resp) => Value::data(resp),
+                    Err(err) => match gpu_backend_fallback_policy(pol) {
+                        GpuBackendFallbackPolicy::RequireDevice => mk_error(
+                            error_tok,
+                            &BridgeError {
+                                code: err.code,
+                                message: err.message,
+                            },
+                            Some(op),
+                        ),
+                        GpuBackendFallbackPolicy::AllowFallback => {
+                            let fallback = first_party_gpu_response(runtime, op, payload);
+                            let decorated = inject_backend_fallback_metadata(
+                                fallback,
+                                gpu_backend_kind_label(backend_kind),
+                                &err.message,
+                            );
+                            Value::data(decorated)
+                        }
+                    },
                 },
-            });
+            );
         }
         return Some(Value::data(first_party_gpu_response(runtime, op, payload)));
     }

@@ -20,6 +20,16 @@ const HEADLESS_ADAPTER: &str = "headless-sim";
 #[cfg(target_os = "wasi")]
 const NOOP_ADAPTER: &str = "noop";
 
+#[cfg(test)]
+std::thread_local! {
+    static DESKTOP_DESTROY_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+fn record_desktop_destroy_call() {
+    DESKTOP_DESTROY_CALLS.with(|calls| calls.set(calls.get().saturating_add(1)));
+}
+
 #[derive(Debug, Clone)]
 struct SurfaceState {
     width: i64,
@@ -66,12 +76,23 @@ impl GfxFirstPartyProfile {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub(crate) struct GfxHostRuntime {
     next_surface: u64,
     surfaces: BTreeMap<String, SurfaceState>,
     audio_queued: u64,
     master_gain: i64,
+}
+
+impl Drop for GfxHostRuntime {
+    fn drop(&mut self) {
+        for (surface_id, surface) in &self.surfaces {
+            if surface.adapter == desktop_adapter_name() {
+                desktop_destroy_surface(surface_id);
+            }
+        }
+        self.surfaces.clear();
+    }
 }
 
 pub(crate) fn gfx_host_call(
@@ -293,6 +314,19 @@ fn desktop_create_surface(surface: &str, width: i64, height: i64, title: &str) -
 #[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
 fn desktop_create_surface(_surface: &str, _width: i64, _height: i64, _title: &str) -> bool {
     false
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_destroy_surface(surface: &str) {
+    #[cfg(test)]
+    record_desktop_destroy_call();
+    desktop_adapter::destroy_surface(surface);
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_destroy_surface(_surface: &str) {
+    #[cfg(test)]
+    record_desktop_destroy_call();
 }
 
 #[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
@@ -719,4 +753,39 @@ fn first_party_enqueue(
         (":queued", Term::Int((runtime.audio_queued as i64).into())),
         (":bell-applied", Term::Bool(bell_applied)),
     ])
+}
+
+#[cfg(test)]
+mod lifecycle_tests {
+    use super::*;
+
+    #[test]
+    fn runtime_drop_reaps_only_owned_desktop_surfaces() {
+        DESKTOP_DESTROY_CALLS.with(|calls| calls.set(0));
+        let mut runtime = GfxHostRuntime::default();
+        runtime.surfaces.insert(
+            "desktop-surface".to_string(),
+            SurfaceState::new(
+                1,
+                1,
+                "desktop".to_string(),
+                FIRST_PARTY_BACKEND.to_string(),
+                desktop_adapter_name().to_string(),
+            ),
+        );
+        runtime.surfaces.insert(
+            "headless-surface".to_string(),
+            SurfaceState::new(
+                1,
+                1,
+                "headless".to_string(),
+                FIRST_PARTY_BACKEND.to_string(),
+                HEADLESS_ADAPTER.to_string(),
+            ),
+        );
+
+        drop(runtime);
+
+        DESKTOP_DESTROY_CALLS.with(|calls| assert_eq!(calls.get(), 1));
+    }
 }

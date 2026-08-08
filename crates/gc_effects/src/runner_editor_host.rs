@@ -304,7 +304,12 @@ fn first_party_watch_unsubscribe(runtime: &mut EditorHostRuntime, payload: &Term
             "editor/first-party-missing-watch-id",
         );
     };
-    runtime.watches.remove(&watch_id);
+    if runtime.watches.remove(&watch_id).is_none() {
+        return editor_error(
+            "editor/watch::unsubscribe",
+            "editor/first-party-watch-not-found",
+        );
+    }
     map_term(vec![
         (":ok", Term::Bool(true)),
         (":backend", Term::Str("first-party-runtime".to_string())),
