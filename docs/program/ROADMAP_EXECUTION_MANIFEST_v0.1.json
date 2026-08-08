@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "86a4a3a3074a8477e3cb1b8c4a902c9c2abc6a9e18c72b4ff92e1cfbf671c72a",
-    "roadmap_sha256": "7dc561c42cb6c7f565ff1b635f05235d00d11d8360b58ae26e55b1f1e597824b",
+    "roadmap_sha256": "e9908dd92012118d6ccc7dab3068d8b0ab6704bda21bfc2de193f7dac2dbfe26",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -2336,7 +2336,7 @@
             "31250800213"
           ],
           "completed_date": "2026-08-08",
-          "input_identity": "ci-release-full-closure-bundle-sha256:1d51e876eefe2763c2fa30adb6b06fc73ae52f318c7547ccfb49e6cc10264ff9"
+          "input_identity": "ci-release-full-closure-bundle-sha256:b00c6c2205570d9696521624e904b3eb4f2ad7c1f0fa0c3cd372878cca00e9a9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3619,7 +3619,7 @@
             "scripts/check_host_bridge_fault_injection.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "hard-cancellation-bundle-sha256:9c6e1c784eb561667994dc4c1209fc16352b36b2ee511f27b1a19a44600038b1"
+          "input_identity": "hard-cancellation-bundle-sha256:1337ca3496bcee8c8bbebfaed92a9928778b0dd310b168b10b26e5edac656b32"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,

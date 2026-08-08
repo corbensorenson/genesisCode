@@ -681,6 +681,18 @@ def create_containment(output: Path) -> tuple[Path, str]:
     return containment, nonce
 
 
+def retain_linux_lifecycle_report(fanout_root: Path, output: Path) -> None:
+    source_path = fanout_root / "host_bridge_fault_injection_report.json"
+    destination = output / "custody/host_bridge_fault_injection_report.json"
+    if not source_path.is_file():
+        fail("authenticated fanout lacks host-handle lifecycle evidence")
+    lifecycle_evidence.validate_linux_report(load_json(source_path))
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source_path, destination)
+    if sha256_file(destination) != sha256_file(source_path):
+        fail("retained host-handle lifecycle evidence changed during custody copy")
+
+
 def prepare_cache(root: Path, output: Path, cache_state: str, index: int) -> int:
     require_initialized_output(output, "cache-sensitive", cache_state, index)
     policy, dag_sha = policy_context(root)
@@ -932,12 +944,7 @@ def run_node(
         fanout_token=fanout_token,
     )
     if evidence_class == "stress-performance" and index == 1 and phase["exitCode"] == 0:
-        source = fanout_root / "host_bridge_fault_injection_report.json"
-        destination = output / "custody/host_bridge_fault_injection_report.json"
-        if not source.is_file():
-            fail("authenticated fanout lacks host-handle lifecycle evidence")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, destination)
+        retain_linux_lifecycle_report(fanout_root, output)
     cleanup = cleanup_record(containment, True)
     fanout_record = {
         "artifactName": auth["artifact"]["name"],
@@ -1815,6 +1822,18 @@ def self_test(root: Path) -> int:
     validate_node_topology(workers)
     validate_isolation_set(workers)
     validate_fanout_custody(workers, dag_sha)
+    with tempfile.TemporaryDirectory(prefix="genesis-release-linux-custody-") as raw:
+        custody_root = Path(raw)
+        fanout_root = custody_root / "fanout"
+        output = custody_root / "worker"
+        fanout_root.mkdir()
+        linux_report, _ = lifecycle_evidence.fixture_reports()
+        source_path = fanout_root / "host_bridge_fault_injection_report.json"
+        write_json(source_path, linux_report)
+        retain_linux_lifecycle_report(fanout_root, output)
+        retained_path = output / "custody/host_bridge_fault_injection_report.json"
+        if sha256_file(source_path) != sha256_file(retained_path):
+            fail("release execution self-test lost Linux lifecycle custody bytes")
     controls = health_evidence.source_inventory_self_test()
     mutations = [
         lambda rows: rows.pop(),
