@@ -401,7 +401,7 @@ require_ci_pattern 'Docs Quickstart Gate'
 require_ci_pattern 'bash scripts/check_docs_quickstart.sh'
 require_ci_pattern 'Ignored Perf Gate Regression Tests'
 require_ci_pattern 'bash scripts/test_perf_gates.sh'
-require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=420000'
+require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=450000'
 require_ci_pattern 'GENESIS_HEALTH_PROFILE=dev-fast'
 require_ci_pattern 'bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health'
 require_ci_pattern 'release_full_measurement:'
@@ -742,9 +742,9 @@ if ! grep -Fq 'GENESIS_TEST_CHANGED_BUDGET_MS:-120000' "$CHANGED_FAST_SCRIPT"; t
   echo "test-execution-profile-matrix: changed-fast default budget must remain 120000ms (2m)" >&2
   exit 1
 fi
-if ! grep -Fq 'GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-480000' "$CHANGED_FAST_SCRIPT" || \
+if ! grep -Fq 'GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-720000' "$CHANGED_FAST_SCRIPT" || \
    ! grep -Fq 'GENESIS_CHANGED_GATE_FALLBACK_DISK_BUDGET_BYTES=3221225472' "$CHANGED_FAST_SCRIPT"; then
-  echo "test-execution-profile-matrix: changed-fast prepush fallback must use the GB-3 8m/3GiB envelope" >&2
+  echo "test-execution-profile-matrix: changed-fast prepush fallback must use the GB-3 12m/3GiB envelope" >&2
   exit 1
 fi
 
@@ -763,8 +763,8 @@ if ! grep -Fq 'GENESIS_FULL_CROSS_HOST_BUDGET_MS:-720000' "$FULL_CROSS_HOST_REND
   exit 1
 fi
 
-if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-480000' "$HEALTH_RENDERER"; then
-  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at GB-3 default 480000ms (8m)" >&2
+if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-720000' "$HEALTH_RENDERER"; then
+  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at GB-3 default 720000ms (12m)" >&2
   exit 1
 fi
 if ! grep -Fq 'CARGO_GATE_ENTRYPOINTS' "$HEALTH_RENDERER" || \

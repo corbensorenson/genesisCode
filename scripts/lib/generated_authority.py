@@ -37,6 +37,7 @@ STAGE_SCOPED_ENVIRONMENT = (
     "GENESIS_GENERATED_STATE_ROOT",
     "GENESIS_GENERATED_STATE_LEASE_PID",
     "GENESIS_GENERATED_STATE_LEASE_TOKEN",
+    "GENESIS_GATE_BUDGET_ENFORCE",
     "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
     "GENESIS_SELFHOST_TOOLCHAIN_FRESHNESS",
     "GENESIS_SELFHOST_TOOLCHAIN_MANIFEST",
@@ -533,6 +534,15 @@ def stage_environment(marker: str) -> dict[str, str]:
     return environment
 
 
+def validation_environment() -> dict[str, str]:
+    environment = stage_environment("GENESIS_GENERATED_AUTHORITY_VALIDATING")
+    # The transaction owns aggregate resource enforcement. Nested checks still
+    # emit telemetry, but parallel checks must not attribute shared disk changes
+    # to whichever sampler happens to observe them.
+    environment["GENESIS_GATE_BUDGET_ENFORCE"] = "0"
+    return environment
+
+
 def next_check_position(
     pending: Sequence[tuple[int, str, int, bool]],
     active_compilation_lanes: Sequence[bool],
@@ -586,7 +596,7 @@ def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
                 compilation_by_check[entrypoint] = compilation
         unknown = sorted(set(checks) - set(compilation_by_check))
         require(not unknown, "generated checks missing gate compilation metadata: " + ", ".join(unknown))
-    environment = stage_environment("GENESIS_GENERATED_AUTHORITY_VALIDATING")
+    environment = validation_environment()
     check_records = [
         (index, check, timeout, compilation_by_check.get(check, False))
         for index, (check, timeout) in enumerate(checks.items())
@@ -878,6 +888,12 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
         require(
             all(isolated.get(name) == value for name, value in STAGE_BUILD_ENVIRONMENT.items()),
             "staging environment omitted its deterministic slim Cargo profile",
+        )
+        validating = validation_environment()
+        require(
+            validating.get("GENESIS_GENERATED_AUTHORITY_VALIDATING") == "1"
+            and validating.get("GENESIS_GATE_BUDGET_ENFORCE") == "0",
+            "validation environment did not assign aggregate budget ownership",
         )
     finally:
         for name, value in saved_stage_values.items():

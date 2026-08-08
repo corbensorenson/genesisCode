@@ -301,13 +301,19 @@
     "scripts/check_check_update_boundary.sh": {
       "kind": "test",
       "profile": "prepush-standard",
-      "expectedDurationSeconds": 600,
+      "expectedDurationSeconds": 555,
       "diskBudgetMiB": 2560
     },
     "scripts/check_gate_manifest.sh": {
       "kind": "static",
       "profile": "local-fast",
       "expectedDurationSeconds": 15,
+      "diskBudgetMiB": 64
+    },
+    "scripts/check_gate_resource_telemetry.sh": {
+      "kind": "test",
+      "profile": "prepush-standard",
+      "expectedDurationSeconds": 60,
       "diskBudgetMiB": 64
     },
     "scripts/check_gcpm_operation_contract_pack.sh": {

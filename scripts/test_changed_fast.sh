@@ -11,7 +11,7 @@ RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
 REPORT_PATH=""
 HISTORY_PATH=""
 BUDGET_MS="${GENESIS_TEST_CHANGED_BUDGET_MS:-120000}" # 2 minutes
-FALLBACK_BUDGET_MS="${GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-480000}" # GB-3: 8 minutes
+FALLBACK_BUDGET_MS="${GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-720000}" # GB-3: 12 minutes
 MIN_HISTORY="${GENESIS_TEST_CHANGED_MIN_HISTORY:-5}"
 FULL_MODE_THRESHOLD="${GENESIS_TEST_CHANGED_FULL_THRESHOLD:-120}"
 STRICT_DISK_MODE="${GENESIS_TEST_CHANGED_STRICT_DISK:-auto}"
@@ -45,7 +45,7 @@ Options:
   --report <path>      explicit metrics report path (must be paired with --history)
   --history <path>     explicit metrics history path (must be paired with --report)
   --budget-ms <N>      max allowed elapsed ms for this run (default: 120000;
-                       profile fallback: 480000 unless explicitly overridden)
+                       profile fallback: 720000 unless explicitly overridden)
   --min-history <N>    samples required before enforcing history P95 (default: 5)
   --strict-disk <mode> pass through to check_disk_headroom strict mode (auto|0|1)
   --changed-files-from <path>

@@ -367,13 +367,13 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "5ac2b9d1ce6c37b95a3a5ef588338897dfad34dc3e5a1da03146560b61cdb3c7"
+          "sha256": "c77ccf71e544ed3b62737ca73c0730f102505ab6f7630a938cfe06a66e2fec02"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_ai_iteration_slo_report.sh"
       ],
-      "execution_identity_sha256": "057623bf88ddbfcc1bcc06d79016ec18b5a0841b91d77d465babfd292082527d",
+      "execution_identity_sha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -917,7 +917,7 @@
       "execution_helper_invocations": [
         "scripts/lib/cargo_target_dir.sh"
       ],
-      "execution_identity_sha256": "413a261bef8019890d3ecef40d7030e2af4ef612abb636f6c69bf63078766212",
+      "execution_identity_sha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -928,7 +928,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "aadd3aca216fb86fab69565e6ba724513eeaf47a275d8e09a96944bcebdb0774",
+      "sha256": "f65af021af439c1870941c9ff98f3a96ff98f5866ad65d555ccab616908ce1d5",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -1027,7 +1027,7 @@
         },
         {
           "path": "scripts/lib/gate_telemetry.sh",
-          "sha256": "feb8584df93cf549b75bec9cf0b3e627ee43fe8d1de1e9103420bd7e5fbec7a9"
+          "sha256": "bb0440a18a3391f7664ac5649ddc2da6d2c3e38fcf5bf8a53e59832a387472f9"
         },
         {
           "path": "scripts/lib/profile_gate_timing.sh",
@@ -1046,7 +1046,7 @@
         "scripts/render_cli_diagnostics_contract_report.sh",
         "scripts/render_gc_repair_utility_report.sh"
       ],
-      "execution_identity_sha256": "c4583da29a70c52bf460db08b8a35d27f7f329166aa0204600a4ca93d4e84e71",
+      "execution_identity_sha256": "9c175887e93d8ab3c3b77363f4c3cbb7fc3986205b490e01ac9953ef75116bf3",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1094,7 +1094,7 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "5ac2b9d1ce6c37b95a3a5ef588338897dfad34dc3e5a1da03146560b61cdb3c7"
+          "sha256": "c77ccf71e544ed3b62737ca73c0730f102505ab6f7630a938cfe06a66e2fec02"
         },
         {
           "path": "scripts/test_shard_workspace.sh",
@@ -1106,7 +1106,7 @@
         "scripts/test_changed_fast.sh",
         "scripts/test_shard_workspace.sh"
       ],
-      "execution_identity_sha256": "5d7fcca0e4a1109fa79c1d828aa09ebefb4eb1bd2cb1cd143f819300fc4a8cca",
+      "execution_identity_sha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3188,13 +3188,13 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "5ac2b9d1ce6c37b95a3a5ef588338897dfad34dc3e5a1da03146560b61cdb3c7"
+          "sha256": "c77ccf71e544ed3b62737ca73c0730f102505ab6f7630a938cfe06a66e2fec02"
         }
       ],
       "execution_helper_invocations": [
         "scripts/test_changed_fast.sh"
       ],
-      "execution_identity_sha256": "b5a5877112d47b1cd04e2b00c868b18e79a5d2572677ca2682ca66137324f9b1",
+      "execution_identity_sha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5562,7 +5562,7 @@
       "execution_helper_invocations": [
         "scripts/test_prepare_release_target_reference.sh"
       ],
-      "execution_identity_sha256": "dd78375014c49dd1f3cfc30b101f12745d4710bbf7ac5c39689c57925b5fee3d",
+      "execution_identity_sha256": "ce5b64f55715481c0f75a99f091c9c98cdd219115728a192540affd6cd4754bb",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5573,7 +5573,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "45794818d6fe2130dd2440ca76e479c5ba4d9466990e5a84667de8c1447e762a",
+      "sha256": "99de0cb6f6450f0669d6a7401960767ac01294c41efda95752bd64e867ac7ca5",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -5853,7 +5853,7 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "d427f73cb156cf09befc4b928edd3b08d2eef98dd430858c440c70a76cdcce6c"
+          "sha256": "974b4366de3cf4cf63ebb0a1522652ee2b9fc2d6b1ffac98e484bdc518d7454b"
         },
         {
           "path": "scripts/render_webxr_browser_conformance_report.sh",
@@ -5861,7 +5861,7 @@
         },
         {
           "path": "scripts/test_changed_fast.sh",
-          "sha256": "5ac2b9d1ce6c37b95a3a5ef588338897dfad34dc3e5a1da03146560b61cdb3c7"
+          "sha256": "c77ccf71e544ed3b62737ca73c0730f102505ab6f7630a938cfe06a66e2fec02"
         },
         {
           "path": "scripts/test_perf_gates.sh",
@@ -5871,7 +5871,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "7f4b0bb93002ff59b128f3ae87d2c2277cec8182df013d5f591c18ce63b9490b",
+      "execution_identity_sha256": "097eb02aca7ad3c3d4d06f1d12d73f2130477b5312481133ce45e7a4a4adba30",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],

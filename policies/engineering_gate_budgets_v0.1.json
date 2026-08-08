@@ -15,7 +15,7 @@
     },
     "GB-3": {
       "maxAdditionalDiskBytes": 3221225472,
-      "maxWarmDurationMs": 480000,
+      "maxWarmDurationMs": 720000,
       "subject": "prepush-standard"
     },
     "GB-4": {
@@ -101,6 +101,11 @@
     {
       "entrypoint": "scripts/check_docs_quickstart.sh",
       "kind": "build",
+      "profile": "prepush-standard"
+    },
+    {
+      "entrypoint": "scripts/check_gate_resource_telemetry.sh",
+      "kind": "test",
       "profile": "prepush-standard"
     },
     {

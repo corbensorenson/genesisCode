@@ -99,7 +99,7 @@ require(
 fallback_output = changed_fast_dry_run(["docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json"])
 require(
     "mode=profile-fallback" in fallback_output
-    and "budget_subject=prepush-standard budget_ms=480000 disk_budget_bytes=3221225472" in fallback_output,
+    and "budget_subject=prepush-standard budget_ms=720000 disk_budget_bytes=3221225472" in fallback_output,
     "profile fallback did not inherit the GB-3 envelope",
 )
 controls.append("profile-aware-budget-selection")

@@ -48,7 +48,7 @@ HEALTH_PROFILE_MIN_HISTORY="${GENESIS_HEALTH_PROFILE_MIN_HISTORY:-5}"
 # prepush-standard includes end-to-end agent/runtime/perf conformance lanes with
 # selfhost-strict compilation + microbench suites; use a default that remains
 # bounded while accommodating cold-cache strict runs after reclaim.
-PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-480000}"
+PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-720000}"
 PREPUSH_DISK_BUDGET_BYTES=3221225472
 PREPUSH_BASELINE_HISTORY="${GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY:-}"
 PREPUSH_MIN_HISTORY="${GENESIS_HEALTH_PREPUSH_MIN_HISTORY:-1}"

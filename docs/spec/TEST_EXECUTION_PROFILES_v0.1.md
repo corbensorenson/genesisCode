@@ -142,7 +142,7 @@ Strict/full profile runtime reports:
     single leaf gate implementation; Rust/source changes whose crate or direct-gate
     fan-out exceeds the policy ceilings escalate to `prepush-standard`
   - automatically escalated `prepush-standard` selections use the existing GB-3
-    480000ms/3 GiB envelope (`GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS`); an explicit
+    720000ms/3 GiB envelope (`GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS`); an explicit
     `--budget-ms` or `GENESIS_TEST_CHANGED_BUDGET_MS` remains authoritative and is
     never silently widened
   - measures additional disk as allocated-block growth in the loop's active
@@ -224,14 +224,14 @@ Strict/full profile runtime reports:
   - the explicit updater emits profile report `kind = genesis/upgrade-plan-health-profile-v0.1` at
     `.genesis/perf/upgrade_plan_health_profile_report.json`
   - enforces prepush wall-time + history p95 budget
-    `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `480000`, the GB-3 eight-minute ceiling)
+    `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `720000`, the GB-3 twelve-minute ceiling)
     via `scripts/lib/profile_runtime_budget.py` using:
     - `GENESIS_HEALTH_PREPUSH_HISTORY`
     - `GENESIS_HEALTH_PREPUSH_MIN_HISTORY`
     - `GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY`
     - `GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY`
     - `GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY`
-  - fails closed when the current prepush sample is absent, exceeds eight minutes,
+  - fails closed when the current prepush sample is absent, exceeds twelve minutes,
     or adds more than 3 GiB of generated disk; retained history remains input-only
     to checks.
   - excludes the closed `releaseFullOnlyGates` inventory in

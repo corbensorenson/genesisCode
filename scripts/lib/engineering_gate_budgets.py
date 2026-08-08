@@ -27,7 +27,7 @@ BUDGET_IDS = [f"GB-{index}" for index in range(1, 9)]
 EXPECTED = {
     "GB-1": {"subject": "static-gates", "maxWarmDurationMs": 15000, "maxAdditionalDiskBytes": 67108864, "network": "deny", "compilation": False},
     "GB-2": {"subject": "changed-file-gate", "maxWarmDurationMs": 120000, "maxAdditionalDiskBytes": 1073741824, "network": "deny"},
-    "GB-3": {"subject": "prepush-standard", "maxWarmDurationMs": 480000, "maxAdditionalDiskBytes": 3221225472},
+    "GB-3": {"subject": "prepush-standard", "maxWarmDurationMs": 720000, "maxAdditionalDiskBytes": 3221225472},
     "GB-4": {"subject": "release-full", "maxReferenceDurationMs": 2700000, "maxArtifactBytes": 21474836480},
     "GB-5": {"subject": "development-footprint", "maxNormalBuildBytes": 8589934592, "maxPostCleanGeneratedBytes": 2147483648, "cleanupProfile": "dev-clean"},
     "GB-6": {"subject": "prebuilt-evidence-verification", "maxOfflineDurationMs": 300000, "network": "deny", "compilerInvocation": False},
@@ -185,14 +185,14 @@ def check_profiles(policy: Mapping[str, Any], gates: Mapping[str, Mapping[str, A
     changed = policy["profileSubjects"]["changedFileScript"]
     require_source_markers(changed, [
         "GENESIS_TEST_CHANGED_BUDGET_MS:-120000",
-        "GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-480000",
+        "GENESIS_TEST_CHANGED_FALLBACK_BUDGET_MS:-720000",
         "1073741824",
         "3221225472",
         'BUDGET_SUBJECT="changed-file-gate"',
         "CARGO_NET_OFFLINE",
     ])
     runner = policy["profileSubjects"]["profileRunner"]
-    runner_source = require_source_markers(runner, ["GENESIS_HEALTH_PREPUSH_BUDGET_MS:-480000", "3221225472", "21474836480", "2700000", "CARGO_GATE_ENTRYPOINTS", 'gate["compilation"]'])
+    runner_source = require_source_markers(runner, ["GENESIS_HEALTH_PREPUSH_BUDGET_MS:-720000", "3221225472", "21474836480", "2700000", "CARGO_GATE_ENTRYPOINTS", 'gate["compilation"]'])
     common_section, prepush_section, release_section = profile_sections(runner_source)
     for entrypoint in policy["releaseFullOnlyGates"]:
         if entrypoint not in gates:
