@@ -12,6 +12,7 @@
     "fanout",
     "github",
     "history",
+    "hostHandleLifecycle",
     "kind",
     "productReleaseQualified",
     "profileOperational",
@@ -125,6 +126,7 @@
         "warmP95WallMs": {"type": "integer", "minimum": 1, "maximum": 2700000}
       }
     },
+    "hostHandleLifecycle": {"$ref": "#/$defs/hostHandleLifecycle"},
     "workers": {
       "type": "array",
       "minItems": 10,
@@ -183,6 +185,159 @@
     }
   },
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "hostHandleLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverageComplete",
+        "custody",
+        "independentCrossHostEvidence",
+        "lifecyclePaths",
+        "negativeControls",
+        "nonclaims",
+        "r2_2_f_closeable",
+        "resourceFamilies",
+        "sharedIdentities",
+        "status",
+        "tier1Hosts",
+        "verifiedControls"
+      ],
+      "properties": {
+        "status": {"const": "pass"},
+        "coverageComplete": {"const": true},
+        "independentCrossHostEvidence": {"const": true},
+        "r2_2_f_closeable": {"const": true},
+        "custody": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "linuxProducerArtifact",
+            "linuxProducerSha256",
+            "macosProducerArtifact",
+            "macosProducerSha256"
+          ],
+          "properties": {
+            "linuxProducerArtifact": {
+              "const": "host-handle-lifecycle/linux/producer-worker.json"
+            },
+            "linuxProducerSha256": {"$ref": "#/$defs/sha256"},
+            "macosProducerArtifact": {
+              "const": "host-handle-lifecycle/macos/producer-target.json"
+            },
+            "macosProducerSha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "lifecyclePaths": {
+          "const": [
+            "success",
+            "error",
+            "cancellation",
+            "timeout",
+            "runtime-drop",
+            "restart",
+            "repeated-load"
+          ]
+        },
+        "resourceFamilies": {
+          "const": [
+            "filesystem",
+            "network",
+            "process",
+            "plugin",
+            "model-provider-process",
+            "warm-daemon-provider-process"
+          ]
+        },
+        "verifiedControls": {
+          "const": [
+            "bridge-success-error-cancellation-timeout-drop-restart",
+            "browser-repeated-close-rejected",
+            "editor-repeated-unsubscribe-rejected",
+            "graphics-runtime-drop-dispatches-desktop-destroy",
+            "gpu-device-explicit-destroy-rejected-after-close",
+            "gpu-device-restart-rejects-stale-handles",
+            "model-provider-session-success-error-timeout-drop-restart",
+            "warm-daemon-provider-success-error-timeout-restart-shutdown-eof",
+            "xr-repeated-close-rejected"
+          ]
+        },
+        "negativeControls": {
+          "const": [
+            "accept-reaped-process-group",
+            "detect-live-process-group",
+            "reject-duplicate-process-identity",
+            "reject-malformed-process-record",
+            "reject-non-persistent-transport"
+          ]
+        },
+        "nonclaims": {
+          "const": [
+            "does-not-standardize-the-R5.4.e-model-api",
+            "does-not-qualify-unsupported-products-or-platform-packs",
+            "does-not-convert-worker-observations-into-release-authority"
+          ]
+        },
+        "sharedIdentities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["probeSourceSha256", "selfhostArtifactSha256"],
+          "properties": {
+            "probeSourceSha256": {"$ref": "#/$defs/sha256"},
+            "selfhostArtifactSha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "tier1Hosts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/linuxLifecycleHost"
+            },
+            {
+              "$ref": "#/$defs/macosLifecycleHost"
+            }
+          ],
+          "items": false
+        }
+      }
+    },
+    "linuxLifecycleHost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "architecture", "artifact", "artifactSha256", "maximumCleanupMs",
+        "platform", "scope"
+      ],
+      "properties": {
+        "architecture": {"const": "x86_64"},
+        "artifact": {
+          "const": "host-handle-lifecycle/linux/host_bridge_fault_injection_report.json"
+        },
+        "artifactSha256": {"$ref": "#/$defs/sha256"},
+        "maximumCleanupMs": {"type": "integer", "minimum": 0, "maximum": 8000},
+        "platform": {"const": "linux"},
+        "scope": {"const": "complete-host-fault-and-daemon-matrix"}
+      }
+    },
+    "macosLifecycleHost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "architecture", "artifact", "artifactSha256", "maximumCleanupMs",
+        "platform", "scope"
+      ],
+      "properties": {
+        "architecture": {"const": "arm64"},
+        "artifact": {
+          "const": "host-handle-lifecycle/macos/host_bridge_daemon_lifecycle_report.json"
+        },
+        "artifactSha256": {"$ref": "#/$defs/sha256"},
+        "maximumCleanupMs": {"type": "integer", "minimum": 0, "maximum": 8000},
+        "platform": {"const": "darwin"},
+        "scope": {"const": "public-warm-daemon-lifecycle"}
+      }
+    }
   }
 }

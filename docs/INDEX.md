@@ -219,7 +219,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/RELEASE_FULL_MEASUREMENT_PAIR_v0.1.schema.json` - closed isolated pair-worker observation schema for release-full aggregation.
 - `docs/spec/RELEASE_EVIDENCE_WORKER_v0.2.schema.json` - closed, non-authoritative worker-observation schema for the partitioned release-evidence DAG.
 - `docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json` - closed same-run GitHub artifact authentication sidecar for cold-sample-1 evidence fanout.
-- `docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json` - closed read-only aggregate decision schema for ten hosted v0.2 workers and four named-target dispositions.
+- `docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json` - closed read-only aggregate decision schema for ten hosted v0.2 workers, four named-target dispositions, and independently reconciled Linux/macOS host-handle lifecycle custody.
 - `docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json` - closed command partition, cohort, fan-out, aggregate, and watchdog authority for the release-full v0.2 migration.
 - `.genesis/perf/release-full-measurement/manifest.json` - optional retained GB-4 measurement manifest, produced only by `scripts/measure_release_full_profile.sh` from named target-shard evidence.
 - `.genesis/perf/runtime_backend_feature_matrix_report.json` - optional local runtime-backend matrix observation, produced only by `scripts/update_runtime_backend_feature_matrix_report.sh`.

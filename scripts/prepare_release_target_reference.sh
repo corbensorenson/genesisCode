@@ -161,7 +161,9 @@ PY
       "release-target-reference-host-lifecycle" \
       root-host
     cargo build -p gc_cli --bin genesis --quiet
-    HOST_LIFECYCLE_REPORT=".genesis/perf/reference-target-ios/host_bridge_daemon_lifecycle_report.json"
+    # Keep the lifecycle proof inside the iOS replay tree so the target report
+    # inventories its exact bytes before the cross-host aggregate consumes it.
+    HOST_LIFECYCLE_REPORT=".genesis/perf/reference-target-ios/ios/host_bridge_daemon_lifecycle_report.json"
     python3 scripts/lib/host_bridge_daemon_lifecycle.py \
       --genesis "$CARGO_TARGET_DIR/debug/genesis" \
       --selfhost-artifact "$ROOT_DIR/selfhost/toolchain.gc" \

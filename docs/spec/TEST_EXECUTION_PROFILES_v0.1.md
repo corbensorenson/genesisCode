@@ -351,6 +351,19 @@ Strict/full profile runtime reports:
       custody, byte-exact artifacts, complete cleanup, and the exact named-target
       dispositions. It derives cold/warm p95 wall, peak-RSS, and artifact observations
       and alone emits `genesis/release-evidence-aggregate-v0.2 status=pass`;
+    - R2.2.f host-handle closure is a separate derived field inside that aggregate, not
+      a worker verdict. Cold sample 1 produces the authenticated Linux x86_64
+      three-run host-fault matrix; only stress sample 1 retains its byte-exact report
+      from the same-run fanout. The `macos-15` iOS shard places the Darwin arm64 public
+      warm-daemon report inside its authenticated replay inventory. The aggregate
+      retains both producer records and both reports, then independently re-derives
+      lifecycle-path, resource-family, process-tree, child-reap, I/O-quiescence,
+      daemon restart/drain, cleanup-bound, negative-control, host-diversity, probe-source,
+      and self-host-artifact predicates. Missing custody, a producer-authored closure
+      boolean, cross-run input, identity drift, a surviving process, or an omitted
+      lifecycle fact fails closed. The resulting `hostHandleLifecycle` field may set
+      `r2_2_f_closeable=true`; it does not standardize the R5.4.e model API or qualify
+      an unsupported platform pack;
     - the producer requires one CI-provenanced report from every named target shard, with
       the exact runner label, complete reference shard, product-matrix limitation, build and
       runtime-log identities, source commit, and shared workflow run attempt. Those expected blockers keep

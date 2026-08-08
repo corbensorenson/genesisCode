@@ -22,6 +22,7 @@ from typing import Any, Mapping, Optional, Sequence
 import cargo_cache
 import dependency_mirror
 import health_profile_evidence as health_evidence
+import host_handle_lifecycle_evidence as lifecycle_evidence
 import release_evidence_dag as evidence_dag
 import release_evidence_fanout as fanout
 import release_full_measurement as measurement_support
@@ -930,6 +931,13 @@ def run_node(
         input_root=fanout_root,
         fanout_token=fanout_token,
     )
+    if evidence_class == "stress-performance" and index == 1 and phase["exitCode"] == 0:
+        source = fanout_root / "host_bridge_fault_injection_report.json"
+        destination = output / "custody/host_bridge_fault_injection_report.json"
+        if not source.is_file():
+            fail("authenticated fanout lacks host-handle lifecycle evidence")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
     cleanup = cleanup_record(containment, True)
     fanout_record = {
         "artifactName": auth["artifact"]["name"],
@@ -1176,6 +1184,14 @@ def validate_worker(root: Path, output: Path, policy: Mapping[str, Any], dag_sha
         if not isinstance(phases, list) or len(phases) != 1:
             fail("invariant/stress worker requires one measured phase")
         validate_phase(root, output, phases[0], evidence_class, dag_sha, "all", expected_ids)
+    custody_path = "custody/host_bridge_fault_injection_report.json"
+    custody_entries = [row for row in report["artifacts"] if row.get("path") == custody_path]
+    if (evidence_class, cache_state, index) == ("stress-performance", "not-measured", 1):
+        if len(custody_entries) != 1:
+            fail("designated stress worker did not retain authenticated lifecycle evidence")
+        lifecycle_evidence.validate_linux_report(load_json(output / custody_path))
+    elif custody_entries:
+        fail("non-designated worker retained duplicate lifecycle evidence")
     return dict(report)
 
 
@@ -1285,6 +1301,184 @@ def validate_fanout_custody(
     return producer
 
 
+def artifact_entry(report: Mapping[str, Any], relative: str, label: str) -> Mapping[str, Any]:
+    matches = [row for row in report.get("artifacts", []) if row.get("path") == relative]
+    if len(matches) != 1:
+        fail(f"{label} does not bind exactly one {relative!r} artifact")
+    return exact_keys(matches[0], {"bytes", "path", "sha256"}, label)
+
+
+def retain_host_handle_lifecycle_evidence(
+    output: Path,
+    workers_with_outputs: Sequence[tuple[Path, Mapping[str, Any]]],
+    target_reports: Sequence[Path],
+) -> dict[str, Any]:
+    linux_output, linux_worker = next(
+        (
+            worker_output,
+            worker,
+        )
+        for worker_output, worker in workers_with_outputs
+        if (
+            worker["node"]["evidenceClass"],
+            worker["node"]["cacheState"],
+            worker["node"]["index"],
+        )
+        == ("stress-performance", "not-measured", 1)
+    )
+    linux_source_relative = "custody/host_bridge_fault_injection_report.json"
+    linux_source = linux_output / linux_source_relative
+    linux_entry = artifact_entry(
+        linux_worker, linux_source_relative, "Linux lifecycle producer worker"
+    )
+    if (
+        not linux_source.is_file()
+        or linux_source.stat().st_size != linux_entry["bytes"]
+        or sha256_file(linux_source) != linux_entry["sha256"]
+    ):
+        fail("Linux lifecycle evidence does not match its worker inventory")
+
+    ios_report_path = next(
+        path for path in target_reports if load_json(path)["targets"][0]["target"] == "ios"
+    )
+    ios_report = load_json(ios_report_path)
+    replay = ios_report["targets"][0]["replay_artifacts"]
+    macos_relative = "host_bridge_daemon_lifecycle_report.json"
+    macos_entries = [row for row in replay.get("files", []) if row.get("path") == macos_relative]
+    if len(macos_entries) != 1:
+        fail("iOS target report does not bind the macOS daemon lifecycle artifact")
+    macos_entry = exact_keys(
+        macos_entries[0], {"path", "sha256", "size_bytes"},
+        "macOS lifecycle replay artifact",
+    )
+    macos_source = (
+        ios_report_path.parent / "reference-target-ios" / "ios" / macos_relative
+    )
+    if (
+        not macos_source.is_file()
+        or macos_source.stat().st_size != macos_entry["size_bytes"]
+        or sha256_file(macos_source) != macos_entry["sha256"]
+    ):
+        fail("macOS lifecycle evidence does not match the iOS replay inventory")
+
+    retained = {
+        lifecycle_evidence.LINUX_PRODUCER_ARTIFACT: linux_output / MANIFEST_NAME,
+        lifecycle_evidence.LINUX_ARTIFACT: linux_source,
+        lifecycle_evidence.MACOS_PRODUCER_ARTIFACT: ios_report_path,
+        lifecycle_evidence.MACOS_ARTIFACT: macos_source,
+    }
+    for relative, source in retained.items():
+        destination = output / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+    return lifecycle_evidence.reconcile(
+        output / lifecycle_evidence.LINUX_ARTIFACT,
+        output / lifecycle_evidence.MACOS_ARTIFACT,
+        linux_producer_sha256=sha256_file(
+            output / lifecycle_evidence.LINUX_PRODUCER_ARTIFACT
+        ),
+        macos_producer_sha256=sha256_file(
+            output / lifecycle_evidence.MACOS_PRODUCER_ARTIFACT
+        ),
+    )
+
+
+def validate_host_handle_lifecycle_custody(
+    root: Path,
+    aggregate_root: Path,
+    report: Mapping[str, Any],
+) -> None:
+    summary = report["hostHandleLifecycle"]
+    lifecycle_evidence.validate_summary(summary, aggregate_root)
+    custody = summary["custody"]
+
+    linux_manifest_path = aggregate_root / lifecycle_evidence.LINUX_PRODUCER_ARTIFACT
+    linux_manifest = exact_keys(
+        load_json(linux_manifest_path), WORKER_FIELDS, "retained Linux producer worker"
+    )
+    linux_node = linux_manifest["node"]
+    linux_github = linux_manifest["github"]
+    linux_fanout = linux_manifest["fanout"]
+    if not all(isinstance(value, dict) for value in (linux_node, linux_github, linux_fanout)):
+        fail("retained Linux producer worker has malformed custody fields")
+    linux_entry = artifact_entry(
+        linux_manifest,
+        "custody/host_bridge_fault_injection_report.json",
+        "retained Linux producer worker",
+    )
+    linux_report_path = aggregate_root / lifecycle_evidence.LINUX_ARTIFACT
+    linux_summary = next(
+        row
+        for row in report["workers"]
+        if (row["evidenceClass"], row["cacheState"], row["index"])
+        == ("stress-performance", "not-measured", 1)
+    )
+    if (
+        sha256_file(linux_manifest_path) != custody["linuxProducerSha256"]
+        or custody["linuxProducerSha256"] != linux_summary["manifestSha256"]
+        or linux_manifest["contentIdentitySha256"] != identity(linux_manifest)
+        or linux_manifest["source"] != report["source"]
+        or linux_manifest["kind"] != WORKER_KIND
+        or linux_manifest["version"] != VERSION
+        or (
+            linux_node.get("evidenceClass"),
+            linux_node.get("cacheState"),
+            linux_node.get("index"),
+        )
+        != ("stress-performance", "not-measured", 1)
+        or linux_github.get("repository") != report["github"]["repository"]
+        or linux_github.get("runId") != report["github"]["runId"]
+        or linux_github.get("runAttempt") != report["github"]["runAttempt"]
+        or linux_github.get("sha") != report["github"]["sha"]
+        or linux_entry["bytes"] != linux_report_path.stat().st_size
+        or linux_entry["sha256"] != sha256_file(linux_report_path)
+        or linux_fanout.get("role") != "consumer"
+        or linux_fanout.get("bundleIdentitySha256")
+        != report["fanout"]["bundleIdentitySha256"]
+        or linux_fanout.get("digestSha256")
+        != report["fanout"]["digestSha256"]
+    ):
+        fail("retained Linux lifecycle custody is not bound to the aggregate workflow")
+
+    macos_producer_path = aggregate_root / lifecycle_evidence.MACOS_PRODUCER_ARTIFACT
+    ios_summary = next(
+        row for row in report["targetDispositions"] if row["target"] == "ios"
+    )
+    if (
+        sha256_file(macos_producer_path) != custody["macosProducerSha256"]
+        or custody["macosProducerSha256"] != ios_summary["reportSha256"]
+    ):
+        fail("retained macOS producer report digest mismatch")
+    policy, policy_sha = measurement_support.reference_set(root)
+    target, runner = measurement_support.validate_target_report(
+        root,
+        macos_producer_path,
+        policy,
+        policy_sha,
+        report["source"]["gitCommit"],
+    )
+    if (
+        target != "ios"
+        or runner["github_run_id"] != report["github"]["runId"]
+        or runner["github_run_attempt"] != report["github"]["runAttempt"]
+        or runner["github_sha"] != report["github"]["sha"]
+    ):
+        fail("retained macOS lifecycle producer is from another workflow")
+    macos_doc = load_json(macos_producer_path)
+    replay_files = macos_doc["targets"][0]["replay_artifacts"]["files"]
+    macos_entries = [
+        row for row in replay_files
+        if row.get("path") == "host_bridge_daemon_lifecycle_report.json"
+    ]
+    macos_report_path = aggregate_root / lifecycle_evidence.MACOS_ARTIFACT
+    if (
+        len(macos_entries) != 1
+        or macos_entries[0].get("size_bytes") != macos_report_path.stat().st_size
+        or macos_entries[0].get("sha256") != sha256_file(macos_report_path)
+    ):
+        fail("retained macOS lifecycle report is not bound to the iOS replay inventory")
+
+
 def aggregate(
     root: Path,
     output: Path,
@@ -1296,7 +1490,14 @@ def aggregate(
         fail("aggregate output must start absent or empty")
     output.mkdir(parents=True, exist_ok=True)
     policy, dag_sha = policy_context(root)
-    workers = [validate_worker(root, path.resolve(strict=True), policy, dag_sha) for path in worker_outputs]
+    workers_with_outputs = [
+        (
+            path.resolve(strict=True),
+            validate_worker(root, path.resolve(strict=True), policy, dag_sha),
+        )
+        for path in worker_outputs
+    ]
+    workers = [worker for _, worker in workers_with_outputs]
     validate_worker_environment_cohort(workers)
     expected_nodes = expected_node_keys()
     validate_node_topology(workers)
@@ -1350,6 +1551,9 @@ def aggregate(
     cache_workers = [row for row in workers if row["node"]["evidenceClass"] == "cache-sensitive"]
     cold = [row for row in cache_workers if row["node"]["cacheState"] == "cold"]
     warm = [row for row in cache_workers if row["node"]["cacheState"] == "warm"]
+    host_handle_lifecycle = retain_host_handle_lifecycle_evidence(
+        output, workers_with_outputs, target_reports
+    )
     report = {
         "contentIdentitySha256": "",
         "dag": {
@@ -1396,6 +1600,7 @@ def aggregate(
                 [row["measurement"]["elapsedMs"] for row in warm]
             ),
         },
+        "hostHandleLifecycle": host_handle_lifecycle,
         "kind": AGGREGATE_KIND,
         "productReleaseQualified": False,
         "profileOperational": True,
@@ -1410,7 +1615,7 @@ def aggregate(
         fail("release aggregate exceeded its read-only wall budget")
     report["contentIdentitySha256"] = identity(report)
     write_json(output / MANIFEST_NAME, report)
-    validate_aggregate(root, report, policy, dag_sha)
+    validate_aggregate(root, report, policy, dag_sha, output)
     return report
 
 
@@ -1419,12 +1624,13 @@ def validate_aggregate(
     report: Mapping[str, Any],
     policy: Mapping[str, Any],
     dag_sha: str,
+    artifact_root: Path,
 ) -> None:
     exact_keys(
         report,
         {
             "contentIdentitySha256", "dag", "derivedAtUtc", "derivation", "fanout", "github",
-            "history", "kind", "productReleaseQualified", "profileOperational",
+            "history", "hostHandleLifecycle", "kind", "productReleaseQualified", "profileOperational",
             "readinessStatus", "source", "status", "targetDispositions", "version",
             "workers",
         },
@@ -1559,6 +1765,7 @@ def validate_aggregate(
             or not is_sha256(target["reportSha256"])
         ):
             fail("release aggregate target disposition was relabeled or crossed runs")
+    validate_host_handle_lifecycle_custody(root, artifact_root, report)
 
 
 def self_test(root: Path) -> int:
@@ -1834,7 +2041,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             validate_worker(root, args.output.resolve(strict=True), policy, dag_sha)
             print("release-evidence-worker: verified")
         else:
-            validate_aggregate(root, load_json(args.report), policy, dag_sha)
+            report_path = args.report.resolve(strict=True)
+            validate_aggregate(
+                root, load_json(report_path), policy, dag_sha, report_path.parent
+            )
             print("release-evidence-aggregate: verified")
     except (
         ExecutionError,

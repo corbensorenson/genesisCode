@@ -71,6 +71,7 @@ RELEASE_MEASUREMENT_SCHEMA="docs/spec/RELEASE_FULL_MEASUREMENT_v0.1.schema.json"
 RELEASE_EVIDENCE_EXECUTION_SCRIPT="scripts/measure_release_evidence_v02.sh"
 RELEASE_EVIDENCE_EXECUTION_RUNNER="scripts/lib/release_evidence_execution.py"
 RELEASE_EVIDENCE_FANOUT_RUNNER="scripts/lib/release_evidence_fanout.py"
+HOST_HANDLE_LIFECYCLE_EVIDENCE_RUNNER="scripts/lib/host_handle_lifecycle_evidence.py"
 RELEASE_EVIDENCE_FANOUT_SCHEMA="docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json"
 RELEASE_EVIDENCE_WORKER_SCHEMA="docs/spec/RELEASE_EVIDENCE_WORKER_v0.2.schema.json"
 RELEASE_EVIDENCE_AGGREGATE_SCHEMA="docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json"
@@ -165,6 +166,7 @@ for path in \
   "$RELEASE_MEASUREMENT_SCHEMA" \
   "$RELEASE_EVIDENCE_EXECUTION_SCRIPT" \
   "$RELEASE_EVIDENCE_EXECUTION_RUNNER" \
+  "$HOST_HANDLE_LIFECYCLE_EVIDENCE_RUNNER" \
   "$RELEASE_EVIDENCE_FANOUT_RUNNER" \
   "$RELEASE_EVIDENCE_FANOUT_SCHEMA" \
   "$RELEASE_EVIDENCE_WORKER_SCHEMA" \
@@ -209,6 +211,7 @@ done
 python3 "$RELEASE_EVIDENCE_DAG_RUNNER" --root "$ROOT_DIR" check
 python3 "$RELEASE_EVIDENCE_DAG_RUNNER" --root "$ROOT_DIR" self-test
 python3 "$RELEASE_EVIDENCE_EXECUTION_RUNNER" --root "$ROOT_DIR" self-test
+python3 "$HOST_HANDLE_LIFECYCLE_EVIDENCE_RUNNER" --self-test
 
 require_doc_pattern() {
   local pattern="$1"
@@ -704,7 +707,7 @@ for macos_lifecycle_probe in \
   'release-target-reference-host-lifecycle' \
   'scripts/lib/host_bridge_daemon_lifecycle.py' \
   'GENESIS_HOST_BRIDGE_DAEMON_LIFECYCLE_REPORT' \
-  'reference-target-ios/host_bridge_daemon_lifecycle_report.json'; do
+  'reference-target-ios/ios/host_bridge_daemon_lifecycle_report.json'; do
   if ! grep -Fq "$macos_lifecycle_probe" scripts/prepare_release_target_reference.sh; then
     echo "test-execution-profile-matrix: macOS reference lane is missing lifecycle probe $macos_lifecycle_probe" >&2
     exit 1
@@ -1038,6 +1041,11 @@ if fanout_schema.get("$id") != "https://genesiscode.dev/schemas/release-evidence
     raise SystemExit("test-execution-profile-matrix: release evidence fanout schema id mismatch")
 if aggregate_schema.get("$id") != "https://genesiscode.dev/schemas/release-evidence-aggregate-v0.2.schema.json":
     raise SystemExit("test-execution-profile-matrix: release evidence aggregate schema id mismatch")
+if "hostHandleLifecycle" not in aggregate_schema.get("required", []):
+    raise SystemExit("test-execution-profile-matrix: release aggregate schema omits host lifecycle closure")
+host_lifecycle_schema = aggregate_schema.get("$defs", {}).get("hostHandleLifecycle", {})
+if host_lifecycle_schema.get("additionalProperties") is not False:
+    raise SystemExit("test-execution-profile-matrix: host lifecycle aggregate schema is open")
 if policy.get("kind") != "genesis/release-target-reference-set-v0.1":
     raise SystemExit("test-execution-profile-matrix: release target reference policy kind mismatch")
 if policy.get("lifecycleSteps") != ["install", "launch", "smoke", "teardown", "reap"]:
@@ -1406,9 +1414,24 @@ for marker in [
     "release aggregate has a missing or duplicate execution node",
     "fanout consumer does not bind the cold-1 producer",
     "worker cleanup is incomplete",
+    '"hostHandleLifecycle": host_handle_lifecycle',
+    "retain_host_handle_lifecycle_evidence",
+    "validate_host_handle_lifecycle_custody",
+    'custody/host_bridge_fault_injection_report.json',
 ]:
     if marker not in release_execution:
         raise SystemExit(f"test-execution-profile-matrix: v0.2 execution marker missing: {marker}")
+host_lifecycle = (root / "scripts/lib/host_handle_lifecycle_evidence.py").read_text(encoding="utf-8")
+for marker in [
+    'LINUX_ARTIFACT = "host-handle-lifecycle/linux/host_bridge_fault_injection_report.json"',
+    'MACOS_ARTIFACT = "host-handle-lifecycle/macos/host_bridge_daemon_lifecycle_report.json"',
+    '"r2_2_f_closeable": True',
+    '"independentCrossHostEvidence": True',
+    "tier-1 lifecycle reports do not share probe and self-host identities",
+    "lifecycle evidence negative-control inventory drifted",
+]:
+    if marker not in host_lifecycle:
+        raise SystemExit(f"test-execution-profile-matrix: host lifecycle reconciler marker missing: {marker}")
 for marker in [
     'KIND = "genesis/release-evidence-fanout-auth-v0.2"',
     "same-run cold-1 fanout artifact did not become available before deadline",
