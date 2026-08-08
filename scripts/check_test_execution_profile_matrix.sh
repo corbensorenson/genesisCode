@@ -682,6 +682,12 @@ for lifecycle_probe in \
   'editor_first_party_core_ops_are_replayable_without_bridge' \
   'runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces' \
   'model_lifecycle::model_runner_plugin_session_is_owned_reaped_and_restart_isolated' \
+  'scripts/lib/host_bridge_daemon_lifecycle.py' \
+  'host_bridge_daemon_lifecycle.py --self-test' \
+  'warm-daemon-provider-success-error-timeout-restart-shutdown-eof' \
+  '"daemon_service_lifecycle"' \
+  '"fresh_daemon_process_isolation": daemon_verified' \
+  '"no_live_provider_or_descendant": daemon_verified' \
   '--features gfx-desktop-backend' \
   '--features gpu-device-backend' \
   'device_runtime_resources_are_scoped_and_reaped' \
@@ -690,6 +696,17 @@ for lifecycle_probe in \
   '"standard_model_api_owner": "R5.4.e"'; do
   if ! grep -Fq -- "$lifecycle_probe" scripts/render_host_bridge_fault_injection_report.sh; then
     echo "test-execution-profile-matrix: host lifecycle renderer is missing probe $lifecycle_probe" >&2
+    exit 1
+  fi
+done
+
+for macos_lifecycle_probe in \
+  'release-target-reference-host-lifecycle' \
+  'scripts/lib/host_bridge_daemon_lifecycle.py' \
+  'GENESIS_HOST_BRIDGE_DAEMON_LIFECYCLE_REPORT' \
+  'reference-target-ios/host_bridge_daemon_lifecycle_report.json'; do
+  if ! grep -Fq "$macos_lifecycle_probe" scripts/prepare_release_target_reference.sh; then
+    echo "test-execution-profile-matrix: macOS reference lane is missing lifecycle probe $macos_lifecycle_probe" >&2
     exit 1
   fi
 done

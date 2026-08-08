@@ -97,6 +97,7 @@ RUNTIME_IDENTITY=""
 SDK_IDENTITY=""
 IOS_BOOTED_BY_SCRIPT=0
 IOS_DEVICE_ID=""
+HOST_LIFECYCLE_REPORT=""
 
 cleanup() {
   if [[ "$IOS_BOOTED_BY_SCRIPT" == "1" && -n "$IOS_DEVICE_ID" ]]; then
@@ -154,6 +155,17 @@ PY
       xcrun simctl shutdown "$IOS_DEVICE_ID"
       IOS_BOOTED_BY_SCRIPT=0
     fi
+    source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+    genesis_configure_cargo_target_dir \
+      "$ROOT_DIR" \
+      "release-target-reference-host-lifecycle" \
+      root-host
+    cargo build -p gc_cli --bin genesis --quiet
+    HOST_LIFECYCLE_REPORT=".genesis/perf/reference-target-ios/host_bridge_daemon_lifecycle_report.json"
+    python3 scripts/lib/host_bridge_daemon_lifecycle.py \
+      --genesis "$CARGO_TARGET_DIR/debug/genesis" \
+      --selfhost-artifact "$ROOT_DIR/selfhost/toolchain.gc" \
+      --output "$HOST_LIFECYCLE_REPORT"
     ;;
   service-runtime)
     docker info >/dev/null
@@ -182,6 +194,9 @@ esac
 emit_env "$COMMAND_ENV" "$REFERENCE_COMMAND"
 emit_env "$IDENTITY_ENV" "$RUNTIME_IDENTITY"
 emit_env "$SDK_IDENTITY_ENV" "$SDK_IDENTITY"
+if [[ -n "$HOST_LIFECYCLE_REPORT" ]]; then
+  emit_env GENESIS_HOST_BRIDGE_DAEMON_LIFECYCLE_REPORT "$HOST_LIFECYCLE_REPORT"
+fi
 case "$TARGET" in
   android) emit_env GENESIS_GCPM_ANDROID_RUNTIME_CLASS "$RUNTIME_CLASS" ;;
   edge) emit_env GENESIS_GCPM_EDGE_RUNTIME_CLASS "$RUNTIME_CLASS" ;;

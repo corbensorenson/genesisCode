@@ -56,6 +56,13 @@ genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "host-bridge-fault-injection" \
   root-host
+cargo build -p gc_cli --bin genesis --quiet
+GENESIS_BIN="$CARGO_TARGET_DIR/debug/genesis"
+[[ -x "$GENESIS_BIN" ]] || {
+  echo "host-bridge-fault-injection: missing genesis binary: $GENESIS_BIN" >&2
+  exit 1
+}
+python3 scripts/lib/host_bridge_daemon_lifecycle.py --self-test
 
 if grep -En 'static SESSIONS|persistent_bridge_session_map' \
   crates/gc_effects/src/runner_host_bridge_persistent.rs; then
@@ -73,7 +80,8 @@ PY
 )"
 
 RUNS_FILE="$(mktemp)"
-trap 'rm -f "$RUNS_FILE"' EXIT
+DAEMON_REPORT_DIR="$(mktemp -d)"
+trap 'rm -f "$RUNS_FILE"; rm -rf "$DAEMON_REPORT_DIR"' EXIT
 
 passed_runs=0
 failed_runs=0
@@ -95,7 +103,11 @@ PY
      cargo test -p gc_effects --lib tests::tests_host_backends::tests_host_backends_first_party::editor_first_party_core_ops_are_replayable_without_bridge --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces --quiet -- --exact && \
      cargo test -p gc_effects --lib --no-default-features --features gfx-desktop-backend runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces --quiet -- --exact && \
-     cargo test -p gc_effects --lib --no-default-features --features gpu-device-backend device_runtime_resources_are_scoped_and_reaped --quiet; then
+     cargo test -p gc_effects --lib --no-default-features --features gpu-device-backend device_runtime_resources_are_scoped_and_reaped --quiet && \
+     python3 scripts/lib/host_bridge_daemon_lifecycle.py \
+       --genesis "$GENESIS_BIN" \
+       --selfhost-artifact "$ROOT_DIR/selfhost/toolchain.gc" \
+       --output "$DAEMON_REPORT_DIR/run-${run}.json"; then
     run_ok=1
     passed_runs=$((passed_runs + 1))
   else
@@ -127,7 +139,7 @@ if [[ "$HISTORY_INPUT" != "$HISTORY_PATH" ]]; then
   fi
 fi
 
-python3 - "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$RUNS" "$passed_runs" "$failed_runs" "$MAX_FAILURE_RATE_PCT" "$RUNS_FILE" "$HOST_PLATFORM" "$PROCESS_GROUP_PROBE" <<'PY'
+python3 - "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$RUNS" "$passed_runs" "$failed_runs" "$MAX_FAILURE_RATE_PCT" "$RUNS_FILE" "$HOST_PLATFORM" "$PROCESS_GROUP_PROBE" "$DAEMON_REPORT_DIR" <<'PY'
 import json
 import pathlib
 import sys
@@ -144,6 +156,7 @@ max_failure_rate_pct = float(sys.argv[8])
 runs_file = pathlib.Path(sys.argv[9])
 host_platform = sys.argv[10]
 process_group_probe = sys.argv[11]
+daemon_report_dir = pathlib.Path(sys.argv[12])
 
 if max_failure_rate_pct < 0.0 or max_failure_rate_pct > 100.0:
     raise SystemExit(
@@ -162,6 +175,73 @@ for line in runs_file.read_text(encoding="utf-8").splitlines():
     )
 
 observed_failure_rate_pct = (failed_runs / runs) * 100.0
+daemon_reports = []
+for path in sorted(daemon_report_dir.glob("run-*.json")):
+    daemon_reports.append(json.loads(path.read_text(encoding="utf-8")))
+expected_daemon_scenarios = {
+    "request-success-owner-drop",
+    "request-malformed-response",
+    "request-hard-timeout",
+    "generation-restart-renegotiation",
+    "active-shutdown-bounded-drain",
+    "active-eof-bounded-drain",
+    "daemon-process-restart-isolation",
+}
+expected_daemon_controls = {
+    "reject-malformed-process-record",
+    "reject-duplicate-process-identity",
+    "detect-live-process-group",
+    "accept-reaped-process-group",
+    "reject-non-persistent-transport",
+}
+daemon_verified = len(daemon_reports) == runs and all(
+    report.get("kind") == "genesis/host-bridge-daemon-lifecycle-v0.1"
+    and report.get("ok") is True
+    and report.get("platform") == host_platform
+    and report.get("transport") == "persistent-stdio"
+    and set(report.get("scenarios", [])) == expected_daemon_scenarios
+    and set(report.get("negative_controls", [])) == expected_daemon_controls
+    and report.get("provider_processes") == 5
+    and report.get("unique_provider_processes") == 5
+    and report.get("descendant_processes") == 5
+    and report.get("daemon_processes") == 3
+    and report.get("cleanup", {}).get("no_live_provider_or_descendant") is True
+    and report.get("cleanup", {}).get("maximum_ms", 2**63)
+        <= report.get("cleanup", {}).get("bound_ms", -1)
+    and all(
+        isinstance(report.get(field), str)
+        and len(report[field]) == 64
+        and all(character in "0123456789abcdef" for character in report[field])
+        for field in (
+            "genesis_executable_sha256",
+            "selfhost_artifact_sha256",
+            "probe_source_sha256",
+        )
+    )
+    for report in daemon_reports
+)
+daemon_scenarios = sorted(
+    {
+        scenario
+        for daemon_report in daemon_reports
+        for scenario in daemon_report.get("scenarios", [])
+    }
+)
+daemon_max_cleanup_ms = max(
+    (report.get("cleanup", {}).get("maximum_ms", 0) for report in daemon_reports),
+    default=0,
+)
+daemon_source_identities = sorted(
+    {
+        (
+            report.get("architecture"),
+            report.get("genesis_executable_sha256"),
+            report.get("probe_source_sha256"),
+            report.get("selfhost_artifact_sha256"),
+        )
+        for report in daemon_reports
+    }
+)
 
 report = {
     "kind": "genesis/host-bridge-fault-injection-v0.1",
@@ -194,6 +274,7 @@ report = {
             "gpu-device-explicit-destroy-rejected-after-close",
             "gpu-device-restart-rejects-stale-handles",
             "model-provider-session-success-error-timeout-drop-restart",
+            "warm-daemon-provider-success-error-timeout-restart-shutdown-eof",
             "xr-repeated-close-rejected",
         ],
         "model_sessions": {
@@ -202,6 +283,25 @@ report = {
             "status": "bridge-profile-implemented",
             "transport": "host/plugin::command",
             "verified": True,
+        },
+        "daemon_service_lifecycle": {
+            "profile": "genesis/warm-protocol-v0.2",
+            "verified": daemon_verified,
+            "runs": len(daemon_reports),
+            "scenarios": daemon_scenarios,
+            "maximum_cleanup_ms": daemon_max_cleanup_ms,
+            "fresh_daemon_process_isolation": daemon_verified,
+            "no_live_provider_or_descendant": daemon_verified,
+            "source_identities": [
+                {
+                    "architecture": architecture,
+                    "genesis_executable_sha256": genesis_sha256,
+                    "probe_source_sha256": probe_sha256,
+                    "selfhost_artifact_sha256": artifact_sha256,
+                }
+                for architecture, genesis_sha256, probe_sha256, artifact_sha256
+                in daemon_source_identities
+            ],
         },
         "independent_cross_host_evidence": False,
     },
@@ -230,6 +330,7 @@ report = {
             "process",
             "plugin",
             "model-provider-process",
+            "warm-daemon-provider-process",
         ],
     },
     "runs_detail": run_records,

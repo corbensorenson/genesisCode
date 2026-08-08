@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "d4cd37634fcee27fee5f9171207818563f1d2aa079dbf289dcbf1febfb72c7ae",
+      "inputIdentitySha256": "704f054468d87a803f18dd433e8c5a7775a03b25f5daf0ac192ae7055fcaba42",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -281,6 +281,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/reclaim_build_space.sh",
@@ -362,7 +363,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -448,6 +449,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -664,7 +666,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -750,6 +752,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -822,7 +825,7 @@
       "executionIdentitySha256": "40576239afd82ec6bc6364a51c3cc0e287c823662e2f53bec8254bebad0a7124",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -908,6 +911,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -980,7 +984,7 @@
       "executionIdentitySha256": "057623bf88ddbfcc1bcc06d79016ec18b5a0841b91d77d465babfd292082527d",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1717,6 +1721,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -2384,7 +2389,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3121,6 +3126,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -3497,7 +3503,7 @@
       "executionIdentitySha256": "413a261bef8019890d3ecef40d7030e2af4ef612abb636f6c69bf63078766212",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4234,6 +4240,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -4485,7 +4492,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5222,6 +5229,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -5552,7 +5560,7 @@
       "executionIdentitySha256": "5d7fcca0e4a1109fa79c1d828aa09ebefb4eb1bd2cb1cd143f819300fc4a8cca",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6289,6 +6297,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -6828,7 +6837,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "395b7fd150e8105da0bd566ca6cc6f64948a3cd72333cc5305d2fdcb95f13572",
+      "inputIdentitySha256": "2c83bebbe000dc640c0565b80d07617469722e87a218f88c43c97259adaf4d61",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7111,7 +7120,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7848,6 +7857,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -8685,7 +8695,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "cd7041e19935e4998574f0a3dafb58e64d24a9bea1f75f5288e9ece16ab1312c",
+      "inputIdentitySha256": "6c451c4a5ce83a2678a7f6b43edb1f5ae117eecf475700fc8a4e1d6ad675f782",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8872,7 +8882,7 @@
       "executionIdentitySha256": "969f063c2bb464130de2dc61013286e16ddaf028bc31c8b8bc99dabe3e95398d",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9609,6 +9619,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -9844,7 +9855,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "d4cd37634fcee27fee5f9171207818563f1d2aa079dbf289dcbf1febfb72c7ae",
+      "inputIdentitySha256": "704f054468d87a803f18dd433e8c5a7775a03b25f5daf0ac192ae7055fcaba42",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10116,6 +10127,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/reclaim_build_space.sh",
@@ -10201,7 +10213,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "d4cd37634fcee27fee5f9171207818563f1d2aa079dbf289dcbf1febfb72c7ae",
+      "inputIdentitySha256": "704f054468d87a803f18dd433e8c5a7775a03b25f5daf0ac192ae7055fcaba42",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10473,6 +10485,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/reclaim_build_space.sh",
@@ -10558,7 +10571,7 @@
       "executionIdentitySha256": "09ccbdaf204f565c2bca87bb239f1e4e529497f7ff1a50c3e999396a593cbce7",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "d4cd37634fcee27fee5f9171207818563f1d2aa079dbf289dcbf1febfb72c7ae",
+      "inputIdentitySha256": "704f054468d87a803f18dd433e8c5a7775a03b25f5daf0ac192ae7055fcaba42",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10830,6 +10843,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/reclaim_build_space.sh",
@@ -10915,7 +10929,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "d4cd37634fcee27fee5f9171207818563f1d2aa079dbf289dcbf1febfb72c7ae",
+      "inputIdentitySha256": "704f054468d87a803f18dd433e8c5a7775a03b25f5daf0ac192ae7055fcaba42",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11187,6 +11201,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/reclaim_build_space.sh",
@@ -11469,7 +11484,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12206,6 +12221,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -13098,7 +13114,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13835,6 +13851,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -14074,7 +14091,7 @@
       "executionIdentitySha256": "e8c39e351f7248a80e11baa8a91d47b4cf694dea82210113409010ee4f0298bc",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14160,6 +14177,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -14273,7 +14291,7 @@
       "executionIdentitySha256": "b5a5877112d47b1cd04e2b00c868b18e79a5d2572677ca2682ca66137324f9b1",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15010,6 +15028,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -15421,10 +15440,10 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_host_bridge_fault_injection.sh",
-      "executionIdentitySha256": "cd521b78dbc8ccad5ed489888904899a432fc499ba65e972864a58d1cc46539f",
+      "executionIdentitySha256": "2567edebcd9d93810a936812804358285410a0d25d2e93c426b67a72f28285f1",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15510,6 +15529,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -15830,7 +15850,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16567,6 +16587,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -17099,7 +17120,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17836,6 +17857,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -18921,7 +18943,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19007,6 +19029,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -19898,7 +19921,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19984,6 +20007,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -20363,10 +20387,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_test_execution_profile_matrix.sh",
-      "executionIdentitySha256": "d23c7d47d2c9852e24ef34fc902321e4229563c00ec0ad69c5cc2f8ce1e75391",
+      "executionIdentitySha256": "64b4782d87c6199eef27186ddd09289277e4aae81bc3d043b5ad9ad9f8aa89a8",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21103,6 +21127,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -21324,7 +21349,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "a1f552369ba6ff28fb2440dd1adebfce019a681407ceefa15ab590cc238b0d2b",
+      "sourceSha256": "4ef4693182c50e21da1cf6a6ca556743dd6db7d6e9c899dafafe0ea0a2fbf9bc",
       "tools": [
         "adb",
         "bash",
@@ -21453,10 +21478,10 @@
       "dependencies": [],
       "diskBudgetMiB": 5120,
       "entrypoint": "scripts/check_upgrade_plan_health.sh",
-      "executionIdentitySha256": "d2eff19b85c0d7e52f47a178148232abaf90b746f3b27808398068a744c4bfcb",
+      "executionIdentitySha256": "7f4b0bb93002ff59b128f3ae87d2c2277cec8182df013d5f591c18ce63b9490b",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "343ef01eead33c716641846e0fcc261c7ad0113ea9fda42da82b0edd318782b1",
+      "inputIdentitySha256": "aebd299794a2147bf45e8e1e6f4dbbd6d51bdb386e51a20ad3f9f918f8458ba0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22193,6 +22218,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/lint_suppression_policy.py",
           "scripts/lib/measure.sh",
           "scripts/lib/panic_policy.py",
@@ -22984,7 +23010,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23070,6 +23096,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -23139,7 +23166,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "208d96e5975d7b4b6f07ead8be0ebaab8c7ac730da8b1452e33b2e2f87268850",
+      "inputIdentitySha256": "a8f82a9fdd45143daf136e49e29be4f2f97e19bd59fa3a271440850af3a6fdeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23225,6 +23252,7 @@
           "scripts/lib/health_profile_evidence.py",
           "scripts/lib/health_profile_evidence.sh",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -23456,7 +23484,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "21e9465c8af5b7ebe26d26dab68155ba69f7953d989f674e078e56fc56deba30"
+        "sha256": "f85c9d9390c122e7d9ae1d222c8fdacceee7b8f345f36de3a729829c614b4a94"
       },
       {
         "path": "genesis.prerequisites.json",

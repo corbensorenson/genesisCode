@@ -3374,14 +3374,14 @@
         },
         {
           "path": "scripts/render_host_bridge_fault_injection_report.sh",
-          "sha256": "3f5148209bab825fbc0b2445ee279d9fef72c5b893fd09b29d54d5597ea6a4f8"
+          "sha256": "2399e236dc80954c07668cf5e0a7aa2833ba68a021581a680ba1747c694a9521"
         }
       ],
       "execution_helper_invocations": [
         "scripts/lib/health_profile_evidence.sh",
         "scripts/render_host_bridge_fault_injection_report.sh"
       ],
-      "execution_identity_sha256": "cd521b78dbc8ccad5ed489888904899a432fc499ba65e972864a58d1cc46539f",
+      "execution_identity_sha256": "2567edebcd9d93810a936812804358285410a0d25d2e93c426b67a72f28285f1",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -3402,7 +3402,7 @@
         "scripts/render_host_bridge_fault_injection_report.sh: printf '%s,%s,%s\\n' \"$run\" \"$run_ok\" \"$run_elapsed_ms\" >> \"$RUNS_FILE\"",
         "scripts/render_host_bridge_fault_injection_report.sh: report_path.parent.mkdir(parents=True, exist_ok=True)",
         "scripts/render_host_bridge_fault_injection_report.sh: report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + \"\\n\", encoding=\"utf-8\")",
-        "scripts/render_host_bridge_fault_injection_report.sh: trap 'rm -f \"$RUNS_FILE\"' EXIT",
+        "scripts/render_host_bridge_fault_injection_report.sh: trap 'rm -f \"$RUNS_FILE\"; rm -rf \"$DAEMON_REPORT_DIR\"' EXIT",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT"
       ]
     },
@@ -5562,7 +5562,7 @@
       "execution_helper_invocations": [
         "scripts/test_prepare_release_target_reference.sh"
       ],
-      "execution_identity_sha256": "d23c7d47d2c9852e24ef34fc902321e4229563c00ec0ad69c5cc2f8ce1e75391",
+      "execution_identity_sha256": "64b4782d87c6199eef27186ddd09289277e4aae81bc3d043b5ad9ad9f8aa89a8",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5573,7 +5573,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "a1f552369ba6ff28fb2440dd1adebfce019a681407ceefa15ab590cc238b0d2b",
+      "sha256": "4ef4693182c50e21da1cf6a6ca556743dd6db7d6e9c899dafafe0ea0a2fbf9bc",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -5841,7 +5841,7 @@
         },
         {
           "path": "scripts/render_host_bridge_fault_injection_report.sh",
-          "sha256": "3f5148209bab825fbc0b2445ee279d9fef72c5b893fd09b29d54d5597ea6a4f8"
+          "sha256": "2399e236dc80954c07668cf5e0a7aa2833ba68a021581a680ba1747c694a9521"
         },
         {
           "path": "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -5871,7 +5871,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "d2eff19b85c0d7e52f47a178148232abaf90b746f3b27808398068a744c4bfcb",
+      "execution_identity_sha256": "7f4b0bb93002ff59b128f3ae87d2c2277cec8182df013d5f591c18ce63b9490b",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5923,7 +5923,7 @@
         "scripts/render_host_bridge_fault_injection_report.sh: printf '%s,%s,%s\\n' \"$run\" \"$run_ok\" \"$run_elapsed_ms\" >> \"$RUNS_FILE\"",
         "scripts/render_host_bridge_fault_injection_report.sh: report_path.parent.mkdir(parents=True, exist_ok=True)",
         "scripts/render_host_bridge_fault_injection_report.sh: report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + \"\\n\", encoding=\"utf-8\")",
-        "scripts/render_host_bridge_fault_injection_report.sh: trap 'rm -f \"$RUNS_FILE\"' EXIT",
+        "scripts/render_host_bridge_fault_injection_report.sh: trap 'rm -f \"$RUNS_FILE\"; rm -rf \"$DAEMON_REPORT_DIR\"' EXIT",
         "scripts/render_runtime_backend_feature_matrix_report.sh: history_path.parent.mkdir(parents=True, exist_ok=True)",
         "scripts/render_runtime_backend_feature_matrix_report.sh: mkdir -p \"$(dirname \"$REPORT_OUT\")\"",
         "scripts/render_runtime_backend_feature_matrix_report.sh: printf '%s\\t%s\\n' \"$label\" \"$elapsed_ms\" >>\"$STAGE_FILE\"",

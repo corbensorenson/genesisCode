@@ -1491,6 +1491,8 @@ BUNDLES: Mapping[str, Sequence[str]] = {
         "scripts/check_host_bridge_fault_injection.sh",
         "scripts/render_host_bridge_fault_injection_report.sh",
         "scripts/update_host_bridge_fault_injection_report.sh",
+        "scripts/lib/host_bridge_daemon_lifecycle.py",
+        "scripts/prepare_release_target_reference.sh",
         "policies/check_update_boundary_v0.1.json",
         "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
         "policies/gates_v0.1.json",
