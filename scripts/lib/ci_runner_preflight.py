@@ -22,6 +22,7 @@ POLICY_KEYS = {
     "workflows",
     "limitsSeconds",
     "historicalIncident",
+    "releaseFullChronology",
     "selectionProfiles",
     "runnerLanes",
 }
@@ -81,6 +82,20 @@ def validate_policy(policy: Any) -> tuple[dict[str, list[str]], list[dict[str, A
             "recordsSha256": "8651a34f4c44d6859eebaa75166a315751a0a1a66602bd1bb91c31cf2f463d0e",
         },
         "historical incident authority mismatch",
+    )
+    require(
+        policy["releaseFullChronology"]
+        == {
+            "path": "docs/program/incidents/CI_RELEASE_FULL_CHRONOLOGY_2026-08-05_2026-08-08.json",
+            "chronologyId": "ci-release-full-2026-08-05_2026-08-08",
+            "firstRunId": 31023619554,
+            "lastRunId": 31246022249,
+            "failedCount": 11,
+            "cancelledCount": 5,
+            "successfulCount": 2,
+            "recordsSha256": "22a872895817799ba2f8ffde31694c9f60e31835d30b56d682b19854c7bca7d9",
+        },
+        "release-full chronology authority mismatch",
     )
     profiles = policy["selectionProfiles"]
     require(isinstance(profiles, dict) and set(profiles) == {"none", "primary", "matrix"}, "selection profiles mismatch")

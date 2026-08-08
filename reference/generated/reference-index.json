@@ -5,7 +5,7 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 273,
+    "canonicalSources": 274,
     "diagnostics": 196,
     "exampleFiles": 189,
     "hostOperations": 188,
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "86f78b185b4285d8c4ba0cb036c5abc27bf03ee48469bae29b1f17191c48d705"
+      "sha256": "863b1d53f9ddebf35d281126e7b0dc98ef7e925fc38ab467affda1bce8e85f01"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "043f69e317742e39f75e0af5f975ea26722116aef38f5777b24962af8de2c7b8"
+      "sha256": "93621361a91857e6259240a9c3f65b57b19c02891e09dceed1c1c13bd6e58b10"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -179,12 +179,16 @@
       "sha256": "f75cfa079e5bed93de12ee9d2e77654f7a65c31523a61af1592eaf772791f005"
     },
     {
+      "path": "docs/program/incidents/CI_RELEASE_FULL_CHRONOLOGY_2026-08-05_2026-08-08.json",
+      "sha256": "f318030d453f98c09aef54b1950c12503d230bc977130b520f4ade63f291481e"
+    },
+    {
       "path": "docs/skill_pack/write_genesiscode_v1/authoring-card.md",
       "sha256": "515024801e4736da2328563cb70a0f5c51d6add8a0f27bdab44dec000281f871"
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
-      "sha256": "60e776b2da6ac85180cbcf0f2933443dcdf1215c0dac69496db84dec13496411"
+      "sha256": "b876277362fce96e9e1e359673c6eceb3e8cdf8f14308d8c1cbbae751f53e713"
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/prompt-cards.json",
@@ -448,7 +452,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "7800e7cfdb8ad4e9b645cf70649ee87e3627797de51dccfc26db6e48563cc3a5"
+      "sha256": "b2fa50420661458c762f67d1c453178c3908e5397956e81b5e17a97c272b281e"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
@@ -464,7 +468,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "aee74be6374a3702f0a008fe096dd3ea018143b29069ed1b75e7c992c762d44e"
+      "sha256": "9257eca57244e90b814024c8529e42946b5b12e6c47072ce5255b8285bd4b3e2"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -508,11 +512,11 @@
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "1630af057b5fe272592a83165e92f61c9dd892ee407b8b073de8b03d7faac7cd"
+      "sha256": "20068230a343fb2b7d541493870f370a46d67096a6bfd863844c985fa1363caf"
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-      "sha256": "5252af3a249d4e63f1f19e9efcf8cdf99f84f21c9447e5046dd038f222d02694"
+      "sha256": "931c90cc2279675dd6076eca846ea483fe0d5bfd7dd8117c4796fb78ed7ef9bc"
     },
     {
       "path": "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
@@ -588,7 +592,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "d64260de4d0820f6f6ebe285274454e314bab29ac7cb1c066a482de193781b1c"
+      "sha256": "a12c21c658d50123f95bd0e818e5be770a44e7e1db7a936a6021b4ea3900c5e2"
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -608,11 +612,11 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
-      "sha256": "209c29bb8dd0ff699412cef6e66ad50b1036c02d0d66be64b2063c167db1976e"
+      "sha256": "f813c7b7330af2b342effbe6bd12d1ebb4ca98188646cb7541ec5378a1c97e51"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json",
-      "sha256": "ae84f6c9ae0c6400253439fa4df3523b390373a89ed92ffb023dfdcb85ea60a5"
+      "sha256": "74e29ce8fe19795fc29123109f5a5bcfd9b40fca65f41a2d10045f6bd6b881f2"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
@@ -620,7 +624,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
-      "sha256": "c63724beb818f6463e7d587d17c198030ba3defb00b248bae26ad8ff3485b39f"
+      "sha256": "5f614d38860c13b9a34d1e353d729734a4252d9eb957080f0b55ea40691228b3"
     },
     {
       "path": "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
@@ -644,7 +648,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
-      "sha256": "f2ca1a035dcb06d30d8b0eee4b8a4075d44aff6f75e958f5c9d763fe47e2d002"
+      "sha256": "b872bc6767a6789d32cab852aeb7046c5a0d4d90159aadc788f356ddafcc57c8"
     },
     {
       "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
@@ -712,7 +716,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "8ceddd3b781598d0e83e50cd407e929ff947c9af3d096aefded664556e3f6d4d"
+      "sha256": "3575a1329dcb005cc605f6feaa8e386a5d6e8989a13fab7404fcd58efc64ba14"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -720,7 +724,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "734295f5279b76fa709803093bdc789f3acb6d1ad3a5fa9adc9b22fcd1137522"
+      "sha256": "3dfb77343df642ffa11072a14eeb2950a5bd9cf6fc32968a47250fbd81bc24b6"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
@@ -732,7 +736,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "c74c61a175dcdf24ed7bd70aceb96d8e72e321118652ed74f2fc22d6566f3f71"
+      "sha256": "cb702037a662834c2d43ade174faa30c6d792998b1a37f8f931f90d62c3a0d9d"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
@@ -1000,7 +1004,7 @@
     },
     {
       "path": "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
-      "sha256": "47f8f3a6080ba8f790fea5b5914ac643fd1bfca3410b0bc0e44479f0390d216b"
+      "sha256": "85cc5f6a4b206a30613c57245fcd87eda40e0f36eb334849724f29d0b310ed03"
     },
     {
       "path": "docs/spec/TRANSLATION_VALIDATION.md",

@@ -38,6 +38,8 @@ jobs:
       - name: Evaluate Independent CI Liveness
         shell: bash
         run: |
+          python3 scripts/lib/ci_liveness_watchdog.py verify-retained \
+            --policy policies/ci_control_plane_v0.1.json
           expected_head_time="$(git show -s --format=%cI HEAD)"
           observed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           python3 scripts/lib/ci_liveness_watchdog.py evaluate \

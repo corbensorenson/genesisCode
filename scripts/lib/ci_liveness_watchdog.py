@@ -91,6 +91,22 @@ def validate_policy(policy: Any) -> dict[str, Any]:
         },
         "historical incident authority fields are not closed",
     )
+    chronology = policy.get("releaseFullChronology")
+    require(isinstance(chronology, dict), "release-full chronology authority is missing")
+    require(
+        set(chronology)
+        == {
+            "path",
+            "chronologyId",
+            "firstRunId",
+            "lastRunId",
+            "failedCount",
+            "cancelledCount",
+            "successfulCount",
+            "recordsSha256",
+        },
+        "release-full chronology authority fields are not closed",
+    )
     return policy
 
 
@@ -184,6 +200,169 @@ def verify_incident(policy: Any, incident: Any) -> None:
     require(disposition.get("subsequentMainPushSuccessRunIds") == [30950817979, 30958624492], "incident subsequent disposition mismatch")
     nonclaims = disposition.get("remainingNonclaims")
     require(isinstance(nonclaims, list) and len(nonclaims) == 3 and all(isinstance(row, str) and row for row in nonclaims), "incident nonclaims are incomplete")
+
+
+def verify_release_full_chronology(policy: Any, chronology: Any) -> None:
+    policy = validate_policy(policy)
+    authority = policy["releaseFullChronology"]
+    require(isinstance(chronology, dict), "release-full chronology must be an object")
+    require(
+        set(chronology)
+        == {
+            "kind",
+            "version",
+            "chronologyId",
+            "repository",
+            "workflowPath",
+            "selection",
+            "summary",
+            "recordsSha256",
+            "records",
+            "disposition",
+        },
+        "release-full chronology fields are not closed",
+    )
+    require(
+        chronology["kind"] == "genesis/ci-release-full-chronology-v0.1"
+        and chronology["version"] == "0.1",
+        "release-full chronology identity mismatch",
+    )
+    require(chronology["chronologyId"] == authority["chronologyId"], "release-full chronology id mismatch")
+    require(
+        chronology["repository"] == policy["repository"]
+        and chronology["workflowPath"] == policy["workflows"]["ci"],
+        "release-full chronology source mismatch",
+    )
+    selection = chronology["selection"]
+    require(
+        isinstance(selection, dict)
+        and set(selection)
+        == {
+            "branch",
+            "events",
+            "profile",
+            "fromRunIdInclusive",
+            "throughRunIdInclusive",
+            "observedAt",
+        },
+        "release-full chronology selection is not closed",
+    )
+    require(
+        selection["branch"] == policy["branch"]
+        and selection["events"] == ["schedule", "workflow_dispatch"]
+        and selection["profile"] == "full"
+        and selection["fromRunIdInclusive"] == authority["firstRunId"]
+        and selection["throughRunIdInclusive"] == authority["lastRunId"],
+        "release-full chronology selection mismatch",
+    )
+    observed_at = parse_time(selection["observedAt"], "chronology.selection.observedAt")
+    records = chronology["records"]
+    require(isinstance(records, list) and records, "release-full chronology records are missing")
+    expected_fields = {
+        "conclusion",
+        "createdAt",
+        "displayTitle",
+        "event",
+        "headSha",
+        "runAttempt",
+        "runId",
+        "startedAt",
+        "status",
+        "updatedAt",
+        "url",
+    }
+    seen_ids: set[int] = set()
+    for row in records:
+        require(isinstance(row, dict) and set(row) == expected_fields, "release-full chronology record fields are not closed")
+        require(
+            row["status"] == "completed" and row["conclusion"] in {"failure", "cancelled", "success"},
+            "release-full chronology record is not terminal",
+        )
+        require(row["event"] in {"schedule", "workflow_dispatch"}, "release-full chronology event is invalid")
+        require(row["displayTitle"] == f"ci / {row['event']} / full", "release-full chronology profile title mismatch")
+        require(
+            isinstance(row["runId"], int)
+            and row["runId"] > 0
+            and row["runId"] not in seen_ids
+            and isinstance(row["runAttempt"], int)
+            and row["runAttempt"] > 0,
+            "release-full chronology run identity is invalid or duplicated",
+        )
+        seen_ids.add(row["runId"])
+        require(isinstance(row["headSha"], str) and len(row["headSha"]) == 40, "release-full chronology head is invalid")
+        require(
+            row["url"] == f"https://github.com/{policy['repository']}/actions/runs/{row['runId']}",
+            "release-full chronology URL mismatch",
+        )
+        created = parse_time(row["createdAt"], "chronology.createdAt")
+        started = parse_time(row["startedAt"], "chronology.startedAt")
+        updated = parse_time(row["updatedAt"], "chronology.updatedAt")
+        require(created <= started <= updated <= observed_at, "release-full chronology timestamps are inconsistent")
+    require(records == sorted(records, key=lambda row: (row["createdAt"], row["runId"])), "release-full chronology records are not chronological")
+    require(
+        records[0]["runId"] == authority["firstRunId"]
+        and records[-1]["runId"] == authority["lastRunId"]
+        and records[-1]["conclusion"] == "success",
+        "release-full chronology boundary run mismatch",
+    )
+    digest = hashlib.sha256(json.dumps(records, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    require(digest == chronology["recordsSha256"] == authority["recordsSha256"], "release-full chronology digest mismatch")
+    summary = {
+        "cancelled": sum(row["conclusion"] == "cancelled" for row in records),
+        "failed": sum(row["conclusion"] == "failure" for row in records),
+        "successful": sum(row["conclusion"] == "success" for row in records),
+        "total": len(records),
+    }
+    require(
+        summary
+        == chronology["summary"]
+        == {
+            "cancelled": authority["cancelledCount"],
+            "failed": authority["failedCount"],
+            "successful": authority["successfulCount"],
+            "total": authority["cancelledCount"] + authority["failedCount"] + authority["successfulCount"],
+        },
+        "release-full chronology summary mismatch",
+    )
+    disposition = chronology["disposition"]
+    require(
+        isinstance(disposition, dict)
+        and set(disposition)
+        == {
+            "status",
+            "correctiveAction",
+            "firstSuccessfulV02RunId",
+            "exactMainSuccessRunId",
+            "independentWatchdogRunId",
+            "remainingNonclaims",
+        },
+        "release-full chronology disposition is not closed",
+    )
+    require(disposition["status"] == "retained-with-corrected-design-observation", "release-full chronology status mismatch")
+    require(disposition["correctiveAction"] == "R0.4.j/P1.6", "release-full chronology corrective action mismatch")
+    successes = [row["runId"] for row in records if row["conclusion"] == "success"]
+    require(
+        successes
+        and disposition["firstSuccessfulV02RunId"] == successes[0]
+        and disposition["exactMainSuccessRunId"] == records[-1]["runId"]
+        and isinstance(disposition["independentWatchdogRunId"], int)
+        and disposition["independentWatchdogRunId"] > records[-1]["runId"],
+        "release-full chronology success disposition mismatch",
+    )
+    nonclaims = disposition["remainingNonclaims"]
+    require(
+        isinstance(nonclaims, list)
+        and len(nonclaims) == 3
+        and all(isinstance(row, str) and row for row in nonclaims),
+        "release-full chronology nonclaims are incomplete",
+    )
+
+
+def verify_retained_evidence(policy_path: Path) -> None:
+    policy = read_json(policy_path)
+    repository_root = policy_path.parent.parent
+    verify_incident(policy, read_json(repository_root / policy["historicalIncident"]["path"]))
+    verify_release_full_chronology(policy, read_json(repository_root / policy["releaseFullChronology"]["path"]))
 
 
 def normalize_runs(payload: Any) -> list[dict[str, Any]]:
@@ -381,6 +560,9 @@ def self_test(policy_path: Path) -> None:
     incident_path = policy_path.parent.parent / policy["historicalIncident"]["path"]
     incident = read_json(incident_path)
     verify_incident(policy, incident)
+    chronology_path = policy_path.parent.parent / policy["releaseFullChronology"]["path"]
+    chronology = read_json(chronology_path)
+    verify_release_full_chronology(policy, chronology)
     head = "a" * 40
     old_head = "b" * 40
     now = "2026-08-04T12:00:00Z"
@@ -458,7 +640,39 @@ def self_test(policy_path: Path) -> None:
         pass
     else:
         raise WatchdogError("stale-incident-authority negative control failed")
-    print("ci-liveness-watchdog: self-test ok (14 controls)")
+    tampered_chronology = copy.deepcopy(chronology)
+    tampered_chronology["records"][0]["conclusion"] = "success"
+    try:
+        verify_release_full_chronology(policy, tampered_chronology)
+    except WatchdogError:
+        pass
+    else:
+        raise WatchdogError("tampered-release-full-chronology negative control failed")
+    missing_chronology_row = copy.deepcopy(chronology)
+    del missing_chronology_row["records"][1]
+    try:
+        verify_release_full_chronology(policy, missing_chronology_row)
+    except WatchdogError:
+        pass
+    else:
+        raise WatchdogError("missing-release-full-chronology-row negative control failed")
+    stale_chronology_policy = copy.deepcopy(policy)
+    stale_chronology_policy["releaseFullChronology"]["recordsSha256"] = "0" * 64
+    try:
+        verify_release_full_chronology(stale_chronology_policy, chronology)
+    except WatchdogError:
+        pass
+    else:
+        raise WatchdogError("stale-release-full-chronology-authority negative control failed")
+    false_closing_success = copy.deepcopy(chronology)
+    false_closing_success["records"][-1]["conclusion"] = "failure"
+    try:
+        verify_release_full_chronology(policy, false_closing_success)
+    except WatchdogError:
+        pass
+    else:
+        raise WatchdogError("false-release-full-closing-success negative control failed")
+    print("ci-liveness-watchdog: self-test ok (18 controls)")
 
 
 def main() -> int:
@@ -474,6 +688,8 @@ def main() -> int:
     evaluate_parser.add_argument("--out", type=Path, required=True)
     self_parser = subparsers.add_parser("self-test")
     self_parser.add_argument("--policy", type=Path, required=True)
+    retained_parser = subparsers.add_parser("verify-retained")
+    retained_parser.add_argument("--policy", type=Path, required=True)
     incident_parser = subparsers.add_parser("verify-incident")
     incident_parser.add_argument("--policy", type=Path, required=True)
     incident_parser.add_argument("--incident", type=Path, required=True)
@@ -481,6 +697,10 @@ def main() -> int:
     try:
         if args.command == "self-test":
             self_test(args.policy)
+            return 0
+        if args.command == "verify-retained":
+            verify_retained_evidence(args.policy)
+            print("ci-liveness-watchdog: retained evidence verified")
             return 0
         if args.command == "verify-incident":
             verify_incident(read_json(args.policy), read_json(args.incident))

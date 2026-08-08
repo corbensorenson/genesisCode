@@ -572,6 +572,15 @@ is not reference evidence.
   nonclaim. Its canonical record digest is pinned by the control-plane policy;
   changing, dropping, reordering, or relabeling a historical run fails the
   execution-profile gate.
+- `docs/program/incidents/CI_RELEASE_FULL_CHRONOLOGY_2026-08-05_2026-08-08.json`
+  is the append-only follow-up for the release-profile redesign. It retains every
+  scheduled or explicitly dispatched `full` run from the first measured redesign
+  counterexample through the first corrected exact-`main` success, including
+  intermediate successes followed by regressions. The control-plane policy pins
+  its closed selection, boundaries, outcome counts, and canonical record digest.
+  The independent watchdog verifies both retained ledgers before evaluating live
+  history; neither ledger qualifies a product release or turns an unsupported
+  target disposition into a platform claim.
 - Standard pull-request CI runs the changed-impact planner with `--dry-run`
   because the same job executes generated-authority checks, lint, and the full
   test surface directly. This prevents a second disposable-worktree compilation
