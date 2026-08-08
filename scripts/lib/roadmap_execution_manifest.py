@@ -1363,6 +1363,53 @@ def canonical_bytes(doc: Mapping[str, Any]) -> bytes:
     return (json.dumps(doc, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
+def resolve_frontier_candidates(
+    manifest: Mapping[str, Any],
+    ordered_ids: Sequence[str],
+    workstreams: Mapping[str, Any],
+) -> List[Tuple[str, str]]:
+    """Resolve each sequential anchor to its first unfinished task."""
+    task_list = list(manifest["tasks"])
+    tasks = {str(task["id"]): task for task in task_list}
+    by_workstream: dict[str, List[Mapping[str, Any]]] = {}
+    for task in task_list:
+        by_workstream.setdefault(str(task["workstream"]), []).append(task)
+
+    resolved: List[Tuple[str, str]] = []
+    seen: set[str] = set()
+    for anchor_id in ordered_ids:
+        anchor = tasks[anchor_id]
+        candidate = anchor
+        if anchor["state"] == "done":
+            workstream = str(anchor["workstream"])
+            rule = require_object(
+                workstreams.get(workstream), f"policy.workstreams[{workstream}]"
+            )
+            candidate = None
+            if rule.get("sequential") is True:
+                members = by_workstream[workstream]
+                anchor_index = next(
+                    index
+                    for index, member in enumerate(members)
+                    if member["id"] == anchor_id
+                )
+                candidate = next(
+                    (
+                        member
+                        for member in members[anchor_index + 1 :]
+                        if member["state"] == "open"
+                    ),
+                    None,
+                )
+        if candidate is None:
+            continue
+        candidate_id = str(candidate["id"])
+        if candidate_id not in seen:
+            resolved.append((candidate_id, anchor_id))
+            seen.add(candidate_id)
+    return resolved
+
+
 def build_execution_slice(
     manifest: Mapping[str, Any], policy_path: Path
 ) -> Mapping[str, Any]:
@@ -1384,13 +1431,17 @@ def build_execution_slice(
     tasks = require_object(
         {str(task["id"]): task for task in manifest["tasks"]}, "task index"
     )
-    open_ids = [task_id for task_id in ordered_ids if tasks[task_id]["state"] == "open"]
+    workstreams = require_object(policy.get("workstreams"), "policy.workstreams")
+    resolved = resolve_frontier_candidates(manifest, ordered_ids, workstreams)
+    open_ids = [task_id for task_id, _ in resolved]
+    context_anchors = {task_id: anchor_id for task_id, anchor_id in resolved}
     focused_ids = open_ids[:wip_limit]
     focus_tasks = []
     for task_id in focused_ids:
         task = tasks[task_id]
+        anchor_id = context_anchors[task_id]
         context = require_object(
-            task_context[task_id], f"execution_frontier.task_context[{task_id}]"
+            task_context[anchor_id], f"execution_frontier.task_context[{anchor_id}]"
         )
         focus_tasks.append(
             {
@@ -1421,8 +1472,9 @@ def build_execution_slice(
     queued_tasks = []
     for task_id in queued_ids:
         task = tasks[task_id]
+        anchor_id = context_anchors[task_id]
         context = require_object(
-            task_context[task_id], f"execution_frontier.task_context[{task_id}]"
+            task_context[anchor_id], f"execution_frontier.task_context[{anchor_id}]"
         )
         queued_tasks.append(
             {
@@ -1468,6 +1520,20 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
         policy.get("release_lane_contracts"), "policy.release_lane_contracts"
     )
     baseline = build_manifest(roadmap_path, policy_path, schema_path)
+    sequential_probe = copy.deepcopy(baseline)
+    probe_by_id = {str(task["id"]): task for task in sequential_probe["tasks"]}
+    probe_by_id["R1.5.a"]["state"] = "done"
+    probe_by_id["R1.5.b"]["state"] = "done"
+    probe_by_id["R1.5.c"]["state"] = "open"
+    resolved_probe = resolve_frontier_candidates(
+        sequential_probe,
+        ["R1.5.a"],
+        require_object(policy.get("workstreams"), "policy.workstreams"),
+    )
+    if resolved_probe != [("R1.5.c", "R1.5.a")]:
+        raise ManifestError(
+            "self-test failed to advance a completed sequential frontier anchor"
+        )
     cases: List[Tuple[str, Any]] = []
 
     duplicate = copy.deepcopy(baseline)

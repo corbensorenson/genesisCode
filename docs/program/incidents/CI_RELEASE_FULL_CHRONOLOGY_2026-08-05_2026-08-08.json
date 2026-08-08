@@ -12,16 +12,16 @@
     ],
     "profile": "full",
     "fromRunIdInclusive": 31023619554,
-    "throughRunIdInclusive": 31246022249,
-    "observedAt": "2026-08-08T08:06:52Z"
+    "throughRunIdInclusive": 31249173667,
+    "observedAt": "2026-08-08T09:32:40Z"
   },
   "summary": {
-    "cancelled": 5,
+    "cancelled": 6,
     "failed": 11,
-    "successful": 2,
-    "total": 18
+    "successful": 3,
+    "total": 20
   },
-  "recordsSha256": "22a872895817799ba2f8ffde31694c9f60e31835d30b56d682b19854c7bca7d9",
+  "recordsSha256": "9f38c2abba4f7ec8060cd5b7743ac8bd7a4718c383efdea81348d191b423c9d4",
   "records": [
     {
       "runId": 31023619554,
@@ -256,18 +256,44 @@
       "updatedAt": "2026-08-08T08:04:29Z",
       "displayTitle": "ci / workflow_dispatch / full",
       "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31246022249"
+    },
+    {
+      "runId": 31248899909,
+      "runAttempt": 1,
+      "event": "schedule",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "headSha": "4aee550ed5a9b659fb79ffb7192997ebd6796d3c",
+      "createdAt": "2026-08-08T08:40:14Z",
+      "startedAt": "2026-08-08T08:40:14Z",
+      "updatedAt": "2026-08-08T08:55:07Z",
+      "displayTitle": "ci / schedule / full",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31248899909"
+    },
+    {
+      "runId": 31249173667,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "da9359fd35221421563ea77b7dbe17e0a33d0e12",
+      "createdAt": "2026-08-08T08:47:50Z",
+      "startedAt": "2026-08-08T08:47:50Z",
+      "updatedAt": "2026-08-08T09:31:12Z",
+      "displayTitle": "ci / workflow_dispatch / full",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31249173667"
     }
   ],
   "disposition": {
     "status": "retained-with-corrected-design-observation",
     "correctiveAction": "R0.4.j/P1.6",
     "firstSuccessfulV02RunId": 31199175579,
-    "exactMainSuccessRunId": 31246022249,
-    "independentWatchdogRunId": 31247680122,
+    "exactMainSuccessRunId": 31249173667,
+    "independentWatchdogRunId": 31250800213,
     "remainingNonclaims": [
       "This chronology does not qualify a GenesisCode product release.",
       "Unsupported target dispositions remain non-claiming until their platform tasks close.",
-      "R0.4.j and P1.6 remain open until this chronology and its verifier pass on reviewed main."
+      "R0.4.j closure requires the exact-main standard, full, aggregate, and watchdog evidence named in ROADMAP.md; this chronology alone grants no downstream authority."
     ]
   }
 }

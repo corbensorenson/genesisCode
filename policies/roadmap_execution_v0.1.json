@@ -1,7 +1,7 @@
 {
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
-  "audit_date": "2026-08-06",
+  "audit_date": "2026-08-08",
   "execution_frontier": {
     "wip_limit": 1,
     "scope_freeze": {
@@ -25,25 +25,17 @@
       "exception_rule": "Only a reproduced P0/P1 correction may replace one equivalent concept one-for-one with a recorded deletion, dependency impact, acceptance delta, and no increase in WIP or release ancestry."
     },
     "ordered_task_ids": [
-      "R0.4.j",
       "R2.2.f",
+      "R1.3.f",
       "R1.5.a",
-      "R2.1.h",
       "R1.6.a",
       "R1.7.a",
+      "R2.1.h",
       "R2.3.a",
       "R4.1.a"
     ],
-    "rationale": "Finish R0.4.j, close the GenesisCode agent/runtime frontier, freeze Core contracts, establish self-host semantic ownership and bootstrap closure, and carry the finite Core through exact reviewed R9.4.f before reactivating any GenesisBench campaign, custody, publication, governance, GenesisChallenge, Foundry implementation, or Genesis Model work.",
+    "rationale": "Close P1.5 and R2.2.f first; then advance the complete sequential R1.3, R1.5, R1.6, R1.7, R2.1, and R2.3 agent/runtime frontier before SH-A establishes self-host semantic ownership. Carry the finite Core through exact reviewed R9.4.f before reactivating any GenesisBench campaign, custody, publication, governance, GenesisChallenge, Foundry implementation, or Genesis Model work.",
     "task_context": {
-      "R0.4.j": {
-        "product_lanes": ["GenesisCode", "GenesisBench"],
-        "milestones": ["M0", "M1-A", "M1-B"],
-        "nonclaims": [
-          "does not implement or qualify future platform packs",
-          "does not turn synthetic or unavailable target execution into product evidence"
-        ]
-      },
       "R2.2.f": {
         "product_lanes": ["GenesisCode"],
         "milestones": ["M1-A", "M2"],
@@ -52,12 +44,20 @@
           "does not downgrade a promised hard-cancellation guarantee to cooperative cancellation"
         ]
       },
+      "R1.3.f": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M1-A"],
+        "nonclaims": [
+          "does not convert local mutable performance observations into release evidence",
+          "does not authorize a GenesisBench campaign or Genesis Model dependency"
+        ]
+      },
       "R1.5.a": {
         "product_lanes": ["GenesisCode"],
         "milestones": ["M1-A"],
         "nonclaims": [
-          "does not close the generated authoring skill or its clean-install distribution proof",
-          "does not make benchmark or model output authoritative"
+          "does not grant authority from generated cards, documentation, prompts, or model output",
+          "does not claim clean-install or cross-model distribution until the complete R1.5 sequence passes"
         ]
       },
       "R2.1.h": {

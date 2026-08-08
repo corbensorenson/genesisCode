@@ -80,7 +80,7 @@ for required in (
         raise SystemExit(
             f"roadmap-execution-manifest: portability canary lost {required!r}"
         )
-if explanation["id"] != "R0.4.j" or explanation["state"] != "open":
+if explanation["id"] != "R0.4.j" or explanation["state"] != "done":
     raise SystemExit("roadmap-execution-manifest: task explanation drift")
 PY
 

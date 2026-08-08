@@ -44,6 +44,6 @@ Never hand-edit a generated authority. Use its explicit `update_*` command, insp
 
 ## Current Concentration
 
-Complete the in-flight R0.4.j release-profile transaction and hosted v0.2 cutover, then execute R1.4.o's frozen Qwen3 4B nine-class product-proof campaign before returning to P1.5 through R2.2.f. Keep the one authorized disjoint benchmark/private-lineage lane explicitly dispositioned under the 72-hour/two-review anti-starvation rule. Continue M1-A and M1-B before bytecode breadth, universal platform breadth, Foundry implementation, or Genesis Model implementation. Foundry implementation WIP and Genesis Model implementation WIP are zero until their graph prerequisites become start-ready.
+Close P1.5 through R2.2.f, then follow the generated sequential frontier through R1.3, R1.5, R1.6, R1.7, R2.1, and R2.3 before SH-A begins the R4.1 self-host authority cutover. GenesisBench campaigns, private-lineage commissioning, ranking, and publication remain frozen until exact reviewed R9.4.f; only the separately custodied, read-only, non-scoring portability canary may run under its declared conditions. Continue M1-A and M2 before bytecode breadth, universal platform breadth, Foundry implementation, or Genesis Model implementation. Foundry implementation WIP and Genesis Model implementation WIP are zero until their graph prerequisites become start-ready.
 
 Scoped instructions under a subtree override this file only for that subtree; they cannot weaken these program invariants.

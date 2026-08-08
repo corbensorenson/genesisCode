@@ -1,18 +1,17 @@
 # GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
-Last updated: 2026-08-04
+Last updated: 2026-08-08
 
 Scope:
 - Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and production runtime trust.
 - This file is the canonical active P0/P1 defect-ID source. The capability ledger mirrors the exact IDs, and generated status views must match it.
 - Keep completed work out of this file. Durable source history and E1-E4 evidence establish closure; mutable `.genesis/perf/` observations do not.
 
-Open checklist items: 2
+Open checklist items: 1
 
 ## Critical Path
 
 - [ ] P1.5 Eliminate host-bridge timeout kill/reap failure under mandatory fault injection. `runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers` produced `gpu/bridge-reap` after the process group survived repeated termination sweeps, so daemon and bridge cleanup are not yet reliable under the supported stress profile. Close only when R2.2.f proves success, failure, cancellation, timeout, restart, and repeated-load cleanup with bounded kill/reap latency and no surviving descendant on every supported native host.
-- [ ] P1.6 Restore authoritative CI liveness under R0.4.j. At the 2026-08-04 audit boundary, `main` had no successful CI after run `29664738972` on 2026-07-18, followed by fifteen failed and sixteen cancelled runs; the repository exposed zero registered self-hosted runners while the full workflow unconditionally dispatched a `[self-hosted, linux, x64, gpu]` job that could queue for 24 hours. Close only when event/profile-aware concurrency preserves terminal default-branch dispositions, hosted runner preflight prevents impossible queues, optional unavailable packs remain explicit nonclaims, an independent watchdog rejects stale/cancelled-only evidence, the exact reviewed `main` revision passes standard and release-full within R0.4.j bounds, and the historical sequence has an append-only incident disposition.
 
 ## Evidence Anchors
 

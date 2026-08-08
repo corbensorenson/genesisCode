@@ -1,9 +1,8 @@
 {
   "active_defect_ids": [
-    "P1.5",
-    "P1.6"
+    "P1.5"
   ],
-  "audit_date": "2026-08-04",
+  "audit_date": "2026-08-08",
   "claims": [
     {
       "category": "kernel",
@@ -1020,7 +1019,6 @@
       ],
       "gap_ids": [
         "P1.5",
-        "P1.6",
         "R7.1.a",
         "R7.3.a"
       ],
@@ -1121,7 +1119,6 @@
   ],
   "gap_catalog": {
     "P1.5": "Eliminate host-bridge timeout kill/reap failure under mandatory fault injection and complete R2.2.f cleanup proof.",
-    "P1.6": "Restore authoritative default-branch and full-profile CI liveness through non-starving concurrency, bounded runner readiness, independent freshness monitoring, and R0.4.j closure evidence.",
     "R1.3.c": "Generate and verify the pinned MCP agent interface from canonical CLI schemas.",
     "R1.4.c": "Build deterministic generation, repair, refactor, and deployment task benchmarks.",
     "R1.5.a": "Generate the authoring skill from canonical language and capability inputs.",
