@@ -654,6 +654,29 @@ for stress_test in \
   fi
 done
 
+if ! grep -Fq \
+  'runner_process_control::tests::zombie_only_process_group_is_execution_quiescent --quiet -- --exact' \
+  scripts/render_host_bridge_fault_injection_report.sh; then
+  echo "test-execution-profile-matrix: host-bridge renderer must exercise zombie-only process-group quiescence" >&2
+  exit 1
+fi
+if ! grep -Fq \
+  'runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail --quiet -- --exact' \
+  scripts/render_host_bridge_fault_injection_report.sh; then
+  echo "test-execution-profile-matrix: host-bridge renderer must exercise bounded signal/reap failure" >&2
+  exit 1
+fi
+for probe_marker in \
+  'HOST_PLATFORM="darwin"' \
+  'PROCESS_GROUP_PROBE="libproc-pgrp-status"' \
+  'HOST_PLATFORM="linux"' \
+  'PROCESS_GROUP_PROBE="procfs-pgrp-status"'; do
+  if ! grep -Fq "$probe_marker" scripts/render_host_bridge_fault_injection_report.sh; then
+    echo "test-execution-profile-matrix: host-bridge renderer is missing probe marker $probe_marker" >&2
+    exit 1
+  fi
+done
+
 if ! grep -B 2 -F 'fn task_cards_python_and_planner_selection_remain_stable_under_parallel_load' \
   crates/gc_cli/tests/cli_agent_plan.rs | grep -Fq '#[ignore = "stress-gate"]' || \
    ! grep -Fq 'task_cards_python_and_planner_selection_remain_stable_under_parallel_load' \

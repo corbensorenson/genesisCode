@@ -19,6 +19,21 @@ BUDGET_MS="${GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS:-120000}"
 RUNS="${GENESIS_HOST_BRIDGE_FAULT_RUNS:-1}"
 MAX_FAILURE_RATE_PCT="${GENESIS_HOST_BRIDGE_FAULT_MAX_FAILURE_RATE_PCT:-0}"
 
+case "$(uname -s)" in
+  Darwin)
+    HOST_PLATFORM="darwin"
+    PROCESS_GROUP_PROBE="libproc-pgrp-status"
+    ;;
+  Linux)
+    HOST_PLATFORM="linux"
+    PROCESS_GROUP_PROBE="procfs-pgrp-status"
+    ;;
+  *)
+    echo "host-bridge-fault-injection: hard-cancellation evidence requires macOS or Linux" >&2
+    exit 2
+    ;;
+esac
+
 if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
   echo "host-bridge-fault-injection: GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS must be a positive integer" >&2
   exit 2
@@ -69,6 +84,8 @@ print(time.time_ns())
 PY
 )"
   if cargo test -p gc_effects --test host_bridge_fault_injection --quiet && \
+     cargo test -p gc_effects --lib runner_process_control::tests::zombie_only_process_group_is_execution_quiescent --quiet -- --exact && \
+     cargo test -p gc_effects --lib runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_reaps_residual_descendants_after_success_and_error --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
@@ -104,7 +121,7 @@ if [[ "$HISTORY_INPUT" != "$HISTORY_PATH" ]]; then
   fi
 fi
 
-python3 - "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$RUNS" "$passed_runs" "$failed_runs" "$MAX_FAILURE_RATE_PCT" "$RUNS_FILE" <<'PY'
+python3 - "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$RUNS" "$passed_runs" "$failed_runs" "$MAX_FAILURE_RATE_PCT" "$RUNS_FILE" "$HOST_PLATFORM" "$PROCESS_GROUP_PROBE" <<'PY'
 import json
 import pathlib
 import sys
@@ -119,6 +136,8 @@ passed_runs = int(sys.argv[6])
 failed_runs = int(sys.argv[7])
 max_failure_rate_pct = float(sys.argv[8])
 runs_file = pathlib.Path(sys.argv[9])
+host_platform = sys.argv[10]
+process_group_probe = sys.argv[11]
 
 if max_failure_rate_pct < 0.0 or max_failure_rate_pct > 100.0:
     raise SystemExit(
@@ -149,12 +168,19 @@ report = {
     "elapsed_ms": elapsed_ms,
     "budget_ms": budget_ms,
     "ok": elapsed_ms <= budget_ms and observed_failure_rate_pct <= max_failure_rate_pct,
+    "native_host": {
+        "platform": host_platform,
+        "process_group_probe": process_group_probe,
+        "zombie_only_group_control": True,
+        "signal_reap_failure_control": True,
+    },
     "families": ["fs", "net", "process", "plugin"],
     "deterministic_replay_verified": True,
     "hard_cancellation": {
         "transports": ["persistent-stdio", "spawn-per-op"],
         "repeated_hang_cases": 49,
         "process_tree_termination": True,
+        "process_group_quiescence": "no-live-members",
         "child_reap": True,
         "io_worker_quiescence": True,
         "uncertain_request_retry": False,

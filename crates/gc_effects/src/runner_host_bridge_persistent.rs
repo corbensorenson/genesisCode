@@ -28,6 +28,7 @@ struct PersistentBridgeSession {
     process_id: u32,
     requests: Option<std::sync::mpsc::SyncSender<PersistentBridgeRequest>>,
     worker: Option<std::thread::JoinHandle<()>>,
+    worker_done: std::sync::mpsc::Receiver<()>,
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -85,11 +86,30 @@ pub(super) fn joined_persistent_bridge_workers_for_tests() -> usize {
 #[cfg(not(target_os = "wasi"))]
 impl PersistentBridgeSession {
     fn stop(&mut self) -> std::io::Result<()> {
-        // The worker exclusively owns Child and is therefore the only thread that
-        // can reap the leader. Signal first, join that owner, then verify that no
-        // residual process-group member remains.
+        const WORKER_JOIN_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(250);
+
+        // The worker exclusively owns Child. Stop admission, drive the process
+        // group to execution quiescence, then join only after bounded completion.
         let signal_result = signal_process_tree(self.process_id);
         self.requests.take();
+        let termination_result = terminate_descendants(self.process_id);
+        let completion_result = if self.worker.is_some() {
+            match self.worker_done.recv_timeout(WORKER_JOIN_TIMEOUT) {
+                Ok(()) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => Ok(()),
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Err(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    format!(
+                        "persistent bridge worker did not quiesce within {}ms; initial signal: {}; process tree: {}",
+                        WORKER_JOIN_TIMEOUT.as_millis(),
+                        io_result_summary(&signal_result),
+                        io_result_summary(&termination_result),
+                    ),
+                )),
+            }
+        } else {
+            Ok(())
+        };
+        completion_result?;
         let join_result = if let Some(worker) = self.worker.take() {
             let result = worker.join().map_err(|_| {
                 std::io::Error::other("persistent bridge worker panicked during teardown")
@@ -102,7 +122,7 @@ impl PersistentBridgeSession {
             Ok(())
         };
         let residual_result = terminate_descendants(self.process_id);
-        signal_result.and(join_result).and(residual_result)
+        join_result.and(residual_result)
     }
 
     fn call(
@@ -160,6 +180,14 @@ impl PersistentBridgeSession {
                 })
             }
         }
+    }
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn io_result_summary(result: &std::io::Result<()>) -> String {
+    match result {
+        Ok(()) => "ok".to_string(),
+        Err(error) => error.to_string(),
     }
 }
 
@@ -288,10 +316,14 @@ fn spawn_persistent_bridge_session(
 ) -> Result<PersistentBridgeSession, BridgeError> {
     let (request_sender, request_receiver) = std::sync::mpsc::sync_channel(1);
     let (startup_sender, startup_receiver) = std::sync::mpsc::sync_channel(1);
+    let (worker_done_sender, worker_done_receiver) = std::sync::mpsc::sync_channel(1);
     let worker_key = key.clone();
     let worker = std::thread::Builder::new()
         .name("gc-persistent-bridge".to_string())
-        .spawn(move || persistent_worker(worker_key, request_receiver, startup_sender))
+        .spawn(move || {
+            persistent_worker(worker_key, request_receiver, startup_sender);
+            let _ = worker_done_sender.send(());
+        })
         .map_err(|error| BridgeError {
             code: format!("{}/bridge-thread", key.family),
             message: error.to_string(),
@@ -301,6 +333,7 @@ fn spawn_persistent_bridge_session(
             process_id,
             requests: Some(request_sender),
             worker: Some(worker),
+            worker_done: worker_done_receiver,
         }),
         Ok(Err(error)) => {
             let _ = worker.join();
@@ -386,4 +419,47 @@ pub(super) fn run_bridge_process_persistent(
         args: args.to_vec(),
     };
     run_persistent_bridge_process_once(runtime, &key, &payload_frame, timeout_ms, max_bytes)
+}
+
+#[cfg(all(test, not(target_os = "wasi")))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn persistent_stop_is_bounded_when_signal_and_reap_fail() {
+        let (release_sender, release_receiver) = std::sync::mpsc::sync_channel(1);
+        let (done_sender, done_receiver) = std::sync::mpsc::sync_channel(1);
+        let worker = std::thread::spawn(move || {
+            let _ = release_receiver.recv();
+            let _ = done_sender.send(());
+        });
+        let joined_before = joined_persistent_bridge_workers_for_tests();
+        let mut session = PersistentBridgeSession {
+            process_id: u32::MAX,
+            requests: None,
+            worker: Some(worker),
+            worker_done: done_receiver,
+        };
+
+        let started = std::time::Instant::now();
+        let error = session
+            .stop()
+            .expect_err("blocked worker with invalid process group must fail boundedly");
+        assert_eq!(error.kind(), std::io::ErrorKind::TimedOut);
+        assert!(
+            started.elapsed() >= std::time::Duration::from_millis(200)
+                && started.elapsed() < std::time::Duration::from_millis(750),
+            "persistent stop did not honor its bounded worker deadline: {:?}",
+            started.elapsed()
+        );
+        assert!(session.worker.is_some(), "timed-out worker handle was lost");
+
+        release_sender.send(()).expect("release synthetic worker");
+        let _ = session.stop();
+        assert!(session.worker.is_none(), "released worker was not joined");
+        assert_eq!(
+            joined_persistent_bridge_workers_for_tests(),
+            joined_before + 1
+        );
+    }
 }
