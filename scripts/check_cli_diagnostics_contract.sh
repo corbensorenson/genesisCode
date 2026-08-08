@@ -13,6 +13,7 @@ python3 scripts/lib/gc_diagnostic_goldens.py --check
 python3 scripts/lib/gc_diagnostic_goldens.py --self-test
 python3 scripts/lib/gc_repair_utility.py --check
 python3 scripts/lib/gc_repair_utility.py --self-test
+python3 scripts/lib/gc_repair_utility_runner.py --self-test
 python3 - <<'PY'
 import json
 from pathlib import Path

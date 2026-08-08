@@ -39,10 +39,31 @@ BASELINE_HISTORY_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_BASELINE_HISTORY:-p
 MIN_HISTORY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_MIN_HISTORY:-5}"
 REQUIRE_MIN_HISTORY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_REQUIRE_MIN_HISTORY:-0}"
 INCLUDE_PARITY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY:-0}"
+PARITY_DRIVER_OPT_LEVEL_JSON="null"
 
 if [[ "$INCLUDE_PARITY" != "0" && "$INCLUDE_PARITY" != "1" ]]; then
   echo "help-surface: GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY must be 0 or 1" >&2
   exit 2
+fi
+if [[ "$INCLUDE_PARITY" == "1" ]]; then
+  PARITY_DRIVER_OPT_LEVEL_JSON="$(PYTHONPATH="$ROOT/scripts/lib" python3 - "$ROOT/Cargo.toml" <<'PY'
+import pathlib
+import sys
+
+from toml_compat import tomllib
+
+manifest = pathlib.Path(sys.argv[1])
+with manifest.open("rb") as handle:
+    document = tomllib.load(handle)
+try:
+    value = document["profile"]["release"]["package"]["gc_cli_driver_parity"]["opt-level"]
+except (KeyError, TypeError) as exc:
+    raise SystemExit("help-surface: missing release profile for gc_cli_driver_parity") from exc
+if type(value) is not int or value != 1:
+    raise SystemExit("help-surface: gc_cli_driver_parity release opt-level must be 1")
+print(value)
+PY
+)"
 fi
 if [[ ! "$MIN_HISTORY" =~ ^[0-9]+$ || "$MIN_HISTORY" -le 0 ]]; then
   echo "help-surface: GENESIS_PRODUCTION_CLI_HELP_SURFACE_MIN_HISTORY must be a positive integer" >&2
@@ -153,7 +174,7 @@ genesis_profile_gate_emit_runtime_report \
   "$START_MS" \
   "$BUDGET_MS" \
   "$MIN_HISTORY" \
-  "{\"build_strategy\":\"single-cargo-build\",\"include_parity\":$INCLUDE_PARITY,\"checked_bins\":$checked_bins_json}" \
+  "{\"build_strategy\":\"single-cargo-build\",\"production_profile\":\"release\",\"parity_driver_opt_level\":$PARITY_DRIVER_OPT_LEVEL_JSON,\"include_parity\":$INCLUDE_PARITY,\"checked_bins\":$checked_bins_json}" \
   "$HISTORY_SCOPE_KEY" \
   "$EFFECTIVE_BASELINE_HISTORY" \
   "$REQUIRE_MIN_HISTORY"

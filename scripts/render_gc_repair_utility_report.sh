@@ -23,6 +23,14 @@ REPEATS="${GENESIS_GC_REPAIR_UTILITY_REPEATS:-$DEFAULT_REPEATS}"
   echo "gc-repair-utility: GENESIS_GC_REPAIR_UTILITY_REPEATS must be 1 or 2" >&2
   exit 2
 }
+# Keep the default aggregate case concurrency bounded when the standalone
+# determinism check launches two independent replays at once.
+DEFAULT_WORKERS="$((4 / REPEATS))"
+WORKERS="${GENESIS_GC_REPAIR_UTILITY_WORKERS:-$DEFAULT_WORKERS}"
+[[ "$WORKERS" =~ ^[1-8]$ ]] || {
+  echo "gc-repair-utility: GENESIS_GC_REPAIR_UTILITY_WORKERS must be between 1 and 8" >&2
+  exit 2
+}
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/genesis-repair-utility.XXXXXX")"
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -54,7 +62,8 @@ for ((sample = 1; sample <= REPEATS; sample++)); do
     python3 scripts/lib/gc_repair_utility_runner.py \
       --genesis "$GENESIS_BIN" \
       --selfhost-artifact "$SELFHOST_ARTIFACT" \
-      --output "$TMP_DIR/report-$sample.json"
+      --output "$TMP_DIR/report-$sample.json" \
+      --workers "$WORKERS"
     python3 scripts/lib/gc_repair_utility.py \
       --check \
       --report "$TMP_DIR/report-$sample.json"

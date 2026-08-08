@@ -115,8 +115,12 @@ fn write_fixture_bundle(path: &Path) {
 #[test]
 fn release_profile_uses_one_closed_bundle_without_duplicate_derived_workloads() {
     let root = repo_root();
+    let workspace = fs::read_to_string(root.join("Cargo.toml")).expect("read workspace manifest");
     let health = fs::read_to_string(root.join("scripts/render_upgrade_plan_health_report.sh"))
         .expect("read release health runner");
+    let help_surface =
+        fs::read_to_string(root.join("scripts/render_production_cli_help_surface_report.sh"))
+            .expect("read production CLI help renderer");
     let bundle = fs::read_to_string(root.join("scripts/render_health_profile_evidence_bundle.sh"))
         .expect("read release evidence bundle");
     let parity =
@@ -215,6 +219,32 @@ fn release_profile_uses_one_closed_bundle_without_duplicate_derived_workloads() 
             ),
         "the cold release matrix must use its 600s sub-budget without relaxing prepush"
     );
+    assert!(
+        workspace.contains("[profile.release.package.gc_cli_driver_parity]\nopt-level = 1"),
+        "the development-only parity oracle must not duplicate a full O3 CLI-driver build"
+    );
+    for marker in [
+        "GENESIS_PRODUCTION_CLI_HELP_SURFACE_BUDGET_MS:-240000",
+        "gc_cli_driver_parity release opt-level must be 1",
+        "parity_driver_opt_level",
+        "$PARITY_DRIVER_OPT_LEVEL_JSON",
+    ] {
+        assert!(
+            help_surface.contains(marker),
+            "production CLI help evidence lost its bounded parity-build contract: {marker}"
+        );
+    }
+    for marker in [
+        "Cargo.toml\ncrates/gc_cli/Cargo.toml",
+        "crates/gc_cli_driver/Cargo.toml",
+        "crates/gc_cli_driver_parity/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml",
+    ] {
+        assert!(
+            health.contains(marker),
+            "production CLI help evidence inputs omit a build authority: {marker}"
+        );
+    }
 }
 
 fn resign_manifest(root: &Path, manifest: &Path, mutation: &str) {

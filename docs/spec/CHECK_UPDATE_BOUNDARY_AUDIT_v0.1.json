@@ -1039,14 +1039,14 @@
         },
         {
           "path": "scripts/render_gc_repair_utility_report.sh",
-          "sha256": "2754bc018c4988b2b9f60bcda6cd1d51d8c8bfd8b68a7e30e9cfe2c27e8ab88e"
+          "sha256": "c8ec44ae2b7d0a990d96db35018020108472d696f247b2c1dbcde02532b067e5"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cli_diagnostics_contract_report.sh",
         "scripts/render_gc_repair_utility_report.sh"
       ],
-      "execution_identity_sha256": "1047d4ee5e899e1a490449f0b841731c9942b5deb6b350d8bc3ab65ae61268b1",
+      "execution_identity_sha256": "c4583da29a70c52bf460db08b8a35d27f7f329166aa0204600a4ca93d4e84e71",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1057,7 +1057,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "da1b6934707849e2fdef0c33b1322b178cb8ddc549f9ad9314605644bf062f0f",
+      "sha256": "08969ab30ebda815ad82c1170bcd3235d1b3c0b8dc87ab4cfe99b6a08f271984",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -4033,13 +4033,13 @@
         },
         {
           "path": "scripts/render_production_cli_help_surface_report.sh",
-          "sha256": "63c723b4eecd6247ac8012ab9eb869679ac4fa957510ad1e17c78f06e5e238b8"
+          "sha256": "dac06df532d0c08a6bca394fafc465eaf15588d22c31b040d098e3d1b62fe1e2"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_production_cli_help_surface_report.sh"
       ],
-      "execution_identity_sha256": "a1d6ae9c63559d057ddc4689832ad5286a384ab1933d0458352746dd6902329a",
+      "execution_identity_sha256": "3afff07e11281d7b5e3365fd87c13cd7a74318e0aa425858139d390405ed7b9b",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -5853,7 +5853,7 @@
         },
         {
           "path": "scripts/render_upgrade_plan_health_report.sh",
-          "sha256": "1735d2f7cec51e057fdae28855f8385f49ba82cf7d75448d787f3b5ac4177610"
+          "sha256": "d427f73cb156cf09befc4b928edd3b08d2eef98dd430858c440c70a76cdcce6c"
         },
         {
           "path": "scripts/render_webxr_browser_conformance_report.sh",
@@ -5871,7 +5871,7 @@
       "execution_helper_invocations": [
         "scripts/render_upgrade_plan_health_report.sh"
       ],
-      "execution_identity_sha256": "6e8e8be523ccf08cefabe90ada725c7a7459697107f05ac637ef56f188a5476f",
+      "execution_identity_sha256": "3963c8fff60a5bac9d7202f48e02913b40f384993f5bec6a4aa867469edfb9d0",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],

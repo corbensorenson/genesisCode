@@ -57,6 +57,11 @@ url = "2"
 # Line tables retain actionable test backtraces without the multi-gigabyte full-debug cache.
 debug = 1
 
+# The parity driver is a development-only differential oracle, not a shipped runtime.
+# Keep release-gate binaries optimized while avoiding a second full O3 compile of the CLI driver.
+[profile.release.package.gc_cli_driver_parity]
+opt-level = 1
+
 [profile.selfhost-strict]
 inherits = "test"
 incremental = false

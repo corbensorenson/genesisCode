@@ -443,8 +443,12 @@ EOF
 production-cli-help-surface
 scripts/check_production_cli_help_surface.sh
 scripts/lib/**/*.sh
+Cargo.toml
+crates/gc_cli/Cargo.toml
 crates/gc_cli/src/**/*.rs
+crates/gc_cli_driver/Cargo.toml
 crates/gc_cli_driver/src/**/*.rs
+crates/gc_wasi_cli/Cargo.toml
 crates/gc_wasi_cli/src/**/*.rs
 EOF
       return 0
@@ -454,9 +458,13 @@ EOF
 production-cli-help-surface-parity
 scripts/check_production_cli_help_surface.sh
 scripts/lib/**/*.sh
+Cargo.toml
+crates/gc_cli/Cargo.toml
 crates/gc_cli/src/**/*.rs
+crates/gc_cli_driver/Cargo.toml
 crates/gc_cli_driver/src/**/*.rs
-crates/gc_cli_driver_parity/src/**/*.rs
+crates/gc_cli_driver_parity/Cargo.toml
+crates/gc_wasi_cli/Cargo.toml
 crates/gc_wasi_cli/src/**/*.rs
 EOF
       return 0

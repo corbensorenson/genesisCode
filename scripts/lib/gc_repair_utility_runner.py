@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
 import json
 import os
@@ -11,17 +12,35 @@ from pathlib import Path, PurePosixPath
 import subprocess
 import sys
 import tempfile
-from typing import Any, Mapping, Sequence
+import time
+from typing import Any, Callable, Mapping, Sequence, TypeVar
 
 
 ROOT = Path(__file__).resolve().parents[2]
 REQUEST_SCHEMA = "genesis/reference-repair-request-v0.1"
 RESPONSE_SCHEMA = "genesis/reference-repair-response-v0.1"
 REPORT_KIND = "genesis/repair-utility-report-v0.1"
+InputT = TypeVar("InputT")
+OutputT = TypeVar("OutputT")
 
 
 class RunnerError(ValueError):
     pass
+
+
+def validate_worker_count(workers: int) -> None:
+    if not 1 <= workers <= 8:
+        raise RunnerError("workers must be between 1 and 8")
+
+
+def ordered_parallel_map(
+    function: Callable[[InputT], OutputT],
+    inputs: Sequence[InputT],
+    workers: int,
+) -> list[OutputT]:
+    validate_worker_count(workers)
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="gc-repair") as executor:
+        return list(executor.map(function, inputs))
 
 
 def load_json(path: Path) -> Any:
@@ -392,7 +411,14 @@ def summarize(agent_id: str, results: Sequence[Mapping[str, Any]]) -> dict[str, 
     }
 
 
-def render(binary: Path, artifact: Path, output: Path, policy_path: Path) -> None:
+def render(
+    binary: Path,
+    artifact: Path,
+    output: Path,
+    policy_path: Path,
+    workers: int,
+) -> None:
+    validate_worker_count(workers)
     policy = load_json(policy_path)
     workload_path = ROOT / policy["workload"]
     agent_path = ROOT / policy["referenceAgent"]
@@ -403,11 +429,25 @@ def render(binary: Path, artifact: Path, output: Path, policy_path: Path) -> Non
     if [case["id"] for case in cases] != sorted(case["id"] for case in cases):
         raise RunnerError("workload cases must be sorted by ID")
     agents = policy["agents"]
-    results = [
-        run_one(binary, artifact, agent_path, agent["id"], policy["maxRepairTurns"], case)
+    jobs = [
+        (agent["id"], case)
         for agent in sorted(agents, key=lambda item: item["id"])
         for case in cases
     ]
+
+    def run_job(job: tuple[str, Mapping[str, Any]]) -> dict[str, Any]:
+        agent_id, case = job
+        return run_one(
+            binary,
+            artifact,
+            agent_path,
+            agent_id,
+            policy["maxRepairTurns"],
+            case,
+        )
+
+    # Collection order is canonical even when execution finishes out of order.
+    results = ordered_parallel_map(run_job, jobs, workers)
     summaries = [summarize(agent["id"], results) for agent in sorted(agents, key=lambda item: item["id"])]
     primary_id = next(agent["id"] for agent in agents if agent["role"] == "primary")
     baseline_id = next(agent["id"] for agent in agents if agent["role"] == "baseline")
@@ -475,7 +515,34 @@ def render(binary: Path, artifact: Path, output: Path, policy_path: Path) -> Non
         raise RunnerError(f"repair utility acceptance failed: {checks}")
 
 
+def self_test() -> None:
+    for invalid in (0, 9):
+        try:
+            validate_worker_count(invalid)
+        except RunnerError:
+            continue
+        raise RunnerError(f"invalid worker count accepted: {invalid}")
+
+    inputs = [3, 2, 1, 0]
+
+    def delayed_square(value: int) -> int:
+        time.sleep(value * 0.005)
+        return value * value
+
+    if ordered_parallel_map(delayed_square, inputs, 4) != [9, 4, 1, 0]:
+        raise RunnerError("parallel collection did not preserve canonical input order")
+    print("gc-repair-utility-runner: self-test ok (negative_controls=2)")
+
+
 def main(argv: Sequence[str]) -> int:
+    if list(argv) == ["--self-test"]:
+        try:
+            self_test()
+        except RunnerError as exc:
+            print(f"gc-repair-utility-runner: {exc}", file=sys.stderr)
+            return 1
+        return 0
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--genesis", type=Path, required=True)
     parser.add_argument("--selfhost-artifact", type=Path, required=True)
@@ -483,6 +550,7 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument(
         "--policy", type=Path, default=ROOT / "policies/gc_repair_utility_v0.1.json"
     )
+    parser.add_argument("--workers", type=int, default=1)
     args = parser.parse_args(argv)
     try:
         render(
@@ -490,6 +558,7 @@ def main(argv: Sequence[str]) -> int:
             args.selfhost_artifact.resolve(),
             args.output.resolve(),
             args.policy.resolve(),
+            args.workers,
         )
     except (RunnerError, KeyError, OSError, subprocess.SubprocessError) as exc:
         print(f"gc-repair-utility-runner: {exc}", file=sys.stderr)
