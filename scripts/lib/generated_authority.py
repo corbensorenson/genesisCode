@@ -38,6 +38,8 @@ STAGE_SCOPED_ENVIRONMENT = (
     "GENESIS_GENERATED_STATE_LEASE_PID",
     "GENESIS_GENERATED_STATE_LEASE_TOKEN",
     "GENESIS_GATE_BUDGET_ENFORCE",
+    "GENESIS_GATE_AGGREGATE_OWNER_FD",
+    "GENESIS_GATE_TELEMETRY_EVENT_FILE",
     "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
     "GENESIS_SELFHOST_TOOLCHAIN_FRESHNESS",
     "GENESIS_SELFHOST_TOOLCHAIN_MANIFEST",
@@ -502,22 +504,209 @@ def refresh_roadmap_evidence(stage: Path) -> None:
     roadmap.write_text(text, encoding="utf-8")
 
 
+def filesystem_free_bytes(path: Path) -> int:
+    if hasattr(os, "statvfs"):
+        values = os.statvfs(path)
+        return int(values.f_bavail) * int(values.f_frsize)
+    return int(shutil.disk_usage(path).free)
+
+
+def allocated_tree_bytes(path: Path) -> int:
+    total = 0
+    seen: set[tuple[int, int]] = set()
+    stack = [path]
+    while stack:
+        current = stack.pop()
+        try:
+            metadata = current.lstat()
+        except OSError:
+            continue
+        identity = (metadata.st_dev, metadata.st_ino)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        total += max(0, int(getattr(metadata, "st_blocks", 0))) * 512
+        if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode):
+            try:
+                with os.scandir(current) as entries:
+                    stack.extend(Path(entry.path) for entry in entries)
+            except OSError:
+                continue
+    return total
+
+
+def kill_and_reap(process: subprocess.Popen[Any]) -> None:
+    if process.poll() is None:
+        try:
+            if os.name != "nt":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+        except ProcessLookupError:
+            pass
+    process.wait()
+
+
+class AggregateResourceOwner:
+    """Own complete-transaction wall, disk, event, and child cancellation limits."""
+
+    def __init__(self, root: Path, event_root: Path, limits: Mapping[str, Any]):
+        self.root = root
+        self.started = time.monotonic()
+        self.timeout_seconds = int(limits["maxTimeoutSeconds"])
+        self.disk_limit_bytes = int(limits["maxDiskMiB"]) * 1024 * 1024
+        self.free_baseline = filesystem_free_bytes(root)
+        self.event_path = event_root / (
+            f"aggregate-resource-events-{os.getpid()}-{time.monotonic_ns()}.jsonl"
+        )
+        self.event_fd: Optional[int] = None
+        self.event_offset = 0
+        self.event_fragment = b""
+        self.event_count = 0
+        self.network_attempts = 0
+        if os.name != "nt":
+            self.event_fd = os.open(
+                self.event_path,
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_APPEND,
+                0o600,
+            )
+            os.set_inheritable(self.event_fd, True)
+
+    def child_environment(
+        self, environment: Mapping[str, str]
+    ) -> tuple[dict[str, str], tuple[int, ...]]:
+        result = dict(environment)
+        result.pop("GENESIS_GATE_BUDGET_ENFORCE", None)
+        if self.event_fd is None:
+            result.pop("GENESIS_GATE_AGGREGATE_OWNER_FD", None)
+            result.pop("GENESIS_GATE_TELEMETRY_EVENT_FILE", None)
+            return result, ()
+        result["GENESIS_GATE_AGGREGATE_OWNER_FD"] = str(self.event_fd)
+        result["GENESIS_GATE_TELEMETRY_EVENT_FILE"] = str(self.event_path)
+        return result, (self.event_fd,)
+
+    def consume_events(self, *, final: bool = False) -> None:
+        if self.event_fd is None:
+            return
+        with self.event_path.open("rb") as handle:
+            handle.seek(self.event_offset)
+            chunk = handle.read()
+        self.event_offset += len(chunk)
+        data = self.event_fragment + chunk
+        lines = data.split(b"\n")
+        self.event_fragment = lines.pop()
+        for raw in lines:
+            require(bool(raw) and len(raw) <= 128, "aggregate resource event line is invalid")
+            try:
+                event = json.loads(
+                    raw.decode("ascii"), object_pairs_hook=reject_duplicate_keys
+                )
+            except (UnicodeError, json.JSONDecodeError) as exc:
+                raise AuthorityError("aggregate resource event is malformed") from exc
+            require(
+                isinstance(event, dict) and set(event) == {"count", "kind"},
+                "aggregate resource event fields drift",
+            )
+            count = event["count"]
+            kind = event["kind"]
+            require(
+                kind in {"cache-hit", "network-attempt"}
+                and isinstance(count, int)
+                and not isinstance(count, bool)
+                and count > 0,
+                "aggregate resource event value is invalid",
+            )
+            self.event_count += count
+            require(self.event_count <= 1_000_000, "aggregate resource event count exceeded")
+            if kind == "network-attempt":
+                self.network_attempts += count
+        if final:
+            require(not self.event_fragment, "aggregate resource event channel ended mid-record")
+        require(
+            self.network_attempts == 0,
+            f"aggregate resource owner rejected network attempts: {self.network_attempts}",
+        )
+
+    def check(
+        self,
+        label: str,
+        *,
+        scope_allocated_bytes: Optional[int] = None,
+        scope_root: Optional[Path] = None,
+        scope_disk_mib: Optional[int] = None,
+    ) -> None:
+        elapsed = time.monotonic() - self.started
+        require(
+            elapsed <= self.timeout_seconds,
+            f"aggregate resource owner exceeded wall limit during {label}: "
+            f"{elapsed:.3f}s>{self.timeout_seconds}s",
+        )
+        free_now = filesystem_free_bytes(self.root)
+        aggregate_delta = max(0, self.free_baseline - free_now)
+        require(
+            aggregate_delta <= self.disk_limit_bytes,
+            f"aggregate resource owner exceeded disk limit during {label}: "
+            f"{aggregate_delta}B>{self.disk_limit_bytes}B",
+        )
+        if (
+            scope_allocated_bytes is not None
+            and scope_root is not None
+            and scope_disk_mib is not None
+        ):
+            scope_delta = max(0, allocated_tree_bytes(scope_root) - scope_allocated_bytes)
+            scope_limit = int(scope_disk_mib) * 1024 * 1024
+            require(
+                scope_delta <= scope_limit,
+                f"generated node exceeded disk limit during {label}: "
+                f"{scope_delta}B>{scope_limit}B",
+            )
+        self.consume_events()
+
+    def close(self, *, validate: bool = True) -> None:
+        try:
+            if validate:
+                self.check("transaction cleanup")
+                self.consume_events(final=True)
+        finally:
+            if self.event_fd is not None:
+                os.close(self.event_fd)
+                self.event_fd = None
+
+
 def run_bounded(
     command: Sequence[str], *, cwd: Path, timeout: int,
     environment: Optional[Mapping[str, str]] = None,
+    owner: Optional[AggregateResourceOwner] = None,
+    disk_mib: Optional[int] = None,
 ) -> None:
+    scope_allocated = allocated_tree_bytes(cwd) if disk_mib is not None else None
+    process_environment = dict(environment or os.environ)
+    pass_fds: tuple[int, ...] = ()
+    if owner is not None:
+        process_environment, pass_fds = owner.child_environment(process_environment)
     process = subprocess.Popen(
-        list(command), cwd=cwd, env=environment,
+        list(command), cwd=cwd, env=process_environment,
         start_new_session=(os.name != "nt"),
+        **({"pass_fds": pass_fds} if pass_fds else {}),
     )
     try:
-        return_code = process.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        if os.name != "nt":
-            os.killpg(process.pid, signal.SIGKILL)
-        else:
-            process.kill()
-        process.wait()
+        started = time.monotonic()
+        while process.poll() is None:
+            if time.monotonic() - started > timeout:
+                raise subprocess.TimeoutExpired(list(command), timeout)
+            if owner is not None:
+                owner.check("child execution")
+            time.sleep(0.05)
+        return_code = process.returncode
+        if owner is not None:
+            owner.check(
+                "child completion",
+                scope_allocated_bytes=scope_allocated,
+                scope_root=cwd,
+                scope_disk_mib=disk_mib,
+            )
+    except BaseException:
+        kill_and_reap(process)
         raise
     if return_code != 0:
         raise subprocess.CalledProcessError(return_code, list(command))
@@ -535,12 +724,7 @@ def stage_environment(marker: str) -> dict[str, str]:
 
 
 def validation_environment() -> dict[str, str]:
-    environment = stage_environment("GENESIS_GENERATED_AUTHORITY_VALIDATING")
-    # The transaction owns aggregate resource enforcement. Nested checks still
-    # emit telemetry, but parallel checks must not attribute shared disk changes
-    # to whichever sampler happens to observe them.
-    environment["GENESIS_GATE_BUDGET_ENFORCE"] = "0"
-    return environment
+    return stage_environment("GENESIS_GENERATED_AUTHORITY_VALIDATING")
 
 
 def next_check_position(
@@ -561,7 +745,12 @@ def next_check_position(
     )
 
 
-def run_node(stage: Path, node: Mapping[str, Any]) -> None:
+def run_node(
+    stage: Path,
+    node: Mapping[str, Any],
+    owner: Optional[AggregateResourceOwner] = None,
+) -> None:
+    scope_allocated = allocated_tree_bytes(stage) if owner is not None else None
     before = changed_content_snapshot(stage)
     command = list(node["command"])
     if command == ["internal:roadmap-evidence"]:
@@ -571,6 +760,8 @@ def run_node(stage: Path, node: Mapping[str, Any]) -> None:
             command, cwd=stage,
             environment=stage_environment("GENESIS_GENERATED_AUTHORITY_STAGE"),
             timeout=node["timeoutSeconds"],
+            owner=owner,
+            disk_mib=node["diskMiB"],
         )
     after = changed_content_snapshot(stage)
     writes = {
@@ -578,9 +769,21 @@ def run_node(stage: Path, node: Mapping[str, Any]) -> None:
     }
     undeclared = sorted(writes - set(node["outputs"]))
     require(not undeclared, f"{node['id']} wrote undeclared paths: {undeclared}")
+    if owner is not None:
+        owner.check(
+            node["id"],
+            scope_allocated_bytes=scope_allocated,
+            scope_root=stage,
+            scope_disk_mib=node["diskMiB"],
+        )
 
 
-def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
+def run_checks(
+    stage: Path,
+    nodes: Sequence[Mapping[str, Any]],
+    owner: Optional[AggregateResourceOwner] = None,
+) -> None:
+    require(owner is not None, "generated validation requires an aggregate resource owner")
     checks: dict[str, int] = {}
     for node in nodes:
         for check in node["checks"]:
@@ -596,7 +799,7 @@ def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
                 compilation_by_check[entrypoint] = compilation
         unknown = sorted(set(checks) - set(compilation_by_check))
         require(not unknown, "generated checks missing gate compilation metadata: " + ", ".join(unknown))
-    environment = validation_environment()
+    environment, pass_fds = owner.child_environment(validation_environment())
     check_records = [
         (index, check, timeout, compilation_by_check.get(check, False))
         for index, (check, timeout) in enumerate(checks.items())
@@ -616,7 +819,11 @@ def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
     with tempfile.TemporaryDirectory(prefix="generated-authority-checks-") as temporary:
         log_root = Path(temporary)
         while pending or active:
-            while pending and len(active) < CHECK_WORKERS:
+            try:
+                owner.check("parallel validation")
+            except BaseException as exc:
+                failure = exc
+            while failure is None and pending and len(active) < CHECK_WORKERS:
                 next_pending = next_check_position(
                     pending,
                     [item[2] for item in active.values()],
@@ -633,6 +840,7 @@ def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
                     stdout=handle,
                     stderr=subprocess.STDOUT,
                     start_new_session=(os.name != "nt"),
+                    **({"pass_fds": pass_fds} if pass_fds else {}),
                 )
                 active[index] = (
                     check, timeout, compilation, process, handle, time.monotonic(), log_path
@@ -656,15 +864,7 @@ def run_checks(stage: Path, nodes: Sequence[Mapping[str, Any]]) -> None:
 
             if failure is not None:
                 for index, (_, _, _, process, handle, started, log_path) in active.items():
-                    if process.poll() is None:
-                        try:
-                            if os.name != "nt":
-                                os.killpg(process.pid, signal.SIGKILL)
-                            else:
-                                process.kill()
-                        except ProcessLookupError:
-                            pass
-                    process.wait()
+                    kill_and_reap(process)
                     handle.close()
                     completed_logs[index] = log_path
                     durations_ms[index] = round((time.monotonic() - started) * 1000)
@@ -808,7 +1008,13 @@ def promote(
     return changed
 
 
-def stage_closure(root: Path, nodes: Sequence[Mapping[str, Any]], *, update: bool) -> list[str]:
+def stage_closure(
+    root: Path,
+    nodes: Sequence[Mapping[str, Any]],
+    *,
+    update: bool,
+    limits: Mapping[str, Any],
+) -> list[str]:
     outputs = sorted({output for node in nodes for output in node["outputs"]})
     require(
         all((root / output).is_file() and not (root / output).is_symlink() for output in outputs),
@@ -818,12 +1024,22 @@ def stage_closure(root: Path, nodes: Sequence[Mapping[str, Any]], *, update: boo
     baseline_outputs = {output: file_identity(root / output) for output in outputs}
     temporary_root = Path(tempfile.mkdtemp(prefix="generated-authority-stage-"))
     stage = temporary_root / "worktree"
+    owner = AggregateResourceOwner(root, temporary_root, limits)
     try:
-        git(root, "worktree", "add", "--detach", str(stage), "HEAD", capture=False)
+        owner.check("worktree setup")
+        run_bounded(
+            ["git", "worktree", "add", "--detach", str(stage), "HEAD"],
+            cwd=root,
+            timeout=min(300, owner.timeout_seconds),
+            owner=owner,
+        )
+        owner.check("worktree checkout")
         copy_overlay(root, stage)
+        owner.check("worktree overlay")
         for node in nodes:
-            run_node(stage, node)
-        run_checks(stage, nodes)
+            run_node(stage, node, owner)
+        run_checks(stage, nodes, owner)
+        owner.check("staged closure validation")
         require(tree_snapshot(root, set(outputs)) == baseline, "canonical inputs changed while generated closure was staged")
         stale = [
             output for output in outputs
@@ -837,11 +1053,21 @@ def stage_closure(root: Path, nodes: Sequence[Mapping[str, Any]], *, update: boo
             expected_input_snapshot=baseline,
             expected_output_identities=baseline_outputs,
         )
+        owner.check("generated publication")
         return promoted
     finally:
         if stage.exists():
-            subprocess.run(["git", "worktree", "remove", "--force", str(stage)], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        shutil.rmtree(temporary_root, ignore_errors=True)
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(stage)],
+                cwd=root,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=60,
+            )
+        try:
+            owner.close()
+        finally:
+            shutil.rmtree(temporary_root, ignore_errors=True)
 
 
 def synthetic_graph(root: Path, graph: Mapping[str, Any], mutation: callable) -> None:
@@ -892,8 +1118,9 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
         validating = validation_environment()
         require(
             validating.get("GENESIS_GENERATED_AUTHORITY_VALIDATING") == "1"
-            and validating.get("GENESIS_GATE_BUDGET_ENFORCE") == "0",
-            "validation environment did not assign aggregate budget ownership",
+            and "GENESIS_GATE_BUDGET_ENFORCE" not in validating
+            and "GENESIS_GATE_AGGREGATE_OWNER_FD" not in validating,
+            "validation environment retained a caller-selected resource owner",
         )
     finally:
         for name, value in saved_stage_values.items():
@@ -918,25 +1145,121 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
         }]
         try:
             run_checks(stage, fixture)
-        except subprocess.CalledProcessError:
-            time.sleep(0.1)
-            require(not marker.exists(), "failed check did not cancel its concurrent process group")
+        except AuthorityError:
             controls += 1
         else:
-            raise AuthorityError("self-test accepted a failed concurrent check")
-
-        (scripts / "timeout.sh").write_text(
-            "#!/usr/bin/env bash\nsleep 2\nprintf escaped > escaped\n",
-            encoding="utf-8",
+            raise AuthorityError("self-test accepted validation without an aggregate owner")
+        owner = AggregateResourceOwner(
+            stage, stage, {"maxTimeoutSeconds": 30, "maxDiskMiB": 64}
         )
         try:
-            run_checks(stage, [{"checks": ["scripts/timeout.sh"], "timeoutSeconds": 0}])
-        except subprocess.TimeoutExpired:
+            try:
+                run_checks(stage, fixture, owner)
+            except subprocess.CalledProcessError:
+                time.sleep(0.1)
+                require(not marker.exists(), "failed check did not cancel its concurrent process group")
+                controls += 1
+            else:
+                raise AuthorityError("self-test accepted a failed concurrent check")
+
+            (scripts / "timeout.sh").write_text(
+                "#!/usr/bin/env bash\nsleep 2\nprintf escaped > escaped\n",
+                encoding="utf-8",
+            )
+            try:
+                run_checks(
+                    stage,
+                    [{"checks": ["scripts/timeout.sh"], "timeoutSeconds": 0}],
+                    owner,
+                )
+            except subprocess.TimeoutExpired:
+                time.sleep(0.1)
+                require(not marker.exists(), "timed-out check escaped hard cancellation")
+                controls += 1
+            else:
+                raise AuthorityError("self-test accepted a timed-out check")
+        finally:
+            owner.close(validate=False)
+
+    with tempfile.TemporaryDirectory(prefix="generated-authority-resource-") as temporary:
+        resource_root = Path(temporary)
+        wall_owner = AggregateResourceOwner(
+            resource_root,
+            resource_root,
+            {"maxTimeoutSeconds": 0, "maxDiskMiB": 64},
+        )
+        wall_marker = resource_root / "wall-escaped"
+        try:
+            run_bounded(
+                ["bash", "-c", "sleep 2; printf escaped > wall-escaped"],
+                cwd=resource_root,
+                timeout=5,
+                owner=wall_owner,
+            )
+        except AuthorityError:
             time.sleep(0.1)
-            require(not marker.exists(), "timed-out check escaped hard cancellation")
+            require(not wall_marker.exists(), "aggregate wall failure did not kill its child group")
             controls += 1
         else:
-            raise AuthorityError("self-test accepted a timed-out check")
+            raise AuthorityError("self-test accepted an aggregate wall overrun")
+        finally:
+            wall_owner.close(validate=False)
+
+        disk_owner = AggregateResourceOwner(
+            resource_root,
+            resource_root,
+            {"maxTimeoutSeconds": 30, "maxDiskMiB": 64},
+        )
+        try:
+            run_bounded(
+                [
+                    sys.executable,
+                    "-c",
+                    "import os; f=open('disk-payload','wb'); f.write(b'x'*(2*1024*1024)); f.flush(); os.fsync(f.fileno()); f.close()",
+                ],
+                cwd=resource_root,
+                timeout=5,
+                owner=disk_owner,
+                disk_mib=0,
+            )
+        except AuthorityError:
+            controls += 1
+        else:
+            raise AuthorityError("self-test accepted a generated-node disk overrun")
+        finally:
+            disk_owner.close(validate=False)
+            (resource_root / "disk-payload").unlink(missing_ok=True)
+
+        network_owner = AggregateResourceOwner(
+            resource_root,
+            resource_root,
+            {"maxTimeoutSeconds": 30, "maxDiskMiB": 64},
+        )
+        try:
+            if network_owner.event_fd is None:
+                require(os.name == "nt", "aggregate event owner is unavailable")
+            else:
+                environment, pass_fds = network_owner.child_environment(os.environ)
+                subprocess.run(
+                    [
+                        "bash",
+                        "-c",
+                        "printf '{\"count\":1,\"kind\":\"network-attempt\"}\\n' >>\"$GENESIS_GATE_TELEMETRY_EVENT_FILE\"",
+                    ],
+                    cwd=resource_root,
+                    env=environment,
+                    pass_fds=pass_fds,
+                    check=True,
+                )
+                try:
+                    network_owner.check("network control")
+                except AuthorityError:
+                    pass
+                else:
+                    raise AuthorityError("self-test accepted an aggregate network attempt")
+            controls += 1
+        finally:
+            network_owner.close(validate=False)
 
     def rejected(label: str, mutation: callable) -> None:
         nonlocal controls
@@ -1023,6 +1346,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             ],
             "outputs": ["declared"],
             "timeoutSeconds": 10,
+            "diskMiB": 16,
         }
         try:
             run_node(repository, fixture_node)
@@ -1131,7 +1455,7 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 22, "generated-authority self-test inventory drift")
+    require(controls == 26, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 
@@ -1187,7 +1511,9 @@ def main(argv: Sequence[str]) -> int:
         if args.plan:
             print("\n".join(node["id"] for node in selected))
             return 0
-        changed = stage_closure(root, selected, update=args.update)
+        changed = stage_closure(
+            root, selected, update=args.update, limits=graph["limits"]
+        )
         action = "updated" if args.update else "fresh"
         print(f"generated-authority: {action} (nodes={len(selected)} changed={len(changed)})")
         if changed:

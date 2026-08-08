@@ -13,3 +13,5 @@ Scope:
 ## Active Risks (P0/P1)
 
 - `P1.5`
+- `P1.6`
+- `P1.7`

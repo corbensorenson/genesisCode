@@ -86,7 +86,11 @@ controls.append("schema-policy-closure")
 
 report = temp / "pass.json"
 start = time.monotonic()
-event_env = dict(os.environ, GENESIS_GATE_BUDGET_ENFORCE="0")
+event_env = {
+    key: value
+    for key, value in os.environ.items()
+    if key not in {telemetry.RETIRED_BUDGET_BYPASS_ENV, telemetry.AGGREGATE_OWNER_FD_ENV}
+}
 proc = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
     "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
@@ -140,7 +144,7 @@ proc = subprocess.run([
     "--out", str(event_report), "--emit", "none", "--", "bash", "-c", event_command,
 ], cwd=root, env=event_env)
 events = telemetry.load_json(event_report)
-require(proc.returncode == 0 and events["metrics"]["cacheHits"]["value"] == 2 and events["metrics"]["networkAttempts"]["value"] == 3, "event channel count drift")
+require(proc.returncode == 3 and events["metrics"]["cacheHits"]["value"] == 2 and events["metrics"]["networkAttempts"]["value"] == 3, "event channel accounting or deny-network enforcement drift")
 controls.append("explicit-event-accounting")
 
 network_budget_report = temp / "network-budget.json"
@@ -153,6 +157,58 @@ proc = subprocess.run([
 network_budget = telemetry.load_json(network_budget_report)
 require(proc.returncode == 3 and network_budget["result"] == {"exitCode": 3, "status": "failed"}, "deny-network budget was not enforced")
 controls.append("deny-network-budget-enforcement")
+
+if os.name != "nt":
+    aggregate_events = temp / "aggregate-owner-events.jsonl"
+    aggregate_fd = os.open(
+        aggregate_events,
+        os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_APPEND,
+        0o600,
+    )
+    os.set_inheritable(aggregate_fd, True)
+    aggregate_report = temp / "aggregate-owner.json"
+    aggregate_env = dict(
+        event_env,
+        GENESIS_GATE_AGGREGATE_OWNER_FD=str(aggregate_fd),
+    )
+    try:
+        proc = subprocess.run([
+            sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
+            "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
+            "--out", str(aggregate_report), "--emit", "none", "--", "bash", "-c",
+            'printf \'{"count":1,"kind":"network-attempt"}\\n\' >>"$GENESIS_GATE_TELEMETRY_EVENT_FILE"',
+        ], cwd=root, env=aggregate_env, pass_fds=(aggregate_fd,), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    finally:
+        os.close(aggregate_fd)
+    aggregate_doc = telemetry.load_json(aggregate_report)
+    forwarded = telemetry.event_counts(aggregate_events, policy)
+    require(
+        proc.returncode == 3
+        and aggregate_doc["result"] == {"exitCode": 3, "status": "failed"}
+        and forwarded["network-attempt"] == 1,
+        "aggregate owner suppressed deny-network enforcement or lost its event",
+    )
+else:
+    try:
+        os.environ[telemetry.AGGREGATE_OWNER_FD_ENV] = "3"
+        telemetry.aggregate_owner_fd()
+    except telemetry.TelemetryError:
+        pass
+    else:
+        raise SystemExit("gate-resource-telemetry: unsupported descriptor delegation was accepted")
+    finally:
+        os.environ.pop(telemetry.AGGREGATE_OWNER_FD_ENV, None)
+controls.append("aggregate-owner-preserves-network-enforcement")
+
+bypass_report = temp / "caller-bypass.json"
+bypass_env = dict(event_env, GENESIS_GATE_BUDGET_ENFORCE="0")
+proc = subprocess.run([
+    sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
+    "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
+    "--out", str(bypass_report), "--emit", "none", "--", "bash", "-c", "true",
+], cwd=root, env=bypass_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+require(proc.returncode == 2 and not bypass_report.exists(), "caller-selected budget bypass was accepted")
+controls.append("caller-budget-bypass-rejection")
 
 failure_report = temp / "failure.json"
 proc = subprocess.run([
@@ -256,7 +312,7 @@ for path in check_scripts:
 require(not missing, f"governed checks missing telemetry wrapper: {missing}")
 controls.append("complete-gate-wrapper-coverage")
 
-require(len(controls) == 18 and len(set(controls)) == 18, "control coverage drift")
+require(len(controls) == 20 and len(set(controls)) == 20, "control coverage drift")
 authorities = [
     "policies/gate_telemetry_v0.1.json",
     "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json",

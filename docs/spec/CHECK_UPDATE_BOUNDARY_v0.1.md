@@ -182,6 +182,19 @@ full-system process-tree walk does not materially perturb the child SLOs the
 aggregate is intended to validate; child gates still emit their own
 high-resolution observations.
 
+Generated-authority publication has exactly one aggregate resource owner for
+the complete staging, validation, promotion, and cleanup transaction. The
+owner enforces the graph's aggregate wall and disk ceilings, enforces every
+node's `timeoutSeconds` and `diskMiB`, owns the append-only event channel, and
+kills and reaps active process groups on any violation. Parallel child gates
+continue to enforce their own duration and deny-network contracts. They may
+delegate only shared generated-disk attribution, and only by possessing the
+owner's inherited append-only descriptor; an environment value without that
+open descriptor fails closed. `GENESIS_GATE_BUDGET_ENFORCE` is retired and its
+presence is an error, so ordinary callers cannot select an observation-only
+passing mode. Failed generation never authorizes or partially retains a
+publication.
+
 Cache hits and network attempts cross a closed append-only event channel owned
 by the parent observer. Repository Cargo cache materialization emits a cache
 hit only after a matching content-addressed cache is reused. A gate emits a

@@ -1,6 +1,8 @@
 {
   "active_defect_ids": [
-    "P1.5"
+    "P1.5",
+    "P1.6",
+    "P1.7"
   ],
   "audit_date": "2026-08-08",
   "claims": [
@@ -307,6 +309,7 @@
         "E1:cap-evidence-gated-publish/check-1"
       ],
       "gap_ids": [
+        "P1.7",
         "R4.2.d",
         "R6.2.d"
       ],
@@ -1019,6 +1022,8 @@
       ],
       "gap_ids": [
         "P1.5",
+        "P1.6",
+        "P1.7",
         "R7.1.a",
         "R7.3.a"
       ],
@@ -1057,6 +1062,7 @@
         "E1:cap-tool-qualification/check-1"
       ],
       "gap_ids": [
+        "P1.7",
         "R7.1.e",
         "R9.2.c"
       ],
@@ -1118,7 +1124,9 @@
     }
   ],
   "gap_catalog": {
-    "P1.5": "Eliminate host-bridge timeout kill/reap failure under mandatory fault injection and complete R2.2.f cleanup proof.",
+    "P1.5": "Eliminate host-bridge termination failure and cleanup-error suppression under public-path fault injection and complete R2.2.f cleanup proof.",
+    "P1.6": "Require independent exact-main standard-profile watchdog disposition and re-close R0.4.j without substituting push-fast evidence.",
+    "P1.7": "Enforce one fail-closed aggregate resource owner in reopened R0.4.j and rerun the complete R0.4.i/R0.4.k generated-authority guard set.",
     "R1.3.c": "Generate and verify the pinned MCP agent interface from canonical CLI schemas.",
     "R1.4.c": "Build deterministic generation, repair, refactor, and deployment task benchmarks.",
     "R1.5.a": "Generate the authoring skill from canonical language and capability inputs.",

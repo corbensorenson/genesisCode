@@ -80,8 +80,14 @@ for required in (
         raise SystemExit(
             f"roadmap-execution-manifest: portability canary lost {required!r}"
         )
-if explanation["id"] != "R0.4.j" or explanation["state"] != "done":
+if (
+    explanation["id"] != "R0.4.j"
+    or explanation["state"] != "open"
+    or explanation["start_ready"] is not True
+):
     raise SystemExit("roadmap-execution-manifest: task explanation drift")
+if [task["id"] for task in execution_slice["focus_tasks"]] != ["R0.4.j"]:
+    raise SystemExit("roadmap-execution-manifest: corrective focus drift")
 PY
 
 if python3 scripts/lib/roadmap_execution_manifest.py --explain R99.99.z \

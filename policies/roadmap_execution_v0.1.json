@@ -25,6 +25,7 @@
       "exception_rule": "Only a reproduced P0/P1 correction may replace one equivalent concept one-for-one with a recorded deletion, dependency impact, acceptance delta, and no increase in WIP or release ancestry."
     },
     "ordered_task_ids": [
+      "R0.4.j",
       "R2.2.f",
       "R1.3.f",
       "R1.5.a",
@@ -34,14 +35,23 @@
       "R2.3.a",
       "R4.1.a"
     ],
-    "rationale": "Close P1.5 and R2.2.f first; then advance the complete sequential R1.3, R1.5, R1.6, R1.7, R2.1, and R2.3 agent/runtime frontier before SH-A establishes self-host semantic ownership. Carry the finite Core through exact reviewed R9.4.f before reactivating any GenesisBench campaign, custody, publication, governance, GenesisChallenge, Foundry implementation, or Genesis Model work.",
+    "rationale": "Close P1.7 and P1.6 through reopened R0.4.j, ordering generated-publication resource ownership and the complete R0.4.i/R0.4.k guard rerun before exact-main standard/full evidence; close P1.5 and R2.2.f next; then advance the complete sequential R1.3, R1.5, R1.6, R1.7, R2.1, and R2.3 agent/runtime frontier before SH-A establishes self-host semantic ownership. Carry the finite Core through exact reviewed R9.4.f before reactivating any GenesisBench campaign, custody, publication, governance, GenesisChallenge, Foundry implementation, or Genesis Model work.",
     "task_context": {
+      "R0.4.j": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M0", "M1-A", "M1-B"],
+        "nonclaims": [
+          "does not treat generated output, update execution, or mutable telemetry as independent evidence",
+          "does not close R0.4.j until exact-main standard/full evidence is independently watched"
+        ]
+      },
       "R2.2.f": {
         "product_lanes": ["GenesisCode"],
         "milestones": ["M1-A", "M2"],
         "nonclaims": [
           "does not close daemon or service readiness until every supported-host lifecycle matrix passes",
-          "does not downgrade a promised hard-cancellation guarantee to cooperative cancellation"
+          "does not downgrade a promised hard-cancellation guarantee to cooperative cancellation",
+          "does not discard stop, join, reap, or residual-process failures behind an initiating operation error"
         ]
       },
       "R1.3.f": {
@@ -425,6 +435,30 @@
         "reject undeclared tools, network inputs, rebuild islands, and benchmark environments"
       ]
     },
+    "hermetic-release-evidence": {
+      "risk_class": "critical",
+      "resource_class": "release",
+      "owner_paths": [
+        ".github",
+        "Cargo.toml",
+        "Cargo.lock",
+        "genesis.lock",
+        "docs/program",
+        "docs/spec",
+        "docs/status",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_gate_resource_telemetry.sh",
+        "scripts/check_generated_artifact_policy.sh",
+        "scripts/check_test_execution_profile_matrix.sh",
+        "scripts/check_roadmap_execution_manifest.sh"
+      ],
+      "negative_controls": [
+        "reject self-generated evidence, unbounded nested execution, hidden cache-class changes, incomplete lifecycle cleanup, and watchdogs that omit a claimed profile"
+      ]
+    },
     "agent-contract": {
       "risk_class": "high",
       "resource_class": "build",
@@ -624,7 +658,7 @@
     "R0.1": {"profile": "planning-truth", "start_after": [], "sequential": false},
     "R0.2": {"profile": "evidence-authority", "start_after": ["R0.1.e"], "sequential": true},
     "R0.3": {"profile": "hermetic-foundation", "start_after": ["R0.1.e"], "sequential": true},
-    "R0.4": {"profile": "hermetic-foundation", "start_after": ["R0.2.a", "R0.3.a"], "sequential": true},
+    "R0.4": {"profile": "hermetic-release-evidence", "start_after": ["R0.2.a", "R0.3.a"], "sequential": true},
     "R0.5": {"profile": "hermetic-foundation", "start_after": ["R0.3.b", "R0.4.d"], "sequential": true},
     "R1.1": {"profile": "agent-contract", "start_after": ["R0.2.e", "R0.3", "R0.5"], "sequential": true},
     "R1.2": {"profile": "agent-contract", "start_after": ["R1.1"], "sequential": true},

@@ -10,6 +10,7 @@ import os
 from pathlib import Path, PurePosixPath
 import platform
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,8 @@ from typing import Any, Optional, Sequence
 
 POLICY_REL = "policies/gate_telemetry_v0.1.json"
 MANIFEST_REL = "genesis.gates.json"
+AGGREGATE_OWNER_FD_ENV = "GENESIS_GATE_AGGREGATE_OWNER_FD"
+RETIRED_BUDGET_BYPASS_ENV = "GENESIS_GATE_BUDGET_ENFORCE"
 POLICY_FIELDS = {
     "aggregateSampleIntervalMs",
     "diskRoots",
@@ -107,6 +110,56 @@ def exact_disk_enabled(policy: dict, entrypoint: str, override: str | None) -> b
     if override not in (None, "0", "1"):
         raise TelemetryError("GENESIS_GATE_TELEMETRY_EXACT_DISK must be 0 or 1")
     return override == "1" or entrypoint in policy["exactDiskEntrypoints"]
+
+
+def aggregate_owner_fd() -> int | None:
+    """Return a supervisor-issued disk-attribution capability, if present."""
+    retired = os.environ.get(RETIRED_BUDGET_BYPASS_ENV)
+    if retired is not None:
+        raise TelemetryError(
+            f"{RETIRED_BUDGET_BYPASS_ENV} is retired; callers cannot disable resource enforcement"
+        )
+    raw = os.environ.get(AGGREGATE_OWNER_FD_ENV)
+    if raw is None:
+        return None
+    if os.name == "nt" or not raw.isascii() or not raw.isdigit() or int(raw) < 3:
+        raise TelemetryError("aggregate resource owner descriptor is invalid")
+    descriptor = int(raw)
+    try:
+        metadata = os.fstat(descriptor)
+    except OSError as exc:
+        raise TelemetryError("aggregate resource owner descriptor is not inherited") from exc
+    try:
+        import fcntl
+
+        flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
+    except (ImportError, OSError) as exc:
+        raise TelemetryError("aggregate resource owner descriptor flags are unavailable") from exc
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or not os.get_inheritable(descriptor)
+        or flags & os.O_ACCMODE != os.O_WRONLY
+        or not flags & os.O_APPEND
+    ):
+        raise TelemetryError(
+            "aggregate resource owner descriptor is not inherited append-only write capability"
+        )
+    return descriptor
+
+
+def forward_aggregate_events(descriptor: int | None, events: dict[str, int]) -> None:
+    if descriptor is None:
+        return
+    for kind in sorted(events):
+        count = events[kind]
+        if count:
+            payload = json.dumps(
+                {"count": count, "kind": kind}, sort_keys=True, separators=(",", ":")
+            ).encode("ascii") + b"\n"
+            try:
+                os.write(descriptor, payload)
+            except OSError as exc:
+                raise TelemetryError("aggregate resource owner event channel failed") from exc
 
 
 def logical_size(path: Path) -> int:
@@ -279,6 +332,7 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
     gate = gates[entrypoint]
     if not command:
         raise TelemetryError("gate command is empty")
+    aggregate_fd = aggregate_owner_fd()
     exact_disk = exact_disk_enabled(
         policy, entrypoint, os.environ.get("GENESIS_GATE_TELEMETRY_EXACT_DISK")
     )
@@ -291,7 +345,10 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
     env["GENESIS_GATE_TELEMETRY_EVENT_FILE"] = str(event_path)
     started = time.monotonic_ns()
     try:
-        proc = subprocess.Popen(command, cwd=root, env=env, start_new_session=True)
+        popen_options = {"pass_fds": (aggregate_fd,)} if aggregate_fd is not None else {}
+        proc = subprocess.Popen(
+            command, cwd=root, env=env, start_new_session=True, **popen_options
+        )
     except OSError:
         event_path.unlink(missing_ok=True)
         raise
@@ -329,6 +386,7 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
         events = event_counts(event_path, policy)
     finally:
         event_path.unlink(missing_ok=True)
+    forward_aggregate_events(aggregate_fd, events)
     rusage_rss = int(usage.ru_maxrss if normalize_platform() == "darwin" else usage.ru_maxrss * 1024)
     peak_rss = max(sampler.peak_rss, rusage_rss)
     if normalize_platform() == "linux":
@@ -341,14 +399,14 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
         io_method, io_quality = "rusage-block-operations-x512", "estimated"
     effective_exit_code = exit_code if exit_code >= 0 else 128 + (-exit_code)
     budget_violations = []
-    if effective_exit_code == 0 and os.environ.get("GENESIS_GATE_BUDGET_ENFORCE", "1") != "0":
+    if effective_exit_code == 0:
         if duration > int(gate["expectedDurationSeconds"]) * 1_000_000_000:
             budget_violations.append(
                 f"duration={duration}ns>{gate['expectedDurationSeconds']}s"
             )
         generated_delta = after_disk - before_disk if exact_disk else before_disk - after_disk
         disk_budget = int(gate["diskBudgetMiB"]) * 1024 * 1024
-        if generated_delta > disk_budget:
+        if aggregate_fd is None and generated_delta > disk_budget:
             budget_violations.append(
                 f"generated-disk={generated_delta}B>{disk_budget}B"
             )
