@@ -90,6 +90,7 @@ PY
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact && \
+     cargo test -p gc_effects --lib runner::runner_capability_dispatch::tests::model_lifecycle::model_runner_plugin_session_is_owned_reaped_and_restart_isolated --quiet -- --exact && \
      cargo test -p gc_effects --test host_abi_surface browser_xr::first_party_browser_and_xr_reject_repeated_close --quiet -- --exact && \
      cargo test -p gc_effects --lib tests::tests_host_backends::tests_host_backends_first_party::editor_first_party_core_ops_are_replayable_without_bridge --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces --quiet -- --exact && \
@@ -192,11 +193,15 @@ report = {
             "graphics-runtime-drop-dispatches-desktop-destroy",
             "gpu-device-explicit-destroy-rejected-after-close",
             "gpu-device-restart-rejects-stale-handles",
+            "model-provider-session-success-error-timeout-drop-restart",
             "xr-repeated-close-rejected",
         ],
         "model_sessions": {
-            "status": "not-implemented",
-            "verified": False,
+            "profile": "genesis.agent-model-runner.v0.1",
+            "standard_model_api_owner": "R5.4.e",
+            "status": "bridge-profile-implemented",
+            "transport": "host/plugin::command",
+            "verified": True,
         },
         "independent_cross_host_evidence": False,
     },
@@ -224,6 +229,7 @@ report = {
             "network",
             "process",
             "plugin",
+            "model-provider-process",
         ],
     },
     "runs_detail": run_records,

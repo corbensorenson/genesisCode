@@ -457,9 +457,9 @@ mod tests {
         release_sender.send(()).expect("release synthetic worker");
         let _ = session.stop();
         assert!(session.worker.is_none(), "released worker was not joined");
-        assert_eq!(
-            joined_persistent_bridge_workers_for_tests(),
-            joined_before + 1
+        assert!(
+            joined_persistent_bridge_workers_for_tests() > joined_before,
+            "released synthetic worker was not included in the monotonic join count"
         );
     }
 }

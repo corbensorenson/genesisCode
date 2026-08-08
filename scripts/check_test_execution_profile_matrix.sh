@@ -681,11 +681,13 @@ for lifecycle_probe in \
   'browser_xr::first_party_browser_and_xr_reject_repeated_close' \
   'editor_first_party_core_ops_are_replayable_without_bridge' \
   'runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces' \
+  'model_lifecycle::model_runner_plugin_session_is_owned_reaped_and_restart_isolated' \
   '--features gfx-desktop-backend' \
   '--features gpu-device-backend' \
   'device_runtime_resources_are_scoped_and_reaped' \
   '"coverage_complete": False' \
-  '"status": "not-implemented"'; do
+  '"status": "bridge-profile-implemented"' \
+  '"standard_model_api_owner": "R5.4.e"'; do
   if ! grep -Fq -- "$lifecycle_probe" scripts/render_host_bridge_fault_injection_report.sh; then
     echo "test-execution-profile-matrix: host lifecycle renderer is missing probe $lifecycle_probe" >&2
     exit 1

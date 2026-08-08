@@ -1143,3 +1143,5 @@ mod extended_crypto;
 mod extended_ffi;
 #[path = "runner_capability_dispatch_tests/extended_plugin.rs"]
 mod extended_plugin;
+#[path = "runner_capability_dispatch_tests/model_lifecycle.rs"]
+mod model_lifecycle;
