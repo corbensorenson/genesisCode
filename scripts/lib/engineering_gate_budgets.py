@@ -37,7 +37,7 @@ EXPECTED = {
 STDLIB = {
     "__future__", "argparse", "ast", "base64", "binascii", "collections", "concurrent", "contextlib", "copy",
     "dataclasses", "datetime", "decimal", "errno", "fcntl", "fnmatch", "fractions", "functools", "gzip",
-    "hashlib", "html", "http", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "random", "re",
+    "hashlib", "html", "http", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "queue", "random", "re",
     "shlex", "shutil", "signal", "socket", "stat",
     "secrets", "statistics", "string", "subprocess", "sys", "tarfile", "tempfile", "threading", "time", "tomllib",
     "types", "typing", "urllib", "xml", "zipfile",
@@ -427,7 +427,7 @@ def self_test() -> int:
     else:
         raise BudgetError("release-profile leakage negative control was accepted")
     platform_stdlib = (
-        "import concurrent.futures\nimport contextlib\nimport errno\nimport fcntl\nimport msvcrt\n"
+        "import concurrent.futures\nimport contextlib\nimport errno\nimport fcntl\nimport msvcrt\nimport queue\n"
     )
     if undeclared_python_modules((("platform.py", platform_stdlib),), set()):
         raise BudgetError("declared cross-platform Python standard-library modules were rejected")
