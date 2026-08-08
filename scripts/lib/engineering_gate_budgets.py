@@ -35,7 +35,7 @@ EXPECTED = {
     "GB-8": {"subject": "fresh-clone-prerequisites", "prerequisiteManifest": "genesis.prerequisites.json", "minimumPython": "3.9", "undeclaredPythonModules": 0},
 }
 STDLIB = {
-    "__future__", "argparse", "ast", "base64", "binascii", "collections", "contextlib", "copy",
+    "__future__", "argparse", "ast", "base64", "binascii", "collections", "concurrent", "contextlib", "copy",
     "dataclasses", "datetime", "decimal", "errno", "fcntl", "fnmatch", "fractions", "functools", "gzip",
     "hashlib", "html", "http", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "random", "re",
     "shlex", "shutil", "signal", "socket", "stat",
@@ -426,7 +426,9 @@ def self_test() -> int:
         controls += 1
     else:
         raise BudgetError("release-profile leakage negative control was accepted")
-    platform_stdlib = "import contextlib\nimport errno\nimport fcntl\nimport msvcrt\n"
+    platform_stdlib = (
+        "import concurrent.futures\nimport contextlib\nimport errno\nimport fcntl\nimport msvcrt\n"
+    )
     if undeclared_python_modules((("platform.py", platform_stdlib),), set()):
         raise BudgetError("declared cross-platform Python standard-library modules were rejected")
     controls += 1
