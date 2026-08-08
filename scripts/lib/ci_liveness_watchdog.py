@@ -67,7 +67,8 @@ def validate_policy(policy: Any) -> dict[str, Any]:
     require(
         limits
         == {
-            "latestMainDisposition": 7200,
+            "latestMainPushDisposition": 7200,
+            "standardRunDisposition": 7200,
             "fullRunTermination": 3600,
             "successfulFullFreshness": 172800,
             "scheduledFullCadence": 93600,
@@ -106,6 +107,22 @@ def validate_policy(policy: Any) -> dict[str, Any]:
             "recordsSha256",
         },
         "release-full chronology authority fields are not closed",
+    )
+    standard = policy.get("standardChronology")
+    require(isinstance(standard, dict), "standard chronology authority is missing")
+    require(
+        set(standard)
+        == {
+            "path",
+            "chronologyId",
+            "firstRunId",
+            "lastRunId",
+            "failedCount",
+            "cancelledCount",
+            "successfulCount",
+            "recordsSha256",
+        },
+        "standard chronology authority fields are not closed",
     )
     return policy
 
@@ -358,11 +375,170 @@ def verify_release_full_chronology(policy: Any, chronology: Any) -> None:
     )
 
 
+def verify_standard_chronology(policy: Any, chronology: Any) -> None:
+    policy = validate_policy(policy)
+    authority = policy["standardChronology"]
+    require(isinstance(chronology, dict), "standard chronology must be an object")
+    require(
+        set(chronology)
+        == {
+            "kind",
+            "version",
+            "chronologyId",
+            "repository",
+            "workflowPath",
+            "selection",
+            "summary",
+            "recordsSha256",
+            "records",
+            "disposition",
+        },
+        "standard chronology fields are not closed",
+    )
+    require(
+        chronology["kind"] == "genesis/ci-standard-chronology-v0.1"
+        and chronology["version"] == "0.1",
+        "standard chronology identity mismatch",
+    )
+    require(chronology["chronologyId"] == authority["chronologyId"], "standard chronology id mismatch")
+    require(
+        chronology["repository"] == policy["repository"]
+        and chronology["workflowPath"] == policy["workflows"]["ci"],
+        "standard chronology source mismatch",
+    )
+    selection = chronology["selection"]
+    require(
+        isinstance(selection, dict)
+        and set(selection)
+        == {
+            "branch",
+            "events",
+            "profile",
+            "fromRunIdInclusive",
+            "throughRunIdInclusive",
+            "observedAt",
+        },
+        "standard chronology selection is not closed",
+    )
+    require(
+        selection["branch"] == policy["branch"]
+        and selection["events"] == ["workflow_dispatch"]
+        and selection["profile"] == "standard"
+        and selection["fromRunIdInclusive"] == authority["firstRunId"]
+        and selection["throughRunIdInclusive"] == authority["lastRunId"],
+        "standard chronology selection mismatch",
+    )
+    observed_at = parse_time(selection["observedAt"], "standard.selection.observedAt")
+    records = chronology["records"]
+    require(isinstance(records, list) and records, "standard chronology records are missing")
+    expected_fields = {
+        "conclusion",
+        "createdAt",
+        "displayTitle",
+        "event",
+        "headSha",
+        "runAttempt",
+        "runId",
+        "startedAt",
+        "status",
+        "updatedAt",
+        "url",
+    }
+    seen_ids: set[int] = set()
+    for row in records:
+        require(
+            isinstance(row, dict) and set(row) == expected_fields,
+            "standard chronology record fields are not closed",
+        )
+        require(
+            row["event"] == "workflow_dispatch"
+            and row["displayTitle"] == "ci / workflow_dispatch / standard"
+            and row["status"] == "completed"
+            and row["conclusion"] in {"failure", "cancelled", "success"},
+            "standard chronology record is not a terminal standard run",
+        )
+        require(
+            isinstance(row["runId"], int)
+            and row["runId"] > 0
+            and row["runId"] not in seen_ids
+            and isinstance(row["runAttempt"], int)
+            and row["runAttempt"] > 0,
+            "standard chronology run identity is invalid or duplicated",
+        )
+        seen_ids.add(row["runId"])
+        require(isinstance(row["headSha"], str) and len(row["headSha"]) == 40, "standard chronology head is invalid")
+        require(
+            row["url"] == f"https://github.com/{policy['repository']}/actions/runs/{row['runId']}",
+            "standard chronology URL mismatch",
+        )
+        created = parse_time(row["createdAt"], "standard.createdAt")
+        started = parse_time(row["startedAt"], "standard.startedAt")
+        updated = parse_time(row["updatedAt"], "standard.updatedAt")
+        require(created <= started <= updated <= observed_at, "standard chronology timestamps are inconsistent")
+    require(
+        records == sorted(records, key=lambda row: (row["createdAt"], row["runId"])),
+        "standard chronology records are not chronological",
+    )
+    require(
+        records[0]["runId"] == authority["firstRunId"]
+        and records[-1]["runId"] == authority["lastRunId"],
+        "standard chronology boundary run mismatch",
+    )
+    digest = hashlib.sha256(json.dumps(records, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    require(digest == chronology["recordsSha256"] == authority["recordsSha256"], "standard chronology digest mismatch")
+    summary = {
+        "cancelled": sum(row["conclusion"] == "cancelled" for row in records),
+        "failed": sum(row["conclusion"] == "failure" for row in records),
+        "successful": sum(row["conclusion"] == "success" for row in records),
+        "total": len(records),
+    }
+    require(
+        summary
+        == chronology["summary"]
+        == {
+            "cancelled": authority["cancelledCount"],
+            "failed": authority["failedCount"],
+            "successful": authority["successfulCount"],
+            "total": authority["cancelledCount"] + authority["failedCount"] + authority["successfulCount"],
+        },
+        "standard chronology summary mismatch",
+    )
+    disposition = chronology["disposition"]
+    require(
+        isinstance(disposition, dict)
+        and set(disposition)
+        == {
+            "status",
+            "correctiveAction",
+            "counterexampleRunId",
+            "subsequentSuccessRunId",
+            "remainingNonclaims",
+        },
+        "standard chronology disposition is not closed",
+    )
+    by_id = {row["runId"]: row for row in records}
+    require(
+        disposition["status"] == "retained-with-open-corrective-action"
+        and disposition["correctiveAction"] == "R0.4.j/P1.6"
+        and by_id.get(disposition["counterexampleRunId"], {}).get("conclusion") == "failure"
+        and by_id.get(disposition["subsequentSuccessRunId"], {}).get("conclusion") == "success",
+        "standard chronology disposition mismatch",
+    )
+    nonclaims = disposition["remainingNonclaims"]
+    require(
+        isinstance(nonclaims, list)
+        and len(nonclaims) == 3
+        and all(isinstance(row, str) and row for row in nonclaims),
+        "standard chronology nonclaims are incomplete",
+    )
+
+
 def verify_retained_evidence(policy_path: Path) -> None:
     policy = read_json(policy_path)
     repository_root = policy_path.parent.parent
     verify_incident(policy, read_json(repository_root / policy["historicalIncident"]["path"]))
     verify_release_full_chronology(policy, read_json(repository_root / policy["releaseFullChronology"]["path"]))
+    verify_standard_chronology(policy, read_json(repository_root / policy["standardChronology"]["path"]))
 
 
 def normalize_runs(payload: Any) -> list[dict[str, Any]]:
@@ -406,10 +582,18 @@ def normalize_runs(payload: Any) -> list[dict[str, Any]]:
 
 def is_full_run(run: dict[str, Any]) -> bool:
     if run["event"] == "schedule":
-        return True
-    if run["event"] != "workflow_dispatch":
-        return False
-    return run["displayTitle"].strip().endswith("/ full")
+        return run["displayTitle"].strip() == "ci / schedule / full"
+    return (
+        run["event"] == "workflow_dispatch"
+        and run["displayTitle"].strip() == "ci / workflow_dispatch / full"
+    )
+
+
+def is_standard_run(run: dict[str, Any]) -> bool:
+    return (
+        run["event"] == "workflow_dispatch"
+        and run["displayTitle"].strip() == "ci / workflow_dispatch / standard"
+    )
 
 
 def violation(code: str, message: str, run_id: int | None = None) -> dict[str, Any]:
@@ -445,18 +629,108 @@ def evaluate(
     )
     head_age = int((now - head_time).total_seconds())
     if not exact_pushes:
-        if head_age > limits["latestMainDisposition"]:
+        if head_age > limits["latestMainPushDisposition"]:
             violations.append(violation("missing-main-disposition", "latest main revision has no CI push disposition"))
     else:
         latest_push = exact_pushes[0]
         run_age = int((now - latest_push["createdAt"]).total_seconds())
-        if latest_push["status"] != "completed" and run_age > limits["latestMainDisposition"]:
+        if latest_push["status"] != "completed" and run_age > limits["latestMainPushDisposition"]:
             violations.append(violation("main-disposition-overdue", "latest main CI push is not terminal within its bound", latest_push["id"]))
         if latest_push["status"] == "completed":
             if latest_push["conclusion"] == "cancelled":
                 violations.append(violation("cancelled-only-main", "latest main revision has only a cancelled disposition", latest_push["id"]))
             elif latest_push["conclusion"] != "success":
                 violations.append(violation("unsuccessful-main-disposition", "latest main revision did not pass CI", latest_push["id"]))
+
+    standard_runs = [run for run in ci_runs if is_standard_run(run)]
+    exact_standard = sorted(
+        [run for run in standard_runs if run["headSha"] == expected_head],
+        key=lambda run: (run["createdAt"], run["id"], run["attempt"]),
+        reverse=True,
+    )
+    wrong_head_standard = [
+        run
+        for run in standard_runs
+        if run["createdAt"] >= head_time
+        and run["headSha"] != expected_head
+        and run["status"] == "completed"
+        and run["conclusion"] == "success"
+    ]
+    for run in wrong_head_standard:
+        violations.append(
+            violation(
+                "wrong-head-standard-success",
+                "a post-head standard success does not match latest main",
+                run["id"],
+            )
+        )
+    latest_standard = exact_standard[0] if exact_standard else None
+    if latest_standard is None:
+        if head_age > limits["standardRunDisposition"]:
+            prior_success = any(
+                run["status"] == "completed"
+                and run["conclusion"] == "success"
+                and run["headSha"] in main_history
+                for run in standard_runs
+            )
+            if prior_success:
+                violations.append(
+                    violation(
+                        "superseded-only-standard",
+                        "standard success exists only for a superseded main revision",
+                    )
+                )
+            else:
+                violations.append(
+                    violation(
+                        "missing-standard-disposition",
+                        "latest main revision has no exact-head standard disposition",
+                    )
+                )
+    else:
+        run_age = int((now - latest_standard["createdAt"]).total_seconds())
+        if latest_standard["createdAt"] < head_time:
+            violations.append(
+                violation(
+                    "stale-standard-disposition",
+                    "exact-head standard disposition predates the latest main revision",
+                    latest_standard["id"],
+                )
+            )
+        if latest_standard["status"] != "completed" and run_age > limits["standardRunDisposition"]:
+            violations.append(
+                violation(
+                    "standard-disposition-overdue",
+                    "exact-head standard run is not terminal within its bound",
+                    latest_standard["id"],
+                )
+            )
+        if latest_standard["status"] == "completed":
+            elapsed = int((latest_standard["updatedAt"] - latest_standard["startedAt"]).total_seconds())
+            if elapsed > limits["standardRunDisposition"]:
+                violations.append(
+                    violation(
+                        "stale-standard-disposition",
+                        "exact-head standard disposition completed after its bound",
+                        latest_standard["id"],
+                    )
+                )
+            if latest_standard["conclusion"] == "cancelled":
+                violations.append(
+                    violation(
+                        "cancelled-only-standard",
+                        "latest exact-head standard run is cancelled",
+                        latest_standard["id"],
+                    )
+                )
+            elif latest_standard["conclusion"] != "success":
+                violations.append(
+                    violation(
+                        "unsuccessful-standard-disposition",
+                        "latest exact-head standard run did not pass",
+                        latest_standard["id"],
+                    )
+                )
 
     full_runs = [run for run in ci_runs if is_full_run(run)]
     for run in full_runs:
@@ -494,6 +768,24 @@ def evaluate(
         elif latest_full["conclusion"] != "success":
             violations.append(violation("unsuccessful-latest-full", "latest full CI run did not pass", latest_full["id"]))
 
+    exact_full_successes = sorted(
+        [
+            run
+            for run in valid_successes
+            if run["headSha"] == expected_head
+        ],
+        key=lambda run: (run["updatedAt"], run["id"]),
+        reverse=True,
+    )
+    exact_standard_success_id = (
+        latest_standard["id"]
+        if latest_standard is not None
+        and latest_standard["status"] == "completed"
+        and latest_standard["conclusion"] == "success"
+        else None
+    )
+    exact_full_success_id = exact_full_successes[0]["id"] if exact_full_successes else None
+
     violations.sort(key=lambda row: (row["code"], row["runId"] or 0))
     return {
         "kind": KIND,
@@ -512,9 +804,21 @@ def evaluate(
         "observations": {
             "inputRunCount": len(runs),
             "canonicalCiRunCount": len(ci_runs),
+            "standardRunCount": len(standard_runs),
+            "exactHeadStandardRunCount": len(exact_standard),
+            "latestExactHeadStandardRunId": latest_standard["id"] if latest_standard else None,
+            "latestExactHeadStandardStatus": latest_standard["status"] if latest_standard else None,
+            "latestExactHeadStandardConclusion": latest_standard["conclusion"] if latest_standard else None,
+            "exactHeadSuccessfulStandardRunId": exact_standard_success_id,
             "fullRunCount": len(full_runs),
             "scheduledFullRunCount": len(scheduled),
             "canonicalSuccessfulFullRunCount": len(valid_successes),
+            "exactHeadSuccessfulFullRunId": exact_full_success_id,
+            "exactHeadStandardFullPair": (
+                "complete"
+                if exact_standard_success_id is not None and exact_full_success_id is not None
+                else "incomplete"
+            ),
         },
         "violations": violations,
         "releaseQualified": False,
@@ -563,6 +867,9 @@ def self_test(policy_path: Path) -> None:
     chronology_path = policy_path.parent.parent / policy["releaseFullChronology"]["path"]
     chronology = read_json(chronology_path)
     verify_release_full_chronology(policy, chronology)
+    standard_chronology_path = policy_path.parent.parent / policy["standardChronology"]["path"]
+    standard_chronology = read_json(standard_chronology_path)
+    verify_standard_chronology(policy, standard_chronology)
     head = "a" * 40
     old_head = "b" * 40
     now = "2026-08-04T12:00:00Z"
@@ -575,6 +882,7 @@ def self_test(policy_path: Path) -> None:
     good_runs = [
         fixture_run(1, event="push", head_sha=head, created="2026-08-04T11:15:00Z", title="ci / push / fast"),
         fixture_run(2, event="schedule", head_sha=old_head, created="2026-08-04T09:00:00Z", updated="2026-08-04T09:45:00Z"),
+        fixture_run(3, event="workflow_dispatch", head_sha=head, created="2026-08-04T11:20:00Z", updated="2026-08-04T11:50:00Z", title="ci / workflow_dispatch / standard"),
     ]
     good = {"workflow_runs": good_runs}
     report = evaluate(policy, good, **kwargs)
@@ -591,6 +899,65 @@ def self_test(policy_path: Path) -> None:
     failed_main = copy.deepcopy(good)
     failed_main["workflow_runs"][0]["conclusion"] = "failure"
     expect_code(policy, failed_main, "unsuccessful-main-disposition", **kwargs)
+
+    missing_standard = {"workflow_runs": good_runs[:2]}
+    old_kwargs = dict(kwargs, expected_head_time="2026-08-04T08:00:00Z")
+    expect_code(policy, missing_standard, "missing-standard-disposition", **old_kwargs)
+
+    superseded_standard = copy.deepcopy(missing_standard)
+    superseded_standard["workflow_runs"].append(
+        fixture_run(4, event="workflow_dispatch", head_sha=old_head, created="2026-08-04T07:30:00Z", title="ci / workflow_dispatch / standard")
+    )
+    expect_code(policy, superseded_standard, "superseded-only-standard", **old_kwargs)
+
+    overdue_standard = copy.deepcopy(good)
+    overdue_standard["workflow_runs"][2].update(
+        status="in_progress",
+        conclusion=None,
+        created_at="2026-08-04T09:30:00Z",
+        run_started_at="2026-08-04T09:30:00Z",
+        updated_at="2026-08-04T09:30:00Z",
+    )
+    expect_code(policy, overdue_standard, "standard-disposition-overdue", **kwargs)
+
+    cancelled_standard = copy.deepcopy(good)
+    cancelled_standard["workflow_runs"][2]["conclusion"] = "cancelled"
+    expect_code(policy, cancelled_standard, "cancelled-only-standard", **kwargs)
+
+    failed_standard = copy.deepcopy(good)
+    failed_standard["workflow_runs"][2]["conclusion"] = "failure"
+    expect_code(policy, failed_standard, "unsuccessful-standard-disposition", **kwargs)
+
+    stale_standard = copy.deepcopy(good)
+    stale_standard["workflow_runs"][2].update(
+        created_at="2026-08-04T08:30:00Z",
+        run_started_at="2026-08-04T08:30:00Z",
+        updated_at="2026-08-04T11:50:00Z",
+    )
+    expect_code(policy, stale_standard, "stale-standard-disposition", **kwargs)
+
+    wrong_standard = copy.deepcopy(good)
+    wrong_standard["workflow_runs"].append(
+        fixture_run(4, event="workflow_dispatch", head_sha="c" * 40, created="2026-08-04T11:30:00Z", title="ci / workflow_dispatch / standard")
+    )
+    expect_code(policy, wrong_standard, "wrong-head-standard-success", **kwargs)
+
+    superseding_failure = copy.deepcopy(good)
+    superseding_failure["workflow_runs"].append(
+        fixture_run(4, event="workflow_dispatch", head_sha=head, created="2026-08-04T11:40:00Z", conclusion="failure", title="ci / workflow_dispatch / standard")
+    )
+    expect_code(policy, superseding_failure, "unsuccessful-standard-disposition", **kwargs)
+
+    exact_pair = copy.deepcopy(good)
+    exact_pair["workflow_runs"][1]["head_sha"] = head
+    pair_report = evaluate(policy, exact_pair, **kwargs)
+    require(
+        pair_report["status"] == "pass"
+        and pair_report["observations"]["exactHeadStandardFullPair"] == "complete"
+        and pair_report["observations"]["exactHeadSuccessfulStandardRunId"] == 3
+        and pair_report["observations"]["exactHeadSuccessfulFullRunId"] == 2,
+        "exact-head standard/full pair was not recognized",
+    )
 
     failed_full = copy.deepcopy(good)
     failed_full["workflow_runs"][1]["conclusion"] = "failure"
@@ -672,7 +1039,31 @@ def self_test(policy_path: Path) -> None:
         pass
     else:
         raise WatchdogError("false-release-full-closing-success negative control failed")
-    print("ci-liveness-watchdog: self-test ok (18 controls)")
+    tampered_standard_chronology = copy.deepcopy(standard_chronology)
+    tampered_standard_chronology["records"][0]["displayTitle"] = "ci / push / fast"
+    try:
+        verify_standard_chronology(policy, tampered_standard_chronology)
+    except WatchdogError:
+        pass
+    else:
+        raise WatchdogError("tampered-standard-chronology negative control failed")
+    missing_standard_chronology_row = copy.deepcopy(standard_chronology)
+    del missing_standard_chronology_row["records"][1]
+    try:
+        verify_standard_chronology(policy, missing_standard_chronology_row)
+    except WatchdogError:
+        pass
+    else:
+        raise WatchdogError("missing-standard-chronology-row negative control failed")
+    stale_standard_chronology_policy = copy.deepcopy(policy)
+    stale_standard_chronology_policy["standardChronology"]["recordsSha256"] = "0" * 64
+    try:
+        verify_standard_chronology(stale_standard_chronology_policy, standard_chronology)
+    except WatchdogError:
+        pass
+    else:
+        raise WatchdogError("stale-standard-chronology-authority negative control failed")
+    print("ci-liveness-watchdog: self-test ok (30 controls)")
 
 
 def main() -> int:

@@ -28,7 +28,7 @@ Levels: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode productio
 | `CAP-SEMANTIC-VCS` | Built-in semantic VCS (`commit`/`patch`/`refs`/`merge3`) | **H0** | L1 | `crates/gc_vcs/src`<br>`crates/gc_patches/src` | `vcs-patches` | `R4.2.c`<br>`R4.2.e` |
 | `CAP-PACKAGE-MANAGER` | Built-in package/project manager (`pkg`/`gcpm`) | **H0** | L1 | `crates/gc_pkg/src`<br>`crates/gc_cli_driver/src` | `package-registry` | `R4.2.e`<br>`R6.1.a` |
 | `CAP-ARTIFACT-GC` | Reachability-based artifact GC (`refs` + locks + pins) | **H0** | L1 | `crates/gc_pkg/src`<br>`crates/gc_vcs/src` | `package-registry` | `R4.2.e` |
-| `CAP-EVIDENCE-GATED-PUBLISH` | Obligation/evidence/attestation-gated publish + ref updates | **H0** | L1 | `crates/gc_obligations/src`<br>`crates/gc_registry/src` | `obligations-registry` | `P1.7`<br>`R4.2.d`<br>`R6.2.d` |
+| `CAP-EVIDENCE-GATED-PUBLISH` | Obligation/evidence/attestation-gated publish + ref updates | **H0** | L1 | `crates/gc_obligations/src`<br>`crates/gc_registry/src` | `obligations-registry` | `R4.2.d`<br>`R6.2.d` |
 | `CAP-RUNTIME-SURFACES` | Native + WASI + wasm-host runtime surfaces | **H0** | L1 | `crates/gc_cli/src`<br>`crates/gc_wasi_cli/src`<br>`crates/gc_wasm/src` | `runtime-platforms` | `R3.2.a`<br>`R6.3.a` |
 | `CAP-SELFHOST-FRONTEND` | Selfhost frontend default in production CLIs | **H0** | L1 | `selfhost`<br>`crates/gc_cli_driver/src` | `selfhost-toolchain` | `R4.2.a`<br>`R4.2.g` |
 | `CAP-SELFHOST-CUTOVER` | Full selfhost cutover profile + readiness scorecard | **H0** | L1 | `selfhost`<br>`scripts` | `selfhost-toolchain` | `R4.4.c` |
@@ -39,7 +39,7 @@ Levels: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode productio
 | `CAP-HOST-BRIDGE` | First-party bridge for network/process/db/crypto/plugin/ffi | **H0** | L1 | `crates/gc_effects/src` | `effect-runtime` | `P1.5`<br>`R2.2.f`<br>`R7.3.b` |
 | `CAP-STAGE2-WASM-VALIDATION` | Stage2 CoreForm->WASM translation-validation | **H0** | L1 | `crates/gc_wasm/src`<br>`crates/gc_opt/src` | `wasm-optimizer` | `R3.2.a`<br>`R3.2.b` |
 | `CAP-DEPLOYMENT-PIPELINE` | Deployment target pipeline in core toolchain | **H0** | L1 | `crates/gc_cli_driver/src`<br>`examples/agent_deploy_bundle_workflow` | `package-registry` | `R6.3.b`<br>`R6.3.c` |
-| `CAP-TOOL-QUALIFICATION` | Tool qualification lineage + evidence closures | **H0** | L1 | `crates/gc_obligations/src`<br>`docs/program` | `assurance` | `P1.7`<br>`R7.1.e`<br>`R9.2.c` |
+| `CAP-TOOL-QUALIFICATION` | Tool qualification lineage + evidence closures | **H0** | L1 | `crates/gc_obligations/src`<br>`docs/program` | `assurance` | `R7.1.e`<br>`R9.2.c` |
 
 ## Claim Boundary
 

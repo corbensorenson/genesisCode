@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "9de9bf4b1d32c669476952c1fee14682f6bb81da1e68d43e5431d502e8644fe0",
+  "contentIdentitySha256": "16c373fb04b7f42007fd3025e7b432f1b04a9af3e5acf7414f4753413f5714d2",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -204,7 +204,6 @@
             "E1:cap-evidence-gated-publish/check-1"
           ],
           "gapIds": [
-            "P1.7",
             "R4.2.d",
             "R6.2.d"
           ],
@@ -625,7 +624,6 @@
           "gapIds": [
             "P1.5",
             "P1.6",
-            "P1.7",
             "R7.1.a",
             "R7.3.a"
           ],
@@ -648,7 +646,6 @@
             "E1:cap-tool-qualification/check-1"
           ],
           "gapIds": [
-            "P1.7",
             "R7.1.e",
             "R9.2.c"
           ],
@@ -1886,8 +1883,7 @@
     "knownGaps": {
       "activeDefectIds": [
         "P1.5",
-        "P1.6",
-        "P1.7"
+        "P1.6"
       ],
       "roadmapGaps": [
         {
@@ -1904,15 +1900,6 @@
           ],
           "id": "P1.6",
           "summary": "Require independent exact-main standard-profile watchdog disposition and re-close R0.4.j without substituting push-fast evidence."
-        },
-        {
-          "affectedClaims": [
-            "CAP-ASSURANCE-PROFILES",
-            "CAP-EVIDENCE-GATED-PUBLISH",
-            "CAP-TOOL-QUALIFICATION"
-          ],
-          "id": "P1.7",
-          "summary": "Enforce one fail-closed aggregate resource owner in reopened R0.4.j and rerun the complete R0.4.i/R0.4.k generated-authority guard set."
         },
         {
           "affectedClaims": [
@@ -2610,8 +2597,7 @@
     "security": {
       "activeDefectIds": [
         "P1.5",
-        "P1.6",
-        "P1.7"
+        "P1.6"
       ],
       "claimState": "requirements-only-unverified",
       "mandatoryChecks": [
@@ -2712,7 +2698,7 @@
     "docs/program/evidence/artifact/genesis-example.bin": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
-    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "f82b8b231b0953f6b8895ee17aa7f5f4e03389bf2aa47a6afdc26acb34f5f449",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "c0ed088a9a6a6e8b23aa378a2b22623176caa56afdfa573cf3d1c0d40d6e4bba",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",

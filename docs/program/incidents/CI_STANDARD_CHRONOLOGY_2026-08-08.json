@@ -1,0 +1,102 @@
+{
+  "kind": "genesis/ci-standard-chronology-v0.1",
+  "version": "0.1",
+  "chronologyId": "ci-standard-2026-08-08",
+  "repository": "corbensorenson/genesisCode",
+  "workflowPath": ".github/workflows/ci.yml",
+  "selection": {
+    "branch": "main",
+    "events": [
+      "workflow_dispatch"
+    ],
+    "profile": "standard",
+    "fromRunIdInclusive": 31264075302,
+    "throughRunIdInclusive": 31278093079,
+    "observedAt": "2026-08-08T22:30:00Z"
+  },
+  "summary": {
+    "cancelled": 1,
+    "failed": 3,
+    "successful": 1,
+    "total": 5
+  },
+  "recordsSha256": "de17406ed90121cea7350dee6e2f1ab739dfbafdcd1e679b77650c07832bfed6",
+  "records": [
+    {
+      "runId": 31264075302,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "44ac317328f28175a8598e97b63cf7d117f4296d",
+      "createdAt": "2026-08-08T15:17:09Z",
+      "startedAt": "2026-08-08T15:17:09Z",
+      "updatedAt": "2026-08-08T15:30:47Z",
+      "displayTitle": "ci / workflow_dispatch / standard",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31264075302"
+    },
+    {
+      "runId": 31264789681,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "headSha": "af4e3f0753da9ce6211b61e44a0e3ae02233824f",
+      "createdAt": "2026-08-08T15:34:18Z",
+      "startedAt": "2026-08-08T15:34:18Z",
+      "updatedAt": "2026-08-08T16:06:11Z",
+      "displayTitle": "ci / workflow_dispatch / standard",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31264789681"
+    },
+    {
+      "runId": 31267047009,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "4de4517ad4f3f2cc1f6182110b24221e030f6321",
+      "createdAt": "2026-08-08T16:28:52Z",
+      "startedAt": "2026-08-08T16:28:52Z",
+      "updatedAt": "2026-08-08T17:20:31Z",
+      "displayTitle": "ci / workflow_dispatch / standard",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31267047009"
+    },
+    {
+      "runId": 31269647811,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "6d22bc1e1eebee6ac76b8c20fb513f7d14b37d5b",
+      "createdAt": "2026-08-08T17:31:48Z",
+      "startedAt": "2026-08-08T17:31:48Z",
+      "updatedAt": "2026-08-08T18:24:11Z",
+      "displayTitle": "ci / workflow_dispatch / standard",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31269647811"
+    },
+    {
+      "runId": 31278093079,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "ac29b61f2463fce386faac166756edfc990d33f8",
+      "createdAt": "2026-08-08T20:56:01Z",
+      "startedAt": "2026-08-08T20:56:01Z",
+      "updatedAt": "2026-08-08T22:12:39Z",
+      "displayTitle": "ci / workflow_dispatch / standard",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31278093079"
+    }
+  ],
+  "disposition": {
+    "status": "retained-with-open-corrective-action",
+    "correctiveAction": "R0.4.j/P1.6",
+    "counterexampleRunId": 31269647811,
+    "subsequentSuccessRunId": 31278093079,
+    "remainingNonclaims": [
+      "This chronology does not qualify a GenesisCode product release.",
+      "A later standard success does not erase retained failures or prove the watchdog classifies standard independently.",
+      "P1.6 closes only after the corrected evaluator recognizes exact-head standard and full evidence on reviewed main."
+    ]
+  }
+}

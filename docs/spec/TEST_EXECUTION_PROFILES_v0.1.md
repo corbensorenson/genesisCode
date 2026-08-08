@@ -559,14 +559,18 @@ is not reference evidence.
 - `.github/workflows/ci-watchdog.yml` is a separately scheduled observer with a
   unique per-run concurrency group and read-only Actions access. It evaluates
   `.github/workflows/ci.yml` history rather than its own status and retains a
-  `genesis/ci-liveness-watchdog-v0.1` disposition. It rejects a latest-main push
-  without a successful terminal disposition after 7,200 seconds, any scheduled
+  `genesis/ci-liveness-watchdog-v0.1` disposition. It classifies push-fast,
+  separately dispatched standard, and full runs independently. It rejects a
+  latest-main push or exact-head standard run without a successful terminal
+  disposition after 7,200 seconds, a failed or cancelled latest exact-head
+  standard attempt, wrong-head or superseded-only standard evidence, any scheduled
   or explicitly named full dispatch still running after 3,600 seconds, successful
   full evidence older than 172,800 seconds, an unsuccessful latest full run, a
   missing daily schedule after 93,600
   seconds, and a successful full run whose revision is absent from canonical
   `main` history. Watchdog output is observational and always has
-  `releaseQualified = false`.
+  `releaseQualified = false`; it reports whether successful standard and full
+  evidence form an exact-head pair without requiring a full run after every push.
 - The full-profile dependency graph also enforces the 3,600-second ceiling rather
   than relying on observation alone. Named-target preparation is limited to 20
   minutes in parallel with each 55-minute release-evidence worker, followed by a
@@ -591,9 +595,14 @@ is not reference evidence.
   counterexample through the first corrected exact-`main` success, including
   intermediate successes followed by regressions. The control-plane policy pins
   its closed selection, boundaries, outcome counts, and canonical record digest.
-  The independent watchdog verifies both retained ledgers before evaluating live
+  The independent watchdog verifies all retained ledgers before evaluating live
   history; neither ledger qualifies a product release or turns an unsupported
   target disposition into a platform claim.
+- `docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json` retains the
+  bounded standard-profile failure sequence that exposed the push-fast
+  substitution bug. Its closed run selection, terminal outcomes, and canonical
+  digest are policy-pinned; the historical disposition remains non-authorizing
+  even after the corrected watchdog observes later exact-head success.
 - Standard pull-request CI runs the changed-impact planner with `--dry-run`
   because the same job executes generated-authority checks, lint, and the full
   test surface directly. This prevents a second disposable-worktree compilation

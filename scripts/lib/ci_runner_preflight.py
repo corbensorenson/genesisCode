@@ -23,6 +23,7 @@ POLICY_KEYS = {
     "limitsSeconds",
     "historicalIncident",
     "releaseFullChronology",
+    "standardChronology",
     "selectionProfiles",
     "runnerLanes",
 }
@@ -61,7 +62,8 @@ def validate_policy(policy: Any) -> tuple[dict[str, list[str]], list[dict[str, A
     require(
         limits
         == {
-            "latestMainDisposition": 7200,
+            "latestMainPushDisposition": 7200,
+            "standardRunDisposition": 7200,
             "fullRunTermination": 3600,
             "successfulFullFreshness": 172800,
             "scheduledFullCadence": 93600,
@@ -96,6 +98,32 @@ def validate_policy(policy: Any) -> tuple[dict[str, list[str]], list[dict[str, A
             "recordsSha256": "9f38c2abba4f7ec8060cd5b7743ac8bd7a4718c383efdea81348d191b423c9d4",
         },
         "release-full chronology authority mismatch",
+    )
+    standard = policy["standardChronology"]
+    require(
+        isinstance(standard, dict)
+        and set(standard)
+        == {
+            "path",
+            "chronologyId",
+            "firstRunId",
+            "lastRunId",
+            "failedCount",
+            "cancelledCount",
+            "successfulCount",
+            "recordsSha256",
+        }
+        and standard["path"]
+        == "docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json"
+        and standard["chronologyId"] == "ci-standard-2026-08-08"
+        and standard["firstRunId"] == 31264075302
+        and standard["lastRunId"] == 31278093079
+        and standard["failedCount"] == 3
+        and standard["cancelledCount"] == 1
+        and standard["successfulCount"] == 1
+        and standard["recordsSha256"]
+        == "de17406ed90121cea7350dee6e2f1ab739dfbafdcd1e679b77650c07832bfed6",
+        "standard chronology authority mismatch",
     )
     profiles = policy["selectionProfiles"]
     require(isinstance(profiles, dict) and set(profiles) == {"none", "primary", "matrix"}, "selection profiles mismatch")

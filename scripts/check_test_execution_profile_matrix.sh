@@ -1203,7 +1203,8 @@ policy_control = json.loads((root / "policies/ci_control_plane_v0.1.json").read_
 if policy_control.get("kind") != "genesis/ci-control-plane-policy-v0.1":
     raise SystemExit("test-execution-profile-matrix: CI control-plane policy identity mismatch")
 if policy_control.get("limitsSeconds") != {
-    "latestMainDisposition": 7200,
+    "latestMainPushDisposition": 7200,
+    "standardRunDisposition": 7200,
     "fullRunTermination": 3600,
     "successfulFullFreshness": 172800,
     "scheduledFullCadence": 93600,

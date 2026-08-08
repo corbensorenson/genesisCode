@@ -1459,6 +1459,7 @@ BUNDLES: Mapping[str, Sequence[str]] = {
         "crates/gc_cli/tests/release_evidence_regressions/release_evidence_v02.rs",
         "docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json",
         "docs/program/incidents/CI_RELEASE_FULL_CHRONOLOGY_2026-08-05_2026-08-08.json",
+        "docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json",
         "docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json",
         "docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json",
         "docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json",
