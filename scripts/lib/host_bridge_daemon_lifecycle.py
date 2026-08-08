@@ -18,19 +18,14 @@ import threading
 import time
 from typing import Any
 
+import host_handle_lifecycle_evidence as lifecycle_evidence
+
 
 PROTOCOL = "genesis/warm-protocol-v0.2"
 RESPONSE = "genesis/warm-response-v0.2"
-REPORT_KIND = "genesis/host-bridge-daemon-lifecycle-v0.1"
+REPORT_KIND = lifecycle_evidence.MACOS_REPORT_KIND
 PROCESS_EXIT_TIMEOUT_SECONDS = 8.0
 RESPONSE_TIMEOUT_SECONDS = 20.0
-NEGATIVE_CONTROLS = (
-    "reject-malformed-process-record",
-    "reject-duplicate-process-identity",
-    "detect-live-process-group",
-    "accept-reaped-process-group",
-    "reject-non-persistent-transport",
-)
 
 
 class ProbeError(RuntimeError):
@@ -378,7 +373,7 @@ def new_records(
 def run_probe(genesis: pathlib.Path, artifact: pathlib.Path, output: pathlib.Path) -> None:
     if os.name != "posix" or not shutil.which("ps"):
         raise ProbeError("daemon lifecycle evidence requires a POSIX host with ps")
-    negative_controls = self_test(announce=False)
+    self_test(announce=False)
     genesis = genesis.resolve(strict=True)
     artifact = artifact.resolve(strict=True)
     if not os.access(genesis, os.X_OK):
@@ -388,16 +383,6 @@ def run_probe(genesis: pathlib.Path, artifact: pathlib.Path, output: pathlib.Pat
     cleanup_samples: list[int] = []
     all_records: list[tuple[int, int, str]] = []
     daemon_pids: list[int] = []
-    scenarios = [
-        "request-success-owner-drop",
-        "request-malformed-response",
-        "request-hard-timeout",
-        "generation-restart-renegotiation",
-        "active-shutdown-bounded-drain",
-        "active-eof-bounded-drain",
-        "daemon-process-restart-isolation",
-    ]
-
     with tempfile.TemporaryDirectory(prefix="genesis-host-bridge-daemon-") as directory:
         workspace = pathlib.Path(directory)
         fixture = write_fixture(workspace)
@@ -490,7 +475,7 @@ def run_probe(genesis: pathlib.Path, artifact: pathlib.Path, output: pathlib.Pat
         "provider_processes": len(provider_pids),
         "descendant_processes": len(descendant_pids),
         "unique_provider_processes": len(set(provider_pids)),
-        "scenarios": scenarios,
+        "scenarios": list(lifecycle_evidence.DAEMON_SCENARIOS),
         "cleanup": {
             "samples": len(cleanup_samples),
             "maximum_ms": max(cleanup_samples, default=0),
@@ -502,7 +487,7 @@ def run_probe(genesis: pathlib.Path, artifact: pathlib.Path, output: pathlib.Pat
         "genesis_executable_sha256": sha256_file(genesis),
         "selfhost_artifact_sha256": sha256_file(artifact),
         "probe_source_sha256": sha256_file(pathlib.Path(__file__).resolve()),
-        "negative_controls": negative_controls,
+        "negative_controls": list(lifecycle_evidence.NEGATIVE_CONTROLS),
         "elapsed_ms": round((time.monotonic() - started) * 1000),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -554,8 +539,13 @@ def self_test(*, announce: bool = True) -> list[str]:
             raise ProbeError("reaped process-group control remained live")
         controls.append("accept-reaped-process-group")
 
-    if set(controls) != set(NEGATIVE_CONTROLS) or len(controls) != len(NEGATIVE_CONTROLS):
+    if (
+        set(controls) != set(lifecycle_evidence.NEGATIVE_CONTROLS)
+        or len(controls) != len(lifecycle_evidence.NEGATIVE_CONTROLS)
+    ):
         raise ProbeError(f"negative-control coverage drifted: {controls!r}")
+    if lifecycle_evidence.DAEMON_SCENARIOS != sorted(lifecycle_evidence.DAEMON_SCENARIOS):
+        raise ProbeError("daemon lifecycle scenarios are not in canonical order")
     if announce:
         print(f"host-bridge-daemon-lifecycle: self-test ok (negative_controls={len(controls)})")
     return controls
