@@ -1511,6 +1511,66 @@ def build_execution_slice(
     }
 
 
+def build_start_readiness_report(
+    manifest: Mapping[str, Any], policy_path: Path
+) -> Mapping[str, Any]:
+    """Render all graph-ready work without granting selection authority."""
+    execution_slice = build_execution_slice(manifest, policy_path)
+    tasks = {str(task["id"]): task for task in manifest["tasks"]}
+    frontier_focus_ids = [
+        str(task["id"]) for task in execution_slice["focus_tasks"]
+    ]
+    selected_ready_ids = [
+        task_id
+        for task_id in frontier_focus_ids
+        if tasks[task_id]["start_ready"] is True
+    ]
+    ready_tasks = []
+    for task_id in manifest["ready_task_ids"]:
+        task = tasks[str(task_id)]
+        selected = task_id in selected_ready_ids
+        ready_tasks.append(
+            {
+                "id": task["id"],
+                "title": task["title"],
+                "phase": task["phase"],
+                "workstream": task["workstream"],
+                "riskClass": task["risk_class"],
+                "resourceClass": task["resource_class"],
+                "prerequisites": task["prerequisites"],
+                "selectedByFrontier": selected,
+                "selectionDisposition": (
+                    "selected" if selected else "ready-but-deprioritized"
+                ),
+                "deprioritizedReason": (
+                    None if selected else "wip-limit-and-frontier-priority"
+                ),
+                "source": task["source"],
+            }
+        )
+    return {
+        "kind": "genesis/roadmap-start-readiness-v0.1",
+        "version": "0.1",
+        "authority": {
+            "roadmap": manifest["authority"]["roadmap"],
+            "policy": manifest["authority"]["policy"],
+            "derivedViewOnly": True,
+            "selector": "--slice",
+        },
+        "inputIdentities": manifest["input_identities"],
+        "wipLimit": execution_slice["wip_limit"],
+        "openTaskCount": manifest["summary"]["open_count"],
+        "startReadyTaskCount": len(ready_tasks),
+        "frontierFocusTaskIds": frontier_focus_ids,
+        "selectedReadyTaskIds": selected_ready_ids,
+        "startReadyTasks": ready_tasks,
+        "nonclaims": [
+            "Graph readiness does not select work or widen repository-changing WIP.",
+            "This derived report cannot authorize start, completion, promotion, capability, signing, or release.",
+        ],
+    }
+
+
 def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> int:
     parsed = parse_roadmap(roadmap_path)
     policy = validate_policy(
@@ -1520,6 +1580,51 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
         policy.get("release_lane_contracts"), "policy.release_lane_contracts"
     )
     baseline = build_manifest(roadmap_path, policy_path, schema_path)
+    readiness = build_start_readiness_report(baseline, policy_path)
+    if set(readiness) != {
+        "kind",
+        "version",
+        "authority",
+        "inputIdentities",
+        "wipLimit",
+        "openTaskCount",
+        "startReadyTaskCount",
+        "frontierFocusTaskIds",
+        "selectedReadyTaskIds",
+        "startReadyTasks",
+        "nonclaims",
+    }:
+        raise ManifestError("self-test found start-readiness report field drift")
+    readiness_task_fields = {
+        "id",
+        "title",
+        "phase",
+        "workstream",
+        "riskClass",
+        "resourceClass",
+        "prerequisites",
+        "selectedByFrontier",
+        "selectionDisposition",
+        "deprioritizedReason",
+        "source",
+    }
+    if (
+        readiness["kind"] != "genesis/roadmap-start-readiness-v0.1"
+        or readiness["authority"]["derivedViewOnly"] is not True
+        or readiness["authority"]["selector"] != "--slice"
+        or [task["id"] for task in readiness["startReadyTasks"]]
+        != baseline["ready_task_ids"]
+        or any(
+            set(task) != readiness_task_fields
+            for task in readiness["startReadyTasks"]
+        )
+        or any(
+            task["selectedByFrontier"]
+            != (task["id"] in readiness["selectedReadyTaskIds"])
+            for task in readiness["startReadyTasks"]
+        )
+    ):
+        raise ManifestError("self-test found start-readiness derivation drift")
     sequential_probe = copy.deepcopy(baseline)
     probe_by_id = {str(task["id"]): task for task in sequential_probe["tasks"]}
     probe_by_id["R1.5.a"]["state"] = "done"
@@ -1732,6 +1837,7 @@ def main(argv: Sequence[str]) -> int:
     mode.add_argument("--render", action="store_true")
     mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--slice", action="store_true")
+    mode.add_argument("--ready", action="store_true")
     mode.add_argument("--explain", metavar="TASK_ID")
     parser.add_argument("--roadmap", type=Path, default=DEFAULT_ROADMAP)
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
@@ -1753,6 +1859,10 @@ def main(argv: Sequence[str]) -> int:
         if args.slice:
             sys.stdout.buffer.write(
                 canonical_bytes(build_execution_slice(rendered, policy_path))
+            )
+        elif args.ready:
+            sys.stdout.buffer.write(
+                canonical_bytes(build_start_readiness_report(rendered, policy_path))
             )
         elif args.explain is not None:
             task = next(

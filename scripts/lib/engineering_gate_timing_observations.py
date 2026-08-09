@@ -163,8 +163,18 @@ def host_observation(*, require_conformant: bool) -> dict[str, Any]:
     return document
 
 
-def validate_control(document: Any, class_id: str) -> dict[str, Any]:
-    return calibration.validate_control_observation(document, class_id)
+def validate_control(
+    document: Any, class_id: str, policy: dict[str, Any]
+) -> dict[str, Any]:
+    return calibration.validate_control_observation(
+        document,
+        class_id,
+        local_background_load_limit_basis_points=(
+            policy["localPreflight"]["backgroundLoadMaxPercent"] * 100
+            if class_id.startswith("local-")
+            else None
+        ),
+    )
 
 
 def observation_identity(document: dict[str, Any]) -> str:
@@ -247,6 +257,7 @@ def validate_observation(document: Any, policy: dict[str, Any]) -> dict[str, Any
             document["controlObservationCanonicalJson"], "control observation"
         ),
         class_id,
+        policy,
     )
     require(
         control["referenceHostConformant"] == host["conformance"]["ok"],
@@ -409,19 +420,39 @@ def resolved_default_cache() -> Path:
     return Path(output)
 
 
-def local_preflight(class_id: str, host: dict[str, Any]) -> dict[str, Any]:
+def sampled_background_load_basis_points(
+    logical_cpus: int, sample_count: int, sample_interval_ms: int
+) -> int:
+    samples = []
+    for index in range(sample_count):
+        samples.append(round(os.getloadavg()[0] * 10000 / logical_cpus))
+        if index + 1 < sample_count:
+            time.sleep(sample_interval_ms / 1000)
+    return max(samples)
+
+
+def local_preflight(
+    class_id: str, host: dict[str, Any], policy: dict[str, Any]
+) -> dict[str, Any]:
     require(git_output("branch", "--show-current") == "main", "local timing requires main")
     require(not git_output("status", "--porcelain"), "local timing requires a clean worktree")
     head = git_output("rev-parse", "HEAD")
     require(head == git_output("rev-parse", "origin/main"), "local timing requires exact origin/main")
-    profile = reference_host_profiles.profile_map(load_host_policy())[host["platformId"]]
-    load_limit = profile["benchmarkControls"]["backgroundLoadMaxPercent"] * 100
+    local_policy = policy["localPreflight"]
+    load_limit = local_policy["backgroundLoadMaxPercent"] * 100
     logical_cpus = host["metadata"]["cpu"]["logicalCores"]
-    load_basis_points = round(os.getloadavg()[0] * 10000 / logical_cpus)
+    load_basis_points = sampled_background_load_basis_points(
+        logical_cpus,
+        local_policy["backgroundLoadSampleCount"],
+        local_policy["backgroundLoadSampleIntervalMs"],
+    )
     competing = competing_process_count()
     thermal = thermal_state()
     require(load_basis_points <= load_limit, "local timing background load is too high")
-    require(competing == 0, "local timing has competing build processes")
+    require(
+        competing <= local_policy["competingBuildProcessMaxCount"],
+        "local timing has competing build processes",
+    )
     require(thermal == "nominal", "local timing thermal state is not nominal")
     if class_id == "local-warm":
         cache = resolved_default_cache()
@@ -601,7 +632,7 @@ def _record_local(class_id: str, history_path: Path) -> dict[str, Any]:
     class_policy = classes[class_id]
     workload = workloads[class_policy["workloadIdentity"]]
     host = host_observation(require_conformant=True)
-    control = local_preflight(class_id, host)
+    control = local_preflight(class_id, host, policy)
     toolchain = toolchain_observation(workload["runner"])
     records = load_history(history_path, policy)
     previous = next(
@@ -975,8 +1006,12 @@ def fixture_observation(
     }
     local = class_id.startswith("local-")
     control = {
-        "backgroundLoadBasisPoints": 100 if local else None,
-        "backgroundLoadLimitBasisPoints": 500 if local else None,
+        "backgroundLoadBasisPoints": 2500 if local else None,
+        "backgroundLoadLimitBasisPoints": (
+            policy["localPreflight"]["backgroundLoadMaxPercent"] * 100
+            if local
+            else None
+        ),
         "cacheState": class_policy["cachePrecondition"],
         "competingLaneState": class_policy["competingLaneState"],
         "competingProcessCount": 0,
@@ -1006,6 +1041,32 @@ def fixture_observation(
 
 def self_test() -> int:
     policy = calibration.validate_policy(calibration.load_json(calibration.POLICY_PATH))
+    load_samples = iter(
+        [
+            (0.8, 0.0, 0.0),
+            (1.6, 0.0, 0.0),
+            (1.2, 0.0, 0.0),
+            (2.0, 0.0, 0.0),
+            (1.0, 0.0, 0.0),
+        ]
+    )
+    sleep_calls = []
+    original_getloadavg = os.getloadavg
+    original_sleep = time.sleep
+    try:
+        os.getloadavg = lambda: next(load_samples)
+        time.sleep = lambda seconds: sleep_calls.append(seconds)
+        require(
+            sampled_background_load_basis_points(8, 5, 1000) == 2500,
+            "local timing load sampler did not retain the maximum",
+        )
+        require(
+            sleep_calls == [1.0, 1.0, 1.0, 1.0],
+            "local timing load sampler interval count drifted",
+        )
+    finally:
+        os.getloadavg = original_getloadavg
+        time.sleep = original_sleep
     first = fixture_observation(policy, "local-warm", "fixture-1", ZERO_SHA256)
     second = fixture_observation(
         policy, "local-clean-fallback", "fixture-2", first["identitySha256"]
@@ -1015,7 +1076,7 @@ def self_test() -> int:
     )
     for record in (first, second, hosted):
         validate_observation(record, policy)
-    controls = 3
+    controls = 4
 
     mutations = []
     candidate = copy.deepcopy(first)
@@ -1037,7 +1098,15 @@ def self_test() -> int:
     control = parse_canonical_json(
         candidate["controlObservationCanonicalJson"], "fixture control"
     )
-    control["backgroundLoadBasisPoints"] = 501
+    control["backgroundLoadBasisPoints"] = 3001
+    candidate["controlObservationCanonicalJson"] = canonical_json(control)
+    candidate["identitySha256"] = observation_identity(candidate)
+    mutations.append(candidate)
+    candidate = copy.deepcopy(first)
+    control = parse_canonical_json(
+        candidate["controlObservationCanonicalJson"], "fixture control"
+    )
+    control["backgroundLoadLimitBasisPoints"] = 3001
     candidate["controlObservationCanonicalJson"] = canonical_json(control)
     candidate["identitySha256"] = observation_identity(candidate)
     mutations.append(candidate)

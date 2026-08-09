@@ -15,15 +15,17 @@ python3 scripts/lib/roadmap_execution_manifest.py \
   --render \
   --output "$TMP_DIR/rendered.json" >/dev/null
 python3 scripts/lib/roadmap_execution_manifest.py --slice >"$TMP_DIR/slice.json"
+python3 scripts/lib/roadmap_execution_manifest.py --ready >"$TMP_DIR/ready.json"
 python3 scripts/lib/roadmap_execution_manifest.py --explain R0.4.j >"$TMP_DIR/explain.json"
 
-python3 - "$TMP_DIR/slice.json" "$TMP_DIR/explain.json" <<'PY'
+python3 - "$TMP_DIR/slice.json" "$TMP_DIR/ready.json" "$TMP_DIR/explain.json" <<'PY'
 import json
 from pathlib import Path
 import sys
 
 execution_slice = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-explanation = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+readiness = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+explanation = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
 if execution_slice["kind"] != "genesis/roadmap-execution-slice-v0.1":
     raise SystemExit("roadmap-execution-manifest: execution slice kind drift")
 if execution_slice["authority"]["derived_view_only"] is not True:
@@ -88,6 +90,46 @@ if (
     raise SystemExit("roadmap-execution-manifest: task explanation drift")
 if [task["id"] for task in execution_slice["focus_tasks"]] != ["R0.4.j"]:
     raise SystemExit("roadmap-execution-manifest: corrective focus drift")
+if set(readiness) != {
+    "kind", "version", "authority", "inputIdentities", "wipLimit",
+    "openTaskCount", "startReadyTaskCount", "frontierFocusTaskIds",
+    "selectedReadyTaskIds", "startReadyTasks", "nonclaims",
+}:
+    raise SystemExit("roadmap-execution-manifest: readiness report field drift")
+if (
+    readiness["kind"] != "genesis/roadmap-start-readiness-v0.1"
+    or readiness["authority"] != {
+        "derivedViewOnly": True,
+        "policy": "policies/roadmap_execution_v0.1.json",
+        "roadmap": "ROADMAP.md",
+        "selector": "--slice",
+    }
+    or readiness["wipLimit"] != execution_slice["wip_limit"]
+    or readiness["frontierFocusTaskIds"] != ["R0.4.j"]
+    or readiness["selectedReadyTaskIds"] != ["R0.4.j"]
+    or readiness["startReadyTaskCount"] != len(readiness["startReadyTasks"])
+):
+    raise SystemExit("roadmap-execution-manifest: readiness report derivation drift")
+ready_fields = {
+    "id", "title", "phase", "workstream", "riskClass", "resourceClass",
+    "prerequisites", "selectedByFrontier", "selectionDisposition",
+    "deprioritizedReason", "source",
+}
+if any(set(task) != ready_fields for task in readiness["startReadyTasks"]):
+    raise SystemExit("roadmap-execution-manifest: readiness task field drift")
+ready_ids = [task["id"] for task in readiness["startReadyTasks"]]
+if ready_ids != ["R0.4.j", "R1.5.c", "R2.1.h", "R2.2.f", "R4.1.a"]:
+    raise SystemExit("roadmap-execution-manifest: global readiness set drift")
+for task in readiness["startReadyTasks"]:
+    selected = task["id"] == "R0.4.j"
+    if (
+        task["selectedByFrontier"] is not selected
+        or task["selectionDisposition"]
+        != ("selected" if selected else "ready-but-deprioritized")
+        or task["deprioritizedReason"]
+        != (None if selected else "wip-limit-and-frontier-priority")
+    ):
+        raise SystemExit("roadmap-execution-manifest: readiness selection drift")
 PY
 
 if python3 scripts/lib/roadmap_execution_manifest.py --explain R99.99.z \

@@ -6,6 +6,14 @@
   "observationSchemaPath": "docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json",
   "evidencePath": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
   "observationHistoryPath": ".genesis/perf/engineering_gate_timing_observations_v0.1.jsonl",
+  "localPreflight": {
+    "backgroundLoadMeasurement": "maximum-one-minute-load-average-over-samples",
+    "backgroundLoadMaxPercent": 30,
+    "backgroundLoadSampleCount": 5,
+    "backgroundLoadSampleIntervalMs": 1000,
+    "competingBuildProcessMaxCount": 0,
+    "operatingMode": "agent-operated-reference-host"
+  },
   "sampling": {
     "discardedWarmups": 5,
     "retainedConformantSamples": 30,

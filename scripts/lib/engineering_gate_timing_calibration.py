@@ -52,6 +52,7 @@ POLICY_FIELDS = {
     "observationSchemaPath",
     "evidencePath",
     "observationHistoryPath",
+    "localPreflight",
     "sampling",
     "statistics",
     "trend",
@@ -219,7 +220,12 @@ def validate_toolchain_observation(document: Any) -> dict[str, Any]:
     return document
 
 
-def validate_control_observation(document: Any, class_id: str) -> dict[str, Any]:
+def validate_control_observation(
+    document: Any,
+    class_id: str,
+    *,
+    local_background_load_limit_basis_points: Optional[int] = None,
+) -> dict[str, Any]:
     require(
         isinstance(document, dict) and set(document) == CONTROL_FIELDS,
         "timing control observation fields mismatch",
@@ -244,6 +250,12 @@ def validate_control_observation(document: Any, class_id: str) -> dict[str, Any]
         "timing competing process count invalid",
     )
     if class_id.startswith("local-"):
+        require(
+            isinstance(local_background_load_limit_basis_points, int)
+            and not isinstance(local_background_load_limit_basis_points, bool)
+            and local_background_load_limit_basis_points > 0,
+            "local timing load limit is not policy-bound",
+        )
         require(document["source"] == "local-preflight", "local timing class lacks local preflight")
         require(document["referenceHostConformant"] is True, "local timing host is not conformant")
         require(document["thermalState"] == "nominal", "local timing thermal state is not nominal")
@@ -253,6 +265,8 @@ def validate_control_observation(document: Any, class_id: str) -> dict[str, Any]
             and not isinstance(document["backgroundLoadBasisPoints"], bool)
             and isinstance(document["backgroundLoadLimitBasisPoints"], int)
             and not isinstance(document["backgroundLoadLimitBasisPoints"], bool)
+            and document["backgroundLoadLimitBasisPoints"]
+            == local_background_load_limit_basis_points
             and document["backgroundLoadBasisPoints"]
             <= document["backgroundLoadLimitBasisPoints"],
             "local timing background load exceeds its declared limit",
@@ -522,6 +536,18 @@ def validate_policy(policy: Any) -> dict[str, Any]:
         "timing observation history path drift",
     )
     require(
+        policy["localPreflight"]
+        == {
+            "backgroundLoadMeasurement": "maximum-one-minute-load-average-over-samples",
+            "backgroundLoadMaxPercent": 30,
+            "backgroundLoadSampleCount": 5,
+            "backgroundLoadSampleIntervalMs": 1000,
+            "competingBuildProcessMaxCount": 0,
+            "operatingMode": "agent-operated-reference-host",
+        },
+        "timing local preflight contract mismatch",
+    )
+    require(
         policy["sampling"]
         == {
             "discardedWarmups": 5,
@@ -767,6 +793,11 @@ def validate_sample(
             "controlObservationCanonicalJson",
         ),
         class_policy["id"],
+        local_background_load_limit_basis_points=(
+            policy["localPreflight"]["backgroundLoadMaxPercent"] * 100
+            if class_policy["id"].startswith("local-")
+            else None
+        ),
     )
     require(
         control["referenceHostConformant"] == host["conformance"]["ok"],
@@ -963,7 +994,9 @@ def fixture_sample(sequence: int, duration: int, outcome: str = "semantic-pass")
 
 
 def fixture_environment(
-    class_policy: dict[str, Any], workload: dict[str, Any]
+    policy: dict[str, Any],
+    class_policy: dict[str, Any],
+    workload: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     host_policy = reference_host_profiles.validate_policy(
         reference_host_profiles.load_json(reference_host_profiles.POLICY)
@@ -990,8 +1023,12 @@ def fixture_environment(
     }
     local = class_policy["sourceIdentityKind"] == "local-observation"
     control = {
-        "backgroundLoadBasisPoints": 100 if local else None,
-        "backgroundLoadLimitBasisPoints": 500 if local else None,
+        "backgroundLoadBasisPoints": 2500 if local else None,
+        "backgroundLoadLimitBasisPoints": (
+            policy["localPreflight"]["backgroundLoadMaxPercent"] * 100
+            if local
+            else None
+        ),
         "cacheState": class_policy["cachePrecondition"],
         "competingLaneState": class_policy["competingLaneState"],
         "competingProcessCount": 0,
@@ -1015,7 +1052,9 @@ def complete_fixture(policy: dict[str, Any], evidence: dict[str, Any]) -> tuple[
             for item in policy["workloads"]
             if item["id"] == class_policy["workloadIdentity"]
         )
-        host, toolchain, control = fixture_environment(class_policy, workload)
+        host, toolchain, control = fixture_environment(
+            policy, class_policy, workload
+        )
         warmups = [fixture_sample(index, 100_000 + index) for index in range(1, 6)]
         retained = [fixture_sample(index, 100_000 + index * 100) for index in range(6, 36)]
         for sample in warmups + retained:

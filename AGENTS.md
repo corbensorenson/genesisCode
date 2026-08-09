@@ -9,7 +9,7 @@ Build four dependency-ordered, independently governed outcomes:
 3. Genesis Foundry: a post-v1, proof-carrying research system that consumes frozen GenesisCode interfaces and never enters the production dependency graph.
 4. Genesis Model: an optional specialist that starts only after the named readiness gate in `ROADMAP.md`; GenesisCode and GenesisBench must remain useful without it.
 
-The canonical strategy and dependency order live in `ROADMAP.md`. Current execution state is generated from it and `policies/roadmap_execution_v0.1.json`; inspect it with `python3 scripts/lib/roadmap_execution_manifest.py --slice`. `docs/TECH_HANDOFF.md` and `docs/PAPER_v0.2.md` are historical architecture inputs, not current project status.
+The canonical strategy and dependency order live in `ROADMAP.md`. Current execution state is generated from it and `policies/roadmap_execution_v0.1.json`; inspect selected work with `python3 scripts/lib/roadmap_execution_manifest.py --slice` and all graph-ready work with the non-authoritative `--ready` view. `docs/TECH_HANDOFF.md` and `docs/PAPER_v0.2.md` are historical architecture inputs, not current project status.
 
 ## Authority Order
 
@@ -44,6 +44,6 @@ Never hand-edit a generated authority. Use its explicit `update_*` command, insp
 
 ## Current Concentration
 
-Close P1.7 and P1.6 through reopened R0.4.j, ordering aggregate generated-publication resource ownership and the complete R0.4.i/R0.4.k guard rerun before exact-main hosted evidence; then close P1.5 through R2.2.f. Follow the generated sequential frontier through R1.3, R1.5, R1.6, R1.7, R2.1, and R2.3 before SH-A begins the R4.1 self-host authority cutover. GenesisBench campaigns, private-lineage commissioning, ranking, and publication remain frozen until exact reviewed R9.4.f; only the separately custodied, read-only, non-scoring portability canary may run under its declared conditions. Continue M1-A and M2 before bytecode breadth, universal platform breadth, Foundry implementation, or Genesis Model implementation. Foundry implementation WIP and Genesis Model implementation WIP are zero until their graph prerequisites become start-ready.
+Close reopened R0.4.j with complete class-separated timing calibration and exact-main standard/full/watchdog evidence, then close P1.5 through R2.2.f. R4.1.a is already graph-ready but WIP-deferred: after R2.2.f, complete the full SH-A truth/boundary package before following the generated sequential frontier through R1.3, R1.5, R1.6, R1.7, R2.1, and R2.3. GenesisBench campaigns, private-lineage commissioning, ranking, and publication remain frozen until exact reviewed R9.4.f; only the separately custodied, read-only, non-scoring portability canary may run under its declared conditions. Continue the self-host Core, M1-A, and M2 before bytecode breadth, universal platform breadth, Foundry implementation, or Genesis Model implementation. Foundry implementation WIP and Genesis Model implementation WIP are zero until their graph prerequisites become start-ready.
 
 Scoped instructions under a subtree override this file only for that subtree; they cannot weaken these program invariants.

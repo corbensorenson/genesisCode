@@ -266,13 +266,20 @@ Strict/full profile runtime reports:
     `scripts/test_changed_fast.sh --base HEAD --runner cargo --min-history 1`
     in `profile-fallback` mode from the declared one-file impact input. Collection
     requires clean `main` at exact `origin/main`, a conformant reference host,
-    nominal thermal state, bounded background load, no competing build process,
+    nominal thermal state, bounded agent-operated-host load, no competing build process,
     an exclusive advisory collector lock, process-group timeout/kill/reap, and a
     report proving the selected profile, runner, file count, budget, and terminal
     result. `local-warm` requires the reusable root-host cache; the clean class
     uses the updater's fresh external worktree and a collector-owned empty Cargo
     cache. The collector is:
     `python3 scripts/lib/engineering_gate_timing_observations.py record-local --class-id <local-warm|local-clean-fallback>`.
+    The timing-specific preflight takes five one-second-spaced samples of the
+    one-minute load average and records their maximum. It permits at most 30% of
+    logical CPU for the declared agent-operated reference-host mode, while still
+    requiring zero competing Cargo, Rust, Genesis, nextest, or Quarto processes.
+    This is not a promotion of the general 5% unattended reference-lab control:
+    it defines the realistic local agent-loop timing class and binds the exact
+    limit into every observation so a collector cannot self-declare headroom.
   - The hosted class measures the exact `test_suite` standard job only for an
     explicit `workflow_dispatch` of `main`. `Begin Hosted Timing Calibration`
     starts the monotonic interval immediately after checkout; `Finalize Hosted
