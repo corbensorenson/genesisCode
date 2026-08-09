@@ -39,11 +39,13 @@
     "path": "docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json",
     "chronologyId": "ci-standard-2026-08-08",
     "firstRunId": 31264075302,
-    "lastRunId": 31278093079,
+    "lastRunId": 31284542152,
     "failedCount": 3,
     "cancelledCount": 1,
-    "successfulCount": 1,
-    "recordsSha256": "de17406ed90121cea7350dee6e2f1ab739dfbafdcd1e679b77650c07832bfed6"
+    "successfulCount": 3,
+    "recordsSha256": "29aa6d73fea05ee7fc3c4d05f2c2172fb9de1a6c820c411d56e56c8c01055735",
+    "exactMainSuccessRunId": 31284542152,
+    "independentWatchdogRunId": 31287266902
   },
   "selectionProfiles": {
     "none": [],

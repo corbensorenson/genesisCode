@@ -121,6 +121,8 @@ def validate_policy(policy: Any) -> dict[str, Any]:
             "cancelledCount",
             "successfulCount",
             "recordsSha256",
+            "exactMainSuccessRunId",
+            "independentWatchdogRunId",
         },
         "standard chronology authority fields are not closed",
     )
@@ -511,17 +513,23 @@ def verify_standard_chronology(policy: Any, chronology: Any) -> None:
             "status",
             "correctiveAction",
             "counterexampleRunId",
-            "subsequentSuccessRunId",
+            "firstSubsequentSuccessRunId",
+            "exactMainSuccessRunId",
+            "independentWatchdogRunId",
             "remainingNonclaims",
         },
         "standard chronology disposition is not closed",
     )
     by_id = {row["runId"]: row for row in records}
     require(
-        disposition["status"] == "retained-with-open-corrective-action"
+        disposition["status"] == "retained-with-corrected-watchdog-observation"
         and disposition["correctiveAction"] == "R0.4.j/P1.6"
         and by_id.get(disposition["counterexampleRunId"], {}).get("conclusion") == "failure"
-        and by_id.get(disposition["subsequentSuccessRunId"], {}).get("conclusion") == "success",
+        and by_id.get(disposition["firstSubsequentSuccessRunId"], {}).get("conclusion") == "success"
+        and disposition["exactMainSuccessRunId"] == records[-1]["runId"]
+        and by_id.get(disposition["exactMainSuccessRunId"], {}).get("conclusion") == "success"
+        and isinstance(disposition["independentWatchdogRunId"], int)
+        and disposition["independentWatchdogRunId"] > disposition["exactMainSuccessRunId"],
         "standard chronology disposition mismatch",
     )
     nonclaims = disposition["remainingNonclaims"]

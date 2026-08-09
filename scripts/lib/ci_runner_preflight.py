@@ -112,17 +112,21 @@ def validate_policy(policy: Any) -> tuple[dict[str, list[str]], list[dict[str, A
             "cancelledCount",
             "successfulCount",
             "recordsSha256",
+            "exactMainSuccessRunId",
+            "independentWatchdogRunId",
         }
         and standard["path"]
         == "docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json"
         and standard["chronologyId"] == "ci-standard-2026-08-08"
         and standard["firstRunId"] == 31264075302
-        and standard["lastRunId"] == 31278093079
+        and standard["lastRunId"] == 31284542152
         and standard["failedCount"] == 3
         and standard["cancelledCount"] == 1
-        and standard["successfulCount"] == 1
+        and standard["successfulCount"] == 3
         and standard["recordsSha256"]
-        == "de17406ed90121cea7350dee6e2f1ab739dfbafdcd1e679b77650c07832bfed6",
+        == "29aa6d73fea05ee7fc3c4d05f2c2172fb9de1a6c820c411d56e56c8c01055735"
+        and standard["exactMainSuccessRunId"] == 31284542152
+        and standard["independentWatchdogRunId"] == 31287266902,
         "standard chronology authority mismatch",
     )
     profiles = policy["selectionProfiles"]

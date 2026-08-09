@@ -102,7 +102,6 @@ Authorized unqualified claims:
 Known GenesisCode gaps
 
 - `P1.5`: Eliminate host-bridge termination failure and cleanup-error suppression under public-path fault injection and complete R2.2.f cleanup proof. Affected claims: `CAP-HOST-BRIDGE`, `CAP-ASSURANCE-PROFILES`
-- `P1.6`: Require independent exact-main standard-profile watchdog disposition and re-close R0.4.j without substituting push-fast evidence. Affected claims: `CAP-ASSURANCE-PROFILES`
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`
 - `R1.5.a`: Generate the authoring skill from canonical language and capability inputs. Affected claims: `CAP-AGENT-SKILL-PACK`

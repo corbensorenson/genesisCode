@@ -11,16 +11,16 @@
     ],
     "profile": "standard",
     "fromRunIdInclusive": 31264075302,
-    "throughRunIdInclusive": 31278093079,
-    "observedAt": "2026-08-08T22:30:00Z"
+    "throughRunIdInclusive": 31284542152,
+    "observedAt": "2026-08-09T00:57:41Z"
   },
   "summary": {
     "cancelled": 1,
     "failed": 3,
-    "successful": 1,
-    "total": 5
+    "successful": 3,
+    "total": 7
   },
-  "recordsSha256": "de17406ed90121cea7350dee6e2f1ab739dfbafdcd1e679b77650c07832bfed6",
+  "recordsSha256": "29aa6d73fea05ee7fc3c4d05f2c2172fb9de1a6c820c411d56e56c8c01055735",
   "records": [
     {
       "runId": 31264075302,
@@ -86,17 +86,45 @@
       "updatedAt": "2026-08-08T22:12:39Z",
       "displayTitle": "ci / workflow_dispatch / standard",
       "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31278093079"
+    },
+    {
+      "runId": 31282186172,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "d07ff48e909fea43ec405b7160901b5bbe0b62ad",
+      "createdAt": "2026-08-08T22:39:12Z",
+      "startedAt": "2026-08-08T22:39:12Z",
+      "updatedAt": "2026-08-08T23:53:08Z",
+      "displayTitle": "ci / workflow_dispatch / standard",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31282186172"
+    },
+    {
+      "runId": 31284542152,
+      "runAttempt": 1,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "63db7e3f3a00da6b582aa0464ad1e12d9df2e85d",
+      "createdAt": "2026-08-08T23:41:33Z",
+      "startedAt": "2026-08-08T23:41:33Z",
+      "updatedAt": "2026-08-09T00:56:33Z",
+      "displayTitle": "ci / workflow_dispatch / standard",
+      "url": "https://github.com/corbensorenson/genesisCode/actions/runs/31284542152"
     }
   ],
   "disposition": {
-    "status": "retained-with-open-corrective-action",
+    "status": "retained-with-corrected-watchdog-observation",
     "correctiveAction": "R0.4.j/P1.6",
     "counterexampleRunId": 31269647811,
-    "subsequentSuccessRunId": 31278093079,
+    "firstSubsequentSuccessRunId": 31278093079,
+    "exactMainSuccessRunId": 31284542152,
+    "independentWatchdogRunId": 31287266902,
     "remainingNonclaims": [
       "This chronology does not qualify a GenesisCode product release.",
-      "A later standard success does not erase retained failures or prove the watchdog classifies standard independently.",
-      "P1.6 closes only after the corrected evaluator recognizes exact-head standard and full evidence on reviewed main."
+      "Closing P1.6 does not close R0.4.j while its statistical timing-calibration predicate remains open.",
+      "A successful exact-main standard/full pair does not erase retained failures or authorize a product release."
     ]
   }
 }

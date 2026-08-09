@@ -7,12 +7,11 @@ Scope:
 - This file is the canonical active P0/P1 defect-ID source. The capability ledger mirrors the exact IDs, and generated status views must match it.
 - Keep completed work out of this file. Durable source history and E1-E4 evidence establish closure; mutable `.genesis/perf/` observations do not.
 
-Open checklist items: 2
+Open checklist items: 1
 
 ## Critical Path
 
 - [ ] P1.5 Eliminate host-bridge termination failure and error suppression under mandatory fault injection. `runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers` produced `gpu/bridge-reap` after the process group survived repeated termination sweeps, while persistent-session disconnect, malformed-response cleanup, and owner teardown can discard `stop()` failures before they reach the sealed operation boundary. Close only when R2.2.f proves success, malformed response, disconnection, failure, cancellation, timeout, owner drop, daemon restart, and repeated-load cleanup through public operations; every cleanup failure must remain observable as a typed reap/cleanup error, all workers must join or remain under an explicitly reported bounded containment failure, and no descendant may survive on any supported native host.
-- [ ] P1.6 Restore independently watched exact-main standard-profile disposition and truthful R0.4.j closure. The watchdog classifies exact-head `push` runs, which are `fast`, and full dispatches, but does not classify or require the separately dispatched `standard` profile promised by R0.4.j and M0. Exact revision `6d22bc1e1eebee6ac76b8c20fb513f7d14b37d5b` demonstrated the counterexample: standard run `31269647811` failed while full and multiple watchdog runs passed. Close only when policy and evaluator distinguish standard from fast/full, require the latest exact-main standard run to reach a successful terminal disposition within two hours, reject missing, stale, cancelled, failed, wrong-head, and superseded-only evidence, preserve append-only history, and independently recognize a passing exact-main standard/full pair.
 
 ## Evidence Anchors
 

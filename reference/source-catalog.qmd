@@ -14,12 +14,12 @@ toc-depth: 2
 | Source | Title / kind | Type | SHA-256 |
 |---|---|---|---|
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `450876e7c719` |
-| [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `241bbb84566f` |
+| [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `11480482bf7a` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `80368c73cde9` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `b54ac6413134` |
-| [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-08) | md | `104adfc28669` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `658a53676476` |
+| [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-08) | md | `44928f49c48d` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
-| [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `d11bc50b8636` |
+| [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `ab8cd51869ac` |
 
 ## Top-level documentation
 
@@ -59,8 +59,8 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json`](../docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json) | genesis/evidence-adversarial-matrix-v0.1 | json | `f9f281eb2bf7` |
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
-| [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `c978fe0c1b91` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `c5b0e4a20f13` |
+| [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `aac30c63ac3f` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `9a8f743acf1c` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -74,7 +74,7 @@ toc-depth: 2
 | [`docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub`](../docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub) | roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub | pub | `f942d973dd55` |
 | [`docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json`](../docs/program/incidents/CI_LIVENESS_2026-07-18_2026-08-04.json) | genesis/ci-incident-disposition-v0.1 | json | `f75cfa079e5b` |
 | [`docs/program/incidents/CI_RELEASE_FULL_CHRONOLOGY_2026-08-05_2026-08-08.json`](../docs/program/incidents/CI_RELEASE_FULL_CHRONOLOGY_2026-08-05_2026-08-08.json) | genesis/ci-release-full-chronology-v0.1 | json | `8ba6eccb5d0c` |
-| [`docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json`](../docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json) | genesis/ci-standard-chronology-v0.1 | json | `9b6ebacf3b4e` |
+| [`docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json`](../docs/program/incidents/CI_STANDARD_CHRONOLOGY_2026-08-08.json) | genesis/ci-standard-chronology-v0.1 | json | `cd497f4a7000` |
 
 ## docs/skill_pack
 
@@ -106,7 +106,7 @@ toc-depth: 2
 | [`docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json`](../docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json) | genesis/capability-coverage-audit-v0.1 | json | `b1263e60750f` |
 | [`docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.md`](../docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.md) | Capability Coverage Audit v0.1 | md | `765dcf81841f` |
 | [`docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json`](../docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json) | genesis/capability-coverage-status-v0.1 | json | `f69150c81e83` |
-| [`docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json`](../docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json) | genesis/capability-evidence-ledger-v0.1 | json | `c0ed088a9a6a` |
+| [`docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json`](../docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json) | genesis/capability-evidence-ledger-v0.1 | json | `64875e17d645` |
 | [`docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json`](../docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json) | GenesisCode Capability Evidence Ledger v0.1 | schema | `cd3c5b62c057` |
 | [`docs/spec/CAPS_TOML.md`](../docs/spec/CAPS_TOML.md) | caps.toml (Capability Policy) v0.2 | md | `e718c78fd6de` |
 | [`docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json`](../docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json) | GenesisCode Cargo Cache Policy v0.1 | schema | `10c82a4c531b` |
@@ -138,8 +138,8 @@ toc-depth: 2
 | [`docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json`](../docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json) | GenesisCode Evidence Fixture Classification v0.1 | schema | `84818f18c09b` |
 | [`docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json`](../docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json) | GenesisCode Evidence Storage Policy v0.1 | schema | `c70de6a31aa6` |
 | [`docs/spec/EVIDENCE_STORE.md`](../docs/spec/EVIDENCE_STORE.md) | Evidence Store v0.2 (Durability + Integrity) | md | `dafe99c27e72` |
-| [`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json`](../docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json) | genesis/feature-matrix-evidence-v0.1 | json | `4c7bc4679b89` |
-| [`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md`](../docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md) | Feature Matrix Evidence Ledger v0.1 | md | `c4f31c57d994` |
+| [`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json`](../docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json) | genesis/feature-matrix-evidence-v0.1 | json | `66b184dc53e6` |
+| [`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md`](../docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md) | Feature Matrix Evidence Ledger v0.1 | md | `712a86525b5b` |
 | [`docs/spec/FS_SANDBOX.md`](../docs/spec/FS_SANDBOX.md) | Filesystem Capability Sandbox v0.2 | md | `16da75a804bc` |
 | [`docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`](../docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md) | Full-Selfhost Cutover Profile v0.1 | md | `1958bfd73267` |
 | [`docs/spec/GATE_MANIFEST_v0.1.schema.json`](../docs/spec/GATE_MANIFEST_v0.1.schema.json) | GenesisCode Gate Manifest v0.1 | schema | `835ab09b1767` |
@@ -315,6 +315,6 @@ toc-depth: 2
 
 | Source | Title / kind | Type | SHA-256 |
 |---|---|---|---|
-| [`docs/status/REDTEAM_REPORT.md`](../docs/status/REDTEAM_REPORT.md) | GenesisCode Red-Team Report (P0/P1 Active Risk Summary) | md | `9fc18650d957` |
+| [`docs/status/REDTEAM_REPORT.md`](../docs/status/REDTEAM_REPORT.md) | GenesisCode Red-Team Report (P0/P1 Active Risk Summary) | md | `fd4578c6e81b` |
 | [`docs/status/SELFHOST_AUTHORITY_v0.1.md`](../docs/status/SELFHOST_AUTHORITY_v0.1.md) | GenesisCode Semantic Selfhost Authority Status v0.1 | md | `006adb0009fa` |
 | [`docs/status/SELFHOST_CUTOVER.md`](../docs/status/SELFHOST_CUTOVER.md) | Selfhost Cutover Dashboard (v0.2) | md | `6456e945b5f9` |
