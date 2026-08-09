@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "04287fb6c2376e7a9dc819be60d4b3c15af08c6cc3526f735db4d0ba63a13486",
+  "contentIdentitySha256": "5adb2cddeb9984c066f8e866193e79b05ecfbe0931aa2cbb9cb2077180eaddf6",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -1754,7 +1754,7 @@
           "pathOrWorkspacePackageRecords": 18,
           "registryPackageRecords": 441,
           "schemaVersion": 4,
-          "sha256": "e0714f3cf7579ec40ece9b4bb341c69e039753d721bcb32ff467d819fb1a7ddc",
+          "sha256": "d72fab43725d3a9b0c033644f4adad3e85c9404b864ce0fa42b59f989fd6accd",
           "totalPackageRecords": 459,
           "uniquePackageIdentities": 459
         },
@@ -2657,7 +2657,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_supply_chain.sh",
-          "executionIdentitySha256": "1b8238b4729d2d38e8e227aa7a987f0a30f864a689511d80eb0494af56165fc7",
+          "executionIdentitySha256": "8b46f84ab4ee1987a4f906f473383335a8c61fea2822b1af8ff29068884d1a52",
           "gateId": "gate/supply-chain",
           "kind": "release-only",
           "networkMode": "deny",
@@ -2674,13 +2674,13 @@
         }
       ],
       "passedChecks": [],
-      "policySha256": "b06ac4fa64316d97cd4fc7f4ed540140a027559b7a80838d4d5e6e5826323480"
+      "policySha256": "efdae31392b03f5228bd48e96eb14ef718520ae19b4d9de064ef9ed1c19978e5"
     }
   },
   "sourceIdentities": {
-    "Cargo.lock": "e0714f3cf7579ec40ece9b4bb341c69e039753d721bcb32ff467d819fb1a7ddc",
+    "Cargo.lock": "d72fab43725d3a9b0c033644f4adad3e85c9404b864ce0fa42b59f989fd6accd",
     "Cargo.toml": "63addc5871d2f2b420b093c4abe12bef9faece7015d127a73a1314362a67bcae",
-    "deny.toml": "b06ac4fa64316d97cd4fc7f4ed540140a027559b7a80838d4d5e6e5826323480",
+    "deny.toml": "efdae31392b03f5228bd48e96eb14ef718520ae19b4d9de064ef9ed1c19978e5",
     "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json": "4ce9bed19d3dac8926a06a15f2edceaaaa038c3a9a814265b7bd13858359a173",
     "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json": "1ee6541e1f594edce44ae99a9e17c5288c9cab7a4f0818528c821bdc11b15546",
     "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json": "1dcfce299a83bac9ba9601b064c3da8caa1ffa61602cca5446febc9132172e81",

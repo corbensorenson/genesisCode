@@ -150,6 +150,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/DEPENDENCY_MIRROR_v0.1.schema.json` - closed dependency-mirror policy schema.
 - `docs/spec/DEPENDENCY_MIRROR_MANIFEST_v0.1.schema.json` - closed generated mirror-evidence schema.
 - `genesis.dependency-mirror.json` - authoritative repository dependency-mirror policy.
+- `policies/rustsec_advisory_db_v0.1.json` - reviewed exact RustSec commit, canonical content identity, storage bounds, licenses, cargo-deny version, and nonclaim policy.
+- `docs/spec/RUSTSEC_ADVISORY_DB_v0.1.schema.json` - closed pinned RustSec advisory-database policy contract.
+- `scripts/lib/rustsec_advisory_db.py` - exact-source inspector, bounded content-addressed preparer, installed-snapshot verifier, host-path config renderer, and adversarial control suite; supply-chain checks consume its prepared snapshot without network access.
 - `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#cargo-cache-policy` - normative content-addressed Cargo cache scopes, key inputs, override boundary, and rebuild-island prohibition.
 - `docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json` - closed Cargo cache policy schema.
 - `policies/cargo_cache_v0.1.json` - authoritative four-scope Cargo cache policy.

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schema/rustsec-advisory-db-v0.1.json",
+  "title": "GenesisCode pinned RustSec advisory database policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "source", "storage", "tool", "nonclaims"],
+  "properties": {
+    "kind": {"const": "genesis/rustsec-advisory-database-policy-v0.1"},
+    "version": {"const": "0.1"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "commit", "treeSha256", "licensePaths"],
+      "properties": {
+        "url": {"const": "https://github.com/RustSec/advisory-db"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "treeSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "licensePaths": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"}
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "databaseDirectory", "maxFiles", "maxBytes"],
+      "properties": {
+        "root": {"const": ".genesis/dependency-mirrors/rustsec-advisory-db-v0.1"},
+        "databaseDirectory": {"const": "advisory-db-3157b0e258782691"},
+        "maxFiles": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "maxBytes": {"type": "integer", "minimum": 1, "maximum": 134217728}
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "cargo-deny"},
+        "version": {"const": "0.19.0"}
+      }
+    },
+    "nonclaims": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

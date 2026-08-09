@@ -145,7 +145,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 | Lockfile | Records | Registry | Git | SHA-256 |
 |---|---:|---:|---:|---|
-| `Cargo.lock` | 459 | 441 | 0 | `e0714f3cf7579ec40ece9b4bb341c69e039753d721bcb32ff467d819fb1a7ddc` |
+| `Cargo.lock` | 459 | 441 | 0 | `d72fab43725d3a9b0c033644f4adad3e85c9404b864ce0fa42b59f989fd6accd` |
 | `tools/genesis-evidence-producer/Cargo.lock` | 41 | 40 | 0 | `a7aa895176386dcbde3de7e0d49a8511ca38227880ee30e82c12978cc5fa416e` |
 | `tools/genesis-evidence-verifier/Cargo.lock` | 41 | 40 | 0 | `d3a5c9c2e7d3cb614d79b3360210c93f63317cdbb808250d0084ff4c1822f3eb` |
 | `package-lock.json` | 3 | sha512 integrity | 0 | `f5b2fa938c2c572fa8172b0f57418c10dca846791855fbd25b1b662b188097ed` |
@@ -164,7 +164,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `04287fb6c2376e7a9dc819be60d4b3c15af08c6cc3526f735db4d0ba63a13486`.
+Machine-readable identity: `5adb2cddeb9984c066f8e866193e79b05ecfbe0931aa2cbb9cb2077180eaddf6`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

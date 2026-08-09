@@ -624,6 +624,10 @@ jobs:
         with:
           tool: cargo-deny@0.19.0
 
+      - name: Prepare Pinned RustSec Advisory Database
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: python3 scripts/lib/rustsec_advisory_db.py prepare
+
       - name: Fetch Offline Gate Dependencies
         run: |
           cargo fetch --locked

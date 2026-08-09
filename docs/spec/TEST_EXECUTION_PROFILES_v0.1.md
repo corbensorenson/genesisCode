@@ -310,6 +310,17 @@ Strict/full profile runtime reports:
   - strict profiles (`prepush-standard`, `release-full`, `full-selfhost-cutover`)
     fail closed on low-disk preflight by default
     (`GENESIS_HEALTH_STRICT_DISK_POLICY=fail`)
+  - The supply-chain gate uses the exact RustSec commit and canonical tree
+    identity in `policies/rustsec_advisory_db_v0.1.json`. CI prepares that
+    snapshot in the declared dependency-network phase; the gate verifies the
+    installed commit, clean Git tree, content identity, file/byte bounds, and
+    licenses before invoking
+    `cargo deny --locked --offline check --disable-fetch`; subsequent Cargo
+    metadata inspection is also locked and offline.
+    Floating advisory HEAD, gate-time fetching, a stale or dirty checkout, and
+    a host-global advisory database fail closed. Yanked crates are denied rather
+    than downgraded to cargo-deny's default warning. Updating the pin is a
+    reviewed policy transaction and never occurs inside a check.
   - GPU device-conformance lane policy:
     - `release-full` renders current real-device and deterministic-device conformance into
       one private temporary evidence root and requires lane parity by default.

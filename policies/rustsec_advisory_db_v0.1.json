@@ -1,0 +1,29 @@
+{
+  "kind": "genesis/rustsec-advisory-database-policy-v0.1",
+  "version": "0.1",
+  "source": {
+    "url": "https://github.com/RustSec/advisory-db",
+    "commit": "b4af64d3dab58bfac9d4ab23d474264ed0bb6537",
+    "treeSha256": "d5b39d679be714322ccf27b0741a0be568c486c1067aeae3c4a53e59e7eebe3f",
+    "licensePaths": [
+      "LICENSE.txt",
+      "LICENSES/CC-BY-4.0.txt",
+      "LICENSES/CC0-1.0.txt"
+    ]
+  },
+  "storage": {
+    "root": ".genesis/dependency-mirrors/rustsec-advisory-db-v0.1",
+    "databaseDirectory": "advisory-db-3157b0e258782691",
+    "maxFiles": 2000,
+    "maxBytes": 16777216
+  },
+  "tool": {
+    "name": "cargo-deny",
+    "version": "0.19.0"
+  },
+  "nonclaims": [
+    "A pinned advisory snapshot does not claim that later advisories do not exist.",
+    "Preparing the snapshot is not evidence that the supply-chain gate passed.",
+    "The supply-chain gate never fetches or advances the pinned advisory revision."
+  ]
+}

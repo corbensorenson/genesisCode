@@ -15,6 +15,9 @@ genesis_configure_cargo_target_dir \
 
 DENY_CONFIG="deny.toml"
 DUPLICATE_MAJOR_ALLOWLIST="policies/supply_chain_duplicate_major_allowlist.txt"
+PINNED_DENY_CONFIG="$(mktemp)"
+META_JSON="$(mktemp)"
+trap 'rm -f "$PINNED_DENY_CONFIG" "$META_JSON"' EXIT
 
 [[ -f "$DENY_CONFIG" ]] || {
   echo "supply-chain: missing $DENY_CONFIG" >&2
@@ -30,11 +33,12 @@ if ! command -v cargo-deny >/dev/null 2>&1; then
   exit 1
 fi
 
-cargo deny check --config "$DENY_CONFIG" advisories bans licenses sources
+python3 scripts/lib/rustsec_advisory_db.py check
+python3 scripts/lib/rustsec_advisory_db.py self-test
+python3 scripts/lib/rustsec_advisory_db.py render-deny-config --output "$PINNED_DENY_CONFIG"
+cargo deny --locked --offline check --disable-fetch --config "$PINNED_DENY_CONFIG" advisories bans licenses sources
 
-META_JSON="$(mktemp)"
-trap 'rm -f "$META_JSON"' EXIT
-cargo metadata --format-version 1 > "$META_JSON"
+cargo metadata --locked --offline --format-version 1 > "$META_JSON"
 
 python3 - "$ROOT_DIR" "$META_JSON" "$DUPLICATE_MAJOR_ALLOWLIST" <<'PY'
 from collections import defaultdict

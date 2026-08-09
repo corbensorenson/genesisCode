@@ -4,6 +4,7 @@ no-default-features = false
 targets = []
 
 [advisories]
+yanked = "deny"
 ignore = []
 
 [licenses]

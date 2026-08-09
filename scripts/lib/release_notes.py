@@ -12,6 +12,7 @@ import re
 import sys
 from typing import Any, Dict, Mapping, Sequence, Tuple
 
+import gate_manifest
 from toml_compat import tomllib
 
 
@@ -212,7 +213,15 @@ def render_document() -> Mapping[str, Any]:
     fixtures = load_json(ROOT / "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json")
     mirror = load_json(ROOT / "genesis.dependency-mirror.json")
     package_lock = load_json(ROOT / "package-lock.json")
-    gates = load_json(ROOT / policy["securityGateAuthority"])
+    require(
+        policy["securityGateAuthority"] == gate_manifest.MANIFEST_REL,
+        "release-note gate authority does not match the canonical renderer",
+    )
+    gates = gate_manifest.render_manifest(
+        gate_manifest.load_json(ROOT / gate_manifest.POLICY_REL),
+        gate_manifest.load_json(ROOT / gate_manifest.AUDIT_REL),
+        gate_manifest.load_json(ROOT / gate_manifest.PREREQUISITES_REL),
+    )
 
     release_train = versions.get("release_train")
     require(isinstance(release_train, str), "version surfaces release train is missing")

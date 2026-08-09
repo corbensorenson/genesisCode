@@ -25,6 +25,9 @@ GENESIS_EVIDENCE_VERIFIER_SCRIPT="scripts/check_genesis_evidence_verifier.sh"
 EVIDENCE_STORAGE_CLASSES_SCRIPT="scripts/check_evidence_storage_classes.sh"
 VERSIONING_RELEASE_HYGIENE_SCRIPT="scripts/check_versioning_release_hygiene.sh"
 SUPPLY_CHAIN_SCRIPT="scripts/check_supply_chain.sh"
+RUSTSEC_ADVISORY_POLICY="policies/rustsec_advisory_db_v0.1.json"
+RUSTSEC_ADVISORY_SCHEMA="docs/spec/RUSTSEC_ADVISORY_DB_v0.1.schema.json"
+RUSTSEC_ADVISORY_RUNNER="scripts/lib/rustsec_advisory_db.py"
 RELEASE_SMOKE_SCRIPT="scripts/check_release_smoke.sh"
 RELEASE_NOTES_SCRIPT="scripts/check_release_notes.sh"
 RELEASE_NOTES_UPDATE="scripts/update_release_notes.sh"
@@ -126,6 +129,9 @@ for path in \
   "$EVIDENCE_STORAGE_CLASSES_SCRIPT" \
   "$VERSIONING_RELEASE_HYGIENE_SCRIPT" \
   "$SUPPLY_CHAIN_SCRIPT" \
+  "$RUSTSEC_ADVISORY_POLICY" \
+  "$RUSTSEC_ADVISORY_SCHEMA" \
+  "$RUSTSEC_ADVISORY_RUNNER" \
   "$RELEASE_SMOKE_SCRIPT" \
   "$RELEASE_NOTES_SCRIPT" \
   "$RELEASE_NOTES_UPDATE" \
@@ -225,6 +231,14 @@ require_ci_pattern() {
   local pattern="$1"
   if ! grep -Fq -- "$pattern" "$CI"; then
     echo "test-execution-profile-matrix: missing CI profile step in $CI: $pattern" >&2
+    exit 1
+  fi
+}
+
+require_supply_pattern() {
+  local pattern="$1"
+  if ! grep -Fq -- "$pattern" "$SUPPLY_CHAIN_SCRIPT"; then
+    echo "test-execution-profile-matrix: missing hermetic supply-chain control in $SUPPLY_CHAIN_SCRIPT: $pattern" >&2
     exit 1
   fi
 }
@@ -341,6 +355,8 @@ require_doc_pattern 'scripts/check_capability_indices.sh'
 require_doc_pattern 'scripts/check_generated_artifact_policy.sh'
 require_doc_pattern 'scripts/check_versioning_release_hygiene.sh'
 require_doc_pattern 'scripts/check_supply_chain.sh'
+require_doc_pattern 'policies/rustsec_advisory_db_v0.1.json'
+require_doc_pattern 'cargo deny --locked --offline check --disable-fetch'
 require_doc_pattern 'scripts/check_release_smoke.sh'
 require_doc_pattern 'scripts/check_release_notes.sh'
 require_doc_pattern 'scripts/update_release_notes.sh'
@@ -401,6 +417,21 @@ require_ci_pattern 'Docs Quickstart Gate'
 require_ci_pattern 'bash scripts/check_docs_quickstart.sh'
 require_ci_pattern 'Ignored Perf Gate Regression Tests'
 require_ci_pattern 'bash scripts/test_perf_gates.sh'
+require_ci_pattern 'Prepare Pinned RustSec Advisory Database'
+require_ci_pattern 'python3 scripts/lib/rustsec_advisory_db.py prepare'
+require_supply_pattern 'python3 scripts/lib/rustsec_advisory_db.py check'
+require_supply_pattern 'python3 scripts/lib/rustsec_advisory_db.py self-test'
+require_supply_pattern 'python3 scripts/lib/rustsec_advisory_db.py render-deny-config'
+require_supply_pattern 'cargo deny --locked --offline check --disable-fetch'
+require_supply_pattern 'cargo metadata --locked --offline --format-version 1'
+if ! grep -Fq 'yanked = "deny"' "$DENY_CONFIG"; then
+  echo "test-execution-profile-matrix: cargo-deny must fail closed on yanked crates" >&2
+  exit 1
+fi
+if grep -Fq 'rustsec_advisory_db.py prepare' "$SUPPLY_CHAIN_SCRIPT"; then
+  echo "test-execution-profile-matrix: supply-chain check must not prepare or fetch the RustSec snapshot" >&2
+  exit 1
+fi
 require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=450000'
 require_ci_pattern 'GENESIS_HEALTH_PROFILE=dev-fast'
 require_ci_pattern 'bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health'
