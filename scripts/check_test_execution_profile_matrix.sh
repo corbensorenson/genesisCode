@@ -432,7 +432,7 @@ if grep -Fq 'rustsec_advisory_db.py prepare' "$SUPPLY_CHAIN_SCRIPT"; then
   echo "test-execution-profile-matrix: supply-chain check must not prepare or fetch the RustSec snapshot" >&2
   exit 1
 fi
-require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=450000'
+require_ci_pattern 'GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=485000'
 require_ci_pattern 'GENESIS_HEALTH_PROFILE=dev-fast'
 require_ci_pattern 'bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health'
 require_ci_pattern 'release_full_measurement:'

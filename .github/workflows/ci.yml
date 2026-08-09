@@ -938,9 +938,9 @@ jobs:
             GENESIS_HEALTH_PROFILE=release-full \
               bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health
           else
-            # Keep the 360s local warm-cache target; hosted regression runs disable
-            # the nested health cache and need an explicit cold-run envelope.
-            GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=450000 \
+            # Keep the 360s local warm-cache target. The hosted cold containment
+            # envelope is provisional and separately documented from the SLO.
+            GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=485000 \
               GENESIS_HEALTH_PROFILE=dev-fast \
               bash scripts/test_perf_gates.sh
           fi

@@ -321,6 +321,15 @@ Strict/full profile runtime reports:
     a host-global advisory database fail closed. Yanked crates are denied rather
     than downgraded to cargo-deny's default warning. Updating the pin is a
     reviewed policy transaction and never occurs inside a check.
+  - The standard hosted regression lane retains the 360,000 ms local warm-cache
+    target but uses a provisional 485,000 ms cold nested-health containment
+    envelope. Thirty successful exact-revision hosted observations had a
+    nearest-rank p95 of 439,553 ms and MAD of 15,059/2 ms; the declared
+    p95-plus-max(6*MAD, 10%) rule yields 484,730 ms and rounds upward to
+    485,000 ms. Runs 31308665169 (451,394 ms) and 31314057937 (452,351 ms)
+    remain timing failures under the superseded 450,000 ms envelope; this
+    adjustment does not relabel them, ratify a performance SLO, change GB-3, or
+    substitute for the complete section 3.21 class calibration.
   - GPU device-conformance lane policy:
     - `release-full` renders current real-device and deterministic-device conformance into
       one private temporary evidence root and requires lane parity by default.
