@@ -61,8 +61,10 @@
   "timingCalibration": {
     "policy": "policies/engineering_gate_timing_calibration_v0.1.json",
     "schema": "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+    "observationSchema": "docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json",
     "evidence": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
-    "verifier": "scripts/lib/engineering_gate_timing_calibration.py"
+    "verifier": "scripts/lib/engineering_gate_timing_calibration.py",
+    "collector": "scripts/lib/engineering_gate_timing_observations.py"
   },
   "roadmapTask": "R0.4.f",
   "releaseFullOnlyGates": [

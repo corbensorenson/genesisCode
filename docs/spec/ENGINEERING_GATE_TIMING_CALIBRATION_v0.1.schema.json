@@ -47,18 +47,28 @@
     "sample": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sequence", "durationMs", "outcome", "gitCommit", "hostIdentitySha256", "toolchainIdentitySha256", "workloadIdentitySha256", "cachePrecondition", "competingLaneState", "sourceIdentity"],
+      "required": ["sequence", "observedAtUnixSeconds", "durationMs", "outcome", "failureKind", "exitCode", "cleanupStatus", "gitCommit", "hostObservationCanonicalJson", "hostIdentitySha256", "toolchainIdentityCanonicalJson", "toolchainIdentitySha256", "controlObservationCanonicalJson", "workloadIdentitySha256", "observationIdentitySha256", "cachePrecondition", "competingLaneState", "sourceIdentity", "chainScope", "previousObservationSha256"],
       "properties": {
         "sequence": {"$ref": "#/$defs/positive"},
+        "observedAtUnixSeconds": {"$ref": "#/$defs/positive"},
         "durationMs": {"$ref": "#/$defs/positive"},
         "outcome": {"enum": ["semantic-pass", "hard-failure"]},
+        "failureKind": {"oneOf": [{"enum": ["command-failure", "hard-timeout", "infrastructure-failure", "telemetry-budget", "interrupted"]}, {"type": "null"}]},
+        "exitCode": {"oneOf": [{"type": "integer"}, {"type": "null"}]},
+        "cleanupStatus": {"enum": ["reaped", "containment-failure"]},
         "gitCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "hostObservationCanonicalJson": {"type": "string", "minLength": 2},
         "hostIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "toolchainIdentityCanonicalJson": {"type": "string", "minLength": 2},
         "toolchainIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "controlObservationCanonicalJson": {"type": "string", "minLength": 2},
         "workloadIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "observationIdentitySha256": {"$ref": "#/$defs/sha256"},
         "cachePrecondition": {"type": "string", "minLength": 1},
         "competingLaneState": {"type": "string", "minLength": 1},
-        "sourceIdentity": {"type": "string", "pattern": "^(github-actions-run|local-observation):.+$"}
+        "sourceIdentity": {"type": "string", "pattern": "^(github-actions-run|local-observation):.+$"},
+        "chainScope": {"enum": ["append-only-local", "standalone-hosted"]},
+        "previousObservationSha256": {"$ref": "#/$defs/sha256"}
       }
     },
     "statistics": {

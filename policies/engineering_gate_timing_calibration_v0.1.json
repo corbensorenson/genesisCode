@@ -3,7 +3,9 @@
   "version": "0.1",
   "roadmapTask": "R0.4.j",
   "schemaPath": "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+  "observationSchemaPath": "docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json",
   "evidencePath": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
+  "observationHistoryPath": ".genesis/perf/engineering_gate_timing_observations_v0.1.jsonl",
   "sampling": {
     "discardedWarmups": 5,
     "retainedConformantSamples": 30,
@@ -31,6 +33,48 @@
     "roundUpQuantumMs": 1000,
     "requireWithinDeclaredContainmentCeiling": true
   },
+  "workloads": [
+    {
+      "id": "prepush-standard-v1",
+      "measurement": "monotonic-process-wall",
+      "command": "scripts/test_changed_fast.sh",
+      "arguments": [
+        "--base",
+        "HEAD",
+        "--runner",
+        "cargo",
+        "--min-history",
+        "1",
+        "--changed-files-from",
+        "<collector-owned>",
+        "--report",
+        "<collector-owned>",
+        "--history",
+        "<collector-owned>"
+      ],
+      "changedFiles": [
+        "policies/engineering_gate_budgets_v0.1.json"
+      ],
+      "runner": "cargo",
+      "budgetMs": 720000,
+      "networkMode": "deny"
+    },
+    {
+      "id": "ci-standard-v1",
+      "measurement": "github-actions-job-wall",
+      "command": ".github/workflows/ci.yml#test_suite",
+      "arguments": [
+        "profile=standard",
+        "lane=standard",
+        "start=Begin Hosted Timing Calibration",
+        "end=Finalize Hosted Timing Calibration"
+      ],
+      "changedFiles": [],
+      "runner": "github-actions",
+      "budgetMs": 7200000,
+      "networkMode": "declared-ci-dependency-network"
+    }
+  ],
   "classes": [
     {
       "id": "local-warm",

@@ -533,6 +533,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Begin Hosted Timing Calibration
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && env.GENESIS_CI_PROFILE == 'standard' && env.GENESIS_CI_LANE == 'standard' }}
+        run: |
+          python3 scripts/lib/engineering_gate_timing_observations.py begin-hosted \
+            --output .genesis/perf/engineering-gate-timing/hosted-start.json
+
       - name: Resolve CI Profile
         run: |
           case "${GENESIS_CI_PROFILE}" in
@@ -1070,6 +1076,22 @@ jobs:
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release --locked --offline
           GENESIS_WASI_SMOKE_NATIVE_BIN="$native_smoke_bin" \
             bash scripts/wasi_smoke.sh "$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
+
+      - name: Finalize Hosted Timing Calibration
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && env.GENESIS_CI_PROFILE == 'standard' && env.GENESIS_CI_LANE == 'standard' }}
+        run: |
+          python3 scripts/lib/engineering_gate_timing_observations.py record-hosted \
+            --start .genesis/perf/engineering-gate-timing/hosted-start.json \
+            --status '${{ job.status }}' \
+            --output .genesis/perf/engineering-gate-timing/hosted-observation.json
+
+      - name: Upload Hosted Timing Calibration Observation
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && env.GENESIS_CI_PROFILE == 'standard' && env.GENESIS_CI_LANE == 'standard' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: engineering-gate-timing-observation-${{ github.run_attempt }}
+          path: .genesis/perf/engineering-gate-timing/hosted-observation.json
+          if-no-files-found: warn
 
   local_workspace_test_contract:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile != 'fast') }}

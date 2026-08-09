@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/lib"))
 from toml_compat import tomllib
 import engineering_gate_timing_calibration as timing_calibration
+import engineering_gate_timing_observations as timing_observations
 
 POLICY = ROOT / "policies/engineering_gate_budgets_v0.1.json"
 SCHEMA = ROOT / "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json"
@@ -38,8 +39,10 @@ EXPECTED = {
 TIMING_CALIBRATION_POINTER = {
     "policy": "policies/engineering_gate_timing_calibration_v0.1.json",
     "schema": "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+    "observationSchema": "docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json",
     "evidence": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
     "verifier": "scripts/lib/engineering_gate_timing_calibration.py",
+    "collector": "scripts/lib/engineering_gate_timing_observations.py",
 }
 STDLIB = {
     "__future__", "argparse", "ast", "base64", "binascii", "collections", "concurrent", "contextlib", "copy",
@@ -353,8 +356,10 @@ def bundle_digest() -> str:
         "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
         "policies/engineering_gate_timing_calibration_v0.1.json",
         "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+        "docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json",
         "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
         "scripts/lib/engineering_gate_timing_calibration.py",
+        "scripts/lib/engineering_gate_timing_observations.py",
         "scripts/lib/engineering_gate_budgets.py",
         "scripts/check_engineering_gate_contract.sh",
         "genesis.gates.json",
@@ -408,9 +413,13 @@ def run_check(policy_doc: Optional[Any] = None) -> Dict[str, Any]:
     python_files = check_python_closure()
     try:
         timing = timing_calibration.verify()
-    except timing_calibration.TimingCalibrationError as exc:
+        timing_observation = timing_observations.verify_contract()
+    except (
+        timing_calibration.TimingCalibrationError,
+        timing_observations.TimingObservationError,
+    ) as exc:
         raise BudgetError(f"timing calibration rejected: {exc}") from exc
-    return {"static": static_count, "fileWaivers": file_waivers, "crateWaivers": crate_waivers, "pythonFiles": python_files, "timing": timing}
+    return {"static": static_count, "fileWaivers": file_waivers, "crateWaivers": crate_waivers, "pythonFiles": python_files, "timing": timing, "timingObservation": timing_observation}
 
 
 def self_test() -> int:
@@ -483,6 +492,7 @@ def self_test() -> int:
         raise BudgetError("shell-embedded Python dependency escaped GB-8")
     controls += 1
     controls += timing_calibration.self_test()
+    controls += timing_observations.self_test()
     print(f"engineering-gate-budgets: self-test ok (negative_controls={controls})")
     return controls
 
@@ -501,10 +511,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             f"(budgets=8 static_gates={summary['static']} file_waivers={summary['fileWaivers']} "
             f"crate_waivers={summary['crateWaivers']} python_files={summary['pythonFiles']} "
             f"timing_status={summary['timing']['status']} timing_classes={len(summary['timing']['classes'])} "
+            f"timing_e0_records={summary['timingObservation']['records']} "
             f"bundle={bundle_digest()})"
         )
         return 0
-    except (BudgetError, OSError, UnicodeError) as exc:
+    except (
+        BudgetError,
+        timing_observations.TimingObservationError,
+        OSError,
+        UnicodeError,
+    ) as exc:
         print(f"engineering-gate-budgets: {exc}", file=sys.stderr)
         return 1
 

@@ -255,11 +255,41 @@ Strict/full profile runtime reports:
     the existing `scripts/check_engineering_gate_contract.sh`, and retained in
     `docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json` under the closed
     `docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json` schema.
+    Raw observations use the separately closed
+    `docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json` envelope.
     The authority keeps `local-warm`, `local-clean-fallback`, and
     `hosted-cold-shared-runner` as three ordered, non-interchangeable classes.
     Each observation binds its exact commit, host, toolchain, workload,
     cache-precondition, competing-lane, and typed source identities; duplicate
     sequence/source identities, cache relabeling, and undeclared outcomes fail.
+  - The two local classes execute one exact policy-owned workload:
+    `scripts/test_changed_fast.sh --base HEAD --runner cargo --min-history 1`
+    in `profile-fallback` mode from the declared one-file impact input. Collection
+    requires clean `main` at exact `origin/main`, a conformant reference host,
+    nominal thermal state, bounded background load, no competing build process,
+    an exclusive advisory collector lock, process-group timeout/kill/reap, and a
+    report proving the selected profile, runner, file count, budget, and terminal
+    result. `local-warm` requires the reusable root-host cache; the clean class
+    uses the updater's fresh external worktree and a collector-owned empty Cargo
+    cache. The collector is:
+    `python3 scripts/lib/engineering_gate_timing_observations.py record-local --class-id <local-warm|local-clean-fallback>`.
+  - The hosted class measures the exact `test_suite` standard job only for an
+    explicit `workflow_dispatch` of `main`. `Begin Hosted Timing Calibration`
+    starts the monotonic interval immediately after checkout; `Finalize Hosted
+    Timing Calibration` closes it after native/WASI smoke; the resulting closed
+    observation is uploaded as a run-attempt-scoped artifact. Floating refs,
+    non-standard profiles or lanes, non-Linux/x86-64 hosts, non-ubuntu24 runner
+    images, and missing start envelopes fail closed.
+  - Local JSONL history and logs under `.genesis/perf/` are ignored, append-only,
+    hash-chained E0 observations. Hosted artifacts are likewise observations,
+    not authority. `render-candidate` validates every supplied observation,
+    retains failures in chronology, assigns the first five successful records
+    to warmups and all later successful records to the retained population, and
+    emits an E0 review candidate without editing policy or canonical evidence.
+    Promotion is a separate reviewed transaction. Canonical samples preserve the
+    exact host, toolchain, control, timestamp, terminal, and chain material and
+    recompute the originating observation identity, so review remains possible
+    after mutable collection storage is gone.
   - A class remains `collecting` until exactly five semantic-pass warmups have
     been discarded and at least 30 semantic-pass measurements are retained.
     The first 30 retained measurements form the immutable calibration population:
