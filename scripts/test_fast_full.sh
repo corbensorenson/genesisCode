@@ -41,6 +41,7 @@ if [[ "$RUNNER" == "nextest" ]]; then
     --test cli_selfhost_only \
     --test cli_apply_patch_determinism \
     --test cli_typecheck_apply_patch_engine \
+    --test shell_gate_regressions \
     --profile ci
 else
   echo "[test-fast-full] cargo test (core libs)"
@@ -57,6 +58,7 @@ else
     cli_selfhost_only
     cli_apply_patch_determinism
     cli_typecheck_apply_patch_engine
+    shell_gate_regressions
   )
   CLI_TEST_LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/genesis-fast-cli.XXXXXX")"
   trap 'rm -rf "$CLI_TEST_LOG_DIR"' EXIT
@@ -65,6 +67,7 @@ else
     --test cli_selfhost_only \
     --test cli_apply_patch_determinism \
     --test cli_typecheck_apply_patch_engine \
+    --test shell_gate_regressions \
     | python3 -c '
 import json
 import sys
@@ -74,6 +77,7 @@ wanted = {
     "cli_selfhost_only",
     "cli_apply_patch_determinism",
     "cli_typecheck_apply_patch_engine",
+    "shell_gate_regressions",
 }
 executables = {}
 for line in sys.stdin:

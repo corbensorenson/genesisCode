@@ -753,7 +753,7 @@ fn release_health_provisions_evidence_before_parallel_consumers() {
         perf_lane.contains("if [[ \"$GENESIS_CI_PROFILE\" == \"full\" ]]")
             && perf_lane
                 .contains("bash scripts/test_perf_gates.sh --exclude-test upgrade_plan_health")
-            && perf_lane.contains("GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=450000")
+            && perf_lane.contains("GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS=485000")
             && perf_lane.contains("GENESIS_HEALTH_PROFILE=dev-fast")
             && perf_lane.contains("bash scripts/test_perf_gates.sh"),
         "standard CI must declare its cold dev-fast envelope; full CI must exclude the aggregate owned by its paired release measurement lane"
