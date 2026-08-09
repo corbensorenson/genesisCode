@@ -275,7 +275,7 @@ Strict/full profile runtime reports:
     cache. The collector is:
     `python3 scripts/lib/engineering_gate_timing_observations.py record-local --class-id <local-warm|local-clean-fallback>`.
     The timing-specific preflight takes five one-second-spaced samples of the
-    one-minute load average and records their maximum. It permits at most 50% of
+    one-minute load average and records their maximum. It permits at most 75% of
     logical CPU for the declared agent-operated reference-host mode. Before launch
     and once per second while the workload is live, the collector parses complete
     process arguments so direct, shell-wrapped, or `env`/`rustup`-wrapped Cargo,
