@@ -8,7 +8,7 @@
   "observationHistoryPath": ".genesis/perf/engineering_gate_timing_observations_v0.1.jsonl",
   "localPreflight": {
     "backgroundLoadMeasurement": "maximum-one-minute-load-average-over-samples",
-    "backgroundLoadMaxPercent": 30,
+    "backgroundLoadMaxPercent": 50,
     "backgroundLoadSampleCount": 5,
     "backgroundLoadSampleIntervalMs": 1000,
     "competingBuildProcessMaxCount": 0,

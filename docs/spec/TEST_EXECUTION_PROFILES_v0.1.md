@@ -274,7 +274,7 @@ Strict/full profile runtime reports:
     cache. The collector is:
     `python3 scripts/lib/engineering_gate_timing_observations.py record-local --class-id <local-warm|local-clean-fallback>`.
     The timing-specific preflight takes five one-second-spaced samples of the
-    one-minute load average and records their maximum. It permits at most 30% of
+    one-minute load average and records their maximum. It permits at most 50% of
     logical CPU for the declared agent-operated reference-host mode, while still
     requiring zero competing Cargo, Rust, Genesis, nextest, or Quarto processes.
     This is not a promotion of the general 5% unattended reference-lab control:

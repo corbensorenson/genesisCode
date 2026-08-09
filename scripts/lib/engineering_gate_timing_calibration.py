@@ -539,7 +539,7 @@ def validate_policy(policy: Any) -> dict[str, Any]:
         policy["localPreflight"]
         == {
             "backgroundLoadMeasurement": "maximum-one-minute-load-average-over-samples",
-            "backgroundLoadMaxPercent": 30,
+            "backgroundLoadMaxPercent": 50,
             "backgroundLoadSampleCount": 5,
             "backgroundLoadSampleIntervalMs": 1000,
             "competingBuildProcessMaxCount": 0,

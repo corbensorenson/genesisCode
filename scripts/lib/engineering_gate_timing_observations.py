@@ -1098,7 +1098,7 @@ def self_test() -> int:
     control = parse_canonical_json(
         candidate["controlObservationCanonicalJson"], "fixture control"
     )
-    control["backgroundLoadBasisPoints"] = 3001
+    control["backgroundLoadBasisPoints"] = 5001
     candidate["controlObservationCanonicalJson"] = canonical_json(control)
     candidate["identitySha256"] = observation_identity(candidate)
     mutations.append(candidate)
@@ -1106,7 +1106,7 @@ def self_test() -> int:
     control = parse_canonical_json(
         candidate["controlObservationCanonicalJson"], "fixture control"
     )
-    control["backgroundLoadLimitBasisPoints"] = 3001
+    control["backgroundLoadLimitBasisPoints"] = 5001
     candidate["controlObservationCanonicalJson"] = canonical_json(control)
     candidate["identitySha256"] = observation_identity(candidate)
     mutations.append(candidate)
