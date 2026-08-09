@@ -1,0 +1,69 @@
+{
+  "kind": "genesis/engineering-gate-timing-calibration-policy-v0.1",
+  "version": "0.1",
+  "roadmapTask": "R0.4.j",
+  "schemaPath": "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+  "evidencePath": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
+  "sampling": {
+    "discardedWarmups": 5,
+    "retainedConformantSamples": 30,
+    "retainAdditionalConformantSamples": true,
+    "retainHardFailures": true
+  },
+  "statistics": {
+    "median": "exact-rational",
+    "p95": "nearest-rank-ceil",
+    "mad": "exact-rational",
+    "medianConfidenceInterval95": {
+      "lowerRank": 10,
+      "upperRank": 21
+    }
+  },
+  "trend": {
+    "windowSamples": 30,
+    "medianRegressionBasisPoints": 1000,
+    "p95RegressionBasisPoints": 1000
+  },
+  "ceilingDerivation": {
+    "baseStatistic": "p95-nearest-rank",
+    "madMultiplier": 6,
+    "minimumHeadroomBasisPoints": 1000,
+    "roundUpQuantumMs": 1000,
+    "requireWithinDeclaredContainmentCeiling": true
+  },
+  "classes": [
+    {
+      "id": "local-warm",
+      "profile": "prepush-standard",
+      "workloadIdentity": "prepush-standard-v1",
+      "cachePrecondition": "warm-reusable-root-host-target",
+      "hostClass": "declared-local-reference-host",
+      "competingLaneState": "exclusive",
+      "sourceIdentityKind": "local-observation",
+      "ceilingStatus": "provisional",
+      "hardCeilingMs": 720000
+    },
+    {
+      "id": "local-clean-fallback",
+      "profile": "prepush-standard",
+      "workloadIdentity": "prepush-standard-v1",
+      "cachePrecondition": "empty-generated-authority-stage-and-declared-fallback-cache",
+      "hostClass": "declared-local-reference-host",
+      "competingLaneState": "exclusive",
+      "sourceIdentityKind": "local-observation",
+      "ceilingStatus": "provisional",
+      "hardCeilingMs": 720000
+    },
+    {
+      "id": "hosted-cold-shared-runner",
+      "profile": "standard",
+      "workloadIdentity": "ci-standard-v1",
+      "cachePrecondition": "github-hosted-cold-checkout-with-declared-shared-caches",
+      "hostClass": "ubuntu-24.04-shared-runner",
+      "competingLaneState": "declared-ci-matrix",
+      "sourceIdentityKind": "github-actions-run",
+      "ceilingStatus": "provisional",
+      "hardCeilingMs": 7200000
+    }
+  ]
+}

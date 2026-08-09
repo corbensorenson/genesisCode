@@ -250,6 +250,33 @@ Strict/full profile runtime reports:
     - `GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY` (default `1`, fail-closed)
     - `GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY` (default `policies/perf/upgrade_plan_health_release_full_seed_history.jsonl`)
     - `GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY`
+  - R0.4.j timing calibration is governed by
+    `policies/engineering_gate_timing_calibration_v0.1.json`, validated through
+    the existing `scripts/check_engineering_gate_contract.sh`, and retained in
+    `docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json` under the closed
+    `docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json` schema.
+    The authority keeps `local-warm`, `local-clean-fallback`, and
+    `hosted-cold-shared-runner` as three ordered, non-interchangeable classes.
+    Each observation binds its exact commit, host, toolchain, workload,
+    cache-precondition, competing-lane, and typed source identities; duplicate
+    sequence/source identities, cache relabeling, and undeclared outcomes fail.
+  - A class remains `collecting` until exactly five semantic-pass warmups have
+    been discarded and at least 30 semantic-pass measurements are retained.
+    The first 30 retained measurements form the immutable calibration population:
+    exact-rational median and MAD, nearest-rank p95, and the distribution-free
+    rank-10/rank-21 median interval are independently recomputed. Additional
+    conformant measurements and every hard failure remain retained. The most
+    recent 30 measurements form the current trend window; once 60 exist, the
+    prior and current windows are compared with separate 10% median and p95
+    alarms.
+  - A calibrated hard ceiling is the nearest 1,000ms above p95 plus the larger
+    of six MADs or 10% proportional headroom. Completion requires that value to
+    remain inside the prior containment ceiling, be copied exactly into a
+    `ratified` class policy, and pass the verifier. Until then the existing
+    720,000ms local and 7,200,000ms hosted values are provisional containment
+    limits only. A semantic pass cannot override a timing overrun, collection
+    cannot authorize a budget increase, and neither mutable E0 observations nor
+    a `collecting` evidence file can close R0.4.j or qualify a release.
   - strict profiles (`prepush-standard`, `release-full`, `full-selfhost-cutover`)
     fail closed on low-disk preflight by default
     (`GENESIS_HEALTH_STRICT_DISK_POLICY=fail`)

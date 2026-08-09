@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "cfcea916cb6d436353e143754002c55812547477d1838bf726587ba75231459a",
+      "inputIdentitySha256": "627f7c2074f11cedeeb2d1bd6c01cd8747bbec0a5c5c4909bde2712eff6b796d",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -364,7 +364,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -668,7 +668,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -828,7 +828,7 @@
       "executionIdentitySha256": "40576239afd82ec6bc6364a51c3cc0e287c823662e2f53bec8254bebad0a7124",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1207,6 +1207,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -1259,6 +1260,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -1498,6 +1500,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -1680,6 +1683,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -2395,7 +2399,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2614,6 +2618,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -2666,6 +2671,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -2905,6 +2911,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -3087,6 +3094,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -3431,7 +3439,7 @@
       "executionIdentitySha256": "242ca8460da231b46767e4964fbc3b6656b93e244ae9007a53943df8349af97e",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "09f62af5b3d29d58f708f9bab044b4e14ef2c74426bcc0597993877bb00b4b1b",
+      "inputIdentitySha256": "76094f036dbe0812c3c52759e33ace85f35d56d509df117584b9aee52dc69190",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3511,7 +3519,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3730,6 +3738,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -3782,6 +3791,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -4021,6 +4031,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -4203,6 +4214,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -4502,7 +4514,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4721,6 +4733,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -4773,6 +4786,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -5012,6 +5026,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -5194,6 +5209,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -5572,7 +5588,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5791,6 +5807,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -5843,6 +5860,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -6082,6 +6100,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -6264,6 +6283,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -6851,7 +6871,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "f94c59fe67888531e74a1d928fd772fc04c7a2245e83ae9997f4b2b702c2dec3",
+      "inputIdentitySha256": "9272c7cb68062a39e68f395054df3c7477d176cd4aa13263e313fb8cae8e21f0",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7066,7 +7086,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "49383b69db820d5c972345bcc6dadcf84edbd6be3aa3cba4b1fdfeabafd02fc1",
+      "inputIdentitySha256": "34f1732396b6c3030c78f9c0b639de7b672e2e04bcad7d7a1fe996ecbdc0e3f1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7134,7 +7154,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7353,6 +7373,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -7405,6 +7426,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -7644,6 +7666,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -7826,6 +7849,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -8474,7 +8498,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "a4e8d15a570a0042c4f500969450b6d90360289022048c78f07d9a6287e9d05c",
+      "inputIdentitySha256": "528f48dbd32862a251fe2c285ab7000dd6e931f21435351c3a30aecafbbce109",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8711,7 +8735,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "7dda7476b33dd05e2a2637c831b1b5fa1832e29c0fa6fb1f3c1f36aa5ae081b8",
+      "inputIdentitySha256": "8524059386403758a1678ef19c46674c6f4c54de4582b421cbd67da138ad3e3f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8898,7 +8922,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9117,6 +9141,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -9169,6 +9194,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -9408,6 +9434,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -9590,6 +9617,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -9873,7 +9901,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "cfcea916cb6d436353e143754002c55812547477d1838bf726587ba75231459a",
+      "inputIdentitySha256": "627f7c2074f11cedeeb2d1bd6c01cd8747bbec0a5c5c4909bde2712eff6b796d",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10232,7 +10260,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "cfcea916cb6d436353e143754002c55812547477d1838bf726587ba75231459a",
+      "inputIdentitySha256": "627f7c2074f11cedeeb2d1bd6c01cd8747bbec0a5c5c4909bde2712eff6b796d",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10591,7 +10619,7 @@
       "executionIdentitySha256": "09ccbdaf204f565c2bca87bb239f1e4e529497f7ff1a50c3e999396a593cbce7",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "cfcea916cb6d436353e143754002c55812547477d1838bf726587ba75231459a",
+      "inputIdentitySha256": "627f7c2074f11cedeeb2d1bd6c01cd8747bbec0a5c5c4909bde2712eff6b796d",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10950,7 +10978,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "cfcea916cb6d436353e143754002c55812547477d1838bf726587ba75231459a",
+      "inputIdentitySha256": "627f7c2074f11cedeeb2d1bd6c01cd8747bbec0a5c5c4909bde2712eff6b796d",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11506,7 +11534,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11725,6 +11753,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -11777,6 +11806,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -12016,6 +12046,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -12198,6 +12229,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -13139,7 +13171,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13358,6 +13390,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -13410,6 +13443,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -13649,6 +13683,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -13831,6 +13866,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -14118,7 +14154,7 @@
       "executionIdentitySha256": "e8c39e351f7248a80e11baa8a91d47b4cf694dea82210113409010ee4f0298bc",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14319,7 +14355,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14538,6 +14574,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -14590,6 +14627,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -14829,6 +14867,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -15011,6 +15050,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -15473,7 +15513,7 @@
       "executionIdentitySha256": "2567edebcd9d93810a936812804358285410a0d25d2e93c426b67a72f28285f1",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15881,7 +15921,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16100,6 +16140,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -16152,6 +16193,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -16391,6 +16433,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -16573,6 +16616,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -17153,7 +17197,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17372,6 +17416,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -17424,6 +17469,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -17663,6 +17709,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -17845,6 +17892,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -18978,7 +19026,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19634,7 +19682,7 @@
       "executionIdentitySha256": "a75bef0c8614f9c2aef9d2bf07db0eb53ff40e153aea48f4e697466d4566dac0",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "5e4482608ea2506064ead5c827babfa621ea9c8e97969a21dda53af27e1bc134",
+      "inputIdentitySha256": "6f02ad05916b1a2cca7a75e4dd2b3666d3fb3e5f899df649649ed39ab7136577",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -19957,7 +20005,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20427,7 +20475,7 @@
       "executionIdentitySha256": "409743c3e971ab2c5a151f01f38da85602e3a181893a22a4755242d1fb3ed5cf",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20646,6 +20694,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -20698,6 +20747,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -20937,6 +20987,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -21119,6 +21170,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -21520,7 +21572,7 @@
       "executionIdentitySha256": "097eb02aca7ad3c3d4d06f1d12d73f2130477b5312481133ce45e7a4a4adba30",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "eb742095dea5228df21ef4b038c277e998152c541b90c44cac4469569c106005",
+      "inputIdentitySha256": "7f60659d16787a4e893e281b8c70da9bb92a58323bad31c04fc3a3dea2cd9288",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21739,6 +21791,7 @@
           "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
           "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
           "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+          "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
           "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
           "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
           "docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json",
@@ -21791,6 +21844,7 @@
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
           "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+          "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
           "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
           "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
@@ -22030,6 +22084,7 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/docs/doc_complexity_budget.toml",
           "policies/engineering_gate_budgets_v0.1.json",
+          "policies/engineering_gate_timing_calibration_v0.1.json",
           "policies/evidence_storage_classes_v0.1.json",
           "policies/evidence_verifier_trust_v0.1.json",
           "policies/gate_telemetry_v0.1.json",
@@ -22212,6 +22267,7 @@
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/engineering_gate_budgets.py",
+          "scripts/lib/engineering_gate_timing_calibration.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_manifest.py",
           "scripts/lib/gate_telemetry.py",
@@ -23051,7 +23107,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23208,7 +23264,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "2462c2646b1ed199436a64b1db32b2bb23348f3946a02e46b28a5bbfc1e88845",
+      "inputIdentitySha256": "793641569c4cff1a216349bdcfd1d3c5237bf5d7be5f65849953df77e0bb195a",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23367,7 +23423,7 @@
       "executionIdentitySha256": "352025cc70b36a3be61f30d540c703e68cd628f85dd842ac902f78dacb6f2a9b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "4f7d9d46fffc93e3626e4c22b4b493f227b9cbaa5579fa856bd2a269620e8939",
+      "inputIdentitySha256": "d8168835a7185e9e53fcdafdefca3c5671b9e430011e5dfeeb5f4388b052bd2f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",

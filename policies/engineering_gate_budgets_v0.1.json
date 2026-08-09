@@ -58,6 +58,12 @@
     "evidenceVerifierScript": "scripts/verify_prebuilt_evidence_bundle.sh",
     "profileRunner": "scripts/render_upgrade_plan_health_report.sh"
   },
+  "timingCalibration": {
+    "policy": "policies/engineering_gate_timing_calibration_v0.1.json",
+    "schema": "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+    "evidence": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
+    "verifier": "scripts/lib/engineering_gate_timing_calibration.py"
+  },
   "roadmapTask": "R0.4.f",
   "releaseFullOnlyGates": [
     "scripts/check_agent_generative_workloads.sh",

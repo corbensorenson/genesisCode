@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 275,
+    "canonicalSources": 277,
     "diagnostics": 196,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 99,
+    "schemas": 100,
     "symbols": 170
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "658a536764763f7dafeb5ab1f838d8f8e0a8b8a540a07f239253d7cfe0858308"
+      "sha256": "7de61a5e4dbcc5d0a12dc57c7abf5ce5ed0e3444426b06e8aebe9a9fd3fc5e12"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -111,6 +111,10 @@
       "sha256": "6fda8dcd71f2158abc345b2690b5662ee43f6b4aefa34abed51dd1412463080d"
     },
     {
+      "path": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
+      "sha256": "ba263883e578ff6e2c48a60d20e8936e987e7bdd26a53acc937090e914fadb00"
+    },
+    {
       "path": "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
       "sha256": "f9f281eb2bf7a70148f98f5df3a226c63240803f41a0b59b705afb177d93e842"
     },
@@ -128,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "9a8f743acf1cf971a5118f9aa8df0f154202062099b995f47cf07a73e0c1fec2"
+      "sha256": "4a59e3b3842b19995544697d31df95516c57896de3ee3b1505c478d017a1ab6d"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -192,7 +196,7 @@
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
-      "sha256": "ea97fdbc6d055f9df12a666dcf53ee6ba40092e43a650fca1031a077cee4519e"
+      "sha256": "e2f985d92b8d3d2d0478a216446b7a36161d77960ba236d83ef3f360f839c206"
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/prompt-cards.json",
@@ -380,7 +384,11 @@
     },
     {
       "path": "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
-      "sha256": "bf69459b29de362b4e8625a44c2a5630e5a923d8551a629bc4e4a3d6c0943ad3"
+      "sha256": "00ae970faa622493d653bb2910c0128ca4c1ee0daee3ce7dc7d8f0e20a6a42de"
+    },
+    {
+      "path": "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+      "sha256": "546bd8ff22cd6ccdd46d3957ec3539f0832c3880188c74d3298cd7d5388f2872"
     },
     {
       "path": "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
@@ -456,7 +464,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "e9f96ae3bf6ccaabde583a87dc6421a7dae5bdb1a9a172ab64c9206837f42c67"
+      "sha256": "35fd1493a96f2420ba680d96aae7150db1604460f6057e810bfe2766ed93748d"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
@@ -472,7 +480,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "569f4e52fb54253b01f353de379874add7b837d1fe81843a9fa531841c5777ad"
+      "sha256": "1b63f738d1a716ab405c169a7d2ac02573e71a409af023d8e94a6d3b6308a9e0"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -516,11 +524,11 @@
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "38c68823f0dc74c0878c26d66baec232f940608b43fca1fb28a8a81e947a4cac"
+      "sha256": "1cf3f35690c304c0a91736883255a55537123b642622a4029900651e3bdc0a61"
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-      "sha256": "d3aeb976d5d876bc24c51ff88cb5c5cbf16cdf97d44b00eb631f355a483281fc"
+      "sha256": "487246b355a7af0864676649038aab023068f28b630040221ecf0ee625e051f6"
     },
     {
       "path": "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
@@ -596,7 +604,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "0acb9a859a61df326f1a1dd6bb18be416dc9081918754983f53a66af03cccafa"
+      "sha256": "67f88e819aa38abe6e3514103e8ce7ab2ec2ed88f734edd349e9f73f9dce214e"
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -616,11 +624,11 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
-      "sha256": "1e76ff0fe8e68be91686ab066332a452cbf432ebdf4ff25970ce84657ff4c30c"
+      "sha256": "56aa12009f81875f12168e6ee2d9a37448fbfe560b3dc18741a04622bbb4d6d8"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json",
-      "sha256": "71c301c10dc6010f45195c4489299bb4e2da0cb758bcdcca1fba988d5a4ec069"
+      "sha256": "5229027c081ab1512eee6608d5a9c3879fe81165fc3e292b72a3c5b2e0abeca9"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
@@ -628,7 +636,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
-      "sha256": "777d8c2890d22fca3211b7f7df136f8d2fcc8a1ab7ca59360a867be1c5a986da"
+      "sha256": "48c943f2ff767a1b8893314761ecb927efc12bd76c9626fd8382e2412c8e2d4a"
     },
     {
       "path": "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
@@ -652,7 +660,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
-      "sha256": "284d3c226092eee13514abc73a5ea7f6addaf4d806f917162f50969bad2d4c6c"
+      "sha256": "f7cc525e704b1592d89d6064c62bb27122cd0ad0c893f27f807f0b0e38175eba"
     },
     {
       "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
@@ -720,7 +728,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "f8901914cd0afe5bac0e7c2d7e22ad6edd798fb986d1a15246f7cf23cbb199d9"
+      "sha256": "8baa30674d0073c561ffccc71c9ef29ad83f0ff992dc4200decb0ec5eb90cf5b"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -728,7 +736,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "5bf3e097145aea0d9b6f4bd517ed30403f7bc04ab263350a56ea8bb2e80e21fe"
+      "sha256": "9d60ec8a8267a69eab87ae426d1b8c95d5db624abd996dfe496560db6b17af8a"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
@@ -740,7 +748,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "2c91a780f0b0b0320e72737aa4d1c4ceebe19c840a831ecbd4caa56e94d687eb"
+      "sha256": "95870118dac15a14c6faf2f24ad2dc99e5acc579ab1be292db3121d7480ca534"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
@@ -1008,7 +1016,7 @@
     },
     {
       "path": "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
-      "sha256": "38f5e3dfd05259f4093b64ae48a589b6ad0241ada334ba5201fbad04e126c0af"
+      "sha256": "76feb9ee59784093a52666b8cf588a96d167f95a23f1a017adf58f1e66633f79"
     },
     {
       "path": "docs/spec/TRANSLATION_VALIDATION.md",

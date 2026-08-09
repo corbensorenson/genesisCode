@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/engineering-gate-timing-calibration-v0.1.json",
+  "title": "GenesisCode engineering gate timing calibration evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "status", "policySha256", "schemaSha256", "classes", "nonclaims"],
+  "properties": {
+    "kind": {"const": "genesis/engineering-gate-timing-calibration-evidence-v0.1"},
+    "version": {"const": "0.1"},
+    "status": {"enum": ["collecting", "complete"]},
+    "policySha256": {"$ref": "#/$defs/sha256"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "classes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "warmups", "retainedSamples", "failedSamples", "statistics", "trend", "derivedHardCeiling"],
+        "properties": {
+          "id": {"enum": ["local-warm", "local-clean-fallback", "hosted-cold-shared-runner"]},
+          "warmups": {"type": "array", "items": {"$ref": "#/$defs/sample"}},
+          "retainedSamples": {"type": "array", "items": {"$ref": "#/$defs/sample"}},
+          "failedSamples": {"type": "array", "items": {"$ref": "#/$defs/sample"}},
+          "statistics": {"oneOf": [{"$ref": "#/$defs/statistics"}, {"type": "null"}]},
+          "trend": {"oneOf": [{"$ref": "#/$defs/trend"}, {"type": "null"}]},
+          "derivedHardCeiling": {"oneOf": [{"$ref": "#/$defs/derivedHardCeiling"}, {"type": "null"}]}
+        }
+      }
+    },
+    "nonclaims": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "positive": {"type": "integer", "minimum": 1},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "rational": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {"type": "integer", "minimum": 0},
+        "denominator": {"type": "integer", "minimum": 1}
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "durationMs", "outcome", "gitCommit", "hostIdentitySha256", "toolchainIdentitySha256", "workloadIdentitySha256", "cachePrecondition", "competingLaneState", "sourceIdentity"],
+      "properties": {
+        "sequence": {"$ref": "#/$defs/positive"},
+        "durationMs": {"$ref": "#/$defs/positive"},
+        "outcome": {"enum": ["semantic-pass", "hard-failure"]},
+        "gitCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "hostIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "toolchainIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "workloadIdentitySha256": {"$ref": "#/$defs/sha256"},
+        "cachePrecondition": {"type": "string", "minLength": 1},
+        "competingLaneState": {"type": "string", "minLength": 1},
+        "sourceIdentity": {"type": "string", "pattern": "^(github-actions-run|local-observation):.+$"}
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["population", "sampleCount", "medianMs", "p95NearestRankMs", "madMs", "medianConfidenceInterval95Ms", "minimumMs", "maximumMs"],
+      "properties": {
+        "population": {"const": "first-retained-calibration-samples"},
+        "sampleCount": {"const": 30},
+        "medianMs": {"$ref": "#/$defs/rational"},
+        "p95NearestRankMs": {"$ref": "#/$defs/positive"},
+        "madMs": {"$ref": "#/$defs/rational"},
+        "medianConfidenceInterval95Ms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lowerRank", "upperRank", "lowerMs", "upperMs"],
+          "properties": {
+            "lowerRank": {"const": 10},
+            "upperRank": {"const": 21},
+            "lowerMs": {"$ref": "#/$defs/positive"},
+            "upperMs": {"$ref": "#/$defs/positive"}
+          }
+        },
+        "minimumMs": {"$ref": "#/$defs/positive"},
+        "maximumMs": {"$ref": "#/$defs/positive"}
+      }
+    },
+    "trend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowSamples", "status", "medianRegressionAlarm", "p95RegressionAlarm", "currentMedianMs", "currentP95NearestRankMs", "priorMedianMs", "priorP95NearestRankMs"],
+      "properties": {
+        "windowSamples": {"const": 30},
+        "status": {"enum": ["baseline-only", "compared"]},
+        "medianRegressionAlarm": {"type": "boolean"},
+        "p95RegressionAlarm": {"type": "boolean"},
+        "currentMedianMs": {"$ref": "#/$defs/rational"},
+        "currentP95NearestRankMs": {"$ref": "#/$defs/positive"},
+        "priorMedianMs": {"oneOf": [{"$ref": "#/$defs/rational"}, {"type": "null"}]},
+        "priorP95NearestRankMs": {"oneOf": [{"$ref": "#/$defs/positive"}, {"type": "null"}]}
+      }
+    },
+    "derivedHardCeiling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "baseP95NearestRankMs", "madMultiplier", "dispersionHeadroomMs", "minimumHeadroomBasisPoints", "minimumHeadroomMs", "appliedHeadroomMs", "unroundedMs", "roundUpQuantumMs", "derivedMs", "withinDeclaredContainmentCeiling"],
+      "properties": {
+        "method": {"const": "p95-plus-max-mad-or-proportional-headroom-rounded-up"},
+        "baseP95NearestRankMs": {"$ref": "#/$defs/positive"},
+        "madMultiplier": {"const": 6},
+        "dispersionHeadroomMs": {"type": "integer", "minimum": 0},
+        "minimumHeadroomBasisPoints": {"const": 1000},
+        "minimumHeadroomMs": {"type": "integer", "minimum": 0},
+        "appliedHeadroomMs": {"type": "integer", "minimum": 0},
+        "unroundedMs": {"$ref": "#/$defs/positive"},
+        "roundUpQuantumMs": {"const": 1000},
+        "derivedMs": {"$ref": "#/$defs/positive"},
+        "withinDeclaredContainmentCeiling": {"type": "boolean"}
+      }
+    }
+  }
+}

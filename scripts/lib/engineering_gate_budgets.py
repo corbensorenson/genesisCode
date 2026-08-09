@@ -17,12 +17,13 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/lib"))
 from toml_compat import tomllib
+import engineering_gate_timing_calibration as timing_calibration
 
 POLICY = ROOT / "policies/engineering_gate_budgets_v0.1.json"
 SCHEMA = ROOT / "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json"
 MANIFEST = ROOT / "genesis.gates.json"
 
-TOP_FIELDS = {"kind", "version", "roadmapTask", "budgets", "panicAssurance", "profileSubjects", "releaseFullOnlyGates", "semanticCrateWaivers", "staticReclassifications"}
+TOP_FIELDS = {"kind", "version", "roadmapTask", "budgets", "panicAssurance", "profileSubjects", "timingCalibration", "releaseFullOnlyGates", "semanticCrateWaivers", "staticReclassifications"}
 BUDGET_IDS = [f"GB-{index}" for index in range(1, 9)]
 EXPECTED = {
     "GB-1": {"subject": "static-gates", "maxWarmDurationMs": 15000, "maxAdditionalDiskBytes": 67108864, "network": "deny", "compilation": False},
@@ -33,6 +34,12 @@ EXPECTED = {
     "GB-6": {"subject": "prebuilt-evidence-verification", "maxOfflineDurationMs": 300000, "network": "deny", "compilerInvocation": False},
     "GB-7": {"subject": "source-concentration", "maxProductionRustFileLines": 1000, "maxSemanticCrateLines": 20000, "enforcementMilestone": "M3"},
     "GB-8": {"subject": "fresh-clone-prerequisites", "prerequisiteManifest": "genesis.prerequisites.json", "minimumPython": "3.9", "undeclaredPythonModules": 0},
+}
+TIMING_CALIBRATION_POINTER = {
+    "policy": "policies/engineering_gate_timing_calibration_v0.1.json",
+    "schema": "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+    "evidence": "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
+    "verifier": "scripts/lib/engineering_gate_timing_calibration.py",
 }
 STDLIB = {
     "__future__", "argparse", "ast", "base64", "binascii", "collections", "concurrent", "contextlib", "copy",
@@ -88,6 +95,10 @@ def require_policy(policy: Any) -> Mapping[str, Any]:
             raise BudgetError(f"{section} must be an object")
         for field, path in policy[section].items():
             canonical_path(path, f"{section}.{field}")
+    if policy["timingCalibration"] != TIMING_CALIBRATION_POINTER:
+        raise BudgetError("timing calibration authority pointer drift")
+    for field, path in policy["timingCalibration"].items():
+        canonical_path(path, f"timingCalibration.{field}")
     release_only = policy["releaseFullOnlyGates"]
     if not isinstance(release_only, list) or not release_only or release_only != sorted(set(release_only)):
         raise BudgetError("release-full-only gates must be a non-empty sorted unique array")
@@ -340,6 +351,10 @@ def bundle_digest() -> str:
     paths = [
         "policies/engineering_gate_budgets_v0.1.json",
         "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+        "policies/engineering_gate_timing_calibration_v0.1.json",
+        "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json",
+        "docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json",
+        "scripts/lib/engineering_gate_timing_calibration.py",
         "scripts/lib/engineering_gate_budgets.py",
         "scripts/check_engineering_gate_contract.sh",
         "genesis.gates.json",
@@ -391,7 +406,11 @@ def run_check(policy_doc: Optional[Any] = None) -> Dict[str, Any]:
     check_profiles(policy, gates)
     file_waivers, crate_waivers = check_source_concentration(policy)
     python_files = check_python_closure()
-    return {"static": static_count, "fileWaivers": file_waivers, "crateWaivers": crate_waivers, "pythonFiles": python_files}
+    try:
+        timing = timing_calibration.verify()
+    except timing_calibration.TimingCalibrationError as exc:
+        raise BudgetError(f"timing calibration rejected: {exc}") from exc
+    return {"static": static_count, "fileWaivers": file_waivers, "crateWaivers": crate_waivers, "pythonFiles": python_files, "timing": timing}
 
 
 def self_test() -> int:
@@ -403,6 +422,7 @@ def self_test() -> int:
     candidate = copy.deepcopy(policy); candidate["semanticCrateWaivers"][0]["expiresAtMilestone"] = "M4"; mutations.append(candidate)
     candidate = copy.deepcopy(policy); candidate["staticReclassifications"].append(copy.deepcopy(candidate["staticReclassifications"][0])); mutations.append(candidate)
     candidate = copy.deepcopy(policy); candidate["releaseFullOnlyGates"].append(candidate["releaseFullOnlyGates"][0]); mutations.append(candidate)
+    candidate = copy.deepcopy(policy); candidate["timingCalibration"]["evidence"] = candidate["timingCalibration"]["policy"]; mutations.append(candidate)
     candidate = copy.deepcopy(policy); candidate["unknown"] = True; mutations.append(candidate)
     for candidate in mutations:
         try:
@@ -462,6 +482,7 @@ def self_test() -> int:
     if shell_unknown != {"genesis_shell_dependency": {"embedded.sh"}}:
         raise BudgetError("shell-embedded Python dependency escaped GB-8")
     controls += 1
+    controls += timing_calibration.self_test()
     print(f"engineering-gate-budgets: self-test ok (negative_controls={controls})")
     return controls
 
@@ -478,7 +499,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(
             "engineering-gate-budgets: ok "
             f"(budgets=8 static_gates={summary['static']} file_waivers={summary['fileWaivers']} "
-            f"crate_waivers={summary['crateWaivers']} python_files={summary['pythonFiles']} bundle={bundle_digest()})"
+            f"crate_waivers={summary['crateWaivers']} python_files={summary['pythonFiles']} "
+            f"timing_status={summary['timing']['status']} timing_classes={len(summary['timing']['classes'])} "
+            f"bundle={bundle_digest()})"
         )
         return 0
     except (BudgetError, OSError, UnicodeError) as exc:
