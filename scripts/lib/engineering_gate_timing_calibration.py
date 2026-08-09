@@ -231,7 +231,8 @@ def validate_control_observation(
         "timing control observation fields mismatch",
     )
     require(
-        document["source"] in {"local-preflight", "github-actions-context"},
+        document["source"]
+        in {"local-preflight-and-runtime-monitor", "github-actions-context"},
         "timing control source invalid",
     )
     require(document["exactRevision"] is True, "timing observation is not exact-revision")
@@ -256,10 +257,12 @@ def validate_control_observation(
             and local_background_load_limit_basis_points > 0,
             "local timing load limit is not policy-bound",
         )
-        require(document["source"] == "local-preflight", "local timing class lacks local preflight")
+        require(
+            document["source"] == "local-preflight-and-runtime-monitor",
+            "local timing class lacks runtime exclusivity monitoring",
+        )
         require(document["referenceHostConformant"] is True, "local timing host is not conformant")
         require(document["thermalState"] == "nominal", "local timing thermal state is not nominal")
-        require(document["competingProcessCount"] == 0, "local timing host is not exclusive")
         require(
             isinstance(document["backgroundLoadBasisPoints"], int)
             and not isinstance(document["backgroundLoadBasisPoints"], bool)
@@ -281,7 +284,25 @@ def validate_control_observation(
             and document["backgroundLoadLimitBasisPoints"] is None,
             "hosted shared-runner load must remain unclaimed",
         )
+        require(
+            document["competingProcessCount"] == 0,
+            "hosted timing observation claims competing local processes",
+        )
     return document
+
+
+def validate_competing_lane_outcome(
+    control: dict[str, Any], class_id: str, outcome: str, failure_kind: Any
+) -> None:
+    if not class_id.startswith("local-"):
+        return
+    count = control["competingProcessCount"]
+    if outcome == "semantic-pass":
+        require(count == 0, "local semantic pass was observed with a competing build")
+    elif failure_kind == "competing-lane":
+        require(count > 0, "competing-lane failure lacks a competing build")
+    else:
+        require(count == 0, "local non-contention failure claims a competing build")
 
 
 def reconstruct_observation(sample: dict[str, Any], class_id: str) -> dict[str, Any]:
@@ -542,6 +563,8 @@ def validate_policy(policy: Any) -> dict[str, Any]:
             "backgroundLoadMaxPercent": 50,
             "backgroundLoadSampleCount": 5,
             "backgroundLoadSampleIntervalMs": 1000,
+            "competingBuildMeasurement": "preflight-and-runtime-process-tree-poll",
+            "competingBuildPollIntervalMs": 1000,
             "competingBuildProcessMaxCount": 0,
             "operatingMode": "agent-operated-reference-host",
         },
@@ -725,6 +748,7 @@ def validate_sample(
             sample["failureKind"]
             in {
                 "command-failure",
+                "competing-lane",
                 "hard-timeout",
                 "infrastructure-failure",
                 "telemetry-budget",
@@ -798,6 +822,9 @@ def validate_sample(
             if class_policy["id"].startswith("local-")
             else None
         ),
+    )
+    validate_competing_lane_outcome(
+        control, class_policy["id"], sample["outcome"], sample["failureKind"]
     )
     require(
         control["referenceHostConformant"] == host["conformance"]["ok"],
@@ -1034,7 +1061,11 @@ def fixture_environment(
         "competingProcessCount": 0,
         "exactRevision": True,
         "referenceHostConformant": host["conformance"]["ok"],
-        "source": "local-preflight" if local else "github-actions-context",
+        "source": (
+            "local-preflight-and-runtime-monitor"
+            if local
+            else "github-actions-context"
+        ),
         "thermalState": "nominal" if local else "unknown",
     }
     return host, toolchain, control
@@ -1294,6 +1325,35 @@ def self_test() -> int:
     candidate_policy = copy.deepcopy(complete_policy)
     candidate_policy["classes"][0]["hardCeilingMs"] += 1000
     expect_rejection(candidate_policy, complete_evidence, "")
+    controls += 1
+
+    local_control = parse_canonical_json_text(
+        complete_evidence["classes"][0]["retainedSamples"][0][
+            "controlObservationCanonicalJson"
+        ],
+        "controlObservationCanonicalJson",
+    )
+    candidate_control = copy.deepcopy(local_control)
+    candidate_control["competingProcessCount"] = 1
+    try:
+        validate_competing_lane_outcome(
+            candidate_control, "local-warm", "semantic-pass", None
+        )
+    except TimingCalibrationError:
+        controls += 1
+    else:
+        raise TimingCalibrationError("competing local semantic pass was accepted")
+    try:
+        validate_competing_lane_outcome(
+            local_control, "local-warm", "hard-failure", "competing-lane"
+        )
+    except TimingCalibrationError:
+        controls += 1
+    else:
+        raise TimingCalibrationError("unproved competing-lane failure was accepted")
+    validate_competing_lane_outcome(
+        candidate_control, "local-warm", "hard-failure", "competing-lane"
+    )
     controls += 1
 
     require(rational_mad([0, 1]) == {"numerator": 1, "denominator": 2}, "exact MAD regression")

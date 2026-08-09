@@ -11,6 +11,8 @@
     "backgroundLoadMaxPercent": 50,
     "backgroundLoadSampleCount": 5,
     "backgroundLoadSampleIntervalMs": 1000,
+    "competingBuildMeasurement": "preflight-and-runtime-process-tree-poll",
+    "competingBuildPollIntervalMs": 1000,
     "competingBuildProcessMaxCount": 0,
     "operatingMode": "agent-operated-reference-host"
   },

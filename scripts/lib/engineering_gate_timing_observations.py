@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import argparse
 import copy
+import io
 import json
 import os
 from pathlib import Path
 import re
+import shlex
 import signal
 import subprocess
 import sys
@@ -282,6 +284,7 @@ def validate_observation(document: Any, policy: dict[str, Any]) -> dict[str, Any
             and document["failureKind"]
             in {
                 "command-failure",
+                "competing-lane",
                 "hard-timeout",
                 "infrastructure-failure",
                 "telemetry-budget",
@@ -297,6 +300,9 @@ def validate_observation(document: Any, policy: dict[str, Any]) -> dict[str, Any
             and document["cleanupStatus"] in {"reaped", "containment-failure"},
             "hard failure terminal facts invalid",
         )
+    calibration.validate_competing_lane_outcome(
+        control, class_id, document["outcome"], document["failureKind"]
+    )
     if class_id.startswith("local-"):
         require(
             document["chainScope"] == "append-only-local",
@@ -373,19 +379,118 @@ def git_output(*args: str) -> str:
     return run_text(["git", *args])
 
 
-def competing_process_count() -> int:
-    output = run_text(["ps", "-axo", "pid=,comm="])
-    count = 0
+BUILD_PROCESS_NAMES = {
+    "cargo",
+    "cargo-nextest",
+    "genesis",
+    "nextest",
+    "quarto",
+    "rustc",
+}
+SHELL_NAMES = {"bash", "dash", "sh", "zsh"}
+
+
+def command_tokens(command: str) -> list[str]:
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return command.split()
+
+
+def build_process_class(command: str) -> Optional[str]:
+    tokens = command_tokens(command)
+    if not tokens:
+        return None
+    executable = Path(tokens[0]).name
+    if executable in BUILD_PROCESS_NAMES:
+        return executable
+    if executable == "env":
+        index = 1
+        while index < len(tokens) and (
+            tokens[index].startswith("-") or "=" in tokens[index]
+        ):
+            index += 1
+        return build_process_class(" ".join(tokens[index:]))
+    if executable in SHELL_NAMES:
+        index = 1
+        while index < len(tokens) and tokens[index].startswith("-"):
+            if "c" in tokens[index] and index + 1 < len(tokens):
+                return build_process_class(tokens[index + 1])
+            index += 1
+        if index < len(tokens):
+            wrapped = Path(tokens[index]).name
+            return wrapped if wrapped in BUILD_PROCESS_NAMES else None
+        return None
+    if executable in {"deno", "node"} and any(
+        Path(token).name in {"quarto", "quarto.js"} for token in tokens[1:]
+    ):
+        return "quarto"
+    if executable == "rustup":
+        for token in tokens[1:]:
+            wrapped = Path(token).name
+            if wrapped in BUILD_PROCESS_NAMES:
+                return wrapped
+    return None
+
+
+def parse_process_snapshot(output: str) -> list[dict[str, Any]]:
+    rows = []
     for line in output.splitlines():
-        parts = line.strip().split(None, 1)
-        if len(parts) != 2:
+        parts = line.strip().split(None, 2)
+        if len(parts) != 3:
             continue
-        pid, command = int(parts[0]), Path(parts[1]).name
-        if pid == os.getpid():
+        try:
+            pid = int(parts[0])
+            parent_pid = int(parts[1])
+        except ValueError:
             continue
-        if command in {"cargo", "rustc", "cargo-nextest", "nextest", "genesis", "quarto"}:
-            count += 1
-    return count
+        rows.append(
+            {
+                "pid": pid,
+                "parentPid": parent_pid,
+                "command": parts[2],
+                "buildClass": build_process_class(parts[2]),
+            }
+        )
+    return rows
+
+
+def process_snapshot() -> list[dict[str, Any]]:
+    return parse_process_snapshot(run_text(["ps", "-axo", "pid=,ppid=,command="]))
+
+
+def descendant_pids(rows: Sequence[dict[str, Any]], root_pid: int) -> set[int]:
+    owned = {root_pid}
+    changed = True
+    while changed:
+        changed = False
+        for row in rows:
+            if row["parentPid"] in owned and row["pid"] not in owned:
+                owned.add(row["pid"])
+                changed = True
+    return owned
+
+
+def external_competing_builds(
+    rows: Sequence[dict[str, Any]], owned_root_pid: Optional[int] = None
+) -> list[dict[str, Any]]:
+    owned = (
+        descendant_pids(rows, owned_root_pid)
+        if owned_root_pid is not None
+        else {os.getpid()}
+    )
+    return sorted(
+        [
+            row
+            for row in rows
+            if row["pid"] not in owned and row["buildClass"] is not None
+        ],
+        key=lambda row: (row["buildClass"], row["pid"]),
+    )
+
+
+def competing_process_count() -> int:
+    return len(external_competing_builds(process_snapshot()))
 
 
 def thermal_state() -> str:
@@ -472,9 +577,58 @@ def local_preflight(
         "competingProcessCount": competing,
         "exactRevision": True,
         "referenceHostConformant": True,
-        "source": "local-preflight",
+        "source": "local-preflight-and-runtime-monitor",
         "thermalState": thermal,
     }
+
+
+def wait_for_local_process(
+    process: subprocess.Popen[Any],
+    *,
+    timeout_ms: int,
+    poll_interval_ms: int,
+    log: Any,
+) -> tuple[Optional[int], bool, bool, int]:
+    deadline_ns = time.monotonic_ns() + timeout_ms * 1_000_000
+    maximum_competing = 0
+    monitor_failed = False
+    timed_out = False
+    exit_code: Optional[int] = None
+    while True:
+        if process.poll() is not None:
+            exit_code = process.returncode
+            break
+        try:
+            competitors = external_competing_builds(process_snapshot(), process.pid)
+        except TimingObservationError as exc:
+            monitor_failed = True
+            log.write(f"runtime exclusivity monitor failure: {exc}\n".encode("utf-8"))
+            break
+        maximum_competing = max(maximum_competing, len(competitors))
+        if competitors:
+            classes = ",".join(sorted({row["buildClass"] for row in competitors}))
+            log.write(
+                (
+                    "runtime exclusivity violation: "
+                    f"count={len(competitors)} classes={classes}\n"
+                ).encode("ascii")
+            )
+            break
+        remaining_ns = deadline_ns - time.monotonic_ns()
+        if remaining_ns <= 0:
+            timed_out = True
+            break
+        wait_seconds = min(poll_interval_ms / 1000, remaining_ns / 1_000_000_000)
+        try:
+            exit_code = process.wait(timeout=wait_seconds)
+            break
+        except subprocess.TimeoutExpired:
+            continue
+        except OSError as exc:
+            monitor_failed = True
+            log.write(f"collector wait failure: {exc}\n".encode("utf-8"))
+            break
+    return exit_code, timed_out, monitor_failed, maximum_competing
 
 
 def terminate_group(process: subprocess.Popen[Any]) -> str:
@@ -652,6 +806,8 @@ def _record_local(class_id: str, history_path: Path) -> dict[str, Any]:
     started = time.monotonic_ns()
     timed_out = False
     launch_failed = False
+    monitor_failed = False
+    competing_processes = 0
     exit_code: Optional[int] = None
     cleanup_status = "reaped"
     report: Any = None
@@ -696,19 +852,22 @@ def _record_local(class_id: str, history_path: Path) -> dict[str, Any]:
                 launch_failed = True
                 log.write(f"collector launch failure: {exc}\n".encode("utf-8"))
             else:
-                try:
-                    exit_code = process.wait(
-                        timeout=class_policy["hardCeilingMs"] / 1000
-                    )
-                except subprocess.TimeoutExpired:
-                    timed_out = True
-                except OSError as exc:
-                    launch_failed = True
-                    log.write(f"collector wait failure: {exc}\n".encode("utf-8"))
-                finally:
-                    cleanup_status = terminate_group(process)
-                    if exit_code is None and process.returncode is not None:
-                        exit_code = process.returncode
+                (
+                    exit_code,
+                    timed_out,
+                    monitor_failed,
+                    competing_processes,
+                ) = wait_for_local_process(
+                    process,
+                    timeout_ms=class_policy["hardCeilingMs"],
+                    poll_interval_ms=policy["localPreflight"][
+                        "competingBuildPollIntervalMs"
+                    ],
+                    log=log,
+                )
+                cleanup_status = terminate_group(process)
+                if exit_code is None and process.returncode is not None:
+                    exit_code = process.returncode
         if report_path.is_file():
             try:
                 report = json.loads(
@@ -729,7 +888,9 @@ def _record_local(class_id: str, history_path: Path) -> dict[str, Any]:
     )
     semantic_pass = (
         not launch_failed
+        and not monitor_failed
         and not timed_out
+        and competing_processes == 0
         and exit_code == 0
         and cleanup_status == "reaped"
         and report_valid
@@ -737,9 +898,11 @@ def _record_local(class_id: str, history_path: Path) -> dict[str, Any]:
     )
     if semantic_pass:
         failure_kind = None
+    elif competing_processes > 0:
+        failure_kind = "competing-lane"
     elif timed_out:
         failure_kind = "hard-timeout"
-    elif launch_failed or cleanup_status != "reaped":
+    elif launch_failed or monitor_failed or cleanup_status != "reaped":
         failure_kind = "infrastructure-failure"
     elif report_valid and (
         report.get("elapsed_ms", 0) > report.get("budget_ms", 0)
@@ -749,6 +912,7 @@ def _record_local(class_id: str, history_path: Path) -> dict[str, Any]:
         failure_kind = "telemetry-budget"
     else:
         failure_kind = "command-failure"
+    control["competingProcessCount"] = competing_processes
     document = build_observation(
         class_policy=class_policy,
         workload=workload,
@@ -1017,7 +1181,11 @@ def fixture_observation(
         "competingProcessCount": 0,
         "exactRevision": True,
         "referenceHostConformant": True,
-        "source": "local-preflight" if local else "github-actions-context",
+        "source": (
+            "local-preflight-and-runtime-monitor"
+            if local
+            else "github-actions-context"
+        ),
         "thermalState": "nominal" if local else "unknown",
     }
     document = build_observation(
@@ -1067,6 +1235,80 @@ def self_test() -> int:
     finally:
         os.getloadavg = original_getloadavg
         time.sleep = original_sleep
+    require(build_process_class("/usr/bin/cargo test") == "cargo", "direct Cargo was missed")
+    require(
+        build_process_class("/bin/bash /opt/quarto/bin/quarto render") == "quarto",
+        "shell-wrapped Quarto was missed",
+    )
+    require(
+        build_process_class("/opt/deno run /opt/quarto/bin/quarto.js render")
+        == "quarto",
+        "Deno-hosted Quarto was missed",
+    )
+    require(
+        build_process_class("/bin/zsh -c 'cargo test -p gc_kernel'") == "cargo",
+        "shell command Cargo was missed",
+    )
+    require(
+        build_process_class("rg cargo scripts") is None,
+        "non-build command text was misclassified",
+    )
+    process_fixture = parse_process_snapshot(
+        "\n".join(
+            [
+                "100 1 bash scripts/test_changed_fast.sh",
+                "101 100 /usr/bin/cargo test",
+                "102 101 /usr/bin/rustc crate.rs",
+                "200 1 /bin/bash /opt/quarto/bin/quarto render",
+                "201 200 /opt/deno run /opt/quarto/bin/quarto.js render",
+            ]
+        )
+    )
+    require(
+        {row["pid"] for row in external_competing_builds(process_fixture, 100)}
+        == {200, 201},
+        "owned descendant closure did not isolate external builds",
+    )
+
+    class PendingProcess:
+        pid = 100
+        returncode = None
+
+        @staticmethod
+        def poll() -> None:
+            return None
+
+        @staticmethod
+        def wait(timeout: float) -> int:
+            raise AssertionError(f"monitor waited despite a competitor: {timeout}")
+
+    original_process_snapshot = process_snapshot
+    monitor_log = io.BytesIO()
+    try:
+        globals()["process_snapshot"] = lambda: process_fixture
+        monitor_result = wait_for_local_process(
+            PendingProcess(), timeout_ms=1000, poll_interval_ms=100, log=monitor_log
+        )
+        require(
+            monitor_result == (None, False, False, 2)
+            and b"classes=quarto" in monitor_log.getvalue(),
+            "runtime monitor did not fail closed on external builds",
+        )
+        globals()["process_snapshot"] = lambda: (_ for _ in ()).throw(
+            TimingObservationError("fixture monitor failure")
+        )
+        require(
+            wait_for_local_process(
+                PendingProcess(),
+                timeout_ms=1000,
+                poll_interval_ms=100,
+                log=io.BytesIO(),
+            )
+            == (None, False, True, 0),
+            "runtime monitor failure did not fail closed",
+        )
+    finally:
+        globals()["process_snapshot"] = original_process_snapshot
     first = fixture_observation(policy, "local-warm", "fixture-1", ZERO_SHA256)
     second = fixture_observation(
         policy, "local-clean-fallback", "fixture-2", first["identitySha256"]
@@ -1076,7 +1318,7 @@ def self_test() -> int:
     )
     for record in (first, second, hosted):
         validate_observation(record, policy)
-    controls = 4
+    controls = 12
 
     mutations = []
     candidate = copy.deepcopy(first)
@@ -1084,6 +1326,31 @@ def self_test() -> int:
     mutations.append(candidate)
     candidate = copy.deepcopy(first)
     candidate["cachePrecondition"] = "empty"
+    candidate["identitySha256"] = observation_identity(candidate)
+    mutations.append(candidate)
+    candidate = copy.deepcopy(first)
+    control = parse_canonical_json(
+        candidate["controlObservationCanonicalJson"], "fixture control"
+    )
+    control["competingProcessCount"] = 1
+    candidate["controlObservationCanonicalJson"] = canonical_json(control)
+    candidate["identitySha256"] = observation_identity(candidate)
+    mutations.append(candidate)
+    candidate = copy.deepcopy(first)
+    candidate["outcome"] = "hard-failure"
+    candidate["failureKind"] = "competing-lane"
+    candidate["exitCode"] = -15
+    candidate["identitySha256"] = observation_identity(candidate)
+    mutations.append(candidate)
+    candidate = copy.deepcopy(first)
+    control = parse_canonical_json(
+        candidate["controlObservationCanonicalJson"], "fixture control"
+    )
+    control["competingProcessCount"] = 1
+    candidate["controlObservationCanonicalJson"] = canonical_json(control)
+    candidate["outcome"] = "hard-failure"
+    candidate["failureKind"] = "command-failure"
+    candidate["exitCode"] = 1
     candidate["identitySha256"] = observation_identity(candidate)
     mutations.append(candidate)
     candidate = copy.deepcopy(first)
@@ -1125,6 +1392,19 @@ def self_test() -> int:
             controls += 1
         else:
             raise TimingObservationError("timing observation mutation was accepted")
+
+    competing_failure = copy.deepcopy(first)
+    control = parse_canonical_json(
+        competing_failure["controlObservationCanonicalJson"], "fixture control"
+    )
+    control["competingProcessCount"] = 1
+    competing_failure["controlObservationCanonicalJson"] = canonical_json(control)
+    competing_failure["outcome"] = "hard-failure"
+    competing_failure["failureKind"] = "competing-lane"
+    competing_failure["exitCode"] = -15
+    competing_failure["identitySha256"] = observation_identity(competing_failure)
+    validate_observation(competing_failure, policy)
+    controls += 1
 
     with tempfile.TemporaryDirectory() as raw_temp:
         history = Path(raw_temp) / "history.jsonl"

@@ -53,7 +53,7 @@
         "observedAtUnixSeconds": {"$ref": "#/$defs/positive"},
         "durationMs": {"$ref": "#/$defs/positive"},
         "outcome": {"enum": ["semantic-pass", "hard-failure"]},
-        "failureKind": {"oneOf": [{"enum": ["command-failure", "hard-timeout", "infrastructure-failure", "telemetry-budget", "interrupted"]}, {"type": "null"}]},
+        "failureKind": {"oneOf": [{"enum": ["command-failure", "competing-lane", "hard-timeout", "infrastructure-failure", "telemetry-budget", "interrupted"]}, {"type": "null"}]},
         "exitCode": {"oneOf": [{"type": "integer"}, {"type": "null"}]},
         "cleanupStatus": {"enum": ["reaped", "containment-failure"]},
         "gitCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
