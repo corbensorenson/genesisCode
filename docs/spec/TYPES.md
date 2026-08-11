@@ -96,6 +96,12 @@ Package metadata does not grant capability. Each module's `:caps` must cover the
 transitive effects reachable from its definitions and exports as well as effects found by
 direct syntax inference.
 
+When any module opts into `genesis/module-resolution-profile-v0.1`, package typechecking first
+applies `MODULE_RESOLUTION_PROFILE_v0.1.md`. Resolver failures are deterministic module errors and
+no invalid closure receives a resolution identity. Unmarked v0.2 modules retain the legacy shared
+export environment until the scheduled self-hosted migration and semantic migration tooling are
+complete; profile activation never occurs by inference.
+
 ## Inference Coverage (v0.2)
 
 The typechecker infers types most precisely for:

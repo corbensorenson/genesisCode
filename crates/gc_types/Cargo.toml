@@ -8,8 +8,13 @@ publish.workspace = true
 [dependencies]
 anyhow.workspace = true
 thiserror.workspace = true
+unicode-normalization.workspace = true
 
 # local
 gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
 gc_prelude = { path = "../gc_prelude", default-features = false }
+
+[dev-dependencies]
+serde_json.workspace = true
+sha2.workspace = true

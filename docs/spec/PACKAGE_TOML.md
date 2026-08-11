@@ -93,6 +93,11 @@ Each entry:
 - `genesis test` must verify that each module’s current hash matches the pinned `hash` field.
 - Dependencies must be hash-checked before use (local path deps are allowed but must match pinned hashes).
 - Package acceptance is granted only if all listed `obligations` succeed.
+- Module vector order is semantic and identity-bound. Under
+  `genesis/module-resolution-profile-v0.1`, local imports may target only public exports of earlier
+  entries; forward, self, and cyclic imports fail closed.
+- There is no ambient workspace override. A local replacement requires an explicit manifest/lock
+  update naming exact content identities and produces a new package closure identity.
 - Package evaluation limits are enforced for `genesis test` and `genesis apply-patch`:
   - if `limits.allow_unlimited = false` (default), `--no-step-limit` must be rejected as a manifest policy error
   - the effective step limit is the minimum of the CLI request (if any) and `limits.step_limit` (or the toolchain default when omitted)

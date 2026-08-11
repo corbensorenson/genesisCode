@@ -5,6 +5,7 @@ use gc_coreform::{Term, TermOrdKey, print_term};
 mod diagnostics;
 mod effect_inference;
 mod infer;
+mod module_resolution;
 mod ty;
 mod type_compatibility;
 
@@ -21,6 +22,9 @@ use crate::type_compatibility::{
 pub use crate::diagnostics::TypecheckDiagnostic;
 use crate::diagnostics::module_diagnostics;
 pub use crate::effect_inference::{infer_effects, infer_effects_in_term};
+pub use crate::module_resolution::{
+    MODULE_RESOLUTION_PROFILE_ID, ModuleResolutionReport, resolve_module_profile,
+};
 
 #[derive(Debug, Clone)]
 pub struct ModuleForTypecheck {
@@ -78,7 +82,15 @@ struct PackageTypeContext {
 }
 
 pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
-    let context = collect_package_type_context(mods);
+    let mut context = collect_package_type_context(mods);
+    let resolution = resolve_module_profile(mods);
+    for (path, errors) in resolution.errors_by_module {
+        context
+            .module_errors
+            .entry(path)
+            .or_default()
+            .extend(errors);
+    }
     let mut report = TypecheckReport {
         ok: true,
         errors: Vec::new(),

@@ -971,6 +971,65 @@ fn package_rejects_duplicate_export_ownership() {
 }
 
 #[test]
+fn module_resolution_profile_rejects_undeclared_cross_module_reference() {
+    let provider_src = r#"
+          (def ::meta
+            '{:module-profile genesis/module-resolution-profile-v0.1
+              :requires-profiles {
+                genesis/coreform-profile genesis/coreform/v0.2
+                genesis/hash-profile genesis/hash-profile/gcv0.2-blake3
+                genesis/language-profile genesis/language-profile/v0.2
+                genesis/module-resolution-profile genesis/module-resolution-profile-v0.1}
+              :imports []
+              :exports [pkg/a::value]
+              :caps []
+              :types {pkg/a::value Int}})
+          (def pkg/a::value 1)
+          pkg/a::value
+        "#;
+    let consumer_src = r#"
+          (def ::meta
+            '{:module-profile genesis/module-resolution-profile-v0.1
+              :requires-profiles {
+                genesis/coreform-profile genesis/coreform/v0.2
+                genesis/hash-profile genesis/hash-profile/gcv0.2-blake3
+                genesis/language-profile genesis/language-profile/v0.2
+                genesis/module-resolution-profile genesis/module-resolution-profile-v0.1}
+              :imports []
+              :exports [pkg/b::value]
+              :caps []
+              :types {pkg/b::value Int}})
+          (def pkg/b::value pkg/a::value)
+          pkg/b::value
+        "#;
+    let provider_forms = canonicalize_module(parse_module(provider_src).unwrap()).unwrap();
+    let consumer_forms = canonicalize_module(parse_module(consumer_src).unwrap()).unwrap();
+    let report = typecheck_package(&[
+        ModuleForTypecheck {
+            path: "a.gc".to_string(),
+            meta: extract_meta(&provider_forms),
+            forms: provider_forms,
+        },
+        ModuleForTypecheck {
+            path: "b.gc".to_string(),
+            meta: extract_meta(&consumer_forms),
+            forms: consumer_forms,
+        },
+    ]);
+
+    assert!(!report.ok, "undeclared cross-module use must fail closed");
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("b.gc")
+                && error.contains("pkg/a::value")
+                && error.contains("not declared in :imports")
+        }),
+        "expected deterministic undeclared-import diagnostic, got {:?}",
+        report.errors
+    );
+}
+
+#[test]
 fn strict_effects_accept_parameter_bound_named_row_variable() {
     let src = r#"
           (def ::meta

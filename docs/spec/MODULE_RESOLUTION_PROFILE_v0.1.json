@@ -1,0 +1,73 @@
+{
+  "auditDate": "2026-08-11",
+  "canonicalSpec": "docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.md",
+  "canonicalSpecSha256": "8f541bf3b1ce3b61d3428e0bfe97c7f4e9659cb3b52012b891de6da4ffa5f755",
+  "contentIdentitySha256": "b186e589bc5b6e466496f224c694712e411dac47c0f46e7ecdde6a6ce36ef8e1",
+  "cycles": {
+    "crossModule": "reject-forward-self-and-cyclic-imports",
+    "intraModuleRecursion": "allowed-by-module-scope-v0.2",
+    "proof": "every-accepted-local-edge-targets-lower-manifest-index"
+  },
+  "identity": {
+    "invalidClosure": "no-resolution-identity",
+    "module": "hash-module-canonical-coreform-gcv0.2-blake3",
+    "package": "artifact-hash-binds-manifest-order-modules-dependencies-obligations",
+    "resolution": "hash-canonical-profile-plus-manifest-ordered-module-records"
+  },
+  "imports": {
+    "external": "dependency-package-public-exports-from-exact-verified-closure",
+    "local": "explicit-module-meta-import-set",
+    "order": "owner-must-precede-consumer-in-manifest",
+    "representation": "unique-qualified-symbol-vector-canonicalized-as-lexical-set",
+    "resolution": "unique-owner-public-export-only"
+  },
+  "kind": "genesis/module-resolution-profile-v0.1",
+  "modules": {
+    "activation": "if-any-marker-then-all-modules-exact-marker",
+    "metadata": [":module-profile", ":requires-profiles", ":imports", ":exports"],
+    "order": "package-manifest-vector-is-semantic-and-identity-bound",
+    "paths": "portable-base-relative-nfc-slash-paths"
+  },
+  "nonclaims": [
+    "Version labels, semantic-version ranges, and source compatibility do not imply profile compatibility.",
+    "No implicit re-exports, aliases, wildcard imports, friend visibility, runtime dynamic loading, or ambient workspace overrides are provided.",
+    "The profile does not switch production semantic authority before the corresponding R4.2 migration.",
+    "No package, registry, self-host, backend, benchmark, Foundry result, or release level is promoted."
+  ],
+  "packageBoundaries": {
+    "dependencies": "manifest-and-lock-declared-exact-content-hashes",
+    "privateDefinitions": "never-enter-dependent-package-environment",
+    "selection": "explicit-root-manifest-and-lock-no-discovery",
+    "versions": "labels-and-ranges-grant-no-compatibility"
+  },
+  "profiles": {
+    "bindings": {
+      "genesis/coreform-profile": "genesis/coreform/v0.2",
+      "genesis/hash-profile": "genesis/hash-profile/gcv0.2-blake3",
+      "genesis/language-profile": "genesis/language-profile/v0.2",
+      "genesis/module-resolution-profile": "genesis/module-resolution-profile-v0.1"
+    },
+    "mode": "closed-exact-map-no-inference-or-ranges"
+  },
+  "schema": "docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.schema.json",
+  "schemaSha256": "397dcc559fb4f442a90392922cc97bb7ce13cc7f702020580e63c0378a4dfd36",
+  "sourceBindings": [
+    {"id": "source/content-identity", "mode": "content-identity", "path": "crates/gc_coreform/src/term.rs"},
+    {"id": "source/manifest", "mode": "manifest", "path": "crates/gc_pkg/src/manifest.rs"},
+    {"id": "source/module-evaluation", "mode": "module-evaluation", "path": "crates/gc_obligations/src/obligation_eval_helpers.rs"},
+    {"id": "source/package-boundary", "mode": "package-boundary", "path": "crates/gc_obligations/src/obligation_stage.rs"},
+    {"id": "source/patch-import-export", "mode": "patch", "path": "crates/gc_patches/src/lib.rs"},
+    {"id": "source/resolver", "mode": "resolver", "path": "crates/gc_types/src/module_resolution.rs"},
+    {"id": "source/typecheck", "mode": "typecheck", "path": "crates/gc_types/src/lib.rs"}
+  ],
+  "version": "0.1",
+  "visibility": {
+    "private": "all-non-exported-top-level-definitions-module-local",
+    "public": "only-unique-locally-defined-meta-exports",
+    "shadowing": "lexical-fn-and-let-binders-do-not-create-imports"
+  },
+  "workspaceOverrides": {
+    "ambient": "unsupported-and-rejected",
+    "replacement": "explicit-old-and-new-identity-manifest-lock-update-produces-new-closure"
+  }
+}

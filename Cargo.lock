@@ -1302,7 +1302,10 @@ dependencies = [
  "gc_coreform",
  "gc_kernel",
  "gc_prelude",
+ "serde_json",
+ "sha2",
  "thiserror 2.0.18",
+ "unicode-normalization",
 ]
 
 [[package]]

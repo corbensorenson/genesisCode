@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.org/spec/module-resolution-profile-v0.1.schema.json",
+  "title": "GenesisCode Module Resolution Profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["auditDate", "canonicalSpec", "canonicalSpecSha256", "contentIdentitySha256", "cycles", "identity", "imports", "kind", "modules", "nonclaims", "packageBoundaries", "profiles", "schema", "schemaSha256", "sourceBindings", "version", "visibility", "workspaceOverrides"],
+  "properties": {
+    "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "canonicalSpec": {"const": "docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.md"},
+    "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "cycles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["crossModule", "intraModuleRecursion", "proof"],
+      "properties": {
+        "crossModule": {"const": "reject-forward-self-and-cyclic-imports"},
+        "intraModuleRecursion": {"const": "allowed-by-module-scope-v0.2"},
+        "proof": {"const": "every-accepted-local-edge-targets-lower-manifest-index"}
+      }
+    },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["invalidClosure", "module", "package", "resolution"],
+      "properties": {
+        "invalidClosure": {"const": "no-resolution-identity"},
+        "module": {"const": "hash-module-canonical-coreform-gcv0.2-blake3"},
+        "package": {"const": "artifact-hash-binds-manifest-order-modules-dependencies-obligations"},
+        "resolution": {"const": "hash-canonical-profile-plus-manifest-ordered-module-records"}
+      }
+    },
+    "imports": {
+      "type": "object", "additionalProperties": false,
+      "required": ["external", "local", "order", "representation", "resolution"],
+      "properties": {
+        "external": {"const": "dependency-package-public-exports-from-exact-verified-closure"},
+        "local": {"const": "explicit-module-meta-import-set"},
+        "order": {"const": "owner-must-precede-consumer-in-manifest"},
+        "representation": {"const": "unique-qualified-symbol-vector-canonicalized-as-lexical-set"},
+        "resolution": {"const": "unique-owner-public-export-only"}
+      }
+    },
+    "kind": {"const": "genesis/module-resolution-profile-v0.1"},
+    "modules": {
+      "type": "object", "additionalProperties": false,
+      "required": ["activation", "metadata", "order", "paths"],
+      "properties": {
+        "activation": {"const": "if-any-marker-then-all-modules-exact-marker"},
+        "metadata": {"const": [":module-profile", ":requires-profiles", ":imports", ":exports"]},
+        "order": {"const": "package-manifest-vector-is-semantic-and-identity-bound"},
+        "paths": {"const": "portable-base-relative-nfc-slash-paths"}
+      }
+    },
+    "nonclaims": {"$ref": "#/$defs/nonemptyStrings"},
+    "packageBoundaries": {
+      "type": "object", "additionalProperties": false,
+      "required": ["dependencies", "privateDefinitions", "selection", "versions"],
+      "properties": {
+        "dependencies": {"const": "manifest-and-lock-declared-exact-content-hashes"},
+        "privateDefinitions": {"const": "never-enter-dependent-package-environment"},
+        "selection": {"const": "explicit-root-manifest-and-lock-no-discovery"},
+        "versions": {"const": "labels-and-ranges-grant-no-compatibility"}
+      }
+    },
+    "profiles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bindings", "mode"],
+      "properties": {
+        "bindings": {
+          "const": {
+            "genesis/coreform-profile": "genesis/coreform/v0.2",
+            "genesis/hash-profile": "genesis/hash-profile/gcv0.2-blake3",
+            "genesis/language-profile": "genesis/language-profile/v0.2",
+            "genesis/module-resolution-profile": "genesis/module-resolution-profile-v0.1"
+          }
+        },
+        "mode": {"const": "closed-exact-map-no-inference-or-ranges"}
+      }
+    },
+    "schema": {"const": "docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.schema.json"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "sourceBindings": {
+      "type": "array", "minItems": 7, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "mode", "path"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "mode": {"enum": ["content-identity", "manifest", "module-evaluation", "package-boundary", "patch", "resolver", "typecheck"]},
+          "path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "version": {"const": "0.1"},
+    "visibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["private", "public", "shadowing"],
+      "properties": {
+        "private": {"const": "all-non-exported-top-level-definitions-module-local"},
+        "public": {"const": "only-unique-locally-defined-meta-exports"},
+        "shadowing": {"const": "lexical-fn-and-let-binders-do-not-create-imports"}
+      }
+    },
+    "workspaceOverrides": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ambient", "replacement"],
+      "properties": {
+        "ambient": {"const": "unsupported-and-rejected"},
+        "replacement": {"const": "explicit-old-and-new-identity-manifest-lock-update-produces-new-closure"}
+      }
+    }
+  },
+  "$defs": {
+    "nonemptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

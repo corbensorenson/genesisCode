@@ -50,3 +50,11 @@ Name lookup is:
 
 Recursive module scope can create cyclic value graphs (a binding closes over the module scope that binds it). Value
 hashing remains total and deterministic by applying the cycle handling rule defined in `docs/spec/VALUE_EFFECT_HASH.md`.
+
+## Cross-Module Resolution
+
+This document governs recursion and replacement inside one module. Modules that declare
+`genesis/module-resolution-profile-v0.1` additionally follow
+`MODULE_RESOLUTION_PROFILE_v0.1.md`: only earlier public exports may be imported, local
+cross-module imports are explicit, and forward, self, and cyclic module imports fail closed. These
+rules do not restrict mutual recursion among top-level definitions in the same module.
