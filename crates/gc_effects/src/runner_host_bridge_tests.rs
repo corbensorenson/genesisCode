@@ -255,6 +255,109 @@ max_bytes = 4096
     }
 }
 
+#[cfg(all(not(target_os = "wasi"), unix))]
+#[test]
+fn spawn_bridge_cleanup_failures_cross_the_public_operation_boundary() {
+    let td = tempfile::tempdir().expect("bridge tempdir");
+    let bridge = td.path().join("cleanup_fault_bridge.sh");
+    write_timeout_bridge_script(&bridge);
+    let pid_log = td.path().join("cleanup_fault_pids.txt");
+    let base_dir = td.path().display().to_string();
+    let pid_log_s = pid_log.display().to_string();
+    let policy_for = |mode: &str, timeout_ms: u64| {
+        CapsPolicy::from_toml_str(&format!(
+            r#"
+allow = ["gpu/compute::limits"]
+[op."gpu/compute::limits"]
+base_dir = "{base_dir}"
+bridge_cmd = "cleanup_fault_bridge.sh"
+bridge_transport = "spawn-per-op"
+bridge_args = ["{pid_log_s}", "{mode}"]
+timeout_ms = {timeout_ms}
+max_bytes = 4096
+"#
+        ))
+        .expect("cleanup fault policy")
+    };
+    let mut runtime = HostBridgeRuntime::default();
+
+    let fast_policy = policy_for("fast", 1_000);
+    let residual_error = super::with_spawn_bridge_cleanup_fault_for_tests(
+        super::SpawnBridgeCleanupFault::ResidualVerification,
+        || {
+            super::call_host_bridge(
+                &mut runtime,
+                "gpu",
+                "gpu/compute::limits",
+                &Term::Nil,
+                fast_policy.op_policy("gpu/compute::limits"),
+            )
+        },
+    )
+    .expect_err("residual verification failure must replace a successful result");
+    assert_eq!(residual_error.code, "gpu/bridge-reap");
+    assert!(
+        residual_error
+            .message
+            .contains("injected spawn bridge residual verification failure")
+    );
+
+    let join_error = super::with_spawn_bridge_cleanup_fault_for_tests(
+        super::SpawnBridgeCleanupFault::WriterJoin,
+        || {
+            super::call_host_bridge(
+                &mut runtime,
+                "gpu",
+                "gpu/compute::limits",
+                &Term::Nil,
+                fast_policy.op_policy("gpu/compute::limits"),
+            )
+        },
+    )
+    .expect_err("pump join failure must replace a successful result");
+    assert_eq!(join_error.code, "gpu/bridge-reap");
+    assert!(
+        join_error
+            .message
+            .contains("injected stdin pump join failure")
+    );
+
+    let timeout_policy = policy_for("hang", 25);
+    let reap_error = super::with_spawn_bridge_cleanup_fault_for_tests(
+        super::SpawnBridgeCleanupFault::Reap,
+        || {
+            super::call_host_bridge(
+                &mut runtime,
+                "gpu",
+                "gpu/compute::limits",
+                &Term::Nil,
+                timeout_policy.op_policy("gpu/compute::limits"),
+            )
+        },
+    )
+    .expect_err("reap failure must replace the initiating timeout");
+    assert_eq!(reap_error.code, "gpu/bridge-reap");
+    assert!(
+        reap_error
+            .message
+            .contains("injected spawn bridge reap failure")
+    );
+    assert!(
+        reap_error
+            .message
+            .contains("prior error: gpu/bridge-timeout")
+    );
+    let pids = std::fs::read_to_string(&pid_log).expect("cleanup fault pid log");
+    for pid in pids
+        .lines()
+        .flat_map(|line| line.split(':'))
+        .filter_map(|pid| pid.parse::<i32>().ok())
+        .filter(|pid| *pid > 0)
+    {
+        wait_for_pid_exit(pid);
+    }
+}
+
 #[cfg(not(target_os = "wasi"))]
 fn write_persistent_bridge_script(path: &std::path::Path) {
     let src = r#"#!/usr/bin/env sh

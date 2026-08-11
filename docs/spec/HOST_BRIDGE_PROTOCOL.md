@@ -99,6 +99,7 @@ Example:
 - A persistent worker exclusively owns its `Child`. Teardown must signal before join, let that owner reap the leader, then perform the bounded residual-group verification. Waiting for group disappearance before joining the child owner is forbidden because it misclassifies the owner's unreaped leader as a surviving process.
 - Teardown is bounded. Failure to signal, join, reap, or eliminate a live residual member returns a family-scoped `bridge-reap` error; it is never rewritten as successful cancellation.
 - Persistent worker completion carries the worker's own child-reap result through the join handle. Session eviction and multi-session owner shutdown attempt every owned session, return cleanup failures in canonical session-key order, and preserve the error that initiated cleanup.
+- Spawn-per-operation teardown owns every started stdin/stdout/stderr pump until join. Thread-spawn, wait, timeout, and residual-verification paths first attempt process-tree termination as applicable, then join every started pump in fixed stdin/stdout/stderr order, aggregate every stop/reap/join failure, and return family-scoped `bridge-reap` in preference to the initiating operation result while retaining that prior error.
 - Recreating a runner after daemon restart creates a fresh bridge generation. Logical IDs or processes from the retired owner cannot be reused.
 
 ## WASI Profile

@@ -95,6 +95,7 @@ PY
      cargo test -p gc_effects --lib runner_process_control::tests::zombie_only_process_group_is_execution_quiescent --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_reaps_residual_descendants_after_success_and_error --quiet -- --exact && \
+     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_cleanup_failures_cross_the_public_operation_boundary --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact && \
