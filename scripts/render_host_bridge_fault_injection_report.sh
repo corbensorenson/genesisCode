@@ -64,6 +64,29 @@ GENESIS_BIN="$CARGO_TARGET_DIR/debug/genesis"
 }
 python3 scripts/lib/host_bridge_daemon_lifecycle.py --self-test
 
+run_exact_test() {
+  local test_name="$1"
+  local mode="$2"
+  shift 2
+  local -a libtest_args=(--exact)
+  if [[ "$mode" == "ignored" ]]; then
+    libtest_args+=(--ignored)
+  elif [[ "$mode" != "active" ]]; then
+    echo "host-bridge-fault-injection: invalid exact-test mode: $mode" >&2
+    return 2
+  fi
+  local output
+  if ! output="$(cargo test "$@" "$test_name" --quiet -- "${libtest_args[@]}" 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    return 1
+  fi
+  printf '%s\n' "$output"
+  if ! grep -Eq '^test result: ok\. 1 passed; 0 failed;' <<<"$output"; then
+    echo "host-bridge-fault-injection: required exact test was absent or vacuous: $test_name" >&2
+    return 1
+  fi
+}
+
 if grep -En 'static SESSIONS|persistent_bridge_session_map' \
   crates/gc_effects/src/runner_host_bridge_persistent.rs; then
   echo "host-bridge-fault-injection: process-global persistent bridge ownership is forbidden" >&2
@@ -90,22 +113,27 @@ for (( run = 1; run <= RUNS; run += 1 )); do
 import time
 print(time.time_ns())
 PY
-)"
+  )"
   if cargo test -p gc_effects --test host_bridge_fault_injection --quiet && \
-     cargo test -p gc_effects --lib runner_process_control::tests::zombie_only_process_group_is_execution_quiescent --quiet -- --exact && \
-     cargo test -p gc_effects --lib runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail --quiet -- --exact && \
-     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_reaps_residual_descendants_after_success_and_error --quiet -- --exact && \
-     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_cleanup_failures_cross_the_public_operation_boundary --quiet -- --exact && \
-     cargo test -p gc_cli_driver --lib host_bridge_runtime::tests::network_cleanup_failures_cross_public_boundaries_after_handle_removal --quiet -- --exact && \
-     cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart --quiet -- --exact && \
-     cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
-     cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact && \
-     cargo test -p gc_effects --lib runner::runner_capability_dispatch::tests::model_lifecycle::model_runner_plugin_session_is_owned_reaped_and_restart_isolated --quiet -- --exact && \
-     cargo test -p gc_effects --test host_abi_surface browser_xr::first_party_browser_and_xr_reject_repeated_close --quiet -- --exact && \
-     cargo test -p gc_effects --lib tests::tests_host_backends::tests_host_backends_first_party::editor_first_party_core_ops_are_replayable_without_bridge --quiet -- --exact && \
-     cargo test -p gc_effects --lib runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces --quiet -- --exact && \
-     cargo test -p gc_effects --lib --no-default-features --features gfx-desktop-backend runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces --quiet -- --exact && \
-     cargo test -p gc_effects --lib --no-default-features --features gpu-device-backend device_runtime_resources_are_scoped_and_reaped --quiet && \
+     run_exact_test runner_process_control::tests::zombie_only_process_group_is_execution_quiescent active -p gc_effects --lib && \
+     run_exact_test runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail active -p gc_effects --lib && \
+     run_exact_test runner_host_bridge::tests::spawn_bridge_reaps_residual_descendants_after_success_and_error active -p gc_effects --lib && \
+     run_exact_test runner_host_bridge::tests::spawn_bridge_cleanup_failures_cross_the_public_operation_boundary active -p gc_effects --lib && \
+     run_exact_test host_bridge_runtime::tests::network_cleanup_failures_cross_public_boundaries_after_handle_removal active -p gc_cli_driver --lib && \
+     run_exact_test warm_worker_process::io_cleanup::tests::failed_initial_termination_cancels_pipes_before_fallback_reap active -p gc_cli_driver --lib && \
+     run_exact_test warm_worker_process::io_cleanup::tests::residual_and_pipe_join_failures_are_not_discarded active -p gc_cli_driver --lib && \
+     run_exact_test warm_session::tests::worker_cleanup_failure_precedes_cancellation_and_fails_session_closed active -p gc_cli_driver --lib && \
+     run_exact_test mcp::session::tests::worker_cleanup_failure_precedes_mcp_cancellation_and_closes_uncontained_server active -p gc_cli_driver --lib && \
+     run_exact_test runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart active -p gc_effects --lib && \
+     run_exact_test runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers ignored -p gc_effects --lib && \
+     run_exact_test runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers ignored -p gc_effects --lib && \
+     run_exact_test runner::runner_capability_dispatch::tests::model_lifecycle::model_runner_plugin_session_is_owned_reaped_and_restart_isolated active -p gc_effects --lib && \
+     run_exact_test browser_xr::first_party_browser_and_xr_reject_repeated_close active -p gc_effects --test host_abi_surface && \
+     run_exact_test tests::tests_host_backends::tests_host_backends_first_party::editor_first_party_core_ops_are_replayable_without_bridge active -p gc_effects --lib && \
+     run_exact_test runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces active -p gc_effects --lib && \
+     run_exact_test runner_gfx_host::lifecycle_tests::runtime_drop_reaps_only_owned_desktop_surfaces active -p gc_effects --lib --no-default-features --features gfx-desktop-backend && \
+     run_exact_test tests::tests_host_backends::gfx_gpu_device_runtime_resources_are_scoped_and_reaped active -p gc_effects --lib --no-default-features --features gpu-device-backend && \
+     run_exact_test tests::tests_host_backends::gpu_compute_device_runtime_resources_are_scoped_and_reaped active -p gc_effects --lib --no-default-features --features gpu-device-backend && \
      python3 scripts/lib/host_bridge_daemon_lifecycle.py \
        --genesis "$GENESIS_BIN" \
        --selfhost-artifact "$ROOT_DIR/selfhost/toolchain.gc" \
@@ -279,6 +307,8 @@ report = {
             "network-close-failures-cross-public-boundary-after-handle-removal",
             "spawn-pumps-cancel-before-fallback-reap",
             "warm-daemon-provider-success-error-timeout-restart-shutdown-eof",
+            "warm-worker-cleanup-failures-cross-warm-and-mcp-boundaries",
+            "warm-worker-pumps-cancel-before-fallback-reap",
             "xr-repeated-close-rejected",
         ],
         "model_sessions": {

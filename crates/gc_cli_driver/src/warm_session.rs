@@ -126,7 +126,8 @@ fn handle_worker_result(
         | WorkerResult::Crashed { request_id, .. }
         | WorkerResult::Aborted { request_id, .. }
         | WorkerResult::Cancelled { request_id, .. }
-        | WorkerResult::ResourceExceeded { request_id, .. } => request_id,
+        | WorkerResult::ResourceExceeded { request_id, .. }
+        | WorkerResult::CleanupFailed { request_id, .. } => request_id,
     };
     if state
         .running
@@ -144,7 +145,8 @@ fn handle_worker_result(
         | WorkerResult::Crashed { audit, .. }
         | WorkerResult::Aborted { audit, .. }
         | WorkerResult::Cancelled { audit, .. }
-        | WorkerResult::ResourceExceeded { audit, .. } => Some(audit.as_json()),
+        | WorkerResult::ResourceExceeded { audit, .. }
+        | WorkerResult::CleanupFailed { audit, .. } => Some(audit.as_json()),
         WorkerResult::WorkspaceError { audit, .. } => audit.as_ref().map(SessionAudit::as_json),
     };
     let hard_termination = audit
@@ -152,6 +154,42 @@ fn handle_worker_result(
         .and_then(|audit| audit.get("worker_profile"))
         .and_then(serde_json::Value::as_str)
         == Some("native-isolated-v0.1");
+    if let WorkerResult::CleanupFailed {
+        failures,
+        prior,
+        contained,
+        audit,
+        ..
+    } = &outcome
+    {
+        state.protocol_error(
+            Some(running.id),
+            "warm/worker-cleanup",
+            "isolated worker cleanup failed",
+            *contained,
+            json!({
+                "accepted_index": running.accepted_index,
+                "prior": prior,
+                "failures": failures,
+                "contained": contained,
+                "daemon_available": contained,
+                "audit": audit.as_json(),
+            }),
+            0,
+        )?;
+        state.discard_pending_after_worker_failure(
+            limits,
+            "worker-cleanup-cancelled",
+            "accepted request was cancelled during worker cleanup recovery",
+        )?;
+        state.crash_count = state.crash_count.saturating_add(1);
+        state.generation = state.generation.saturating_add(1);
+        state.initialized = false;
+        state.workspaces.clear();
+        state.seen_ids.clear();
+        state.shutting_down |= !*contained;
+        return Ok(());
+    }
     if running.drain_timeout {
         state.cancelled_requests = state.cancelled_requests.saturating_add(1);
         return state.protocol_error(
@@ -271,7 +309,11 @@ fn handle_worker_result(
                 json!({"requires_initialize": true, "audit": audit.as_json()}),
                 0,
             )?;
-            state.discard_pending_after_crash(limits)?;
+            state.discard_pending_after_worker_failure(
+                limits,
+                "worker-crash-cancelled",
+                "accepted request was cancelled during worker crash recovery",
+            )?;
             state.crash_count = state.crash_count.saturating_add(1);
             state.generation = state.generation.saturating_add(1);
             state.initialized = false;
@@ -326,6 +368,7 @@ fn handle_worker_result(
                 0,
             )
         }
+        WorkerResult::CleanupFailed { .. } => Ok(()),
     }
 }
 

@@ -270,6 +270,11 @@ observed by an embedding runtime) uses `genesis/warm-session-v0.2`.
    the signal and `worker-signal-contained` audit. Because that process cannot
    mutate daemon memory, initialization, workspace bindings, generation, and
    later queued requests remain valid.
+   A failed worker kill, reap, residual-tree cleanup, pipe read, or pipe join
+   takes precedence over cancellation, deadline, resource, and command outcomes
+   as `warm/worker-cleanup`, retaining the prior outcome and all cleanup failures.
+   The daemon resets its generation and pending queue; if containment cannot be
+   established, it stops admission and shuts down after terminalizing accepted work.
 6. `shutdown`, EOF, input failure, and disconnect stop admission. At most
    `max_drain_requests`, including the active request, remain eligible to run;
    excess accepted requests receive `warm/drain-bounded`. The retained set has

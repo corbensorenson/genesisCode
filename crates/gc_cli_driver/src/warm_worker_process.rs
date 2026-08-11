@@ -1,7 +1,6 @@
 #![cfg(any(target_os = "macos", target_os = "linux"))]
 
 use std::fs;
-use std::io::Read;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::Arc;
@@ -19,48 +18,9 @@ const POLL_INTERVAL: Duration = Duration::from_millis(5);
 const DISK_POLL_INTERVAL: Duration = Duration::from_millis(50);
 const MAX_ACCOUNTED_FILES: usize = 200_000;
 
-struct CapturedPipe {
-    bytes: Vec<u8>,
-    observed: u64,
-    exceeded: bool,
-}
-
 enum CommandResult {
     Output(CmdOut),
     Error { exit_code: u8, envelope: Value },
-}
-
-fn capture_pipe<R: Read + Send + 'static>(
-    mut pipe: R,
-    limit: usize,
-    total_observed: Arc<AtomicU64>,
-    total_exceeded: Arc<AtomicBool>,
-) -> thread::JoinHandle<CapturedPipe> {
-    thread::spawn(move || {
-        let mut bytes = Vec::with_capacity(limit.min(64 * 1024));
-        let mut observed = 0_u64;
-        let mut chunk = [0_u8; 16 * 1024];
-        loop {
-            let read = match pipe.read(&mut chunk) {
-                Ok(0) | Err(_) => break,
-                Ok(read) => read,
-            };
-            observed = observed.saturating_add(read as u64);
-            let total = total_observed
-                .fetch_add(read as u64, Ordering::SeqCst)
-                .saturating_add(read as u64);
-            if total > limit as u64 {
-                total_exceeded.store(true, Ordering::SeqCst);
-            }
-            let remaining = limit.saturating_sub(bytes.len());
-            bytes.extend_from_slice(&chunk[..read.min(remaining)]);
-        }
-        CapturedPipe {
-            bytes,
-            observed,
-            exceeded: total_exceeded.load(Ordering::SeqCst),
-        }
-    })
 }
 
 fn workspace_bytes(root: &Path) -> Result<u64, ()> {
@@ -90,8 +50,10 @@ fn workspace_bytes(root: &Path) -> Result<u64, ()> {
     Ok(bytes)
 }
 
+mod io_cleanup;
 mod platform;
-use platform::{configure_process, cpu_millis_snapshot, kill_process_tree, process_tree_usage};
+use io_cleanup::{FinalizedWorker, WorkerPipes, finalize_worker};
+use platform::{configure_process, cpu_millis_snapshot, process_tree_usage};
 
 fn effect_ops(value: &Value) -> Option<u64> {
     match value.get("kind").and_then(Value::as_str) {
@@ -162,6 +124,13 @@ struct AuditMeasurements {
     observed_cpu_ms: Option<u64>,
 }
 
+#[derive(Clone, Copy)]
+struct WorkerStartMeasurements {
+    started: Instant,
+    cpu_before: Option<u64>,
+    disk_before: u64,
+}
+
 fn audit(
     job: &WorkerJob,
     measurements: AuditMeasurements,
@@ -195,6 +164,52 @@ fn audit(
     }
 }
 
+fn worker_setup_failure(
+    job: &WorkerJob,
+    request_id: String,
+    message: &str,
+    prior: &'static str,
+    start: WorkerStartMeasurements,
+    finalized: FinalizedWorker,
+) -> WorkerResult {
+    let output_bytes = finalized
+        .stdout
+        .observed
+        .saturating_add(finalized.stderr.observed);
+    let disk_after = workspace_bytes(&job.workspace_root).unwrap_or(u64::MAX);
+    let audit = audit(
+        job,
+        AuditMeasurements {
+            started: start.started,
+            cpu_before: start.cpu_before,
+            output_bytes,
+            disk_before: start.disk_before,
+            disk_after,
+            peak_heap_bytes: None,
+            peak_processes: Some(1),
+            observed_cpu_ms: None,
+        },
+        None,
+        prior,
+        None,
+    );
+    if finalized.failures.is_empty() {
+        WorkerResult::WorkspaceError {
+            request_id,
+            message: message.to_string(),
+            audit: Some(audit),
+        }
+    } else {
+        WorkerResult::CleanupFailed {
+            request_id,
+            failures: finalized.failures,
+            prior,
+            contained: finalized.contained,
+            audit,
+        }
+    }
+}
+
 pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> WorkerResult {
     let request_id = job.request_id.clone();
     let started = Instant::now();
@@ -211,6 +226,11 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
                 )),
             };
         }
+    };
+    let start = WorkerStartMeasurements {
+        started,
+        cpu_before,
+        disk_before,
     };
     let executable = match std::env::current_exe() {
         Ok(executable) => executable,
@@ -249,72 +269,67 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
     let process_id = child.id();
     let output_observed = Arc::new(AtomicU64::new(0));
     let output_exceeded = Arc::new(AtomicBool::new(false));
+    let mut pipes = WorkerPipes::default();
     let stdout = match child.stdout.take() {
-        Some(stdout) => capture_pipe(
-            stdout,
-            job.limits.max_output_bytes,
-            Arc::clone(&output_observed),
-            Arc::clone(&output_exceeded),
-        ),
+        Some(stdout) => stdout,
         None => {
-            let _ = kill_process_tree(process_id);
-            let _ = child.wait();
-            let disk_after = workspace_bytes(&job.workspace_root).unwrap_or(disk_before);
-            return WorkerResult::WorkspaceError {
+            let finalized = finalize_worker(&mut child, pipes, None, true);
+            return worker_setup_failure(
+                &job,
                 request_id,
-                message: "isolated worker stdout was unavailable".to_string(),
-                audit: Some(audit(
-                    &job,
-                    AuditMeasurements {
-                        started,
-                        cpu_before,
-                        output_bytes: 0,
-                        disk_before,
-                        disk_after,
-                        peak_heap_bytes: None,
-                        peak_processes: Some(1),
-                        observed_cpu_ms: None,
-                    },
-                    None,
-                    "worker-stdout-unavailable",
-                    None,
-                )),
-            };
+                "isolated worker stdout was unavailable",
+                "worker-stdout-unavailable",
+                start,
+                finalized,
+            );
         }
     };
+    if let Err(error) = pipes.capture_stdout(
+        stdout,
+        job.limits.max_output_bytes,
+        Arc::clone(&output_observed),
+        Arc::clone(&output_exceeded),
+    ) {
+        let finalized = finalize_worker(&mut child, pipes, None, true);
+        return worker_setup_failure(
+            &job,
+            request_id,
+            &format!("isolated worker stdout reader could not start: {error}"),
+            "worker-stdout-reader-unavailable",
+            start,
+            finalized,
+        );
+    }
     let stderr = match child.stderr.take() {
-        Some(stderr) => capture_pipe(
-            stderr,
-            job.limits.max_output_bytes,
-            Arc::clone(&output_observed),
-            Arc::clone(&output_exceeded),
-        ),
+        Some(stderr) => stderr,
         None => {
-            let _ = kill_process_tree(process_id);
-            let _ = child.wait();
-            let disk_after = workspace_bytes(&job.workspace_root).unwrap_or(disk_before);
-            return WorkerResult::WorkspaceError {
+            let finalized = finalize_worker(&mut child, pipes, None, true);
+            return worker_setup_failure(
+                &job,
                 request_id,
-                message: "isolated worker stderr was unavailable".to_string(),
-                audit: Some(audit(
-                    &job,
-                    AuditMeasurements {
-                        started,
-                        cpu_before,
-                        output_bytes: 0,
-                        disk_before,
-                        disk_after,
-                        peak_heap_bytes: None,
-                        peak_processes: Some(1),
-                        observed_cpu_ms: None,
-                    },
-                    None,
-                    "worker-stderr-unavailable",
-                    None,
-                )),
-            };
+                "isolated worker stderr was unavailable",
+                "worker-stderr-unavailable",
+                start,
+                finalized,
+            );
         }
     };
+    if let Err(error) = pipes.capture_stderr(
+        stderr,
+        job.limits.max_output_bytes,
+        Arc::clone(&output_observed),
+        Arc::clone(&output_exceeded),
+    ) {
+        let finalized = finalize_worker(&mut child, pipes, None, true);
+        return worker_setup_failure(
+            &job,
+            request_id,
+            &format!("isolated worker stderr reader could not start: {error}"),
+            "worker-stderr-reader-unavailable",
+            start,
+            finalized,
+        );
+    }
 
     let mut termination = "completed";
     let mut exceeded = None;
@@ -327,23 +342,20 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
     );
     let mut observed_cpu_ms = initial_usage.map(|(_, _, cpu_ms)| cpu_ms);
     let mut next_disk_poll = Instant::now();
-    let status = loop {
+    let (status, termination_required) = loop {
         if cancelled.load(Ordering::SeqCst) {
             termination = "cancelled-and-reaped";
-            let _ = kill_process_tree(process_id);
-            break child.wait();
+            break (None, true);
         }
         if started.elapsed() >= job.limits.max_wall {
             termination = "resource-killed-and-reaped";
             exceeded = Some("wall");
-            let _ = kill_process_tree(process_id);
-            break child.wait();
+            break (None, true);
         }
         if output_exceeded.load(Ordering::SeqCst) {
             termination = "resource-killed-and-reaped";
             exceeded = Some("output");
-            let _ = kill_process_tree(process_id);
-            break child.wait();
+            break (None, true);
         }
         if let Some((processes, heap_bytes, cpu_ms)) = process_tree_usage(process_id) {
             peak_processes = Some(peak_processes.unwrap_or(0).max(processes));
@@ -361,8 +373,7 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
             if let Some(resource) = resource {
                 termination = "resource-killed-and-reaped";
                 exceeded = Some(resource);
-                let _ = kill_process_tree(process_id);
-                break child.wait();
+                break (None, true);
             }
         }
         if Instant::now() >= next_disk_poll {
@@ -373,16 +384,19 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
             {
                 termination = "resource-killed-and-reaped";
                 exceeded = Some("disk");
-                let _ = kill_process_tree(process_id);
-                break child.wait();
+                break (None, true);
             }
         }
         match child.try_wait() {
-            Ok(Some(status)) => break Ok(status),
+            Ok(Some(status)) => break (Some(Ok(status)), false),
             Ok(None) => thread::sleep(POLL_INTERVAL),
-            Err(error) => break Err(error),
+            Err(error) => break (Some(Err(error)), true),
         }
     };
+    let finalized = finalize_worker(&mut child, pipes, status, termination_required);
+    let status = finalized.status;
+    let stdout = finalized.stdout;
+    let stderr = finalized.stderr;
     #[cfg(unix)]
     let (worker_signal, file_size_signal) = {
         use std::os::unix::process::ExitStatusExt;
@@ -391,17 +405,6 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
     };
     #[cfg(not(unix))]
     let (worker_signal, file_size_signal) = (None, false);
-    let _ = kill_process_tree(process_id);
-    let stdout = stdout.join().unwrap_or(CapturedPipe {
-        bytes: Vec::new(),
-        observed: 0,
-        exceeded: true,
-    });
-    let stderr = stderr.join().unwrap_or(CapturedPipe {
-        bytes: Vec::new(),
-        observed: 0,
-        exceeded: true,
-    });
     let output_bytes = stdout.observed.saturating_add(stderr.observed);
     let disk_after = workspace_bytes(&job.workspace_root).unwrap_or(u64::MAX);
     let measurements = AuditMeasurements {
@@ -414,6 +417,34 @@ pub(super) fn run_isolated(job: WorkerJob, cancelled: Arc<AtomicBool>) -> Worker
         peak_processes,
         observed_cpu_ms,
     };
+
+    if !finalized.failures.is_empty() {
+        let prior = if termination == "cancelled-and-reaped" {
+            "cancelled"
+        } else if let Some(resource) = exceeded {
+            match resource {
+                "wall" => "resource-wall",
+                "output" => "resource-output",
+                "processes" => "resource-processes",
+                "heap" => "resource-heap",
+                "cpu" => "resource-cpu",
+                "disk" => "resource-disk",
+                _ => "resource-unknown",
+            }
+        } else if status.is_err() {
+            "worker-wait"
+        } else {
+            "completed"
+        };
+        let cleanup_audit = audit(&job, measurements, None, "worker-cleanup-failed", exceeded);
+        return WorkerResult::CleanupFailed {
+            request_id,
+            failures: finalized.failures,
+            prior,
+            contained: finalized.contained,
+            audit: cleanup_audit,
+        };
+    }
 
     if termination == "cancelled-and-reaped" {
         let audit = audit(&job, measurements, None, termination, None);

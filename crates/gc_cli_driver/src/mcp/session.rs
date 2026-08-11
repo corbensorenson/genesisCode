@@ -347,7 +347,8 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
         | WorkerResult::Crashed { request_id, .. }
         | WorkerResult::Aborted { request_id, .. }
         | WorkerResult::Cancelled { request_id, .. }
-        | WorkerResult::ResourceExceeded { request_id, .. } => request_id,
+        | WorkerResult::ResourceExceeded { request_id, .. }
+        | WorkerResult::CleanupFailed { request_id, .. } => request_id,
     };
     if state
         .running
@@ -366,9 +367,45 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
         | WorkerResult::Crashed { audit, .. }
         | WorkerResult::Aborted { audit, .. }
         | WorkerResult::Cancelled { audit, .. }
-        | WorkerResult::ResourceExceeded { audit, .. } => Some(audit.as_json()),
+        | WorkerResult::ResourceExceeded { audit, .. }
+        | WorkerResult::CleanupFailed { audit, .. } => Some(audit.as_json()),
         WorkerResult::WorkspaceError { audit, .. } => audit.as_ref().map(SessionAudit::as_json),
     };
+    if let WorkerResult::CleanupFailed {
+        failures,
+        prior,
+        contained,
+        audit,
+        ..
+    } = &result
+    {
+        rpc_error(
+            running.id,
+            -32009,
+            "isolated tool worker cleanup failed",
+            Some(json!({
+                "kind": "warm/worker-cleanup",
+                "prior": prior,
+                "failures": failures,
+                "contained": contained,
+                "server_available": contained,
+                "audit": audit.as_json(),
+            })),
+            config,
+        )?;
+        while let Some(pending) = state.pending.pop_front() {
+            state.active_ids.remove(&pending.key);
+            rpc_error(
+                pending.id,
+                -32009,
+                "accepted tool call was cancelled during worker cleanup recovery",
+                Some(json!({"kind": "warm/worker-cleanup"})),
+                config,
+            )?;
+        }
+        state.input_eof |= !*contained;
+        return Ok(());
+    }
     if running.drain_timeout {
         state.cancelled_calls = state.cancelled_calls.saturating_add(1);
         return rpc_error(
@@ -476,6 +513,7 @@ fn finish_worker(result: WorkerResult, state: &mut State, config: &Config) -> Re
                 config,
             )
         }
+        WorkerResult::CleanupFailed { .. } => Ok(()),
     }
 }
 

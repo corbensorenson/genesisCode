@@ -681,7 +681,7 @@ for stress_test in \
     echo "test-execution-profile-matrix: ${stress_test} must remain in the dedicated stress lane" >&2
     exit 1
   fi
-  if ! grep -Fq "runner_host_bridge::tests::${stress_test} --quiet -- --ignored --exact" \
+  if ! grep -Fq "run_exact_test runner_host_bridge::tests::${stress_test} ignored -p gc_effects --lib" \
     scripts/render_host_bridge_fault_injection_report.sh; then
     echo "test-execution-profile-matrix: host-bridge renderer must execute ignored stress test ${stress_test}" >&2
     exit 1
@@ -689,17 +689,25 @@ for stress_test in \
 done
 
 if ! grep -Fq \
-  'runner_process_control::tests::zombie_only_process_group_is_execution_quiescent --quiet -- --exact' \
+  'run_exact_test runner_process_control::tests::zombie_only_process_group_is_execution_quiescent active -p gc_effects --lib' \
   scripts/render_host_bridge_fault_injection_report.sh; then
   echo "test-execution-profile-matrix: host-bridge renderer must exercise zombie-only process-group quiescence" >&2
   exit 1
 fi
 if ! grep -Fq \
-  'runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail --quiet -- --exact' \
+  'run_exact_test runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail active -p gc_effects --lib' \
   scripts/render_host_bridge_fault_injection_report.sh; then
   echo "test-execution-profile-matrix: host-bridge renderer must exercise bounded signal/reap failure" >&2
   exit 1
 fi
+for exact_runner_marker in \
+  'required exact test was absent or vacuous' \
+  '^test result: ok\. 1 passed; 0 failed;'; do
+  if ! grep -Fq "$exact_runner_marker" scripts/render_host_bridge_fault_injection_report.sh; then
+    echo "test-execution-profile-matrix: host-bridge exact-test runner is missing fail-closed marker $exact_runner_marker" >&2
+    exit 1
+  fi
+done
 for probe_marker in \
   'HOST_PLATFORM="darwin"' \
   'PROCESS_GROUP_PROBE="libproc-pgrp-status"' \
@@ -718,7 +726,11 @@ for lifecycle_probe in \
   'model_lifecycle::model_runner_plugin_session_is_owned_reaped_and_restart_isolated' \
   'scripts/lib/host_bridge_daemon_lifecycle.py' \
   'host_bridge_daemon_lifecycle.py --self-test' \
+  'network-close-failures-cross-public-boundary-after-handle-removal' \
+  'spawn-pumps-cancel-before-fallback-reap' \
   'warm-daemon-provider-success-error-timeout-restart-shutdown-eof' \
+  'warm-worker-cleanup-failures-cross-warm-and-mcp-boundaries' \
+  'warm-worker-pumps-cancel-before-fallback-reap' \
   '"daemon_service_lifecycle"' \
   '"fresh_daemon_process_isolation": daemon_verified' \
   '"no_live_provider_or_descendant": daemon_verified' \

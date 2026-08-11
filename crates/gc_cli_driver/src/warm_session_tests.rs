@@ -147,3 +147,47 @@ fn worker_crash_resets_generation_and_discards_queue() {
     assert!(state.pending.is_empty());
     assert!(state.running.is_none());
 }
+
+#[test]
+fn worker_cleanup_failure_precedes_cancellation_and_fails_session_closed() {
+    let mut state = state();
+    state.running = Some(RunningRequest {
+        id: "running".to_string(),
+        workspace_id: "ws".to_string(),
+        deadline: None,
+        accepted_index: 0,
+        cancellation_requested: true,
+        deadline_expired: false,
+        drain_timeout: false,
+        control: None,
+    });
+    state.pending.push_back(PendingRequest {
+        id: "queued".to_string(),
+        cli: fixture_cli(),
+        argv: vec!["cli-schema".to_string()],
+        workspace_id: "ws".to_string(),
+        workspace_root: PathBuf::from("ws"),
+        deadline: None,
+        accepted_index: 1,
+    });
+
+    handle_worker_result(
+        &mut state,
+        WorkerResult::CleanupFailed {
+            request_id: "running".to_string(),
+            failures: vec!["injected process cleanup failure".to_string()],
+            prior: "cancelled",
+            contained: false,
+            audit: audit(),
+        },
+        &limits(),
+    )
+    .expect("cleanup failure must cross the public warm boundary");
+
+    assert_eq!(state.generation, 1);
+    assert_eq!(state.crash_count, 1);
+    assert!(!state.initialized);
+    assert!(state.shutting_down);
+    assert!(state.pending.is_empty());
+    assert!(state.running.is_none());
+}

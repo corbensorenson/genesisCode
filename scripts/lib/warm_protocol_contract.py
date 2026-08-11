@@ -77,6 +77,7 @@ REQUIRED_ERROR_CODES = {
     "warm/restart-busy",
     "warm/session-limit",
     "warm/worker-abort",
+    "warm/worker-cleanup",
     "warm/worker-crash",
     "warm/worker-launch",
     "warm/worker-restarted",

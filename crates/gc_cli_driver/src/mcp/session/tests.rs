@@ -82,3 +82,45 @@ fn cancellation_returns_queued_calls_for_terminal_provenance_and_marks_running_c
     assert!(cancel_request(&json!({"requestId": 7}), &mut state).is_none());
     assert!(state.running.as_ref().is_some_and(|call| call.cancelled));
 }
+
+#[test]
+fn worker_cleanup_failure_precedes_mcp_cancellation_and_closes_uncontained_server() {
+    let cwd = std::env::current_dir().expect("cwd");
+    let config = Config {
+        max_queue: 1,
+        max_frame_bytes: 1024,
+        max_output_bytes: 1024,
+        max_requests: 10,
+        max_roots: 1,
+        workspace_boundary: cwd.clone(),
+        resources: limits(),
+    };
+    let mut state = State::new(&cwd);
+    state.active_ids.insert("7".to_string());
+    state.running = Some(RunningCall {
+        id: json!(7),
+        key: "7".to_string(),
+        progress_token: None,
+        cancelled: true,
+        drain_timeout: false,
+        control: None,
+    });
+
+    finish_worker(
+        WorkerResult::CleanupFailed {
+            request_id: "7".to_string(),
+            failures: vec!["injected process cleanup failure".to_string()],
+            prior: "cancelled",
+            contained: false,
+            audit: SessionAudit::not_started(&config.resources, "test-cleanup"),
+        },
+        &mut state,
+        &config,
+    )
+    .expect("cleanup failure must cross the MCP boundary");
+
+    assert!(state.input_eof);
+    assert!(state.running.is_none());
+    assert!(!state.active_ids.contains("7"));
+    assert_eq!(state.cancelled_calls, 0);
+}

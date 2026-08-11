@@ -70,6 +70,13 @@ pub(super) enum WorkerResult {
         command_envelope: Option<serde_json::Value>,
         audit: SessionAudit,
     },
+    CleanupFailed {
+        request_id: String,
+        failures: Vec<String>,
+        prior: &'static str,
+        contained: bool,
+        audit: SessionAudit,
+    },
 }
 
 fn run_job(job: WorkerJob) -> WorkerResult {

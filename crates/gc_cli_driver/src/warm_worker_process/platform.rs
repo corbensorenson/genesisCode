@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 #[cfg(target_os = "linux")]
 use std::fs;
-use std::process::Command;
+use std::process::{Child, Command, ExitStatus};
 
 use crate::warm_worker::WorkerJob;
 
@@ -67,8 +67,13 @@ pub(super) fn kill_process_tree(process_id: u32) -> std::io::Result<()> {
     let mut members = process_tree_ids(root).into_iter().collect::<HashSet<_>>();
     members.extend(initial);
     for member in &members {
-        if let Ok(member) = i32::try_from(*member) {
-            let _ = unsafe { libc::kill(member, libc::SIGSTOP) };
+        if let Ok(member) = i32::try_from(*member)
+            && unsafe { libc::kill(member, libc::SIGSTOP) } != 0
+        {
+            let error = std::io::Error::last_os_error();
+            if error.raw_os_error() != Some(libc::ESRCH) && first_error.is_none() {
+                first_error = Some(error);
+            }
         }
     }
     members.extend(process_tree_ids(root));
@@ -110,6 +115,40 @@ pub(super) fn kill_process_tree(process_id: u32) -> std::io::Result<()> {
 #[cfg(not(unix))]
 pub(super) fn kill_process_tree(_process_id: u32) -> std::io::Result<()> {
     Ok(())
+}
+
+#[cfg(unix)]
+pub(super) fn terminate_and_reap(child: &mut Child) -> std::io::Result<ExitStatus> {
+    let tree_result = kill_process_tree(child.id());
+    if let Err(tree_error) = &tree_result
+        && let Err(leader_error) = child.kill()
+    {
+        return Err(std::io::Error::new(
+            leader_error.kind(),
+            format!(
+                "process-tree kill failed ({tree_error}); worker leader kill failed ({leader_error})"
+            ),
+        ));
+    }
+    let status = child.wait()?;
+    let residual_result = kill_process_tree(child.id());
+    match (tree_result, residual_result) {
+        (Ok(()), Ok(())) => Ok(status),
+        (Err(tree_error), Ok(())) => Err(tree_error),
+        (Ok(()), Err(residual_error)) => Err(residual_error),
+        (Err(tree_error), Err(residual_error)) => Err(std::io::Error::new(
+            residual_error.kind(),
+            format!(
+                "initial process-tree kill failed ({tree_error}); residual cleanup failed ({residual_error})"
+            ),
+        )),
+    }
+}
+
+#[cfg(not(unix))]
+pub(super) fn terminate_and_reap(child: &mut Child) -> std::io::Result<ExitStatus> {
+    child.kill()?;
+    child.wait()
 }
 
 #[cfg(unix)]

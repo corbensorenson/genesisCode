@@ -142,17 +142,19 @@ impl SessionState {
         )
     }
 
-    pub(super) fn discard_pending_after_crash(
+    pub(super) fn discard_pending_after_worker_failure(
         &mut self,
         limits: &SessionResourceLimits,
+        termination: &'static str,
+        message: &'static str,
     ) -> Result<(), CliError> {
         while let Some(request) = self.pending.pop_front() {
             self.cancelled_requests = self.cancelled_requests.saturating_add(1);
-            let audit = SessionAudit::not_started(limits, "worker-crash-cancelled");
+            let audit = SessionAudit::not_started(limits, termination);
             self.protocol_error(
                 Some(request.id),
                 "warm/worker-restarted",
-                "accepted request was cancelled during worker crash recovery",
+                message,
                 true,
                 json!({
                     "accepted_index": request.accepted_index,
