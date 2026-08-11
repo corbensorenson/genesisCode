@@ -3,7 +3,8 @@
 ## Purpose
 
 Evaluate whether
-GenesisCode's strict selfhost command-routing profile, parity isolation, bootstrap-mode
+GenesisCode's strict selfhost command-routing profile, exact per-decision H2 semantic
+authority, per-decision H3 bootstrap closure, parity isolation, bootstrap-mode
 configuration, selected runtime quality checks, and active P0/P1 defect closure satisfy
 this scorecard, and define the deterministic machine-readable report produced on explicit
 request. This report does not establish H2 semantic authority, an H3 cross-host
@@ -39,11 +40,21 @@ Default history floor:
 - `unresolved_upgrade_plan_ids` (string list), `closure_ok`
 - `dimensions` object with scored dimensions:
   - `runtime_routing_coverage`
+  - `semantic_authority_closure`
+  - `bootstrap_fixpoint_closure`
   - `parity_only_surface_isolation`
   - `bootstrap_mode_strictness`
   - `deprecated_bootstrap_reference_count`
   - `critical_gate_truth`
   - `runtime_quality_truth`
+
+`semantic_authority_closure` and `bootstrap_fixpoint_closure` are derived from the
+validated `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`, never from dashboard
+percentages or broad capability rows. The former passes only when every applicable
+semantic decision is at least H2; the latter passes only when every applicable decision
+is at least H3. Declared residual stage0 decisions receive no score credit and cannot be
+promoted by this report. Each dimension emits the exact ledger identity and blocking
+decision rows.
 
 `runtime_quality_truth` is a fail-closed aggregate over machine reports:
 
@@ -106,12 +117,14 @@ Each dimension records at least:
 
 Readiness is `ok=true` only when all are true:
 
-1. All scored dimensions are `ok=true`.
+1. All scored dimensions are `ok=true`, including exact H2 semantic authority and H3 bootstrap closure.
 2. No unresolved `upgrade_plan.md` checklist IDs remain.
 3. Runtime elapsed and history-p95 remain within configured budget.
 
-`ok=true` closes only this scorecard contract. Semantic selfhost authority is reported in
-`docs/status/SELFHOST_AUTHORITY_v0.1.md`; release-claim eligibility is reported in
+Routing coverage, a `.gc` wrapper, a parity match, or a decomposition-table phase can
+never satisfy either H2 or H3 dimension. `ok=true` closes only this scorecard contract.
+Semantic selfhost authority is reported in `docs/status/SELFHOST_AUTHORITY_v0.1.md`;
+release-claim eligibility is reported in
 `feature_matrix.md`. Neither may be inferred from this mutable local report.
 
 ## Runtime History Floor Inputs

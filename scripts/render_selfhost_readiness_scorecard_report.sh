@@ -100,6 +100,9 @@ start_ns = int(sys.argv[10])
 strict_mode = sys.argv[11] == "1"
 critical_ttl_sec = int(sys.argv[12])
 
+sys.path.insert(0, str(root / "scripts/lib"))
+import semantic_ownership_ledger as semantic_ledger_contract
+
 if p95_min_samples < 1:
     raise SystemExit("selfhost-readiness: p95_min_samples must be >= 1")
 
@@ -135,6 +138,68 @@ def parse_percent(raw: Any, field: str) -> float:
         return float(raw[:-1])
     except ValueError as exc:
         raise SystemExit(f"selfhost-readiness: invalid numeric percent for `{field}`: {raw!r}") from exc
+
+def load_semantic_ledger() -> dict[str, Any]:
+    ledger_path = root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json"
+    schema_path = root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json"
+    spec_path = root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md"
+    closure_path = root / "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json"
+    try:
+        ledger = semantic_ledger_contract.load_json(ledger_path)
+        schema = semantic_ledger_contract.load_json(schema_path)
+        closure = semantic_ledger_contract.load_json(closure_path)
+        semantic_ledger_contract.validate(
+            root,
+            ledger,
+            schema,
+            spec_path.read_bytes(),
+            schema_path.read_bytes(),
+            closure,
+        )
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"selfhost-readiness: invalid semantic ownership authority: {exc}") from exc
+    return ledger
+
+semantic_ledger = load_semantic_ledger()
+semantic_levels = ("H0", "H1", "H2", "H3", "H4")
+
+def dim_semantic_closure(target_level: str) -> dict[str, Any]:
+    target_rank = semantic_levels.index(target_level)
+    applicable = [
+        row
+        for row in semantic_ledger["semanticDecisions"]
+        if row["applicability"] == "applicable"
+    ]
+    blockers = []
+    earned = 0.0
+    for row in applicable:
+        level = row["currentLevel"]
+        rank = semantic_levels.index(level) if level in semantic_levels else -1
+        if rank < target_rank:
+            blockers.append(
+                {
+                    "id": row["id"],
+                    "current_level": level,
+                    "fallback_reachability": row["fallbackReachability"],
+                    "migration_tasks": row["migrationTasks"],
+                }
+            )
+        earned += max(0.0, min(rank, target_rank) / target_rank)
+    ok = not blockers
+    return {
+        "ok": ok,
+        "score": 100 if ok else int(round(100.0 * earned / len(applicable))),
+        "max_score": 100,
+        "target_level": target_level,
+        "ledger_identity": semantic_ledger["contentIdentitySha256"],
+        "applicable_decision_count": len(applicable),
+        "residual_stage0_decision_count": sum(
+            row["applicability"] == "residual-stage0"
+            for row in semantic_ledger["semanticDecisions"]
+        ),
+        "blocking_decision_count": len(blockers),
+        "blocking_decisions": blockers,
+    }
 
 def dim_runtime_routing() -> dict[str, Any]:
     routed = parse_percent(summary.get("selfhost_routed_percent"), "selfhost_routed_percent")
@@ -634,6 +699,8 @@ unresolved_upgrade_ids = sorted(
 
 dimensions = {
     "runtime_routing_coverage": dim_runtime_routing(),
+    "semantic_authority_closure": dim_semantic_closure("H2"),
+    "bootstrap_fixpoint_closure": dim_semantic_closure("H3"),
     "parity_only_surface_isolation": dim_parity_isolation(),
     "bootstrap_mode_strictness": dim_bootstrap_mode_strictness(),
     "deprecated_bootstrap_reference_count": dim_deprecated_bootstrap_refs(),

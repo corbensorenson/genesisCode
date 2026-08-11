@@ -99,6 +99,9 @@ python3 scripts/lib/semantic_ownership_ledger.py \
   --closure docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json \
   --self-test
 
+# Status projections must preserve the route/authority/bootstrap distinctions.
+bash scripts/check_selfhost_doc_runtime_parity.sh
+
 resolve_base() {
   if [[ -n "${SELFHOST_BOUNDARY_BASE:-}" ]]; then
     echo "$SELFHOST_BOUNDARY_BASE"

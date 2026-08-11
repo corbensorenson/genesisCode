@@ -16,6 +16,7 @@ Maturity legend:
 - `L5` release-attested with immutable evidence
 
 Selfhost legend: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode production authority, `H3` reproducible bootstrap fixpoint, `H4` independently conformant, `N/A` deliberately outside selfhost closure.
+Capability-row selfhost labels are non-authoritative traceability summaries. Exact per-decision status, including decisions below H0, is derived from `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` in `docs/status/SELFHOST_AUTHORITY_v0.1.md`.
 
 ## Supported Host Scope
 

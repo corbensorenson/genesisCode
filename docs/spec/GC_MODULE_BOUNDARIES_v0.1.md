@@ -86,41 +86,44 @@ producing host's absolute paths. Retain the parity observation only with
 
 ## Selfhost Migration Plan (High-Churn Rust -> GC)
 
-Goal: reduce high-churn Rust production ownership by moving behavior into GC-authored modules where parity is proven.
+Goal: track the presence and integration maturity of GC-authored routes beside high-churn Rust modules. This table is a decomposition plan, not semantic-ownership evidence. Only `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` may report H-levels or production authority.
 
 Phase model:
 
-- `phase-0`: extraction planning complete, no behavior moved yet.
-- `phase-1`: shared contract/data model moved to GC modules with parity harness checks.
-- `phase-2`: runtime dispatch moved to GC-first path, Rust path retained as parity-only sidecar.
-- `phase-3`: Rust implementation removed from production path; historical logic archived under the legacy bootstrap archive or parity-only test harnesses.
+- `phase-0`: extraction target is proposed; no route or parity claim exists.
+- `phase-1`: target GC module and shared contract are present with a named parity gate.
+- `phase-2`: a callable GC route or integration point is present and exercised by the named gate; Rust authority may remain fully reachable.
+- `phase-3`: route/decomposition and parity surfaces are expanded enough to begin an authority-switch task; this phase still does not claim H1, H2, fallback removal, or Rust demotion.
+
+`route-present` means only that the phase-specific integration evidence above is present. It must never be rendered or interpreted as "migrated," self-hosted, production-authoritative, or bootstrapped.
 
 | Rust module | Target GC module(s) | Parity evidence gate | Phase | Status |
 |---|---|---|---|---|
-| `crates/gc_cli_driver/src/cmd_selfhost.rs` | `selfhost/toolchain.gc`, `selfhost/toolchain_manifest.gc` | `bash scripts/check_selfhost_readiness_scorecard.sh` | `phase-2` | `migrated` |
-| `crates/gc_cli_driver/src/pkg_workspace_ops.rs` | `prelude/modules/31_data_pipeline.gc` | `bash scripts/check_agent_reference_workflows.sh` | `phase-2` | `migrated` |
-| `crates/gc_obligations/src/obligation_exec.rs` | `prelude/modules/30_service_orchestration.gc`, `prelude/modules/31_data_pipeline.gc` | `bash scripts/check_agent_generative_workloads.sh` | `phase-3` | `migrated` |
-| `crates/gc_gfx/src/lib.rs` | `prelude/modules/33_game_loop.gc`, `prelude/modules/34_xr_workflow.gc` | `bash scripts/check_gfx_runtime_profile.sh` | `phase-2` | `migrated` |
-| `crates/gc_prelude/src/prelude.rs` | `prelude/modules/manifest.toml` | `bash scripts/check_prelude_capability_coverage.sh` | `phase-2` | `migrated` |
-| `crates/gc_types/src/infer.rs` | `prelude/modules/36_semantic_workspace.gc`, `selfhost/toolchain.gc` | `cargo test -p gc_types --lib --quiet` | `phase-3` | `migrated` |
-| `crates/gc_cli_driver/src/semantic_workspace.rs` | `prelude/modules/36_semantic_workspace.gc`, `prelude/modules/32_network_workflow.gc` | `bash scripts/check_agent_reference_workflows.sh` | `phase-3` | `migrated` |
-| `crates/gc_patches/src/lib.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_task_concurrency_stress.sh` | `phase-3` | `migrated` |
-| `crates/gc_types/src/lib.rs` | `prelude/modules/36_semantic_workspace.gc`, `selfhost/toolchain.gc` | `bash scripts/check_write_genesiscode_skill_conformance.sh` | `phase-3` | `migrated` |
-| `crates/gc_kernel/src/eval.rs` | `selfhost/toolchain.gc`, `prelude/modules/00_core_media.gc` | `bash scripts/check_kernel_tcb_contract.sh` | `phase-3` | `migrated` |
-| `crates/gc_cli_driver/src/cmd_vcs.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_vcs_selfhost_contract.sh` | `phase-3` | `migrated` |
-| `crates/gc_effects/src/runner_host_bridge.rs` | `prelude/modules/10_browser_host.gc`, `prelude/modules/10_xr_host.gc` | `bash scripts/check_host_bridge_fault_injection.sh` | `phase-2` | `migrated` |
-| `crates/gc_registry/src/registry/client_impl/ping_and_store.rs` | `prelude/modules/32_network_workflow.gc` | `cargo test -p gc_registry --quiet` | `phase-2` | `migrated` |
-| `crates/gc_vcs/src/policy.rs` | `prelude/modules/32_network_workflow.gc` | `cargo test -p gc_vcs --quiet` | `phase-3` | `migrated` |
-| `crates/gc_opt/src/stage2_wasm/collections_lowering.rs` | `selfhost/toolchain.gc`, `prelude/modules/31_data_pipeline.gc` | `cargo test -p gc_opt --lib --quiet` | `phase-2` | `migrated` |
-| `crates/gc_effects/src/runner_xr_host/advanced.rs` | `prelude/modules/10_xr_host.gc`, `prelude/modules/34_xr_workflow.gc` | `cargo test -p gc_effects --lib --quiet` | `phase-2` | `migrated` |
-| `crates/gc_effects/src/runner_capability_dispatch/net.rs` | `prelude/modules/32_network_workflow.gc`, `prelude/modules/10_browser_host.gc` | `cargo test -p gc_effects --lib --quiet` | `phase-2` | `migrated` |
-| `crates/gc_patches/src/patch_apply.rs` | `prelude/modules/36_semantic_workspace.gc`, `prelude/modules/31_data_pipeline.gc` | `cargo test -p gc_patches --quiet` | `phase-2` | `migrated` |
-| `crates/gc_kernel/src/compiled.rs` | `selfhost/toolchain.gc`, `prelude/modules/00_core_media.gc` | `cargo test -p gc_kernel --quiet` | `phase-2` | `migrated` |
-| `crates/gc_cli_driver/src/pkg_assurance_ops.rs` | `prelude/modules/31_data_pipeline.gc`, `prelude/modules/36_semantic_workspace.gc` | `cargo test -p gc_cli_driver --quiet` | `phase-2` | `migrated` |
+| `crates/gc_cli_driver/src/cmd_selfhost.rs` | `selfhost/toolchain.gc`, `selfhost/toolchain_manifest.gc` | `bash scripts/check_selfhost_readiness_scorecard.sh` | `phase-2` | `route-present` |
+| `crates/gc_cli_driver/src/pkg_workspace_ops.rs` | `prelude/modules/31_data_pipeline.gc` | `bash scripts/check_agent_reference_workflows.sh` | `phase-2` | `route-present` |
+| `crates/gc_obligations/src/obligation_exec.rs` | `prelude/modules/30_service_orchestration.gc`, `prelude/modules/31_data_pipeline.gc` | `bash scripts/check_agent_generative_workloads.sh` | `phase-3` | `route-present` |
+| `crates/gc_gfx/src/lib.rs` | `prelude/modules/33_game_loop.gc`, `prelude/modules/34_xr_workflow.gc` | `bash scripts/check_gfx_runtime_profile.sh` | `phase-2` | `route-present` |
+| `crates/gc_prelude/src/prelude.rs` | `prelude/modules/manifest.toml` | `bash scripts/check_prelude_capability_coverage.sh` | `phase-2` | `route-present` |
+| `crates/gc_types/src/infer.rs` | `prelude/modules/36_semantic_workspace.gc`, `selfhost/toolchain.gc` | `cargo test -p gc_types --lib --quiet` | `phase-3` | `route-present` |
+| `crates/gc_cli_driver/src/semantic_workspace.rs` | `prelude/modules/36_semantic_workspace.gc`, `prelude/modules/32_network_workflow.gc` | `bash scripts/check_agent_reference_workflows.sh` | `phase-3` | `route-present` |
+| `crates/gc_patches/src/lib.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_task_concurrency_stress.sh` | `phase-3` | `route-present` |
+| `crates/gc_types/src/lib.rs` | `prelude/modules/36_semantic_workspace.gc`, `selfhost/toolchain.gc` | `bash scripts/check_write_genesiscode_skill_conformance.sh` | `phase-3` | `route-present` |
+| `crates/gc_kernel/src/eval.rs` | `selfhost/toolchain.gc`, `prelude/modules/00_core_media.gc` | `bash scripts/check_kernel_tcb_contract.sh` | `phase-3` | `route-present` |
+| `crates/gc_cli_driver/src/cmd_vcs.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_vcs_selfhost_contract.sh` | `phase-3` | `route-present` |
+| `crates/gc_effects/src/runner_host_bridge.rs` | `prelude/modules/10_browser_host.gc`, `prelude/modules/10_xr_host.gc` | `bash scripts/check_host_bridge_fault_injection.sh` | `phase-2` | `route-present` |
+| `crates/gc_registry/src/registry/client_impl/ping_and_store.rs` | `prelude/modules/32_network_workflow.gc` | `cargo test -p gc_registry --quiet` | `phase-2` | `route-present` |
+| `crates/gc_vcs/src/policy.rs` | `prelude/modules/32_network_workflow.gc` | `cargo test -p gc_vcs --quiet` | `phase-3` | `route-present` |
+| `crates/gc_opt/src/stage2_wasm/collections_lowering.rs` | `selfhost/toolchain.gc`, `prelude/modules/31_data_pipeline.gc` | `cargo test -p gc_opt --lib --quiet` | `phase-2` | `route-present` |
+| `crates/gc_effects/src/runner_xr_host/advanced.rs` | `prelude/modules/10_xr_host.gc`, `prelude/modules/34_xr_workflow.gc` | `cargo test -p gc_effects --lib --quiet` | `phase-2` | `route-present` |
+| `crates/gc_effects/src/runner_capability_dispatch/net.rs` | `prelude/modules/32_network_workflow.gc`, `prelude/modules/10_browser_host.gc` | `cargo test -p gc_effects --lib --quiet` | `phase-2` | `route-present` |
+| `crates/gc_patches/src/patch_apply.rs` | `prelude/modules/36_semantic_workspace.gc`, `prelude/modules/31_data_pipeline.gc` | `cargo test -p gc_patches --quiet` | `phase-2` | `route-present` |
+| `crates/gc_kernel/src/compiled.rs` | `selfhost/toolchain.gc`, `prelude/modules/00_core_media.gc` | `cargo test -p gc_kernel --quiet` | `phase-2` | `route-present` |
+| `crates/gc_cli_driver/src/pkg_assurance_ops.rs` | `prelude/modules/31_data_pipeline.gc`, `prelude/modules/36_semantic_workspace.gc` | `cargo test -p gc_cli_driver --quiet` | `phase-2` | `route-present` |
 
 Exit criteria:
 
-1. Target GC module path is live in production authoring flow.
-2. Parity evidence gate is green in strict profile lanes.
-3. Rust path is no longer on production critical path (parity-only or archived).
-4. `policies/source_decomposition_progress.toml` is updated in the same change.
+1. Target GC module path and callable route/integration point exist.
+2. The named parity/decomposition gate validates the row's declared phase.
+3. The row uses `route-present`; no H-level or Rust-authority conclusion is inferred.
+4. Any later production-authority or fallback change is recorded first in the exact semantic-ownership ledger under its R4.2 task.
+5. `policies/source_decomposition_progress.toml` is updated in the same change.

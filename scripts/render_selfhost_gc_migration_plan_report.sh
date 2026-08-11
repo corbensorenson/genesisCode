@@ -57,7 +57,7 @@ disallowed_statuses_raw = policy.get("disallowed_statuses", [])
 if not isinstance(disallowed_statuses_raw, list):
     raise SystemExit("selfhost-gc-migration-plan: disallowed_statuses must be a list")
 disallowed_statuses = {str(x) for x in disallowed_statuses_raw if str(x)}
-allowed_statuses = {"planned", "in-progress", "migrated", "blocked"}
+allowed_statuses = {"planned", "in-progress", "route-present", "blocked"}
 
 policy_rows: dict[str, dict] = {}
 for row in migration_rows:
@@ -123,7 +123,7 @@ for m in row_pattern.finditer(plan_text):
     status_cell = cells[5]
 
     phase_value_match = re.search(r"phase-(\d+)", phase_cell)
-    status_value_match = re.search(r"(planned|in-progress|migrated|blocked)", status_cell)
+    status_value_match = re.search(r"(planned|in-progress|route-present|blocked)", status_cell)
     if phase_value_match is None or status_value_match is None:
         raise SystemExit(
             "selfhost-gc-migration-plan: invalid phase/status formatting for row: " + line
