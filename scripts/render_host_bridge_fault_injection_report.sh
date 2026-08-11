@@ -96,6 +96,7 @@ PY
      cargo test -p gc_effects --lib runner_host_bridge::runner_host_bridge_persistent::tests::persistent_stop_is_bounded_when_signal_and_reap_fail --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_reaps_residual_descendants_after_success_and_error --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_bridge_cleanup_failures_cross_the_public_operation_boundary --quiet -- --exact && \
+     cargo test -p gc_cli_driver --lib host_bridge_runtime::tests::network_cleanup_failures_cross_public_boundaries_after_handle_removal --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart --quiet -- --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers --quiet -- --ignored --exact && \
      cargo test -p gc_effects --lib runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers --quiet -- --ignored --exact && \
@@ -275,6 +276,7 @@ report = {
             "gpu-device-explicit-destroy-rejected-after-close",
             "gpu-device-restart-rejects-stale-handles",
             "model-provider-session-success-error-timeout-drop-restart",
+            "network-close-failures-cross-public-boundary-after-handle-removal",
             "warm-daemon-provider-success-error-timeout-restart-shutdown-eof",
             "xr-repeated-close-rejected",
         ],

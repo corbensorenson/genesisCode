@@ -69,6 +69,137 @@ struct WsStream {
     mask_outgoing: bool,
 }
 
+#[derive(Debug)]
+struct HostBridgeFailure {
+    code: &'static str,
+    message: String,
+    prior_error: Option<String>,
+}
+
+impl HostBridgeFailure {
+    fn dispatch(message: String) -> Self {
+        Self {
+            code: "bridge/dispatch",
+            message,
+            prior_error: None,
+        }
+    }
+
+    fn net_cleanup(message: String, prior_error: Option<String>) -> Self {
+        Self {
+            code: "net/cleanup",
+            message,
+            prior_error,
+        }
+    }
+}
+
+impl From<String> for HostBridgeFailure {
+    fn from(message: String) -> Self {
+        Self::dispatch(message)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum NetCleanupFault {
+    TcpShutdown,
+    HttpWrite,
+    HttpFlush,
+    HttpShutdown,
+    WsCloseFrame,
+    WsShutdown,
+    #[cfg(test)]
+    HttpAll,
+    #[cfg(test)]
+    WsAll,
+}
+
+#[cfg(test)]
+std::thread_local! {
+    static NET_CLEANUP_FAULT: std::cell::Cell<Option<NetCleanupFault>> =
+        const { std::cell::Cell::new(None) };
+}
+
+fn checked_net_cleanup(
+    #[cfg_attr(not(test), allow(unused_variables))] fault: NetCleanupFault,
+    result: Result<(), String>,
+) -> Result<(), String> {
+    #[cfg(test)]
+    if result.is_ok()
+        && NET_CLEANUP_FAULT.get().is_some_and(|active| {
+            active == fault
+                || matches!(
+                    (active, fault),
+                    (
+                        NetCleanupFault::HttpAll,
+                        NetCleanupFault::HttpWrite
+                            | NetCleanupFault::HttpFlush
+                            | NetCleanupFault::HttpShutdown
+                    ) | (
+                        NetCleanupFault::WsAll,
+                        NetCleanupFault::WsCloseFrame | NetCleanupFault::WsShutdown
+                    )
+                )
+        })
+    {
+        return Err(format!("injected network cleanup failure at {fault:?}"));
+    }
+    result
+}
+
+fn combine_net_cleanup_results(
+    context: &str,
+    results: impl IntoIterator<Item = Result<(), String>>,
+) -> Result<(), String> {
+    let failures = results
+        .into_iter()
+        .filter_map(Result::err)
+        .collect::<Vec<_>>();
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("{context}: {}", failures.join("; ")))
+    }
+}
+
+fn finish_net_operation_with_cleanup(
+    context: &str,
+    operation: Result<(), String>,
+    cleanup: impl IntoIterator<Item = Result<(), String>>,
+) -> Result<(), HostBridgeFailure> {
+    match (operation, combine_net_cleanup_results(context, cleanup)) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Ok(()), Err(cleanup)) => Err(HostBridgeFailure::net_cleanup(cleanup, None)),
+        (Err(operation), Ok(())) => Err(HostBridgeFailure::dispatch(operation)),
+        (Err(operation), Err(cleanup)) => {
+            Err(HostBridgeFailure::net_cleanup(cleanup, Some(operation)))
+        }
+    }
+}
+
+fn shutdown_net_stream(stream: &TcpStream) -> Result<(), String> {
+    match stream.shutdown(Shutdown::Both) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotConnected => Ok(()),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+#[cfg(test)]
+fn with_net_cleanup_fault_for_tests<T>(fault: NetCleanupFault, operation: impl FnOnce() -> T) -> T {
+    struct ResetFault(Option<NetCleanupFault>);
+
+    impl Drop for ResetFault {
+        fn drop(&mut self) {
+            NET_CLEANUP_FAULT.set(self.0);
+        }
+    }
+
+    let previous = NET_CLEANUP_FAULT.replace(Some(fault));
+    let _reset = ResetFault(previous);
+    operation()
+}
+
 fn net_bridge_state() -> &'static Mutex<NetBridgeState> {
     static STATE: OnceLock<Mutex<NetBridgeState>> = OnceLock::new();
     STATE.get_or_init(|| Mutex::new(NetBridgeState::default()))
@@ -153,6 +284,18 @@ fn write_framed_term<W: Write>(writer: &mut W, term: &Term) -> Result<(), String
 }
 
 fn dispatch_host_bridge(op: &str, payload: &Term) -> Term {
+    let lifecycle_result = match op {
+        "io/net::tcp-close" => Some(net_tcp_close(payload)),
+        "io/net::http-respond" => Some(net_http_respond(payload)),
+        "io/net::ws-close" => Some(net_ws_close(payload)),
+        _ => None,
+    };
+    if let Some(result) = lifecycle_result {
+        return match result {
+            Ok(term) => term,
+            Err(failure) => host_bridge_failure_term(failure),
+        };
+    }
     match dispatch_host_bridge_impl(op, payload) {
         Ok(term) => term,
         Err(err) => error_term("bridge/dispatch", &err),
@@ -168,18 +311,15 @@ fn dispatch_host_bridge_impl(op: &str, payload: &Term) -> Result<Term, String> {
         "io/net::tcp-open" => net_tcp_open(payload),
         "io/net::tcp-send" => net_tcp_send(payload),
         "io/net::tcp-recv" => net_tcp_recv(payload),
-        "io/net::tcp-close" => net_tcp_close(payload),
         "io/net::udp-bind" => net_udp_bind(payload),
         "io/net::udp-send" => net_udp_send(payload),
         "io/net::udp-recv" => net_udp_recv(payload),
         "io/net::udp-close" => net_udp_close(payload),
         "io/net::http-listen" => net_http_listen(payload),
-        "io/net::http-respond" => net_http_respond(payload),
         "io/net::ws-accept" => net_ws_accept(payload),
         "io/net::ws-open" => net_ws_open(payload),
         "io/net::ws-send" => net_ws_send(payload),
         "io/net::ws-recv" => net_ws_recv(payload),
-        "io/net::ws-close" => net_ws_close(payload),
         "io/db::connect" => db_connect(payload),
         "io/db::tx-begin" => db_tx_begin(payload),
         "io/db::tx-commit" | "io/db::tx-rollback" => db_tx_finish(op, payload),
@@ -406,6 +546,19 @@ fn error_term(code: &str, message: &str) -> Term {
     let mut err = BTreeMap::new();
     err.insert(map_key(":code"), Term::Str(code.to_string()));
     err.insert(map_key(":message"), Term::Str(message.to_string()));
+    let mut top = BTreeMap::new();
+    top.insert(map_key(":ok"), Term::Bool(false));
+    top.insert(map_key(":error"), Term::Map(err));
+    Term::Map(top)
+}
+
+fn host_bridge_failure_term(failure: HostBridgeFailure) -> Term {
+    let mut err = BTreeMap::new();
+    err.insert(map_key(":code"), Term::Str(failure.code.to_string()));
+    err.insert(map_key(":message"), Term::Str(failure.message));
+    if let Some(prior_error) = failure.prior_error {
+        err.insert(map_key(":prior-error"), Term::Str(prior_error));
+    }
     let mut top = BTreeMap::new();
     top.insert(map_key(":ok"), Term::Bool(false));
     top.insert(map_key(":error"), Term::Map(err));
@@ -708,7 +861,7 @@ fn net_tcp_recv(payload: &Term) -> Result<Term, String> {
     ]))
 }
 
-fn net_tcp_close(payload: &Term) -> Result<Term, String> {
+fn net_tcp_close(payload: &Term) -> Result<Term, HostBridgeFailure> {
     let stream_id = req_string(payload, ":stream-id")?;
     let stream = net_bridge_state()
         .lock()
@@ -716,7 +869,12 @@ fn net_tcp_close(payload: &Term) -> Result<Term, String> {
         .tcp_streams
         .remove(&stream_id);
     if let Some(stream) = stream {
-        let _ = stream.shutdown(Shutdown::Both);
+        checked_net_cleanup(
+            NetCleanupFault::TcpShutdown,
+            shutdown_net_stream(&stream)
+                .map_err(|error| format!("tcp close `{stream_id}` shutdown: {error}")),
+        )
+        .map_err(|error| HostBridgeFailure::net_cleanup(error, None))?;
     }
     Ok(ok_term(vec![(":closed", Term::Bool(true))]))
 }

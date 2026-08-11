@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Structured failures
 
-**196 diagnostics** · catalog identity `41e129eb33cb92a10f4be46e38e878f06d9b278cd4220e1f77d2c8ebe81fcf68`
+**198 diagnostics** · catalog identity `c805de5174773fd24ff829cea2a0f7dcc69294c7aa490b13724db2dcbb469422`
 
 Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
 
@@ -201,7 +201,24 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 
 | Code | Severity | Safe action |
 |---|---|---|
+| [`bridge/dispatch`](#bridge-dispatch-e0cefe94) | error | `inspect-effect-boundary` |
 | [`effects/run`](#effects-run-88f4c729) | error | `inspect-effect-boundary` |
+| [`net/cleanup`](#net-cleanup-f746f6c0) | error | `inspect-effect-boundary` |
+
+### `bridge/dispatch` {#bridge-dispatch-e0cefe94}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/bridge/dispatch`
+
+**Likely causes**
+
+- An effect program or host bridge failed at the deny-by-default runner boundary.
+- The effect payload, host response, or resource cleanup violated its contract.
+
+**Safe repairs**
+
+- **`inspect-effect-boundary`** (not automatic; review required): Inspect the operation, capability decision, sealed error, and cleanup context; preserve the policy unless a separate review authorizes change.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 
 ### `effects/run` {#effects-run-88f4c729}
 
@@ -209,12 +226,27 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 
 **Likely causes**
 
-- An effect program failed at the deny-by-default runner boundary.
-- The effect payload or response violated its contract.
+- An effect program or host bridge failed at the deny-by-default runner boundary.
+- The effect payload, host response, or resource cleanup violated its contract.
 
 **Safe repairs**
 
-- **`inspect-effect-boundary`** (not automatic; review required): Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.
+- **`inspect-effect-boundary`** (not automatic; review required): Inspect the operation, capability decision, sealed error, and cleanup context; preserve the policy unless a separate review authorizes change.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `net/cleanup` {#net-cleanup-f746f6c0}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/net/cleanup`
+
+**Likely causes**
+
+- An effect program or host bridge failed at the deny-by-default runner boundary.
+- The effect payload, host response, or resource cleanup violated its contract.
+
+**Safe repairs**
+
+- **`inspect-effect-boundary`** (not automatic; review required): Inspect the operation, capability decision, sealed error, and cleanup context; preserve the policy unless a separate review authorizes change.
 
 **Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 

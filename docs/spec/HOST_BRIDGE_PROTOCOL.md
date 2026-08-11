@@ -100,6 +100,7 @@ Example:
 - Teardown is bounded. Failure to signal, join, reap, or eliminate a live residual member returns a family-scoped `bridge-reap` error; it is never rewritten as successful cancellation.
 - Persistent worker completion carries the worker's own child-reap result through the join handle. Session eviction and multi-session owner shutdown attempt every owned session, return cleanup failures in canonical session-key order, and preserve the error that initiated cleanup.
 - Spawn-per-operation teardown owns every started stdin/stdout/stderr pump until join. Thread-spawn, wait, timeout, and residual-verification paths first attempt process-tree termination as applicable, then join every started pump in fixed stdin/stdout/stderr order, aggregate every stop/reap/join failure, and return family-scoped `bridge-reap` in preference to the initiating operation result while retaining that prior error.
+- First-party network close operations remove their TCP, pending HTTP, or WebSocket handle before teardown, attempt every applicable write/flush/close-frame/shutdown action in protocol order, and aggregate failures under `net/cleanup` at the public bridge boundary. A preceding operation failure is retained in `:prior-error`; a cleanup failure cannot be rewritten as successful close.
 - Recreating a runner after daemon restart creates a fresh bridge generation. Logical IDs or processes from the retired owner cannot be reused.
 
 ## WASI Profile
@@ -111,5 +112,6 @@ Example:
 
 Conformance tests:
 - Native framing, owner lifetime, success/error descendant reap, timeout/cancellation, restart, and repeated-load tests: `crates/gc_effects/src/runner_host_bridge_tests.rs`.
+- First-party TCP, pending HTTP, and WebSocket close-error propagation after handle removal: `crates/gc_cli_driver/src/host_bridge_runtime_tests.rs`.
 - End-to-end bridge replay tests: `crates/gc_effects/tests/gfx_gpu_bridge.rs`, `crates/gc_effects/tests/editor_bridge.rs`.
 - Mandatory aggregate gate and machine report: `scripts/check_host_bridge_fault_injection.sh` and `.genesis/perf/host_bridge_fault_injection_report.json`.

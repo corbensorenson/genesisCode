@@ -567,6 +567,7 @@ failure-rate budgets.
 - `io/net::http-respond`
   - Required payload fields: `:listener-id` (string), `:request-id` (string), `:status` (int).
   - Optional payload fields: `:headers` (map/vector), `:body` (bytes/string).
+  - The request handle is consumed before response I/O. The backend attempts write, flush, and bidirectional shutdown in that order; cleanup continues after an earlier failure. A cleanup failure returns `net/cleanup`, aggregates every failed cleanup action in order, and retains a preceding write failure in `:prior-error`. `NotConnected` during shutdown means the peer already made the stream quiescent and is successful cleanup; other shutdown errors remain failures.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::tcp-listen`
   - Required payload field: `:local` (string URL-like target, e.g. `tcp://127.0.0.1:9000`).
@@ -588,6 +589,7 @@ failure-rate budgets.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::tcp-close`
   - Required payload field: `:stream-id` (string).
+  - The stream handle is removed before bidirectional shutdown. `NotConnected` means the peer already made the stream quiescent; any other shutdown failure returns `net/cleanup` and is not converted to `:closed true`.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::udp-bind`
   - Required payload field: `:local` (string URL-like target, e.g. `udp://ip:port`).
@@ -623,6 +625,7 @@ failure-rate budgets.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::ws-close`
   - Required payload field: `:stream-id` (string).
+  - The stream handle is removed before teardown. The backend attempts the close frame and bidirectional shutdown in that order, aggregates both failures, and returns them as `net/cleanup` rather than reporting `:closed true`. `NotConnected` during shutdown means the peer already made the stream quiescent and is not a failure.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `sys/process::exec`
   - Required payload field: `:program` (string).

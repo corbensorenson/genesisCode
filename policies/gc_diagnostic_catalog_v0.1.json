@@ -88,9 +88,9 @@
     },
     {
       "id": "effects",
-      "families": ["effects"],
-      "likelyCauses": ["An effect program failed at the deny-by-default runner boundary.", "The effect payload or response violated its contract."],
-      "safeRepairActions": [{"id": "inspect-effect-boundary", "description": "Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.", "policyEffect": "review-required"}],
+      "families": ["bridge", "effects", "net"],
+      "likelyCauses": ["An effect program or host bridge failed at the deny-by-default runner boundary.", "The effect payload, host response, or resource cleanup violated its contract."],
+      "safeRepairActions": [{"id": "inspect-effect-boundary", "description": "Inspect the operation, capability decision, sealed error, and cleanup context; preserve the policy unless a separate review authorizes change.", "policyEffect": "review-required"}],
       "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]
     },
     {

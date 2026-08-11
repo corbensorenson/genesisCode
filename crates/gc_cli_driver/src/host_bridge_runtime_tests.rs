@@ -562,6 +562,133 @@ fn net_tcp_lifecycle_open_send_recv_close_roundtrip() {
     });
 }
 
+#[test]
+fn network_cleanup_failures_cross_public_boundaries_after_handle_removal() {
+    with_test_workspace(|_root| {
+        let bridge_error = |response: Term| {
+            let Term::Map(response) = response else {
+                panic!("bridge response must be a map");
+            };
+            assert_eq!(map_get_bool(&response, ":ok"), Some(false));
+            let error = map_get_map(&response, ":error").expect("bridge error map");
+            (
+                map_get_str(error, ":code")
+                    .expect("bridge error code")
+                    .to_string(),
+                map_get_str(error, ":message")
+                    .expect("bridge error message")
+                    .to_string(),
+                map_get_str(error, ":prior-error").map(str::to_string),
+            )
+        };
+
+        let (tcp_stream, tcp_peer) = tcp_stream_pair();
+        let tcp_id = "tcp-cleanup-fault".to_string();
+        net_bridge_state()
+            .lock()
+            .expect("net state")
+            .tcp_streams
+            .insert(tcp_id.clone(), tcp_stream);
+        let (tcp_code, tcp_error, tcp_prior) =
+            with_net_cleanup_fault_for_tests(NetCleanupFault::TcpShutdown, || {
+                bridge_error(dispatch_host_bridge(
+                    "io/net::tcp-close",
+                    &term_map(vec![(":stream-id", Term::Str(tcp_id.clone()))]),
+                ))
+            });
+        assert_eq!(tcp_code, "net/cleanup");
+        assert!(tcp_error.contains("TcpShutdown"), "{tcp_error}");
+        assert_eq!(tcp_prior, None);
+        assert!(
+            !net_bridge_state()
+                .lock()
+                .expect("net state")
+                .tcp_streams
+                .contains_key(&tcp_id)
+        );
+        drop(tcp_peer);
+
+        let (http_stream, http_peer) = tcp_stream_pair();
+        let listener_id = "http-cleanup-listener".to_string();
+        let request_id = "http-cleanup-request".to_string();
+        net_bridge_state()
+            .lock()
+            .expect("net state")
+            .http_requests
+            .insert(
+                request_id.clone(),
+                HttpPendingRequest {
+                    listener_id: listener_id.clone(),
+                    stream: http_stream,
+                    headers: Vec::new(),
+                },
+            );
+        let (http_code, http_error, http_prior) =
+            with_net_cleanup_fault_for_tests(NetCleanupFault::HttpAll, || {
+                bridge_error(dispatch_host_bridge(
+                    "io/net::http-respond",
+                    &term_map(vec![
+                        (":listener-id", Term::Str(listener_id)),
+                        (":request-id", Term::Str(request_id.clone())),
+                        (":status", Term::Int(200_i64.into())),
+                        (":headers", Term::Nil),
+                        (":body", Term::Bytes(b"ok".to_vec().into())),
+                    ]),
+                ))
+            });
+        assert_eq!(http_code, "net/cleanup");
+        for expected in ["HttpFlush", "HttpShutdown"] {
+            assert!(http_error.contains(expected), "{http_error}");
+        }
+        assert_eq!(
+            http_prior.as_deref(),
+            Some("injected network cleanup failure at HttpWrite")
+        );
+        assert!(
+            !net_bridge_state()
+                .lock()
+                .expect("net state")
+                .http_requests
+                .contains_key(&request_id)
+        );
+        drop(http_peer);
+
+        let (ws_stream, ws_peer) = tcp_stream_pair();
+        let ws_id = "ws-cleanup-fault".to_string();
+        net_bridge_state()
+            .lock()
+            .expect("net state")
+            .ws_streams
+            .insert(
+                ws_id.clone(),
+                Arc::new(Mutex::new(WsStream {
+                    stream: ws_stream,
+                    mask_outgoing: false,
+                })),
+            );
+        let (ws_code, ws_error, ws_prior) =
+            with_net_cleanup_fault_for_tests(NetCleanupFault::WsAll, || {
+                bridge_error(dispatch_host_bridge(
+                    "io/net::ws-close",
+                    &term_map(vec![(":stream-id", Term::Str(ws_id.clone()))]),
+                ))
+            });
+        assert_eq!(ws_code, "net/cleanup");
+        for expected in ["WsCloseFrame", "WsShutdown"] {
+            assert!(ws_error.contains(expected), "{ws_error}");
+        }
+        assert_eq!(ws_prior, None);
+        assert!(
+            !net_bridge_state()
+                .lock()
+                .expect("net state")
+                .ws_streams
+                .contains_key(&ws_id)
+        );
+        drop(ws_peer);
+    });
+}
+
 #[cfg(unix)]
 #[test]
 fn net_udp_lifecycle_bind_send_recv_close_roundtrip() {

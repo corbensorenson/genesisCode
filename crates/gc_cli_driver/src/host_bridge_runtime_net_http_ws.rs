@@ -480,7 +480,7 @@ pub(super) fn net_http_listen(payload: &Term) -> Result<Term, String> {
     ]))
 }
 
-pub(super) fn net_http_respond(payload: &Term) -> Result<Term, String> {
+pub(super) fn net_http_respond(payload: &Term) -> Result<Term, HostBridgeFailure> {
     let listener_id = req_string(payload, ":listener-id")?;
     let request_id = req_string(payload, ":request-id")?;
     let status = req_int(payload, ":status")?;
@@ -497,9 +497,9 @@ pub(super) fn net_http_respond(payload: &Term) -> Result<Term, String> {
         .remove(&request_id)
         .ok_or_else(|| format!("unknown `:request-id` `{request_id}`"))?;
     if pending.listener_id != listener_id {
-        return Err(format!(
-            "request `{request_id}` does not belong to listener `{listener_id}`"
-        ));
+        return Err(
+            format!("request `{request_id}` does not belong to listener `{listener_id}`").into(),
+        );
     }
     if !headers.iter().any(|line| {
         line.split(':')
@@ -523,12 +523,30 @@ pub(super) fn net_http_respond(payload: &Term) -> Result<Term, String> {
     }
     response.extend_from_slice(b"\r\n");
     response.extend_from_slice(&body);
-    pending
-        .stream
-        .write_all(&response)
-        .map_err(|e| format!("http respond write `{request_id}`: {e}"))?;
-    let _ = pending.stream.flush();
-    let _ = pending.stream.shutdown(Shutdown::Both);
+    let write_result = checked_net_cleanup(
+        NetCleanupFault::HttpWrite,
+        pending
+            .stream
+            .write_all(&response)
+            .map_err(|error| format!("http respond write `{request_id}`: {error}")),
+    );
+    finish_net_operation_with_cleanup(
+        &format!("http respond cleanup `{request_id}`"),
+        write_result,
+        [
+            checked_net_cleanup(
+                NetCleanupFault::HttpFlush,
+                pending
+                    .stream
+                    .flush()
+                    .map_err(|error| format!("flush: {error}")),
+            ),
+            checked_net_cleanup(
+                NetCleanupFault::HttpShutdown,
+                shutdown_net_stream(&pending.stream).map_err(|error| format!("shutdown: {error}")),
+            ),
+        ],
+    )?;
     Ok(ok_term(vec![
         (":responded", Term::Bool(true)),
         (":status", Term::Int(status.into())),
@@ -747,7 +765,7 @@ pub(super) fn net_ws_recv(payload: &Term) -> Result<Term, String> {
     ]))
 }
 
-pub(super) fn net_ws_close(payload: &Term) -> Result<Term, String> {
+pub(super) fn net_ws_close(payload: &Term) -> Result<Term, HostBridgeFailure> {
     let stream_id = req_string(payload, ":stream-id")?;
     let stream = net_bridge_state()
         .lock()
@@ -759,8 +777,20 @@ pub(super) fn net_ws_close(payload: &Term) -> Result<Term, String> {
             .lock()
             .map_err(|_| format!("ws stream state lock poisoned `{stream_id}`"))?;
         let mask_outgoing = ws.mask_outgoing;
-        let _ = write_ws_frame(&mut ws.stream, 0x8, &[], mask_outgoing);
-        let _ = ws.stream.shutdown(Shutdown::Both);
+        combine_net_cleanup_results(
+            &format!("ws close cleanup `{stream_id}`"),
+            [
+                checked_net_cleanup(
+                    NetCleanupFault::WsCloseFrame,
+                    write_ws_frame(&mut ws.stream, 0x8, &[], mask_outgoing),
+                ),
+                checked_net_cleanup(
+                    NetCleanupFault::WsShutdown,
+                    shutdown_net_stream(&ws.stream).map_err(|error| format!("shutdown: {error}")),
+                ),
+            ],
+        )
+        .map_err(|error| HostBridgeFailure::net_cleanup(error, None))?;
     }
     Ok(ok_term(vec![(":closed", Term::Bool(true))]))
 }
