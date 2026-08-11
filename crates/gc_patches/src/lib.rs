@@ -40,6 +40,8 @@ mod patch_selfhost_authority;
 mod patch_selfhost_toolchain;
 #[path = "patch_semantic.rs"]
 mod patch_semantic;
+#[path = "patch_transaction.rs"]
+mod patch_transaction;
 
 use patch_authority::{selfhost_normalize_patch, selfhost_semantic_node_index};
 use patch_manifest::{
@@ -53,6 +55,7 @@ use patch_selfhost_toolchain::SelfhostPatchToolchain;
 use patch_semantic::{
     hash32_hex, path_steps_to_term, resolve_node_id_path, semantic_node_id_for_path_with_frontend,
 };
+use patch_transaction::{PatchWorkspaceRollback, rollback_error};
 
 #[derive(Debug, Error)]
 pub enum PatchError {

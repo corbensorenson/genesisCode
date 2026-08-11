@@ -28,11 +28,9 @@ pub fn apply_patch_with_step_limit_and_frontend(
         .map(|config| SelfhostPatchToolchain::init(config, mem_limits))
         .transpose()?;
 
-    // Selfhost frontend is authoritative for patch-schema acceptance.
     if let Some(sh) = selfhost.as_mut() {
         sh.validate_patch_term(&patch_term, step_limit)?;
     }
-
     let patch = if let Some(sh) = selfhost.as_mut() {
         selfhost_normalize_patch(&patch_term, sh, step_limit)?
     } else {
@@ -56,58 +54,66 @@ pub fn apply_patch_with_step_limit_and_frontend(
     if let Some(sh) = selfhost.as_mut() {
         selfhost_preflight_patch(&patch, &pkg_dir, sh, step_limit)?;
     }
-    let store = EvidenceStore::open(&pkg_dir)?;
+    let rollback = PatchWorkspaceRollback::capture(pkg_toml, &pkg_dir, &patch)?;
+    let outcome = (|| {
+        let store = EvidenceStore::open(&pkg_dir)?;
 
-    // Store the patch artifact itself (as canonical CoreForm bytes).
-    let patch_artifact = store.put_term(&patch.normalized_term)?;
+        let patch_artifact = store.put_term(&patch.normalized_term)?;
+        let mut semantic_edits = Vec::new();
+        for op in &patch.ops {
+            if let Some(edit) = apply_one_op(
+                &pkg_dir,
+                pkg_toml,
+                op,
+                &frontend,
+                step_limit,
+                mem_limits,
+                selfhost.as_mut(),
+            )? {
+                semantic_edits.push(edit);
+            }
+        }
 
-    // Apply ops.
-    let mut semantic_edits = Vec::new();
-    for op in &patch.ops {
-        if let Some(edit) = apply_one_op(
-            &pkg_dir,
+        let package_artifact = Some(pack(pkg_toml)?);
+        let acceptance = Some(test_package_with_step_limit_and_frontend(
             pkg_toml,
-            op,
-            &frontend,
+            caps_override,
             step_limit,
             mem_limits,
-            selfhost.as_mut(),
-        )? {
-            semantic_edits.push(edit);
+            frontend,
+        )?);
+
+        let ok = acceptance.as_ref().is_some_and(|r| r.ok);
+        let report = patch_apply_report::report_term(
+            &patch,
+            ok,
+            &package_artifact,
+            acceptance.as_ref(),
+            &semantic_edits,
+        );
+        let report_artifact = store.put_term(&report)?;
+
+        Ok(PatchApplyResult {
+            ok,
+            semantic_patch_hash: patch.semantic_hash,
+            patch_artifact,
+            report_artifact,
+            acceptance_artifact: acceptance.as_ref().map(|r| r.acceptance_artifact.clone()),
+            package_artifact,
+        })
+    })();
+
+    match outcome {
+        Ok(result) if result.ok => Ok(result),
+        Ok(result) => {
+            rollback.restore().map_err(PatchError::Io)?;
+            Ok(result)
         }
+        Err(error) => match rollback.restore() {
+            Ok(()) => Err(error),
+            Err(rollback_failure) => Err(rollback_error(&error, rollback_failure)),
+        },
     }
-
-    // Re-pack to compute updated package artifact record and module hashes.
-    let package_artifact = Some(pack(pkg_toml)?);
-
-    // Re-run obligations using updated manifest.
-    let acceptance = Some(test_package_with_step_limit_and_frontend(
-        pkg_toml,
-        caps_override,
-        step_limit,
-        mem_limits,
-        frontend,
-    )?);
-
-    let ok = acceptance.as_ref().is_some_and(|r| r.ok);
-
-    let report = patch_apply_report::report_term(
-        &patch,
-        ok,
-        &package_artifact,
-        acceptance.as_ref(),
-        &semantic_edits,
-    );
-    let report_artifact = store.put_term(&report)?;
-
-    Ok(PatchApplyResult {
-        ok,
-        semantic_patch_hash: patch.semantic_hash,
-        patch_artifact,
-        report_artifact,
-        acceptance_artifact: acceptance.as_ref().map(|r| r.acceptance_artifact.clone()),
-        package_artifact,
-    })
 }
 
 fn apply_one_op(

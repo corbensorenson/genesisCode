@@ -682,6 +682,7 @@ fn patch_obligation_rerun_failure_is_reported_ok_false() {
     let patch_term = gc_coreform::parse_term(&patch_src).unwrap();
     let patch_path = td.path().join("break.gcpatch");
     fs::write(&patch_path, print_term(&patch_term)).unwrap();
+    let module_before = fs::read(td.path().join("mod.gc")).unwrap();
 
     let r = gc_patches::apply_patch(&patch_path, &pkg, None).unwrap();
     assert!(!r.ok, "expected obligations to fail after patch");
@@ -693,6 +694,38 @@ fn patch_obligation_rerun_failure_is_reported_ok_false() {
     assert!(report.contains(":patch-h"));
     assert!(report.contains(":source-patch-h"));
     assert!(report.contains(":op-identities"));
+    assert_eq!(
+        fs::read(td.path().join("mod.gc")).unwrap(),
+        module_before,
+        "failed obligations must restore package source"
+    );
+}
+
+#[test]
+fn patch_hard_obligation_error_restores_manifest_and_added_module() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let manifest_before = fs::read(&pkg).unwrap();
+    let module_before = fs::read(td.path().join("mod.gc")).unwrap();
+    let patch = write_patch(
+        td.path(),
+        r#"{
+          :version 1
+          :intent "add invalid module"
+          :provenance {}
+          :ops [{
+            :op :add-module
+            :module-path "bad.gc"
+            :content "(def my/pkg::bad missing/symbol)"
+          }]
+        }"#,
+    );
+
+    let error = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
+    assert!(error.to_string().contains("obligations error"), "{error}");
+    assert_eq!(fs::read(&pkg).unwrap(), manifest_before);
+    assert_eq!(fs::read(td.path().join("mod.gc")).unwrap(), module_before);
+    assert!(!td.path().join("bad.gc").exists());
 }
 
 #[test]

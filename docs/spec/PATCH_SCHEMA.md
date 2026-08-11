@@ -42,6 +42,11 @@ failure stops at the first unsatisfied check and emits the closed conflict recor
 `{:actual string :code "patch/path-state-conflict" :expected string :op symbol :ordinal int :path string}`.
 The host validates complete ordered check coverage and fails closed on malformed, incomplete,
 unbound, or identity-mismatched reports; it never retries with Rust precondition semantics.
+After preflight, apply snapshots the manifest and every operation-touched module path. The package
+mutation commits only when packing and all obligations succeed. An `ok=false` acceptance or any
+hard operation, packing, or obligation error restores exact prior bytes and removes files that did
+not exist before the patch; failure evidence may remain in the content-addressed evidence store.
+A rollback failure is a distinct hard error and cannot be reported as a successful apply.
 
 - `:op` (symbol) one of:
   - `:replace-node`
