@@ -110,6 +110,7 @@ Owner: Documentation + release maintainers.
 - Generated product/target qualification and one-language predicate views: the product/target section of `feature_matrix.md` and `docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json`
 - Generated semantic selfhost authority view: `docs/status/SELFHOST_AUTHORITY_v0.1.md`
 - Normative stage0 boundary: `docs/spec/SELF_HOST_BOUNDARY.md` with content-addressed machine authority `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json` and closed schema `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json`
+- Normative stage0 dependency enforcement: `docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md` with content-addressed policy `docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json` and closed schema `docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json`
 - Normative self-host closure lattice: `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md` with content-addressed machine authority `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json` and closed schema `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json`
 - Canonical semantic ownership inventory: `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md` with content-addressed ledger `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` and closed schema `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json`
 - Normative check/update lifecycle: `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`

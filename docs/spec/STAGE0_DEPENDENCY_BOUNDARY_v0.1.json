@@ -1,0 +1,188 @@
+{
+  "auditDate": "2026-08-11",
+  "canonicalSpec": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+  "canonicalSpecSha256": "a332218b90c8527e8f20ed986b9447968eae82a70021bd94b53247ba49222c78",
+  "contentIdentitySha256": "379d9a5a41c886829413ed3010d681a3d12bbff70c98a4978ada9c2326f2574c",
+  "forbiddenAmbientPackages": [
+    "async-std",
+    "clap",
+    "crossterm",
+    "getrandom",
+    "libloading",
+    "mio",
+    "notify",
+    "rand",
+    "rand_core",
+    "reqwest",
+    "rusqlite",
+    "socket2",
+    "tiny_http",
+    "tokio",
+    "wasm-bindgen",
+    "wgpu"
+  ],
+  "forbiddenWorkspacePackages": [
+    "gc_cli",
+    "gc_cli_driver",
+    "gc_cli_driver_parity",
+    "gc_effects",
+    "gc_gfx",
+    "gc_obligations",
+    "gc_opt",
+    "gc_patches",
+    "gc_pkg",
+    "gc_registry",
+    "gc_runtime_bench",
+    "gc_types",
+    "gc_vcs",
+    "gc_wasi_cli",
+    "gc_wasm"
+  ],
+  "kind": "genesis/stage0-dependency-boundary-v0.1",
+  "nonclaims": [
+    "changes-no-semantic-decision-h-level-production-authority-or-fallback",
+    "does-not-broaden-the-bound-stage0-contract",
+    "grants-no-authority-to-dev-only-parity-dependencies",
+    "proves-no-H2-H3-H4-or-release-readiness"
+  ],
+  "schema": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
+  "schemaSha256": "5de329ff06cf88cd76b0fa80a2842f7392dd49e4f3ab6dfedc03e4674d870337",
+  "sourceEscapes": [
+    {
+      "line": "include!(concat!(env!(\"OUT_DIR\"), \"/prelude_assembled.rs\"));",
+      "path": "crates/gc_prelude/src/prelude.rs",
+      "reason": "build-script-produced immutable Prelude source string"
+    },
+    {
+      "line": "include_str!(\"../../../selfhost/toolchain.gc\");",
+      "path": "crates/gc_prelude/src/selfhost_coreform_v1.rs",
+      "reason": "reviewed embedded-bootstrap artifact available only under the guarded development feature"
+    },
+    {
+      "line": "include_str!(\"../../../selfhost/toolchain_manifest.gc\");",
+      "path": "crates/gc_prelude/src/selfhost_coreform_v1.rs",
+      "reason": "reviewed embedded-bootstrap manifest available only under the guarded development feature"
+    }
+  ],
+  "stage0Packages": [
+    {
+      "allowedBuildExternalDependencies": [],
+      "allowedBuildWorkspaceDependencies": [],
+      "allowedDevExternalDependencies": [
+        "proptest"
+      ],
+      "allowedDevWorkspaceDependencies": [],
+      "allowedFeatures": {},
+      "allowedProductionExternalDependencies": [
+        "anyhow",
+        "blake3",
+        "bytes",
+        "logos",
+        "num-bigint",
+        "num-traits",
+        "stacker",
+        "thiserror"
+      ],
+      "allowedProductionWorkspaceDependencies": [],
+      "domains": [
+        "S0-R"
+      ],
+      "manifestPath": "crates/gc_coreform/Cargo.toml",
+      "name": "gc_coreform",
+      "productionWorkspaceClosure": [
+        "gc_coreform"
+      ],
+      "sourceRoot": "crates/gc_coreform/src",
+      "buildScriptPath": null,
+      "manifestSha256": "d207fece2541279080ada5a06d3dbfdce6594efdeeae8bb5178580e2fc59a969",
+      "productionResolvedPackageCount": 47,
+      "productionResolvedClosureSha256": "4c572f1e0d92d06eee485adcfe659d2fc1d3c9e44d7dcd404c82e0705931bfcf"
+    },
+    {
+      "allowedBuildExternalDependencies": [],
+      "allowedBuildWorkspaceDependencies": [],
+      "allowedDevExternalDependencies": [],
+      "allowedDevWorkspaceDependencies": [],
+      "allowedFeatures": {},
+      "allowedProductionExternalDependencies": [
+        "anyhow",
+        "blake3",
+        "bytes",
+        "num-bigint",
+        "num-traits",
+        "rust-cc",
+        "stacker",
+        "thiserror"
+      ],
+      "allowedProductionWorkspaceDependencies": [
+        "gc_coreform"
+      ],
+      "domains": [
+        "S0-K",
+        "S0-X"
+      ],
+      "manifestPath": "crates/gc_kernel/Cargo.toml",
+      "name": "gc_kernel",
+      "productionWorkspaceClosure": [
+        "gc_coreform",
+        "gc_kernel"
+      ],
+      "sourceRoot": "crates/gc_kernel/src",
+      "buildScriptPath": null,
+      "manifestSha256": "eb3aa8a0071662c2c02d5aafae8bd5ca9cca239e0f1af0ac1f7a633e5356f2eb",
+      "productionResolvedPackageCount": 51,
+      "productionResolvedClosureSha256": "52ff74ddfbf78c5f10e938cd77d7dc0ed0c8dd2c774de8321864eb666e06ff1a"
+    },
+    {
+      "allowedBuildExternalDependencies": [
+        "toml"
+      ],
+      "allowedBuildWorkspaceDependencies": [],
+      "allowedDevExternalDependencies": [
+        "serde",
+        "serde_json",
+        "sha2",
+        "tempfile",
+        "toml"
+      ],
+      "allowedDevWorkspaceDependencies": [
+        "gc_effects",
+        "gc_opt",
+        "gc_types"
+      ],
+      "allowedFeatures": {
+        "default": [],
+        "embedded-bootstrap": []
+      },
+      "allowedProductionExternalDependencies": [
+        "anyhow",
+        "blake3",
+        "once_cell",
+        "thiserror"
+      ],
+      "allowedProductionWorkspaceDependencies": [
+        "gc_coreform",
+        "gc_kernel"
+      ],
+      "domains": [
+        "S0-A",
+        "S0-P"
+      ],
+      "manifestPath": "crates/gc_prelude/Cargo.toml",
+      "name": "gc_prelude",
+      "productionWorkspaceClosure": [
+        "gc_coreform",
+        "gc_kernel",
+        "gc_prelude"
+      ],
+      "sourceRoot": "crates/gc_prelude/src",
+      "buildScriptPath": "crates/gc_prelude/build.rs",
+      "manifestSha256": "ce405c1ca2a460590ea1413f5f47758bcaac6498f300201c451c1a94cee79627",
+      "productionResolvedPackageCount": 65,
+      "productionResolvedClosureSha256": "860c95d7bdd920ba0d245bcd9932fcb82bde7dfb8730f4552d2d25cc250fe287"
+    }
+  ],
+  "stage0TrustContract": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
+  "stage0TrustContractIdentitySha256": "9e59cb97538ffbb39156085a1e71997ba00f759c277a51724527795ac6f31651",
+  "version": "0.1"
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.org/spec/stage0-dependency-boundary-v0.1.schema.json",
+  "title": "GenesisCode Stage0 Dependency Boundary v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "auditDate",
+    "canonicalSpec",
+    "canonicalSpecSha256",
+    "contentIdentitySha256",
+    "forbiddenAmbientPackages",
+    "forbiddenWorkspacePackages",
+    "kind",
+    "nonclaims",
+    "schema",
+    "schemaSha256",
+    "sourceEscapes",
+    "stage0Packages",
+    "stage0TrustContract",
+    "stage0TrustContractIdentitySha256",
+    "version"
+  ],
+  "properties": {
+    "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "canonicalSpec": {"const": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md"},
+    "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "forbiddenAmbientPackages": {"$ref": "#/$defs/stringArray"},
+    "forbiddenWorkspacePackages": {"$ref": "#/$defs/stringArray"},
+    "kind": {"const": "genesis/stage0-dependency-boundary-v0.1"},
+    "nonclaims": {"$ref": "#/$defs/stringArray"},
+    "schema": {"const": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "sourceEscapes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["line", "path", "reason"],
+        "properties": {
+          "line": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "stage0Packages": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "allowedBuildExternalDependencies",
+          "allowedBuildWorkspaceDependencies",
+          "allowedDevExternalDependencies",
+          "allowedDevWorkspaceDependencies",
+          "allowedFeatures",
+          "allowedProductionExternalDependencies",
+          "allowedProductionWorkspaceDependencies",
+          "buildScriptPath",
+          "domains",
+          "manifestSha256",
+          "manifestPath",
+          "name",
+          "productionResolvedClosureSha256",
+          "productionResolvedPackageCount",
+          "productionWorkspaceClosure",
+          "sourceRoot"
+        ],
+        "properties": {
+          "allowedBuildExternalDependencies": {"$ref": "#/$defs/stringArray"},
+          "allowedBuildWorkspaceDependencies": {"$ref": "#/$defs/stringArray"},
+          "allowedDevExternalDependencies": {"$ref": "#/$defs/stringArray"},
+          "allowedDevWorkspaceDependencies": {"$ref": "#/$defs/stringArray"},
+          "allowedFeatures": {
+            "type": "object",
+            "additionalProperties": {"$ref": "#/$defs/stringArray"}
+          },
+          "allowedProductionExternalDependencies": {"$ref": "#/$defs/stringArray"},
+          "allowedProductionWorkspaceDependencies": {"$ref": "#/$defs/stringArray"},
+          "buildScriptPath": {
+            "oneOf": [
+              {"type": "null"},
+              {"type": "string", "pattern": "^crates/[^/]+/build\\.rs$"}
+            ]
+          },
+          "domains": {"$ref": "#/$defs/stringArray"},
+          "manifestSha256": {"$ref": "#/$defs/sha256"},
+          "manifestPath": {"type": "string", "pattern": "^crates/[^/]+/Cargo\\.toml$"},
+          "name": {"type": "string", "pattern": "^gc_[a-z0-9_]+$"},
+          "productionResolvedClosureSha256": {"$ref": "#/$defs/sha256"},
+          "productionResolvedPackageCount": {"type": "integer", "minimum": 1},
+          "productionWorkspaceClosure": {"$ref": "#/$defs/stringArray"},
+          "sourceRoot": {"type": "string", "pattern": "^crates/[^/]+/src$"}
+        }
+      }
+    },
+    "stage0TrustContract": {"const": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json"},
+    "stage0TrustContractIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "version": {"const": "0.1"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stringArray": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    }
+  }
+}

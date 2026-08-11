@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 287,
+    "canonicalSources": 290,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 105,
+    "schemas": 106,
     "symbols": 170
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "4bbd4cebab93f7f249d00ec65920eba481db08a241df5022cacfabb6558f4e55"
+      "sha256": "7b300e506f306f4e660e2e1f9022e057f604cdf7deeb9b7800682edebb4e4ba3"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "6b3f316ec448ce77df13af2e9ebb5f41fbc0e566d1a4239d2ece6764156869d6"
+      "sha256": "b68684dc8a9ceaee0af4a8c68a71563d720b997a770c0b4b524b9ce7f2cae09f"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "8c3fc4e4f0c60bc7af2e6313fb5263e6823a0953c2ff2a8a7ee7026f306cc8f7"
+      "sha256": "04dc10634b864ed2047083e5598febed4eabffeefb616b269ce2b47c46de7388"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -296,7 +296,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "6b915b60f01ecdd3365f392936469f467136737775e54c2b70170c5453042e6e"
+      "sha256": "6684db0ef4e2e020bc95eee863bef0f00eadf81ce2747ef8bdfdfc62ca751255"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -368,7 +368,7 @@
     },
     {
       "path": "docs/spec/DOC_TOPOLOGY_v0.1.md",
-      "sha256": "a68498ee3d97bc6ca4265f29165d4b6a8441954aff2d1e31c8b56b593b66a144"
+      "sha256": "632d8156f81695b0a1aa416a99b39a3e0afbf216f57ae8376b679a7778645159"
     },
     {
       "path": "docs/spec/DOMAIN_KITS_v0.1.md",
@@ -860,7 +860,7 @@
     },
     {
       "path": "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
-      "sha256": "f5ae32a42716e692e3d7ac0bc0dc097ae37ead18d3126eb1cfcf06c83449f0eb"
+      "sha256": "b9210c8e90ca6d72b13595fc0d0f50257fade31347331d19e325f830847d4e05"
     },
     {
       "path": "docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md",
@@ -1041,6 +1041,18 @@
     {
       "path": "docs/spec/SOURCE_SIZE_BUDGET_v0.1.md",
       "sha256": "f31895d3ca194f14095f8a51fffb2286da7dae28c733a6886d90488b4fdd982a"
+    },
+    {
+      "path": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+      "sha256": "321012557199af4ded7cb407b9860ae540eb183905087aafa28e73d9e0604e8d"
+    },
+    {
+      "path": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+      "sha256": "a332218b90c8527e8f20ed986b9447968eae82a70021bd94b53247ba49222c78"
+    },
+    {
+      "path": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
+      "sha256": "5de329ff06cf88cd76b0fa80a2842f7392dd49e4f3ab6dfedc03e4674d870337"
     },
     {
       "path": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",

@@ -167,6 +167,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELF_HOST_BOUNDARY.md` - normative stage0 trust model, residual host assumptions, and self-host cutover boundary.
 - `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json` - content-addressed six-domain stage0 authority; only S0-K is TCB-A.
 - `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json` - closed machine schema for the stage0 authority.
+- `docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md` - normative exact production dependency, feature, resolved-closure, and source-escape boundary for stage0.
+- `docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json` - content-addressed stage0 dependency/source policy bound to the six-domain trust contract.
+- `docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json` - closed machine schema for the stage0 dependency boundary.
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md` - normative per-decision H0-H4 lattice, applicability, evidence, aggregation, and invalidation rules.
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json` - content-addressed machine authority for cumulative self-host closure claims.
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json` - closed machine schema for the self-host closure lattice.

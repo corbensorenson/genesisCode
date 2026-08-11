@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "65a8d37702f30382c87f9dc4973d2c038066faf350e0b0de4995c94e9a73cae9",
+      "inputIdentitySha256": "570c651792f0349107de00f4620a4e9836c5e6785284cbebb9a14bb6ba4a1672",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1416,6 +1416,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -1779,6 +1782,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -2438,7 +2442,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2866,6 +2870,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -3229,6 +3236,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -3584,7 +3592,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4012,6 +4020,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -4375,6 +4386,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -4605,7 +4617,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5033,6 +5045,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -5396,6 +5411,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -5705,7 +5721,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6133,6 +6149,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -6496,6 +6515,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -7014,7 +7034,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "cba7c53f31fd8da8f44e7906b1de64c6f2a1cc99232f3c7eaff062c827bb1b87",
+      "inputIdentitySha256": "6f936dfe85ace6b04a49e37cc1a4f80b9e8043c782b4529a87fedde57d4619d1",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7297,7 +7317,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7725,6 +7745,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -8088,6 +8111,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -8680,7 +8704,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "817e4fd9d2283f639a56e810f0480465bf0f75f73937d2e76d487e7eaf04addf",
+      "inputIdentitySha256": "1bbdcdd8077ad6757f3410cb46aa4b3bcd92173aae577f948d26228c5c77e93d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8740,6 +8764,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/WASI.md",
@@ -8802,7 +8829,9 @@
           "scripts/lib/release_bin.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
+          "scripts/lib/toml_compat.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -8963,7 +8992,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "cf3f601cbc47da27a712662979a2f91b1eaa657ee37f7a49efd024168f87099a",
+      "inputIdentitySha256": "830abc0408cac50d1eba9d736d1756e14754522cd7f9a095c13dd1b936fa62e8",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9150,7 +9179,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9578,6 +9607,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -9941,6 +9973,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -10155,7 +10188,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "65a8d37702f30382c87f9dc4973d2c038066faf350e0b0de4995c94e9a73cae9",
+      "inputIdentitySha256": "570c651792f0349107de00f4620a4e9836c5e6785284cbebb9a14bb6ba4a1672",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10514,7 +10547,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "65a8d37702f30382c87f9dc4973d2c038066faf350e0b0de4995c94e9a73cae9",
+      "inputIdentitySha256": "570c651792f0349107de00f4620a4e9836c5e6785284cbebb9a14bb6ba4a1672",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10873,7 +10906,7 @@
       "executionIdentitySha256": "09ccbdaf204f565c2bca87bb239f1e4e529497f7ff1a50c3e999396a593cbce7",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "65a8d37702f30382c87f9dc4973d2c038066faf350e0b0de4995c94e9a73cae9",
+      "inputIdentitySha256": "570c651792f0349107de00f4620a4e9836c5e6785284cbebb9a14bb6ba4a1672",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11232,7 +11265,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "65a8d37702f30382c87f9dc4973d2c038066faf350e0b0de4995c94e9a73cae9",
+      "inputIdentitySha256": "570c651792f0349107de00f4620a4e9836c5e6785284cbebb9a14bb6ba4a1672",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11788,7 +11821,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12216,6 +12249,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -12579,6 +12615,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -13451,7 +13488,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13879,6 +13916,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -14242,6 +14282,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -14661,7 +14702,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15089,6 +15130,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -15452,6 +15496,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -16253,7 +16298,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16681,6 +16726,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -17044,6 +17092,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -17498,7 +17547,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "dc4bdfc7cff1f072bbc84f4b940c1bff3bb337f84fd543f934fe5212d1eb9ee6",
+      "inputIdentitySha256": "ef4c7b88400cdc2a75746a2f86a837448604de5e34b469b4c1db3ce53dcfd595",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -17555,7 +17604,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17983,6 +18032,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -18346,6 +18398,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -18892,7 +18945,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "4bc3d2ace1108be1b86242daea8ad93d2c184ce68d800adf278ab928034d0646",
+      "inputIdentitySha256": "ebe285ca5479f8357a3f5ac4ccca0e4672a3f0b2bd4921b67751a66ef0c782ce",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19093,7 +19146,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "e7413ecbf2dda9f2b496ffee7b416d3bfac9cbf6649a94320d4edfb88f3b24fd",
+      "inputIdentitySha256": "202988ad1bb6a982956511750848704358a662c497a2e3a4ac8bfb4013a77460",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20129,12 +20182,13 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_boundary.sh",
-      "executionIdentitySha256": "ff9bc895023db83036d658a10bc3bfb4313b5571e75510d4d1a2370f91b6418a",
+      "executionIdentitySha256": "f623f838dd45cfa50aa9b00e8a70a81fcbda21adc2bff50f995113060b2a6408",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "ef3022fc35ded7fb0f32ea4c09febcd449632634f7add16bed0e13707b15fc66",
+      "inputIdentitySha256": "fa5a3469ef8702805a842400f0520bf33d4b03d06d52d549e4d7c5d75efb2a32",
       "inputs": {
         "paths": [
+          "Cargo.toml",
           "README.md",
           "ROADMAP.md",
           "crates/gc_cli/src/main.rs",
@@ -20178,6 +20232,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/WASI.md",
@@ -20190,7 +20247,9 @@
           "scripts/check_selfhost_doc_runtime_parity.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
+          "scripts/lib/toml_compat.py",
           "selfhost/toolchain.gc",
           "selfhost/toolchain_manifest.gc"
         ],
@@ -20225,7 +20284,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "01de479c3909f2fc5c0140e8921fd69af9ca3f92acf521da0d1148368d9a89ab",
+      "sourceSha256": "1bbea34c01dd4eb07ba3dcf6b8ab7688f157096328ebcf6653758a9691802457",
       "tools": [
         "bash",
         "cargo",
@@ -21220,7 +21279,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21648,6 +21707,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -22011,6 +22073,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -22343,7 +22406,7 @@
       "executionIdentitySha256": "dcb0bc87467a235be514fcb981a65f3e098d16aa0f12066c645705fdda01ac20",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "496ef2f36bf5cf60bc88dd6fd5d161bfd3efc6dd79df014736e9edc629282723",
+      "inputIdentitySha256": "217937554620ad49dfdac949e89fc28a4e84f557b18093f416bd709ada6f4b79",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22771,6 +22834,9 @@
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
           "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
+          "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
           "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
           "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -23134,6 +23200,7 @@
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
           "scripts/lib/semantic_ownership_ledger.py",
+          "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "scripts/lib/v1_compatibility.py",
@@ -23544,7 +23611,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "b6f5e010ca4cd5ca755bab76e8cef331db5a9750ce4b29f796f6a7bff7826758",
+      "inputIdentitySha256": "1eb6df21fa5b594c746158aeac1fa21f32497dbd8e08ea5b3bdef221608a374f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24288,7 +24355,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "50ce17b2c4f082755240eeeb4856cfd30155fc2ba9fdb5afde6f44f3f8da7f1c",
+      "inputIdentitySha256": "9d4500922edd48c286351535c89c492181d4e6e308d034c377a747e0ed170e75",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -24380,7 +24447,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "6b915b60f01ecdd3365f392936469f467136737775e54c2b70170c5453042e6e"
+        "sha256": "6684db0ef4e2e020bc95eee863bef0f00eadf81ce2747ef8bdfdfc62ca751255"
       },
       {
         "path": "genesis.prerequisites.json",
