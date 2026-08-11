@@ -521,7 +521,9 @@ states `open`, `applied`, or `aborted`.
 3. The current snapshot is materialized below `.genesis/agent-sessions/`.
    `session stage` accepts one canonical Genesis semantic patch, applies it to a
    fresh candidate materialization, and runs package obligations there. The live
-   package is not mutated. Failed patch parsing or application never activates
+   package is not mutated. The ordered session chain records the GenesisCode-authoritative
+   normalized semantic `patch-h`, so source formatting cannot fork patch identity; any source-byte
+   digest is an internal staging locator only. Failed patch parsing or application never activates
    the candidate.
 4. `session test` rehashes the isolated workspace before running obligations and
    binds the acceptance artifact to that exact current snapshot. Capability

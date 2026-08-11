@@ -102,6 +102,7 @@ pub fn apply_patch_with_step_limit_and_frontend(
 
     Ok(PatchApplyResult {
         ok,
+        semantic_patch_hash: patch.semantic_hash,
         patch_artifact,
         report_artifact,
         acceptance_artifact: acceptance.as_ref().map(|r| r.acceptance_artifact.clone()),

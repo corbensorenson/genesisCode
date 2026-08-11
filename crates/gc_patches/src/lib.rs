@@ -72,6 +72,7 @@ pub enum PatchError {
 #[derive(Debug, Clone)]
 pub struct PatchApplyResult {
     pub ok: bool,
+    pub semantic_patch_hash: String,
     pub patch_artifact: String,
     pub report_artifact: String,
     pub acceptance_artifact: Option<String>,

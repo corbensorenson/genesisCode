@@ -3,6 +3,8 @@ use std::path::Path;
 
 use assert_cmd::cargo::cargo_bin_cmd;
 
+mod support;
+
 fn canonical_json(value: &serde_json::Value) -> serde_json::Value {
     match value {
         serde_json::Value::Object(entries) => {
@@ -67,10 +69,15 @@ tests = ["agent/session::tests"]
 }
 
 fn json_command(root: &Path, args: &[&str], success: bool) -> serde_json::Value {
-    let mut command = cargo_bin_cmd!("genesis_parity");
-    command
-        .current_dir(root)
-        .args(["--json", "--coreform-frontend", "rust"]);
+    let artifact = support::repo_toolchain_artifact();
+    let mut command = cargo_bin_cmd!("genesis");
+    command.current_dir(root).args([
+        "--json",
+        "--coreform-frontend",
+        "selfhost",
+        "--selfhost-artifact",
+        artifact.to_str().expect("UTF-8 selfhost artifact path"),
+    ]);
     command.args(args);
     let assertion = command.assert();
     let output = if success {
@@ -228,6 +235,75 @@ fn agent_session_stages_tests_and_explicitly_applies_a_verified_snapshot() {
             .pointer("/data/patch_count")
             .and_then(serde_json::Value::as_u64),
         Some(1)
+    );
+}
+
+#[test]
+fn agent_session_patch_chain_uses_normalized_semantic_identity() {
+    let first = tempfile::tempdir().expect("first tempdir");
+    let second = tempfile::tempdir().expect("second tempdir");
+    write_package(first.path());
+    write_package(second.path());
+    let patch = refactor_patch(first.path(), "agent/session::value_v2");
+    fs::write(first.path().join("rename.gcpatch"), &patch).expect("write first patch");
+    fs::write(
+        second.path().join("rename.gcpatch"),
+        format!("\n  {patch}\n\n"),
+    )
+    .expect("write reformatted patch");
+
+    for root in [first.path(), second.path()] {
+        json_command(
+            root,
+            &[
+                "session",
+                "begin",
+                "--pkg",
+                "package.toml",
+                "--session",
+                "semantic-id",
+            ],
+            true,
+        );
+    }
+    let first_stage = json_command(
+        first.path(),
+        &[
+            "session",
+            "stage",
+            "--pkg",
+            "package.toml",
+            "--session",
+            "semantic-id",
+            "--patch",
+            "rename.gcpatch",
+        ],
+        true,
+    );
+    let second_stage = json_command(
+        second.path(),
+        &[
+            "session",
+            "stage",
+            "--pkg",
+            "package.toml",
+            "--session",
+            "semantic-id",
+            "--patch",
+            "rename.gcpatch",
+        ],
+        true,
+    );
+    assert_eq!(
+        first_stage.pointer("/data/patch"),
+        second_stage.pointer("/data/patch")
+    );
+    assert_eq!(
+        first_stage
+            .pointer("/data/patch")
+            .and_then(serde_json::Value::as_str)
+            .map(str::len),
+        Some(64)
     );
 }
 

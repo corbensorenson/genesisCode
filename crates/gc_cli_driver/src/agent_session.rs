@@ -226,16 +226,16 @@ fn stage(
             session,
         )
     })?;
-    let mut patch_hasher = blake3::Hasher::new();
-    patch_hasher.update(b"GCv0.2\0agent-session-patch-v0.1\0");
-    patch_hasher.update(&patch_bytes);
-    let patch_identity = patch_hasher.finalize().to_hex().to_string();
+    let mut source_hasher = blake3::Hasher::new();
+    source_hasher.update(b"GCv0.2\0agent-session-patch-source-v0.1\0");
+    source_hasher.update(&patch_bytes);
+    let source_identity = source_hasher.finalize().to_hex().to_string();
     let candidate = paths.transaction_root.join("candidate");
     materialize_snapshot(&paths, &before, &candidate, session)?;
     let candidate_patch = paths
         .transaction_root
         .join("patches")
-        .join(format!("{patch_identity}.gc"));
+        .join(format!("{source_identity}.gc"));
     if let Some(parent) = candidate_patch.parent() {
         fs::create_dir_all(parent).map_err(|error| {
             session_error(
@@ -264,6 +264,7 @@ fn stage(
         frontend,
     )
     .map_err(|error| patch_error(error, session))?;
+    let patch_identity = result.semantic_patch_hash.clone();
     let after = capture_snapshot(&paths, &candidate, &state.package_manifest, session)?;
     if paths.workspace_root.exists() {
         fs::remove_dir_all(&paths.workspace_root).map_err(|error| {
