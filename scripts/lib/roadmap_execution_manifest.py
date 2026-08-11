@@ -40,6 +40,7 @@ RELEASE_LANE_IDS = {
     "genesiscode-core",
     "genesisbench-trust",
     "foundry-calibration",
+    "genesischallenge-season",
     "genesis-model-readiness",
     "genesis-model-release",
 }
@@ -61,15 +62,18 @@ FORBIDDEN_SCOPE_ADDITION_CLASSES = [
 ]
 PARALLEL_LANE_REQUIRED_PHRASES = {
     "read-only-selfhost-assurance": [
+        "directly satisfies the selected GenesisCode task's declared evidence contract",
+        "runs on separately provisioned compute and storage",
+        "cannot consume the active task's local CPU, memory, disk, network, lock, or agent-attention budget",
         "cannot modify repository files",
         "performs no target-model inference, benchmark custody or commissioning, result publication, Foundry implementation",
         "cannot authorize completion",
     ],
-    "model-interface-portability-canary": [
-        "no GenesisBench task, private payload, scorer",
-        "cannot modify repository files",
-        "creates no benchmark attempt, score, cohort, rank, result",
-    ],
+}
+TASK_PREREQUISITE_CONTRACTS = {
+    "R8.5.u": ["R9.4.f"],
+    "R8.5.v": ["R8.5.u"],
+    "F2.y": ["R8.5.s"],
 }
 VALIDATION_READINESS_ORDER = [
     "contract",
@@ -659,6 +663,16 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
         if task_id not in task_ids:
             raise ManifestError(f"task_prerequisites contains unknown task: {task_id}")
         require_string_list(refs, f"policy.task_prerequisites[{task_id}]")
+    for task_id, expected_refs in TASK_PREREQUISITE_CONTRACTS.items():
+        observed_refs = require_string_list(
+            task_prerequisites.get(task_id),
+            f"policy.task_prerequisites[{task_id}]",
+        )
+        if observed_refs != expected_refs:
+            raise ManifestError(
+                f"post-Core task prerequisite contract drift for {task_id}: "
+                f"expected={expected_refs} observed={observed_refs}"
+            )
     validate_release_lane_contracts(
         policy.get("release_lane_contracts"),
         task_ids=task_ids,
@@ -884,6 +898,73 @@ def validate_release_lane_isolation(
                 f"release lane {lane_id} has forbidden ancestors: "
                 + ", ".join(sorted(forbidden))
             )
+
+
+def validate_core_frontier_coverage(
+    tasks: Sequence[Mapping[str, Any]], policy: Mapping[str, Any]
+) -> None:
+    """Prove the serial pre-Core selector can reach every unfinished Core task."""
+    frontier = require_object(
+        policy.get("execution_frontier"), "policy.execution_frontier"
+    )
+    freeze_task_id = require_string(
+        require_object(
+            frontier.get("scope_freeze"), "execution_frontier.scope_freeze"
+        ).get("until_task_id"),
+        "execution_frontier.scope_freeze.until_task_id",
+    )
+    core_task_ids = transitive_prerequisites(tasks, freeze_task_id) | {
+        freeze_task_id
+    }
+    ordered_ids = require_string_list(
+        frontier.get("ordered_task_ids"),
+        "execution_frontier.ordered_task_ids",
+        non_empty=True,
+    )
+    non_core_anchors = sorted(set(ordered_ids) - core_task_ids)
+    if non_core_anchors:
+        raise ManifestError(
+            "pre-Core frontier contains post-Core anchors: "
+            + ", ".join(non_core_anchors)
+        )
+    task_by_id = {str(task["id"]): task for task in tasks}
+    tasks_by_workstream: dict[str, List[Mapping[str, Any]]] = {}
+    for task in tasks:
+        tasks_by_workstream.setdefault(str(task["workstream"]), []).append(task)
+    workstreams = require_object(policy.get("workstreams"), "policy.workstreams")
+    covered_open_core: set[str] = set()
+    for anchor_id in ordered_ids:
+        anchor = task_by_id[anchor_id]
+        workstream = str(anchor["workstream"])
+        members = tasks_by_workstream[workstream]
+        rule = require_object(
+            workstreams.get(workstream), f"policy.workstreams[{workstream}]"
+        )
+        if rule.get("sequential") is True:
+            anchor_index = next(
+                index
+                for index, member in enumerate(members)
+                if member["id"] == anchor_id
+            )
+            candidates = members[anchor_index:]
+        else:
+            candidates = [anchor]
+        covered_open_core.update(
+            str(task["id"])
+            for task in candidates
+            if task["state"] == "open" and str(task["id"]) in core_task_ids
+        )
+    open_core = {
+        task_id
+        for task_id in core_task_ids
+        if task_by_id[task_id]["state"] == "open"
+    }
+    missing = sorted(open_core - covered_open_core)
+    if missing:
+        raise ManifestError(
+            "pre-Core frontier is not continuation-complete: "
+            + ", ".join(missing)
+        )
 
 
 def validate_schema(raw: Any) -> Mapping[str, Any]:
@@ -1118,6 +1199,7 @@ def build_manifest(
         policy.get("release_lane_contracts"), "policy.release_lane_contracts"
     )
     validate_release_lane_isolation(resolved_tasks, release_lane_contracts)
+    validate_core_frontier_coverage(resolved_tasks, policy)
     ready = [task["id"] for task in resolved_tasks if task["start_ready"]]
     completed = sum(1 for task in resolved_tasks if task["state"] == "done")
     manifest = {
@@ -1453,8 +1535,9 @@ def resolve_frontier_candidates(
     manifest: Mapping[str, Any],
     ordered_ids: Sequence[str],
     workstreams: Mapping[str, Any],
+    allowed_task_ids: Optional[set[str]] = None,
 ) -> List[Tuple[str, str]]:
-    """Resolve each sequential anchor to its first unfinished task."""
+    """Resolve each sequential anchor to its first allowed unfinished task."""
     task_list = list(manifest["tasks"])
     tasks = {str(task["id"]): task for task in task_list}
     by_workstream: dict[str, List[Mapping[str, Any]]] = {}
@@ -1465,7 +1548,11 @@ def resolve_frontier_candidates(
     seen: set[str] = set()
     for anchor_id in ordered_ids:
         anchor = tasks[anchor_id]
-        candidate = anchor
+        candidate = (
+            anchor
+            if allowed_task_ids is None or anchor_id in allowed_task_ids
+            else None
+        )
         if anchor["state"] == "done":
             workstream = str(anchor["workstream"])
             rule = require_object(
@@ -1484,6 +1571,10 @@ def resolve_frontier_candidates(
                         member
                         for member in members[anchor_index + 1 :]
                         if member["state"] == "open"
+                        and (
+                            allowed_task_ids is None
+                            or str(member["id"]) in allowed_task_ids
+                        )
                     ),
                     None,
                 )
@@ -1518,7 +1609,21 @@ def build_execution_slice(
         {str(task["id"]): task for task in manifest["tasks"]}, "task index"
     )
     workstreams = require_object(policy.get("workstreams"), "policy.workstreams")
-    resolved = resolve_frontier_candidates(manifest, ordered_ids, workstreams)
+    freeze_task_id = require_string(
+        require_object(
+            frontier.get("scope_freeze"), "execution_frontier.scope_freeze"
+        ).get("until_task_id"),
+        "execution_frontier.scope_freeze.until_task_id",
+    )
+    core_task_ids = transitive_prerequisites(
+        list(manifest["tasks"]), freeze_task_id
+    ) | {freeze_task_id}
+    resolved = resolve_frontier_candidates(
+        manifest,
+        ordered_ids,
+        workstreams,
+        allowed_task_ids=core_task_ids,
+    )
     open_ids = [task_id for task_id, _ in resolved]
     context_anchors = {task_id: anchor_id for task_id, anchor_id in resolved}
     focused_ids = [
@@ -1728,6 +1833,22 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
         raise ManifestError(
             "self-test failed to advance a completed sequential frontier anchor"
         )
+    core_task_ids = transitive_prerequisites(
+        baseline["tasks"], "R9.4.f"
+    ) | {"R9.4.f"}
+    core_boundary_probe = copy.deepcopy(baseline)
+    for task in core_boundary_probe["tasks"]:
+        if task["id"] in {"R7.1.a", "R7.1.b", "R7.1.c", "R7.1.d", "R7.1.e"}:
+            task["state"] = "done"
+    if resolve_frontier_candidates(
+        core_boundary_probe,
+        ["R7.1.a"],
+        require_object(policy.get("workstreams"), "policy.workstreams"),
+        allowed_task_ids=core_task_ids,
+    ):
+        raise ManifestError(
+            "self-test let a sequential Core anchor advance into pack-only work"
+        )
     blocked_frontier_probe = copy.deepcopy(baseline)
     blocked_probe_by_id = {
         str(task["id"]): task for task in blocked_frontier_probe["tasks"]
@@ -1877,12 +1998,38 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
     )["prerequisites"].append("R8.5.h")
     lane_cases.append(("foundry-model-leak", foundry_model_leak))
 
+    foundry_benchmark_leak = copy.deepcopy(baseline)
+    next(
+        task for task in foundry_benchmark_leak["tasks"] if task["id"] == "F2.q"
+    )["prerequisites"].append("R8.5.s")
+    lane_cases.append(("foundry-benchmark-leak", foundry_benchmark_leak))
+
+    challenge_benchmark_leak = copy.deepcopy(baseline)
+    next(
+        task
+        for task in challenge_benchmark_leak["tasks"]
+        if task["id"] == "R8.5.v"
+    )["prerequisites"].append("R8.5.s")
+    lane_cases.append(("challenge-benchmark-leak", challenge_benchmark_leak))
+
+    challenge_foundry_leak = copy.deepcopy(baseline)
+    next(
+        task for task in challenge_foundry_leak["tasks"] if task["id"] == "R8.5.v"
+    )["prerequisites"].append("F2.q")
+    lane_cases.append(("challenge-foundry-leak", challenge_foundry_leak))
+
     model_gate_bypass = copy.deepcopy(baseline)
     model_gate = next(
         task for task in model_gate_bypass["tasks"] if task["id"] == "R8.5.t"
     )
     model_gate["prerequisites"].remove("R8.5.i")
     lane_cases.append(("model-gate-bypass", model_gate_bypass))
+
+    model_challenge_leak = copy.deepcopy(baseline)
+    next(
+        task for task in model_challenge_leak["tasks"] if task["id"] == "R8.5.t"
+    )["prerequisites"].append("R8.5.v")
+    lane_cases.append(("model-challenge-leak", model_challenge_leak))
 
     model_platform_leak = copy.deepcopy(baseline)
     next(

@@ -18,7 +18,7 @@ python3 scripts/lib/roadmap_execution_manifest.py --slice >"$TMP_DIR/slice.json"
 python3 scripts/lib/roadmap_execution_manifest.py --ready >"$TMP_DIR/ready.json"
 python3 scripts/lib/roadmap_execution_manifest.py --explain R2.2.f >"$TMP_DIR/explain.json"
 
-python3 - "$TMP_DIR/slice.json" "$TMP_DIR/ready.json" "$TMP_DIR/explain.json" <<'PY'
+python3 - "$TMP_DIR/slice.json" "$TMP_DIR/ready.json" "$TMP_DIR/explain.json" "$TMP_DIR/rendered.json" <<'PY'
 import json
 from pathlib import Path
 import sys
@@ -26,6 +26,10 @@ import sys
 execution_slice = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 readiness = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 explanation = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+manifest = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
+policy = json.loads(
+    Path("policies/roadmap_execution_v0.1.json").read_text(encoding="utf-8")
+)
 if execution_slice["kind"] != "genesis/roadmap-execution-slice-v0.1":
     raise SystemExit("roadmap-execution-manifest: execution slice kind drift")
 if execution_slice["authority"]["derived_view_only"] is not True:
@@ -70,14 +74,17 @@ if scope_freeze.get("frozen_program_concepts") != [
     "GenesisCode", "GenesisBench", "GenesisChallenge", "Genesis Foundry", "Genesis Model"
 ]:
     raise SystemExit("roadmap-execution-manifest: frozen program concept drift")
-if len(execution_slice["allowed_parallel_lanes"]) != 2:
+if len(execution_slice["allowed_parallel_lanes"]) != 1:
     raise SystemExit("roadmap-execution-manifest: allowed parallel lane drift")
 parallel_lanes = {lane["id"]: lane for lane in execution_slice["allowed_parallel_lanes"]}
-if set(parallel_lanes) != {"read-only-selfhost-assurance", "model-interface-portability-canary"}:
+if set(parallel_lanes) != {"read-only-selfhost-assurance"}:
     raise SystemExit("roadmap-execution-manifest: allowed parallel lane contract drift")
 parallel_lane = parallel_lanes["read-only-selfhost-assurance"]
 parallel_contract = " ".join(parallel_lane["conditions"])
 for forbidden in (
+    "directly satisfies the selected GenesisCode task's declared evidence contract",
+    "runs on separately provisioned compute and storage",
+    "cannot consume the active task's local CPU, memory, disk, network, lock, or agent-attention budget",
     "cannot modify repository files",
     "performs no target-model inference, benchmark custody or commissioning, result publication, Foundry implementation",
     "cannot authorize completion",
@@ -86,16 +93,76 @@ for forbidden in (
         raise SystemExit(
             f"roadmap-execution-manifest: read-only parallel lane lost {forbidden!r}"
         )
-canary_contract = " ".join(parallel_lanes["model-interface-portability-canary"]["conditions"])
-for required in (
-    "no GenesisBench task, private payload, scorer",
-    "cannot modify repository files",
-    "creates no benchmark attempt, score, cohort, rank, result",
+
+tasks = {task["id"]: task for task in manifest["tasks"]}
+
+def closure(root):
+    seen = set()
+    pending = [root]
+    while pending:
+        task_id = pending.pop()
+        if task_id in seen:
+            continue
+        seen.add(task_id)
+        pending.extend(tasks[task_id]["prerequisites"])
+    return seen
+
+unfinished_preview = {"R1.4.o", "R1.4.p", "R1.4.q", "R1.4.r"}
+core = closure("R9.4.f")
+if unfinished_preview & core or any(
+    task_id.startswith(("R8.5.", "F")) for task_id in core
 ):
-    if required not in canary_contract:
-        raise SystemExit(
-            f"roadmap-execution-manifest: portability canary lost {required!r}"
+    raise SystemExit("roadmap-execution-manifest: GenesisCode Core absorbed a post-Core lane")
+ordered_anchors = policy["execution_frontier"]["ordered_task_ids"]
+if not set(ordered_anchors).issubset(core):
+    raise SystemExit("roadmap-execution-manifest: pre-Core frontier contains a post-Core anchor")
+tasks_by_workstream = {}
+for task in manifest["tasks"]:
+    tasks_by_workstream.setdefault(task["workstream"], []).append(task)
+covered_open_core = set()
+for anchor_id in ordered_anchors:
+    anchor = tasks[anchor_id]
+    members = tasks_by_workstream[anchor["workstream"]]
+    if policy["workstreams"][anchor["workstream"]]["sequential"]:
+        anchor_index = next(
+            index for index, member in enumerate(members) if member["id"] == anchor_id
         )
+        candidates = members[anchor_index:]
+    else:
+        candidates = [anchor]
+    covered_open_core.update(
+        task["id"]
+        for task in candidates
+        if task["state"] == "open" and task["id"] in core
+    )
+open_core = {task_id for task_id in core if tasks[task_id]["state"] == "open"}
+missing_frontier = sorted(open_core - covered_open_core)
+if missing_frontier:
+    raise SystemExit(
+        "roadmap-execution-manifest: Core frontier is not continuation-complete: "
+        + ", ".join(missing_frontier)
+    )
+foundry = closure("F2.q")
+if "R9.4.f" not in foundry or unfinished_preview & foundry or any(
+    task_id.startswith("R8.5.") for task_id in foundry
+):
+    raise SystemExit("roadmap-execution-manifest: Foundry calibration is not Core-only")
+challenge = closure("R8.5.v")
+if not {"R9.4.f", "R8.5.u"}.issubset(challenge):
+    raise SystemExit("roadmap-execution-manifest: GenesisChallenge lost its Core handoff")
+if unfinished_preview & challenge or any(
+    task_id.startswith("F")
+    or (task_id.startswith("R8.5.") and task_id not in {"R8.5.u", "R8.5.v"})
+    for task_id in challenge
+):
+    raise SystemExit("roadmap-execution-manifest: GenesisChallenge absorbed another post-Core lane")
+if "R8.5.s" not in closure("F2.y"):
+    raise SystemExit("roadmap-execution-manifest: Foundry integration bypassed Benchmark Trust")
+model_readiness = closure("R8.5.t")
+if not {"R8.5.s", "F2.q"}.issubset(model_readiness) or {
+    "R8.5.u", "R8.5.v"
+} & model_readiness:
+    raise SystemExit("roadmap-execution-manifest: Genesis Model readiness lane drift")
 if (
     explanation["id"] != "R2.2.f"
     or explanation["state"] != "open"
@@ -250,8 +317,47 @@ if python3 scripts/lib/roadmap_execution_manifest.py \
   exit 1
 fi
 
-cp policies/roadmap_execution_v0.1.json "$TMP_DIR/canary-broadened-policy.json"
-python3 - "$TMP_DIR/canary-broadened-policy.json" <<'PY'
+cp policies/roadmap_execution_v0.1.json "$TMP_DIR/post-core-edge-bypassed-policy.json"
+python3 - "$TMP_DIR/post-core-edge-bypassed-policy.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+policy["task_prerequisites"]["F2.y"] = []
+path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+PY
+if python3 scripts/lib/roadmap_execution_manifest.py \
+  --render \
+  --policy "$TMP_DIR/post-core-edge-bypassed-policy.json" \
+  --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
+  echo "roadmap-execution-manifest: Foundry integration bypassed Benchmark Trust" >&2
+  exit 1
+fi
+
+cp policies/roadmap_execution_v0.1.json "$TMP_DIR/core-frontier-truncated-policy.json"
+python3 - "$TMP_DIR/core-frontier-truncated-policy.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+policy["execution_frontier"]["ordered_task_ids"].remove("R9.4.a")
+del policy["execution_frontier"]["task_context"]["R9.4.a"]
+path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+PY
+if python3 scripts/lib/roadmap_execution_manifest.py \
+  --render \
+  --policy "$TMP_DIR/core-frontier-truncated-policy.json" \
+  --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
+  echo "roadmap-execution-manifest: truncated Core frontier was accepted" >&2
+  exit 1
+fi
+
+cp policies/roadmap_execution_v0.1.json "$TMP_DIR/parallel-lane-broadened-policy.json"
+python3 - "$TMP_DIR/parallel-lane-broadened-policy.json" <<'PY'
 import json
 from pathlib import Path
 import sys
@@ -260,19 +366,19 @@ path = Path(sys.argv[1])
 policy = json.loads(path.read_text(encoding="utf-8"))
 lane = next(
     lane for lane in policy["execution_frontier"]["allowed_parallel_lanes"]
-    if lane["id"] == "model-interface-portability-canary"
+    if lane["id"] == "read-only-selfhost-assurance"
 )
 lane["conditions"] = [
-    condition.replace("no GenesisBench task, private payload, scorer", "fixed public task and scorer")
+    condition.replace("runs on separately provisioned compute and storage", "shares local compute and storage")
     for condition in lane["conditions"]
 ]
 path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
 PY
 if python3 scripts/lib/roadmap_execution_manifest.py \
   --render \
-  --policy "$TMP_DIR/canary-broadened-policy.json" \
+  --policy "$TMP_DIR/parallel-lane-broadened-policy.json" \
   --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
-  echo "roadmap-execution-manifest: scoring portability canary was accepted" >&2
+  echo "roadmap-execution-manifest: resource-sharing parallel lane was accepted" >&2
   exit 1
 fi
 
@@ -284,4 +390,4 @@ after="$(cksum docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json)"
   exit 1
 }
 
-echo "roadmap-execution-manifest-contract: ok (negative_controls=30 query_views=2 lane_isolation=13 parallel_lanes=2 validation_economy=active scope_freeze=active check_mode=read_only)"
+echo "roadmap-execution-manifest-contract: ok (negative_controls=30 query_views=2 lane_isolation=17 post_core_edges=3 core_frontier=complete parallel_lanes=1 validation_economy=active scope_freeze=active check_mode=read_only)"
