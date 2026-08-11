@@ -4,7 +4,10 @@ use gc_coreform::{SpecialForm, Term, print_term};
 
 use crate::ty::{EffRow, RowTail, Ty};
 
-use super::{InferSession, TypeEnv, infer_term, literal_op_symbol, merge_eff_rows};
+use super::{
+    InferSession, TypeEnv, infer_effects_in_term_with_env, infer_term, literal_op_symbol,
+    merge_eff_rows,
+};
 
 pub(super) fn infer_core_effect_pure(args: &[Term], env: &TypeEnv, sess: &mut InferSession) -> Ty {
     if args.len() != 1 {
@@ -141,7 +144,7 @@ fn infer_bind_continuation_with_param(
     let mut env2 = env.clone();
     env2.set(param_name.clone(), param_ty.clone());
     let ret = infer_term(&body, &env2, sess);
-    let inf = crate::infer_effects_in_term(&body);
+    let inf = infer_effects_in_term_with_env(&body, &env2);
     let tail = if inf.unknown {
         RowTail::Any
     } else {

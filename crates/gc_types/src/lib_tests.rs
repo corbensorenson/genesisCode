@@ -502,3 +502,564 @@ fn strict_shapes_reject_extra_record_fields_for_closed_declared_record() {
         r.errors
     );
 }
+
+#[test]
+fn repeated_effect_row_variable_requires_one_consistent_binding() {
+    let inferred = Ty::Fn {
+        param: Box::new(Ty::Prog {
+            ret: Box::new(Ty::Int),
+            eff: EffRow {
+                ops: BTreeSet::from(["sys/time::now".to_string()]),
+                tail: RowTail::Closed,
+            },
+        }),
+        ret: Box::new(Ty::Prog {
+            ret: Box::new(Ty::Int),
+            eff: EffRow {
+                ops: BTreeSet::from(["sys/random::bytes".to_string()]),
+                tail: RowTail::Closed,
+            },
+        }),
+        eff: EffRow::empty(),
+    };
+    let declared = Ty::Fn {
+        param: Box::new(Ty::Prog {
+            ret: Box::new(Ty::Int),
+            eff: EffRow {
+                ops: BTreeSet::new(),
+                tail: RowTail::Var("e".to_string()),
+            },
+        }),
+        ret: Box::new(Ty::Prog {
+            ret: Box::new(Ty::Int),
+            eff: EffRow {
+                ops: BTreeSet::new(),
+                tail: RowTail::Var("e".to_string()),
+            },
+        }),
+        eff: EffRow::empty(),
+    };
+
+    assert!(
+        !type_compatible(&inferred, &declared, false),
+        "one row variable must not match two different effect remainders"
+    );
+}
+
+#[test]
+fn effect_row_variable_is_instantiated_per_application() {
+    let src = r#"
+          (def ::meta '{:exports [] :caps [sys/time::now] :types {}})
+          (def m::out
+            (m::carry
+              (core/effect::perform
+                'sys/time::now
+                nil
+                (fn (_) (core/effect::pure 1)))))
+          m::out
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let mut declared = BTreeMap::new();
+    declared.insert(
+        "m::carry".to_string(),
+        Ty::Fn {
+            param: Box::new(Ty::Prog {
+                ret: Box::new(Ty::Any),
+                eff: EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Var("e".to_string()),
+                },
+            }),
+            ret: Box::new(Ty::Prog {
+                ret: Box::new(Ty::Any),
+                eff: EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Var("e".to_string()),
+                },
+            }),
+            eff: EffRow::empty(),
+        },
+    );
+    let mut sess = InferSession::default();
+    let (_env, defs) = infer_module_types(&forms, &mut sess, &declared);
+    assert!(
+        sess.errors.is_empty(),
+        "unexpected errors: {:?}",
+        sess.errors
+    );
+
+    let Ty::Prog { eff, .. } = defs.get("m::out").expect("m::out inferred") else {
+        panic!("m::out must infer as Prog")
+    };
+    assert_eq!(
+        eff,
+        &EffRow {
+            ops: BTreeSet::from(["sys/time::now".to_string()]),
+            tail: RowTail::Closed,
+        },
+        "the call result must contain the argument row, not the declaration variable"
+    );
+}
+
+#[test]
+fn unknown_argument_instantiates_effect_row_variable_as_unknown() {
+    let src = r#"
+          (def ::meta '{:exports [] :caps [?] :types {}})
+          (def m::out (m::carry m::unknown))
+          m::out
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let mut declared = BTreeMap::new();
+    declared.insert(
+        "m::carry".to_string(),
+        Ty::Fn {
+            param: Box::new(Ty::Prog {
+                ret: Box::new(Ty::Any),
+                eff: EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Var("e".to_string()),
+                },
+            }),
+            ret: Box::new(Ty::Prog {
+                ret: Box::new(Ty::Any),
+                eff: EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Var("e".to_string()),
+                },
+            }),
+            eff: EffRow::empty(),
+        },
+    );
+    let mut sess = InferSession::default();
+    let (_env, defs) = infer_module_types(&forms, &mut sess, &declared);
+    assert!(
+        sess.errors.is_empty(),
+        "unexpected errors: {:?}",
+        sess.errors
+    );
+
+    let Ty::Prog { eff, .. } = defs.get("m::out").expect("m::out inferred") else {
+        panic!("m::out must infer as Prog")
+    };
+    assert_eq!(
+        eff.tail,
+        RowTail::Any,
+        "an unknown argument must not leave a symbolic row variable in the result"
+    );
+}
+
+#[test]
+fn unknown_and_concrete_repetitions_widen_one_effect_row_binding() {
+    let src = r#"
+          (def ::meta '{:exports [] :caps [] :types {}})
+          (def m::out (m::accept m::mixed))
+          m::out
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let repeated = EffRow {
+        ops: BTreeSet::new(),
+        tail: RowTail::Var("e".to_string()),
+    };
+    let mut declared = BTreeMap::new();
+    declared.insert(
+        "m::accept".to_string(),
+        Ty::Fn {
+            param: Box::new(Ty::Fn {
+                param: Box::new(Ty::Prog {
+                    ret: Box::new(Ty::Int),
+                    eff: repeated.clone(),
+                }),
+                ret: Box::new(Ty::Prog {
+                    ret: Box::new(Ty::Int),
+                    eff: repeated,
+                }),
+                eff: EffRow::empty(),
+            }),
+            ret: Box::new(Ty::Int),
+            eff: EffRow::empty(),
+        },
+    );
+    declared.insert(
+        "m::mixed".to_string(),
+        Ty::Fn {
+            param: Box::new(Ty::Prog {
+                ret: Box::new(Ty::Int),
+                eff: EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Any,
+                },
+            }),
+            ret: Box::new(Ty::Prog {
+                ret: Box::new(Ty::Int),
+                eff: EffRow {
+                    ops: BTreeSet::from(["sys/time::now".to_string()]),
+                    tail: RowTail::Closed,
+                },
+            }),
+            eff: EffRow::empty(),
+        },
+    );
+    let mut sess = InferSession::default();
+    let (_env, defs) = infer_module_types(&forms, &mut sess, &declared);
+
+    assert!(
+        sess.errors.is_empty(),
+        "unknown consistency must widen rather than reject: {:?}",
+        sess.errors
+    );
+    assert_eq!(defs.get("m::out"), Some(&Ty::Int));
+}
+
+#[test]
+fn duplicate_effect_operations_are_rejected() {
+    let forms = parse_module("(Fn Int Int (Eff [sys/time::now sys/time::now] nil))").unwrap();
+    let error = parse_type_term(&forms[0]).expect_err("duplicate effect op must fail");
+    assert_eq!(error, "duplicate effect op sys/time::now");
+}
+
+#[test]
+fn strict_package_boundary_propagates_imported_effects() {
+    let provider_src = r#"
+          (def ::meta
+            '{:exports [pkg/a::clock]
+              :caps [sys/time::now]
+              :strict-effects true
+              :types {
+                pkg/a::clock
+                  (Fn Nil (Prog Int (Eff [sys/time::now] nil))
+                    (Eff [sys/time::now] nil))}})
+          (def pkg/a::clock
+            (fn (_)
+              (core/effect::perform
+                'sys/time::now nil (fn (_) (core/effect::pure 1)))))
+          pkg/a::clock
+        "#;
+    let consumer_src = r#"
+          (def ::meta
+            '{:exports [pkg/b::main]
+              :caps []
+              :strict-effects true
+              :types {pkg/b::main ?}})
+          (def pkg/b::main (pkg/a::clock nil))
+          pkg/b::main
+        "#;
+    let provider_forms = canonicalize_module(parse_module(provider_src).unwrap()).unwrap();
+    let consumer_forms = canonicalize_module(parse_module(consumer_src).unwrap()).unwrap();
+    let report = typecheck_package(&[
+        ModuleForTypecheck {
+            path: "a.gc".to_string(),
+            meta: extract_meta(&provider_forms),
+            forms: provider_forms,
+        },
+        ModuleForTypecheck {
+            path: "b.gc".to_string(),
+            meta: extract_meta(&consumer_forms),
+            forms: consumer_forms,
+        },
+    ]);
+
+    assert!(!report.ok, "consumer must not hide a provider effect");
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|error| error.contains("pkg/b::main") && error.contains("sys/time::now")),
+        "expected an imported-effect diagnostic, got {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn strict_package_boundary_rejects_unknown_imported_signature() {
+    let provider_src = r#"
+          (def ::meta '{:exports [pkg/a::opaque] :caps [] :types {pkg/a::opaque ?}})
+          (def pkg/a::opaque (fn (_) 1))
+          pkg/a::opaque
+        "#;
+    let consumer_src = r#"
+          (def ::meta
+            '{:exports [pkg/b::main]
+              :caps []
+              :strict-effects true
+              :types {pkg/b::main ?}})
+          (def pkg/b::main (pkg/a::opaque nil))
+          pkg/b::main
+        "#;
+    let provider_forms = canonicalize_module(parse_module(provider_src).unwrap()).unwrap();
+    let consumer_forms = canonicalize_module(parse_module(consumer_src).unwrap()).unwrap();
+    let report = typecheck_package(&[
+        ModuleForTypecheck {
+            path: "a.gc".to_string(),
+            meta: extract_meta(&provider_forms),
+            forms: provider_forms,
+        },
+        ModuleForTypecheck {
+            path: "b.gc".to_string(),
+            meta: extract_meta(&consumer_forms),
+            forms: consumer_forms,
+        },
+    ]);
+
+    assert!(
+        !report.ok,
+        "strict consumers require a concrete imported signature"
+    );
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("pkg/b::main") && error.contains("unknown imported effect signature")
+        }),
+        "expected an unknown-import diagnostic, got {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn strict_package_boundary_respects_parameter_shadowing() {
+    let provider_src = r#"
+          (def ::meta '{:exports [pkg/a::opaque] :caps [] :types {pkg/a::opaque ?}})
+          (def pkg/a::opaque (fn (_) 1))
+          pkg/a::opaque
+        "#;
+    let consumer_src = r#"
+          (def ::meta
+            '{:exports [pkg/b::main]
+              :caps []
+              :strict-effects true
+              :types {
+                pkg/b::main
+                  (Fn (Fn Nil Int (Eff [] nil)) Int (Eff [] nil))}})
+          (def pkg/b::main
+            (fn (pkg/a::opaque) (pkg/a::opaque nil)))
+          pkg/b::main
+        "#;
+    let provider_forms = canonicalize_module(parse_module(provider_src).unwrap()).unwrap();
+    let consumer_forms = canonicalize_module(parse_module(consumer_src).unwrap()).unwrap();
+    let report = typecheck_package(&[
+        ModuleForTypecheck {
+            path: "a.gc".to_string(),
+            meta: extract_meta(&provider_forms),
+            forms: provider_forms,
+        },
+        ModuleForTypecheck {
+            path: "b.gc".to_string(),
+            meta: extract_meta(&consumer_forms),
+            forms: consumer_forms,
+        },
+    ]);
+
+    assert!(
+        report.ok,
+        "a local parameter must shadow the imported unknown signature: {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn package_effect_inference_respects_let_shadowing() {
+    let provider_src = r#"
+          (def ::meta
+            '{:exports [pkg/a::clock]
+              :caps [sys/time::now]
+              :strict-effects true
+              :types {
+                pkg/a::clock
+                  (Fn Nil Int (Eff [sys/time::now] nil))}})
+          (def pkg/a::clock (fn (_) 1))
+          pkg/a::clock
+        "#;
+    let consumer_src = r#"
+          (def ::meta
+            '{:exports [pkg/b::main]
+              :caps []
+              :strict-effects true
+              :types {pkg/b::main Int}})
+          (def pkg/b::main
+            (let ((pkg/a::clock (fn (_) 1)))
+              (pkg/a::clock nil)))
+          pkg/b::main
+        "#;
+    let provider_forms = canonicalize_module(parse_module(provider_src).unwrap()).unwrap();
+    let consumer_forms = canonicalize_module(parse_module(consumer_src).unwrap()).unwrap();
+    let report = typecheck_package(&[
+        ModuleForTypecheck {
+            path: "a.gc".to_string(),
+            meta: extract_meta(&provider_forms),
+            forms: provider_forms,
+        },
+        ModuleForTypecheck {
+            path: "b.gc".to_string(),
+            meta: extract_meta(&consumer_forms),
+            forms: consumer_forms,
+        },
+    ]);
+
+    assert!(
+        report.ok,
+        "a local let binding must shadow the imported effectful signature: {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn package_rejects_duplicate_export_ownership() {
+    fn module(path: &str) -> ModuleForTypecheck {
+        let src = r#"
+              (def ::meta '{:exports [pkg/shared::x] :caps [] :types {pkg/shared::x Int}})
+              (def pkg/shared::x 1)
+              pkg/shared::x
+            "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        ModuleForTypecheck {
+            path: path.to_string(),
+            meta: extract_meta(&forms),
+            forms,
+        }
+    }
+
+    let report = typecheck_package(&[module("a.gc"), module("b.gc")]);
+    assert!(!report.ok);
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("duplicate export pkg/shared::x")
+                && error.contains("a.gc")
+                && error.contains("b.gc")
+        }),
+        "expected deterministic duplicate ownership diagnostic, got {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn strict_effects_accept_parameter_bound_named_row_variable() {
+    let src = r#"
+          (def ::meta
+            '{:exports [pkg/poly::carry]
+              :caps []
+              :strict-effects true
+              :types {
+                pkg/poly::carry
+                  (Fn
+                    (Prog Int (Eff [] e))
+                    (Prog Int (Eff [] e))
+                    (Eff [] nil))}})
+          (def pkg/poly::carry (fn (program) program))
+          pkg/poly::carry
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let report = typecheck_package(&[ModuleForTypecheck {
+        path: "poly.gc".to_string(),
+        meta: extract_meta(&forms),
+        forms,
+    }]);
+
+    assert!(
+        report.ok,
+        "parameter-bound row polymorphism must remain strict and capability-neutral: {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn effect_row_variable_cannot_escape_without_parameter_binding() {
+    let src = r#"
+          (def ::meta
+            '{:exports [pkg/poly::bad]
+              :caps []
+              :types {
+                pkg/poly::bad
+                  (Fn Int (Prog Int (Eff [] e)) (Eff [] nil))}})
+          (def pkg/poly::bad (fn (_) (core/effect::pure 1)))
+          pkg/poly::bad
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let report = typecheck_package(&[ModuleForTypecheck {
+        path: "bad-poly.gc".to_string(),
+        meta: extract_meta(&forms),
+        forms,
+    }]);
+
+    assert!(!report.ok);
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("pkg/poly::bad") && error.contains("unbound effect row variable(s) e")
+        }),
+        "expected an escaping-row diagnostic, got {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn nested_return_function_cannot_introduce_effect_row_variable() {
+    let src = r#"
+          (def ::meta
+            '{:exports [pkg/poly::nested]
+              :caps []
+              :types {
+                pkg/poly::nested
+                  (Fn Int
+                    (Fn
+                      (Prog Int (Eff [] e))
+                      (Prog Int (Eff [] e))
+                      (Eff [] nil))
+                    (Eff [] nil))}})
+          (def pkg/poly::nested (fn (_) (fn (program) program)))
+          pkg/poly::nested
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let report = typecheck_package(&[ModuleForTypecheck {
+        path: "nested-poly.gc".to_string(),
+        meta: extract_meta(&forms),
+        forms,
+    }]);
+
+    assert!(!report.ok);
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("pkg/poly::nested")
+                && error.contains("unbound effect row variable(s) e")
+                && error.contains("outermost function parameter")
+        }),
+        "expected a rank-1 scope diagnostic, got {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn standalone_contract_method_cannot_introduce_effect_row_variable() {
+    let src = r#"
+          (def ::meta
+            '{:exports [pkg/poly::contract]
+              :caps []
+              :types {
+                pkg/poly::contract
+                  (Contract
+                    [[pkg/poly::run
+                      (Fn
+                        (Prog Int (Eff [] e))
+                        (Prog Int (Eff [] e))
+                        (Eff [] nil))]]
+                    nil)}})
+          (def pkg/poly::contract
+            (core/contract::extend
+              core/contract::genesis
+              {pkg/poly::run (fn (program) program)}
+              {}))
+          pkg/poly::contract
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let report = typecheck_package(&[ModuleForTypecheck {
+        path: "contract-poly.gc".to_string(),
+        meta: extract_meta(&forms),
+        forms,
+    }]);
+
+    assert!(!report.ok);
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("pkg/poly::contract")
+                && error.contains("unbound effect row variable(s) e")
+        }),
+        "expected unsupported per-method polymorphism to fail, got {:?}",
+        report.errors
+    );
+}

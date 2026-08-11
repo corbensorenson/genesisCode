@@ -1020,7 +1020,7 @@
                     "code": "typecheck/error",
                     "domain": "typechecker",
                     "id": "type-effect.gc#error#0",
-                    "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row",
+                    "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row or a named row variable bound by a function parameter",
                     "module": "type-effect.gc",
                     "ordinal": 0,
                     "severity": "error"
@@ -1058,7 +1058,7 @@
                       "code": "typecheck/error",
                       "domain": "typechecker",
                       "id": "type-effect.gc#error#0",
-                      "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row",
+                      "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row or a named row variable bound by a function parameter",
                       "module": "type-effect.gc",
                       "ordinal": 0,
                       "severity": "error"
@@ -1148,7 +1148,7 @@
                   "code": "typecheck/error",
                   "domain": "typechecker",
                   "id": "type-effect.gc#error#0",
-                  "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row",
+                  "message": "type-effect.gc: golden/type::program: strict effect mode requires a closed declared effect row or a named row variable bound by a function parameter",
                   "module": "type-effect.gc",
                   "ordinal": 0,
                   "severity": "error"

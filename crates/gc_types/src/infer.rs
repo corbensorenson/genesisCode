@@ -4,13 +4,22 @@ use gc_coreform::{SpecialForm, Term, TermOrdKey, print_term};
 
 use crate::ty::{EffRow, RowTail, Ty};
 
+#[path = "infer_application.rs"]
+mod infer_application;
 #[path = "infer_effects.rs"]
 mod infer_effects;
 #[path = "infer_prim.rs"]
 mod infer_prim;
+#[path = "infer_typed_effects.rs"]
+mod infer_typed_effects;
 
+use infer_application::{arg_type_compatible, arg_type_match, infer_apply_types};
 use infer_effects::{infer_core_effect_bind, infer_core_effect_perform, infer_core_effect_pure};
 use infer_prim::prim_type;
+pub use infer_typed_effects::{
+    infer_effects_in_term_with_env, infer_effects_in_term_with_expected,
+    infer_effects_in_terms_with_env, unknown_effect_signature_symbols_in_term,
+};
 
 #[derive(Default)]
 pub struct InferSession {
@@ -50,6 +59,10 @@ impl TypeEnv {
         self.vars.get(s)
     }
 
+    pub fn contains(&self, s: &str) -> bool {
+        self.vars.contains_key(s)
+    }
+
     pub fn set(&mut self, s: String, t: Ty) {
         self.vars.insert(s, t);
     }
@@ -70,7 +83,8 @@ pub fn infer_module_types(
             && matches!(items[0], Term::Symbol(s) if SpecialForm::from_symbol(s) == Some(SpecialForm::Def))
             && let Term::Symbol(name) = items[1]
         {
-            let ty = infer_term(items[2], &env, sess);
+            let expected = env.get(name).cloned();
+            let ty = infer_term_with_expected(items[2], &env, sess, expected.as_ref());
             env.set(name.clone(), ty.clone());
             defs.insert(name.clone(), ty);
         }
@@ -90,6 +104,22 @@ pub fn infer_term(t: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {
         Term::Map(m) => infer_map_literal(m, env, sess),
         Term::Pair(_, _) => infer_list_form(t, env, sess),
     }
+}
+
+fn infer_term_with_expected(
+    t: &Term,
+    env: &TypeEnv,
+    sess: &mut InferSession,
+    expected: Option<&Ty>,
+) -> Ty {
+    let Some(items) = t.as_proper_list() else {
+        return infer_term(t, env, sess);
+    };
+    if matches!(items.first(), Some(Term::Symbol(head)) if SpecialForm::from_symbol(head) == Some(SpecialForm::Fn))
+    {
+        return infer_fn(items, env, sess, expected);
+    }
+    infer_term(t, env, sess)
 }
 
 fn infer_map_literal(m: &BTreeMap<TermOrdKey, Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
@@ -127,7 +157,7 @@ fn infer_list_form(t: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {
     {
         match form {
             SpecialForm::Quote => return Ty::Any,
-            SpecialForm::Fn => return infer_fn(items, env, sess),
+            SpecialForm::Fn => return infer_fn(items, env, sess, None),
             SpecialForm::If => return infer_if(items, env, sess),
             SpecialForm::Begin => return infer_begin(items, env, sess),
             SpecialForm::Let => return infer_let(items, env, sess),
@@ -155,7 +185,12 @@ fn infer_list_form(t: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {
     Ty::Any
 }
 
-fn infer_fn(items: Vec<&Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
+fn infer_fn(
+    items: Vec<&Term>,
+    env: &TypeEnv,
+    sess: &mut InferSession,
+    expected: Option<&Ty>,
+) -> Ty {
     if items.len() < 3 {
         sess.errors
             .push("(fn (x) body...) expects at least 2 arguments".to_string());
@@ -217,14 +252,18 @@ fn infer_fn(items: Vec<&Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
             Term::list(vec![Term::Symbol(names[0].clone())]),
             inner,
         ]);
-        return infer_term(&cur, env, sess);
+        return infer_term_with_expected(&cur, env, sess, expected);
     };
 
+    let expected_param = match expected {
+        Some(Ty::Fn { param, .. }) => Some(param.as_ref()),
+        _ => None,
+    };
     let mut env2 = env.clone();
-    env2.set(names[0].clone(), Ty::Any);
+    env2.set(names[0].clone(), expected_param.cloned().unwrap_or(Ty::Any));
     let ret = infer_term(&body, &env2, sess);
     let eff = {
-        let inf = crate::infer_effects_in_term(&body);
+        let inf = infer_effects_in_term_with_env(&body, &env2);
         let tail = if inf.unknown {
             RowTail::Any
         } else {
@@ -233,7 +272,7 @@ fn infer_fn(items: Vec<&Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
         EffRow { ops: inf.ops, tail }
     };
     Ty::Fn {
-        param: Box::new(Ty::Any),
+        param: Box::new(expected_param.cloned().unwrap_or(Ty::Any)),
         ret: Box::new(ret),
         eff,
     }
@@ -466,14 +505,14 @@ fn infer_contract_method(op: &str, v: &Term, env: &TypeEnv, sess: &mut InferSess
     let eff = {
         // Only treat effects in the handler body as latent effects; not in quoted data.
         let inf = if items.len() == 3 {
-            crate::infer_effects_in_term(items[2])
+            infer_effects_in_term_with_env(items[2], &env2)
         } else {
             let mut xs = Vec::new();
             xs.push(Term::Symbol("begin".to_string()));
             for b in items.iter().skip(2) {
                 xs.push((*b).clone());
             }
-            crate::infer_effects_in_term(&Term::list(xs))
+            infer_effects_in_term_with_env(&Term::list(xs), &env2)
         };
         let tail = if inf.unknown {
             RowTail::Any
@@ -537,101 +576,6 @@ fn infer_core_contract_dispatch(args: &[Term], env: &TypeEnv, sess: &mut InferSe
         Ty::Fn { ret, .. } => *ret.clone(),
         Ty::Any => Ty::Any,
         _ => Ty::Any,
-    }
-}
-
-fn infer_apply_types(head: Ty, args: &[Ty], sess: &mut InferSession) -> Option<Ty> {
-    let mut cur = head;
-    for arg in args {
-        cur = apply_once(cur, arg, sess)?;
-    }
-    Some(cur)
-}
-
-fn apply_once(f_ty: Ty, arg_ty: &Ty, sess: &mut InferSession) -> Option<Ty> {
-    match f_ty {
-        Ty::Fn { param, ret, eff: _ } => {
-            if !arg_type_compatible(arg_ty, &param) {
-                sess.errors.push(format!(
-                    "application arg type mismatch: expected {}, got {}",
-                    print_term(&param.to_term()),
-                    print_term(&arg_ty.to_term())
-                ));
-                return Some(Ty::Any);
-            }
-            Some(*ret)
-        }
-        Ty::Any => Some(Ty::Any),
-        _ => None,
-    }
-}
-
-fn arg_type_compatible(inferred: &Ty, declared: &Ty) -> bool {
-    if matches!(declared, Ty::Any) || matches!(inferred, Ty::Any) {
-        return true;
-    }
-    match (inferred, declared) {
-        (Ty::Int, Ty::Int)
-        | (Ty::Bool, Ty::Bool)
-        | (Ty::Nil, Ty::Nil)
-        | (Ty::Str, Ty::Str)
-        | (Ty::Bytes, Ty::Bytes)
-        | (Ty::Symbol, Ty::Symbol) => true,
-        (
-            Ty::Msg {
-                op: iop,
-                payload: ip,
-            },
-            Ty::Msg {
-                op: dop,
-                payload: dp,
-            },
-        ) => {
-            if let Some(d) = dop
-                && iop.as_deref() != Some(d.as_str())
-            {
-                return false;
-            }
-            arg_type_compatible(ip, dp)
-        }
-        (
-            Ty::Fn {
-                param: ip,
-                ret: ir,
-                eff: _,
-            },
-            Ty::Fn {
-                param: dp,
-                ret: dr,
-                eff: _,
-            },
-        ) => arg_type_compatible(ip, dp) && arg_type_compatible(ir, dr),
-        (Ty::Prog { ret: ir, eff: _ }, Ty::Prog { ret: dr, eff: _ }) => arg_type_compatible(ir, dr),
-        (
-            Ty::Rec {
-                fields: ifs,
-                tail: _,
-            },
-            Ty::Rec {
-                fields: dfs,
-                tail: _,
-            },
-        ) => dfs
-            .iter()
-            .all(|(k, dt)| ifs.get(k).is_some_and(|it| arg_type_compatible(it, dt))),
-        (
-            Ty::Contract {
-                methods: ims,
-                tail: _,
-            },
-            Ty::Contract {
-                methods: dms,
-                tail: _,
-            },
-        ) => dms
-            .iter()
-            .all(|(k, dt)| ims.get(k).is_some_and(|it| arg_type_compatible(it, dt))),
-        _ => false,
     }
 }
 

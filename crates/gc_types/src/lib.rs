@@ -6,10 +6,17 @@ mod diagnostics;
 mod effect_inference;
 mod infer;
 mod ty;
+mod type_compatibility;
 
 use crate::effect_inference::is_core_task_effect_op;
-use crate::infer::{InferSession, infer_module_types};
-use crate::ty::{EffRow, RowTail, Ty, parse_type_term};
+use crate::infer::{
+    InferSession, infer_effects_in_term_with_expected, infer_effects_in_terms_with_env,
+    infer_module_types, unknown_effect_signature_symbols_in_term,
+};
+use crate::ty::{RowTail, Ty, parse_type_term};
+use crate::type_compatibility::{
+    declared_eff_row, has_unresolved_contract_ops, type_compatible, validate_effect_row_declaration,
+};
 
 pub use crate::diagnostics::TypecheckDiagnostic;
 use crate::diagnostics::module_diagnostics;
@@ -64,7 +71,14 @@ pub struct ExportTypeReport {
     pub warnings: Vec<String>,
 }
 
+#[derive(Default)]
+struct PackageTypeContext {
+    declarations: BTreeMap<String, Ty>,
+    module_errors: BTreeMap<String, Vec<String>>,
+}
+
 pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
+    let context = collect_package_type_context(mods);
     let mut report = TypecheckReport {
         ok: true,
         errors: Vec::new(),
@@ -73,7 +87,15 @@ pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
         modules: Vec::new(),
     };
     for m in mods {
-        let mr = typecheck_one(m);
+        let mr = typecheck_one(
+            m,
+            &context.declarations,
+            context
+                .module_errors
+                .get(&m.path)
+                .map(Vec::as_slice)
+                .unwrap_or_default(),
+        );
         report.ok &= mr.ok;
         report.errors.extend(mr.errors.iter().cloned());
         report.warnings.extend(mr.warnings.iter().cloned());
@@ -85,10 +107,74 @@ pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
     report
 }
 
-fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
-    let inferred = infer_effects(&m.forms);
-    let mut ok = true;
-    let mut errors = Vec::new();
+fn collect_package_type_context(mods: &[ModuleForTypecheck]) -> PackageTypeContext {
+    let mut owners: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut declarations_by_owner: BTreeMap<(String, String), Ty> = BTreeMap::new();
+
+    for module in mods {
+        let Some(meta @ Term::Map(_)) = module.meta.as_ref() else {
+            continue;
+        };
+        let types = meta_types(meta).unwrap_or_default();
+        let caps = meta_caps(meta).unwrap_or_default();
+        let strict_effects = meta_strict_effects(meta).unwrap_or(false)
+            || caps.iter().any(|cap| is_core_task_effect_op(cap));
+        for export in meta_exports(meta).unwrap_or_default() {
+            owners
+                .entry(export.clone())
+                .or_default()
+                .insert(module.path.clone());
+            let Some(term) = types.get(&export) else {
+                continue;
+            };
+            let parsed = if matches!(term, Term::Symbol(symbol) if symbol == "?") {
+                Some(Ty::Any)
+            } else {
+                parse_type_term(term).ok()
+            };
+            if let Some(ty) = parsed
+                && validate_effect_row_declaration(&ty, strict_effects).is_ok()
+            {
+                declarations_by_owner.insert((module.path.clone(), export), ty);
+            }
+        }
+    }
+
+    let mut context = PackageTypeContext::default();
+    for (export, paths) in owners {
+        if paths.len() != 1 {
+            let joined = paths.iter().cloned().collect::<Vec<_>>().join(", ");
+            let message = format!("duplicate export {export} is owned by modules [{joined}]");
+            for path in paths {
+                context
+                    .module_errors
+                    .entry(path)
+                    .or_default()
+                    .push(message.clone());
+            }
+            continue;
+        }
+        let Some(path) = paths.into_iter().next() else {
+            continue;
+        };
+        if let Some(ty) = declarations_by_owner.remove(&(path, export.clone())) {
+            context.declarations.insert(export, ty);
+        }
+    }
+    context
+}
+
+fn typecheck_one(
+    m: &ModuleForTypecheck,
+    package_declarations: &BTreeMap<String, Ty>,
+    package_errors: &[String],
+) -> ModuleReport {
+    let syntax_inferred = infer_effects(&m.forms);
+    let mut ok = package_errors.is_empty();
+    let mut errors: Vec<String> = package_errors
+        .iter()
+        .map(|error| format!("{}: {error}", m.path))
+        .collect();
     let mut warnings = Vec::new();
 
     let meta = match &m.meta {
@@ -100,7 +186,7 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                 ok,
                 errors,
                 warnings,
-                inferred_effects: inferred,
+                inferred_effects: syntax_inferred,
                 export_effects: Vec::new(),
                 export_types: Vec::new(),
             };
@@ -118,7 +204,7 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                 ok,
                 errors,
                 warnings,
-                inferred_effects: inferred,
+                inferred_effects: syntax_inferred,
                 export_effects: Vec::new(),
                 export_types: Vec::new(),
             };
@@ -157,55 +243,6 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
 
     let caps_set: BTreeSet<String> = caps.iter().cloned().collect();
     let def_map = defs_map(&m.forms);
-    let mut export_effects = Vec::new();
-    for e in exports.iter() {
-        let Some(expr) = def_map.get(e) else {
-            ok = false;
-            errors.push(format!(
-                "{}: exported symbol {} has no (def {}) in module",
-                m.path, e, e
-            ));
-            continue;
-        };
-        let eff = infer_effects_in_term(expr);
-        if eff.unknown {
-            warnings.push(format!(
-                "{}: {} effect ops could not be fully inferred (non-literal op passed to core/effect::perform or core/caps::perform, or unknown task wrapper arity)",
-                m.path, e
-            ));
-            if caps.is_empty() {
-                ok = false;
-                errors.push(format!(
-                    "{}: {} declares :caps [] but has unknown effect ops",
-                    m.path, e
-                ));
-            }
-            if strict_effects {
-                ok = false;
-                errors.push(format!(
-                    "{}: {} strict effect mode forbids unknown effect ops; use literal op symbols and closed declared rows",
-                    m.path, e
-                ));
-            }
-        }
-        for op in eff.ops.iter() {
-            if !caps_set.contains(op) {
-                ok = false;
-                errors.push(format!(
-                    "{}: {} inferred effect op {} not present in ::meta :caps",
-                    m.path, e, op
-                ));
-            }
-        }
-        export_effects.push(ExportEffectReport {
-            name: e.clone(),
-            effects: eff,
-        });
-    }
-    let export_eff_map: BTreeMap<String, InferredEffects> = export_effects
-        .iter()
-        .map(|x| (x.name.clone(), x.effects.clone()))
-        .collect();
 
     // Parse declared export types early so inference can use them as hints (row tails, dispatch, etc.).
     let types = match meta_types(&meta) {
@@ -234,7 +271,7 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
 
     // Infer module types once (sequential def order).
     let mut infer_sess = InferSession::default();
-    let (_env, inferred_defs) = infer_module_types(&m.forms, &mut infer_sess, &declared_parsed);
+    let (env, inferred_defs) = infer_module_types(&m.forms, &mut infer_sess, package_declarations);
     for e in infer_sess.errors.iter() {
         ok = false;
         errors.push(format!("{}: {e}", m.path));
@@ -242,6 +279,80 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
     for w in infer_sess.warnings.iter() {
         warnings.push(format!("{}: {w}", m.path));
     }
+
+    let inferred = infer_effects_in_terms_with_env(&m.forms, &env);
+    let mut export_effects = Vec::new();
+    for e in exports.iter() {
+        let Some(expr) = def_map.get(e) else {
+            ok = false;
+            errors.push(format!(
+                "{}: exported symbol {} has no (def {}) in module",
+                m.path, e, e
+            ));
+            continue;
+        };
+        let eff = infer_effects_in_term_with_expected(expr, &env, inferred_defs.get(e));
+        let unknown_signatures =
+            unknown_effect_signature_symbols_in_term(expr, package_declarations);
+        if !unknown_signatures.is_empty() {
+            warnings.push(format!(
+                "{}: {} has unknown imported effect signature(s): {}",
+                m.path,
+                e,
+                unknown_signatures
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        if eff.unknown {
+            warnings.push(format!(
+                "{}: {} effect ops could not be fully inferred (non-literal op, open row, unknown imported signature, or unknown task wrapper arity)",
+                m.path, e
+            ));
+            if caps.is_empty() {
+                ok = false;
+                errors.push(format!(
+                    "{}: {} declares :caps [] but has unknown effect ops",
+                    m.path, e
+                ));
+            }
+            if strict_effects {
+                ok = false;
+                if unknown_signatures.is_empty() {
+                    errors.push(format!(
+                        "{}: {} strict effect mode forbids unknown effect ops; use literal op symbols and soundly bound effect rows",
+                        m.path, e
+                    ));
+                } else {
+                    errors.push(format!(
+                        "{}: {} strict effect mode forbids unknown imported effect signature(s): {}",
+                        m.path,
+                        e,
+                        unknown_signatures.iter().cloned().collect::<Vec<_>>().join(", ")
+                    ));
+                }
+            }
+        }
+        for op in eff.ops.iter() {
+            if !caps_set.contains(op) {
+                ok = false;
+                errors.push(format!(
+                    "{}: {} inferred effect op {} not present in ::meta :caps",
+                    m.path, e, op
+                ));
+            }
+        }
+        export_effects.push(ExportEffectReport {
+            name: e.clone(),
+            effects: eff,
+        });
+    }
+    let export_eff_map: BTreeMap<String, InferredEffects> = export_effects
+        .iter()
+        .map(|x| (x.name.clone(), x.effects.clone()))
+        .collect();
 
     // Export/type conformance.
     let mut export_types = Vec::new();
@@ -265,6 +376,12 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                 };
                 match decl_res {
                     Ok(decl) => {
+                        if let Err(validation_error) =
+                            validate_effect_row_declaration(&decl, strict_effects)
+                        {
+                            tr_ok = false;
+                            tr_errors.push(format!("{e}: {validation_error}"));
+                        }
                         if !type_compatible(&inferred_ty, &decl, strict_shapes) {
                             tr_ok = false;
                             tr_errors.push(format!(
@@ -279,12 +396,6 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                                 ops: BTreeSet::new(),
                                 unknown: false,
                             });
-                            if strict_effects && decl_eff.tail.is_open() {
-                                tr_ok = false;
-                                tr_errors.push(format!(
-                                    "{e}: strict effect mode requires a closed declared effect row"
-                                ));
-                            }
                             if eff.unknown && matches!(decl_eff.tail, RowTail::Closed) {
                                 tr_ok = false;
                                 tr_errors.push(format!(
@@ -356,143 +467,6 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
         export_effects,
         export_types,
     }
-}
-
-fn declared_eff_row(ty: &Ty) -> Option<&EffRow> {
-    match ty {
-        Ty::Fn { eff, .. } => Some(eff),
-        Ty::Prog { eff, .. } => Some(eff),
-        _ => None,
-    }
-}
-
-fn has_unresolved_contract_ops(ty: &Ty) -> bool {
-    match ty {
-        Ty::Msg { op, payload } => op.is_none() || has_unresolved_contract_ops(payload),
-        Ty::Fn { param, ret, .. } => {
-            has_unresolved_contract_ops(param) || has_unresolved_contract_ops(ret)
-        }
-        Ty::Prog { ret, .. } => has_unresolved_contract_ops(ret),
-        Ty::Rec { fields, .. } => fields.iter().any(|(_, v)| has_unresolved_contract_ops(v)),
-        Ty::Contract { methods, .. } => methods.iter().any(|(_, v)| has_unresolved_contract_ops(v)),
-        _ => false,
-    }
-}
-
-fn type_compatible(inferred: &Ty, declared: &Ty, strict_shapes: bool) -> bool {
-    // `?` in the declared position accepts anything.
-    if matches!(declared, Ty::Any) {
-        return true;
-    }
-    match (inferred, declared) {
-        (Ty::Any, _) => false,
-        (Ty::Int, Ty::Int)
-        | (Ty::Bool, Ty::Bool)
-        | (Ty::Nil, Ty::Nil)
-        | (Ty::Str, Ty::Str)
-        | (Ty::Bytes, Ty::Bytes)
-        | (Ty::Symbol, Ty::Symbol) => true,
-        (
-            Ty::Msg {
-                op: iop,
-                payload: ip,
-            },
-            Ty::Msg {
-                op: dop,
-                payload: dp,
-            },
-        ) => {
-            if let Some(d) = dop
-                && iop.as_deref() != Some(d.as_str())
-            {
-                return false;
-            }
-            type_compatible(ip, dp, strict_shapes)
-        }
-        (
-            Ty::Fn {
-                param: ip,
-                ret: ir,
-                eff: ie,
-            },
-            Ty::Fn {
-                param: dp,
-                ret: dr,
-                eff: de,
-            },
-        ) => {
-            if !type_compatible(ip, dp, strict_shapes) {
-                return false;
-            }
-            if !type_compatible(ir, dr, strict_shapes) {
-                return false;
-            }
-            eff_row_compatible(ie, de)
-        }
-        (Ty::Prog { ret: ir, eff: ie }, Ty::Prog { ret: dr, eff: de }) => {
-            type_compatible(ir, dr, strict_shapes) && eff_row_compatible(ie, de)
-        }
-        (
-            Ty::Rec {
-                fields: ifs,
-                tail: i_tail,
-            },
-            Ty::Rec {
-                fields: dfs,
-                tail: d_tail,
-            },
-        ) => {
-            if !dfs.iter().all(|(k, dt)| {
-                ifs.get(k)
-                    .is_some_and(|it| type_compatible(it, dt, strict_shapes))
-            }) {
-                return false;
-            }
-            if strict_shapes && matches!(d_tail, RowTail::Closed) {
-                if !matches!(i_tail, RowTail::Closed) {
-                    return false;
-                }
-                if ifs.len() != dfs.len() {
-                    return false;
-                }
-            }
-            true
-        }
-        (
-            Ty::Contract {
-                methods: ims,
-                tail: i_tail,
-            },
-            Ty::Contract {
-                methods: dms,
-                tail: d_tail,
-            },
-        ) => {
-            if !dms.iter().all(|(k, dt)| {
-                ims.get(k)
-                    .is_some_and(|it| type_compatible(it, dt, strict_shapes))
-            }) {
-                return false;
-            }
-            if strict_shapes && matches!(d_tail, RowTail::Closed) {
-                if !matches!(i_tail, RowTail::Closed) {
-                    return false;
-                }
-                if ims.len() != dms.len() {
-                    return false;
-                }
-            }
-            true
-        }
-        _ => false,
-    }
-}
-
-fn eff_row_compatible(inferred: &EffRow, declared: &EffRow) -> bool {
-    if declared.tail.is_open() {
-        return true;
-    }
-    inferred.ops.is_subset(&declared.ops) && matches!(inferred.tail, RowTail::Closed)
 }
 
 fn meta_exports(meta: &Term) -> Option<Vec<String>> {

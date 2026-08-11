@@ -38,6 +38,128 @@ impl EffRow {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct EffectRowBindings {
+    rows: BTreeMap<String, EffRow>,
+}
+
+impl EffectRowBindings {
+    pub(crate) fn bind_unknowns_in_type(&mut self, ty: &Ty) {
+        match ty {
+            Ty::Fn { param, ret, eff } => {
+                self.bind_unknowns_in_type(param);
+                self.bind_unknowns_in_type(ret);
+                self.bind_unknown_row(eff);
+            }
+            Ty::Prog { ret, eff } => {
+                self.bind_unknowns_in_type(ret);
+                self.bind_unknown_row(eff);
+            }
+            Ty::Msg { payload, .. } => self.bind_unknowns_in_type(payload),
+            Ty::Rec { fields, .. } => {
+                for field in fields.values() {
+                    self.bind_unknowns_in_type(field);
+                }
+            }
+            Ty::Contract { methods, .. } => {
+                for method in methods.values() {
+                    self.bind_unknowns_in_type(method);
+                }
+            }
+            Ty::Any | Ty::Int | Ty::Bool | Ty::Nil | Ty::Str | Ty::Bytes | Ty::Symbol => {}
+        }
+    }
+
+    pub(crate) fn match_row(&mut self, inferred: &EffRow, declared: &EffRow) -> bool {
+        match &declared.tail {
+            RowTail::Closed => {
+                matches!(inferred.tail, RowTail::Closed) && inferred.ops.is_subset(&declared.ops)
+            }
+            RowTail::Any => true,
+            RowTail::Var(name) => {
+                let remainder = EffRow {
+                    ops: inferred.ops.difference(&declared.ops).cloned().collect(),
+                    tail: inferred.tail.clone(),
+                };
+                match self.rows.get(name) {
+                    Some(bound)
+                        if matches!(bound.tail, RowTail::Any)
+                            || matches!(remainder.tail, RowTail::Any) =>
+                    {
+                        let mut widened = bound.clone();
+                        widened.ops.extend(remainder.ops);
+                        widened.tail = RowTail::Any;
+                        self.rows.insert(name.clone(), widened);
+                        true
+                    }
+                    Some(bound) => bound == &remainder,
+                    None => {
+                        self.rows.insert(name.clone(), remainder);
+                        true
+                    }
+                }
+            }
+        }
+    }
+
+    pub(crate) fn apply_type(&self, ty: &Ty) -> Ty {
+        match ty {
+            Ty::Fn { param, ret, eff } => Ty::Fn {
+                param: Box::new(self.apply_type(param)),
+                ret: Box::new(self.apply_type(ret)),
+                eff: self.apply_row(eff),
+            },
+            Ty::Prog { ret, eff } => Ty::Prog {
+                ret: Box::new(self.apply_type(ret)),
+                eff: self.apply_row(eff),
+            },
+            Ty::Msg { op, payload } => Ty::Msg {
+                op: op.clone(),
+                payload: Box::new(self.apply_type(payload)),
+            },
+            Ty::Rec { fields, tail } => Ty::Rec {
+                fields: fields
+                    .iter()
+                    .map(|(name, field)| (name.clone(), self.apply_type(field)))
+                    .collect(),
+                tail: tail.clone(),
+            },
+            Ty::Contract { methods, tail } => Ty::Contract {
+                methods: methods
+                    .iter()
+                    .map(|(name, method)| (name.clone(), self.apply_type(method)))
+                    .collect(),
+                tail: tail.clone(),
+            },
+            scalar => scalar.clone(),
+        }
+    }
+
+    pub(crate) fn apply_row(&self, row: &EffRow) -> EffRow {
+        let RowTail::Var(name) = &row.tail else {
+            return row.clone();
+        };
+        let Some(bound) = self.rows.get(name) else {
+            return row.clone();
+        };
+        let mut ops = row.ops.clone();
+        ops.extend(bound.ops.iter().cloned());
+        EffRow {
+            ops,
+            tail: bound.tail.clone(),
+        }
+    }
+
+    fn bind_unknown_row(&mut self, row: &EffRow) {
+        if let RowTail::Var(name) = &row.tail {
+            self.rows.entry(name.clone()).or_insert_with(|| EffRow {
+                ops: BTreeSet::new(),
+                tail: RowTail::Any,
+            });
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Ty {
     Any,
@@ -246,7 +368,9 @@ fn parse_eff_term(t: &Term) -> Result<EffRow, String> {
         Term::Vector(xs) => {
             for x in xs {
                 if let Term::Symbol(s) = x {
-                    ops.insert(s.clone());
+                    if !ops.insert(s.clone()) {
+                        return Err(format!("duplicate effect op {s}"));
+                    }
                 } else {
                     return Err(format!("eff op must be a symbol, got {}", print_term(x)));
                 }
