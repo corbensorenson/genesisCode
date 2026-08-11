@@ -1,17 +1,17 @@
 # GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
-Last updated: 2026-08-08
+Last updated: 2026-08-11
 
 Scope:
 - Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and production runtime trust.
 - This file is the canonical active P0/P1 defect-ID source. The capability ledger mirrors the exact IDs, and generated status views must match it.
 - Keep completed work out of this file. Durable source history and E1-E4 evidence establish closure; mutable `.genesis/perf/` observations do not.
 
-Open checklist items: 1
+Open checklist items: 0
 
 ## Critical Path
 
-- [ ] P1.5 Eliminate host-bridge termination failure and error suppression under mandatory fault injection. `runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers` produced `gpu/bridge-reap` after the process group survived repeated termination sweeps, while persistent-session disconnect, malformed-response cleanup, and owner teardown can discard `stop()` failures before they reach the sealed operation boundary. Close only when R2.2.f proves success, malformed response, disconnection, failure, cancellation, timeout, owner drop, daemon restart, and repeated-load cleanup through public operations; every cleanup failure must remain observable as a typed reap/cleanup error, all workers must join or remain under an explicitly reported bounded containment failure, and no descendant may survive on any supported native host.
+No open P0/P1 defects. Completed defects remain in Git history and the dated roadmap evidence that closed them.
 
 ## Evidence Anchors
 

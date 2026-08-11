@@ -45,12 +45,10 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 #### Known Gaps
 
-- `P1.5`: Eliminate host-bridge termination failure and cleanup-error suppression under public-path fault injection and complete R2.2.f cleanup proof. Affected claims: `CAP-ASSURANCE-PROFILES`, `CAP-HOST-BRIDGE`.
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`.
 - `R1.5.a`: Generate the authoring skill from canonical language and capability inputs. Affected claims: `CAP-AGENT-SKILL-PACK`.
 - `R1.5.f`: Validate skill distribution, offline use, token budgets, and multi-agent compatibility. Affected claims: `CAP-AGENT-SKILL-PACK`.
-- `R2.2.f`: Prove host-handle cleanup across success, failure, cancellation, timeout, and restart. Affected claims: `CAP-HOST-BRIDGE`.
 - `R2.3.e`: Meet explicit incremental large-workspace agent-loop SLOs. Affected claims: `CAP-AGENT-WORKSPACE-PERF`.
 - `R3.2.a`: Audit existing stage2/Wasm coverage and eliminate undeclared fallback. Affected claims: `CAP-RUNTIME-SURFACES`, `CAP-STAGE2-WASM-VALIDATION`.
 - `R3.2.b`: Validate source-to-Wasm translation and embedded artifact identity. Affected claims: `CAP-STAGE2-WASM-VALIDATION`.
@@ -130,7 +128,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.r`: Prove a reproducible Genesis-native data science and local ML system. Affected claims: `TARGET-DATA-ML`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: `P1.5`. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: none. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -164,7 +162,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `5adb2cddeb9984c066f8e866193e79b05ecfbe0931aa2cbb9cb2077180eaddf6`.
+Machine-readable identity: `7e165a6c676afa637e235fd912ca41e63c21d269cc033bb5d17c3648d45df6bc`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

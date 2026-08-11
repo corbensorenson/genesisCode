@@ -9,21 +9,22 @@
   },
   "input_identities": {
     "policy_sha256": "b2cb59043930a635d7171d13681ee2212e3bff073e3b46a0fe0ae81cb89c8be6",
-    "roadmap_sha256": "2d7e4a23ffe4c22c7ac1eef2e7afcd6de44dcbe5197fa334cd8e771f78ec68c4",
+    "roadmap_sha256": "2307e37ac3e96b0ab704dedcbce55eab4a26b36b763d734fec9aa8e998712fcd",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
   "ready_task_ids": [
+    "R1.3.f",
     "R1.5.c",
     "R2.1.h",
-    "R2.2.f",
     "R4.1.a",
+    "R5.1.a",
     "R7.1.a"
   ],
   "summary": {
-    "completed_count": 80,
-    "open_count": 299,
-    "ready_count": 5,
+    "completed_count": 81,
+    "open_count": 298,
+    "ready_count": 6,
     "task_count": 379
   },
   "tasks": [
@@ -104,7 +105,7 @@
             "scripts/check_capability_evidence_ledger_contract.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "capability-ledger-bundle-sha256:a3cc928f9ce731fb1cd5c6457d3dba608c3ffb9564d92ddff636d09209ffeb85"
+          "input_identity": "capability-ledger-bundle-sha256:ce716e59a8850ef03b79d95d1ef6027f9937f83fe07d0dceefa7837a20003ebc"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -172,7 +173,7 @@
             "scripts/check_capability_evidence_ledger_contract.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "capability-ledger-bundle-sha256:a3cc928f9ce731fb1cd5c6457d3dba608c3ffb9564d92ddff636d09209ffeb85"
+          "input_identity": "capability-ledger-bundle-sha256:ce716e59a8850ef03b79d95d1ef6027f9937f83fe07d0dceefa7837a20003ebc"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -240,7 +241,7 @@
             "scripts/check_capability_evidence_ledger_contract.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "status-authority-bundle-sha256:ec13a711bf6a852af414f19e3a3332c4e515ebe22ef05186b009de268d6101fb"
+          "input_identity": "status-authority-bundle-sha256:69da4dc97d9df74cb6cdc816bc64bc410ed41a2c18e28e1b4567888ea56c0978"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -309,7 +310,7 @@
             "scripts/check_redteam_report.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "status-authority-bundle-sha256:ec13a711bf6a852af414f19e3a3332c4e515ebe22ef05186b009de268d6101fb"
+          "input_identity": "status-authority-bundle-sha256:69da4dc97d9df74cb6cdc816bc64bc410ed41a2c18e28e1b4567888ea56c0978"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -377,7 +378,7 @@
             "scripts/check_roadmap_execution_manifest.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "roadmap-execution-contract-bundle-sha256:efb3971638301d83d16b40f850ac00809835a83293362f69092702049d8dc01e"
+          "input_identity": "roadmap-execution-contract-bundle-sha256:b3ea50c49de6744159a9acb6ef025020da2a64723e78214a5c9ef3671d95f6d9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -528,7 +529,7 @@
             "scripts/check_doc_topology_drift.sh"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "capability-ledger-bundle-sha256:a3cc928f9ce731fb1cd5c6457d3dba608c3ffb9564d92ddff636d09209ffeb85"
+          "input_identity": "capability-ledger-bundle-sha256:ce716e59a8850ef03b79d95d1ef6027f9937f83fe07d0dceefa7837a20003ebc"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -676,7 +677,7 @@
             "scripts/check_genesis_evidence_profile.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "genesis-evidence-profile-bundle-sha256:d93a3992c2daac94e6c09ba3aa261c757bed40f56b82d844bda06947c0b8d50a"
+          "input_identity": "genesis-evidence-profile-bundle-sha256:75f10c7b6e9893411b1093d6ea2eb844f3701ae22cf9f9b56885688544df4beb"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -748,7 +749,7 @@
             "scripts/check_genesis_evidence_verifier.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "genesis-evidence-verifier-bundle-sha256:5ce87d0754f61839077300346b7abdcc11f0cb828cf7fd97706a23a766589730"
+          "input_identity": "genesis-evidence-verifier-bundle-sha256:5ad438b5e7e2e6b81f814048d4c6b82a568dc06d06ac71b1948e9d18c32f964a"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -820,7 +821,7 @@
             "scripts/check_evidence_storage_classes.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "evidence-storage-classes-bundle-sha256:319d3bfee2077d9584b0f5976ea2a10630f3f57f1758391f712f8327120e1279"
+          "input_identity": "evidence-storage-classes-bundle-sha256:a049eafe5eb58b74848680c4ec9640df561e4208f7b0b58bab66617fa7afae6a"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -892,7 +893,7 @@
             "scripts/check_evidence_adversarial_matrix.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "evidence-adversarial-matrix-bundle-sha256:8663b2c125ca021b70452835aafb30549140a2094851d8f0e5074343d2736787"
+          "input_identity": "evidence-adversarial-matrix-bundle-sha256:214a54c975ad838b2818291949473c7727a625711f6b50179a81bad57be03370"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -964,7 +965,7 @@
             "scripts/check_evidence_adversarial_matrix.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "evidence-adversarial-matrix-bundle-sha256:8663b2c125ca021b70452835aafb30549140a2094851d8f0e5074343d2736787"
+          "input_identity": "evidence-adversarial-matrix-bundle-sha256:214a54c975ad838b2818291949473c7727a625711f6b50179a81bad57be03370"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1038,7 +1039,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "test-hermeticity-bundle-sha256:23b4334feba4a494fd687e212339a1bd4c0d3aa79a033f51dba446f67434311c"
+          "input_identity": "test-hermeticity-bundle-sha256:2eb12e04f49c95bcac4140bbbd4c774373cc327b8b1ce26496be3c1db88958d2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1260,7 +1261,7 @@
             "scripts/check_prerequisite_manifest.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "prerequisite-manifest-bundle-sha256:49dc1dc5b967429aae2e2691fe5c39d75a81b11803be8f37402d14a6e238a90b"
+          "input_identity": "prerequisite-manifest-bundle-sha256:637902e6773d1f9dcd43d0bd16bcdea8301721d50e6814645128690d8ced9485"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1335,7 +1336,7 @@
             "scripts/test_offline_dependency_mirror.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "dependency-mirror-bundle-sha256:e5b31c00822e8c537ee1fd886acf0e8d7b6e9cde0d59802aa157d50242cb3670"
+          "input_identity": "dependency-mirror-bundle-sha256:10851cb9893ff3370e626698506a4e83818b0132893123bdfcd6d06fa52f4704"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1411,7 +1412,7 @@
             "scripts/check_release_smoke.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "version-surface-bundle-sha256:abeacbc911e90668968fd2c91522c39dc29e5618a54d802408bed0ab2dd2e6fb"
+          "input_identity": "version-surface-bundle-sha256:6a5edaa4ea1ebf210c567ef6b01db84f326d86fe6d57933e5c8ad1411a3296d2"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1485,7 +1486,7 @@
             "scripts/check_v1_compatibility.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "v1-compatibility-registry-bundle-sha256:c17215df3d1c17d0ccb6cd98986d48cf777c7468d8bad6f6d07f33374450a8b2"
+          "input_identity": "v1-compatibility-registry-bundle-sha256:06bd087fe89d92ee0402bda7e974be58e1a22bf535a20cfc4e2e031404db4e25"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1559,7 +1560,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "gate-manifest-bundle-sha256:34654fea9c383b9bcbad5454967751a064942ab541e9f2dc824e8c6f2340eae8"
+          "input_identity": "gate-manifest-bundle-sha256:4634252d4d4238799fd213774bf72e441b12a9e2f98d8f32fa48a6c136307e1f"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -1985,7 +1986,7 @@
             "scripts/check_cargo_target_dir_policy.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "engineering-gate-budget-bundle-sha256:7dd2dcc16f105e244081ddb06ab21b71045731b0a3b62e46103b551b9c8a7532"
+          "input_identity": "engineering-gate-budget-bundle-sha256:0223388e9c2f0e4d63046fadbc12a2d2d2ce034cfc81c7926f5626c3851b4e83"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2072,7 +2073,7 @@
             "scripts/check_default_iteration_workflow.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "generated-state-lifecycle-bundle-sha256:8f603c3f325b7222ba9c199c1d8b5a7a9e9f88695b237c4b86d50112d1ff8eff"
+          "input_identity": "generated-state-lifecycle-bundle-sha256:0a1c3ff72ecc268d6655d69ce4d79ff4f59dd2c6c16003f726faa3e5a918b362"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2158,7 +2159,7 @@
             "scripts/check_check_update_boundary.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "governance-consolidation-bundle-sha256:2674a9baf8f727f9fafde6b21e4ba997d495154fe241df2685865c386fde337e"
+          "input_identity": "governance-consolidation-bundle-sha256:6f97f8e5de1653f74a3d315d7d312fba176de77438ecc17447b34260048007dc"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2245,7 +2246,7 @@
             "scripts/check_gate_manifest.sh"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "generated-authority-closure-bundle-sha256:f77ec532e25c11403871b6449aaa96c3597f551f0f2af90348b98815805cbbf6"
+          "input_identity": "generated-authority-closure-bundle-sha256:06ee172e00475c0d3decdcf515f47868ea1c466451655857bb4c72a3c6195f84"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2334,7 +2335,7 @@
             "30826800834"
           ],
           "completed_date": "2026-08-03",
-          "input_identity": "generated-authority-closure-bundle-sha256:f77ec532e25c11403871b6449aaa96c3597f551f0f2af90348b98815805cbbf6"
+          "input_identity": "generated-authority-closure-bundle-sha256:06ee172e00475c0d3decdcf515f47868ea1c466451655857bb4c72a3c6195f84"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2513,7 +2514,7 @@
             "scripts/check_reference_host_profiles.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "reference-host-profile-bundle-sha256:7c249c32513c2548e248e60352631c9a18359fe7afdcaa3be17ac5b25fd32656"
+          "input_identity": "reference-host-profile-bundle-sha256:9ad583f308148b02a4348cf95a3b32fa68d8fad302506266c22820e545e00bbe"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2587,7 +2588,7 @@
             "scripts/check_roadmap_workloads.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "roadmap-workload-bundle-sha256:9421ace1cc6d983037fe1e321aedfdc96f04b368540537c5cc39a8b618d4f7bd"
+          "input_identity": "roadmap-workload-bundle-sha256:d39e761aa64f04e1853587821356eebadb34624b37d71ff52afac15bad4a0c24"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2663,7 +2664,7 @@
             "scripts/check_roadmap_baseline.sh"
           ],
           "completed_date": "2026-07-10",
-          "input_identity": "roadmap-baseline-bundle-sha256:8a2ff30b184ff993f871a5156d65f2bfe7648c7c3fce7540acb7b688a0fd0981"
+          "input_identity": "roadmap-baseline-bundle-sha256:5312cbcc37af3438e3952febc3747572161ac4574ec90ee0836aa61a9c676b51"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2739,7 +2740,7 @@
             "scripts/check_release_notes.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "release-notes-bundle-sha256:62856ee60ce6b8143e45d06fb7dd8ec52c8dfda2883b8226050fc8975ef71322"
+          "input_identity": "release-notes-bundle-sha256:fd10d58ddb00e1a13737da0ab84408224895b32301c6010a8b83e40406780b9e"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2815,7 +2816,7 @@
             "scripts/check_gc_agent_profile.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-profile-bundle-sha256:325f8dd84cf2f4eff2288557743d9c7092ec8b5a312c1d8060ef57bf6fe663cb"
+          "input_identity": "gc-agent-profile-bundle-sha256:ec5dbbc54e5fa998d9657534cdac3597620669954eef9f06b09584b135357203"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2891,7 +2892,7 @@
             "scripts/check_gc_agent_core_card.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-core-card-bundle-sha256:b64849be3a92db5c9cee4ba790d3a91896b994b6c025334c09dddb4d0c54e86a"
+          "input_identity": "gc-agent-core-card-bundle-sha256:d203ac29238b515a9dd6a7268650a3bf9e77bc3211066818cb2423d94098075f"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -2969,7 +2970,7 @@
             "scripts/check_gc_agent_task_cards.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-task-cards-bundle-sha256:c41948ac899157edcc0f56c0529fe6dce8910844402a76eb66293455a6fcc986"
+          "input_identity": "gc-agent-task-cards-bundle-sha256:d699269f40d73e320d1c2305833f49003579d1873da0aecfe38da58eeb471a42"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3047,7 +3048,7 @@
             "scripts/check_gc_agent_symbol_index.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-symbol-index-bundle-sha256:47eec33bb7ed0acc2a811d19d87408cc4e61fda72b10bb477e4c81788a723aa1"
+          "input_identity": "gc-agent-symbol-index-bundle-sha256:82395bd90a8f6597918a48e95b6704adca219b4b6681d294396f6d57b7deb74d"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3126,7 +3127,7 @@
             "scripts/check_gc_agent_core_card.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-agent-unsupported-behavior-bundle-sha256:3d5d59039b06dfdb52d8b8d35f4c040a0dffe0efaaae8913ed737358ecce2c6a"
+          "input_identity": "gc-agent-unsupported-behavior-bundle-sha256:dbff6078cf8cb365021c31850a0d64f2356eb044c5ad007c4fbaf59c9624d141"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3204,7 +3205,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "gc-diagnostic-catalog-bundle-sha256:678791edfb8cfd7bd5a1470c639d4f43f9b08fa2cb83619ddf7106297db4e771"
+          "input_identity": "gc-diagnostic-catalog-bundle-sha256:b7b2850a56b24a88866d1716dbfacc4a855a7f96ebbe36223e6298fdfb4e7812"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3350,7 +3351,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "guarded-repair-hints-bundle-sha256:5f71cde96c45a9f789fe82f7db082dfe72df4b144623e93b2efea747d34c5e64"
+          "input_identity": "guarded-repair-hints-bundle-sha256:bc22a6cfb3d61b9865af08c5da6cc5d952aa689d0be134cf367a2dcbffad54c0"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3424,7 +3425,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "diagnostic-goldens-bundle-sha256:9b04520bbfaabd20d7d4c4d93175166492c73d95904a84fef368501e14391ada"
+          "input_identity": "diagnostic-goldens-bundle-sha256:7a0cff96308d682eb909cbb76ebd7b2d44d0b192989fc826d2fbb2c0e8abb734"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3498,7 +3499,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "diagnostic-repair-utility-bundle-sha256:a0253988b2271c7404af6ae60054e941e4a49569761b3f8160fb949ef76e6b77"
+          "input_identity": "diagnostic-repair-utility-bundle-sha256:24f7c266bebcfb808fcf4891195ff953241877ff9a8a9a82e9c3e8bbd6d2dd0c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3646,7 +3647,7 @@
             "scripts/check_warm_protocol_contract.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "warm-protocol-bundle-sha256:39f5d384c8eebe85bb36e74c96e4f07723b4588880b74a0c77cfce3aebef509e"
+          "input_identity": "warm-protocol-bundle-sha256:1fd98f2c0285a34154a5ac376770d18bd296c4adfec730bdeaf1671d04a3a9a9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3718,7 +3719,7 @@
             "scripts/check_host_bridge_fault_injection.sh"
           ],
           "completed_date": "2026-07-11",
-          "input_identity": "hard-cancellation-bundle-sha256:ef5692164539fbbc695eef3c1287795b54676e13294e3d7bc30991d52dc92ffd"
+          "input_identity": "hard-cancellation-bundle-sha256:b4aa53d9cd7b1255900dee9cdfff4df4126945507739bf9fd402a289492aee3a"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3793,7 +3794,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "mcp-interface-bundle-sha256:ff5135e22b02fb2c55fc6df085ca1705adb643514170d48908bc64d44566a064"
+          "input_identity": "mcp-interface-bundle-sha256:0ed101293f9f86d6dac972c6a19f0068308f5c281f4257e3d8d2f91c538e01ce"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3870,7 +3871,7 @@
             "scripts/check_write_genesiscode_skill_conformance.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "transactional-agent-session-bundle-sha256:3cbc75551d086a4fd1d2ca60bd992e858e5f9a20edcf2649547f07b7118795a0"
+          "input_identity": "transactional-agent-session-bundle-sha256:97e0b7b4b33cbc76d572c06d9873d8ed0589755fc50c2c8e6a0fae0004a44da9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -3946,7 +3947,7 @@
             "scripts/check_cli_diagnostics_contract.sh"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "agent-session-resources-bundle-sha256:3c1c9f888e7bc99b628277079467656c1d7763b1d83ce878de7ad7f349042b68"
+          "input_identity": "agent-session-resources-bundle-sha256:6354b2cb9c9d7cbd5084e96c41e6a9e4eb98984c4e7ce6340d8b33fdca765f65"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4077,12 +4078,10 @@
         "line": 901,
         "path": "ROADMAP.md"
       },
-      "start_ready": false,
+      "start_ready": true,
       "state": "open",
       "title": "Meet AB-3 and AB-4",
-      "unsatisfied_prerequisites": [
-        "R2.2.f"
-      ],
+      "unsatisfied_prerequisites": [],
       "workstream": "R1.3"
     },
     {
@@ -4093,7 +4092,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-14",
-          "input_identity": "gc-agent-corpus-bundle-sha256:e20f04824b19ecd456b7a932a6c81e81c1345f3231d1656bef2b297b4cbb5ead"
+          "input_identity": "gc-agent-corpus-bundle-sha256:9649806bf3b49faed84e3ce48cf240f88bcf2feec3525161f8fa5818b685492a"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4168,7 +4167,7 @@
             "crates/gc_cli/tests/cli_canonical_language_examples.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-canonical-examples-bundle-sha256:e58e9eee7c90a139de96519b36e98591c7f6ca675452941d7ff5c8c3b4d3283f"
+          "input_identity": "gc-canonical-examples-bundle-sha256:5ace7460b41276297a5a70c2d3b0fe976056072ae62b27b7eecfbd3135a8af03"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4243,7 +4242,7 @@
             "crates/gc_cli/tests/cli_agent_task_benchmarks.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-agent-task-benchmark-bundle-sha256:f616295401e761b7b7a48a70990fc2e11f26824676530b3dc25fc5bffb8d7e09"
+          "input_identity": "gc-agent-task-benchmark-bundle-sha256:8fa560a3892f946d960e92c31327d75ee386906a606f2e4b7acfc69b031ab9f8"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4318,7 +4317,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-agent-held-out-evaluation-bundle-sha256:ff3b240ca7e74080eb23c66f87e08d1e2bc000b27b5f5065311c636587b9cf1a"
+          "input_identity": "gc-agent-held-out-evaluation-bundle-sha256:104ace72b646fb0eed4789d17de2c9dbdb2c71ac7c611ae7d847e5581fdaba2c"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4393,7 +4392,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-agent-benchmark-scoring-bundle-sha256:bbc714e6a05036f04e4ae79cf51df5fce85ca7dec3b38340c676ff22992ea546"
+          "input_identity": "gc-agent-benchmark-scoring-bundle-sha256:f6f510a8efc69f02a72daafb18b8d7e44c693bfcff3f2e1b6712d24594f0d6c9"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4468,7 +4467,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_run.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "gc-agent-benchmark-run-bundle-sha256:63b75618e8d49cc8f2310f8ebad9c32db973179bb9c47502bfdb53df2efa9877"
+          "input_identity": "gc-agent-benchmark-run-bundle-sha256:5b753ef4b16d532ea149324a514d8a532d959f380896d8aefa858b3a5b39c8d7"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4544,7 +4543,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_run.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-protocol-bundle-sha256:5e756287e738c4015dc017a7edb1989f005c55954392b3a20cb90bed37b41d74"
+          "input_identity": "genesisbench-protocol-bundle-sha256:1140c7e93fd18c14524fbf0eea7d65b2bb7cbbd900762e113b1b33dfe3ff88c7"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4620,7 +4619,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_run.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-protocol-bundle-sha256:5e756287e738c4015dc017a7edb1989f005c55954392b3a20cb90bed37b41d74"
+          "input_identity": "genesisbench-protocol-bundle-sha256:1140c7e93fd18c14524fbf0eea7d65b2bb7cbbd900762e113b1b33dfe3ff88c7"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4698,7 +4697,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-lineage-analysis-bundle-sha256:7a89394cd259ded528eac958355649389c044d19479f598af2b2303cec8a24be"
+          "input_identity": "genesisbench-lineage-analysis-bundle-sha256:4a8d52eaab19d32ccb837e8a26c7855665b878ba81db0115b68a5d0e0d7a9c5d"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4775,7 +4774,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-temporal-epochs-bundle-sha256:722771517397e0808201ba50b1bc5aa4aefa1b3723cfd252c882160c7b8796ef"
+          "input_identity": "genesisbench-temporal-epochs-bundle-sha256:18580df8c51d026d5482567b526b076c253bed9d2a86256fc3346e1d94c4f6e8"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -4851,7 +4850,7 @@
             "crates/gc_cli/tests/cli_agent_index.rs"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-reference-agent-bundle-sha256:11074fa358f99b0f6e8dae4d98dff1de454670d3c0f63a399978281df242ab47"
+          "input_identity": "genesisbench-reference-agent-bundle-sha256:8dfa0a9e4a8f0ab9b6e15d8f8461564c71315b1795d28f7284fcc634117eb5e1"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -5003,7 +5002,7 @@
             "scripts/check_agent_authoring_bundle.sh"
           ],
           "completed_date": "2026-07-15",
-          "input_identity": "genesisbench-signed-registry-bundle-sha256:99f97ed7934129cfa5f839ce78a733d21802f2304b14efc5749518cea5c0db87"
+          "input_identity": "genesisbench-signed-registry-bundle-sha256:138bcecfbe4f1872c73491bdf59ed03541355ae07583c717a689d38f4e79b254"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -5080,7 +5079,7 @@
             "crates/gc_cli/tests/cli_agent_benchmark_scoring.rs"
           ],
           "completed_date": "2026-07-16",
-          "input_identity": "genesisbench-construct-validity-bundle-sha256:1196a8e7ef205d71d005904ca73b168b7fd5412e51d1a88407b15dd69d986113"
+          "input_identity": "genesisbench-construct-validity-bundle-sha256:0b2c1bc3d33a9927e913141f5638e6584ba1781e5e0097093f9e43e1b0f96556"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -5464,7 +5463,7 @@
             "scripts/check_generated_artifact_policy.sh"
           ],
           "completed_date": "2026-08-06",
-          "input_identity": "authoring-skill-bundle-sha256:e6d941871b59f55646a5e323ff4c34d3f8d2f27800f6ee1794e8286b4c5495f4"
+          "input_identity": "authoring-skill-bundle-sha256:5a10f5a9703784a6f2ccece0f86c759ee7320f1f28cecf93988bddbc5a4237bc"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -5574,7 +5573,7 @@
             "scripts/check_agent_authoring_bundle.sh"
           ],
           "completed_date": "2026-08-06",
-          "input_identity": "authoring-skill-bundle-sha256:e6d941871b59f55646a5e323ff4c34d3f8d2f27800f6ee1794e8286b4c5495f4"
+          "input_identity": "authoring-skill-bundle-sha256:5a10f5a9703784a6f2ccece0f86c759ee7320f1f28cecf93988bddbc5a4237bc"
         },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
@@ -7909,10 +7908,18 @@
     },
     {
       "acceptance": {
-        "evidence": null,
+        "evidence": {
+          "commands": [
+            "31456950564",
+            "31456839013",
+            "release_evidence_execution.py verify-aggregate"
+          ],
+          "completed_date": "2026-08-11",
+          "input_identity": "host-handle-lifecycle-closure-sha256:f8dd0073bf8820d3a2935bab30f0858781b0dd5021b63e8af69a114b3a022327"
+        },
         "independent_verification_required": true,
         "manifest_can_authorize_completion": false,
-        "status": "required"
+        "status": "satisfied"
       },
       "expected_inputs": {
         "owner_paths": [
@@ -7971,8 +7978,8 @@
         "line": 1022,
         "path": "ROADMAP.md"
       },
-      "start_ready": true,
-      "state": "open",
+      "start_ready": false,
+      "state": "done",
       "title": "Prove host-handle cleanup",
       "unsatisfied_prerequisites": [],
       "workstream": "R2.2"
@@ -8036,15 +8043,14 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1037,
+        "line": 1038,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Build a deterministic Prelude snapshot",
       "unsatisfied_prerequisites": [
-        "R2.1.h",
-        "R2.2.f"
+        "R2.1.h"
       ],
       "workstream": "R2.3"
     },
@@ -8109,7 +8115,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1038,
+        "line": 1039,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8117,7 +8123,6 @@
       "title": "Meet PB-6 and reverse startup/PB-1 drift",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R2.3.a"
       ],
       "workstream": "R2.3"
@@ -8183,7 +8188,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1039,
+        "line": 1040,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8191,7 +8196,6 @@
       "title": "Content-address frontend stages",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R2.3.b"
       ],
       "workstream": "R2.3"
@@ -8257,7 +8261,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1040,
+        "line": 1041,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8265,7 +8269,6 @@
       "title": "Add precise invalidation",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R2.3.c"
       ],
       "workstream": "R2.3"
@@ -8331,7 +8334,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1041,
+        "line": 1042,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8339,7 +8342,6 @@
       "title": "Optimize large workspaces",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R2.3.d"
       ],
       "workstream": "R2.3"
@@ -8401,7 +8403,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1045,
+        "line": 1046,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8471,7 +8473,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1046,
+        "line": 1047,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8542,7 +8544,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1047,
+        "line": 1048,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8613,15 +8615,14 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1059,
+        "line": 1060,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Specify a versioned bytecode",
       "unsatisfied_prerequisites": [
-        "R2.1.h",
-        "R2.2.f"
+        "R2.1.h"
       ],
       "workstream": "R3.1"
     },
@@ -8686,7 +8687,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1060,
+        "line": 1061,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8694,7 +8695,6 @@
       "title": "Implement an independent verifier",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.1.a"
       ],
       "workstream": "R3.1"
@@ -8760,7 +8760,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1061,
+        "line": 1062,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8768,7 +8768,6 @@
       "title": "Build the VM outside TCB-A",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.1.b"
       ],
       "workstream": "R3.1"
@@ -8834,7 +8833,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1062,
+        "line": 1063,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8842,7 +8841,6 @@
       "title": "Match resource semantics",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.1.c"
       ],
       "workstream": "R3.1"
@@ -8908,7 +8906,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1063,
+        "line": 1064,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8916,7 +8914,6 @@
       "title": "Add complete differential coverage",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.1.d"
       ],
       "workstream": "R3.1"
@@ -8982,7 +8979,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1064,
+        "line": 1065,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -8990,7 +8987,6 @@
       "title": "Meet PB-2",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.1.e"
       ],
       "workstream": "R3.1"
@@ -9054,15 +9050,14 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1068,
+        "line": 1069,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Audit existing `wasmi` coverage",
       "unsatisfied_prerequisites": [
-        "R2.1.h",
-        "R2.2.f"
+        "R2.1.h"
       ],
       "workstream": "R3.2"
     },
@@ -9127,7 +9122,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1069,
+        "line": 1070,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9135,7 +9130,6 @@
       "title": "Validate translation",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.2.a"
       ],
       "workstream": "R3.2"
@@ -9201,7 +9195,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1070,
+        "line": 1071,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9209,7 +9203,6 @@
       "title": "Unify resource/capability enforcement",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.2.b"
       ],
       "workstream": "R3.2"
@@ -9275,7 +9268,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1071,
+        "line": 1072,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9283,7 +9276,6 @@
       "title": "Fuzz the boundary",
       "unsatisfied_prerequisites": [
         "R2.1.h",
-        "R2.2.f",
         "R3.2.c"
       ],
       "workstream": "R3.2"
@@ -9349,7 +9341,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1075,
+        "line": 1076,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9425,7 +9417,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1076,
+        "line": 1077,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9502,7 +9494,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1077,
+        "line": 1078,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9579,7 +9571,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1078,
+        "line": 1079,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9652,7 +9644,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1082,
+        "line": 1083,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9725,7 +9717,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1083,
+        "line": 1084,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9799,7 +9791,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1084,
+        "line": 1085,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9873,7 +9865,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1085,
+        "line": 1086,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -9947,7 +9939,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1099,
+        "line": 1100,
         "path": "ROADMAP.md"
       },
       "start_ready": true,
@@ -10019,7 +10011,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1100,
+        "line": 1101,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10093,7 +10085,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1101,
+        "line": 1102,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10167,7 +10159,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1102,
+        "line": 1103,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10241,7 +10233,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1103,
+        "line": 1104,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10315,7 +10307,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1109,
+        "line": 1110,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10393,7 +10385,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1110,
+        "line": 1111,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10472,7 +10464,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1111,
+        "line": 1112,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10551,7 +10543,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1112,
+        "line": 1113,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10630,7 +10622,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1113,
+        "line": 1114,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10715,7 +10707,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1114,
+        "line": 1115,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10797,7 +10789,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1115,
+        "line": 1116,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10870,7 +10862,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1119,
+        "line": 1120,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -10942,7 +10934,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1120,
+        "line": 1121,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11015,7 +11007,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1121,
+        "line": 1122,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11088,7 +11080,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1122,
+        "line": 1123,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11159,7 +11151,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1126,
+        "line": 1127,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11231,7 +11223,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1127,
+        "line": 1128,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11308,7 +11300,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1128,
+        "line": 1129,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11383,7 +11375,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1129,
+        "line": 1130,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11456,7 +11448,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1130,
+        "line": 1131,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11527,7 +11519,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1134,
+        "line": 1135,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11599,7 +11591,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1135,
+        "line": 1136,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11674,7 +11666,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1136,
+        "line": 1137,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -11750,15 +11742,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1148,
+        "line": 1149,
         "path": "ROADMAP.md"
       },
-      "start_ready": false,
+      "start_ready": true,
       "state": "open",
       "title": "Reconcile paper, handoff, specs, parser, Prelude, types, and all execution tiers",
-      "unsatisfied_prerequisites": [
-        "R2.2.f"
-      ],
+      "unsatisfied_prerequisites": [],
       "workstream": "R5.1"
     },
     {
@@ -11826,14 +11816,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1149,
+        "line": 1150,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Promote effect rows deliberately",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.a"
       ],
       "workstream": "R5.1"
@@ -11903,14 +11892,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1150,
+        "line": 1151,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Freeze error and pattern behavior",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.b"
       ],
       "workstream": "R5.1"
@@ -11980,14 +11968,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1151,
+        "line": 1152,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Specify numeric profiles",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.c"
       ],
       "workstream": "R5.1"
@@ -12057,14 +12044,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1152,
+        "line": 1153,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Specify text/path behavior",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.d"
       ],
       "workstream": "R5.1"
@@ -12130,14 +12116,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1156,
+        "line": 1157,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Audit the existing concurrency contract/runtime",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e"
       ],
       "workstream": "R5.2"
@@ -12205,14 +12190,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1157,
+        "line": 1158,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Add structured scopes",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.2.a"
       ],
@@ -12281,14 +12265,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1158,
+        "line": 1159,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Specify communication",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.2.b"
       ],
@@ -12357,14 +12340,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1159,
+        "line": 1160,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Enforce global and per-scope bounds",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.2.c"
       ],
@@ -12433,14 +12415,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1160,
+        "line": 1161,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Differential/model-check schedules",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.2.d"
       ],
@@ -12507,7 +12488,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1164,
+        "line": 1165,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -12581,7 +12562,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1165,
+        "line": 1166,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -12656,7 +12637,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1166,
+        "line": 1167,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -12731,7 +12712,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1167,
+        "line": 1168,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -12806,7 +12787,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1168,
+        "line": 1169,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -12879,14 +12860,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1172,
+        "line": 1173,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Define the v1 stdlib matrix",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e"
       ],
       "workstream": "R5.4"
@@ -12954,14 +12934,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1173,
+        "line": 1174,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Keep effect APIs capability-shaped",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.4.a"
       ],
@@ -13030,14 +13009,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1174,
+        "line": 1175,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Finish robust codecs/protocols",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.4.b"
       ],
@@ -13106,14 +13084,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1175,
+        "line": 1176,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Define crypto correctly",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.4.c"
       ],
@@ -13182,14 +13159,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1176,
+        "line": 1177,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Treat model inference as an effect",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.1.e",
         "R5.4.d"
       ],
@@ -13258,14 +13234,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1180,
+        "line": 1181,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Adopt a component boundary",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e"
       ],
@@ -13336,14 +13311,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1181,
+        "line": 1182,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Generate bindings and capability manifests",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.5.a"
@@ -13415,14 +13389,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1182,
+        "line": 1183,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Sandbox extensions",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.5.b"
@@ -13494,14 +13467,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1183,
+        "line": 1184,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Make extension behavior replayable",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.5.c"
@@ -13573,14 +13545,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1184,
+        "line": 1185,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Generate foreign-schema adapters without foreign application code",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.5.d"
@@ -13652,14 +13623,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1185,
+        "line": 1186,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Govern native and legacy ecosystem packages",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.5.e"
@@ -13733,7 +13703,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1189,
+        "line": 1190,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -13816,7 +13786,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1190,
+        "line": 1191,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -13900,7 +13870,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1191,
+        "line": 1192,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -13984,7 +13954,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1192,
+        "line": 1193,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14068,7 +14038,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1193,
+        "line": 1194,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14152,7 +14122,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1194,
+        "line": 1195,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14234,7 +14204,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1198,
+        "line": 1199,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14317,7 +14287,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1199,
+        "line": 1200,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14403,7 +14373,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1200,
+        "line": 1201,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14488,7 +14458,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1201,
+        "line": 1202,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14570,7 +14540,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1202,
+        "line": 1203,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14657,7 +14627,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1203,
+        "line": 1204,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -14739,14 +14709,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1209,
+        "line": 1210,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Define a deterministic game/simulation core",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.4.e",
         "R5.6.f"
       ],
@@ -14819,14 +14788,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1210,
+        "line": 1211,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Complete 2D/3D runtime systems",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.4.e",
         "R5.6.f",
         "R5.8.a"
@@ -14900,14 +14868,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1211,
+        "line": 1212,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Make shaders and assets Genesis-authored",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.4.e",
         "R5.6.f",
         "R5.8.b"
@@ -14981,14 +14948,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1212,
+        "line": 1213,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Add audio and creative timelines",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.4.e",
         "R5.6.f",
         "R5.8.c"
@@ -15062,14 +15028,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1213,
+        "line": 1214,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Support networked interactive systems",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.4.e",
         "R5.6.f",
         "R5.8.d"
@@ -15143,14 +15108,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1214,
+        "line": 1215,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Ship editor and debugging workflows",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R5.4.e",
         "R5.6.f",
         "R5.8.e"
@@ -15226,14 +15190,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1218,
+        "line": 1219,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Define Embedded Linux and MCU profiles separately",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.4.e",
@@ -15312,14 +15275,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1219,
+        "line": 1220,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Add closed-world static resource verification",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.4.e",
@@ -15399,14 +15361,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1220,
+        "line": 1221,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Specify real-time and interrupt semantics",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.4.e",
@@ -15486,14 +15447,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1221,
+        "line": 1222,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Define capability-safe HAL APIs",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.4.e",
@@ -15573,14 +15533,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1222,
+        "line": 1223,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Build IoT and robotics packages",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.4.e",
@@ -15660,14 +15619,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1223,
+        "line": 1224,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Preserve semantic identity across constrained compilation",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R3.2.d",
         "R5.1.e",
         "R5.4.e",
@@ -15735,7 +15693,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1235,
+        "line": 1236,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -15808,7 +15766,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1236,
+        "line": 1237,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -15882,7 +15840,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1237,
+        "line": 1238,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -15956,7 +15914,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1238,
+        "line": 1239,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16028,7 +15986,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1242,
+        "line": 1243,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16100,7 +16058,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1243,
+        "line": 1244,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16173,7 +16131,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1244,
+        "line": 1245,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16246,7 +16204,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1245,
+        "line": 1246,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16319,7 +16277,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1246,
+        "line": 1247,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16392,7 +16350,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1250,
+        "line": 1251,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16468,7 +16426,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1251,
+        "line": 1252,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16545,7 +16503,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1252,
+        "line": 1253,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16622,7 +16580,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1253,
+        "line": 1254,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16699,7 +16657,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1254,
+        "line": 1255,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16776,7 +16734,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1255,
+        "line": 1256,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16853,7 +16811,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1256,
+        "line": 1257,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16924,7 +16882,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1260,
+        "line": 1261,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -16994,7 +16952,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1261,
+        "line": 1262,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17065,7 +17023,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1262,
+        "line": 1263,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17136,7 +17094,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1263,
+        "line": 1264,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17207,7 +17165,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1264,
+        "line": 1265,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17278,7 +17236,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1265,
+        "line": 1266,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17355,7 +17313,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1271,
+        "line": 1272,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17437,7 +17395,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1272,
+        "line": 1273,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17520,7 +17478,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1273,
+        "line": 1274,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17603,7 +17561,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1274,
+        "line": 1275,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17682,7 +17640,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1278,
+        "line": 1279,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17761,7 +17719,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1279,
+        "line": 1280,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17841,7 +17799,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1280,
+        "line": 1281,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -17921,7 +17879,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1281,
+        "line": 1282,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18001,7 +17959,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1285,
+        "line": 1286,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18083,7 +18041,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1286,
+        "line": 1287,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18166,7 +18124,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1287,
+        "line": 1288,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18249,7 +18207,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1288,
+        "line": 1289,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18332,7 +18290,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1289,
+        "line": 1290,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18415,7 +18373,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1290,
+        "line": 1291,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18490,7 +18448,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1302,
+        "line": 1303,
         "path": "ROADMAP.md"
       },
       "start_ready": true,
@@ -18560,7 +18518,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1303,
+        "line": 1304,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18632,7 +18590,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1304,
+        "line": 1305,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18704,7 +18662,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1305,
+        "line": 1306,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18776,7 +18734,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1306,
+        "line": 1307,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18848,7 +18806,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1307,
+        "line": 1308,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18918,7 +18876,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1311,
+        "line": 1312,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -18989,7 +18947,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1312,
+        "line": 1313,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19060,7 +19018,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1313,
+        "line": 1314,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19131,7 +19089,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1314,
+        "line": 1315,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19202,7 +19160,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1315,
+        "line": 1316,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19273,7 +19231,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1316,
+        "line": 1317,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19344,7 +19302,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1317,
+        "line": 1318,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19417,7 +19375,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1321,
+        "line": 1322,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19492,7 +19450,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1322,
+        "line": 1323,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19568,7 +19526,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1323,
+        "line": 1324,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19644,7 +19602,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1324,
+        "line": 1325,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19720,7 +19678,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1325,
+        "line": 1326,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19796,7 +19754,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1326,
+        "line": 1327,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -19868,14 +19826,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1330,
+        "line": 1331,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Soak long-lived daemons/services",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R6.4.f"
       ],
       "workstream": "R7.4"
@@ -19941,14 +19898,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1331,
+        "line": 1332,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Test adversarial complexity",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R6.4.f",
         "R7.4.a"
       ],
@@ -20015,14 +19971,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1332,
+        "line": 1333,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Validate disaster recovery",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R6.4.f",
         "R7.4.b"
       ],
@@ -20089,14 +20044,13 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1333,
+        "line": 1334,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
       "state": "open",
       "title": "Soak real products and devices",
       "unsatisfied_prerequisites": [
-        "R2.2.f",
         "R6.4.f",
         "R7.4.c"
       ],
@@ -20169,7 +20123,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1347,
+        "line": 1348,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20253,7 +20207,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1348,
+        "line": 1349,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20338,7 +20292,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1349,
+        "line": 1350,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20423,7 +20377,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1350,
+        "line": 1351,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20502,7 +20456,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1354,
+        "line": 1355,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20588,7 +20542,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1355,
+        "line": 1356,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20681,7 +20635,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1356,
+        "line": 1357,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20773,7 +20727,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1357,
+        "line": 1358,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20860,7 +20814,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1358,
+        "line": 1359,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -20939,7 +20893,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1359,
+        "line": 1360,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21015,7 +20969,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1360,
+        "line": 1361,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21097,7 +21051,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1361,
+        "line": 1362,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21182,7 +21136,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1362,
+        "line": 1363,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21261,7 +21215,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1363,
+        "line": 1364,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21343,7 +21297,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1364,
+        "line": 1365,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21428,7 +21382,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1365,
+        "line": 1366,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21517,7 +21471,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1366,
+        "line": 1367,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21606,7 +21560,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1367,
+        "line": 1368,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21692,7 +21646,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1368,
+        "line": 1369,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21777,7 +21731,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1369,
+        "line": 1370,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21862,7 +21816,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1370,
+        "line": 1371,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -21959,7 +21913,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1371,
+        "line": 1372,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22074,7 +22028,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1375,
+        "line": 1376,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22161,7 +22115,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1376,
+        "line": 1377,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22231,7 +22185,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1377,
+        "line": 1378,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22301,7 +22255,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1378,
+        "line": 1379,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22371,7 +22325,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1379,
+        "line": 1380,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22443,7 +22397,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1383,
+        "line": 1384,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22517,7 +22471,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1384,
+        "line": 1385,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22592,7 +22546,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1385,
+        "line": 1386,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22667,7 +22621,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1386,
+        "line": 1387,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22746,7 +22700,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1387,
+        "line": 1388,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22861,7 +22815,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1393,
+        "line": 1394,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -22946,7 +22900,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1394,
+        "line": 1395,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23028,7 +22982,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1395,
+        "line": 1396,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23110,7 +23064,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1396,
+        "line": 1397,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23192,7 +23146,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1397,
+        "line": 1398,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23274,7 +23228,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1398,
+        "line": 1399,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23356,7 +23310,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1402,
+        "line": 1403,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23440,7 +23394,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1403,
+        "line": 1404,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23527,7 +23481,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1404,
+        "line": 1405,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23611,7 +23565,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1405,
+        "line": 1406,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23693,7 +23647,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1406,
+        "line": 1407,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23777,7 +23731,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1407,
+        "line": 1408,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23862,7 +23816,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1408,
+        "line": 1409,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -23945,7 +23899,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1409,
+        "line": 1410,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24027,7 +23981,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1410,
+        "line": 1411,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24109,7 +24063,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1411,
+        "line": 1412,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24191,7 +24145,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1412,
+        "line": 1413,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24277,7 +24231,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1413,
+        "line": 1414,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24361,7 +24315,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1414,
+        "line": 1415,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24443,7 +24397,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1415,
+        "line": 1416,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24523,7 +24477,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1419,
+        "line": 1420,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24604,7 +24558,7 @@
         "strategy": "Fail closed, keep the prior verified authority reachable, reverse only through a reviewed semantic patch, and preserve all mismatch evidence."
       },
       "source": {
-        "line": 1420,
+        "line": 1421,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24728,7 +24682,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1440,
+        "line": 1441,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24827,7 +24781,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1441,
+        "line": 1442,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -24917,7 +24871,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1442,
+        "line": 1443,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25005,7 +24959,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1443,
+        "line": 1444,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25093,7 +25047,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1444,
+        "line": 1445,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25175,7 +25129,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1448,
+        "line": 1449,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25256,7 +25210,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1449,
+        "line": 1450,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25338,7 +25292,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1450,
+        "line": 1451,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25420,7 +25374,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1451,
+        "line": 1452,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25502,7 +25456,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1452,
+        "line": 1453,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25580,7 +25534,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1456,
+        "line": 1457,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25658,7 +25612,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1457,
+        "line": 1458,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25737,7 +25691,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1458,
+        "line": 1459,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25816,7 +25770,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1459,
+        "line": 1460,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25895,7 +25849,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1460,
+        "line": 1461,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -25972,7 +25926,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1464,
+        "line": 1465,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26050,7 +26004,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1465,
+        "line": 1466,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26129,7 +26083,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1466,
+        "line": 1467,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26208,7 +26162,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1467,
+        "line": 1468,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26287,7 +26241,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1468,
+        "line": 1469,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26366,7 +26320,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1469,
+        "line": 1470,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26437,7 +26391,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1481,
+        "line": 1482,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26507,7 +26461,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1482,
+        "line": 1483,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26578,7 +26532,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1483,
+        "line": 1484,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26649,7 +26603,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1484,
+        "line": 1485,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26720,7 +26674,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1485,
+        "line": 1486,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26793,7 +26747,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1495,
+        "line": 1496,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26866,7 +26820,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1496,
+        "line": 1497,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -26940,7 +26894,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1497,
+        "line": 1498,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27014,7 +26968,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1498,
+        "line": 1499,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27088,7 +27042,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1502,
+        "line": 1503,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27162,7 +27116,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1503,
+        "line": 1504,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27236,7 +27190,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1504,
+        "line": 1505,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27310,7 +27264,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1505,
+        "line": 1506,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27384,7 +27338,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1506,
+        "line": 1507,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27458,7 +27412,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1507,
+        "line": 1508,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27532,7 +27486,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1511,
+        "line": 1512,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27606,7 +27560,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1512,
+        "line": 1513,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27680,7 +27634,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1513,
+        "line": 1514,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27754,7 +27708,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1514,
+        "line": 1515,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27828,7 +27782,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1515,
+        "line": 1516,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27902,7 +27856,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1516,
+        "line": 1517,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -27976,7 +27930,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1517,
+        "line": 1518,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28050,7 +28004,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1523,
+        "line": 1524,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28124,7 +28078,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1524,
+        "line": 1525,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28198,7 +28152,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1525,
+        "line": 1526,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28272,7 +28226,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1526,
+        "line": 1527,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28346,7 +28300,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1527,
+        "line": 1528,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28420,7 +28374,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1528,
+        "line": 1529,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28494,7 +28448,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1529,
+        "line": 1530,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28570,7 +28524,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1530,
+        "line": 1531,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28645,7 +28599,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1531,
+        "line": 1532,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28715,7 +28669,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1537,
+        "line": 1538,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28785,7 +28739,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1538,
+        "line": 1539,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28856,7 +28810,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1539,
+        "line": 1540,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28927,7 +28881,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1540,
+        "line": 1541,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -28998,7 +28952,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1541,
+        "line": 1542,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -29069,7 +29023,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1542,
+        "line": 1543,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -29138,7 +29092,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1546,
+        "line": 1547,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -29208,7 +29162,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1547,
+        "line": 1548,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -29279,7 +29233,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1548,
+        "line": 1549,
         "path": "ROADMAP.md"
       },
       "start_ready": false,
@@ -29350,7 +29304,7 @@
         "strategy": "Fail closed before authority changes, retain the last independently verified implementation and trust roots, revoke affected artifacts when necessary, and require incident evidence before resumption."
       },
       "source": {
-        "line": 1549,
+        "line": 1550,
         "path": "ROADMAP.md"
       },
       "start_ready": false,

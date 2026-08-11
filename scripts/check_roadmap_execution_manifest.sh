@@ -16,9 +16,24 @@ python3 scripts/lib/roadmap_execution_manifest.py \
   --output "$TMP_DIR/rendered.json" >/dev/null
 python3 scripts/lib/roadmap_execution_manifest.py --slice >"$TMP_DIR/slice.json"
 python3 scripts/lib/roadmap_execution_manifest.py --ready >"$TMP_DIR/ready.json"
-python3 scripts/lib/roadmap_execution_manifest.py --explain R2.2.f >"$TMP_DIR/explain.json"
+EXPLAIN_ID="$(python3 - "$TMP_DIR/slice.json" "$TMP_DIR/rendered.json" <<'PY'
+import json
+from pathlib import Path
+import sys
 
-python3 - "$TMP_DIR/slice.json" "$TMP_DIR/ready.json" "$TMP_DIR/explain.json" "$TMP_DIR/rendered.json" <<'PY'
+execution_slice = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+manifest = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+focus_ids = [task["id"] for task in execution_slice["focus_tasks"]]
+if focus_ids:
+    print(focus_ids[0])
+else:
+    open_ids = [task["id"] for task in manifest["tasks"] if task["state"] == "open"]
+    print(open_ids[0] if open_ids else manifest["tasks"][-1]["id"])
+PY
+)"
+python3 scripts/lib/roadmap_execution_manifest.py --explain "$EXPLAIN_ID" >"$TMP_DIR/explain.json"
+
+python3 - "$TMP_DIR/slice.json" "$TMP_DIR/ready.json" "$TMP_DIR/explain.json" "$TMP_DIR/rendered.json" "$EXPLAIN_ID" <<'PY'
 import json
 from pathlib import Path
 import sys
@@ -27,6 +42,7 @@ execution_slice = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 readiness = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 explanation = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
 manifest = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
+explain_id = sys.argv[5]
 policy = json.loads(
     Path("policies/roadmap_execution_v0.1.json").read_text(encoding="utf-8")
 )
@@ -163,29 +179,15 @@ if not {"R8.5.s", "F2.q"}.issubset(model_readiness) or {
     "R8.5.u", "R8.5.v"
 } & model_readiness:
     raise SystemExit("roadmap-execution-manifest: Genesis Model readiness lane drift")
-if (
-    explanation["id"] != "R2.2.f"
-    or explanation["state"] != "open"
-    or explanation["start_ready"] is not True
+focus_ids = [task["id"] for task in execution_slice["focus_tasks"]]
+explained_task = tasks[explain_id]
+if explanation["id"] != explain_id or any(
+    explanation[field] != explained_task[field]
+    for field in ("state", "start_ready")
 ):
     raise SystemExit("roadmap-execution-manifest: task explanation drift")
-if [task["id"] for task in execution_slice["focus_tasks"]] != ["R2.2.f"]:
-    raise SystemExit("roadmap-execution-manifest: corrective focus drift")
-focus = execution_slice["focus_tasks"][0]
-if focus["resource_class"] != "build":
-    raise SystemExit("roadmap-execution-manifest: lifecycle focus is not build-class work")
-required_lifecycle_guards = {
-    "scripts/check_host_bridge_fault_injection.sh",
-    "scripts/check_no_user_panics.sh",
-    "scripts/check_host_abi_conformance.sh",
-}
-if not required_lifecycle_guards.issubset(focus["guard_checks"]):
-    raise SystemExit("roadmap-execution-manifest: lifecycle focus lost task-specific guards")
-if {
-    "scripts/check_runtime_workload_budgets.sh",
-    "scripts/check_perf_budgets.sh",
-}.intersection(focus["guard_checks"]):
-    raise SystemExit("roadmap-execution-manifest: lifecycle focus inherited performance guards")
+if focus_ids and explain_id != focus_ids[0]:
+    raise SystemExit("roadmap-execution-manifest: explanation does not cover selected focus")
 if set(readiness) != {
     "kind", "version", "authority", "inputIdentities", "wipLimit",
     "openTaskCount", "startReadyTaskCount", "frontierFocusTaskIds",
@@ -201,8 +203,8 @@ if (
         "selector": "--slice",
     }
     or readiness["wipLimit"] != execution_slice["wip_limit"]
-    or readiness["frontierFocusTaskIds"] != ["R2.2.f"]
-    or readiness["selectedReadyTaskIds"] != ["R2.2.f"]
+    or readiness["frontierFocusTaskIds"] != focus_ids
+    or readiness["selectedReadyTaskIds"] != focus_ids
     or readiness["startReadyTaskCount"] != len(readiness["startReadyTasks"])
 ):
     raise SystemExit("roadmap-execution-manifest: readiness report derivation drift")
@@ -214,10 +216,15 @@ ready_fields = {
 if any(set(task) != ready_fields for task in readiness["startReadyTasks"]):
     raise SystemExit("roadmap-execution-manifest: readiness task field drift")
 ready_ids = [task["id"] for task in readiness["startReadyTasks"]]
-if ready_ids != ["R1.5.c", "R2.1.h", "R2.2.f", "R4.1.a", "R7.1.a"]:
+expected_ready_ids = [
+    task["id"]
+    for task in manifest["tasks"]
+    if task["state"] == "open" and task["start_ready"]
+]
+if ready_ids != expected_ready_ids:
     raise SystemExit("roadmap-execution-manifest: global readiness set drift")
 for task in readiness["startReadyTasks"]:
-    selected = task["id"] == "R2.2.f"
+    selected = task["id"] in focus_ids
     if (
         task["selectedByFrontier"] is not selected
         or task["selectionDisposition"]

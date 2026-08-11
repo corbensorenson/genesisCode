@@ -1,8 +1,6 @@
 {
-  "active_defect_ids": [
-    "P1.5"
-  ],
-  "audit_date": "2026-08-08",
+  "active_defect_ids": [],
+  "audit_date": "2026-08-11",
   "claims": [
     {
       "category": "kernel",
@@ -901,8 +899,6 @@
         "E1:cap-host-bridge/check-2"
       ],
       "gap_ids": [
-        "P1.5",
-        "R2.2.f",
         "R7.3.b"
       ],
       "host_binding_paths": [
@@ -1018,7 +1014,6 @@
         "E1:cap-assurance-profiles/check-3"
       ],
       "gap_ids": [
-        "P1.5",
         "R7.1.a",
         "R7.3.a"
       ],
@@ -1118,12 +1113,10 @@
     }
   ],
   "gap_catalog": {
-    "P1.5": "Eliminate host-bridge termination failure and cleanup-error suppression under public-path fault injection and complete R2.2.f cleanup proof.",
     "R1.3.c": "Generate and verify the pinned MCP agent interface from canonical CLI schemas.",
     "R1.4.c": "Build deterministic generation, repair, refactor, and deployment task benchmarks.",
     "R1.5.a": "Generate the authoring skill from canonical language and capability inputs.",
     "R1.5.f": "Validate skill distribution, offline use, token budgets, and multi-agent compatibility.",
-    "R2.2.f": "Prove host-handle cleanup across success, failure, cancellation, timeout, and restart.",
     "R2.3.e": "Meet explicit incremental large-workspace agent-loop SLOs.",
     "R3.2.a": "Audit existing stage2/Wasm coverage and eliminate undeclared fallback.",
     "R3.2.b": "Validate source-to-Wasm translation and embedded artifact identity.",

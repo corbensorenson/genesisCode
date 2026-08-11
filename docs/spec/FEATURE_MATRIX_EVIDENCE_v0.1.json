@@ -7,7 +7,7 @@
     "CAP-BROWSER-XR",
     "CAP-DEPLOYMENT-PIPELINE"
   ],
-  "audit_date": "2026-08-08",
+  "audit_date": "2026-08-11",
   "entries": [
     {
       "capability": "Pure deterministic kernel separated from effects",
@@ -884,8 +884,6 @@
         "E1:cap-host-bridge/check-2"
       ],
       "gap_ids": [
-        "P1.5",
-        "R2.2.f",
         "R7.3.b"
       ],
       "host_binding_paths": [
@@ -998,7 +996,6 @@
         "E1:cap-assurance-profiles/check-3"
       ],
       "gap_ids": [
-        "P1.5",
         "R7.1.a",
         "R7.3.a"
       ],
