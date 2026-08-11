@@ -1,0 +1,275 @@
+(def selfhost/patch_merge::REQUEST_KIND "genesis/patch-merge-request-v0.1")
+(def selfhost/patch_merge::REPORT_KIND "genesis/patch-merge-v0.1")
+(def selfhost/patch_merge::PROFILE "genesis/patch-authority-v0.1")
+
+(def selfhost/patch_merge::err
+  (fn (message) ((core/error::make2 "core/patch-merge") message)))
+
+(def selfhost/patch_merge::optional-eq?
+  (fn (left-has left right-has right)
+    (if left-has
+      (if right-has ((core/eq? left) right) false)
+      (if right-has false true))))
+
+(def selfhost/patch_merge::optional-term
+  (fn (present value) (if present value nil)))
+
+(def selfhost/patch_merge::conflict-core
+  (fn (code explanation module-path form-index base left right)
+    {:base-h (selfhost/hash::hash-term base)
+      :code code
+      :explanation explanation
+      :form-index form-index
+      :left-h (selfhost/hash::hash-term left)
+      :module-path module-path
+      :right-h (selfhost/hash::hash-term right)}))
+
+(def selfhost/patch_merge::conflict
+  (fn (code explanation module-path form-index base left right)
+    (let
+      ((core
+         (selfhost/patch_merge::conflict-core
+           code explanation module-path form-index base left right)))
+      (((core/map::put core) (quote :conflict-h))
+        (selfhost/hash::hash-term core)))))
+
+(def selfhost/patch_merge::form-choice
+  (fn (module-path index base left right)
+    (if ((core/eq? left) right)
+      {:conflict nil :form left}
+      (if ((core/eq? left) base)
+        {:conflict nil :form right}
+        (if ((core/eq? right) base)
+          {:conflict nil :form left}
+          {:conflict
+            (selfhost/patch_merge::conflict
+              "form/divergent-edit"
+              "both branches changed the same top-level form differently"
+              module-path index base left right)
+            :form base})))))
+
+(def selfhost/patch_merge::form-merge-loop
+  (fn (module-path base left right i forms conflicts)
+    (if ((core/int::eq? i) (core/vec::len base))
+      {:conflicts conflicts :forms forms}
+      (let
+        ((choice
+           (selfhost/patch_merge::form-choice
+             module-path i
+             ((core/vec::get base) i)
+             ((core/vec::get left) i)
+             ((core/vec::get right) i))))
+        (let ((conflict ((core/map::get choice) (quote :conflict))))
+          (selfhost/patch_merge::form-merge-loop
+            module-path base left right ((core/int::add i) 1)
+            ((core/vec::push forms) ((core/map::get choice) (quote :form)))
+            (if (core/list::is-nil? conflict)
+              conflicts
+              ((core/vec::push conflicts) conflict))))))))
+
+(def selfhost/patch_merge::conflict-result
+  (fn (conflict)
+    {:conflicts ((core/vec::push []) conflict) :forms nil :present false}))
+
+(def selfhost/patch_merge::module-merge
+  (fn (module-path base left right)
+    (if ((core/int::eq? (core/vec::len base)) (core/vec::len left))
+      (if ((core/int::eq? (core/vec::len base)) (core/vec::len right))
+        (let ((result
+               (selfhost/patch_merge::form-merge-loop
+                 module-path base left right 0 [] [])))
+          {:conflicts ((core/map::get result) (quote :conflicts))
+            :forms ((core/map::get result) (quote :forms))
+            :present true})
+        (selfhost/patch_merge::conflict-result
+          (selfhost/patch_merge::conflict
+            "module/structural-divergence"
+            "both branches changed module structure incompatibly"
+            module-path nil base left right)))
+      (selfhost/patch_merge::conflict-result
+        (selfhost/patch_merge::conflict
+          "module/structural-divergence"
+          "both branches changed module structure incompatibly"
+          module-path nil base left right)))))
+
+(def selfhost/patch_merge::choice
+  (fn (present forms) {:conflicts [] :forms forms :present present}))
+
+(def selfhost/patch_merge::path-merge
+  (fn (module-path base-has base left-has left right-has right)
+    (if (selfhost/patch_merge::optional-eq? left-has left right-has right)
+      (selfhost/patch_merge::choice left-has left)
+      (if (selfhost/patch_merge::optional-eq? left-has left base-has base)
+        (selfhost/patch_merge::choice right-has right)
+        (if (selfhost/patch_merge::optional-eq? right-has right base-has base)
+          (selfhost/patch_merge::choice left-has left)
+          (if base-has
+            (if left-has
+              (if right-has
+                (selfhost/patch_merge::module-merge module-path base left right)
+                (selfhost/patch_merge::conflict-result
+                  (selfhost/patch_merge::conflict
+                    "module/delete-modify"
+                    "one branch deleted a module changed by the other branch"
+                    module-path nil base left nil)))
+              (selfhost/patch_merge::conflict-result
+                (selfhost/patch_merge::conflict
+                  "module/delete-modify"
+                  "one branch deleted a module changed by the other branch"
+                  module-path nil base nil right)))
+            (selfhost/patch_merge::conflict-result
+              (selfhost/patch_merge::conflict
+                "module/divergent-add"
+                "both branches added the same module path differently"
+                module-path nil nil left right))))))))
+
+(def selfhost/patch_merge::merge-loop
+  (fn (entries base left right i merged conflicts)
+    (if ((core/int::eq? i) (core/vec::len entries))
+      {:conflicts conflicts :merged merged}
+      (let ((module-path ((core/vec::get ((core/vec::get entries) i)) 0)))
+        (let
+          ((base-has (selfhost/patch_diff::has-key base module-path))
+            (left-has (selfhost/patch_diff::has-key left module-path))
+            (right-has (selfhost/patch_diff::has-key right module-path)))
+          (let
+            ((base-value
+               (selfhost/patch_merge::optional-term
+                 base-has (if base-has ((core/map::get base) module-path) nil)))
+              (left-value
+               (selfhost/patch_merge::optional-term
+                 left-has (if left-has ((core/map::get left) module-path) nil)))
+              (right-value
+               (selfhost/patch_merge::optional-term
+                 right-has (if right-has ((core/map::get right) module-path) nil))))
+            (let
+              ((result
+                 (selfhost/patch_merge::path-merge
+                   module-path
+                   base-has base-value left-has left-value right-has right-value)))
+              (let
+                ((present ((core/map::get result) (quote :present)))
+                  (forms ((core/map::get result) (quote :forms)))
+                  (next-conflicts
+                    (selfhost/patch_diff::append
+                      conflicts
+                      ((core/map::get result) (quote :conflicts)))))
+                (selfhost/patch_merge::merge-loop
+                  entries base left right ((core/int::add i) 1)
+                  (if present (((core/map::put merged) module-path) forms) merged)
+                  next-conflicts)))))))))
+
+(def selfhost/patch_merge::merge-workspaces
+  (fn (base left right)
+    (let
+      ((paths
+         (selfhost/patch_diff::path-set
+           (selfhost/patch_diff::path-set base left)
+           right)))
+      (selfhost/patch_merge::merge-loop
+        (core/map::entries paths) base left right 0 {} []))))
+
+(def selfhost/patch_merge::request-identity-valid?
+  (fn (request)
+    (if ((core/eq? ((core/map::get request) (quote :kind)))
+          selfhost/patch_merge::REQUEST_KIND)
+      (if ((core/eq? ((core/map::get request) (quote :profile)))
+            selfhost/patch_merge::PROFILE)
+        ((core/eq? ((core/map::get request) (quote :v))) 1)
+        false)
+      false)))
+
+(def selfhost/patch_merge::conflict-report
+  (fn (request base left right conflicts)
+    {:base-h (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector base))
+      :conflict-count (core/vec::len conflicts)
+      :conflicts conflicts
+      :diff nil
+      :kind selfhost/patch_merge::REPORT_KIND
+      :left-h (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector left))
+      :merged nil
+      :merged-h nil
+      :ok false
+      :profile selfhost/patch_merge::PROFILE
+      :request-h (selfhost/hash::hash-term request)
+      :right-h (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector right))
+      :v 1}))
+
+(def selfhost/patch_merge::success-report
+  (fn (request intent provenance base left right merged)
+    (let ((merged-vector (selfhost/patch_diff::workspace-vector merged)))
+      (let
+        ((diff
+           (core/cli::patch-diff
+             {:base (selfhost/patch_diff::workspace-vector base)
+               :intent intent
+               :kind "genesis/patch-diff-request-v0.1"
+               :profile "genesis/patch-authority-v0.1"
+               :provenance provenance
+               :target merged-vector
+               :v 1})))
+        (if (core/error::is? diff)
+          diff
+          {:base-h (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector base))
+            :conflict-count 0
+            :conflicts []
+            :diff diff
+            :kind selfhost/patch_merge::REPORT_KIND
+            :left-h (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector left))
+            :merged merged-vector
+            :merged-h (selfhost/hash::hash-term merged-vector)
+            :ok true
+            :profile selfhost/patch_merge::PROFILE
+            :request-h (selfhost/hash::hash-term request)
+            :right-h (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector right))
+            :v 1})))))
+
+(def selfhost/patch_merge::report
+  (fn (request intent provenance base left right)
+    (let ((result (selfhost/patch_merge::merge-workspaces base left right)))
+      (let ((conflicts ((core/map::get result) (quote :conflicts))))
+        (if ((core/int::eq? (core/vec::len conflicts)) 0)
+          (selfhost/patch_merge::success-report
+            request intent provenance base left right
+            ((core/map::get result) (quote :merged)))
+          (selfhost/patch_merge::conflict-report
+            request base left right conflicts))))))
+
+(def core/cli::patch-merge
+  (fn (request)
+    (let
+      ((shape
+         (((selfhost/patch_normalize::shape request)
+            [:base :intent :kind :left :profile :provenance :right :v])
+           [:base :intent :kind :left :profile :provenance :right :v])))
+      (if (core/error::is? shape)
+        shape
+        (if (selfhost/patch_merge::request-identity-valid? request)
+          (let
+            ((intent ((core/map::get request) (quote :intent)))
+              (provenance ((core/map::get request) (quote :provenance))))
+            (if (selfhost/patch_schema::is-str? intent)
+              (if (selfhost/patch_schema::is-map? provenance)
+                (let
+                  ((base
+                     (selfhost/patch_diff::workspace-map
+                       ((core/map::get request) (quote :base)))))
+                  (if (core/error::is? base)
+                    base
+                    (let
+                      ((left
+                         (selfhost/patch_diff::workspace-map
+                           ((core/map::get request) (quote :left)))))
+                      (if (core/error::is? left)
+                        left
+                        (let
+                          ((right
+                             (selfhost/patch_diff::workspace-map
+                               ((core/map::get request) (quote :right)))))
+                          (if (core/error::is? right)
+                            right
+                            (selfhost/patch_merge::report
+                              request intent provenance base left right)))))))
+                (selfhost/patch_merge::err ":provenance must be a map"))
+              (selfhost/patch_merge::err ":intent must be a string")))
+          (selfhost/patch_merge::err "request kind/profile/version mismatch"))))))

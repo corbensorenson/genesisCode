@@ -44,6 +44,8 @@ mod patch_selfhost_toolchain;
 mod patch_semantic;
 #[path = "patch_semantic_diff.rs"]
 mod patch_semantic_diff;
+#[path = "patch_semantic_merge.rs"]
+mod patch_semantic_merge;
 #[path = "patch_transaction.rs"]
 mod patch_transaction;
 
@@ -207,6 +209,9 @@ pub use patch_refactor_plan::{
 };
 pub use patch_semantic_diff::{
     SemanticWorkspaceDiff, SemanticWorkspaceModule, diff_semantic_workspaces_with_frontend,
+};
+pub use patch_semantic_merge::{
+    SemanticWorkspaceConflict, SemanticWorkspaceMerge, merge_semantic_workspaces_with_frontend,
 };
 
 #[derive(Debug, Clone)]

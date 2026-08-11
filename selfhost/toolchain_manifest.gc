@@ -54,6 +54,7 @@
     "selfhost/patch_authority_preflight_v1.gc"
     "selfhost/patch_authority_refactor_plan_v1.gc"
     "selfhost/patch_authority_diff_v1.gc"
+    "selfhost/patch_authority_merge_v1.gc"
     "selfhost/stage1_v1.gc"
   ]
   :required-symbols [
@@ -112,5 +113,6 @@
     core/cli::patch-preflight
     core/cli::refactor-plan
     core/cli::patch-diff
+    core/cli::patch-merge
   ]
 }

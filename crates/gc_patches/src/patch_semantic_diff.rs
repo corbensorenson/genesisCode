@@ -2,17 +2,17 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
 
-const REQUEST_KIND: &str = "genesis/patch-diff-request-v0.1";
+pub(super) const REQUEST_KIND: &str = "genesis/patch-diff-request-v0.1";
 const REPORT_KIND: &str = "genesis/patch-diff-v0.1";
-const PROFILE: &str = "genesis/patch-authority-v0.1";
+pub(super) const PROFILE: &str = "genesis/patch-authority-v0.1";
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SemanticWorkspaceModule {
     pub module_path: String,
     pub forms: Vec<Term>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SemanticWorkspaceDiff {
     pub additions: usize,
     pub op_count: usize,
@@ -43,7 +43,7 @@ fn valid_module_path(path: &str) -> bool {
         )
 }
 
-fn workspace_map(
+pub(super) fn workspace_map(
     modules: &[SemanticWorkspaceModule],
     context: &str,
 ) -> Result<BTreeMap<String, Vec<Term>>, PatchError> {
@@ -72,7 +72,7 @@ fn workspace_map(
     Ok(out)
 }
 
-fn workspace_term(modules: &BTreeMap<String, Vec<Term>>) -> Term {
+pub(super) fn workspace_term(modules: &BTreeMap<String, Vec<Term>>) -> Term {
     Term::Vector(
         modules
             .iter()
@@ -96,7 +96,7 @@ fn workspace_term(modules: &BTreeMap<String, Vec<Term>>) -> Term {
     )
 }
 
-fn request_term(
+pub(super) fn request_term(
     intent: &str,
     provenance: &Term,
     base: &BTreeMap<String, Vec<Term>>,
@@ -126,7 +126,7 @@ fn request_term(
     )
 }
 
-fn closed_map<'a>(
+pub(super) fn closed_map<'a>(
     term: &'a Term,
     context: &str,
     fields: &[&str],
@@ -147,11 +147,11 @@ fn closed_map<'a>(
     Ok(map)
 }
 
-fn field<'a>(map: &'a BTreeMap<TermOrdKey, Term>, name: &str) -> &'a Term {
+pub(super) fn field<'a>(map: &'a BTreeMap<TermOrdKey, Term>, name: &str) -> &'a Term {
     &map[&TermOrdKey(Term::symbol(name))]
 }
 
-fn string_field(
+pub(super) fn string_field(
     map: &BTreeMap<TermOrdKey, Term>,
     name: &str,
     context: &str,
@@ -162,7 +162,7 @@ fn string_field(
     }
 }
 
-fn usize_field(
+pub(super) fn usize_field(
     map: &BTreeMap<TermOrdKey, Term>,
     name: &str,
     context: &str,
@@ -175,7 +175,7 @@ fn usize_field(
     }
 }
 
-fn lower_hex64(value: &str) -> bool {
+pub(super) fn lower_hex64(value: &str) -> bool {
     value.len() == 64
         && value
             .bytes()
@@ -313,7 +313,7 @@ fn verify_minimal_top_form_diff(
     Ok((replacements, additions, removals))
 }
 
-fn decode_report(
+pub(super) fn decode_report(
     report: Term,
     request: &Term,
     intent: &str,

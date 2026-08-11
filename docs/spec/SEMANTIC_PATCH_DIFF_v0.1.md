@@ -10,8 +10,9 @@ artifact, and has no production Rust producer or fallback.
 
 This v0.1 profile covers module creation, removal, whole-module structural replacement,
 and changed top-level forms. Manifest-field diff, rename/move inference, recursive
-within-form minimization, semantic three-way merge, and final filesystem application
-remain separate R4.2.c work. Absence of those features is an explicit profile boundary,
+within-form minimization and final filesystem application remain separate R4.2.c work.
+Semantic three-way merge is separately governed by `SEMANTIC_PATCH_MERGE_v0.1.md`.
+Absence of the other features is an explicit profile boundary,
 not permission for a host implementation to invent them.
 
 ## Request
@@ -106,5 +107,5 @@ WASI consumers. Host paths, timestamps, file metadata, and workspace-vector orde
 not enter semantic patch identity.
 
 This protocol establishes neither aggregate SD-PATCH H2 nor R4.2.c closure. Those claims
-still require GenesisCode-authoritative merge, complete apply/report outcomes, strict
-legacy-producer absence, native/WASI observations, and independent durable evidence.
+still require complete apply/report outcomes, strict legacy-producer absence,
+native/WASI observations, and independent durable evidence.

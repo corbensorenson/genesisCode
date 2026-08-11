@@ -9,7 +9,11 @@ not introduce a separate patch format or identity.
 Production module-workspace diff planning is governed by
 `SEMANTIC_PATCH_DIFF_v0.1.md`. It emits this patch format through the artifact-loaded
 GenesisCode normalizer. Its top-form minimality profile does not imply manifest diff,
-rename inference, recursive byte minimization, or three-way merge support.
+rename inference or recursive byte minimization.
+
+Production three-way workspace merge is governed by
+`SEMANTIC_PATCH_MERGE_v0.1.md`. Every successful merge embeds the canonical diff report
+whose patch uses this schema; conflicts never produce a partial patch.
 
 ## Top-level
 
