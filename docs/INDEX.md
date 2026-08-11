@@ -164,6 +164,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/status/REDTEAM_REPORT.md` - active P0/P1 risk summary.
 - `docs/status/SELFHOST_CUTOVER.md` - generated selfhost command-routing dashboard; routing is not semantic authority.
 - `docs/status/SELFHOST_AUTHORITY_v0.1.md` - generated H0-H4 semantic selfhost authority view.
+- `docs/spec/SELF_HOST_BOUNDARY.md` - normative stage0 trust model, residual host assumptions, and self-host cutover boundary.
+- `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json` - content-addressed six-domain stage0 authority; only S0-K is TCB-A.
+- `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json` - closed machine schema for the stage0 authority.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
 - `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.
 - `.genesis/perf/full_selfhost_cutover_profile_report.json` - optional local full-cutover aggregate observation, produced only by `scripts/update_full_selfhost_cutover_profile_report.sh`.

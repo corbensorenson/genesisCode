@@ -1,0 +1,232 @@
+{
+  "canonicalSpec": "docs/spec/SELF_HOST_BOUNDARY.md",
+  "canonicalSpecSha256": "b7da4f4a7a38ea0d62fb9c1f443b783a032ba767883f8c8d49e59e48a5e6fc3a",
+  "contentIdentitySha256": "9e59cb97538ffbb39156085a1e71997ba00f759c277a51724527795ac6f31651",
+  "identityInputs": [
+    "build-recipe",
+    "compiler-linker-target-architecture-features",
+    "dependencies-and-generated-inputs",
+    "domain-versions-and-source-membership",
+    "semantic-and-abi-profiles",
+    "selfhost-artifact-manifest-and-bootstrap-mode",
+    "verifier-and-trust-roots-for-release-claims"
+  ],
+  "kind": "genesis/stage0-trust-contract-v0.1",
+  "layerOrder": [
+    "S0-R",
+    "S0-A",
+    "S0-P",
+    "S0-K",
+    "S0-X",
+    "S0-H"
+  ],
+  "mappingStatus": "responsibility-domains-with-current-implementation-anchors; exhaustive-source-membership-and-dependency-edges-deferred-to-R4.1.e",
+  "nonclaims": [
+    "does-not-establish-H1-H4",
+    "does-not-enforce-the-R4.1.e-dependency-firewall",
+    "does-not-migrate-a-semantic-decision",
+    "does-not-prove-a-bootstrap-fixpoint",
+    "does-not-authorize-GenesisBench-Foundry-Challenge-or-Model-work"
+  ],
+  "residualHostAssumptions": [
+    "hardware-and-operating-system",
+    "memory-allocation-and-process-isolation",
+    "pinned-host-compiler-and-linker-before-H3-DDC",
+    "cryptographic-provider-and-platform-drivers",
+    "independent-release-verifier-and-signing-roots"
+  ],
+  "schema": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
+  "schemaSha256": "07136db8aedfd0f9092d88c02498b4e6c8e6772ae1b712b3924eb5ac38232c9c",
+  "stage0Domains": [
+    {
+      "authority": [
+        "immutable-runtime-values-and-collections",
+        "reference-pure-evaluation",
+        "pure-primitive-allowlist",
+        "lexical-scope-and-closures",
+        "deterministic-resource-accounting",
+        "seal-creation-sealing-unsealing-and-token-identity"
+      ],
+      "demotionTasks": [
+        "R4.5.a",
+        "R4.5.c",
+        "R7.2.a",
+        "R7.2.b"
+      ],
+      "forbiddenAuthority": [
+        "source-decoding-or-canonical-printing",
+        "compiled-artifact-codec-or-optimized-execution",
+        "effect-interpretation-or-capability-policy",
+        "artifact-promotion-or-release-authority",
+        "ambient-filesystem-time-random-network-process-environment-ui-or-model-access"
+      ],
+      "id": "S0-K",
+      "implementationEvidence": [
+        "policies/kernel_tcb_contract.toml",
+        "crates/gc_kernel/src/eval_treewalk.rs",
+        "crates/gc_kernel/src/eval_forms.rs",
+        "crates/gc_kernel/src/eval_prims.rs",
+        "crates/gc_kernel/src/value.rs"
+      ],
+      "name": "pure-semantic-kernel",
+      "tcbA": true,
+      "trustReason": "an irreducible reference semantics and unforgeable token mechanism must check higher layers"
+    },
+    {
+      "authority": [
+        "source-decoding",
+        "canonicalization-and-printing",
+        "term-ordering",
+        "canonical-content-hashing"
+      ],
+      "demotionTasks": [
+        "R4.2.a",
+        "R4.5.a",
+        "R4.5.c",
+        "R7.2.f"
+      ],
+      "forbiddenAuthority": [
+        "evaluation-or-seal-issuance",
+        "capability-decisions-or-effects",
+        "artifact-promotion",
+        "fallback-selection"
+      ],
+      "id": "S0-R",
+      "implementationEvidence": [
+        "crates/gc_coreform/src/lib.rs",
+        "crates/gc_coreform/src/term.rs",
+        "crates/gc_coreform/src/parse.rs",
+        "crates/gc_coreform/src/canon.rs",
+        "crates/gc_coreform/src/print.rs"
+      ],
+      "name": "coreform-representation-and-identity",
+      "tcbA": false,
+      "trustReason": "stage0 must identify the first artifact before a selfhost frontend can be production authority"
+    },
+    {
+      "authority": [
+        "reserve-unforgeable-protocol-tokens",
+        "bind-minimal-protocol-constructors-and-predicates",
+        "assemble-a-fresh-prelude-environment",
+        "load-a-reviewed-selfhost-artifact"
+      ],
+      "demotionTasks": [
+        "R4.2.a",
+        "R4.2.b",
+        "R4.4.c"
+      ],
+      "forbiddenAuthority": [
+        "ambient-effects-or-policy-grants",
+        "hidden-semantic-fallback",
+        "package-resolution",
+        "optimizer-acceptance-or-release-promotion"
+      ],
+      "id": "S0-P",
+      "implementationEvidence": [
+        "crates/gc_prelude/src/prelude.rs",
+        "crates/gc_prelude/src/prelude_contract_effect.rs",
+        "prelude/modules/manifest.toml",
+        "prelude/prelude.gc"
+      ],
+      "name": "protocol-and-bootstrap-assembly",
+      "tcbA": false,
+      "trustReason": "protocol authority and an initial environment must exist before untrusted GenesisCode executes"
+    },
+    {
+      "authority": [
+        "decode-exact-versioned-compiled-artifacts",
+        "validate-compiled-structure-and-resource-bounds",
+        "execute-compiled-forms-under-reference-equivalence-obligations"
+      ],
+      "demotionTasks": [
+        "R3.1.f",
+        "R3.2.d",
+        "R7.2.d",
+        "R4.5.c"
+      ],
+      "forbiddenAuthority": [
+        "capability-access-or-policy-authority",
+        "unknown-format-acceptance",
+        "workload-shaped-semantic-shortcuts",
+        "self-issued-equivalence"
+      ],
+      "id": "S0-X",
+      "implementationEvidence": [
+        "crates/gc_cli_driver/src/kernel_exec.rs",
+        "crates/gc_kernel/src/compiled.rs",
+        "crates/gc_kernel/src/compiled_blob.rs",
+        "crates/gc_kernel/src/compiled_compile.rs",
+        "crates/gc_kernel/src/compiled_runtime"
+      ],
+      "name": "compiled-artifact-and-optimized-execution",
+      "tcbA": false,
+      "trustReason": "the current production driver defaults to compiled execution and therefore this remains a distinct trusted production domain"
+    },
+    {
+      "authority": [
+        "bind-source-manifest-profile-dependency-cache-and-artifact-identities",
+        "reject-stale-malformed-noncanonical-over-budget-or-wrong-profile-inputs",
+        "select-only-an-explicit-bootstrap-mode"
+      ],
+      "demotionTasks": [
+        "R4.4.a",
+        "R4.4.c",
+        "R4.4.d",
+        "R4.5.c"
+      ],
+      "forbiddenAuthority": [
+        "language-semantics",
+        "silent-source-embedded-or-rust-fallback",
+        "package-publication-or-obligation-waiver",
+        "equivalence-self-approval"
+      ],
+      "id": "S0-A",
+      "implementationEvidence": [
+        "crates/gc_prelude/src/selfhost_coreform_v1.rs",
+        "crates/gc_prelude/src/selfhost_coreform_manifest.rs",
+        "crates/gc_prelude/src/selfhost_compiled_cache.rs",
+        "selfhost/toolchain_manifest.gc"
+      ],
+      "name": "bootstrap-artifact-identity-and-admission",
+      "tcbA": false,
+      "trustReason": "the first executable selfhost artifact must be authenticated before participating in bootstrap"
+    },
+    {
+      "authority": [
+        "deny-by-default-capability-decisions",
+        "bounded-host-operation-dispatch",
+        "host-input-and-error-normalization",
+        "hard-cancellation-where-promised-and-explicit-resource-closure",
+        "deterministic-effect-logging-and-strict-replay",
+        "declared-platform-transport-and-embedding"
+      ],
+      "demotionTasks": [
+        "R4.3.b",
+        "R4.5.b",
+        "R4.5.c",
+        "R5.5.a",
+        "R7.3.a"
+      ],
+      "forbiddenAuthority": [
+        "pure-language-semantics-or-seal-minting",
+        "source-canonicalization",
+        "selfhost-semantic-fallback",
+        "optimizer-verification",
+        "package-policy-waiver-or-release-promotion"
+      ],
+      "id": "S0-H",
+      "implementationEvidence": [
+        "crates/gc_effects/src",
+        "crates/gc_cli_driver/src/host_bridge_runtime.rs",
+        "crates/gc_cli/src/main.rs",
+        "crates/gc_wasi_cli/src/main.rs",
+        "crates/gc_wasm/src/lib.rs"
+      ],
+      "name": "effect-host-abi-and-containment",
+      "tcbA": false,
+      "trustReason": "physical hosts necessarily implement declared external effects even when orchestration is selfhosted"
+    }
+  ],
+  "tcbA": "S0-K",
+  "version": "0.1"
+}

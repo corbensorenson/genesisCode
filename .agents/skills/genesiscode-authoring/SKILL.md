@@ -23,6 +23,7 @@ Deliver the smallest complete deterministic, obligation-gated change while prese
 - `docs/spec/HOST_ABI_INDEX_v0.1.json`
 - `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`
 - `docs/spec/SELF_HOST_BOUNDARY.md`
+- `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`
 - `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 - `ROADMAP.md`
 - `upgrade_plan.md`

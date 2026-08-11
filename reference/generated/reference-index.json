@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 279,
+    "canonicalSources": 281,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 102,
+    "schemas": 103,
     "symbols": 170
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "2307e37ac3e96b0ab704dedcbce55eab4a26b36b763d734fec9aa8e998712fcd"
+      "sha256": "8b0dda61de915954b4382e427087ced2dfe8a8e16550272ff68732ce16e140e5"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "f5da53a0916cddb299657dea340edee8a8cb770223a79700ea64b97695842d1a"
+      "sha256": "0b4b17c56991b0fbae88b2c47394addba92297fc2178f8cfc249a19aa554d1af"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "2e49e33b2fa53f71921d4b99dae1f6880f29406717b77b8c84c693802246dcc6"
+      "sha256": "152c5e9507d7e0443ab016701ca55562a9423afdb50c02a49b392a0980f9b2d5"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -196,7 +196,7 @@
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
-      "sha256": "ebbe0b352c8c1d62971ab8541d92a5bb20b8cd4091ae2fc9800adc70b584b872"
+      "sha256": "1bb410b2635226b1ef0850892cfd6ecd8628bcad6c4c551906cc8f10cbc02a41"
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/prompt-cards.json",
@@ -296,7 +296,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "f230a7c1aebc470209e4ee5e8541f417cad31b05ab74e5fb11e5b5a2ece608c4"
+      "sha256": "d0b223c719133c1c4a671572094d3f422da4f9b9e0b3bf551a56f7f83932987b"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -368,7 +368,7 @@
     },
     {
       "path": "docs/spec/DOC_TOPOLOGY_v0.1.md",
-      "sha256": "eb2c203dea5e5b6a0dc62e2f6c882da6ac6f67f6330e6324c2f69ab5f80a8cf2"
+      "sha256": "c2fef5335a4b6687bfdc5bcd40f79442c83baaa7c0af119addc48d346c8eb2cf"
     },
     {
       "path": "docs/spec/DOMAIN_KITS_v0.1.md",
@@ -860,7 +860,7 @@
     },
     {
       "path": "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
-      "sha256": "1f1090afac76590ef84ae412548e5a033ffdc12e07cd6fe832fb415fc0efecbf"
+      "sha256": "c8874be18477c73542e368ffb276d4af1b71767747cb4738b7b5f11549b6529d"
     },
     {
       "path": "docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md",
@@ -1008,7 +1008,7 @@
     },
     {
       "path": "docs/spec/SELF_HOST_BOUNDARY.md",
-      "sha256": "b52c4947c745b38b4049512445adbcb9a7fcd8f849bef785226ac895b625876e"
+      "sha256": "b7da4f4a7a38ea0d62fb9c1f443b783a032ba767883f8c8d49e59e48a5e6fc3a"
     },
     {
       "path": "docs/spec/SIGNING.md",
@@ -1017,6 +1017,14 @@
     {
       "path": "docs/spec/SOURCE_SIZE_BUDGET_v0.1.md",
       "sha256": "f31895d3ca194f14095f8a51fffb2286da7dae28c733a6886d90488b4fdd982a"
+    },
+    {
+      "path": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
+      "sha256": "164d49f66a5357ca7e5f866216864b865cab1eded4567f94316a696c58d58b07"
+    },
+    {
+      "path": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json",
+      "sha256": "07136db8aedfd0f9092d88c02498b4e6c8e6772ae1b712b3924eb5ac38232c9c"
     },
     {
       "path": "docs/spec/TESTING_BUNDLE_v0.1.md",
@@ -1092,7 +1100,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
-      "sha256": "0fc989913bb1ac06af8f3f96f4a6a9e5b98c73153238f0fd81e68f9dbef64c17"
+      "sha256": "4bceb4a0690610ac4eb72e7a34dfb1e7edeb33f1d232cb274225800cd1530c1a"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md",

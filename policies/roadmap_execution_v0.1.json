@@ -941,8 +941,11 @@
         "crates/gc_cli_driver",
         "crates/gc_patches",
         "crates/gc_obligations",
+        "docs/INDEX.md",
+        "docs/spec",
         "docs/status",
-        "policies"
+        "policies",
+        "scripts"
       ],
       "guard_checks": [
         "scripts/check_selfhost_boundary.sh",

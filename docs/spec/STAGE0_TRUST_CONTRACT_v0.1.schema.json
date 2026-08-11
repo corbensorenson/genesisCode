@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/stage0-trust-contract-v0.1.json",
+  "title": "GenesisCode Stage0 Trust Contract v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "canonicalSpec",
+    "canonicalSpecSha256",
+    "contentIdentitySha256",
+    "tcbA",
+    "mappingStatus",
+    "layerOrder",
+    "identityInputs",
+    "residualHostAssumptions",
+    "schema",
+    "schemaSha256",
+    "nonclaims",
+    "stage0Domains"
+  ],
+  "properties": {
+    "kind": { "const": "genesis/stage0-trust-contract-v0.1" },
+    "version": { "const": "0.1" },
+    "canonicalSpec": { "const": "docs/spec/SELF_HOST_BOUNDARY.md" },
+    "canonicalSpecSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "contentIdentitySha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "tcbA": { "const": "S0-K" },
+    "mappingStatus": {
+      "const": "responsibility-domains-with-current-implementation-anchors; exhaustive-source-membership-and-dependency-edges-deferred-to-R4.1.e"
+    },
+    "layerOrder": {
+      "const": ["S0-R", "S0-A", "S0-P", "S0-K", "S0-X", "S0-H"]
+    },
+    "identityInputs": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+    "residualHostAssumptions": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+    "schema": { "const": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json" },
+    "schemaSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nonclaims": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+    "stage0Domains": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/domain" }
+    }
+  },
+  "$defs": {
+    "nonEmptyUniqueStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "relativePaths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "not": { "pattern": "^(?:/|.*(?:^|/)\\.\\.(?:/|$))" }
+      }
+    },
+    "roadmapTasks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^R[0-9]+\\.[0-9]+\\.[a-z]$" }
+    },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "tcbA",
+        "authority",
+        "forbiddenAuthority",
+        "implementationEvidence",
+        "demotionTasks",
+        "trustReason"
+      ],
+      "properties": {
+        "id": { "enum": ["S0-K", "S0-R", "S0-P", "S0-X", "S0-A", "S0-H"] },
+        "name": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "tcbA": { "type": "boolean" },
+        "authority": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "forbiddenAuthority": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "implementationEvidence": { "$ref": "#/$defs/relativePaths" },
+        "demotionTasks": { "$ref": "#/$defs/roadmapTasks" },
+        "trustReason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

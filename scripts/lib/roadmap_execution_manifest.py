@@ -1853,13 +1853,38 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
     blocked_probe_by_id = {
         str(task["id"]): task for task in blocked_frontier_probe["tasks"]
     }
-    blocked_probe_by_id["R2.2.f"]["start_ready"] = False
-    if [
+    baseline_focus_ids = [
+        task["id"]
+        for task in build_execution_slice(baseline, policy_path)["focus_tasks"]
+    ]
+    if not baseline_focus_ids:
+        raise ManifestError("self-test requires a start-ready frontier task")
+    blocked_id = baseline_focus_ids[0]
+    blocked_probe_by_id[blocked_id]["start_ready"] = False
+    resolved_blocked = resolve_frontier_candidates(
+        blocked_frontier_probe,
+        require_string_list(
+            require_object(
+                policy.get("execution_frontier"), "policy.execution_frontier"
+            ).get("ordered_task_ids"),
+            "execution_frontier.ordered_task_ids",
+            non_empty=True,
+        ),
+        require_object(policy.get("workstreams"), "policy.workstreams"),
+        allowed_task_ids=core_task_ids,
+    )
+    expected_after_block = [
+        task_id
+        for task_id, _ in resolved_blocked
+        if blocked_probe_by_id[task_id]["start_ready"] is True
+    ][:1]
+    observed_after_block = [
         task["id"]
         for task in build_execution_slice(blocked_frontier_probe, policy_path)[
             "focus_tasks"
         ]
-    ] != ["R4.1.a"]:
+    ]
+    if not expected_after_block or observed_after_block != expected_after_block:
         raise ManifestError("self-test let a blocked frontier anchor stall ready work")
     cases: List[Tuple[str, Any]] = []
 

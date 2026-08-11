@@ -74,6 +74,14 @@ if [[ "$MODE" != "diff" && "$MODE" != "strict" ]]; then
   exit 2
 fi
 
+# Validate the normative trust model even when diff mode has no Rust files to scan.
+python3 scripts/lib/stage0_trust_contract.py \
+  --root "$ROOT_DIR" \
+  --contract docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json \
+  --schema docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json \
+  --spec docs/spec/SELF_HOST_BOUNDARY.md \
+  --self-test
+
 resolve_base() {
   if [[ -n "${SELFHOST_BOUNDARY_BASE:-}" ]]; then
     echo "$SELFHOST_BOUNDARY_BASE"

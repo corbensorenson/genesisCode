@@ -13,6 +13,8 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
 - `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - `docs/spec/SELF_HOST_BOUNDARY.md`
+- `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`
+- `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json`
 - `docs/spec/WASM.md`
 - `docs/spec/WASI.md`
 
@@ -23,3 +25,5 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - Machine-readable index contracts (`HOST_ABI_INDEX_v0.1.json`,
   `HOST_ABI_SCHEMA_INDEX_v0.1.json`) are documented in `HOST_ABI.md`.
 - Runtime limit semantics are consolidated into `docs/spec/CAPS_TOML.md`.
+- Stage0 trust-domain authority is machine-readable in
+  `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`; only S0-K is TCB-A.

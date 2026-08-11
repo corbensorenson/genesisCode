@@ -51,67 +51,264 @@ Measurable retirement criteria:
 Only after these criteria are satisfied should bootstrap-era Rust semantic helpers be considered
 fully retired from active production usage.
 
-## Permanent Minimal TCB Contract (v1 release scope)
+## Stage0 Trust Contract v0.1
 
-GenesisCode v1 selfhost claims are scoped to a bounded permanent TCB instead of literal
-"zero Rust in repository" closure.
+### Claim
 
-Contract:
+Stage0 is the smallest independently versioned host implementation needed to ingest a
+reviewed GenesisCode artifact, establish the unforgeable protocol environment, execute
+the pure language, and mediate explicitly authorized effects. Stage0 is not synonymous
+with every Rust crate, the CLI, a routed `.gc` wrapper, the package manager, or the full
+release toolchain.
 
-1. Production semantics authority remains selfhost-first.
-   - Parser/canonicalization/hash/tooling semantics execute through selfhost artifacts by default.
-   - Rust semantic fallback is forbidden in production profiles.
-2. Permanent Rust TCB is limited to:
-   - TCB-A kernel crates (`gc_coreform`, `gc_kernel`, `gc_prelude`).
-   - Host capability transport/runtime bridge (`gc_effects` + CLI embedding shells).
-3. Rust parity references are non-authoritative.
-   - Parity-only fixtures/harnesses may exist for migration/comparison, but they cannot define
-     production semantic truth.
-4. Any expansion of permanent TCB requires explicit spec update + gate updates.
-   - `scripts/check_selfhost_boundary.sh --strict`
-   - `scripts/check_kernel_tcb_contract.sh`
-   - `scripts/check_vcs_selfhost_contract.sh`
-   - `scripts/check_host_api_evolution_contracts.sh`
-   - `scripts/check_gcpm_operation_contract_pack.sh`
-   - `scripts/check_bootstrap_retirement_gate.sh`
-   - `scripts/check_selfhost_readiness_scorecard.sh`
+The stage0 implementation has multiple trust domains. Only S0-K is TCB-A. This contract
+assigns responsibilities and identifies current implementation anchors; it does not yet
+claim exhaustive file membership. Exact source ownership and allowed dependency edges
+are established later by R4.1.e. Neither language, crate, binary, repository location,
+nor a historical label determines trust by itself.
 
-This contract is the canonical boundary for feature-matrix selfhost claims and release readiness.
+The closed machine authority is `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`, validated
+against `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json` by the existing self-host
+boundary gate. Its content identity excludes only the identity field itself.
 
-Full-selfhost closure profile:
-- `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md` defines the no-exception closure path and gate contract.
-- `scripts/check_full_selfhost_cutover_profile.sh` enforces that contract without
-  retaining output; `scripts/update_full_selfhost_cutover_profile_report.sh` explicitly
-  produces `.genesis/perf/full_selfhost_cutover_profile_report.json` and its history.
+### Threat and Failure Model
 
-## Trust Boundaries
+Stage0 treats source, compiled artifacts, manifests, caches, effect payloads, provider
+responses, filesystem state, environment state, and all user-authored code as untrusted.
+It also assumes that any optimized producer, self-hosted tool, model, benchmark solver,
+or Foundry candidate may be incorrect or adversarial. Those producers may propose bytes
+but may not verify or promote their own output.
 
-### TCB-A: Pure Kernel (must stay tiny)
+The current residual assumptions are a non-malicious but fallible operating system,
+hardware, pinned host compiler/linker, cryptographic provider, and independent release
+verifier/signing root. Compromise below those assumptions is outside a single stage0
+process's proof boundary and must be addressed by reproducible cross-host bootstrap,
+diverse double compilation, independent verification, and signed provenance rather than
+by an in-process self-check.
 
-This is the minimal trusted base that executes GenesisCode:
-- CoreForm canonicalization + hashing (`gc_coreform`)
-- Pure evaluator + value hashing (`gc_kernel`)
-- Prelude protocol hardening (`gc_prelude`)
+Every boundary is fail closed. Unknown versions, malformed structure, exhausted limits,
+identity mismatch, verifier disagreement, unsupported host behavior, cleanup failure,
+and missing evidence return a typed rejection. None may select a broader fallback,
+continue with partially verified state, or silently reduce a claim.
 
-This TCB is what we compile to `wasm32-unknown-unknown` (`crates/gc_wasm`) and embed in browser/Node.
+### Exact Stage0 Identity
 
-### TCB-B: Effect Runner + Tooling (allowed to do I/O)
+A stage0 identity binds, at minimum:
+- the exact source tree and build recipe;
+- compiler, linker, target, architecture, and enabled feature identities;
+- every normal/build dependency and generated source input;
+- S0-K/S0-R/S0-P/S0-X/S0-A/S0-H domain versions and source memberships;
+- CoreForm, language, value/effect hash, compiled-artifact, Prelude, host-ABI, capability,
+  resource-accounting, and error profiles;
+- the accepted self-host artifact, manifest, and bootstrap mode;
+- independent verifier and trust-root identities when making a release claim.
 
-This layer is outside kernel purity and may do filesystem/network I/O:
-- capability runner + `.gclog` + replay (`gc_effects`)
-- package/GenesisGraph tooling, bundling, policies
-- obligations and evidence store
+Two binaries with the same user-facing version but a different bound field are distinct
+stage0 implementations. Host paths, timestamps, mutable cache state, and secrets are not
+identity inputs; a build that cannot normalize or explicitly profile a host-dependent
+field is not reproducible-bootstrap evidence.
 
-Under WASI, this layer runs as `genesis_wasi.wasm`.
+### Trust Domains
 
-Self-hosting targets this layer first: we want tooling logic (formatter, packager, optimizer passes, etc.)
-to be written *in GenesisCode* and run on TCB-A.
+#### S0-K: Pure semantic kernel (TCB-A)
+
+Authority:
+- immutable runtime values and persistent collection semantics;
+- the reference G-lambda evaluator and total pure primitive allowlist;
+- lexical scope, closures, deterministic resource accounting, and sealed failures;
+- seal creation, sealing, unsealing, and token identity.
+
+Must not contain:
+- source parsing, canonical printing, package/artifact policy, bytecode codecs,
+  optimized execution, effect interpretation, filesystem, time, randomness, network,
+  process, environment, UI, model access, or release authority.
+
+Why trusted now:
+- some executable must define the irreducible reference semantics and unforgeable token
+  mechanism used to check all higher layers.
+
+Demotion path:
+- replaceability is established by the independent kernel conformance work in R4.5;
+  changing implementation language alone does not reduce this semantic trust.
+
+#### S0-R: CoreForm representation and identity
+
+Authority:
+- source decoding, canonicalization, canonical printing, term ordering, and canonical
+  content hashes for the exact declared profile.
+
+Must not contain:
+- evaluation, seal issuance, capability decisions, effects, artifact promotion, or
+  fallback selection.
+
+Failure impact:
+- can change the program presented to S0-K or the identity bound to evidence, but cannot
+  directly perform an effect.
+
+Why trusted now:
+- stage0 must parse and identify the initial reviewed artifact before a self-hosted
+  frontend can become H2 authority.
+
+Demotion path:
+- R4.2.a moves production decisions to GenesisCode; R7.2.f and R4.5 validate the codec
+  independently. The Rust reference may remain unreachable test material.
+
+#### S0-P: Protocol and bootstrap assembly
+
+Authority:
+- reserve UNHANDLED, EFFECT, and ERROR tokens before user evaluation;
+- bind the minimal trusted protocol constructors/predicates and load the reviewed
+  Prelude/self-host artifact into a fresh environment;
+- fail closed on malformed, mismatched, stale, or unsupported bootstrap inputs.
+
+Must not contain:
+- ambient effects, policy grants, hidden semantic fallback, package resolution,
+  optimizer acceptance, or release promotion.
+
+Failure impact:
+- can misbind initial names or expose protocol authority, so its exact assembly surface
+  remains trusted even though its execution is pure.
+
+Why trusted now:
+- protocol seals must be established outside untrusted user code and an initial loader
+  is unavoidable before the GenesisCode toolchain can run.
+
+Demotion path:
+- shrink to seal reservation plus a content-addressed loader after self-hosted Prelude
+  and frontend authority are H2 and bootstrap fixpoint evidence is H3.
+
+#### S0-X: Compiled artifact decoder and optimized executor
+
+Authority:
+- decode only the exact versioned compiled artifact format;
+- validate structural/resource invariants before allocation or execution;
+- execute compiled forms under the same observable semantics and accounting as S0-K.
+
+Must not contain:
+- capability access, policy authority, acceptance of unknown format versions, semantic
+  shortcuts keyed to source/workload identity, or self-issued equivalence claims.
+
+Failure impact:
+- malformed acceptance can violate memory/resource safety; execution drift can change
+  pure results. This domain is therefore separate from TCB-A and may not redefine S0-K.
+
+Why trusted now:
+- the current production tier executes this representation; differential checks reduce
+  risk but are not proof and do not make the implementation part of the reference core.
+
+Demotion path:
+- R3 translation validation, R7 proof obligations, and independent conformance make
+  compiled output proposal-only. Unsupported or unverified output is rejected or routed
+  explicitly to a profile-permitted lower tier before evaluation, never silently.
+
+#### S0-A: Bootstrap artifact identity and admission
+
+Authority:
+- bind exact source, manifest, profile, dependency, compiled-cache, and artifact hashes;
+- reject missing, stale, malformed, noncanonical, over-budget, or wrong-profile inputs;
+- select only an explicitly configured bootstrap mode.
+
+Must not contain:
+- language semantics, silent source/embedded/Rust fallback, package publication,
+  obligation waiver, or equivalence self-approval.
+
+Failure impact:
+- can substitute the program/toolchain that higher layers execute, so its acceptance
+  decision is a separate trust domain even where it reuses S0-R or S0-X codecs.
+
+Why trusted now:
+- a stage0 loader must authenticate the first executable self-host artifact before that
+  artifact can participate in later bootstrap stages.
+
+Demotion path:
+- H3 witnesses and diverse double compilation bind the accepted bytes; H4 adds an
+  independently implemented verifier.
+
+#### S0-H: Effect-host ABI and containment
+
+Authority:
+- deny-by-default capability decisions and bounded host operation dispatch;
+- normalize host inputs/errors, enforce resource and payload limits, and keep secrets
+  outside deterministic artifacts;
+- hard cancellation where promised, explicit resource closure, deterministic logging,
+  and strict replay;
+- platform transport and embedding only for declared ABI operations.
+
+Must not contain:
+- pure language semantics, seal minting, source canonicalization, self-host semantic
+  fallback, optimizer verification, package policy waiver, or release promotion.
+
+Failure impact:
+- controls real-world authority and containment, but may not alter pure S0-K results.
+
+Why trusted now:
+- physical hosts necessarily implement filesystem, network, process, clock, GPU/UI,
+  device, plugin, and model effects. Self-hosting orchestration does not eliminate this
+  platform trust.
+
+Demotion path:
+- generated ABIs, sandboxed components, capability conformance, replay, and independent
+  host implementations reduce implementation trust while the physical host boundary
+  remains explicit.
+
+### Layer Order
+
+1. S0-R decodes and canonically identifies source/bootstrap data.
+2. S0-A authenticates exact inputs and profile before loading.
+3. S0-P creates protocol seals and the initial environment.
+4. S0-K defines reference pure semantics.
+5. S0-X may execute only accepted compiled artifacts under S0-K equivalence obligations.
+6. S0-H receives only explicit EFFECT requests and returns normalized sealed results.
+
+No later layer may grant authority to an earlier layer, verify itself, mint protocol
+tokens, or convert its own observation into H-level or release completion.
+
+### Current Host Semantics That Remain Trusted
+
+- memory allocation and process isolation provided by the operating system/runtime;
+- exact Rust numeric, UTF-8/byte, BLAKE3, and persistent-value behavior where named by
+  S0-K/S0-R profiles;
+- safe bounded decoding and structural validation in S0-X/S0-A;
+- platform syscalls, TLS/crypto providers, drivers, and device APIs reached only through
+  S0-H;
+- compiler/linker/toolchain correctness for the stage0 binary until H3/DDC witnesses;
+- the independent verifier and signing roots used for release evidence.
+
+These are explicit residual assumptions, not GenesisCode semantic-ownership claims.
+Routing a command through `.gc`, matching a Rust reference, or producing a local report
+does not remove them.
+
+### Claims and Nonclaims
+
+- This contract does not claim H1-H4 for any semantic decision.
+- TCB-A means S0-K only; it is not a crate list or all code linked into a binary.
+- Stage0 includes the other named trust domains, but they remain separately reviewable,
+  replaceable, and forbidden from acquiring S0-K authority.
+- H0/H1/H2/H3/H4 apply per semantic decision, never to the repository as a whole.
+- S0-K and unavoidable S0-H host semantics may be marked not-applicable for self-host
+  migration only when this contract names the residual trust; they cannot be mislabeled
+  H2 merely because a GenesisCode wrapper invokes them.
+- Bytecode speed, artifact hash agreement, differential parity, and routing are evidence
+  inputs, not authority or independent verification.
+
+### Follow-on Enforcement
+
+- R4.1.b freezes exact H-level predicates against this domain model.
+- R4.1.c gives every command and semantic decision one producing implementation,
+  production authority, verifier, fallback status, host binding, and H-level.
+- R4.1.d regenerates status views from that ledger.
+- R4.1.e enforces exact source membership and allowed dependency edges for every domain.
 
 ## Rust Host-Only ABI (Strict)
 
-The Rust host boundary is intentionally narrow and versioned. Rust is allowed to provide only
-transport/adaptation for effectful capabilities and embedding glue. Language semantics must not
-expand in Rust beyond existing TCB-A crates during cutover.
+The Rust host boundary is intentionally narrow and versioned. Existing Rust stage0 semantics are
+partitioned into S0-K/S0-R/S0-P/S0-X/S0-A above; effectful adaptation belongs to S0-H. Outside
+those reviewed responsibilities, Rust may provide only transport and embedding glue. New language
+semantics must not expand in Rust during cutover.
+
+The following v0.2 path list is a coarse migration guard for semantic-token growth, not a stage0
+membership list or authority grant. An allowed path acquires no trust merely by matching this list.
+R4.1.e must replace this coarse allowlist with exact source membership and dependency edges.
 
 Approved Rust host-side modules (v0.2):
 - `crates/gc_effects/src/lib.rs`
@@ -185,6 +382,12 @@ CI enforcement:
 - `scripts/check_gcpm_operation_contract_pack.sh` fail-closes `gcpm` contract drift by enforcing:
   - versioned operation contract pack parity (`build/run/test/trace/qualify`)
   - deterministic failure taxonomy constant stability.
+## Historical v0.2 Migration Plan (Non-Status)
+
+The following sections preserve the v0.2 migration design. They do not report current semantic
+ownership, assign an H-level, or supersede the stage0 contract above. Current authority is
+established only by the future R4.1.c semantic-ownership ledger and its independently checked
+evidence.
 
 ## Self-Host Definition (v0.2)
 
