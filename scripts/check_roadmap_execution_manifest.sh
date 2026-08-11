@@ -158,16 +158,16 @@ if missing_frontier:
         "roadmap-execution-manifest: Core frontier is not continuation-complete: "
         + ", ".join(missing_frontier)
     )
-foundry = closure("F2.q")
-if "R9.4.f" not in foundry or unfinished_preview & foundry or any(
-    task_id.startswith("R8.5.") for task_id in foundry
+foundry_foundation = closure("F2.r")
+if not {"R9.4.f", "F2.q"}.issubset(foundry_foundation) or unfinished_preview & foundry_foundation or any(
+    task_id.startswith("R8.5.") for task_id in foundry_foundation
 ):
-    raise SystemExit("roadmap-execution-manifest: Foundry calibration is not Core-only")
+    raise SystemExit("roadmap-execution-manifest: Foundry Foundation is not Core-only")
 challenge = closure("R8.5.v")
-if not {"R9.4.f", "R8.5.u"}.issubset(challenge):
-    raise SystemExit("roadmap-execution-manifest: GenesisChallenge lost its Core handoff")
+if not {"R9.4.f", "F2.r", "R8.5.u"}.issubset(challenge):
+    raise SystemExit("roadmap-execution-manifest: GenesisChallenge lost its Foundation handoff")
 if unfinished_preview & challenge or any(
-    task_id.startswith("F")
+    (task_id.startswith("F") and task_id not in foundry_foundation)
     or (task_id.startswith("R8.5.") and task_id not in {"R8.5.u", "R8.5.v"})
     for task_id in challenge
 ):
@@ -175,7 +175,7 @@ if unfinished_preview & challenge or any(
 if "R8.5.s" not in closure("F2.y"):
     raise SystemExit("roadmap-execution-manifest: Foundry integration bypassed Benchmark Trust")
 model_readiness = closure("R8.5.t")
-if not {"R8.5.s", "F2.q"}.issubset(model_readiness) or {
+if not {"R8.5.s", "F2.r"}.issubset(model_readiness) or {
     "R8.5.u", "R8.5.v"
 } & model_readiness:
     raise SystemExit("roadmap-execution-manifest: Genesis Model readiness lane drift")

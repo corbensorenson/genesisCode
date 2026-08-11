@@ -75,7 +75,7 @@
       "R9.3.a",
       "R9.4.a"
     ],
-    "rationale": "R0.4.j is closed on exact-main operational release-DAG and watchdog evidence; its class-separated timing calibration is preserved for R9.1.c release qualification. Close P1.5 through R2.2.f, publish the complete R4.1 SH-A truth boundary, freeze R5.1/R5.3, migrate R4.2.a-e, finish only the R2/R3 prerequisites needed for compiler authority, then complete R4.2.f-g and R4.3-R4.5 before remaining agent-product work. Select the first start-ready frontier candidate so a blocked downstream anchor cannot stall its prerequisite; the continuation-complete anchor set covers every unfinished R9.4.f ancestor and filters out post-Core work. One repository-changing GenesisCode transaction owns the lane through exact reviewed R9.4.f; that signed Core handoff then activates independently governed GenesisBench, Foundry-calibration, GenesisChallenge, optional-pack, and F1/F3/F4 lanes, while Genesis Model remains gated by R8.5.t.",
+    "rationale": "R0.4.j is closed on exact-main operational release-DAG and watchdog evidence; its class-separated timing calibration is preserved for R9.1.c release qualification. Close P1.5 through R2.2.f, publish the complete R4.1 SH-A truth boundary, freeze R5.1/R5.3, migrate R4.2.a-e, finish only the R2/R3 prerequisites needed for compiler authority, then complete R4.2.f-g and R4.3-R4.5 before remaining agent-product work. Select the first start-ready frontier candidate so a blocked downstream anchor cannot stall its prerequisite; the continuation-complete anchor set covers every unfinished R9.4.f ancestor and filters out post-Core work. One repository-changing GenesisCode transaction owns the lane through exact reviewed R9.4.f. That signed Core handoff activates F2.a-r Foundry Foundation and Genesis Algorithms v0.1 first; F2.r then activates independently governed GenesisBench and GenesisChallenge while later Foundry expansion, optional packs, and F1/F3/F4 use isolated contracts. Genesis Model remains gated by R8.5.t.",
     "task_context": {
       "R2.2.f": {
         "product_lanes": ["GenesisCode"],
@@ -555,6 +555,7 @@
       "root_task_id": "R8.5.s",
       "required_ancestor_task_ids": [
         "R9.4.f",
+        "F2.r",
         "R8.5.a",
         "R8.5.b",
         "R8.5.c",
@@ -565,7 +566,15 @@
         "R5.7.e",
         "R7.1.f",
         "R7.3.f",
-        "R7.4.d"
+        "R7.4.d",
+        "F2.s",
+        "F2.t",
+        "F2.u",
+        "F2.v",
+        "F2.w",
+        "F2.x",
+        "F2.y",
+        "F2.z"
       ],
       "forbidden_workstreams": [
         "R5.6",
@@ -577,7 +586,6 @@
         "R8.3",
         "R8.5",
         "F1",
-        "F2",
         "F3",
         "F4"
       ],
@@ -593,9 +601,9 @@
         "R8.5.s"
       ]
     },
-    "foundry-calibration": {
-      "root_task_id": "F2.q",
-      "required_ancestor_task_ids": ["R9.4.f"],
+    "foundry-foundation": {
+      "root_task_id": "F2.r",
+      "required_ancestor_task_ids": ["R9.4.f", "F2.q"],
       "forbidden_task_ids": [
         "R1.4.o",
         "R1.4.p",
@@ -605,7 +613,6 @@
         "R7.1.f",
         "R7.3.f",
         "R7.4.d",
-        "F2.r",
         "F2.s",
         "F2.t",
         "F2.u",
@@ -633,7 +640,7 @@
     },
     "genesischallenge-season": {
       "root_task_id": "R8.5.v",
-      "required_ancestor_task_ids": ["R9.4.f", "R8.5.u"],
+      "required_ancestor_task_ids": ["R9.4.f", "F2.r", "R8.5.u"],
       "forbidden_task_ids": [
         "R1.4.o",
         "R1.4.p",
@@ -642,7 +649,15 @@
         "R5.7.e",
         "R7.1.f",
         "R7.3.f",
-        "R7.4.d"
+        "R7.4.d",
+        "F2.s",
+        "F2.t",
+        "F2.u",
+        "F2.v",
+        "F2.w",
+        "F2.x",
+        "F2.y",
+        "F2.z"
       ],
       "forbidden_workstreams": [
         "R5.6",
@@ -654,7 +669,6 @@
         "R8.3",
         "R8.5",
         "F1",
-        "F2",
         "F3",
         "F4"
       ],
@@ -668,14 +682,13 @@
         "R8.5.s",
         "R8.5.h",
         "R8.5.i",
-        "F2.q"
+        "F2.r"
       ],
       "forbidden_task_ids": [
         "R5.7.e",
         "R7.1.f",
         "R7.3.f",
         "R7.4.d",
-        "F2.r",
         "F2.s",
         "F2.t",
         "F2.u",
@@ -710,7 +723,6 @@
         "R7.1.f",
         "R7.3.f",
         "R7.4.d",
-        "F2.r",
         "F2.s",
         "F2.t",
         "F2.u",
@@ -1155,7 +1167,7 @@
     "R1.4.o": [
       "R0.4.k",
       "R1.4.n",
-      "R9.4.f"
+      "F2.r"
     ],
     "R1.5.a": [
       "R1.4.a",
@@ -1175,18 +1187,18 @@
     ],
     "R1.4.q": [
       "R1.4.j",
-      "R9.4.f"
+      "F2.r"
     ],
     "R1.4.r": [
       "R1.4.l",
       "R1.4.n",
-      "R9.4.f"
+      "F2.r"
     ],
     "R1.4.p": [
       "R1.4.o",
       "R1.4.q",
       "R1.4.r",
-      "R9.4.f"
+      "F2.r"
     ],
     "R1.7.b": [
       "R1.4.l"
@@ -1249,7 +1261,7 @@
       "R8.2.r"
     ],
     "R8.5.a": [
-      "R9.4.f",
+      "F2.r",
       "R1.4.a",
       "R1.4.b",
       "R1.4.c",
@@ -1270,7 +1282,7 @@
       "R1.4.r"
     ],
     "R8.5.u": [
-      "R9.4.f"
+      "F2.r"
     ],
     "R8.5.v": [
       "R8.5.u"
@@ -1398,7 +1410,7 @@
     ],
     "R8.5.i": [
       "R8.5.h",
-      "F2.q"
+      "F2.r"
     ],
     "R8.5.j": [
       "R8.5.i",

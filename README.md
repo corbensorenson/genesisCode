@@ -70,13 +70,34 @@ provenance, and custom-404 surfaces against that commit.
 - `genesis.dependency-mirror.json`: closed fetch-once, content-addressed mirror, clean offline-build, and kernel network-denial policy
 - `policies/cargo_cache_v0.1.json`: closed, content-addressed Cargo cache scopes that prevent script- and profile-specific rebuild islands
 
+## Genesis Foundry and Genesis Algorithms
+
+After the signed GenesisCode v1 Core handoff, Genesis Foundry is the first downstream
+program. It searches declared typed mechanism grammars under deterministic resource
+bounds, retains candidates, failures, counterexamples, proofs, and cost evidence, and
+can only propose changes. The mutable research workspace never enters the production
+compiler, runtime, package, or release dependency graph.
+
+Useful accepted results cross a separate destination-owned boundary into
+`genesis/algorithms`: an ordinary versioned `.gc` package collection with stable APIs,
+exact applicability and complexity contracts, deterministic fallbacks, provenance,
+licenses, tests, and generated human/agent documentation. Foundry may search against
+release N and propose N+1, but cannot verify, sign, or publish its own proposal. The
+first independently reproduced Foundry Foundation and Genesis Algorithms release is
+the finite prerequisite for new GenesisBench and GenesisChallenge work; later Foundry
+expansion remains independent.
+
+The canonical architecture and task sequence are in `ROADMAP.md` section F2.
+
 ## GenesisBench
 
-GenesisBench is the project’s benchmark-first adoption surface. It tests whether an
-agent can learn GenesisCode from a frozen repository/runtime/documentation snapshot
-and complete real language tasks under exact context, tool, capability, attempt, and
-scoring rules. Quality is determined by executable artifacts, never model-judge
-preference.
+GenesisBench is the project’s model-evaluation and adoption surface after the finite
+Foundry Foundation. It tests whether an agent can learn exact frozen GenesisCode and
+Genesis Algorithms releases from a repository/runtime/documentation snapshot and
+complete real language and library tasks under exact context, tool, capability,
+attempt, and scoring rules. It consumes only disclosed package releases, never mutable
+Foundry state or search-specific oracles. Quality is determined by executable
+artifacts, never model-judge preference.
 
 - Active profile: `docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`
 - Fixed Cold Acquisition agent: `docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json`
