@@ -43,7 +43,7 @@ Every surface must satisfy the complete promotion set, including an unbound surf
 6. `P-SECURITY`: fuzzing, resource-limit, ambiguity, downgrade, and profile-confusion closure.
 7. `P-R9-FREEZE`: independently verified R9.1.a release-candidate freeze.
 
-Promotion is monotonic. A stable identity cannot be reinterpreted, demoted, or reassigned; incompatible bytes or semantics require a new identity. A dependency must be stable under the same release candidate before its dependent can become stable. Retiring a stable v1 reader requires a later major compatibility policy, an offline migrator, corpus or telemetry evidence, and a published support window. Candidate changes before freeze require a new candidate ID, migration record, golden vectors, and synchronized source authority.
+Promotion is monotonic. A stable identity cannot be reinterpreted, demoted, or reassigned; incompatible bytes or semantics require a new identity. A dependency must be stable under the same release candidate before its dependent can become stable. Retiring a stable v1 reader requires every condition in `docs/spec/SUPPORT_POLICY_v0.1.md`, including a successor-major policy, at least 730 days of explicit deprecation, a bounded migrator, goldens, corpus or telemetry evidence, rollback, and separate review authority. Candidate changes before freeze require a new candidate ID, migration record, golden vectors, and synchronized source authority.
 
 ## Current Matrix
 

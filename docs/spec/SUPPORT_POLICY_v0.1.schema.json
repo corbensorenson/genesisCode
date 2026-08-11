@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.org/spec/support-policy-v0.1.schema.json",
+  "title": "GenesisCode Support Policy v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["applicability", "auditDate", "canonicalSpec", "canonicalSpecSha256", "contentIdentitySha256", "deprecation", "endOfLife", "failure", "identity", "kind", "lifecycle", "nonclaims", "readers", "resourceLimits", "schema", "schemaSha256", "securityExceptions", "sourceBindings", "version"],
+  "properties": {
+    "applicability": {
+      "type": "object", "additionalProperties": false,
+      "required": ["activationTask", "currentClaim", "currentReleaseTrain", "releaseFamily", "v1StableActive"],
+      "properties": {
+        "activationTask": {"const": "R9.1.a"},
+        "currentClaim": {"const": "preview-candidate-only"},
+        "currentReleaseTrain": {"const": "0.2.0"},
+        "releaseFamily": {"const": "v1.x"},
+        "v1StableActive": {"const": false}
+      }
+    },
+    "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "canonicalSpec": {"const": "docs/spec/SUPPORT_POLICY_v0.1.md"},
+    "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "deprecation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["active", "identityChange", "migrationAndRollback", "minimumDays", "minimumSubsequentMinorReleases", "structuredDiagnostics"],
+      "properties": {
+        "active": {"type": "array", "maxItems": 0},
+        "identityChange": {"const": "required-for-observable-byte-or-semantic-change"},
+        "migrationAndRollback": {"const": "required"},
+        "minimumDays": {"const": 365},
+        "minimumSubsequentMinorReleases": {"const": 2},
+        "structuredDiagnostics": {"const": "required"}
+      }
+    },
+    "endOfLife": {
+      "type": "object", "additionalProperties": false,
+      "required": ["artifactRetention", "finalMajorSuccessorDays", "minimumLifecycleDays", "ordinaryRemovalAuthority"],
+      "properties": {
+        "artifactRetention": {"const": "signed-history-verification-migrations-and-advisories-retained-where-possible"},
+        "finalMajorSuccessorDays": {"const": 730},
+        "minimumLifecycleDays": {"const": 1278},
+        "ordinaryRemovalAuthority": {"const": "separate-reviewed-record-required"}
+      }
+    },
+    "failure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["error", "futureReader", "missingReader", "unknownReader"],
+      "properties": {
+        "error": {"const": "explicit-SupportPolicyError-no-panic"},
+        "futureReader": {"const": "reject-before-payload-interpretation"},
+        "missingReader": {"const": "reject-except-named-package-pre-schema-migration"},
+        "unknownReader": {"const": "reject-before-payload-interpretation"}
+      }
+    },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decisionInputs", "hashProfile", "stateTransition"],
+      "properties": {
+        "decisionInputs": {"const": "profile-id-plus-complete-normalized-query-evidence-and-result"},
+        "hashProfile": {"const": "genesis/hash-profile/gcv0.2-blake3"},
+        "stateTransition": {"const": "never-authorized-by-query-result"}
+      }
+    },
+    "kind": {"const": "genesis/support-policy-v0.1"},
+    "lifecycle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ambientTime", "maintenanceDays", "orderedPhases", "securityOnlyDays", "standardDays", "transitionAuthority"],
+      "properties": {
+        "ambientTime": {"const": "forbidden-explicit-reviewed-lifecycle-record-only"},
+        "maintenanceDays": {"const": 365},
+        "orderedPhases": {"const": ["preview", "standard", "maintenance", "security-only", "end-of-life"]},
+        "securityOnlyDays": {"const": 365},
+        "standardDays": {"const": 548},
+        "transitionAuthority": {"const": "separate-signed-or-independently-reviewed-release-record"}
+      }
+    },
+    "nonclaims": {"$ref": "#/$defs/nonemptyStrings"},
+    "readers": {
+      "type": "object", "additionalProperties": false,
+      "required": ["inventory", "legacyRule", "retirement", "sourceRegistries", "stableActivation", "unknown"],
+      "properties": {
+        "inventory": {"type": "array", "minItems": 18, "maxItems": 18, "uniqueItems": true, "items": {"$ref": "#/$defs/reader"}},
+        "legacyRule": {"const": "read-only-with-exactly-one-migration-record"},
+        "retirement": {"const": "successor-major-policy-plus-730-days-plus-migrator-goldens-corpus-evidence-and-rollback"},
+        "sourceRegistries": {"const": ["genesis.compatibility.json", "genesis.version-surfaces.json"]},
+        "stableActivation": {"const": "R9.1.a"},
+        "unknown": {"const": "reject"}
+      }
+    },
+    "resourceLimits": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidenceReferences", "fieldBytes", "securityExceptionDays"],
+      "properties": {
+        "evidenceReferences": {"const": 32},
+        "fieldBytes": {"const": 4096},
+        "securityExceptionDays": {"const": 90}
+      }
+    },
+    "schema": {"const": "docs/spec/SUPPORT_POLICY_v0.1.schema.json"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "securityExceptions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["active", "authority", "protectedInvariants", "renewal", "semanticChange", "testEvidence"],
+      "properties": {
+        "active": {"type": "array", "maxItems": 0},
+        "authority": {"const": "temporary-review-candidate-never-runtime-grant"},
+        "protectedInvariants": {"const": ["kernel-purity", "seal-unforgeability", "explicit-errors", "deny-by-default-capabilities", "resource-bounds", "hard-cancellation", "deterministic-logging", "strict-replay", "canonical-identity", "independent-evidence", "signing-authority", "release-gates"]},
+        "renewal": {"const": "new-reviewed-record"},
+        "semanticChange": {"const": "replacement-identity-and-migrator-required"},
+        "testEvidence": {"const": "one-to-32-strict-lexical-unique-references"}
+      }
+    },
+    "sourceBindings": {
+      "type": "array", "minItems": 8, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "mode", "path"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "mode": {"enum": ["compatibility-registry", "migration-planning", "reader-inventory", "reader-runtime", "release-policy", "support-evaluator", "support-verification", "version-policy", "version-surfaces"]},
+          "path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "version": {"const": "0.1"}
+  },
+  "$defs": {
+    "nonemptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "reader": {
+      "type": "object", "additionalProperties": false,
+      "required": ["compatibilityId", "component", "currentWriter", "migrationRecord", "mode", "reader"],
+      "properties": {
+        "compatibilityId": {"type": "string", "pattern": "^genesis/compat/v1/[a-z][a-z0-9-]*$"},
+        "component": {"type": "string", "minLength": 1},
+        "currentWriter": {"type": "string", "minLength": 1},
+        "migrationRecord": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^M-[A-Z0-9-]+$"}]},
+        "mode": {"enum": ["current", "legacy-read-only"]},
+        "reader": {"type": "string", "minLength": 1}
+      }
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

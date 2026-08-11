@@ -1,0 +1,108 @@
+{
+  "applicability": {
+    "activationTask": "R9.1.a",
+    "currentClaim": "preview-candidate-only",
+    "currentReleaseTrain": "0.2.0",
+    "releaseFamily": "v1.x",
+    "v1StableActive": false
+  },
+  "auditDate": "2026-08-11",
+  "canonicalSpec": "docs/spec/SUPPORT_POLICY_v0.1.md",
+  "canonicalSpecSha256": "05c0e8f5b203619c0145565e7c6f711074c08ebea6b60d947089e31b36120369",
+  "contentIdentitySha256": "ff05236d7536f36db376ac8533fb3321889e96a1715ef5a8e908a799b83ed061",
+  "deprecation": {
+    "active": [],
+    "identityChange": "required-for-observable-byte-or-semantic-change",
+    "migrationAndRollback": "required",
+    "minimumDays": 365,
+    "minimumSubsequentMinorReleases": 2,
+    "structuredDiagnostics": "required"
+  },
+  "endOfLife": {
+    "artifactRetention": "signed-history-verification-migrations-and-advisories-retained-where-possible",
+    "finalMajorSuccessorDays": 730,
+    "minimumLifecycleDays": 1278,
+    "ordinaryRemovalAuthority": "separate-reviewed-record-required"
+  },
+  "failure": {
+    "error": "explicit-SupportPolicyError-no-panic",
+    "futureReader": "reject-before-payload-interpretation",
+    "missingReader": "reject-except-named-package-pre-schema-migration",
+    "unknownReader": "reject-before-payload-interpretation"
+  },
+  "identity": {
+    "decisionInputs": "profile-id-plus-complete-normalized-query-evidence-and-result",
+    "hashProfile": "genesis/hash-profile/gcv0.2-blake3",
+    "stateTransition": "never-authorized-by-query-result"
+  },
+  "kind": "genesis/support-policy-v0.1",
+  "lifecycle": {
+    "ambientTime": "forbidden-explicit-reviewed-lifecycle-record-only",
+    "maintenanceDays": 365,
+    "orderedPhases": ["preview", "standard", "maintenance", "security-only", "end-of-life"],
+    "securityOnlyDays": 365,
+    "standardDays": 548,
+    "transitionAuthority": "separate-signed-or-independently-reviewed-release-record"
+  },
+  "nonclaims": [
+    "No v1 release, stable support activation, compatibility promotion, or EOL transition is claimed.",
+    "Current accepted readers are preview behavior until exact reviewed R9.1.a promotion.",
+    "Eligibility validation grants no removal, exception, compatibility, signing, or release authority.",
+    "Compatibility and lifecycle are not inferred from version labels or ambient time.",
+    "No self-host authority, package, backend, target, benchmark, Foundry result, model, assurance level, or release level is promoted."
+  ],
+  "readers": {
+    "inventory": [
+      {"compatibilityId": "genesis/compat/v1/bootstrap", "component": "selfhost-toolchain-artifact", "currentWriter": "genesis/selfhost-toolchain-artifact-v0.2/:v=1", "migrationRecord": null, "mode": "current", "reader": "genesis/selfhost-toolchain-artifact-v0.2/:v=1"},
+      {"compatibilityId": "genesis/compat/v1/coreform", "component": "canonical-coreform-v0.2", "currentWriter": "genesis/coreform/v0.2", "migrationRecord": null, "mode": "current", "reader": "genesis/coreform/v0.2"},
+      {"compatibilityId": "genesis/compat/v1/coreform", "component": "canonical-term-hash", "currentWriter": "genesis/hash-profile/gcv0.2-blake3", "migrationRecord": null, "mode": "current", "reader": "genesis/hash-profile/gcv0.2-blake3"},
+      {"compatibilityId": "genesis/compat/v1/effect-log", "component": "gclog", "currentWriter": "3", "migrationRecord": "M-GCLOG-2-TO-3", "mode": "legacy-read-only", "reader": "2"},
+      {"compatibilityId": "genesis/compat/v1/effect-log", "component": "gclog", "currentWriter": "3", "migrationRecord": null, "mode": "current", "reader": "3"},
+      {"compatibilityId": "genesis/compat/v1/evidence", "component": "evidence-bundle-v0.1", "currentWriter": "genesis/evidence-profile/v0.1", "migrationRecord": null, "mode": "current", "reader": "genesis/evidence-profile/v0.1"},
+      {"compatibilityId": "genesis/compat/v1/language-profile", "component": "language-semantics-v0.2", "currentWriter": "v0.2", "migrationRecord": null, "mode": "current", "reader": "v0.2"},
+      {"compatibilityId": "genesis/compat/v1/package", "component": "gpk", "currentWriter": "2", "migrationRecord": "M-GPK-1-TO-2", "mode": "legacy-read-only", "reader": "1"},
+      {"compatibilityId": "genesis/compat/v1/package", "component": "gpk", "currentWriter": "2", "migrationRecord": null, "mode": "current", "reader": "2"},
+      {"compatibilityId": "genesis/compat/v1/package", "component": "lock", "currentWriter": "2", "migrationRecord": "M-LOCK-1-TO-2", "mode": "legacy-read-only", "reader": "1"},
+      {"compatibilityId": "genesis/compat/v1/package", "component": "lock", "currentWriter": "2", "migrationRecord": null, "mode": "current", "reader": "2"},
+      {"compatibilityId": "genesis/compat/v1/package", "component": "package-manifest", "currentWriter": "1", "migrationRecord": null, "mode": "current", "reader": "1"},
+      {"compatibilityId": "genesis/compat/v1/package", "component": "package-manifest", "currentWriter": "1", "migrationRecord": "M-PACKAGE-PRESCHEMA-TO-1", "mode": "legacy-read-only", "reader": "pre-schema"},
+      {"compatibilityId": "genesis/compat/v1/package", "component": "workspace", "currentWriter": "1", "migrationRecord": null, "mode": "current", "reader": "1"},
+      {"compatibilityId": "genesis/compat/v1/patch", "component": "semantic-gcpatch", "currentWriter": "1", "migrationRecord": null, "mode": "current", "reader": "1"},
+      {"compatibilityId": "genesis/compat/v1/patch", "component": "vcs-patch", "currentWriter": "1", "migrationRecord": null, "mode": "current", "reader": "1"},
+      {"compatibilityId": "genesis/compat/v1/snapshot", "component": "vcs-snapshot", "currentWriter": "1", "migrationRecord": null, "mode": "current", "reader": "1"},
+      {"compatibilityId": "genesis/compat/v1/value-effect-hash", "component": "value-and-effect-request-hash", "currentWriter": "genesis/value-effect-hash/v0.2", "migrationRecord": null, "mode": "current", "reader": "genesis/value-effect-hash/v0.2"}
+    ],
+    "legacyRule": "read-only-with-exactly-one-migration-record",
+    "retirement": "successor-major-policy-plus-730-days-plus-migrator-goldens-corpus-evidence-and-rollback",
+    "sourceRegistries": ["genesis.compatibility.json", "genesis.version-surfaces.json"],
+    "stableActivation": "R9.1.a",
+    "unknown": "reject"
+  },
+  "resourceLimits": {
+    "evidenceReferences": 32,
+    "fieldBytes": 4096,
+    "securityExceptionDays": 90
+  },
+  "schema": "docs/spec/SUPPORT_POLICY_v0.1.schema.json",
+  "schemaSha256": "392285b43779f1e569dd20ea88aa52ed29f4a602e67a0f1fe9afb180c05d35cb",
+  "securityExceptions": {
+    "active": [],
+    "authority": "temporary-review-candidate-never-runtime-grant",
+    "protectedInvariants": ["kernel-purity", "seal-unforgeability", "explicit-errors", "deny-by-default-capabilities", "resource-bounds", "hard-cancellation", "deterministic-logging", "strict-replay", "canonical-identity", "independent-evidence", "signing-authority", "release-gates"],
+    "renewal": "new-reviewed-record",
+    "semanticChange": "replacement-identity-and-migrator-required",
+    "testEvidence": "one-to-32-strict-lexical-unique-references"
+  },
+  "sourceBindings": [
+    {"id": "source/compatibility-registry", "mode": "compatibility-registry", "path": "genesis.compatibility.json"},
+    {"id": "source/migration-planning", "mode": "migration-planning", "path": "docs/spec/MIGRATION_PROFILE_v0.1.md"},
+    {"id": "source/reader-inventory", "mode": "reader-inventory", "path": "crates/gc_types/src/support_policy_readers.rs"},
+    {"id": "source/reader-runtime", "mode": "reader-runtime", "path": "crates/gc_effects/src/log.rs"},
+    {"id": "source/release-policy", "mode": "release-policy", "path": "policies/release_notes_v0.1.json"},
+    {"id": "source/support-evaluator", "mode": "support-evaluator", "path": "crates/gc_types/src/support_policy.rs"},
+    {"id": "source/support-verification", "mode": "support-verification", "path": "crates/gc_types/tests/support_policy.rs"},
+    {"id": "source/version-policy", "mode": "version-policy", "path": "docs/spec/VERSIONING_v0.1.md"},
+    {"id": "source/version-surfaces", "mode": "version-surfaces", "path": "genesis.version-surfaces.json"}
+  ],
+  "version": "0.1"
+}

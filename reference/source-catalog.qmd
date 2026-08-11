@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**311 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**314 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `833e7da1c6c8` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `ceb2bd0589ba` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `0dd915fba729` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `38fee0067c4d` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `17bf33936b10` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-11) | md | `bd0e7b8580e7` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `ebf50143ae88` |
@@ -61,7 +61,7 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
 | [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `10c14eba91e0` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `7b131666fba5` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `f35c3927c5e5` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -322,6 +322,9 @@ toc-depth: 2
 | [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json) | GenesisCode Stage0 Dependency Boundary v0.1 | schema | `5de329ff06cf` |
 | [`docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`](../docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json) | genesis/stage0-trust-contract-v0.1 | json | `164d49f66a53` |
 | [`docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json`](../docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json) | GenesisCode Stage0 Trust Contract v0.1 | schema | `07136db8aedf` |
+| [`docs/spec/SUPPORT_POLICY_v0.1.json`](../docs/spec/SUPPORT_POLICY_v0.1.json) | genesis/support-policy-v0.1 | json | `5d018c7e7d36` |
+| [`docs/spec/SUPPORT_POLICY_v0.1.md`](../docs/spec/SUPPORT_POLICY_v0.1.md) | GenesisCode Support Policy v0.1 | md | `05c0e8f5b203` |
+| [`docs/spec/SUPPORT_POLICY_v0.1.schema.json`](../docs/spec/SUPPORT_POLICY_v0.1.schema.json) | GenesisCode Support Policy v0.1 | schema | `392285b43779` |
 | [`docs/spec/TESTING_BUNDLE_v0.1.md`](../docs/spec/TESTING_BUNDLE_v0.1.md) | Testing Bundle v0.1 | md | `61533a883593` |
 | [`docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`](../docs/spec/TEST_EXECUTION_PROFILES_v0.1.md) | Test Execution Profiles v0.1 | md | `474e02f5930b` |
 | [`docs/spec/TEXT_PATH_PROFILE_v0.1.json`](../docs/spec/TEXT_PATH_PROFILE_v0.1.json) | genesis/text-path-profile-v0.1 | json | `c2eedb2c40d4` |
@@ -332,8 +335,8 @@ toc-depth: 2
 | [`docs/spec/TYPES.md`](../docs/spec/TYPES.md) | Type Terms and Typechecking v0.2 | md | `dbdb58504d5b` |
 | [`docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json`](../docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json) | GenesisCode v1 Compatibility Registry v0.1 | schema | `2b3762c7a737` |
 | [`docs/spec/VALUE_EFFECT_HASH.md`](../docs/spec/VALUE_EFFECT_HASH.md) | Runtime Value Graph, Lifetime, and Hashing v0.2 | md | `bc9c851116e4` |
-| [`docs/spec/VERSIONING_v0.1.md`](../docs/spec/VERSIONING_v0.1.md) | Versioning Policy v0.1 | md | `ee885103b45d` |
-| [`docs/spec/VERSION_SURFACES_v0.1.md`](../docs/spec/VERSION_SURFACES_v0.1.md) | Version Surfaces v0.1 | md | `e93a5e1d332a` |
+| [`docs/spec/VERSIONING_v0.1.md`](../docs/spec/VERSIONING_v0.1.md) | Versioning Policy v0.1 | md | `7505b74a4b9f` |
+| [`docs/spec/VERSION_SURFACES_v0.1.md`](../docs/spec/VERSION_SURFACES_v0.1.md) | Version Surfaces v0.1 | md | `17f053dd1e1e` |
 | [`docs/spec/VERSION_SURFACES_v0.1.schema.json`](../docs/spec/VERSION_SURFACES_v0.1.schema.json) | GenesisCode Version Surfaces v0.1 | schema | `16e7df06c824` |
 | [`docs/spec/WARM_PROTOCOL_v0.2.schema.json`](../docs/spec/WARM_PROTOCOL_v0.2.schema.json) | GenesisCode warm protocol v0.2 | schema | `843128181601` |
 | [`docs/spec/WASI.md`](../docs/spec/WASI.md) | WASI Tooling Build v0.2 (Rust Bootstrap -> genesis.wasm) | md | `702fbcfe8613` |

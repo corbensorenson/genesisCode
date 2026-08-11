@@ -9,6 +9,7 @@ mod infer;
 mod module_resolution;
 pub mod profile_migration;
 pub mod profile_negotiation;
+pub mod support_policy;
 mod ty;
 mod type_compatibility;
 

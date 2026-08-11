@@ -23,6 +23,7 @@ Normative policy for GenesisCode crate, CLI, generated-artifact, and release-tra
 | Human release notes | Generated block in `CHANGELOG.md` | `scripts/check_release_notes.sh` |
 | Release smoke contract | `docs/spec/RELEASE_SMOKE_v0.1.md` | `scripts/check_release_smoke.sh` |
 | Format/hash/artifact compatibility | `genesis.version-surfaces.json` | `scripts/check_version_surfaces.sh` |
+| v1.x lifecycle, deprecation, reader retirement, security exceptions, and EOL | `docs/spec/SUPPORT_POLICY_v0.1.json` | `cargo test -p gc_types --test support_policy` |
 
 ## Semver Contract Before v1.0
 
@@ -34,6 +35,10 @@ Pre-1.0 compatibility rules:
 - Minor releases may change language/tooling semantics when docs, goldens, and migration notes are updated in the same change.
 - Any format or replay-log incompatibility must be explicit in the relevant spec and changelog entry.
 - No crates.io publication is release-ready until `scripts/check_release_smoke.sh` passes.
+
+## v1.x Support Contract
+
+`docs/spec/SUPPORT_POLICY_v0.1.md` and its closed machine profile govern v1.x lifecycle transitions, source/API deprecation windows, accepted-reader retirement, bounded security exceptions, and EOL. The policy is published before v1 so its promises can be reviewed, but it remains `preview-candidate-only`: only exact reviewed R9.1.a evidence can activate stable v1 support. Tools must query explicit lifecycle records and exact reader identities; they must not infer support from semantic-version ordering or ambient time.
 
 ## Bump Procedure
 
