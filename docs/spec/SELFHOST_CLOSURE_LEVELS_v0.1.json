@@ -1,0 +1,356 @@
+{
+  "aggregationRules": [
+    "aggregate-is-minimum-proven-level-across-closed-applicable-inventory",
+    "omitted-disputed-or-unknown-row-fails-aggregate-closed",
+    "H2-aggregate-requires-all-release-profile-decisions-at-H2-or-higher",
+    "H3-aggregate-requires-all-bootstrap-graph-members-at-H3-under-one-fixpoint-identity",
+    "H4-aggregate-requires-all-critical-semantic-and-artifact-acceptance-roots-at-H4",
+    "N/A-requires-reviewed-disposition-and-never-raises-aggregate"
+  ],
+  "applicabilityDispositions": [
+    {
+      "canSatisfyPrerequisite": true,
+      "countsTowardAggregate": true,
+      "criteria": [
+        "decision-is-intended-to-migrate-to-GenesisCode-authority",
+        "decision-key-and-release-profile-are-closed"
+      ],
+      "id": "applicable",
+      "ledgerValue": "H0-H4"
+    },
+    {
+      "canSatisfyPrerequisite": false,
+      "countsTowardAggregate": false,
+      "criteria": [
+        "exact-decision-is-named-S0-K-reference-semantics-or-unavoidable-S0-H-physical-adapter",
+        "ledger-names-stage0-domain-retained-trust-verifier-and-reason",
+        "wrapper-or-implementation-language-does-not-justify-disposition"
+      ],
+      "id": "residual-stage0",
+      "ledgerValue": "N/A"
+    },
+    {
+      "canSatisfyPrerequisite": false,
+      "countsTowardAggregate": false,
+      "criteria": [
+        "row-makes-no-semantic-decision",
+        "owning-semantic-decision-is-named-or-absence-is-justified"
+      ],
+      "id": "not-semantic-decision",
+      "ledgerValue": "N/A"
+    }
+  ],
+  "canonicalSpec": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
+  "canonicalSpecSha256": "73165edccc1c1f9ca7c810260dd49552e2839b3209a93235232757459875ace8",
+  "contentIdentitySha256": "93c437824ac6d5a8f6b022f66b898b0cca8d56ef317a99db710fe8ecb53eebdc",
+  "evidenceClasses": [
+    {
+      "id": "route-custody",
+      "minimumControls": [
+        "bypass-route-is-rejected",
+        "stale-or-wrong-profile-artifact-is-rejected"
+      ],
+      "requiredFields": [
+        "producer",
+        "subject",
+        "inputs",
+        "outputs",
+        "environment",
+        "profile",
+        "timestamps",
+        "supersession-rule",
+        "verifier",
+        "cryptographic-identity"
+      ]
+    },
+    {
+      "id": "implementation-conformance",
+      "minimumControls": [
+        "malformed-and-adversarial-inputs-fail-as-specified",
+        "resource-bounds-are-enforced",
+        "opaque-host-semantic-delegation-is-detected"
+      ],
+      "requiredFields": [
+        "source-provenance",
+        "artifact-provenance",
+        "normative-corpus",
+        "reference-oracle",
+        "diagnostic-contract",
+        "resource-contract",
+        "cryptographic-identity"
+      ]
+    },
+    {
+      "id": "production-authority",
+      "minimumControls": [
+        "each-forbidden-host-semantic-path-restoration-is-rejected",
+        "artifact-failure-fails-closed",
+        "unapproved-rollback-is-rejected"
+      ],
+      "requiredFields": [
+        "whole-program-reachability",
+        "entrypoint-parity",
+        "fallback-inventory",
+        "failure-behavior",
+        "rollback-custody",
+        "independent-verifier",
+        "cryptographic-identity"
+      ]
+    },
+    {
+      "id": "bootstrap-fixpoint",
+      "minimumControls": [
+        "source-or-toolchain-perturbation-changes-identity-or-fails-closed",
+        "stage-or-host-profile-substitution-is-rejected",
+        "unreviewed-normalization-is-rejected"
+      ],
+      "requiredFields": [
+        "hermetic-recipe",
+        "stage0-stage1-stage2-stage3-identities",
+        "two-clean-runs-per-host",
+        "two-independent-qualified-host-classes",
+        "raw-artifact-identities",
+        "normalization-profile",
+        "diverse-double-compilation-or-equivalent-source-binding",
+        "cryptographic-identity"
+      ]
+    },
+    {
+      "id": "independent-conformance",
+      "minimumControls": [
+        "producer-mutations-are-detected",
+        "hidden-or-held-back-controls-are-not-replayed",
+        "every-disagreement-blocks-promotion"
+      ],
+      "requiredFields": [
+        "independence-manifest",
+        "separate-authorship-review-build-and-operation-custody",
+        "shared-root-inventory",
+        "complete-conformance-outcomes",
+        "hidden-control-outcomes",
+        "disagreement-handling",
+        "cryptographic-identity"
+      ]
+    }
+  ],
+  "forbiddenShortcuts": [
+    "repository-wide-level-without-closed-decision-inventory",
+    "routing-wrapper-or-file-extension-as-implementation-proof",
+    "differential-parity-as-production-authority",
+    "feature-flag-or-convention-as-no-fallback-proof",
+    "producer-generated-status-as-promotion-authority",
+    "one-stage-one-run-or-one-host-as-bootstrap-fixpoint",
+    "unreviewed-normalization-of-artifact-differences",
+    "shared-producer-code-or-generated-port-as-independent-reimplementation",
+    "producer-verdict-as-independent-verification",
+    "N/A-disposition-used-to-hide-an-applicable-decision",
+    "model-optimizer-benchmark-solver-or-candidate-self-verification"
+  ],
+  "kind": "genesis/selfhost-closure-levels-v0.1",
+  "levelOrder": [
+    "H0",
+    "H1",
+    "H2",
+    "H3",
+    "H4"
+  ],
+  "levels": [
+    {
+      "id": "H0",
+      "name": "routed",
+      "negativeControls": [
+        "bypass-route",
+        "stale-artifact",
+        "wrong-profile-artifact"
+      ],
+      "nonclaims": [
+        "GenesisCode-implementation",
+        "GenesisCode-production-authority",
+        "no-fallback",
+        "bootstrap-closure"
+      ],
+      "predicates": [
+        "explicit-versioned-deterministic-route-bound-to-decision-key",
+        "authenticated-GenesisCode-source-or-artifact-is-invoked",
+        "artifact-identity-and-execution-profile-are-recorded",
+        "all-alternate-routes-and-fallbacks-are-enumerated-and-observable"
+      ],
+      "requiredEvidenceClasses": [
+        "route-custody"
+      ],
+      "requiresLevels": []
+    },
+    {
+      "id": "H1",
+      "name": "GenesisCode-implementation",
+      "negativeControls": [
+        "opaque-host-semantic-delegation",
+        "malformed-input",
+        "resource-bound-exhaustion",
+        "artifact-provenance-substitution"
+      ],
+      "nonclaims": [
+        "GenesisCode-production-authority",
+        "host-semantic-fallback-absence",
+        "bootstrap-closure"
+      ],
+      "predicates": [
+        "reviewed-GenesisCode-source-computes-the-semantic-decision",
+        "canonical-bounded-input-output-diagnostic-resource-and-effect-contracts",
+        "host-calls-are-declared-non-semantic-S0-H-adapters",
+        "normative-differential-golden-malformed-adversarial-and-resource-corpora-pass",
+        "source-to-artifact-provenance-and-admission-are-content-addressed"
+      ],
+      "requiredEvidenceClasses": [
+        "route-custody",
+        "implementation-conformance"
+      ],
+      "requiresLevels": [
+        "H0"
+      ]
+    },
+    {
+      "id": "H2",
+      "name": "GenesisCode-production-authority",
+      "negativeControls": [
+        "restore-each-host-semantic-fallback",
+        "artifact-admission-failure",
+        "execution-failure",
+        "unapproved-rollback",
+        "entrypoint-authority-divergence"
+      ],
+      "nonclaims": [
+        "bootstrap-fixpoint",
+        "independent-reimplementation"
+      ],
+      "predicates": [
+        "accepted-GenesisCode-artifact-is-sole-reachable-production-semantic-producer",
+        "no-host-embedded-source-compatibility-environment-error-timeout-recovery-or-debug-semantic-fallback",
+        "host-bindings-cannot-alter-or-replace-the-GenesisCode-decision",
+        "artifact-admission-or-execution-failure-fails-closed",
+        "rollback-selects-only-an-approved-evidenced-prior-GenesisCode-artifact",
+        "independently-controlled-verifier-checks-reachability-identity-fallback-absence-and-result-custody",
+        "all-in-profile-production-and-release-entrypoints-agree"
+      ],
+      "requiredEvidenceClasses": [
+        "route-custody",
+        "implementation-conformance",
+        "production-authority"
+      ],
+      "requiresLevels": [
+        "H0",
+        "H1"
+      ]
+    },
+    {
+      "id": "H3",
+      "name": "reproducible-bootstrap-fixpoint",
+      "negativeControls": [
+        "source-perturbation",
+        "toolchain-or-dependency-perturbation",
+        "stage-substitution",
+        "host-profile-substitution",
+        "normalization-broadening",
+        "trusting-trust-substitution"
+      ],
+      "nonclaims": [
+        "independent-reimplementation",
+        "mathematical-proof"
+      ],
+      "predicates": [
+        "hermetic-pinned-complete-bootstrap-recipe",
+        "stage0-builds-stage1-stage1-builds-stage2-stage2-builds-stage3",
+        "canonical-stage2-and-stage3-identities-are-equal",
+        "two-clean-runs-per-qualified-host-reproduce-identities",
+        "two-independently-administered-qualified-host-classes-share-fixpoint-identity",
+        "raw-identities-and-excluded-envelope-bytes-are-retained",
+        "normalization-is-specification-owned-and-rejects-unexplained-differences",
+        "DDC-or-equivalent-independent-source-to-binary-witness-binds-reviewed-source"
+      ],
+      "requiredEvidenceClasses": [
+        "route-custody",
+        "implementation-conformance",
+        "production-authority",
+        "bootstrap-fixpoint"
+      ],
+      "requiresLevels": [
+        "H0",
+        "H1",
+        "H2"
+      ]
+    },
+    {
+      "id": "H4",
+      "name": "independently-reimplemented-and-conformant",
+      "negativeControls": [
+        "shared-producer-source-or-generated-code",
+        "shared-semantic-library-or-test-oracle",
+        "producer-verdict-trust",
+        "public-vector-replay-only",
+        "producer-mutation",
+        "disagreement-suppression"
+      ],
+      "nonclaims": [
+        "mathematical-proof",
+        "absence-of-hardware-operating-system-cryptographic-or-human-trust"
+      ],
+      "predicates": [
+        "independent-path-has-separate-authorship-review-build-operation-and-custody",
+        "no-producer-source-generated-implementation-semantic-library-parser-evaluator-codegen-or-test-oracle-is-shared",
+        "machine-readable-independence-manifest-declares-all-shared-roots-and-conflicts",
+        "complete-normative-adversarial-metamorphic-resource-malformed-and-producer-mutation-suites-agree",
+        "hidden-or-held-back-controls-prove-non-replay",
+        "every-disagreement-blocks-promotion-and-release",
+        "independent-path-checks-exact-decision-artifact-profile-and-evidence-identities",
+        "independent-path-cannot-promote-itself-or-rewrite-its-evaluator"
+      ],
+      "requiredEvidenceClasses": [
+        "route-custody",
+        "implementation-conformance",
+        "production-authority",
+        "bootstrap-fixpoint",
+        "independent-conformance"
+      ],
+      "requiresLevels": [
+        "H0",
+        "H1",
+        "H2",
+        "H3"
+      ]
+    }
+  ],
+  "nonclaims": [
+    "does-not-assign-any-current-H-level",
+    "does-not-change-production-authority",
+    "does-not-broaden-stage0",
+    "does-not-establish-bootstrap-closure",
+    "does-not-close-R4.1.c-through-R4.1.e",
+    "does-not-authorize-GenesisBench-Foundry-Challenge-or-Model-work"
+  ],
+  "promotionInvalidators": [
+    "evidence-expiry-or-supersession",
+    "decision-key-or-profile-drift",
+    "route-or-dependency-drift",
+    "newly-reachable-fallback",
+    "artifact-or-verifier-identity-mismatch",
+    "verifier-conflict-or-conformance-disagreement",
+    "independence-manifest-violation"
+  ],
+  "schema": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+  "schemaSha256": "60dc6a4d860dc761f68d13c10bcc977a43e08fe39719b54154b7dec7e7d5391c",
+  "stage0Contract": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",
+  "stage0ContractIdentitySha256": "9e59cb97538ffbb39156085a1e71997ba00f759c277a51724527795ac6f31651",
+  "unitOfAssessment": [
+    "semantic-decision-id",
+    "normative-specification-and-profile-version",
+    "command-or-API-surface",
+    "target-and-runtime-profile",
+    "canonical-input-and-output-contract-identities",
+    "producing-implementation-and-artifact-identities",
+    "production-authority-and-host-binding-identities",
+    "verifier-identity",
+    "fallback-policy",
+    "evidence-closure-identity"
+  ],
+  "version": "0.1"
+}

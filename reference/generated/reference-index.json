@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 281,
+    "canonicalSources": 284,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 103,
+    "schemas": 104,
     "symbols": 170
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "8b0dda61de915954b4382e427087ced2dfe8a8e16550272ff68732ce16e140e5"
+      "sha256": "bc32c26cf671fb5d93d5d3ac4034c6660c31857acfd47f42f8343479de4df030"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "0b4b17c56991b0fbae88b2c47394addba92297fc2178f8cfc249a19aa554d1af"
+      "sha256": "e206243d86356a04ed89f4925c93c072f4f6639c7c861af96e5b9f28b9bf5536"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "152c5e9507d7e0443ab016701ca55562a9423afdb50c02a49b392a0980f9b2d5"
+      "sha256": "94706329640bf4d56a858e722ba5a77aadbadc54d7911a2cc13afdcc97dd5374"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -196,7 +196,7 @@
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
-      "sha256": "1bb410b2635226b1ef0850892cfd6ecd8628bcad6c4c551906cc8f10cbc02a41"
+      "sha256": "077f1755b9cb138e43b43ce7b648333dc6bbcaef31fee7c42ce1b14cc98a4a4d"
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/prompt-cards.json",
@@ -296,7 +296,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "d0b223c719133c1c4a671572094d3f422da4f9b9e0b3bf551a56f7f83932987b"
+      "sha256": "2e8de8d13e8bb058c8e90329210e53a416b375cc17e0d27eba2c1155b1fcece9"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -368,7 +368,7 @@
     },
     {
       "path": "docs/spec/DOC_TOPOLOGY_v0.1.md",
-      "sha256": "c2fef5335a4b6687bfdc5bcd40f79442c83baaa7c0af119addc48d346c8eb2cf"
+      "sha256": "262708b3b37b7053da442bb9fc9b511b340db7b779798f485dfa04a383743794"
     },
     {
       "path": "docs/spec/DOMAIN_KITS_v0.1.md",
@@ -860,7 +860,7 @@
     },
     {
       "path": "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
-      "sha256": "c8874be18477c73542e368ffb276d4af1b71767747cb4738b7b5f11549b6529d"
+      "sha256": "0e6905c3def6b693829f22cc821407ab33d4fe7a579d85ed57dcfdb0c2dd2ea3"
     },
     {
       "path": "docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md",
@@ -991,6 +991,18 @@
       "sha256": "a8d7f31e993ec06b2e35fa5cc4c8e05e3a316a6a651442e161e894f76a4c6877"
     },
     {
+      "path": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
+      "sha256": "4d4504048cf12ab2f5fe3c5845780100a031d86c505705d35e6be7f8baf4ff83"
+    },
+    {
+      "path": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
+      "sha256": "73165edccc1c1f9ca7c810260dd49552e2839b3209a93235232757459875ace8"
+    },
+    {
+      "path": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+      "sha256": "60dc6a4d860dc761f68d13c10bcc977a43e08fe39719b54154b7dec7e7d5391c"
+    },
+    {
       "path": "docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.md",
       "sha256": "ecdbc2b3d0bb3f356e76ada645ee8388b208fd3c5eb582e3e02a5e6c5c1253ca"
     },
@@ -1100,7 +1112,7 @@
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
-      "sha256": "4bceb4a0690610ac4eb72e7a34dfb1e7edeb33f1d232cb274225800cd1530c1a"
+      "sha256": "cffc8e8f54cc2ae49ca4ecb291eb7be572cac299252d2a5472fd517326e682e2"
     },
     {
       "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md",
@@ -1116,7 +1128,7 @@
     },
     {
       "path": "docs/status/SELFHOST_AUTHORITY_v0.1.md",
-      "sha256": "67c2eaebc31452600a207c1acd7818d3e47578c8e84a65686d9376db3e2a49eb"
+      "sha256": "80e28f73ed7a7031a8a783518cee6ff8244b021c251db40e5fe34a16e31b2b2e"
     },
     {
       "path": "docs/status/SELFHOST_CUTOVER.md",

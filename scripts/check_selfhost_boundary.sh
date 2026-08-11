@@ -82,6 +82,15 @@ python3 scripts/lib/stage0_trust_contract.py \
   --spec docs/spec/SELF_HOST_BOUNDARY.md \
   --self-test
 
+# H-level claims are cumulative per-decision predicates, not routing labels.
+python3 scripts/lib/selfhost_closure_levels.py \
+  --root "$ROOT_DIR" \
+  --contract docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json \
+  --schema docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json \
+  --spec docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md \
+  --stage0 docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json \
+  --self-test
+
 resolve_base() {
   if [[ -n "${SELFHOST_BOUNDARY_BASE:-}" ]]; then
     echo "$SELFHOST_BOUNDARY_BASE"

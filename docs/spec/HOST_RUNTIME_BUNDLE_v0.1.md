@@ -15,6 +15,9 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - `docs/spec/SELF_HOST_BOUNDARY.md`
 - `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`
 - `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json`
+- `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md`
+- `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json`
+- `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json`
 - `docs/spec/WASM.md`
 - `docs/spec/WASI.md`
 
@@ -27,3 +30,6 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - Runtime limit semantics are consolidated into `docs/spec/CAPS_TOML.md`.
 - Stage0 trust-domain authority is machine-readable in
   `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`; only S0-K is TCB-A.
+- Self-host levels are cumulative per semantic decision under
+  `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json`; `N/A` is a reviewed
+  non-promoting disposition, not a closure level.

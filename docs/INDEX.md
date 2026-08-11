@@ -167,6 +167,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELF_HOST_BOUNDARY.md` - normative stage0 trust model, residual host assumptions, and self-host cutover boundary.
 - `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json` - content-addressed six-domain stage0 authority; only S0-K is TCB-A.
 - `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.schema.json` - closed machine schema for the stage0 authority.
+- `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md` - normative per-decision H0-H4 lattice, applicability, evidence, aggregation, and invalidation rules.
+- `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json` - content-addressed machine authority for cumulative self-host closure claims.
+- `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json` - closed machine schema for the self-host closure lattice.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
 - `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.
 - `.genesis/perf/full_selfhost_cutover_profile_report.json` - optional local full-cutover aggregate observation, produced only by `scripts/update_full_selfhost_cutover_profile_report.sh`.

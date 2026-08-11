@@ -6,7 +6,7 @@ Audit date: `2026-08-11`
 
 This view reports semantic ownership and bootstrap maturity. It is intentionally separate from `docs/status/SELFHOST_CUTOVER.md`, which reports command routing only. A command routed through a `.gc` artifact remains H0 until GenesisCode owns the production semantic decision.
 
-Levels: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode production authority, `H3` reproducible bootstrap fixpoint, `H4` independently conformant.
+Levels are the cumulative per-decision predicates in `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md`: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode production authority, `H3` reproducible bootstrap fixpoint, and `H4` independently reimplemented/conformant.
 
 ## Summary
 
@@ -43,9 +43,10 @@ Levels: `H0` routed, `H1` GenesisCode implementation, `H2` GenesisCode productio
 
 ## Claim Boundary
 
+- `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json` is the machine authority; every level requires all lower-level predicates and evidence classes.
 - H0 proves routing only; it does not prove GenesisCode implementation or authority.
 - H1 requires a GenesisCode implementation but permits another production authority.
-- H2 requires GenesisCode to make the production semantic decision with strict no-fallback evidence.
-- H3 additionally requires a reproducible cross-host bootstrap fixpoint.
-- H4 additionally requires an independently authored conformant implementation or verifier.
-- The minimal pure kernel and unavoidable host effects may remain `N/A` by explicit stage0 contract; moving them into GenesisCode is not required merely to increase a score.
+- H2 requires sole reachable GenesisCode semantic production authority and independently checked no-fallback evidence.
+- H3 additionally requires repeated, cross-host stage2/stage3 fixpoint identity and DDC or equivalent source binding.
+- H4 additionally requires a separately custodied independent reimplementation or complete proof-checking verifier with hidden controls.
+- The minimal pure kernel and unavoidable host effects may use the reviewed non-promoting `N/A` disposition under the explicit stage0 contract; `N/A` is not a closure level or score credit.
