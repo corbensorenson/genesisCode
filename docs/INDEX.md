@@ -185,6 +185,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` - canonical 114-command and 38-decision ownership ledger.
 - `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json` - closed machine schema for semantic ownership facts.
 - `docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md` - closed artifact-only GenesisCode workspace refactor planning protocol, deterministic operation topology, and independent host-verification boundary.
+- `docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md` - closed artifact-only semantic workspace diff protocol, top-form minimization rule, canonical identities, and fail-closed independent decoder boundary.
 - `scripts/lib/semantic_ownership_ledger.py --refresh-identities` - explicit identity refresh for reviewed ledger edits; validation remains read-only in `scripts/check_selfhost_boundary.sh`.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
 - `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.

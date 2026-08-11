@@ -7,6 +7,7 @@ pub(super) struct SelfhostPatchToolchain {
     pub(super) patch_normalize: Value,
     pub(super) patch_preflight: Value,
     pub(super) refactor_plan: Value,
+    pub(super) patch_diff: Value,
     validate_patch: Value,
     apply_replace_node: Value,
     print_module_forms: Value,
@@ -51,6 +52,9 @@ impl SelfhostPatchToolchain {
         })?;
         let refactor_plan = env.get("core/cli::refactor-plan").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::refactor-plan".to_string())
+        })?;
+        let patch_diff = env.get("core/cli::patch-diff").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::patch-diff".to_string())
         })?;
         let apply_replace_node = env.get("core/cli::apply-replace-node").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::apply-replace-node".to_string())
@@ -119,6 +123,7 @@ impl SelfhostPatchToolchain {
             patch_normalize,
             patch_preflight,
             refactor_plan,
+            patch_diff,
             validate_patch,
             apply_replace_node,
             print_module_forms,

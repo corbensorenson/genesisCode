@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "e3fa9d52c8b9050cf17874081b8d08e02406eeff4111b3cdcb555917c99bbda2",
+  "contentIdentitySha256": "2310ab80351cf4852e273fb7ab98fe36261f5043349f23de42a73cd7dd34cd52",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1345,7 +1345,7 @@
       "id": "SD-PATCH",
       "internalOnly": false,
       "limitations": [
-        "Workspace refactor planning is GenesisCode-authoritative and artifact-only, but semantic diff, merge, and remaining patch outcomes are still Rust-authoritative"
+        "Workspace refactor planning and canonical top-form semantic workspace diff are GenesisCode-authoritative and artifact-only, but semantic merge and remaining patch apply/report outcomes are still Rust-authoritative"
       ],
       "migrationTasks": [
         "R4.2.c"
@@ -1353,17 +1353,20 @@
       "producingImplementationPaths": [
         "selfhost/patch_schema_v1.gc",
         "selfhost/patch_authority_refactor_plan_v1.gc",
+        "selfhost/patch_authority_diff_v1.gc",
         "crates/gc_patches/src"
       ],
       "productionAuthorityPaths": [
         "selfhost/patch_authority_refactor_plan_v1.gc",
+        "selfhost/patch_authority_diff_v1.gc",
         "crates/gc_patches/src"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
         "docs/spec/PATCH_SCHEMA.md",
         "docs/spec/SELFHOST_REFACTOR_PIPELINE_v0.1.md",
-        "docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md"
+        "docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md",
+        "docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md"
       ],
       "stage0Domains": [
         "S0-R"
@@ -1375,7 +1378,8 @@
       "title": "Semantic diff, patch, merge, and refactor decisions",
       "verifierPaths": [
         "scripts/check_selfhost_refactor_guard.sh",
-        "crates/gc_patches/src/patch_refactor_plan.rs"
+        "crates/gc_patches/src/patch_refactor_plan.rs",
+        "crates/gc_patches/src/patch_semantic_diff.rs"
       ]
     },
     {

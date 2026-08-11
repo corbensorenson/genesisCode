@@ -42,6 +42,8 @@ mod patch_selfhost_authority;
 mod patch_selfhost_toolchain;
 #[path = "patch_semantic.rs"]
 mod patch_semantic;
+#[path = "patch_semantic_diff.rs"]
+mod patch_semantic_diff;
 #[path = "patch_transaction.rs"]
 mod patch_transaction;
 
@@ -202,6 +204,9 @@ pub struct SemanticNodeRecord {
 pub use patch_refactor_plan::{
     SemanticRefactorConflict, SemanticRefactorModule, SemanticRefactorPlan,
     plan_semantic_refactor_with_frontend,
+};
+pub use patch_semantic_diff::{
+    SemanticWorkspaceDiff, SemanticWorkspaceModule, diff_semantic_workspaces_with_frontend,
 };
 
 #[derive(Debug, Clone)]

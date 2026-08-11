@@ -61,4 +61,17 @@ impl SelfhostPatchToolchain {
             "refactor-plan: authority",
         )
     }
+
+    pub(super) fn patch_diff_report_term(
+        &mut self,
+        request: Term,
+        step_limit: StepLimit,
+    ) -> Result<Term, PatchError> {
+        self.apply_authority_binding(
+            self.patch_diff.clone(),
+            request,
+            step_limit,
+            "patch-diff: authority",
+        )
+    }
 }

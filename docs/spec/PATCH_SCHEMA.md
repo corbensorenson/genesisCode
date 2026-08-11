@@ -6,6 +6,11 @@ Production workspace refactor planning is governed by
 `SEMANTIC_REFACTOR_PLAN_v0.1.md`. Its output is normalized into this schema; it does
 not introduce a separate patch format or identity.
 
+Production module-workspace diff planning is governed by
+`SEMANTIC_PATCH_DIFF_v0.1.md`. It emits this patch format through the artifact-loaded
+GenesisCode normalizer. Its top-form minimality profile does not imply manifest diff,
+rename inference, recursive byte minimization, or three-way merge support.
+
 ## Top-level
 
 Top-level term is a map with keys:

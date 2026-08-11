@@ -1,0 +1,247 @@
+(def selfhost/patch_diff::REQUEST_KIND "genesis/patch-diff-request-v0.1")
+(def selfhost/patch_diff::REPORT_KIND "genesis/patch-diff-v0.1")
+(def selfhost/patch_diff::PROFILE "genesis/patch-authority-v0.1")
+
+(def selfhost/patch_diff::err
+  (fn (message) ((core/error::make2 "core/patch-diff") message)))
+
+(def selfhost/patch_diff::has-key-loop
+  (fn (entries key i)
+    (if ((core/int::eq? i) (core/vec::len entries))
+      false
+      (if ((core/eq? ((core/vec::get ((core/vec::get entries) i)) 0)) key)
+        true
+        (selfhost/patch_diff::has-key-loop entries key ((core/int::add i) 1))))))
+
+(def selfhost/patch_diff::has-key
+  (fn (map key) (selfhost/patch_diff::has-key-loop (core/map::entries map) key 0)))
+
+(def selfhost/patch_diff::workspace-map-loop
+  (fn (modules i out)
+    (if ((core/int::eq? i) (core/vec::len modules))
+      out
+      (let ((module ((core/vec::get modules) i)))
+        (let ((shape (((selfhost/patch_normalize::shape module) [:forms :module-path])
+                       [:forms :module-path])))
+          (if (core/error::is? shape)
+            shape
+            (let
+              ((path ((core/map::get module) (quote :module-path)))
+                (forms ((core/map::get module) (quote :forms))))
+              (if (selfhost/patch_normalize::portable-module-path? path)
+                (if (selfhost/patch_schema::is-vec? forms)
+                  (if (selfhost/patch_diff::has-key out path)
+                    (selfhost/patch_diff::err "workspace contains duplicate module path")
+                    (selfhost/patch_diff::workspace-map-loop
+                      modules
+                      ((core/int::add i) 1)
+                      (((core/map::put out) path) forms)))
+                  (selfhost/patch_diff::err "workspace module :forms must be a vector"))
+                (selfhost/patch_diff::err
+                  "workspace module path must be portable and package-relative")))))))))
+
+(def selfhost/patch_diff::workspace-map
+  (fn (modules)
+    (if (selfhost/patch_schema::is-vec? modules)
+      (selfhost/patch_diff::workspace-map-loop modules 0 {})
+      (selfhost/patch_diff::err "workspace must be a vector of modules"))))
+
+(def selfhost/patch_diff::workspace-vector-loop
+  (fn (entries i out)
+    (if ((core/int::eq? i) (core/vec::len entries))
+      out
+      (let ((entry ((core/vec::get entries) i)))
+        (selfhost/patch_diff::workspace-vector-loop
+          entries
+          ((core/int::add i) 1)
+          ((core/vec::push out)
+            {:forms ((core/vec::get entry) 1)
+              :module-path ((core/vec::get entry) 0)}))))))
+
+(def selfhost/patch_diff::workspace-vector
+  (fn (workspace)
+    (selfhost/patch_diff::workspace-vector-loop (core/map::entries workspace) 0 [])))
+
+(def selfhost/patch_diff::path-set-loop
+  (fn (entries i out)
+    (if ((core/int::eq? i) (core/vec::len entries))
+      out
+      (selfhost/patch_diff::path-set-loop
+        entries
+        ((core/int::add i) 1)
+        (((core/map::put out) ((core/vec::get ((core/vec::get entries) i)) 0)) true)))))
+
+(def selfhost/patch_diff::path-set
+  (fn (base target)
+    (let ((with-base (selfhost/patch_diff::path-set-loop (core/map::entries base) 0 {})))
+      (selfhost/patch_diff::path-set-loop (core/map::entries target) 0 with-base))))
+
+(def selfhost/patch_diff::append-loop
+  (fn (values i out)
+    (if ((core/int::eq? i) (core/vec::len values))
+      out
+      (selfhost/patch_diff::append-loop
+        values
+        ((core/int::add i) 1)
+        ((core/vec::push out) ((core/vec::get values) i))))))
+
+(def selfhost/patch_diff::append
+  (fn (left right) (selfhost/patch_diff::append-loop right 0 left)))
+
+(def selfhost/patch_diff::replace-form-op
+  (fn (module-path index new-form)
+    (let ((step ((core/vec::push ((core/vec::push []) (quote :form))) index)))
+      {:module-path module-path
+        :new new-form
+        :op (quote :replace-node)
+        :path ((core/vec::push []) step)})))
+
+(def selfhost/patch_diff::replace-form-ops-loop
+  (fn (module-path base target i out)
+    (if ((core/int::eq? i) (core/vec::len base))
+      out
+      (let
+        ((before ((core/vec::get base) i))
+          (after ((core/vec::get target) i)))
+        (selfhost/patch_diff::replace-form-ops-loop
+          module-path
+          base
+          target
+          ((core/int::add i) 1)
+          (if ((core/eq? before) after)
+            out
+            ((core/vec::push out)
+              (selfhost/patch_diff::replace-form-op module-path i after))))))))
+
+(def selfhost/patch_diff::module-ops
+  (fn (module-path base target)
+    (if ((core/int::eq? (core/vec::len base)) (core/vec::len target))
+      (selfhost/patch_diff::replace-form-ops-loop module-path base target 0 [])
+      (let
+        ((remove {:module-path module-path :op (quote :remove-module)})
+          (add {:content target :module-path module-path :op (quote :add-module)}))
+        ((core/vec::push ((core/vec::push []) remove)) add)))))
+
+(def selfhost/patch_diff::diff-loop
+  (fn (entries base target i out)
+    (if ((core/int::eq? i) (core/vec::len entries))
+      out
+      (let ((path ((core/vec::get ((core/vec::get entries) i)) 0)))
+        (let
+          ((base-has (selfhost/patch_diff::has-key base path))
+            (target-has (selfhost/patch_diff::has-key target path)))
+          (let
+            ((next
+               (if base-has
+                 (if target-has
+                   (let
+                     ((before ((core/map::get base) path))
+                       (after ((core/map::get target) path)))
+                     (if ((core/eq? before) after)
+                       out
+                       (selfhost/patch_diff::append
+                         out
+                         (selfhost/patch_diff::module-ops path before after))))
+                   ((core/vec::push out)
+                     {:module-path path :op (quote :remove-module)}))
+                 ((core/vec::push out)
+                   {:content ((core/map::get target) path)
+                     :module-path path
+                     :op (quote :add-module)}))))
+            (selfhost/patch_diff::diff-loop
+              entries
+              base
+              target
+              ((core/int::add i) 1)
+              next)))))))
+
+(def selfhost/patch_diff::diff-ops
+  (fn (base target)
+    (selfhost/patch_diff::diff-loop
+      (core/map::entries (selfhost/patch_diff::path-set base target))
+      base
+      target
+      0
+      [])))
+
+(def selfhost/patch_diff::count-ops-loop
+  (fn (ops i replacements additions removals)
+    (if ((core/int::eq? i) (core/vec::len ops))
+      {:additions additions :removals removals :replacements replacements}
+      (let ((op ((core/map::get ((core/vec::get ops) i)) (quote :op))))
+        (if ((core/sym::eq? op) (quote :replace-node))
+          (selfhost/patch_diff::count-ops-loop
+            ops ((core/int::add i) 1) ((core/int::add replacements) 1) additions removals)
+          (if ((core/sym::eq? op) (quote :add-module))
+            (selfhost/patch_diff::count-ops-loop
+              ops ((core/int::add i) 1) replacements ((core/int::add additions) 1) removals)
+            (selfhost/patch_diff::count-ops-loop
+              ops ((core/int::add i) 1) replacements additions ((core/int::add removals) 1))))))))
+
+(def selfhost/patch_diff::request-identity-valid?
+  (fn (request)
+    (if ((core/eq? ((core/map::get request) (quote :kind)))
+          selfhost/patch_diff::REQUEST_KIND)
+      (if ((core/eq? ((core/map::get request) (quote :profile)))
+            selfhost/patch_diff::PROFILE)
+        ((core/eq? ((core/map::get request) (quote :v))) 1)
+        false)
+      false)))
+
+(def selfhost/patch_diff::report
+  (fn (request intent provenance base target)
+    (let ((ops (selfhost/patch_diff::diff-ops base target)))
+      (let ((source-patch {:intent intent :ops ops :provenance provenance :version 1}))
+        (let
+          ((normalized
+             (core/cli::patch-normalize
+               {:kind "genesis/patch-normalize-request-v0.1"
+                 :patch source-patch
+                 :profile "genesis/patch-authority-v0.1"
+                 :v 1})))
+          (if (core/error::is? normalized)
+            normalized
+            (let ((stats (selfhost/patch_diff::count-ops-loop ops 0 0 0 0)))
+              {:base-h
+                (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector base))
+                :kind selfhost/patch_diff::REPORT_KIND
+                :ok true
+                :op-count (core/vec::len ops)
+                :op-identities ((core/map::get normalized) (quote :op-identities))
+                :patch ((core/map::get normalized) (quote :normalized-patch))
+                :patch-h ((core/map::get normalized) (quote :patch-h))
+                :profile selfhost/patch_diff::PROFILE
+                :request-h (selfhost/hash::hash-term request)
+                :stats stats
+                :target-h
+                (selfhost/hash::hash-term (selfhost/patch_diff::workspace-vector target))
+                :v 1})))))))
+
+(def core/cli::patch-diff
+  (fn (request)
+    (let
+      ((shape
+         (((selfhost/patch_normalize::shape request)
+            [:base :intent :kind :profile :provenance :target :v])
+           [:base :intent :kind :profile :provenance :target :v])))
+      (if (core/error::is? shape)
+        shape
+        (if (selfhost/patch_diff::request-identity-valid? request)
+          (let
+            ((intent ((core/map::get request) (quote :intent)))
+              (provenance ((core/map::get request) (quote :provenance)))
+              (base0 ((core/map::get request) (quote :base)))
+              (target0 ((core/map::get request) (quote :target))))
+            (if (selfhost/patch_schema::is-str? intent)
+              (if (selfhost/patch_schema::is-map? provenance)
+                (let ((base (selfhost/patch_diff::workspace-map base0)))
+                  (if (core/error::is? base)
+                    base
+                    (let ((target (selfhost/patch_diff::workspace-map target0)))
+                      (if (core/error::is? target)
+                        target
+                        (selfhost/patch_diff::report
+                          request intent provenance base target)))))
+                (selfhost/patch_diff::err ":provenance must be a map"))
+              (selfhost/patch_diff::err ":intent must be a string")))
+          (selfhost/patch_diff::err "request kind/profile/version mismatch"))))))
