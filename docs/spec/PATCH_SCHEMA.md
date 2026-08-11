@@ -187,3 +187,38 @@ Node IDs are deterministic and path-derived:
   - `node-id = blake3("GCv0.2\\0semantic-node-id\\0" || module-path || "\\0" || print(path-term))`
 
 This ensures agentic patch targeting is stable for unchanged structure and independent of source formatting.
+
+### Node-index authority protocol
+
+Production node indexing and node-ID resolution are authoritative only through the
+artifact-loaded GenesisCode binding `core/cli::patch-semantic-node-index`. The
+request is a closed map with exactly these fields:
+
+- `:kind` = `"genesis/patch-node-index-request-v0.1"`
+- `:profile` = `"genesis/patch-authority-v0.1"`
+- `:module-path` = a non-empty package-relative module path string
+- `:forms` = the canonical module-form vector
+- `:v` = `1`
+
+The binding returns a closed report map with exactly `:kind`, `:module-h`,
+`:module-path`, `:nodes`, `:ok`, `:profile`, and `:v`. Its fixed values are:
+
+- `:kind` = `"genesis/patch-node-index-v0.1"`
+- `:profile` = `"genesis/patch-authority-v0.1"`
+- `:ok` = `true`
+- `:v` = `1`
+
+`:module-h` is the canonical module hash. `:nodes` is the complete preorder
+inventory described above. Every node record is a closed map with exactly:
+
+- `:module-path` and `:node-id`
+- `:path` and its canonical `:path-repr`
+- `:term-h` and `:term-tag`
+
+The host boundary must reject unknown fields, missing or reordered inventory,
+request/report path or module-h disagreement, duplicate or non-lowercase-hex64
+node IDs, and term hash/tag disagreement. It validates report binding but does
+not independently recompute node IDs. The Rust node-ID/index implementation is
+compiled only by the `gc_patches/parity-oracle` feature and is not a production
+fallback. A rejected, missing, malformed, or resource-exhausted GenesisCode
+authority result fails closed.

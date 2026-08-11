@@ -181,6 +181,54 @@ fn poison_patch_schema_validate_patch_unknown_op(artifact: &Path) {
     fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
 }
 
+fn poison_patch_authority_node_index(artifact: &Path) {
+    let src = fs::read_to_string(artifact).expect("read toolchain artifact");
+    let mut term = parse_term(&src).expect("parse toolchain artifact");
+    let Term::Map(root) = &mut term else {
+        panic!("artifact root must be map");
+    };
+    let Term::Vector(entries) = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("artifact :modules")
+    else {
+        panic!("artifact :modules must be vector");
+    };
+    let patch_mod = entries
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(module)
+                if matches!(
+                    module.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path)) if path == "selfhost/patch_authority_identity_v1.gc"
+                ) =>
+            {
+                Some(module)
+            }
+            _ => None,
+        })
+        .expect("patch authority module");
+    let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("patch authority module missing :source"),
+    };
+    let poisoned_src = format!(
+        "{module_src}\n(def core/cli::patch-semantic-node-index (fn (request) {{:kind \"genesis/patch-node-index-v0.1\" :module-h \"{}\" :module-path \"mod.gc\" :nodes [] :ok true :profile \"genesis/patch-authority-v0.1\" :v 1}}))\n",
+        "0".repeat(64)
+    );
+    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).expect("parse poisoned"))
+        .expect("canonicalize poisoned");
+    patch_mod.insert(TermOrdKey(Term::symbol(":source")), Term::Str(poisoned_src));
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms.clone()),
+    );
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(hash_module(&poisoned_forms).to_vec().into()),
+    );
+    fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
+}
+
 fn poison_patch_refactor_rename_symbol_forms(artifact: &Path) {
     let src = fs::read_to_string(artifact).expect("read toolchain artifact");
     let mut term = parse_term(&src).expect("parse toolchain artifact");
@@ -297,14 +345,15 @@ fn poison_patch_refactor_rewrite_meta_list_forms(artifact: &Path) {
             Term::Map(mm)
                 if matches!(
                     mm.get(&TermOrdKey(Term::symbol(":path"))),
-                    Some(Term::Str(path)) if path == "selfhost/patch_schema_refactor_v1.gc"
+                    Some(Term::Str(path))
+                        if path == "selfhost/patch_schema_refactor_meta_migrate_v1.gc"
                 ) =>
             {
                 Some(mm)
             }
             _ => None,
         })
-        .expect("selfhost/patch_schema_refactor_v1.gc entry");
+        .expect("selfhost/patch_schema_refactor_meta_migrate_v1.gc entry");
 
     let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
         Some(Term::Str(src)) => src.clone(),
@@ -489,6 +538,57 @@ fn semantic_node_index_is_deterministic_for_same_module_source() {
 
     assert_eq!(a, b);
     assert!(!a.is_empty(), "node index should not be empty");
+}
+
+#[test]
+fn semantic_node_index_rejects_tampered_authority_report_without_rust_fallback() {
+    let td = tempfile::tempdir().unwrap();
+    let artifact = copy_repo_toolchain_artifact(td.path());
+    poison_patch_authority_node_index(&artifact);
+    let frontend =
+        gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
+            bootstrap_mode: gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+            artifact: Some(artifact),
+        });
+    let error = gc_patches::semantic_node_index_for_module_with_frontend(
+        "mod.gc",
+        "(def example::value {:nested [1 2 3]})",
+        &frontend,
+        StepLimit::Default,
+        MemLimits::default(),
+    )
+    .unwrap_err();
+    assert!(
+        error.to_string().contains(":module-h mismatch"),
+        "unexpected authority failure: {error}"
+    );
+}
+
+#[cfg(feature = "parity-oracle")]
+#[test]
+fn semantic_node_index_matches_compile_time_rust_oracle() {
+    let source = r#"
+        (def example::scalar 7)
+        (def example::data {:a [nil true 42 "text" b"bytes" example::symbol]})
+        (def example::pair (quote (left . right)))
+    "#;
+    let selfhost = gc_patches::semantic_node_index_for_module_with_frontend(
+        "example.gc",
+        source,
+        &gc_obligations::default_coreform_frontend(),
+        StepLimit::Default,
+        MemLimits::default(),
+    )
+    .unwrap();
+    let rust = gc_patches::semantic_node_index_for_module_with_frontend(
+        "example.gc",
+        source,
+        &gc_obligations::rust_coreform_frontend(),
+        StepLimit::Default,
+        MemLimits::default(),
+    )
+    .unwrap();
+    assert_eq!(selfhost, rust);
 }
 
 #[test]

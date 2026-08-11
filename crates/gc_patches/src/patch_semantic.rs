@@ -30,6 +30,7 @@ pub(super) fn hash32_hex(h: [u8; 32]) -> String {
     out
 }
 
+#[cfg(feature = "parity-oracle")]
 pub(super) fn semantic_node_id(module_path: &str, path: &[PathStep]) -> Result<String, PatchError> {
     let path_term = path_steps_to_term(path)?;
     let path_repr = print_term(&path_term);
@@ -55,6 +56,7 @@ pub(super) fn term_tag(t: &Term) -> &'static str {
     }
 }
 
+#[cfg(feature = "parity-oracle")]
 pub(super) fn collect_term_nodes(
     module_path: &str,
     path: &mut Vec<PathStep>,
@@ -100,6 +102,7 @@ pub(super) fn collect_term_nodes(
     Ok(())
 }
 
+#[cfg(feature = "parity-oracle")]
 pub(super) fn semantic_node_index_for_forms(
     module_path: &str,
     forms: &[Term],
@@ -116,8 +119,17 @@ pub(super) fn resolve_node_id_path(
     module_path: &str,
     forms: &[Term],
     node_id: &str,
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
 ) -> Result<Vec<PathStep>, PatchError> {
-    let nodes = semantic_node_index_for_forms(module_path, forms)?;
+    let nodes = semantic_node_index_for_canonical_forms_with_frontend(
+        module_path,
+        forms,
+        frontend,
+        step_limit,
+        mem_limits,
+    )?;
     let mut matches = nodes
         .into_iter()
         .filter(|n| n.node_id == node_id)
@@ -135,6 +147,57 @@ pub(super) fn resolve_node_id_path(
     parse_path(&matches.remove(0).path)
 }
 
+pub(super) fn semantic_node_id_for_path_with_frontend(
+    module_path: &str,
+    forms: &[Term],
+    path: &[PathStep],
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<String, PatchError> {
+    let path_term = path_steps_to_term(path)?;
+    semantic_node_index_for_canonical_forms_with_frontend(
+        module_path,
+        forms,
+        frontend,
+        step_limit,
+        mem_limits,
+    )?
+    .into_iter()
+    .find(|record| record.path == path_term)
+    .map(|record| record.node_id)
+    .ok_or_else(|| {
+        PatchError::Validate(format!(
+            "semantic path {} is absent from module {module_path}",
+            print_term(&path_term)
+        ))
+    })
+}
+
+fn semantic_node_index_for_canonical_forms_with_frontend(
+    module_path: &str,
+    forms: &[Term],
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<Vec<SemanticNodeRecord>, PatchError> {
+    if coreform_frontend_is_rust(frontend) {
+        #[cfg(not(feature = "parity-oracle"))]
+        return Err(PatchError::Validate(
+            "Rust patch identity oracle is not compiled into production; use a dedicated parity harness binary"
+                .to_string(),
+        ));
+        #[cfg(feature = "parity-oracle")]
+        return semantic_node_index_for_forms(module_path, forms);
+    }
+    let CoreformFrontend::Selfhost(config) = frontend else {
+        return Err(PatchError::Validate(
+            "invalid patch identity frontend dispatch".to_string(),
+        ));
+    };
+    selfhost_semantic_node_index(module_path, forms, config, step_limit, mem_limits)
+}
+
 pub(super) fn semantic_node_index_for_module_with_frontend(
     module_path: &str,
     src: &str,
@@ -143,5 +206,11 @@ pub(super) fn semantic_node_index_for_module_with_frontend(
     mem_limits: MemLimits,
 ) -> Result<Vec<SemanticNodeRecord>, PatchError> {
     let forms = parse_canonicalize_module_src(src, frontend, step_limit, mem_limits)?;
-    semantic_node_index_for_forms(module_path, &forms)
+    semantic_node_index_for_canonical_forms_with_frontend(
+        module_path,
+        &forms,
+        frontend,
+        step_limit,
+        mem_limits,
+    )
 }

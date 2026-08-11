@@ -110,6 +110,14 @@ fn apply_one_op(
             let abs = pkg_dir.join(module_path);
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let node_id = semantic_node_id_for_path_with_frontend(
+                module_path,
+                &forms,
+                path,
+                frontend,
+                step_limit,
+                mem_limits,
+            )?;
 
             if let Some(sh) = selfhost.as_mut() {
                 let path_term = path_steps_to_term(path)?;
@@ -128,7 +136,7 @@ fn apply_one_op(
             Ok(Some(AppliedSemanticEdit {
                 op: ":replace-node",
                 module_path: module_path.clone(),
-                node_id: Some(semantic_node_id(module_path, path)?),
+                node_id: Some(node_id),
                 path: Some(path.clone()),
                 new_term_hash: Some(hash32_hex(hash_term(new_term))),
                 before_module_hash: None,
@@ -144,7 +152,14 @@ fn apply_one_op(
             let abs = pkg_dir.join(module_path);
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
-            let path = resolve_node_id_path(module_path, &forms, node_id)?;
+            let path = resolve_node_id_path(
+                module_path,
+                &forms,
+                node_id,
+                frontend,
+                step_limit,
+                mem_limits,
+            )?;
 
             if let Some(sh) = selfhost.as_mut() {
                 let path_term = path_steps_to_term(&path)?;

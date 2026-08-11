@@ -1,0 +1,223 @@
+(def selfhost/patch_authority::PROFILE "genesis/patch-authority-v0.1")
+(def selfhost/patch_authority::REQUEST_KIND "genesis/patch-node-index-request-v0.1")
+(def selfhost/patch_authority::REPORT_KIND "genesis/patch-node-index-v0.1")
+(def selfhost/patch_authority::NODE_ID_PREFIX b"GCv0.2\x00semantic-node-id\x00")
+
+(def selfhost/patch_authority::err
+  (fn (message) ((core/error::make2 "core/patch-authority") message)))
+
+(def selfhost/patch_authority::vec1 (fn (a) ((core/vec::push []) a)))
+(def selfhost/patch_authority::vec2
+  (fn (a) (fn (b) ((core/vec::push ((core/vec::push []) a)) b))))
+(def selfhost/patch_authority::vec4
+  (fn (a)
+    (fn (b)
+      (fn (c)
+        (fn (d)
+          ((core/vec::push
+             ((core/vec::push ((core/vec::push ((core/vec::push []) a)) b)) c))
+            d))))))
+
+(def selfhost/patch_authority::tag-name
+  (fn (term)
+    (let ((tag (core/data::tag term)))
+      (if ((core/sym::eq? tag) (quote :nil))
+        "nil"
+        (if ((core/sym::eq? tag) (quote :bool))
+          "bool"
+          (if ((core/sym::eq? tag) (quote :int))
+            "int"
+            (if ((core/sym::eq? tag) (quote :str))
+              "str"
+              (if ((core/sym::eq? tag) (quote :bytes))
+                "bytes"
+                (if ((core/sym::eq? tag) (quote :sym))
+                  "sym"
+                  (if ((core/sym::eq? tag) (quote :pair))
+                    "pair"
+                    (if ((core/sym::eq? tag) (quote :vec))
+                      "vec"
+                      (if ((core/sym::eq? tag) (quote :map))
+                        "map"
+                        (selfhost/patch_authority::err "unsupported term tag")))))))))))))
+
+(def selfhost/patch_authority::node-id
+  (fn (module-path)
+    (fn (path-repr)
+      (let
+        ((parts
+           ((((selfhost/patch_authority::vec4 selfhost/patch_authority::NODE_ID_PREFIX)
+               (core/str::to-utf8 module-path))
+              b"\x00")
+             (core/str::to-utf8 path-repr))))
+        (let ((message (core/bytes::join parts)))
+          (if (core/error::is? message)
+            message
+            (let ((digest (core/crypto::blake3 message)))
+              (if (core/error::is? digest) digest (core/bytes::to-hex digest)))))))))
+
+(def selfhost/patch_authority::node-record
+  (fn (module-path)
+    (fn (path)
+      (fn (term)
+        (let
+          ((path-repr (selfhost/printer::print-term path))
+            (term-tag (selfhost/patch_authority::tag-name term))
+            (term-h (selfhost/hash::hash-term term))
+            (node-id ((selfhost/patch_authority::node-id module-path) path-repr)))
+          (if (core/error::is? path-repr)
+            path-repr
+            (if (core/error::is? term-tag)
+              term-tag
+              (if (core/error::is? term-h)
+                term-h
+                (if (core/error::is? node-id)
+                  node-id
+                  {:module-path module-path
+                    :node-id node-id
+                    :path path
+                    :path-repr path-repr
+                    :term-h term-h
+                    :term-tag term-tag})))))))))
+
+(def selfhost/patch_authority::collect-vector
+  (fn (module-path)
+    (fn (path)
+      (fn (values)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len values))
+              out
+              (let
+                ((child-path
+                   ((core/vec::push path)
+                     ((selfhost/patch_authority::vec2 (quote :vec)) i))))
+                (let
+                  ((next
+                     ((((selfhost/patch_authority::collect-term module-path) child-path)
+                        ((core/vec::get values) i))
+                       out)))
+                  (if (core/error::is? next)
+                    next
+                    (((((selfhost/patch_authority::collect-vector module-path) path) values)
+                        ((core/int::add i) 1))
+                      next)))))))))))
+
+(def selfhost/patch_authority::collect-map
+  (fn (module-path)
+    (fn (path)
+      (fn (entries)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len entries))
+              out
+              (let
+                ((entry ((core/vec::get entries) i)))
+                (let
+                  ((child-path
+                     ((core/vec::push path)
+                       ((selfhost/patch_authority::vec2 (quote :map))
+                         ((core/vec::get entry) 0)))))
+                  (let
+                    ((next
+                       ((((selfhost/patch_authority::collect-term module-path) child-path)
+                          ((core/vec::get entry) 1))
+                         out)))
+                    (if (core/error::is? next)
+                      next
+                      (((((selfhost/patch_authority::collect-map module-path) path) entries)
+                          ((core/int::add i) 1))
+                        next))))))))))))
+
+(def selfhost/patch_authority::collect-term
+  (fn (module-path)
+    (fn (path)
+      (fn (term)
+        (fn (out)
+          (let
+            ((record (((selfhost/patch_authority::node-record module-path) path) term)))
+            (if (core/error::is? record)
+              record
+              (let ((with-record ((core/vec::push out) record)) (tag (core/data::tag term)))
+                (if ((core/sym::eq? tag) (quote :pair))
+                  (let
+                    ((with-car
+                       ((((selfhost/patch_authority::collect-term module-path)
+                           ((core/vec::push path)
+                             (selfhost/patch_authority::vec1 (quote :pair-car))))
+                          (core/pair::car term))
+                         with-record)))
+                    (if (core/error::is? with-car)
+                      with-car
+                      ((((selfhost/patch_authority::collect-term module-path)
+                          ((core/vec::push path)
+                            (selfhost/patch_authority::vec1 (quote :pair-cdr))))
+                         (core/pair::cdr term))
+                        with-car)))
+                  (if ((core/sym::eq? tag) (quote :vec))
+                    (((((selfhost/patch_authority::collect-vector module-path) path) term) 0)
+                      with-record)
+                    (if ((core/sym::eq? tag) (quote :map))
+                      (((((selfhost/patch_authority::collect-map module-path) path)
+                           (core/map::entries term))
+                          0)
+                        with-record)
+                      with-record)))))))))))
+
+(def selfhost/patch_authority::collect-forms
+  (fn (module-path)
+    (fn (forms)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len forms))
+            out
+            (let
+              ((next
+                 ((((selfhost/patch_authority::collect-term module-path)
+                     (selfhost/patch_authority::vec1
+                       ((selfhost/patch_authority::vec2 (quote :form)) i)))
+                    ((core/vec::get forms) i))
+                   out)))
+              (if (core/error::is? next)
+                next
+                ((((selfhost/patch_authority::collect-forms module-path) forms)
+                   ((core/int::add i) 1))
+                  next)))))))))
+
+(def core/cli::patch-semantic-node-index
+  (fn (request)
+    (if (core/cli::map? request)
+      (if ((core/int::eq? (core/map::len request)) 5)
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (profile ((core/map::get request) (quote :profile)))
+            (module-path ((core/map::get request) (quote :module-path)))
+            (forms ((core/map::get request) (quote :forms)))
+            (version ((core/map::get request) (quote :v))))
+          (if (if (core/cli::str? kind) ((core/eq? kind) selfhost/patch_authority::REQUEST_KIND) false)
+            (if (if (core/cli::str? profile) ((core/eq? profile) selfhost/patch_authority::PROFILE) false)
+              (if
+                (if (core/cli::str? module-path) ((core/int::lt? 0) (core/str::len module-path)) false)
+                (if (core/cli::vec? forms)
+                  (if (if (core/cli::int? version) ((core/int::eq? version) 1) false)
+                    (let
+                      ((nodes ((((selfhost/patch_authority::collect-forms module-path) forms) 0) []))
+                        (module-h (selfhost/hash::hash-module forms)))
+                      (if (core/error::is? nodes)
+                        nodes
+                        (if (core/error::is? module-h)
+                          module-h
+                          {:kind selfhost/patch_authority::REPORT_KIND
+                            :module-h module-h
+                            :module-path module-path
+                            :nodes nodes
+                            :ok true
+                            :profile selfhost/patch_authority::PROFILE
+                            :v 1})))
+                    (selfhost/patch_authority::err "request :v must equal 1"))
+                  (selfhost/patch_authority::err "request :forms must be a vector"))
+                (selfhost/patch_authority::err "request :module-path must be a non-empty string"))
+              (selfhost/patch_authority::err "request :profile mismatch"))
+            (selfhost/patch_authority::err "request :kind mismatch")))
+        (selfhost/patch_authority::err "request must contain exactly five fields"))
+      (selfhost/patch_authority::err "request must be a map"))))

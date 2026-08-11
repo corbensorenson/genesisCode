@@ -20,6 +20,8 @@ pub const SEMANTIC_PATCH_VERSION: u64 = 1;
 
 #[path = "patch_apply.rs"]
 mod patch_apply;
+#[path = "patch_authority.rs"]
+mod patch_authority;
 #[path = "patch_manifest.rs"]
 mod patch_manifest;
 #[path = "patch_parse.rs"]
@@ -33,6 +35,7 @@ mod patch_selfhost_toolchain;
 #[path = "patch_semantic.rs"]
 mod patch_semantic;
 
+use patch_authority::selfhost_semantic_node_index;
 use patch_manifest::{
     apply_manifest_set, coreform_to_toml, parse_canonicalize_module_src,
     patch_manifest_add_module_path, patch_manifest_move_module_path, patch_string_vec_field,
@@ -40,7 +43,9 @@ use patch_manifest::{
 };
 use patch_replace::apply_replace;
 use patch_selfhost_toolchain::SelfhostPatchToolchain;
-use patch_semantic::{hash32_hex, path_steps_to_term, resolve_node_id_path, semantic_node_id};
+use patch_semantic::{
+    hash32_hex, path_steps_to_term, resolve_node_id_path, semantic_node_id_for_path_with_frontend,
+};
 
 #[derive(Debug, Error)]
 pub enum PatchError {

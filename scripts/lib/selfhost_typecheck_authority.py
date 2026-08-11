@@ -204,6 +204,15 @@ def cargo_tree(root: Path, package: str) -> str:
     return result.stdout
 
 
+def cargo_feature_members(manifest: str, feature: str) -> list[str]:
+    match = re.search(
+        rf"(?m)^{re.escape(feature)}\s*=\s*\[([^\n]*)\]\s*$", manifest
+    )
+    if match is None:
+        return []
+    return re.findall(r'"([^"\n]+)"', match.group(1))
+
+
 def verify_oracle_isolation(root: Path) -> None:
     obligations = (root / "crates/gc_obligations/Cargo.toml").read_text()
     driver = (root / "crates/gc_cli_driver/Cargo.toml").read_text()
@@ -211,11 +220,13 @@ def verify_oracle_isolation(root: Path) -> None:
     authority = (
         root / "crates/gc_obligations/src/obligations/typecheck_authority.rs"
     ).read_text()
-    if 'parity-oracle = ["dep:gc_types"]' not in obligations:
+    if cargo_feature_members(obligations, "parity-oracle") != ["dep:gc_types"]:
         raise VerificationError("gc_types is not isolated behind parity-oracle")
     if 'gc_types = { path = "../gc_types", optional = true }' not in obligations:
         raise VerificationError("gc_types must be optional in gc_obligations")
-    if 'parity-harness = ["gc_obligations/parity-oracle"]' not in driver:
+    if "gc_obligations/parity-oracle" not in cargo_feature_members(
+        driver, "parity-harness"
+    ):
         raise VerificationError("driver parity feature does not enable the isolated oracle")
     if 'features = ["parity-oracle"]' not in parity:
         raise VerificationError("dedicated parity package does not bind the oracle feature")

@@ -17,7 +17,7 @@ pub(super) struct SelfhostPatchToolchain {
     migrate_contract_signature_forms: Value,
 }
 
-fn summarize_protocol_error_payload(payload: &Value) -> String {
+pub(super) fn summarize_protocol_error_payload(payload: &Value) -> String {
     let Some(t) = payload.as_data() else {
         return payload.debug_repr();
     };
@@ -43,7 +43,7 @@ fn summarize_protocol_error_payload(payload: &Value) -> String {
     }
 }
 
-fn extract_protocol_error(out: &Value, error_token: SealId) -> Option<String> {
+pub(super) fn extract_protocol_error(out: &Value, error_token: SealId) -> Option<String> {
     match out {
         Value::Sealed { token, payload } if *token == error_token => {
             Some(summarize_protocol_error_payload(payload))

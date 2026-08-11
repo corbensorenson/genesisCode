@@ -49,6 +49,7 @@
     "selfhost/patch_schema_manifest_v1.gc"
     "selfhost/patch_schema_refactor_v1.gc"
     "selfhost/patch_schema_refactor_meta_migrate_v1.gc"
+    "selfhost/patch_authority_identity_v1.gc"
     "selfhost/stage1_v1.gc"
   ]
   :required-symbols [
@@ -102,5 +103,6 @@
     core/cli::vcs-why-program
     core/cli::rename-symbol-forms
     core/cli::split-module-forms
+    core/cli::patch-semantic-node-index
   ]
 }

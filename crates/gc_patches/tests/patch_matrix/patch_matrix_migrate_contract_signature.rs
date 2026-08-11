@@ -18,14 +18,15 @@ fn poison_patch_refactor_migrate_contract_signature_forms(artifact: &Path) {
             Term::Map(mm)
                 if matches!(
                     mm.get(&TermOrdKey(Term::symbol(":path"))),
-                    Some(Term::Str(path)) if path == "selfhost/patch_schema_refactor_v1.gc"
+                    Some(Term::Str(path))
+                        if path == "selfhost/patch_schema_refactor_meta_migrate_v1.gc"
                 ) =>
             {
                 Some(mm)
             }
             _ => None,
         })
-        .expect("selfhost/patch_schema_refactor_v1.gc entry");
+        .expect("selfhost/patch_schema_refactor_meta_migrate_v1.gc entry");
 
     let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
         Some(Term::Str(src)) => src.clone(),
