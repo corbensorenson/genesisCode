@@ -21,6 +21,13 @@ The optimizer must treat the following as **opaque** boundaries and must not rew
 
 Additionally, the optimizer must not rewrite inside `(quote datum)`.
 
+`CONTRACT_COMPOSITION_PROFILE_v0.1.md` may report a public interface as optimization-eligible only
+when it is concrete, shape/effect closed, pure, refinement-free, contract-free, and monomorphic.
+That report is a necessary admission fact for transformations relying on the interface, never a
+rewrite authorization or equivalence proof. All rules in this document and exact-artifact
+translation validation still apply; runtime dispatch shapes and static interface identities cannot
+substitute for one another.
+
 ## Rewritten Subset
 
 The v0.2 optimizer uses `egg` (e-graphs) to optimize only expressions that can be represented in

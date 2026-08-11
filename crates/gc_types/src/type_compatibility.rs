@@ -104,49 +104,26 @@ pub(super) fn has_unresolved_contract_ops(ty: &Ty) -> bool {
 }
 
 pub(super) fn type_compatible(inferred: &Ty, declared: &Ty, strict_shapes: bool) -> bool {
-    type_compatible_with_bindings(
-        inferred,
-        declared,
-        strict_shapes,
-        &mut EffectRowBindings::default(),
-    )
+    let mut bindings = EffectRowBindings::default();
+    if !bind_declared_effect_rows(inferred, declared, &mut bindings) {
+        return false;
+    }
+    is_subtype(inferred, &bindings.apply_type(declared), strict_shapes)
 }
 
-fn type_compatible_with_bindings(
+fn bind_declared_effect_rows(
     inferred: &Ty,
     declared: &Ty,
-    strict_shapes: bool,
     bindings: &mut EffectRowBindings,
 ) -> bool {
-    // `?` in the declared position accepts anything.
-    if matches!(declared, Ty::Any) {
+    if matches!(inferred, Ty::Any) {
+        bindings.bind_unknowns_in_type(declared);
         return true;
     }
     match (inferred, declared) {
-        (Ty::Any, _) => false,
-        (Ty::Int, Ty::Int)
-        | (Ty::Dec, Ty::Dec)
-        | (Ty::Bool, Ty::Bool)
-        | (Ty::Nil, Ty::Nil)
-        | (Ty::Str, Ty::Str)
-        | (Ty::Bytes, Ty::Bytes)
-        | (Ty::Symbol, Ty::Symbol) => true,
-        (
-            Ty::Msg {
-                op: iop,
-                payload: ip,
-            },
-            Ty::Msg {
-                op: dop,
-                payload: dp,
-            },
-        ) => {
-            if let Some(d) = dop
-                && iop.as_deref() != Some(d.as_str())
-            {
-                return false;
-            }
-            type_compatible_with_bindings(ip, dp, strict_shapes, bindings)
+        (_, Ty::Any) => true,
+        (Ty::Msg { payload: ip, .. }, Ty::Msg { payload: dp, .. }) => {
+            bind_declared_effect_rows(ip, dp, bindings)
         }
         (
             Ty::Fn {
@@ -160,72 +137,199 @@ fn type_compatible_with_bindings(
                 eff: de,
             },
         ) => {
-            if !type_compatible_with_bindings(ip, dp, strict_shapes, bindings) {
+            if !bind_declared_effect_rows(ip, dp, bindings) {
                 return false;
             }
-            if !type_compatible_with_bindings(ir, dr, strict_shapes, bindings) {
+            if !bind_declared_effect_rows(ir, dr, bindings) {
                 return false;
             }
-            bindings.match_row(ie, de)
+            bind_declared_effect_row(ie, de, bindings)
         }
         (Ty::Prog { ret: ir, eff: ie }, Ty::Prog { ret: dr, eff: de }) => {
-            type_compatible_with_bindings(ir, dr, strict_shapes, bindings)
-                && bindings.match_row(ie, de)
+            bind_declared_effect_rows(ir, dr, bindings)
+                && bind_declared_effect_row(ie, de, bindings)
+        }
+        (Ty::Rec { fields: ifs, .. }, Ty::Rec { fields: dfs, .. })
+        | (Ty::Contract { methods: ifs, .. }, Ty::Contract { methods: dfs, .. }) => {
+            dfs.iter().all(|(name, declared_field)| {
+                ifs.get(name).is_none_or(|inferred_field| {
+                    bind_declared_effect_rows(inferred_field, declared_field, bindings)
+                })
+            })
+        }
+        _ => true,
+    }
+}
+
+fn bind_declared_effect_row(
+    inferred: &EffRow,
+    declared: &EffRow,
+    bindings: &mut EffectRowBindings,
+) -> bool {
+    if matches!(declared.tail, RowTail::Var(_)) {
+        bindings.match_row(inferred, declared)
+    } else {
+        true
+    }
+}
+
+fn is_subtype(actual: &Ty, expected: &Ty, strict_shapes: bool) -> bool {
+    if matches!(expected, Ty::Any) {
+        return true;
+    }
+    match (actual, expected) {
+        (Ty::Any, _) => false,
+        (Ty::Int, Ty::Int)
+        | (Ty::Dec, Ty::Dec)
+        | (Ty::Bool, Ty::Bool)
+        | (Ty::Nil, Ty::Nil)
+        | (Ty::Str, Ty::Str)
+        | (Ty::Bytes, Ty::Bytes)
+        | (Ty::Symbol, Ty::Symbol) => true,
+        (
+            Ty::Msg {
+                op: actual_op,
+                payload: actual_payload,
+            },
+            Ty::Msg {
+                op: expected_op,
+                payload: expected_payload,
+            },
+        ) => {
+            expected_op
+                .as_ref()
+                .is_none_or(|op| actual_op.as_ref() == Some(op))
+                && is_subtype(actual_payload, expected_payload, strict_shapes)
+        }
+        (
+            Ty::Fn {
+                param: actual_param,
+                ret: actual_ret,
+                eff: actual_eff,
+            },
+            Ty::Fn {
+                param: expected_param,
+                ret: expected_ret,
+                eff: expected_eff,
+            },
+        ) => {
+            is_subtype(expected_param, actual_param, strict_shapes)
+                && is_subtype(actual_ret, expected_ret, strict_shapes)
+                && effect_row_is_subtype(actual_eff, expected_eff)
+        }
+        (
+            Ty::Prog {
+                ret: actual_ret,
+                eff: actual_eff,
+            },
+            Ty::Prog {
+                ret: expected_ret,
+                eff: expected_eff,
+            },
+        ) => {
+            is_subtype(actual_ret, expected_ret, strict_shapes)
+                && effect_row_is_subtype(actual_eff, expected_eff)
         }
         (
             Ty::Rec {
-                fields: ifs,
-                tail: i_tail,
+                fields: actual_fields,
+                tail: actual_tail,
             },
             Ty::Rec {
-                fields: dfs,
-                tail: d_tail,
+                fields: expected_fields,
+                tail: expected_tail,
             },
         ) => {
-            if !dfs.iter().all(|(k, dt)| {
-                ifs.get(k).is_some_and(|it| {
-                    type_compatible_with_bindings(it, dt, strict_shapes, bindings)
+            expected_fields.iter().all(|(name, expected_field)| {
+                actual_fields.get(name).is_some_and(|actual_field| {
+                    is_subtype(actual_field, expected_field, strict_shapes)
                 })
-            }) {
-                return false;
-            }
-            if strict_shapes && matches!(d_tail, RowTail::Closed) {
-                if !matches!(i_tail, RowTail::Closed) {
-                    return false;
-                }
-                if ifs.len() != dfs.len() {
-                    return false;
-                }
-            }
-            true
+            }) && shape_tail_is_compatible(
+                actual_fields.len(),
+                actual_tail,
+                expected_fields.len(),
+                expected_tail,
+                strict_shapes,
+            )
         }
         (
             Ty::Contract {
-                methods: ims,
-                tail: i_tail,
+                methods: actual_fields,
+                tail: actual_tail,
             },
             Ty::Contract {
-                methods: dms,
-                tail: d_tail,
+                methods: expected_fields,
+                tail: expected_tail,
             },
         ) => {
-            if !dms.iter().all(|(k, dt)| {
-                ims.get(k).is_some_and(|it| {
-                    type_compatible_with_bindings(it, dt, strict_shapes, bindings)
+            expected_fields.iter().all(|(name, expected_field)| {
+                actual_fields.get(name).is_some_and(|actual_field| {
+                    contract_method_is_subtype(name, actual_field, expected_field, strict_shapes)
                 })
-            }) {
-                return false;
-            }
-            if strict_shapes && matches!(d_tail, RowTail::Closed) {
-                if !matches!(i_tail, RowTail::Closed) {
-                    return false;
-                }
-                if ims.len() != dms.len() {
-                    return false;
-                }
-            }
-            true
+            }) && shape_tail_is_compatible(
+                actual_fields.len(),
+                actual_tail,
+                expected_fields.len(),
+                expected_tail,
+                strict_shapes,
+            )
         }
         _ => false,
+    }
+}
+
+fn contract_method_is_subtype(
+    operation: &str,
+    actual: &Ty,
+    expected: &Ty,
+    strict_shapes: bool,
+) -> bool {
+    fn bind_operation(ty: &Ty, operation: &str) -> Ty {
+        let Ty::Fn { param, ret, eff } = ty else {
+            return ty.clone();
+        };
+        let param = match param.as_ref() {
+            Ty::Msg { op: None, payload } => Ty::Msg {
+                op: Some(operation.to_string()),
+                payload: payload.clone(),
+            },
+            other => other.clone(),
+        };
+        Ty::Fn {
+            param: Box::new(param),
+            ret: ret.clone(),
+            eff: eff.clone(),
+        }
+    }
+
+    is_subtype(
+        &bind_operation(actual, operation),
+        &bind_operation(expected, operation),
+        strict_shapes,
+    )
+}
+
+fn shape_tail_is_compatible(
+    actual_len: usize,
+    actual_tail: &RowTail,
+    expected_len: usize,
+    expected_tail: &RowTail,
+    strict_shapes: bool,
+) -> bool {
+    !strict_shapes
+        || !matches!(expected_tail, RowTail::Closed)
+        || (matches!(actual_tail, RowTail::Closed) && actual_len == expected_len)
+}
+
+fn effect_row_is_subtype(actual: &EffRow, expected: &EffRow) -> bool {
+    match &expected.tail {
+        RowTail::Any => true,
+        RowTail::Closed => {
+            matches!(actual.tail, RowTail::Closed) && actual.ops.is_subset(&expected.ops)
+        }
+        RowTail::Var(expected_name) => {
+            matches!(&actual.tail, RowTail::Var(actual_name) if actual_name == expected_name)
+                && actual.ops.is_subset(&expected.ops)
+        }
     }
 }

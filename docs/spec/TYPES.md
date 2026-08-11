@@ -67,6 +67,18 @@ Given an inferred type `I` and a declared type `D`:
     parameter type to an unknown row; a symbolic variable may not escape as evidence of a
     known effect set
 
+Function compatibility is directional. An implementation parameter is contravariant with its
+declared interface parameter; results and latent effects are covariant. This prevents an
+implementation that requires a narrower record or contract from being published behind an
+interface that promises callers may provide a broader input. Contract method row keys bind the
+message operation omitted by the `(Msg Payload)` source constructor before variance is checked.
+Duplicate record fields and contract methods are parse errors rather than last-entry-wins aliases.
+
+Modules opting into `genesis/contract-composition-profile-v0.1` additionally follow
+`CONTRACT_COMPOSITION_PROFILE_v0.1.md`: strict shapes/effects are mandatory, public types cannot
+contain gradual `?` or anonymous rows, rank-1 effect rows are alpha-normalized for identity,
+refinement sets are explicit and empty-only, and conservative optimizer preconditions are emitted.
+
 Named effect rows provide rank-1 effect polymorphism over the explicit function type. For
 example, `(Fn (Prog Int (Eff [] e)) (Prog Int (Eff [] e)) (Eff [] nil))` preserves the
 argument program's effects. Reusing `e` for two incompatible parameter components is a type

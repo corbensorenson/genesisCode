@@ -894,7 +894,7 @@
   ],
   "kind": "genesis/gc-agent-profile-v0.3",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "e28292f638a9f2f6519be7bd336ec3bc16e322f86c16372d868a7e2d7b51b358",
+  "profileIdentitySha256": "70e726d7222699c8f1ac07fba76755d6e5612009c40f0ef656513a265b1dd331",
   "sourceIdentities": {
     "crates/gc_cli/tests/gc_agent_profile_v03.rs": "04716e0603e8eace128099de6c5b479df40c43f8dbc96a9b238fab89641c99c3",
     "crates/gc_cli_driver/src/diagnostics.rs": "57f4f8b7e9057a81c5f641ea8c3a96f3668c0f6935e4b5613637483903802307",
@@ -911,7 +911,7 @@
     "crates/gc_kernel/src/tests.rs": "097f1f66612f1b517f41dd945f688ff5f4ec7109efecc3c1f21bd178f4677464",
     "crates/gc_kernel/src/value.rs": "e92c047d5a64a3adf4a5c50fe0960c4f33e3bb7d8fb6084bd7e5a75cd968d5e3",
     "crates/gc_pkg/src/manifest.rs": "d60e84b07dcfc18246bf8587203aa75bf2426dc8ee58262ea7718021e4be3792",
-    "crates/gc_prelude/src/lib.rs": "ad73ecfc8833497ef1a885181fddbe325310eba40c8e7b37ff2ce1abb025cfbc",
+    "crates/gc_prelude/src/lib.rs": "df796d65a584c49d23fa5b00ab72f4158cc20bcf1c2eeb8e85c8ff3ed7910fb4",
     "crates/gc_prelude/src/prelude.rs": "aecba7320d8716b93a9419737e88abe4ffc9e28985e7a23ab398c45fa94f9ba3",
     "docs/spec/CLI_JSON_SCHEMAS_v0.1.md": "cf632e03dda691f7e7d2996687efc3ea26d03c9719db6d9034dc323686e062a5",
     "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json": "559ffafe661d3d95696107717acb159a38c60d7735bbc940ef2ac19f18be6314",

@@ -229,6 +229,88 @@ mod tests {
     }
 
     #[test]
+    fn runtime_contract_shape_and_value_identities_have_separate_domains() {
+        let src = r#"
+            (def msg-x (core/msg::make 'foo/bar::x nil))
+            (def msg-y (core/msg::make 'foo/bar::y nil))
+            (def c1
+              (core/contract::extend
+                core/contract::genesis
+                {foo/bar::x (fn (_) 10)}
+                {:label "one"}))
+            (def c1-again
+              (core/contract::extend
+                core/contract::genesis
+                {foo/bar::x (fn (_) 10)}
+                {:label "one"}))
+            (def c2
+              (core/contract::extend
+                core/contract::genesis
+                {foo/bar::x (fn (_) 20)}
+                {:label "two"}))
+            (def c3
+              (core/contract::extend
+                core/contract::genesis
+                {foo/bar::y (fn (_) 10)}
+                {:label "one"}))
+            {:shape-1 (core/contract::shape c1)
+             :shape-1-again (core/contract::shape c1-again)
+             :shape-2 (core/contract::shape c2)
+             :shape-3 (core/contract::shape c3)
+             :trace-1 (core/contract::explain c1 msg-x)
+             :trace-1-again (core/contract::explain c1-again msg-x)
+             :trace-2 (core/contract::explain c2 msg-x)
+             :trace-3 (core/contract::explain c3 msg-y)}
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let Value::Map(result) = eval_module(&mut ctx, &mut env, &forms).unwrap() else {
+            panic!("expected identity result map")
+        };
+
+        let string = |key: &str| match result
+            .get(&TermOrdKey(Term::Symbol(key.to_string())))
+            .and_then(Value::as_data)
+        {
+            Some(Term::Str(value)) => value.clone(),
+            other => panic!("{key} must be a string datum, got {other:?}"),
+        };
+        let contract_id = |key: &str| {
+            let Some(Term::Map(trace)) = result
+                .get(&TermOrdKey(Term::Symbol(key.to_string())))
+                .and_then(Value::as_data)
+            else {
+                panic!("{key} must be a trace map")
+            };
+            let Some(Term::Vector(steps)) =
+                trace.get(&TermOrdKey(Term::Symbol(":steps".to_string())))
+            else {
+                panic!("{key} must contain trace steps")
+            };
+            let Some(Term::Map(first)) = steps.first() else {
+                panic!("{key} must contain a first trace step")
+            };
+            let Some(Term::Str(identity)) =
+                first.get(&TermOrdKey(Term::Symbol(":contract-id".to_string())))
+            else {
+                panic!("{key} first step must contain a contract identity")
+            };
+            identity.clone()
+        };
+
+        let shape_1 = string(":shape-1");
+        assert_eq!(shape_1, string(":shape-1-again"));
+        assert_eq!(shape_1, string(":shape-2"));
+        assert_ne!(shape_1, string(":shape-3"));
+        let id_1 = contract_id(":trace-1");
+        assert_ne!(id_1, contract_id(":trace-1-again"));
+        assert_ne!(id_1, contract_id(":trace-2"));
+        assert_ne!(id_1, contract_id(":trace-3"));
+    }
+
+    #[test]
     fn embedded_prelude_wrappers_work() {
         let src = r#"
             (core/int::add 1 2)

@@ -432,7 +432,10 @@ fn parse_row_fields(t: &Term) -> Result<BTreeMap<String, Ty>, String> {
                 print_term(&pair[0])
             ));
         };
-        out.insert(k.clone(), parse_type_term(&pair[1])?);
+        let parsed = parse_type_term(&pair[1])?;
+        if out.insert(k.clone(), parsed).is_some() {
+            return Err(format!("duplicate row label {k}"));
+        }
     }
     Ok(out)
 }

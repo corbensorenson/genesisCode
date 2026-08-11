@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.org/spec/contract-composition-profile-v0.1.schema.json",
+  "title": "GenesisCode Contract Composition Profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["auditDate", "blame", "canonicalSpec", "canonicalSpecSha256", "compatibility", "contentIdentitySha256", "effects", "identity", "kind", "metadata", "nonclaims", "optimization", "parametricity", "profiles", "refinements", "runtimeContracts", "schema", "schemaSha256", "sourceBindings", "version"],
+  "properties": {
+    "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "blame": {
+      "type": "object", "additionalProperties": false,
+      "required": ["boundary", "consumer", "provider", "projection"],
+      "properties": {
+        "boundary": {"const": "profile-metadata-identity-ownership-or-unsupported-feature"},
+        "consumer": {"const": "import-or-call-site-violating-accepted-interface"},
+        "provider": {"const": "base-relative-module-path-hash-qualified-export"},
+        "projection": {"const": "portable-path-then-lexical-message"}
+      }
+    },
+    "canonicalSpec": {"const": "docs/spec/CONTRACT_COMPOSITION_PROFILE_v0.1.md"},
+    "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
+    "compatibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractMethodOperation", "duplicateRows", "functionParameters", "functionResults", "gradualPublicTypes", "recordsAndContracts", "strictClosedRows"],
+      "properties": {
+        "contractMethodOperation": {"const": "row-key-binds-message-operation"},
+        "duplicateRows": {"const": "reject-never-overwrite"},
+        "functionParameters": {"const": "contravariant"},
+        "functionResults": {"const": "covariant"},
+        "gradualPublicTypes": {"const": "reject"},
+        "recordsAndContracts": {"const": "structural-width-subtyping"},
+        "strictClosedRows": {"const": "exact-member-set-and-closed-implementation"}
+      }
+    },
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "effects": {
+      "type": "object", "additionalProperties": false,
+      "required": ["anonymousTail", "closedCompatibility", "identity", "moduleMode"],
+      "properties": {
+        "anonymousTail": {"const": "reject"},
+        "closedCompatibility": {"const": "implementation-closed-ops-subset-of-interface"},
+        "identity": {"const": "latent-and-program-effects-bound-into-static-shape"},
+        "moduleMode": {"const": "strict-effects-required"}
+      }
+    },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["alphaNormalization", "interface", "invalidMetadata", "profile", "refinement", "shapeOpenNormalization", "staticShape"],
+      "properties": {
+        "alphaNormalization": {"const": "rank1-effect-row-first-structural-occurrence"},
+        "interface": {"const": "profile-plus-portable-path-plus-export-plus-shape-plus-refinement"},
+        "invalidMetadata": {"const": "no-profile-identity"},
+        "profile": {"const": "manifest-order-modules-plus-lexical-interface-identities"},
+        "refinement": {"const": "profile-plus-canonical-refinement-set"},
+        "shapeOpenNormalization": {"const": "shape-open"},
+        "staticShape": {"const": "profile-plus-alpha-normalized-declared-type"}
+      }
+    },
+    "kind": {"const": "genesis/contract-composition-profile-v0.1"},
+    "metadata": {
+      "type": "object", "additionalProperties": false,
+      "required": ["activation", "fields", "keyClosure"],
+      "properties": {
+        "activation": {"const": "if-any-marker-then-all-modules-exact-marker"},
+        "fields": {"const": [":module-profile", ":contract-composition-profile", ":strict-shapes", ":strict-effects", ":exports", ":types", ":refinements"]},
+        "keyClosure": {"const": "types-and-refinements-exactly-equal-exports"}
+      }
+    },
+    "nonclaims": {"$ref": "#/$defs/nonemptyStrings"},
+    "optimization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["eligibility", "necessaryNotSufficient", "opaque", "translationValidation"],
+      "properties": {
+        "eligibility": {"const": ["concrete", "closedShapes", "closedEffects", "pure", "refinementFree", "contractFree", "monomorphic"]},
+        "necessaryNotSufficient": {"const": true},
+        "opaque": {"const": ["quote", "seal", "unseal", "core/effect::*", "core/contract::*"]},
+        "translationValidation": {"const": "still-required-for-exact-transformed-artifact"}
+      }
+    },
+    "parametricity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["supported", "unsupported"],
+      "properties": {
+        "supported": {"const": "explicit-rank1-effect-row-variable-bound-by-outermost-function-parameter"},
+        "unsupported": {"const": ["higher-rank-effects", "implicit-method-polymorphism", "value-type-variables", "generic-constructors", "type-classes", "record-or-contract-row-substitution"]}
+      }
+    },
+    "profiles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractComposition", "hash", "language", "moduleResolution", "mode"],
+      "properties": {
+        "contractComposition": {"const": "genesis/contract-composition-profile-v0.1"},
+        "hash": {"const": "genesis/hash-profile/gcv0.2-blake3"},
+        "language": {"const": "genesis/language-profile/v0.2"},
+        "moduleResolution": {"const": "genesis/module-resolution-profile-v0.1"},
+        "mode": {"const": "separate-exact-opt-in-no-version-inference"}
+      }
+    },
+    "refinements": {
+      "type": "object", "additionalProperties": false,
+      "required": ["representation", "supported", "unsupportedBehavior"],
+      "properties": {
+        "representation": {"const": "per-export-duplicate-free-qualified-symbol-vector-as-lexical-set"},
+        "supported": {"const": "empty-set-only"},
+        "unsupportedBehavior": {"const": "nonempty-fails-boundary-no-identity-authority"}
+      }
+    },
+    "runtimeContracts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractIdentity", "dispatchShape", "separation"],
+      "properties": {
+        "contractIdentity": {"const": "runtime-shape-plus-proto-contract-plus-handler-plus-meta"},
+        "dispatchShape": {"const": "proto-runtime-shape-plus-ordered-override-operation-keys"},
+        "separation": {"const": "runtime-and-static-identity-domains-never-interchangeable"}
+      }
+    },
+    "schema": {"const": "docs/spec/CONTRACT_COMPOSITION_PROFILE_v0.1.schema.json"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "sourceBindings": {
+      "type": "array", "minItems": 7, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "mode", "path"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "mode": {"enum": ["composition", "optimizer", "runtime-contract", "type-compatibility", "type-parser", "typecheck", "normative-optimizer"]},
+          "path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "version": {"const": "0.1"}
+  },
+  "$defs": {
+    "nonemptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

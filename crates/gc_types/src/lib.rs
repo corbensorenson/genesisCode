@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use gc_coreform::{Term, TermOrdKey, print_term};
 
+mod contract_composition;
 mod diagnostics;
 mod effect_inference;
 mod infer;
@@ -19,6 +20,10 @@ use crate::type_compatibility::{
     declared_eff_row, has_unresolved_contract_ops, type_compatible, validate_effect_row_declaration,
 };
 
+pub use crate::contract_composition::{
+    BlameAssignment, CONTRACT_COMPOSITION_PROFILE_ID, ComposedExport, ContractCompositionReport,
+    OptimizationPreconditions, compose_contract_profile,
+};
 pub use crate::diagnostics::TypecheckDiagnostic;
 use crate::diagnostics::module_diagnostics;
 pub use crate::effect_inference::{infer_effects, infer_effects_in_term};
@@ -83,6 +88,14 @@ struct PackageTypeContext {
 
 pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
     let mut context = collect_package_type_context(mods);
+    let composition = compose_contract_profile(mods);
+    for (path, errors) in composition.errors_by_module {
+        context
+            .module_errors
+            .entry(path)
+            .or_default()
+            .extend(errors);
+    }
     let resolution = resolve_module_profile(mods);
     for (path, errors) in resolution.errors_by_module {
         context

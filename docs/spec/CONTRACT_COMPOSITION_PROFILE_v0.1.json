@@ -1,0 +1,89 @@
+{
+  "auditDate": "2026-08-11",
+  "blame": {
+    "boundary": "profile-metadata-identity-ownership-or-unsupported-feature",
+    "consumer": "import-or-call-site-violating-accepted-interface",
+    "provider": "base-relative-module-path-hash-qualified-export",
+    "projection": "portable-path-then-lexical-message"
+  },
+  "canonicalSpec": "docs/spec/CONTRACT_COMPOSITION_PROFILE_v0.1.md",
+  "canonicalSpecSha256": "56eb0e4e0c4ef56c0cc6ea4595448c027b2491b417be5ceb288ef7c374e2479e",
+  "compatibility": {
+    "contractMethodOperation": "row-key-binds-message-operation",
+    "duplicateRows": "reject-never-overwrite",
+    "functionParameters": "contravariant",
+    "functionResults": "covariant",
+    "gradualPublicTypes": "reject",
+    "recordsAndContracts": "structural-width-subtyping",
+    "strictClosedRows": "exact-member-set-and-closed-implementation"
+  },
+  "contentIdentitySha256": "066940da54751062e56fd093e8f76434c71fc3c6a7bc510810b57201c841d736",
+  "effects": {
+    "anonymousTail": "reject",
+    "closedCompatibility": "implementation-closed-ops-subset-of-interface",
+    "identity": "latent-and-program-effects-bound-into-static-shape",
+    "moduleMode": "strict-effects-required"
+  },
+  "identity": {
+    "alphaNormalization": "rank1-effect-row-first-structural-occurrence",
+    "interface": "profile-plus-portable-path-plus-export-plus-shape-plus-refinement",
+    "invalidMetadata": "no-profile-identity",
+    "profile": "manifest-order-modules-plus-lexical-interface-identities",
+    "refinement": "profile-plus-canonical-refinement-set",
+    "shapeOpenNormalization": "shape-open",
+    "staticShape": "profile-plus-alpha-normalized-declared-type"
+  },
+  "kind": "genesis/contract-composition-profile-v0.1",
+  "metadata": {
+    "activation": "if-any-marker-then-all-modules-exact-marker",
+    "fields": [":module-profile", ":contract-composition-profile", ":strict-shapes", ":strict-effects", ":exports", ":types", ":refinements"],
+    "keyClosure": "types-and-refinements-exactly-equal-exports"
+  },
+  "nonclaims": [
+    "No runtime casts, dependent types, non-empty refinements, value-type generics, higher-rank polymorphism, implicit dictionaries, or nominal inheritance are provided.",
+    "A static declaration identity alone does not prove its implementation, package, or caller valid.",
+    "Optimization eligibility neither replaces translation validation nor authorizes a rewrite.",
+    "Runtime dispatch shape, runtime contract identity, static shape identity, and interface identity remain separate domains.",
+    "No self-host authority, package, backend, benchmark, Foundry result, model, or release level is promoted."
+  ],
+  "optimization": {
+    "eligibility": ["concrete", "closedShapes", "closedEffects", "pure", "refinementFree", "contractFree", "monomorphic"],
+    "necessaryNotSufficient": true,
+    "opaque": ["quote", "seal", "unseal", "core/effect::*", "core/contract::*"],
+    "translationValidation": "still-required-for-exact-transformed-artifact"
+  },
+  "parametricity": {
+    "supported": "explicit-rank1-effect-row-variable-bound-by-outermost-function-parameter",
+    "unsupported": ["higher-rank-effects", "implicit-method-polymorphism", "value-type-variables", "generic-constructors", "type-classes", "record-or-contract-row-substitution"]
+  },
+  "profiles": {
+    "contractComposition": "genesis/contract-composition-profile-v0.1",
+    "hash": "genesis/hash-profile/gcv0.2-blake3",
+    "language": "genesis/language-profile/v0.2",
+    "moduleResolution": "genesis/module-resolution-profile-v0.1",
+    "mode": "separate-exact-opt-in-no-version-inference"
+  },
+  "refinements": {
+    "representation": "per-export-duplicate-free-qualified-symbol-vector-as-lexical-set",
+    "supported": "empty-set-only",
+    "unsupportedBehavior": "nonempty-fails-boundary-no-identity-authority"
+  },
+  "runtimeContracts": {
+    "contractIdentity": "runtime-shape-plus-proto-contract-plus-handler-plus-meta",
+    "dispatchShape": "proto-runtime-shape-plus-ordered-override-operation-keys",
+    "separation": "runtime-and-static-identity-domains-never-interchangeable"
+  },
+  "schema": "docs/spec/CONTRACT_COMPOSITION_PROFILE_v0.1.schema.json",
+  "schemaSha256": "ab3065a1544f18e0d8420595c3cd26323503f7246ab3551e5d2b9deb92ffaf9f",
+  "sourceBindings": [
+    {"id": "source/composition", "mode": "composition", "path": "crates/gc_types/src/contract_composition.rs"},
+    {"id": "source/composition-analysis", "mode": "composition", "path": "crates/gc_types/src/contract_composition/analysis.rs"},
+    {"id": "source/optimizer", "mode": "optimizer", "path": "crates/gc_opt/src/lib.rs"},
+    {"id": "source/optimizer-contract", "mode": "normative-optimizer", "path": "docs/spec/OPTIMIZER.md"},
+    {"id": "source/runtime-contract", "mode": "runtime-contract", "path": "crates/gc_prelude/src/prelude_contract_effect.rs"},
+    {"id": "source/type-compatibility", "mode": "type-compatibility", "path": "crates/gc_types/src/type_compatibility.rs"},
+    {"id": "source/type-parser", "mode": "type-parser", "path": "crates/gc_types/src/ty.rs"},
+    {"id": "source/typecheck", "mode": "typecheck", "path": "crates/gc_types/src/lib.rs"}
+  ],
+  "version": "0.1"
+}

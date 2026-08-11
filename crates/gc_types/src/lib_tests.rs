@@ -588,6 +588,139 @@ fn repeated_effect_row_variable_requires_one_consistent_binding() {
 }
 
 #[test]
+fn function_contract_parameters_are_checked_contravariantly() {
+    let narrow_parameter = Ty::Rec {
+        fields: BTreeMap::from([(":a".to_string(), Ty::Int), (":b".to_string(), Ty::Int)]),
+        tail: RowTail::Closed,
+    };
+    let broad_parameter = Ty::Rec {
+        fields: BTreeMap::from([(":a".to_string(), Ty::Int)]),
+        tail: RowTail::Closed,
+    };
+    let implementation = Ty::Fn {
+        param: Box::new(narrow_parameter),
+        ret: Box::new(Ty::Int),
+        eff: EffRow::empty(),
+    };
+    let interface = Ty::Fn {
+        param: Box::new(broad_parameter),
+        ret: Box::new(Ty::Int),
+        eff: EffRow::empty(),
+    };
+
+    assert!(
+        !type_compatible(&implementation, &interface, false),
+        "an implementation requiring :b cannot satisfy an interface promising only :a"
+    );
+}
+
+#[test]
+fn function_contract_variance_accepts_broader_inputs_and_narrower_outputs() {
+    let row = |fields: &[&str]| Ty::Rec {
+        fields: fields
+            .iter()
+            .map(|field| ((*field).to_string(), Ty::Int))
+            .collect(),
+        tail: RowTail::Closed,
+    };
+    let implementation = Ty::Fn {
+        param: Box::new(row(&[":a"])),
+        ret: Box::new(row(&[":result", ":detail"])),
+        eff: EffRow::empty(),
+    };
+    let interface = Ty::Fn {
+        param: Box::new(row(&[":a", ":b"])),
+        ret: Box::new(row(&[":result"])),
+        eff: EffRow::empty(),
+    };
+
+    assert!(
+        type_compatible(&implementation, &interface, false),
+        "an implementation accepting fewer required input fields and returning more fields is safe"
+    );
+}
+
+#[test]
+fn function_contract_variance_handles_effectful_program_parameters() {
+    let implementation = Ty::Fn {
+        param: Box::new(Ty::Prog {
+            ret: Box::new(Ty::Int),
+            eff: EffRow {
+                ops: BTreeSet::new(),
+                tail: RowTail::Any,
+            },
+        }),
+        ret: Box::new(Ty::Int),
+        eff: EffRow::empty(),
+    };
+    let interface = Ty::Fn {
+        param: Box::new(Ty::Prog {
+            ret: Box::new(Ty::Int),
+            eff: EffRow {
+                ops: BTreeSet::from(["sys/time::now".to_string()]),
+                tail: RowTail::Closed,
+            },
+        }),
+        ret: Box::new(Ty::Int),
+        eff: EffRow::empty(),
+    };
+
+    assert!(
+        type_compatible(&implementation, &interface, false),
+        "an implementation accepting any program effect row can satisfy a closed effectful input interface"
+    );
+}
+
+#[test]
+fn duplicate_record_and_contract_row_labels_are_rejected() {
+    for source in [
+        "(Rec [[:a Int] [:a Bool]] nil)",
+        "(Contract [[pkg/op::run (Fn Int Int)] [pkg/op::run (Fn Bool Bool)]] nil)",
+    ] {
+        let forms = parse_module(source).expect("parse duplicate row fixture");
+        let error = parse_type_term(&forms[0]).expect_err("duplicate row label must fail");
+        assert!(
+            error.contains("duplicate row label"),
+            "unexpected duplicate-row diagnostic: {error}"
+        );
+    }
+}
+
+#[test]
+fn contract_composition_profile_rejects_unenforced_refinements() {
+    let src = r#"
+          (def ::meta
+            '{:contract-composition-profile genesis/contract-composition-profile-v0.1
+              :exports [pkg/value::answer]
+              :caps []
+              :strict-effects true
+              :strict-shapes true
+              :refinements {pkg/value::answer [pkg/refinement::positive]}
+              :types {pkg/value::answer Int}})
+          (def pkg/value::answer 42)
+          pkg/value::answer
+        "#;
+    let forms = canonicalize_module(parse_module(src).expect("parse profile fixture"))
+        .expect("canonicalize profile fixture");
+    let report = typecheck_package(&[ModuleForTypecheck {
+        path: "contract-profile.gc".to_string(),
+        meta: extract_meta(&forms),
+        forms,
+    }]);
+
+    assert!(!report.ok, "unverified refinements must fail closed");
+    assert!(
+        report.errors.iter().any(|error| {
+            error.contains("pkg/value::answer")
+                && error.contains("refinement")
+                && error.contains("unsupported")
+        }),
+        "expected deterministic unsupported-refinement diagnostic, got {:?}",
+        report.errors
+    );
+}
+
+#[test]
 fn effect_row_variable_is_instantiated_per_application() {
     let src = r#"
           (def ::meta '{:exports [] :caps [sys/time::now] :types {}})
