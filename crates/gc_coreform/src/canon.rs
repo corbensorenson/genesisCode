@@ -1,11 +1,17 @@
-use anyhow::{Context, anyhow, bail};
+use std::collections::BTreeSet;
+
+use anyhow::{anyhow, bail};
 
 use crate::{SpecialForm, term::Term};
 
 pub fn canonicalize_module(forms: Vec<Term>) -> anyhow::Result<Vec<Term>> {
     forms
         .into_iter()
-        .map(|t| canonicalize_form(t).context("canonicalize form"))
+        .enumerate()
+        .map(|(ordinal, term)| {
+            canonicalize_form(term)
+                .map_err(|error| anyhow!("canonicalize form {ordinal}: {error:#}"))
+        })
         .collect()
 }
 
@@ -133,9 +139,13 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         if params_vec.is_empty() {
             bail!("(fn ...) requires at least 1 parameter");
         }
+        let mut parameter_names = BTreeSet::new();
         for p in &params_vec {
-            if !matches!(p, Term::Symbol(_)) {
+            let Term::Symbol(name) = p else {
                 bail!("(fn ...) parameters must be symbols");
+            };
+            if !parameter_names.insert(name.clone()) {
+                bail!("(fn ...) duplicate parameter: {name}");
             }
         }
 
@@ -179,6 +189,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
             bail!("(let ...) bindings must be a list");
         };
         let mut canon_bindings = Vec::new();
+        let mut binding_names = BTreeSet::new();
         for b in bind_list {
             let Some(pair) = b.as_proper_list() else {
                 bail!("(let ...) binding must be a list (name expr)");
@@ -187,8 +198,11 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
             if pair.len() != 2 {
                 bail!("(let ...) binding must have exactly 2 forms");
             }
-            if !matches!(pair[0], Term::Symbol(_)) {
+            let Term::Symbol(name) = &pair[0] else {
                 bail!("(let ...) binding name must be symbol");
+            };
+            if !binding_names.insert(name.clone()) {
+                bail!("(let ...) duplicate binding: {name}");
             }
             canon_bindings.push(Term::list(vec![
                 pair[0].clone(),

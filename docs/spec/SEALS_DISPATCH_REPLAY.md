@@ -12,6 +12,19 @@ This directory is the *normative* behavior surface. If code changes semantics, u
 - UNHANDLED/EFFECT/ERROR must be created by sealing under trusted protocol tokens.
 - User code must not be able to create values recognized as UNHANDLED/EFFECT/ERROR unless given those tokens.
 
+## Errors
+- The runtime protocol identity is `genesis/error-v0.2`.
+- Recoverable language, Prelude, primitive-domain, and host-boundary failures are values
+  sealed by the trusted ERROR token. Their payload is immutable CoreForm data with
+  `:error/code`, non-empty `:error/message`, and `:error/context`.
+- A map with those fields is ordinary data. A value sealed by a user-created token is an
+  opaque user value. Neither is recognized as protocol ERROR.
+- Fatal evaluator failures return explicit `KernelError` to the embedding boundary; they
+  are not silently converted to success or confused with a recoverable sealed value.
+- Parse error `:at` values are zero-based UTF-8 byte offsets governed by
+  `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md`. Missing source provenance is omitted, never
+  fabricated as byte zero.
+
 ## Contract dispatch
 - `dispatch(c, msg)` calls `c.handler(msg)`.
 - If the result is sealed UNHANDLED and `c.proto != nil`, dispatch recurses to `c.proto`.

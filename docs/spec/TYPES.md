@@ -115,6 +115,12 @@ The typechecker infers types most precisely for:
 
 Applications with unknown/non-function heads are treated conservatively as `?` (but still walked for effect inference).
 
+Function parameters and `let` binding names are symbol-only binders, not patterns.
+Within one source parameter or binding list, names must be unique. The typechecker rejects
+non-symbol binders, duplicate names, malformed binding pairs, and empty function parameter
+lists even when it is invoked on raw, non-canonical terms. Top-level duplicate `def` names
+retain the separate sequential module-rebinding rule in `docs/spec/MODULE_SCOPE.md`.
+
 Unknown effect operations emit a warning and are rejected when `:caps` is empty or
 `:strict-effects true`. Strict mode requires literal operation symbols and either closed
 declared effect rows or named rows bound by the outermost function parameter. Task-effect

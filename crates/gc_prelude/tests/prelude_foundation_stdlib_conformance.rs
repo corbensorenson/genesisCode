@@ -1,4 +1,4 @@
-use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
+use gc_coreform::{SpecialForm, Term, TermOrdKey, canonicalize_module, parse_module};
 use gc_kernel::{
     Env, EvalCtx, KernelErrorKind, Value, ValueMap, eval_module, eval_module_compiled, value_hash,
 };
@@ -242,12 +242,15 @@ fn matrix() -> JsonValue {
     let object = value.as_object().expect("matrix root object");
     let expected = [
         "auditDate",
+        "bindingSemantics",
         "canonicalSpec",
         "canonicalSpecSha256",
         "contentIdentitySha256",
+        "errorSemantics",
         "forms",
         "kind",
         "nonclaims",
+        "patternSemantics",
         "schema",
         "schemaSha256",
         "sourceBindings",
@@ -467,6 +470,207 @@ fn malformed_reserved_forms_fail_in_both_runtime_tiers() {
                     "{head} {compiled}"
                 );
             }
+        }
+    }
+}
+
+#[test]
+fn binding_and_pattern_contract_is_closed_and_enforced() {
+    let value = matrix();
+    let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut source_ids = std::collections::BTreeSet::new();
+    for binding in value["sourceBindings"]
+        .as_array()
+        .expect("source bindings")
+    {
+        let id = json_string(binding, "id");
+        let path = json_string(binding, "path");
+        assert!(source_ids.insert(id), "duplicate source binding {id}");
+        assert!(
+            !std::path::Path::new(path).is_absolute(),
+            "source binding {id} must be repository-relative"
+        );
+        assert!(
+            repository.join(path).is_file(),
+            "source binding {id} does not exist: {path}"
+        );
+    }
+    assert_eq!(
+        source_ids,
+        [
+            "source/compiled-evaluator",
+            "source/coreform-canonicalizer",
+            "source/coreform-inventory",
+            "source/coreform-parser",
+            "source/effect-inference",
+            "source/kernel-errors",
+            "source/prelude",
+            "source/prelude-coreform-api",
+            "source/reference-evaluator",
+            "source/selfhost-parser",
+            "source/type-inference",
+            "source/wasm-route",
+        ]
+        .into_iter()
+        .collect()
+    );
+    assert_eq!(
+        value["bindingSemantics"]["functionParameters"],
+        "symbol-only-unique-nonempty"
+    );
+    assert_eq!(
+        value["bindingSemantics"]["letBindings"],
+        "symbol-only-unique-sequential"
+    );
+    assert_eq!(
+        value["bindingSemantics"]["topLevelDefinitions"],
+        "symbol-only-sequential-rebinding"
+    );
+    assert_eq!(value["patternSemantics"]["status"], "unsupported");
+    assert_eq!(
+        value["patternSemantics"]["exhaustiveness"],
+        "not-applicable"
+    );
+    assert_eq!(value["patternSemantics"]["guards"], "unsupported");
+    assert_eq!(SpecialForm::from_symbol("match"), None);
+    assert_eq!(SpecialForm::from_symbol("case"), None);
+    assert_eq!(SpecialForm::from_symbol("when"), None);
+
+    let rejected = [
+        (
+            "(fn (item item) item)",
+            "canonicalize form 0: (fn ...) duplicate parameter: item",
+        ),
+        (
+            "(let ((item 1) (item 2)) item)",
+            "canonicalize form 0: (let ...) duplicate binding: item",
+        ),
+        (
+            "(fn ((item)) item)",
+            "canonicalize form 0: (fn ...) parameters must be symbols",
+        ),
+    ];
+    for (source, expected) in rejected {
+        let error = canonicalize_module(parse_module(source).expect("parse binder fixture"))
+            .expect_err("invalid binder must fail");
+        assert_eq!(error.to_string(), expected);
+    }
+
+    let rebinding = canonicalize_module(
+        parse_module("(def item 1) (def item 2) item").expect("parse rebinding"),
+    )
+    .expect("top-level rebinding remains valid");
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        let mut env = Env::empty();
+        let result = if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &rebinding).expect("compiled rebinding")
+        } else {
+            eval_module(&mut ctx, &mut env, &rebinding).expect("reference rebinding")
+        };
+        assert_eq!(result.to_plain_term(), Some(Term::Int(2.into())));
+    }
+
+    let hidden_pattern =
+        canonicalize_module(parse_module("(match 1)").expect("parse ordinary application"))
+            .expect("pattern-like head is ordinary application");
+    let mut errors = Vec::new();
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        let mut env = Env::empty();
+        let error = if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &hidden_pattern).unwrap_err()
+        } else {
+            eval_module(&mut ctx, &mut env, &hidden_pattern).unwrap_err()
+        };
+        errors.push((error.kind.to_string(), error.msg));
+    }
+    assert_eq!(errors[0], errors[1]);
+    assert_eq!(errors[0].0, KernelErrorKind::Unbound.to_string());
+    assert_eq!(errors[0].1, "unbound symbol: match");
+}
+
+#[test]
+fn fatal_and_sealed_errors_match_across_runtime_tiers() {
+    let malformed = parse_module("(if true 1)").expect("parse malformed CoreForm");
+    let mut fatal = Vec::new();
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        let mut env = Env::empty();
+        let error = if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &malformed).unwrap_err()
+        } else {
+            eval_module(&mut ctx, &mut env, &malformed).unwrap_err()
+        };
+        fatal.push((error.kind.to_string(), error.msg));
+    }
+    assert_eq!(fatal[0], fatal[1]);
+    assert_eq!(fatal[0].0, KernelErrorKind::BadForm.to_string());
+
+    let recoverable = canonicalize_module(
+        parse_module("(prim int/add 1 \"not-an-int\")").expect("parse type error"),
+    )
+    .expect("canonicalize type error");
+    let mut payloads = Vec::new();
+    for compiled in [false, true] {
+        let mut ctx = EvalCtx::new();
+        let mut env = build_prelude(&mut ctx).env;
+        let protocol = ctx.protocol.expect("protocol tokens reserved");
+        let value = if compiled {
+            eval_module_compiled(&mut ctx, &mut env, &recoverable).expect("compiled sealed error")
+        } else {
+            eval_module(&mut ctx, &mut env, &recoverable).expect("reference sealed error")
+        };
+        let Value::Sealed { token, payload } = value else {
+            panic!("recoverable failure must be sealed ERROR");
+        };
+        assert_eq!(token, protocol.error);
+        let term = payload
+            .to_plain_term()
+            .expect("sealed ERROR payload must be immutable data");
+        let Term::Map(fields) = &term else {
+            panic!("sealed ERROR payload must be a map");
+        };
+        assert!(matches!(
+            fields.get(&TermOrdKey(Term::symbol(":error/code"))),
+            Some(Term::Str(code)) if code == "core/type-error"
+        ));
+        assert!(matches!(
+            fields.get(&TermOrdKey(Term::symbol(":error/message"))),
+            Some(Term::Str(message)) if !message.is_empty()
+        ));
+        assert!(matches!(
+            fields.get(&TermOrdKey(Term::symbol(":error/context"))),
+            Some(Term::Map(_))
+        ));
+        payloads.push(term);
+    }
+    assert_eq!(payloads[0], payloads[1]);
+}
+
+#[test]
+fn user_values_cannot_forge_protocol_error() {
+    let cases = [
+        "{:error/code \"core/type-error\" :error/message \"forged\" :error/context {}}",
+        "(let ((token (seal))) (seal {:error/code \"forged\"} token))",
+    ];
+
+    for source in cases {
+        let forms = canonicalize_module(parse_module(source).expect("parse forgery fixture"))
+            .expect("canonicalize forgery fixture");
+        for compiled in [false, true] {
+            let mut ctx = EvalCtx::new();
+            let mut env = build_prelude(&mut ctx).env;
+            let protocol = ctx.protocol.expect("protocol tokens reserved");
+            let value = if compiled {
+                eval_module_compiled(&mut ctx, &mut env, &forms).expect("compiled forgery fixture")
+            } else {
+                eval_module(&mut ctx, &mut env, &forms).expect("reference forgery fixture")
+            };
+            assert!(
+                !matches!(value, Value::Sealed { token, .. } if token == protocol.error),
+                "user-controlled source forged protocol ERROR: {source}"
+            );
         }
     }
 }

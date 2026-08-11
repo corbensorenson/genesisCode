@@ -138,6 +138,67 @@ fn singleton_list_is_just_grouping_in_canonical_form() {
 }
 
 #[test]
+fn canonicalization_rejects_duplicate_local_binders() {
+    let cases = [
+        (
+            "(fn (item item) item)",
+            "(fn ...) duplicate parameter: item",
+        ),
+        (
+            "(let ((item 1) (item 2)) item)",
+            "(let ...) duplicate binding: item",
+        ),
+    ];
+
+    for (source, expected) in cases {
+        let error = canonicalize_module(parse_module(source).expect("parse duplicate binder"))
+            .expect_err("duplicate local binder must fail");
+        assert_eq!(
+            error.to_string(),
+            format!("canonicalize form 0: {expected}")
+        );
+    }
+}
+
+#[test]
+fn canonicalization_rejects_destructuring_binders() {
+    let cases = [
+        ("(fn ((item)) item)", "(fn ...) parameters must be symbols"),
+        (
+            "(let (((item) 1)) item)",
+            "(let ...) binding name must be symbol",
+        ),
+    ];
+
+    for (source, expected) in cases {
+        let error = canonicalize_module(parse_module(source).expect("parse binder pattern"))
+            .expect_err("destructuring binder must fail");
+        assert_eq!(
+            error.to_string(),
+            format!("canonicalize form 0: {expected}")
+        );
+    }
+}
+
+#[test]
+fn parse_error_offsets_are_utf8_byte_offsets() {
+    let cases = [
+        ("", 0usize),
+        ("'", 1usize),
+        ("  ; comment", 11usize),
+        (")", 0usize),
+        ("(nil", 0usize),
+        ("\"\\q\"", 1usize),
+    ];
+
+    for (source, expected) in cases {
+        let error = parse_term(source).expect_err("fixture must fail parsing");
+        let actual = error.byte_offset(source.len());
+        assert_eq!(actual, expected, "source: {source:?}");
+    }
+}
+
+#[test]
 fn fixed_decimal_term_hash_is_normalized() {
     let a = FixedDecimal::parse("1.2300").expect("a").to_term();
     let b = FixedDecimal::parse("1.23").expect("b").to_term();

@@ -58,15 +58,16 @@ fn expect_parse_error_matches_rust(
     ctx: &mut EvalCtx,
     env: &Env,
     got: Value,
-    want: ParseError,
+    want: &ParseError,
     src: &str,
 ) {
-    let (want_code, want_at) = match want {
-        ParseError::Eof => ("core/parse/eof", 0usize),
-        ParseError::Unexpected { at, .. } => ("core/parse/unexpected", at),
-        ParseError::Escape { at, .. } => ("core/parse/escape", at),
-        ParseError::Int { at, .. } => ("core/parse/int", at),
+    let want_code = match want {
+        ParseError::Eof => "core/parse/eof",
+        ParseError::Unexpected { .. } => "core/parse/unexpected",
+        ParseError::Escape { .. } => "core/parse/escape",
+        ParseError::Int { .. } => "core/parse/int",
     };
+    let want_at = want.byte_offset(src.len());
 
     let payload = unerror_payload(ctx, env, got).expect("expected ERROR payload");
     let Term::Map(m) = payload else {
@@ -109,6 +110,9 @@ fn selfhost_parse_term_and_module_match_rust_parser_for_terms_and_errors() {
     let parse_term_fn = env
         .get("selfhost/parse::parse-term")
         .expect("selfhost/parse::parse-term bound");
+    let native_parse_term_fn = env
+        .get("core/coreform::parse-term")
+        .expect("core/coreform::parse-term bound");
     let parse_module_fn = env
         .get("selfhost/parse::parse-module")
         .expect("selfhost/parse::parse-module bound");
@@ -171,6 +175,8 @@ fn selfhost_parse_term_and_module_match_rust_parser_for_terms_and_errors() {
 
     let error_cases = [
         "",            // eof
+        "'",           // eof after quote
+        "  ; comment", // eof after trivia
         ")",           // unexpected delimiter
         "(",           // unterminated list
         "\"abc",       // unterminated string
@@ -183,10 +189,14 @@ fn selfhost_parse_term_and_module_match_rust_parser_for_terms_and_errors() {
 
     for src in error_cases {
         let want_err = parse_term(src).expect_err("rust parser must error");
-        let got = parse_term_fn
-            .clone()
-            .apply(&mut ctx, Value::data(Term::Str(src.to_string())))
-            .expect("selfhost parse-term apply");
-        expect_parse_error_matches_rust(&mut ctx, &env, got, want_err, src);
+        for (implementation, parser) in [
+            ("native", native_parse_term_fn.clone()),
+            ("selfhost", parse_term_fn.clone()),
+        ] {
+            let got = parser
+                .apply(&mut ctx, Value::data(Term::Str(src.to_string())))
+                .unwrap_or_else(|error| panic!("{implementation} parse-term apply: {error}"));
+            expect_parse_error_matches_rust(&mut ctx, &env, got, &want_err, src);
+        }
     }
 }

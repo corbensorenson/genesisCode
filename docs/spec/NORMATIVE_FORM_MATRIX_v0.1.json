@@ -1,8 +1,35 @@
 {
   "auditDate": "2026-08-11",
+  "bindingSemantics": {
+    "functionParameters": "symbol-only-unique-nonempty",
+    "letBindings": "symbol-only-unique-sequential",
+    "topLevelDefinitions": "symbol-only-sequential-rebinding"
+  },
   "canonicalSpec": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md",
-  "canonicalSpecSha256": "f470d7c1ce1c7de15982fd0344cc8358e2a174021add27de23e637e4f597e590",
-  "contentIdentitySha256": "b3265433eff8c885fa769348c6a88f0df0ba02c06ae0ef6c720b7db9d29c2ff8",
+  "canonicalSpecSha256": "caa92bbad2834f0474dc0a8e32f05008f222738e75a016a4a080f71cff2686df",
+  "contentIdentitySha256": "fbb1a20e05d76aef28a451a497134e5b0101c9a61906063378fce5475b280c43",
+  "errorSemantics": {
+    "fatalEvaluationFailure": "explicit-kernel-error",
+    "locationAvailability": {
+      "canonicalization": "zero-based-module-form-ordinal",
+      "parse": "exact-byte-offset",
+      "runtime": "none-on-spanless-coreform",
+      "typecheck": "module-path-and-diagnostic-ordinal"
+    },
+    "missingLocation": "absent-never-fabricated",
+    "parseLocationUnit": "utf8-byte-offset",
+    "parseOffsets": {
+      "eof": "source-byte-length",
+      "escape": "backslash-start",
+      "invalidInteger": "token-start",
+      "unexpectedToken": "token-start",
+      "unterminatedContainer": "opening-delimiter",
+      "unterminatedLiteral": "opening-delimiter"
+    },
+    "protocolId": "genesis/error-v0.2",
+    "recoverableLanguageFailure": "sealed-error",
+    "userForgery": "impossible-without-trusted-token"
+  },
   "forms": [
     {
       "canonicalDisposition": "atom",
@@ -316,8 +343,15 @@
     "does-not-promote-selfhost-closure-levels",
     "does-not-prove-independent-wasm-or-cross-host-parity"
   ],
+  "patternSemantics": {
+    "destructuring": "unsupported",
+    "exhaustiveness": "not-applicable",
+    "guards": "unsupported",
+    "status": "unsupported",
+    "unknownPatternLikeHeads": "ordinary-application"
+  },
   "schema": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json",
-  "schemaSha256": "97bc67089f31b95f9a04435e54382f2a74f9b1d116b1780838d9ecd73b8ec943",
+  "schemaSha256": "731d3a33d5a63ef9943cc698a7ac10e93951c0303cda385770c47eef64986598",
   "sourceBindings": [
     {
       "id": "source/coreform-canonicalizer",
@@ -330,6 +364,11 @@
       "path": "crates/gc_coreform/src/special_form.rs"
     },
     {
+      "id": "source/coreform-parser",
+      "mode": "frontend",
+      "path": "crates/gc_coreform/src/parse.rs"
+    },
+    {
       "id": "source/compiled-evaluator",
       "mode": "compiled",
       "path": "crates/gc_kernel/src/compiled_compile.rs"
@@ -340,14 +379,29 @@
       "path": "crates/gc_types/src/effect_inference.rs"
     },
     {
+      "id": "source/kernel-errors",
+      "mode": "runtime-shared",
+      "path": "crates/gc_kernel/src/error.rs"
+    },
+    {
       "id": "source/prelude",
       "mode": "prelude",
       "path": "crates/gc_prelude/src/prelude.rs"
     },
     {
+      "id": "source/prelude-coreform-api",
+      "mode": "prelude",
+      "path": "crates/gc_prelude/src/prelude_coreform_api.rs"
+    },
+    {
       "id": "source/reference-evaluator",
       "mode": "reference",
       "path": "crates/gc_kernel/src/eval_treewalk.rs"
+    },
+    {
+      "id": "source/selfhost-parser",
+      "mode": "selfhost-preview",
+      "path": "selfhost/parse.gc"
     },
     {
       "id": "source/type-inference",

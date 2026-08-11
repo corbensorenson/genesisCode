@@ -6,12 +6,15 @@
   "additionalProperties": false,
   "required": [
     "auditDate",
+    "bindingSemantics",
     "canonicalSpec",
     "canonicalSpecSha256",
     "contentIdentitySha256",
+    "errorSemantics",
     "forms",
     "kind",
     "nonclaims",
+    "patternSemantics",
     "schema",
     "schemaSha256",
     "sourceBindings",
@@ -20,9 +23,65 @@
   ],
   "properties": {
     "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "bindingSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["functionParameters", "letBindings", "topLevelDefinitions"],
+      "properties": {
+        "functionParameters": {"const": "symbol-only-unique-nonempty"},
+        "letBindings": {"const": "symbol-only-unique-sequential"},
+        "topLevelDefinitions": {"const": "symbol-only-sequential-rebinding"}
+      }
+    },
     "canonicalSpec": {"const": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md"},
     "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
     "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "errorSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fatalEvaluationFailure",
+        "locationAvailability",
+        "missingLocation",
+        "parseLocationUnit",
+        "parseOffsets",
+        "protocolId",
+        "recoverableLanguageFailure",
+        "userForgery"
+      ],
+      "properties": {
+        "fatalEvaluationFailure": {"const": "explicit-kernel-error"},
+        "locationAvailability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["canonicalization", "parse", "runtime", "typecheck"],
+          "properties": {
+            "canonicalization": {"const": "zero-based-module-form-ordinal"},
+            "parse": {"const": "exact-byte-offset"},
+            "runtime": {"const": "none-on-spanless-coreform"},
+            "typecheck": {"const": "module-path-and-diagnostic-ordinal"}
+          }
+        },
+        "missingLocation": {"const": "absent-never-fabricated"},
+        "parseLocationUnit": {"const": "utf8-byte-offset"},
+        "parseOffsets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["eof", "escape", "invalidInteger", "unexpectedToken", "unterminatedContainer", "unterminatedLiteral"],
+          "properties": {
+            "eof": {"const": "source-byte-length"},
+            "escape": {"const": "backslash-start"},
+            "invalidInteger": {"const": "token-start"},
+            "unexpectedToken": {"const": "token-start"},
+            "unterminatedContainer": {"const": "opening-delimiter"},
+            "unterminatedLiteral": {"const": "opening-delimiter"}
+          }
+        },
+        "protocolId": {"const": "genesis/error-v0.2"},
+        "recoverableLanguageFailure": {"const": "sealed-error"},
+        "userForgery": {"const": "impossible-without-trusted-token"}
+      }
+    },
     "forms": {
       "type": "array",
       "minItems": 19,
@@ -68,6 +127,18 @@
     },
     "kind": {"const": "genesis/normative-form-matrix-v0.1"},
     "nonclaims": {"$ref": "#/$defs/stringArray"},
+    "patternSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["destructuring", "exhaustiveness", "guards", "status", "unknownPatternLikeHeads"],
+      "properties": {
+        "destructuring": {"const": "unsupported"},
+        "exhaustiveness": {"const": "not-applicable"},
+        "guards": {"const": "unsupported"},
+        "status": {"const": "unsupported"},
+        "unknownPatternLikeHeads": {"const": "ordinary-application"}
+      }
+    },
     "schema": {"const": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json"},
     "schemaSha256": {"$ref": "#/$defs/sha256"},
     "sourceBindings": {
@@ -79,7 +150,7 @@
         "required": ["id", "mode", "path"],
         "properties": {
           "id": {"type": "string", "minLength": 1},
-          "mode": {"enum": ["canonicalizer", "compiled", "effect-inference", "frontend", "prelude", "reference", "type-inference", "wasm-inherited-reference"]},
+          "mode": {"enum": ["canonicalizer", "compiled", "effect-inference", "frontend", "prelude", "reference", "runtime-shared", "selfhost-preview", "type-inference", "wasm-inherited-reference"]},
           "path": {"type": "string", "minLength": 1}
         }
       }

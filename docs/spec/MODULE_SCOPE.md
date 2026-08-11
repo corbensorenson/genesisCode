@@ -37,6 +37,9 @@ This rule is required to support self-hosted tooling modules (printer, canonical
 ## Lexical Scope
 
 Local bindings (`let`, function parameters) are lexical and create nested scope frames.
+Each source binder is one symbol, and names must be unique within one `fn` parameter list
+or one `let` binding list. This local duplicate rejection does not change the intentional
+top-level `def` replacement rule above.
 
 Name lookup is:
 
@@ -47,4 +50,3 @@ Name lookup is:
 
 Recursive module scope can create cyclic value graphs (a binding closes over the module scope that binds it). Value
 hashing remains total and deterministic by applying the cycle handling rule defined in `docs/spec/VALUE_EFFECT_HASH.md`.
-

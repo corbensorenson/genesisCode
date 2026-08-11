@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use gc_coreform::{SpecialForm, Term, TermOrdKey, print_term};
 
@@ -204,13 +204,21 @@ fn infer_fn(
         ));
         return Ty::Any;
     };
-    let names: Vec<String> = params
-        .iter()
-        .filter_map(|p| match p {
-            Term::Symbol(s) => Some(s.clone()),
-            _ => None,
-        })
-        .collect();
+    let mut names = Vec::with_capacity(params.len());
+    let mut seen = BTreeSet::new();
+    for parameter in params {
+        let Term::Symbol(name) = parameter else {
+            sess.errors
+                .push("(fn ...) parameters must be symbols".to_string());
+            return Ty::Any;
+        };
+        if !seen.insert(name.clone()) {
+            sess.errors
+                .push(format!("(fn ...) duplicate parameter: {name}"));
+            return Ty::Any;
+        }
+        names.push(name.clone());
+    }
     if names.is_empty() {
         sess.errors
             .push("fn must have at least 1 param".to_string());
@@ -312,16 +320,28 @@ fn infer_let(items: Vec<&Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
         return Ty::Any;
     };
     let mut env2 = env.clone();
+    let mut seen = BTreeSet::new();
     for b in binds {
         let Some(pair) = b.as_proper_list() else {
-            continue;
+            sess.errors
+                .push("(let ...) binding must be a list (name expr)".to_string());
+            return Ty::Any;
         };
         if pair.len() != 2 {
-            continue;
+            sess.errors
+                .push("(let ...) binding must have exactly 2 forms".to_string());
+            return Ty::Any;
         }
         let Term::Symbol(name) = pair[0] else {
-            continue;
+            sess.errors
+                .push("(let ...) binding name must be symbol".to_string());
+            return Ty::Any;
         };
+        if !seen.insert(name.clone()) {
+            sess.errors
+                .push(format!("(let ...) duplicate binding: {name}"));
+            return Ty::Any;
+        }
         let ty = infer_term(pair[1], &env2, sess);
         env2.set(name.clone(), ty);
     }

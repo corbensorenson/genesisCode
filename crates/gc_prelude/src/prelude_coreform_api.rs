@@ -16,13 +16,14 @@ fn hex32(h: [u8; 32]) -> String {
     out
 }
 
-fn parse_error_code_at(e: &ParseError) -> (&'static str, usize) {
-    match e {
-        ParseError::Eof => ("core/parse/eof", 0),
-        ParseError::Unexpected { at, .. } => ("core/parse/unexpected", *at),
-        ParseError::Escape { at, .. } => ("core/parse/escape", *at),
-        ParseError::Int { at, .. } => ("core/parse/int", *at),
-    }
+fn parse_error_code_at(e: &ParseError, source_len: usize) -> (&'static str, usize) {
+    let code = match e {
+        ParseError::Eof => "core/parse/eof",
+        ParseError::Unexpected { .. } => "core/parse/unexpected",
+        ParseError::Escape { .. } => "core/parse/escape",
+        ParseError::Int { .. } => "core/parse/int",
+    };
+    (code, e.byte_offset(source_len))
 }
 
 fn arg_utf8_src(args: &[Value], idx: usize) -> Result<String, KernelError> {
@@ -84,7 +85,7 @@ pub(super) fn nf_coreform_parse_term(
     match parse_term(&src) {
         Ok(t) => Ok(Value::data(t)),
         Err(e) => {
-            let (code, at) = parse_error_code_at(&e);
+            let (code, at) = parse_error_code_at(&e, src.len());
             Ok(mk_error_with(ctx, code, e.to_string(), Some(at)))
         }
     }
@@ -101,7 +102,7 @@ pub(super) fn nf_coreform_parse_module(
     match parse_module(&src) {
         Ok(forms) => Ok(Value::data(Term::Vector(forms))),
         Err(e) => {
-            let (code, at) = parse_error_code_at(&e);
+            let (code, at) = parse_error_code_at(&e, src.len());
             Ok(mk_error_with(ctx, code, e.to_string(), Some(at)))
         }
     }
@@ -168,7 +169,7 @@ pub(super) fn nf_coreform_fmt_module(
     let forms = match parse_module(&src) {
         Ok(f) => f,
         Err(e) => {
-            let (code, at) = parse_error_code_at(&e);
+            let (code, at) = parse_error_code_at(&e, src.len());
             return Ok(mk_error_with(ctx, code, e.to_string(), Some(at)));
         }
     };
@@ -228,7 +229,7 @@ pub(super) fn nf_coreform_hash_module_src(
     let forms = match parse_module(&src) {
         Ok(f) => f,
         Err(e) => {
-            let (code, at) = parse_error_code_at(&e);
+            let (code, at) = parse_error_code_at(&e, src.len());
             return Ok(mk_error_with(ctx, code, e.to_string(), Some(at)));
         }
     };

@@ -18,6 +18,17 @@ pub enum ParseError {
     Int { at: usize, msg: String },
 }
 
+impl ParseError {
+    /// Return the authoritative UTF-8 byte offset for this parse failure.
+    /// EOF is located at the end of the exact source presented to the parser.
+    pub fn byte_offset(&self, source_len: usize) -> usize {
+        match self {
+            Self::Eof => source_len,
+            Self::Unexpected { at, .. } | Self::Escape { at, .. } | Self::Int { at, .. } => *at,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Tok {
     LParen,

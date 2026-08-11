@@ -60,6 +60,46 @@ and `unseal`:
 Malformed reserved forms fail as explicit canonicalization or kernel `BadForm` errors;
 they never fall through to ordinary application.
 
+## Bindings And Pattern Boundary
+
+v0.2 has binders, but no pattern language. A function parameter and a `let` binding
+name must each be one symbol. Destructuring binders are malformed. Names within one
+source `fn` parameter list or one `let` binding list must be unique; canonicalization
+and typechecking reject the second occurrence with a deterministic diagnostic. This
+applies even though multi-parameter functions later canonicalize to nested unary
+functions and `let` right-hand sides evaluate sequentially.
+
+Repeated top-level `def` names are different: they intentionally replace the current
+module binding in module order as specified by `docs/spec/MODULE_SCOPE.md`.
+
+There is no `match`, `case`, destructuring, wildcard, alternation, pattern guard, or
+exhaustiveness rule in the v0.2 grammar. Consequently guards are unsupported and
+exhaustiveness is not applicable. A pattern-like head not present in the nine-symbol
+reserved inventory is ordinary application and normally fails as an unbound function;
+no frontend or backend may recognize it as hidden syntax.
+
+## Error And Location Boundary
+
+User-controlled failure is explicit at every boundary. Parser and canonicalizer APIs
+return Rust errors internally. A fatal evaluator failure such as malformed CoreForm,
+an unbound symbol, exhaustion, or a non-callable value returns `KernelError` to its
+caller. Recoverable language/library failures return a value sealed by the trusted
+Prelude `ERROR` token under `genesis/error-v0.2`. A map with error-shaped fields or a
+value sealed by a user-created token is not protocol `ERROR`.
+
+Parser locations are zero-based offsets in the exact UTF-8 source bytes. EOF is the
+source byte length; unexpected tokens and invalid integers use the token start; escape
+errors use the backslash; unterminated strings/byte strings and containers use their
+opening delimiter. Native Prelude and self-host parser adapters must preserve the same
+code and offset in sealed error payloads.
+
+The spanless CoreForm v0.2 term API cannot truthfully recover a source byte location
+after parsing. Canonicalization therefore reports the zero-based module-form ordinal
+and full cause. Typechecking reports module path plus deterministic diagnostic ordinal.
+Runtime CoreForm errors have no source location. Missing locations remain absent rather
+than being fabricated as byte zero or attributed to the whole input. A future
+source-map profile must be versioned and must not alter CoreForm hashes.
+
 ## Tier Reconciliation
 
 Canonicalization is the source-to-CoreForm authority. The reference evaluator defines
@@ -67,6 +107,9 @@ runtime semantics. The compiled AST evaluator is non-authoritative and must matc
 reference on value/error, canonical value hash, steps, memory, seals, and coverage facts.
 Type inference is gradual but must traverse every executable form according to
 `docs/spec/TYPES.md`; effect inference skips quoted data and records no ambient effects.
+Reference and compiled tiers receive canonical CoreForm, so rejected binders and hidden
+pattern forms cannot become valid in one tier only. Fatal errors compare by kind and
+message; sealed errors compare by trusted token role and canonical payload.
 
 The current `gc_wasm` runtime parses and canonicalizes through `gc_coreform` and executes
 through `gc_kernel::eval_module`. It therefore inherits the reference evaluator; it is
@@ -86,8 +129,10 @@ must remain ordinary application; an undocumented backend-only head is a gate fa
 
 ## Nonclaims
 
-- This matrix does not freeze primitives, Prelude APIs, types, effects, numbers, text,
-  patterns, concurrency, modules, FFI, or packages beyond the cited v0.2 behavior.
+- This matrix does not add a pattern language or freeze future pattern design; it freezes
+  the absence of patterns and guards in v0.2. It does not freeze primitives, Prelude APIs,
+  types, effects, numbers, text, concurrency, modules, FFI, or packages beyond the cited
+  v0.2 behavior.
 - It does not claim independent Wasm execution or cross-host parity.
 - It does not promote any self-host implementation or semantic decision to H1-H4.
 - It changes no stage0 authority, fallback, release status, or downstream-product gate.
