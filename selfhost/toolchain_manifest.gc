@@ -50,6 +50,7 @@
     "selfhost/patch_schema_refactor_v1.gc"
     "selfhost/patch_schema_refactor_meta_migrate_v1.gc"
     "selfhost/patch_authority_identity_v1.gc"
+    "selfhost/patch_authority_normalize_v1.gc"
     "selfhost/stage1_v1.gc"
   ]
   :required-symbols [
@@ -104,5 +105,6 @@
     core/cli::rename-symbol-forms
     core/cli::split-module-forms
     core/cli::patch-semantic-node-index
+    core/cli::patch-normalize
   ]
 }

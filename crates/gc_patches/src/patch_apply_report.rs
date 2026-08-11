@@ -25,6 +25,40 @@ pub(super) fn report_term(
         TermOrdKey(Term::symbol(":ops-count")),
         Term::Int((patch.ops.len() as i64).into()),
     );
+    m.insert(
+        TermOrdKey(Term::symbol(":patch-h")),
+        Term::Str(patch.semantic_hash.clone()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":source-patch-h")),
+        Term::Str(patch.source_hash.clone()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":op-identities")),
+        Term::Vector(
+            patch
+                .op_hashes
+                .iter()
+                .enumerate()
+                .map(|(ordinal, op_hash)| {
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":op-h")),
+                                Term::Str(op_hash.clone()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":ordinal")),
+                                Term::Int((ordinal as i64).into()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    )
+                })
+                .collect(),
+        ),
+    );
     if let Some(p) = package_artifact {
         m.insert(
             TermOrdKey(Term::symbol(":package-artifact")),

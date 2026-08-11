@@ -165,6 +165,51 @@ Semantics:
 
 All patch application happens against the module’s canonicalized CoreForm, and the result is re-canonicalized before writing.
 
+## Canonical normalization and identity
+
+Before execution, production must call the artifact-loaded GenesisCode binding
+`core/cli::patch-normalize`. Its closed request contains exactly:
+
+- `:kind` = `"genesis/patch-normalize-request-v0.1"`
+- `:profile` = `"genesis/patch-authority-v0.1"`
+- `:patch` = the source patch term
+- `:v` = `1`
+
+The source patch and every operation map are closed schemas. Unknown fields,
+missing required fields, unknown operations, wrong field types, empty required
+identifiers, and unsupported versions fail closed. Normalization:
+
+- preserves operation vector order as the only execution order
+- converts symbol-or-string identifier fields to non-empty strings
+- converts set-valued vectors to canonical sorted, duplicate-free string vectors
+- emits every optional field explicitly as its normalized value, `[]`, or `nil`
+- preserves `:intent`, `:provenance`, replacement terms, paths, and module content
+
+The closed response contains exactly `:kind`, `:normalized-patch`, `:ok`,
+`:op-identities`, `:patch-h`, `:profile`, `:source-patch-h`, and `:v`.
+Fixed values are:
+
+- `:kind` = `"genesis/patch-normalize-v0.1"`
+- `:profile` = `"genesis/patch-authority-v0.1"`
+- `:ok` = `true`
+- `:v` = `1`
+
+`source-patch-h` is `hash-term(source patch)`. `patch-h` is
+`hash-term(normalized patch)`. `:op-identities` is an exact ordered vector of
+closed `{:ordinal int :op-h hex64}` maps, where `op-h` is the normalized
+operation's `hash-term` identity. The host decoder must bind all hashes,
+ordinals, field sets, types, and operation count to the request and normalized
+term before execution. It may decode the accepted closed plan into host
+execution types but cannot accept, repair, reorder, or synthesize semantic
+fields. Rejected, missing, malformed, resource-exhausted, or unbound authority
+output has no production Rust fallback.
+
+The patch artifact stored by patch application is the normalized patch term.
+Its evidence-store address is the unprefixed BLAKE3 hash of canonical stored
+bytes and is distinct from the domain-separated semantic `patch-h`. Apply
+reports carry `:patch-h`, `:source-patch-h`, and the complete ordered
+`:op-identities` vector.
+
 ## Replay-Aware Evidence
 
 Patch apply reports include deterministic per-op evidence entries. For high-level refactor ops, entries include:

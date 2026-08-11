@@ -13,7 +13,7 @@ pub fn apply_patch_with_step_limit_and_frontend(
     let patch_src = std::fs::read_to_string(patch_path)?;
     let patch_term = parse_term(&patch_src).map_err(|e| PatchError::Parse(e.to_string()))?;
 
-    let mut selfhost = if coreform_frontend_is_rust(&frontend) {
+    let selfhost_config = if coreform_frontend_is_rust(&frontend) {
         None
     } else {
         let CoreformFrontend::Selfhost(cfg) = &frontend else {
@@ -21,15 +21,29 @@ pub fn apply_patch_with_step_limit_and_frontend(
                 "invalid frontend dispatch while initializing patch toolchain".to_string(),
             ));
         };
-        Some(SelfhostPatchToolchain::init(cfg, mem_limits)?)
+        Some(cfg.clone())
     };
+    let mut selfhost = selfhost_config
+        .as_ref()
+        .map(|config| SelfhostPatchToolchain::init(config, mem_limits))
+        .transpose()?;
 
     // Selfhost frontend is authoritative for patch-schema acceptance.
     if let Some(sh) = selfhost.as_mut() {
         sh.validate_patch_term(&patch_term, step_limit)?;
     }
 
-    let patch = Patch::from_term(&patch_term)?;
+    let patch = if let Some(config) = &selfhost_config {
+        selfhost_normalize_patch(&patch_term, config, step_limit, mem_limits)?
+    } else {
+        #[cfg(not(feature = "parity-oracle"))]
+        return Err(PatchError::Validate(
+            "Rust patch parser is not compiled as a production authority; use a dedicated parity harness binary"
+                .to_string(),
+        ));
+        #[cfg(feature = "parity-oracle")]
+        Patch::from_term(&patch_term)?
+    };
     if patch.version != SEMANTIC_PATCH_VERSION {
         return Err(PatchError::Validate(format!(
             "unsupported patch :version {}",
@@ -42,7 +56,7 @@ pub fn apply_patch_with_step_limit_and_frontend(
     let store = EvidenceStore::open(&pkg_dir)?;
 
     // Store the patch artifact itself (as canonical CoreForm bytes).
-    let patch_artifact = store.put_term(&patch_term)?;
+    let patch_artifact = store.put_term(&patch.normalized_term)?;
 
     // Apply ops.
     let mut semantic_edits = Vec::new();

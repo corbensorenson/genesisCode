@@ -22,11 +22,17 @@ impl Patch {
         for op in ops {
             parsed.push(parse_op(op)?);
         }
+        let semantic_hash = hash32_hex(hash_term(t));
+        let op_hashes = ops.iter().map(|op| hash32_hex(hash_term(op))).collect();
         Ok(Self {
             version,
             intent,
             provenance,
             ops: parsed,
+            normalized_term: t.clone(),
+            semantic_hash: semantic_hash.clone(),
+            source_hash: semantic_hash,
+            op_hashes,
         })
     }
 }
@@ -114,14 +120,24 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             Ok(PatchOp::RemoveModule { module_path })
         }
         ":update-manifest" => {
-            let set = m
-                .get(&TermOrdKey(Term::Symbol(":set".to_string())))
-                .cloned();
-            let obligations_add = get_sym_vec(m, ":obligations-add")?;
-            let obligations_remove = get_sym_vec(m, ":obligations-remove")?;
-            let tests_add = get_sym_vec(m, ":tests-add")?;
-            let tests_remove = get_sym_vec(m, ":tests-remove")?;
-            let caps_policy = get_str(m, ":caps-policy")?;
+            let set = match m.get(&TermOrdKey(Term::symbol(":set"))) {
+                None | Some(Term::Nil) => None,
+                Some(value) => Some(value.clone()),
+            };
+            let obligations_add = get_sym_or_str_vec(m, ":obligations-add")?;
+            let obligations_remove = get_sym_or_str_vec(m, ":obligations-remove")?;
+            let tests_add = get_sym_or_str_vec(m, ":tests-add")?;
+            let tests_remove = get_sym_or_str_vec(m, ":tests-remove")?;
+            let caps_policy = match m.get(&TermOrdKey(Term::symbol(":caps-policy"))) {
+                None | Some(Term::Nil) => None,
+                Some(Term::Str(value)) => Some(value.clone()),
+                Some(value) => {
+                    return Err(PatchError::Validate(format!(
+                        ":caps-policy must be nil|string, got {}",
+                        print_term(value)
+                    )));
+                }
+            };
             Ok(PatchOp::UpdateManifest {
                 set,
                 obligations_add,
@@ -306,26 +322,6 @@ pub(super) fn get_str(
     }
 }
 
-pub(super) fn get_sym_vec(
-    m: &BTreeMap<TermOrdKey, Term>,
-    k: &str,
-) -> Result<Vec<String>, PatchError> {
-    match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
-        None => Ok(Vec::new()),
-        Some(Term::Vector(xs)) => Ok(xs
-            .iter()
-            .filter_map(|t| match t {
-                Term::Symbol(s) => Some(s.clone()),
-                _ => None,
-            })
-            .collect()),
-        Some(x) => Err(PatchError::Validate(format!(
-            "{k} must be vector, got {}",
-            print_term(x)
-        ))),
-    }
-}
-
 pub(super) fn get_sym_or_str(
     m: &BTreeMap<TermOrdKey, Term>,
     k: &str,
@@ -377,10 +373,10 @@ pub(super) fn get_optional_sym_or_str_vec(
     m: &BTreeMap<TermOrdKey, Term>,
     k: &str,
 ) -> Result<Option<Vec<String>>, PatchError> {
-    if m.contains_key(&TermOrdKey(Term::Symbol(k.to_string()))) {
-        return Ok(Some(get_sym_or_str_vec(m, k)?));
+    match m.get(&TermOrdKey(Term::symbol(k))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(_) => Ok(Some(get_sym_or_str_vec(m, k)?)),
     }
-    Ok(None)
 }
 
 #[cfg(test)]

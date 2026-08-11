@@ -1,0 +1,509 @@
+(def selfhost/patch_normalize::REQUEST_KIND "genesis/patch-normalize-request-v0.1")
+(def selfhost/patch_normalize::REPORT_KIND "genesis/patch-normalize-v0.1")
+
+(def selfhost/patch_normalize::err
+  (fn (message) ((core/error::make2 "core/patch-authority") message)))
+
+(def selfhost/patch_normalize::has-key-loop
+  (fn (entries)
+    (fn (key)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          false
+          (if ((core/eq? ((core/vec::get ((core/vec::get entries) i)) 0)) key)
+            true
+            (((selfhost/patch_normalize::has-key-loop entries) key)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/patch_normalize::has-key
+  (fn (map)
+    (fn (key) (((selfhost/patch_normalize::has-key-loop (core/map::entries map)) key) 0))))
+
+(def selfhost/patch_normalize::vec-has
+  (fn (values)
+    (fn (needle)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len values))
+          false
+          (if ((core/eq? ((core/vec::get values) i)) needle)
+            true
+            (((selfhost/patch_normalize::vec-has values) needle)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/patch_normalize::keys-allowed-loop
+  (fn (entries)
+    (fn (allowed)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          true
+          (let ((key ((core/vec::get ((core/vec::get entries) i)) 0)))
+            (if (selfhost/patch_schema::is-sym? key)
+              (if (((selfhost/patch_normalize::vec-has allowed) key) 0)
+                (((selfhost/patch_normalize::keys-allowed-loop entries) allowed)
+                  ((core/int::add i) 1))
+                (selfhost/patch_normalize::err "operation contains an unknown field"))
+              (selfhost/patch_normalize::err "operation keys must be symbols"))))))))
+
+(def selfhost/patch_normalize::keys-required-loop
+  (fn (map)
+    (fn (required)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len required))
+          true
+          (if ((selfhost/patch_normalize::has-key map) ((core/vec::get required) i))
+            (((selfhost/patch_normalize::keys-required-loop map) required)
+              ((core/int::add i) 1))
+            (selfhost/patch_normalize::err "operation is missing a required field")))))))
+
+(def selfhost/patch_normalize::shape
+  (fn (map)
+    (fn (allowed)
+      (fn (required)
+        (if (selfhost/patch_schema::is-map? map)
+          (let
+            ((allowed-result
+               (((selfhost/patch_normalize::keys-allowed-loop (core/map::entries map)) allowed)
+                 0)))
+            (if (core/error::is? allowed-result)
+              allowed-result
+              (((selfhost/patch_normalize::keys-required-loop map) required) 0)))
+          (selfhost/patch_normalize::err "operation must be a map"))))))
+
+(def selfhost/patch_normalize::nonempty-str?
+  (fn (value)
+    (if (selfhost/patch_schema::is-str? value)
+      ((core/int::lt? 0) (core/str::len value))
+      false)))
+
+(def selfhost/patch_normalize::sym-or-str
+  (fn (value)
+    (if (selfhost/patch_schema::is-str? value)
+      (if ((core/int::lt? 0) (core/str::len value))
+        value
+        (selfhost/patch_normalize::err "symbol-or-string field must be non-empty"))
+      (if (selfhost/patch_schema::is-sym? value)
+        (core/sym::to-str value)
+        (selfhost/patch_normalize::err "field must be a symbol or string")))))
+
+(def selfhost/patch_normalize::strings-set-loop
+  (fn (values)
+    (fn (i)
+      (fn (set)
+        (if ((core/int::eq? i) (core/vec::len values))
+          set
+          (let ((value (selfhost/patch_normalize::sym-or-str ((core/vec::get values) i))))
+            (if (core/error::is? value)
+              value
+              ((((selfhost/patch_normalize::strings-set-loop values)
+                  ((core/int::add i) 1))
+                (((core/map::put set) value) true))))))))))
+
+(def selfhost/patch_normalize::set-keys-loop
+  (fn (entries)
+    (fn (i)
+      (fn (out)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          out
+          ((((selfhost/patch_normalize::set-keys-loop entries)
+              ((core/int::add i) 1))
+            ((core/vec::push out) ((core/vec::get ((core/vec::get entries) i)) 0)))))))))
+
+(def selfhost/patch_normalize::strings
+  (fn (value)
+    (if (selfhost/patch_schema::is-vec? value)
+      (let ((set (((selfhost/patch_normalize::strings-set-loop value) 0) {})))
+        (if (core/error::is? set)
+          set
+          (((selfhost/patch_normalize::set-keys-loop (core/map::entries set)) 0) [])))
+      (selfhost/patch_normalize::err "field must be a vector of symbols or strings"))))
+
+(def selfhost/patch_normalize::optional-strings
+  (fn (map)
+    (fn (key)
+      (if ((selfhost/patch_normalize::has-key map) key)
+        (selfhost/patch_normalize::strings ((core/map::get map) key))
+        []))))
+
+(def selfhost/patch_normalize::normalize-replace-node
+  (fn (op)
+    (let ((shape (((selfhost/patch_normalize::shape op)
+                    [:op :module-path :path :new])
+                   [:op :module-path :path :new])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((module-path ((core/map::get op) (quote :module-path)))
+            (path ((core/map::get op) (quote :path))))
+          (if (selfhost/patch_normalize::nonempty-str? module-path)
+            (let ((valid-path (selfhost/patch_schema::validate-path path)))
+              (if (core/error::is? valid-path)
+                valid-path
+                {:module-path module-path
+                  :new ((core/map::get op) (quote :new))
+                  :op (quote :replace-node)
+                  :path path}))
+            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+
+(def selfhost/patch_normalize::normalize-replace-node-id
+  (fn (op)
+    (let ((shape (((selfhost/patch_normalize::shape op)
+                    [:op :module-path :node-id :new])
+                   [:op :module-path :node-id :new])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((module-path ((core/map::get op) (quote :module-path)))
+            (node-id ((core/map::get op) (quote :node-id))))
+          (if (selfhost/patch_normalize::nonempty-str? module-path)
+            (if
+              (if (selfhost/patch_normalize::nonempty-str? node-id)
+                ((core/int::eq? (core/str::len node-id)) 64)
+                false)
+              {:module-path module-path
+                :new ((core/map::get op) (quote :new))
+                :node-id node-id
+                :op (quote :replace-node-id)}
+              (selfhost/patch_normalize::err ":node-id must be a non-empty hex64 string"))
+            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+
+(def selfhost/patch_normalize::normalize-add-module
+  (fn (op)
+    (let ((shape (((selfhost/patch_normalize::shape op) [:op :module-path :content])
+                   [:op :module-path :content])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((module-path ((core/map::get op) (quote :module-path)))
+            (content ((core/map::get op) (quote :content))))
+          (if (selfhost/patch_normalize::nonempty-str? module-path)
+            (if
+              (if (selfhost/patch_schema::is-str? content)
+                true
+                (selfhost/patch_schema::is-vec? content))
+              {:content content :module-path module-path :op (quote :add-module)}
+              (selfhost/patch_normalize::err ":content must be a string or vector"))
+            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+
+(def selfhost/patch_normalize::normalize-remove-module
+  (fn (op)
+    (let ((shape (((selfhost/patch_normalize::shape op) [:op :module-path])
+                   [:op :module-path])))
+      (if (core/error::is? shape)
+        shape
+        (let ((module-path ((core/map::get op) (quote :module-path))))
+          (if (selfhost/patch_normalize::nonempty-str? module-path)
+            {:module-path module-path :op (quote :remove-module)}
+            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+
+(def selfhost/patch_normalize::normalize-update-manifest
+  (fn (op)
+    (let
+      ((shape
+         (((selfhost/patch_normalize::shape op)
+            [:op :set :obligations-add :obligations-remove :tests-add :tests-remove :caps-policy])
+           [:op])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((set-value
+             (if ((selfhost/patch_normalize::has-key op) (quote :set))
+               ((core/map::get op) (quote :set))
+               nil))
+            (obligations-add
+              ((selfhost/patch_normalize::optional-strings op) (quote :obligations-add)))
+            (obligations-remove
+              ((selfhost/patch_normalize::optional-strings op) (quote :obligations-remove)))
+            (tests-add ((selfhost/patch_normalize::optional-strings op) (quote :tests-add)))
+            (tests-remove
+              ((selfhost/patch_normalize::optional-strings op) (quote :tests-remove)))
+            (caps-policy
+              (if ((selfhost/patch_normalize::has-key op) (quote :caps-policy))
+                ((core/map::get op) (quote :caps-policy))
+                nil)))
+          (if
+            (if (core/list::is-nil? set-value)
+              true
+              (selfhost/patch_schema::is-map? set-value))
+            (if
+              (if (core/list::is-nil? caps-policy)
+                true
+                (selfhost/patch_normalize::nonempty-str? caps-policy))
+              (if (core/error::is? obligations-add)
+                obligations-add
+                (if (core/error::is? obligations-remove)
+                  obligations-remove
+                  (if (core/error::is? tests-add)
+                    tests-add
+                    (if (core/error::is? tests-remove)
+                      tests-remove
+                      {:caps-policy caps-policy
+                        :obligations-add obligations-add
+                        :obligations-remove obligations-remove
+                        :op (quote :update-manifest)
+                        :set set-value
+                        :tests-add tests-add
+                        :tests-remove tests-remove}))))
+              (selfhost/patch_normalize::err ":caps-policy must be nil or a non-empty string"))
+            (selfhost/patch_normalize::err ":set must be nil or a map")))))))
+
+(def selfhost/patch_normalize::normalize-rename-symbol
+  (fn (op)
+    (let ((shape (((selfhost/patch_normalize::shape op) [:op :module-path :from :to])
+                   [:op :module-path :from :to])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((module-path ((core/map::get op) (quote :module-path)))
+            (from (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :from))))
+            (to (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :to)))))
+          (if (selfhost/patch_normalize::nonempty-str? module-path)
+            (if (core/error::is? from)
+              from
+              (if (core/error::is? to)
+                to
+                {:from from :module-path module-path :op (quote :rename-symbol) :to to}))
+            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+
+(def selfhost/patch_normalize::normalize-move-module
+  (fn (op)
+    (let ((shape (((selfhost/patch_normalize::shape op)
+                    [:op :from-module-path :to-module-path])
+                   [:op :from-module-path :to-module-path])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((from-path ((core/map::get op) (quote :from-module-path)))
+            (to-path ((core/map::get op) (quote :to-module-path))))
+          (if
+            (if (selfhost/patch_normalize::nonempty-str? from-path)
+              (selfhost/patch_normalize::nonempty-str? to-path)
+              false)
+            {:from-module-path from-path :op (quote :move-module) :to-module-path to-path}
+            (selfhost/patch_normalize::err "module paths must be non-empty strings")))))))
+
+(def selfhost/patch_normalize::normalize-split-module
+  (fn (op)
+    (let ((shape (((selfhost/patch_normalize::shape op)
+                    [:op :from-module-path :to-module-path :symbols])
+                   [:op :from-module-path :to-module-path :symbols])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((from-path ((core/map::get op) (quote :from-module-path)))
+            (to-path ((core/map::get op) (quote :to-module-path)))
+            (symbols (selfhost/patch_normalize::strings ((core/map::get op) (quote :symbols)))))
+          (if
+            (if (selfhost/patch_normalize::nonempty-str? from-path)
+              (selfhost/patch_normalize::nonempty-str? to-path)
+              false)
+            (if (core/error::is? symbols)
+              symbols
+              (if ((core/int::lt? 0) (core/vec::len symbols))
+                {:from-module-path from-path
+                  :op (quote :split-module)
+                  :symbols symbols
+                  :to-module-path to-path}
+                (selfhost/patch_normalize::err ":symbols must be non-empty")))
+            (selfhost/patch_normalize::err "module paths must be non-empty strings")))))))
+
+(def selfhost/patch_normalize::normalize-rewrite-meta
+  (fn (op)
+    (fn (op-symbol)
+      (let
+        ((shape
+           (((selfhost/patch_normalize::shape op)
+              [:op :module-path :add :remove :replace])
+             [:op :module-path])))
+        (if (core/error::is? shape)
+          shape
+          (let
+            ((module-path ((core/map::get op) (quote :module-path)))
+              (add ((selfhost/patch_normalize::optional-strings op) (quote :add)))
+              (remove ((selfhost/patch_normalize::optional-strings op) (quote :remove)))
+              (replace
+                (if ((selfhost/patch_normalize::has-key op) (quote :replace))
+                  (selfhost/patch_normalize::strings ((core/map::get op) (quote :replace)))
+                  nil)))
+            (if (selfhost/patch_normalize::nonempty-str? module-path)
+              (if (core/error::is? add)
+                add
+                (if (core/error::is? remove)
+                  remove
+                  (if (core/error::is? replace)
+                    replace
+                    {:add add
+                      :module-path module-path
+                      :op op-symbol
+                      :remove remove
+                      :replace replace})))
+              (selfhost/patch_normalize::err ":module-path must be a non-empty string"))))))))
+
+(def selfhost/patch_normalize::normalize-migrate-contract
+  (fn (op)
+    (let
+      ((shape
+         (((selfhost/patch_normalize::shape op)
+            [:op :module-path :contract-symbol :from-param :to-param])
+           [:op :module-path :contract-symbol :from-param :to-param])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((module-path ((core/map::get op) (quote :module-path)))
+            (contract-symbol
+              (selfhost/patch_normalize::sym-or-str
+                ((core/map::get op) (quote :contract-symbol))))
+            (from-param
+              (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :from-param))))
+            (to-param
+              (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :to-param)))))
+          (if (selfhost/patch_normalize::nonempty-str? module-path)
+            (if (core/error::is? contract-symbol)
+              contract-symbol
+              (if (core/error::is? from-param)
+                from-param
+                (if (core/error::is? to-param)
+                  to-param
+                  {:contract-symbol contract-symbol
+                    :from-param from-param
+                    :module-path module-path
+                    :op (quote :migrate-contract-signature)
+                    :to-param to-param})))
+            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+
+(def selfhost/patch_normalize::normalize-op
+  (fn (op)
+    (if (selfhost/patch_schema::is-map? op)
+      (let ((op-symbol ((core/map::get op) (quote :op))))
+        (if (selfhost/patch_schema::is-sym? op-symbol)
+          (if ((core/sym::eq? op-symbol) (quote :replace-node))
+            (selfhost/patch_normalize::normalize-replace-node op)
+            (if ((core/sym::eq? op-symbol) (quote :replace-node-id))
+              (selfhost/patch_normalize::normalize-replace-node-id op)
+              (if ((core/sym::eq? op-symbol) (quote :add-module))
+                (selfhost/patch_normalize::normalize-add-module op)
+                (if ((core/sym::eq? op-symbol) (quote :remove-module))
+                  (selfhost/patch_normalize::normalize-remove-module op)
+                  (if ((core/sym::eq? op-symbol) (quote :update-manifest))
+                    (selfhost/patch_normalize::normalize-update-manifest op)
+                    (if ((core/sym::eq? op-symbol) (quote :rename-symbol))
+                      (selfhost/patch_normalize::normalize-rename-symbol op)
+                      (if ((core/sym::eq? op-symbol) (quote :move-module))
+                        (selfhost/patch_normalize::normalize-move-module op)
+                        (if ((core/sym::eq? op-symbol) (quote :split-module))
+                          (selfhost/patch_normalize::normalize-split-module op)
+                          (if ((core/sym::eq? op-symbol) (quote :rewrite-imports))
+                            ((selfhost/patch_normalize::normalize-rewrite-meta op)
+                              (quote :rewrite-imports))
+                            (if ((core/sym::eq? op-symbol) (quote :rewrite-exports))
+                              ((selfhost/patch_normalize::normalize-rewrite-meta op)
+                                (quote :rewrite-exports))
+                              (if
+                                ((core/sym::eq? op-symbol)
+                                  (quote :migrate-contract-signature))
+                                (selfhost/patch_normalize::normalize-migrate-contract op)
+                                (selfhost/patch_normalize::err "unknown :op"))))))))))))
+          (selfhost/patch_normalize::err ":op must be a symbol")))
+      (selfhost/patch_normalize::err "operation must be a map"))))
+
+(def selfhost/patch_normalize::normalize-ops-loop
+  (fn (ops)
+    (fn (i)
+      (fn (normalized)
+        (fn (identities)
+          (if ((core/int::eq? i) (core/vec::len ops))
+            {:identities identities :ops normalized}
+            (let ((op (selfhost/patch_normalize::normalize-op ((core/vec::get ops) i))))
+              (if (core/error::is? op)
+                op
+                (let ((op-h (selfhost/hash::hash-term op)))
+                  (if (core/error::is? op-h)
+                    op-h
+                    (((((selfhost/patch_normalize::normalize-ops-loop ops)
+                         ((core/int::add i) 1))
+                        ((core/vec::push normalized) op))
+                       ((core/vec::push identities) {:op-h op-h :ordinal i})))))))))))))
+
+(def selfhost/patch_normalize::normalize-patch
+  (fn (patch)
+    (if (selfhost/patch_schema::is-map? patch)
+      (let
+        ((shape
+           (((selfhost/patch_normalize::shape patch)
+              [:version :intent :provenance :ops])
+             [:version :intent :provenance :ops])))
+        (if (core/error::is? shape)
+          shape
+          (let
+            ((version ((core/map::get patch) (quote :version)))
+              (intent ((core/map::get patch) (quote :intent)))
+              (provenance ((core/map::get patch) (quote :provenance)))
+              (ops ((core/map::get patch) (quote :ops))))
+            (if
+              (if (selfhost/patch_schema::is-int? version)
+                ((core/int::eq? version) 1)
+                false)
+              (if (selfhost/patch_schema::is-str? intent)
+                (if (selfhost/patch_schema::is-map? provenance)
+                  (if (selfhost/patch_schema::is-vec? ops)
+                    (let ((result ((((selfhost/patch_normalize::normalize-ops-loop ops) 0) []) [])))
+                      (if (core/error::is? result)
+                        result
+                        {:identities ((core/map::get result) (quote :identities))
+                          :patch
+                            {:intent intent
+                              :ops ((core/map::get result) (quote :ops))
+                              :provenance provenance
+                              :version 1}}))
+                    (selfhost/patch_normalize::err ":ops must be a vector"))
+                  (selfhost/patch_normalize::err ":provenance must be a map"))
+                (selfhost/patch_normalize::err ":intent must be a string"))
+              (selfhost/patch_normalize::err ":version must equal 1")))))
+      (selfhost/patch_normalize::err "patch must be a map"))))
+
+(def core/cli::patch-normalize
+  (fn (request)
+    (if (selfhost/patch_schema::is-map? request)
+      (let
+        ((shape
+           (((selfhost/patch_normalize::shape request) [:kind :profile :patch :v])
+             [:kind :profile :patch :v])))
+        (if (core/error::is? shape)
+          shape
+          (let
+            ((kind ((core/map::get request) (quote :kind)))
+              (profile ((core/map::get request) (quote :profile)))
+              (patch ((core/map::get request) (quote :patch)))
+              (version ((core/map::get request) (quote :v))))
+            (if (if (selfhost/patch_schema::is-str? kind)
+                  ((core/eq? kind) selfhost/patch_normalize::REQUEST_KIND)
+                  false)
+              (if (if (selfhost/patch_schema::is-str? profile)
+                    ((core/eq? profile) selfhost/patch_authority::PROFILE)
+                    false)
+                (if (if (selfhost/patch_schema::is-int? version)
+                      ((core/int::eq? version) 1)
+                      false)
+                  (let ((normalized (selfhost/patch_normalize::normalize-patch patch)))
+                    (if (core/error::is? normalized)
+                      normalized
+                      (let
+                        ((normalized-patch ((core/map::get normalized) (quote :patch)))
+                          (source-patch-h (selfhost/hash::hash-term patch)))
+                        (let ((patch-h (selfhost/hash::hash-term normalized-patch)))
+                          (if (core/error::is? source-patch-h)
+                            source-patch-h
+                            (if (core/error::is? patch-h)
+                              patch-h
+                              {:kind selfhost/patch_normalize::REPORT_KIND
+                                :normalized-patch normalized-patch
+                                :ok true
+                                :op-identities
+                                  ((core/map::get normalized) (quote :identities))
+                                :patch-h patch-h
+                                :profile selfhost/patch_authority::PROFILE
+                                :source-patch-h source-patch-h
+                                :v 1}))))))
+                  (selfhost/patch_normalize::err "request :v must equal 1"))
+                (selfhost/patch_normalize::err "request :profile mismatch"))
+              (selfhost/patch_normalize::err "request :kind mismatch")))))
+      (selfhost/patch_normalize::err "request must be a map"))))

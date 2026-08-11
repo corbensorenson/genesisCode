@@ -229,6 +229,55 @@ fn poison_patch_authority_node_index(artifact: &Path) {
     fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
 }
 
+fn poison_patch_authority_normalize(artifact: &Path) {
+    let src = fs::read_to_string(artifact).expect("read toolchain artifact");
+    let mut term = parse_term(&src).expect("parse toolchain artifact");
+    let Term::Map(root) = &mut term else {
+        panic!("artifact root must be map");
+    };
+    let Term::Vector(entries) = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("artifact :modules")
+    else {
+        panic!("artifact :modules must be vector");
+    };
+    let patch_mod = entries
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(module)
+                if matches!(
+                    module.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path))
+                        if path == "selfhost/patch_authority_normalize_v1.gc"
+                ) =>
+            {
+                Some(module)
+            }
+            _ => None,
+        })
+        .expect("patch normalization authority module");
+    let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("patch normalization authority module missing :source"),
+    };
+    let poisoned_src = format!(
+        "{module_src}\n(def core/cli::patch-normalize (fn (request) {{:kind \"genesis/patch-normalize-v0.1\" :normalized-patch {{:intent \"poisoned\" :ops [] :provenance {{}} :version 1}} :ok true :op-identities [] :patch-h \"{zeros}\" :profile \"genesis/patch-authority-v0.1\" :source-patch-h \"{zeros}\" :v 1}}))\n",
+        zeros = "0".repeat(64)
+    );
+    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).expect("parse poisoned"))
+        .expect("canonicalize poisoned");
+    patch_mod.insert(TermOrdKey(Term::symbol(":source")), Term::Str(poisoned_src));
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms.clone()),
+    );
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(hash_module(&poisoned_forms).to_vec().into()),
+    );
+    fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
+}
+
 fn poison_patch_refactor_rename_symbol_forms(artifact: &Path) {
     let src = fs::read_to_string(artifact).expect("read toolchain artifact");
     let mut term = parse_term(&src).expect("parse toolchain artifact");
@@ -525,6 +574,69 @@ fn patch_obligation_rerun_failure_is_reported_ok_false() {
     assert!(r.acceptance_artifact.is_some());
     assert!(r.package_artifact.is_some());
     assert!(!r.report_artifact.is_empty());
+    let report = fs::read_to_string(td.path().join(".genesis/store").join(&r.report_artifact))
+        .expect("read patch report");
+    assert!(report.contains(":patch-h"));
+    assert!(report.contains(":source-patch-h"));
+    assert!(report.contains(":op-identities"));
+}
+
+#[test]
+fn patch_normalization_rejects_unknown_fields() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "unknown field"
+            :provenance {}
+            :ops [
+              {
+                :op :remove-module
+                :module-path "mod.gc"
+                :surprise true
+              }
+            ]
+          }
+        "#,
+    );
+    let error = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
+    assert!(
+        error.to_string().contains("unknown field"),
+        "unexpected normalization failure: {error}"
+    );
+}
+
+#[test]
+fn patch_normalization_rejects_tampered_report_without_rust_fallback() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        &patch_replace_form0(r#"(def my/pkg::tests { "t1" { :body (fn (_) 1) :expect 1 } })"#),
+    );
+    let artifact = copy_repo_toolchain_artifact(td.path());
+    poison_patch_authority_normalize(&artifact);
+    let frontend =
+        gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
+            bootstrap_mode: gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+            artifact: Some(artifact),
+        });
+    let error = gc_patches::apply_patch_with_step_limit_and_frontend(
+        &patch,
+        &pkg,
+        None,
+        StepLimit::Default,
+        MemLimits::default(),
+        frontend,
+    )
+    .unwrap_err();
+    assert!(
+        error.to_string().contains(":source-patch-h mismatch"),
+        "unexpected authority failure: {error}"
+    );
 }
 
 #[test]

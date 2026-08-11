@@ -35,7 +35,7 @@ mod patch_selfhost_toolchain;
 #[path = "patch_semantic.rs"]
 mod patch_semantic;
 
-use patch_authority::selfhost_semantic_node_index;
+use patch_authority::{selfhost_normalize_patch, selfhost_semantic_node_index};
 use patch_manifest::{
     apply_manifest_set, coreform_to_toml, parse_canonicalize_module_src,
     patch_manifest_add_module_path, patch_manifest_move_module_path, patch_string_vec_field,
@@ -77,6 +77,10 @@ struct Patch {
     intent: String,
     provenance: Term,
     ops: Vec<PatchOp>,
+    normalized_term: Term,
+    semantic_hash: String,
+    source_hash: String,
+    op_hashes: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -274,8 +278,16 @@ pub fn validate_patch_term_with_frontend(
     mem_limits: MemLimits,
 ) -> Result<(), PatchError> {
     if coreform_frontend_is_rust(frontend) {
-        let _ = Patch::from_term(t)?;
-        return Ok(());
+        #[cfg(not(feature = "parity-oracle"))]
+        return Err(PatchError::Validate(
+            "Rust patch parser is not compiled into production; use a dedicated parity harness binary"
+                .to_string(),
+        ));
+        #[cfg(feature = "parity-oracle")]
+        {
+            let _ = Patch::from_term(t)?;
+            return Ok(());
+        }
     }
     let CoreformFrontend::Selfhost(cfg) = frontend else {
         return Err(PatchError::Validate(
