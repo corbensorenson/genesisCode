@@ -1112,7 +1112,25 @@
     "R4.3": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
     "R4.4": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
     "R4.5": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
-    "R5.1": {"profile": "language-contract", "start_after": ["R0.3", "R2.1.g", "R2.2"], "sequential": true},
+    "R5.1": {
+      "profile": "language-contract",
+      "start_after": ["R0.3", "R2.1.g", "R2.2"],
+      "sequential": true,
+      "owner_paths": [
+        "crates/gc_kernel",
+        "crates/gc_opt",
+        "crates/gc_wasm",
+        "prelude",
+        "selfhost"
+      ],
+      "guard_checks": [
+        "scripts/check_kernel_tcb_contract.sh",
+        "scripts/check_wasm_production_surface.sh"
+      ],
+      "negative_controls": [
+        "reject arbitrary-precision narrowing, unchecked emitted artifacts, noncanonical numeric encoding, unbounded decimal scale, and backend-specific arithmetic"
+      ]
+    },
     "R5.2": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
     "R5.3": {"profile": "language-contract", "start_after": ["R0.3", "R5.1"], "sequential": true},
     "R5.4": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},

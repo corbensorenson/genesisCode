@@ -92,6 +92,12 @@ The step/resume semantics and hashing requirements are specified in `docs/spec/W
 
 All outputs are deterministic given the same inputs.
 
+The numeric contract is `docs/spec/NUMERIC_PROFILE_v0.1.md`. The ordinary `gc_wasm` evaluation
+route inherits arbitrary-precision integer and bounded fixed-decimal semantics from `gc_kernel`.
+Stage 2 may use `i64` only as a translation-validated candidate representation; every emitted
+artifact must pass exact result/hash validation, and unsupported or out-of-range programs fail
+closed before emission.
+
 ## Build
 
 ```bash

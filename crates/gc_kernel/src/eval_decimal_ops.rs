@@ -2,7 +2,7 @@ use crate::error::KernelError;
 use crate::value::Value;
 use gc_coreform::{FixedDecimal, Term};
 
-use super::{EvalCtx, eval_prims::value_to_bigint, type_err};
+use super::{EvalCtx, eval_prims::value_to_bigint, numeric_err, type_err};
 
 pub(super) fn prim_dec_parse(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
     if args.len() != 1 {
@@ -13,7 +13,7 @@ pub(super) fn prim_dec_parse(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value,
     };
     let d = match FixedDecimal::parse(s) {
         Ok(x) => x,
-        Err(msg) => return type_err(ctx, &msg),
+        Err(msg) => return numeric_err(ctx, &msg),
     };
     let t = d.to_term();
     ctx.mem_observe_map_len(3)?;
@@ -63,7 +63,7 @@ where
     };
     let out = match f(a, b) {
         Ok(x) => x,
-        Err(msg) => return type_err(ctx, &msg),
+        Err(msg) => return numeric_err(ctx, &msg),
     };
     let t = out.to_term();
     ctx.mem_observe_map_len(3)?;

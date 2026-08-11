@@ -36,6 +36,10 @@ the `PureLang` grammar:
 Everything else is optimized by structural recursion plus local constant-folding for `prim int/*`
 and literal `if` conditions.
 
+All integer folding uses arbitrary-precision values from the normative numeric profile; narrowing,
+wrapping, saturation, or host-word-dependent folding is invalid. `int/div` and `int/mod` remain
+outside the current rewrite grammar and therefore retain reference-kernel Euclidean semantics.
+
 ## Determinism Requirements
 
 Optimization results must be deterministic across platforms and runs.
@@ -98,3 +102,13 @@ only when both operands are literal integers.
   - `egg_runs`, `egg_iterations`, `egg_eclasses`, `egg_enodes`
   - `egg_rewrites_applied: { <rewrite_name>: <count>, ... }`
 
+## Stage 2 Artifact Boundary
+
+Stage 2 is a non-authoritative Wasm candidate tier. It may internally lower an accepted subset to
+`i64`, but `Int` remains arbitrary precision. Every `emit_wasm` command must first produce a
+successful `core/obligation::translation-validation` report for the exact transformed module.
+Unsupported lowering, out-of-range values, result drift, or value-hash drift rejects emission even
+when the caller did not separately request `stage2_gate`. Direct compiler API output is a candidate
+only and has no execution, publication, or release authority without that report.
+
+See `docs/spec/NUMERIC_PROFILE_v0.1.md` for the complete numeric contract.

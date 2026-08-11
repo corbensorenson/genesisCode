@@ -356,7 +356,7 @@ fn add_reachable_type_effects(out: &mut InferredEffects, ty: &Ty) {
                 add_reachable_type_effects(out, method);
             }
         }
-        Ty::Any | Ty::Int | Ty::Bool | Ty::Nil | Ty::Str | Ty::Bytes | Ty::Symbol => {}
+        Ty::Any | Ty::Int | Ty::Dec | Ty::Bool | Ty::Nil | Ty::Str | Ty::Bytes | Ty::Symbol => {}
     }
 }
 

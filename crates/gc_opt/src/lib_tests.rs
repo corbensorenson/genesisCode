@@ -1,7 +1,8 @@
 use gc_coreform::{Term, canonicalize_module, parse_module, print_module};
 
 use super::{
-    optimize_module, optimize_module_with_report, stage1_pipeline, stage1_validation_report,
+    OptimizeCommandError, optimize_command_pipeline, optimize_module, optimize_module_with_report,
+    stage1_pipeline, stage1_validation_report,
 };
 
 #[test]
@@ -122,4 +123,27 @@ fn stage1_validation_fails_for_effectful_module() {
         "expected effect-related gate error, got {:?}",
         gate.errors
     );
+}
+
+#[test]
+fn emitted_wasm_requires_successful_translation_validation() {
+    let forms =
+        canonicalize_module(parse_module("(prim int/add 9223372036854775807 1)").expect("parse"))
+            .expect("canonicalize");
+
+    let err = optimize_command_pipeline(&forms, false, false, true)
+        .expect_err("overflow-divergent Wasm must not be emitted");
+    match err {
+        OptimizeCommandError::Stage2Gate(report) => {
+            assert!(!report.ok);
+            assert!(
+                report
+                    .errors
+                    .iter()
+                    .any(|error| error.contains("i64 range") || error.contains("hash mismatch")),
+                "unexpected report: {report:?}"
+            );
+        }
+        other => panic!("expected stage2 gate rejection, got {other:?}"),
+    }
 }

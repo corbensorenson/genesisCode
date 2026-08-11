@@ -86,6 +86,12 @@ process's proof boundary and must be addressed by reproducible cross-host bootst
 diverse double compilation, independent verification, and signed provenance rather than
 by an in-process self-check.
 
+Stage0 binds `docs/spec/NUMERIC_PROFILE_v0.1.json`. Self-hosted parsing, typechecking, optimization,
+and code generation may reproduce or propose numeric artifacts but cannot redefine integer width,
+decimal bounds, serialization, hashing, or backend acceptance. A self-host implementation that
+narrows arbitrary-precision integers, accepts scale above 4096, or emits an unvalidated Stage 2
+artifact fails profile equivalence and cannot advance bootstrap authority.
+
 Every boundary is fail closed. Unknown versions, malformed structure, exhausted limits,
 identity mismatch, verifier disagreement, unsupported host behavior, cleanup failure,
 and missing evidence return a typed rejection. None may select a broader fallback,

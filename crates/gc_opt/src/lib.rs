@@ -164,7 +164,7 @@ pub fn optimize_command_pipeline(
     } else {
         None
     };
-    if stage2_gate
+    if (stage2_gate || emit_wasm)
         && let Some(s2) = &stage2
         && (!s2.supported || !s2.ok)
     {

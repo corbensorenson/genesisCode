@@ -66,7 +66,8 @@ impl EffectRowBindings {
                     self.bind_unknowns_in_type(method);
                 }
             }
-            Ty::Any | Ty::Int | Ty::Bool | Ty::Nil | Ty::Str | Ty::Bytes | Ty::Symbol => {}
+            Ty::Any | Ty::Int | Ty::Dec | Ty::Bool | Ty::Nil | Ty::Str | Ty::Bytes | Ty::Symbol => {
+            }
         }
     }
 
@@ -164,6 +165,7 @@ impl EffectRowBindings {
 pub enum Ty {
     Any,
     Int,
+    Dec,
     Bool,
     Nil,
     Str,
@@ -202,6 +204,7 @@ impl Ty {
         match self {
             Ty::Any => Term::Symbol("?".to_string()),
             Ty::Int => Term::Symbol("Int".to_string()),
+            Ty::Dec => Term::Symbol("Dec".to_string()),
             Ty::Bool => Term::Symbol("Bool".to_string()),
             Ty::Nil => Term::Symbol("Nil".to_string()),
             Ty::Str => Term::Symbol("Str".to_string()),
@@ -251,6 +254,7 @@ pub fn parse_type_term(t: &Term) -> Result<Ty, String> {
     match t {
         Term::Symbol(s) if s == "?" => return Ok(Ty::Any),
         Term::Symbol(s) if s == "Int" => return Ok(Ty::Int),
+        Term::Symbol(s) if s == "Dec" => return Ok(Ty::Dec),
         Term::Symbol(s) if s == "Bool" => return Ok(Ty::Bool),
         Term::Symbol(s) if s == "Nil" || s == "nil" => return Ok(Ty::Nil),
         Term::Symbol(s) if s == "Str" => return Ok(Ty::Str),

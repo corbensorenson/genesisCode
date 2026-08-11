@@ -19,7 +19,8 @@ pattern, backend shortcut, or self-host wrapper cannot create syntax implicitly.
 The parser accepts whitespace and semicolon line comments plus these term classes:
 
 - `nil`, `true`, and `false`
-- unbounded base-10 integers with an optional leading minus
+- unbounded base-10 integers with an optional leading minus; arithmetic, division, overflow,
+  serialization, and backend behavior are frozen by `docs/spec/NUMERIC_PROFILE_v0.1.md`
 - UTF-8 strings with `\\`, `\"`, `\n`, `\r`, `\t`, `\xNN`, and `\uNNNN` escapes
 - byte strings `b"..."` with the same named escapes and byte-oriented `\xNN`
 - symbols delimited by whitespace, brackets, braces, parentheses, quote, string quote,

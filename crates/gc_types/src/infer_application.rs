@@ -49,6 +49,7 @@ pub(super) fn arg_type_match(
     }
     match (inferred, declared) {
         (Ty::Int, Ty::Int)
+        | (Ty::Dec, Ty::Dec)
         | (Ty::Bool, Ty::Bool)
         | (Ty::Nil, Ty::Nil)
         | (Ty::Str, Ty::Str)

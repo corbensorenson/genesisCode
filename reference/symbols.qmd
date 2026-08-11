@@ -6,7 +6,7 @@ toc: false
 
 # Frozen symbol inventory
 
-**170 symbols** · profile `GC-AGENT-v0.3` · identity `140ab4c7e1e64528284da0c8492c834872c4e78680901f0857e73c4da977ec4c`
+**172 symbols** · profile `GC-AGENT-v0.3` · identity `9de77b04560de5627b0a73d426ef6a829962ac6ef614eee906d454d9d6dd0679`
 
 This page is generated from the closed agent symbol index. Search by exact spelling; symbol names are case-sensitive.
 
@@ -85,14 +85,14 @@ This page is generated from the closed agent symbol index. Search by exact spell
 | [`coreform/escape-str`](#coreform-escape-str-f4eb7faa) | callable | (prim coreform/escape-str arg1:Str) -> Str | values |
 | [`crypto/blake3`](#crypto-blake3-b5027928) | callable | (prim crypto/blake3 arg1:Bytes) -> Bytes32 | values |
 | [`data/tag`](#data-tag-5c4df3ac) | callable | (prim data/tag arg1:Data) -> Symbol | values |
-| [`dec/add`](#dec-add-48baf079) | callable | (prim dec/add arg1:Decimal arg2:Decimal) -> Decimal | values |
-| [`dec/eq?`](#dec-eq-ec40f155) | callable | (prim dec/eq? arg1:Decimal arg2:Decimal) -> Bool | values |
-| [`dec/from-int`](#dec-from-int-0e838929) | callable | (prim dec/from-int arg1:Int) -> Decimal | values |
-| [`dec/lt?`](#dec-lt-018b867a) | callable | (prim dec/lt? arg1:Decimal arg2:Decimal) -> Bool | values |
-| [`dec/mul`](#dec-mul-a87a4a5a) | callable | (prim dec/mul arg1:Decimal arg2:Decimal) -> Decimal | values |
-| [`dec/parse`](#dec-parse-d0bdaf56) | callable | (prim dec/parse arg1:Str) -> Decimal | values |
-| [`dec/sub`](#dec-sub-20cc65b0) | callable | (prim dec/sub arg1:Decimal arg2:Decimal) -> Decimal | values |
-| [`dec/to-str`](#dec-to-str-ac6f08d8) | callable | (prim dec/to-str arg1:Decimal) -> Str | values |
+| [`dec/add`](#dec-add-48baf079) | callable | (prim dec/add arg1:Dec arg2:Dec) -> Dec | values |
+| [`dec/eq?`](#dec-eq-ec40f155) | callable | (prim dec/eq? arg1:Dec arg2:Dec) -> Bool | values |
+| [`dec/from-int`](#dec-from-int-0e838929) | callable | (prim dec/from-int arg1:Int) -> Dec | values |
+| [`dec/lt?`](#dec-lt-018b867a) | callable | (prim dec/lt? arg1:Dec arg2:Dec) -> Bool | values |
+| [`dec/mul`](#dec-mul-a87a4a5a) | callable | (prim dec/mul arg1:Dec arg2:Dec) -> Dec | values |
+| [`dec/parse`](#dec-parse-d0bdaf56) | callable | (prim dec/parse arg1:Str) -> Dec | values |
+| [`dec/sub`](#dec-sub-20cc65b0) | callable | (prim dec/sub arg1:Dec arg2:Dec) -> Dec | values |
+| [`dec/to-str`](#dec-to-str-ac6f08d8) | callable | (prim dec/to-str arg1:Dec) -> Str | values |
 | [`def`](#def-cb8379ac) | form | (def name expression) -> module binding; top-level only | evaluation, modules |
 | [`dependencies`](#dependencies-2188dfc2) | policy-field | reviewed manifest/policy field: dependencies | packages |
 | [`false`](#false-fcbcf165) | literal | reader-form false -> CoreForm | lexical-grammar |
@@ -111,8 +111,10 @@ This page is generated from the closed agent symbol index. Search by exact spell
 | [`gpk-v2`](#gpk-v2-8b898c38) | identifier | stable profile identifier: gpk-v2 | compatibility-identifiers |
 | [`if`](#if-935f6831) | form | (if condition then else) -> Value; exactly one branch is evaluated | evaluation |
 | [`int/add`](#int-add-9962ca5a) | callable | (prim int/add arg1:Int arg2:Int) -> Int | values |
+| [`int/div`](#int-div-1085f9b5) | callable | (prim int/div arg1:Int arg2:Int) -> Int | values |
 | [`int/eq?`](#int-eq-185bea78) | callable | (prim int/eq? arg1:Int arg2:Int) -> Bool | values |
 | [`int/lt?`](#int-lt-a2c99b7f) | callable | (prim int/lt? arg1:Int arg2:Int) -> Bool | values |
+| [`int/mod`](#int-mod-d72563f9) | callable | (prim int/mod arg1:Int arg2:Int) -> Int | values |
 | [`int/mul`](#int-mul-2deb11ac) | callable | (prim int/mul arg1:Int arg2:Int) -> Int | values |
 | [`int/sub`](#int-sub-6dc99d3d) | callable | (prim int/sub arg1:Int arg2:Int) -> Int | values |
 | [`int/to-str`](#int-to-str-c6b046bc) | callable | (prim int/to-str arg1:Int) -> Str | values |
@@ -443,6 +445,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -452,6 +456,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -473,6 +480,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -482,6 +491,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -503,6 +515,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -512,6 +526,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -533,6 +550,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -542,6 +561,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -631,6 +653,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -640,6 +664,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -661,6 +688,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -670,6 +699,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -724,6 +756,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -734,6 +768,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -792,6 +829,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -802,6 +841,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -857,6 +899,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -866,6 +910,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -979,6 +1026,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -988,6 +1037,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1009,6 +1061,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1018,6 +1072,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1236,6 +1293,8 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1246,6 +1305,9 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1429,6 +1491,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1438,6 +1502,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1459,6 +1526,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1468,6 +1537,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1489,6 +1561,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1498,6 +1572,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1519,6 +1596,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1528,6 +1607,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1549,6 +1631,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1558,6 +1642,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1579,6 +1666,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1588,6 +1677,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1609,6 +1701,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1618,6 +1712,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -1639,6 +1736,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -1648,6 +1747,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2210,6 +2312,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -2219,6 +2323,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2330,6 +2437,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -2339,6 +2448,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2360,6 +2472,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -2369,6 +2483,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2390,6 +2507,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -2399,6 +2518,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2420,6 +2542,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -2429,6 +2553,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2436,7 +2563,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/add arg1:Decimal arg2:Decimal) -> Decimal`
+**Signature:** `(prim dec/add arg1:Dec arg2:Dec) -> Dec`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2450,15 +2577,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/add arg1:Decimal arg2:Decimal) -> Decimal` → `Decimal`
+- **usage-template:** `(prim dec/add arg1:Dec arg2:Dec) -> Dec` → `Dec`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2466,7 +2598,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/eq? arg1:Decimal arg2:Decimal) -> Bool`
+**Signature:** `(prim dec/eq? arg1:Dec arg2:Dec) -> Bool`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2480,15 +2612,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/eq? arg1:Decimal arg2:Decimal) -> Bool` → `Bool`
+- **usage-template:** `(prim dec/eq? arg1:Dec arg2:Dec) -> Bool` → `Bool`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2496,7 +2633,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/from-int arg1:Int) -> Decimal`
+**Signature:** `(prim dec/from-int arg1:Int) -> Dec`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2510,15 +2647,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/from-int arg1:Int) -> Decimal` → `Decimal`
+- **usage-template:** `(prim dec/from-int arg1:Int) -> Dec` → `Dec`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2526,7 +2668,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/lt? arg1:Decimal arg2:Decimal) -> Bool`
+**Signature:** `(prim dec/lt? arg1:Dec arg2:Dec) -> Bool`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2540,15 +2682,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/lt? arg1:Decimal arg2:Decimal) -> Bool` → `Bool`
+- **usage-template:** `(prim dec/lt? arg1:Dec arg2:Dec) -> Bool` → `Bool`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2556,7 +2703,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/mul arg1:Decimal arg2:Decimal) -> Decimal`
+**Signature:** `(prim dec/mul arg1:Dec arg2:Dec) -> Dec`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2570,15 +2717,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/mul arg1:Decimal arg2:Decimal) -> Decimal` → `Decimal`
+- **usage-template:** `(prim dec/mul arg1:Dec arg2:Dec) -> Dec` → `Dec`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2586,7 +2738,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/parse arg1:Str) -> Decimal`
+**Signature:** `(prim dec/parse arg1:Str) -> Dec`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2600,15 +2752,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/parse arg1:Str) -> Decimal` → `Decimal`
+- **usage-template:** `(prim dec/parse arg1:Str) -> Dec` → `Dec`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2616,7 +2773,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/sub arg1:Decimal arg2:Decimal) -> Decimal`
+**Signature:** `(prim dec/sub arg1:Dec arg2:Dec) -> Dec`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2630,15 +2787,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/sub arg1:Decimal arg2:Decimal) -> Decimal` → `Decimal`
+- **usage-template:** `(prim dec/sub arg1:Dec arg2:Dec) -> Dec` → `Dec`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -2646,7 +2808,7 @@ allow_unlimited = false
 
 <span class="status-chip">core</span>
 
-**Signature:** `(prim dec/to-str arg1:Decimal) -> Str`
+**Signature:** `(prim dec/to-str arg1:Dec) -> Str`
 
 **Domains:** values<br>
 **Effects:** pure; no ambient host effect<br>
@@ -2660,15 +2822,20 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
-- **usage-template:** `(prim dec/to-str arg1:Decimal) -> Str` → `Str`
+- **usage-template:** `(prim dec/to-str arg1:Dec) -> Str` → `Str`
 
 **Sources**
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3268,6 +3435,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3277,6 +3446,44 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
+
+</details>
+
+## `int/div` {#int-div-1085f9b5}
+
+<span class="status-chip">core</span>
+
+**Signature:** `(prim int/div arg1:Int arg2:Int) -> Int`
+
+**Domains:** values<br>
+**Effects:** pure; no ambient host effect<br>
+**Capabilities:** none<br>
+**Diagnostics:** BadForm, Type, MemoryLimit
+
+<details><summary>Contracts and examples</summary>
+
+**Contracts**
+
+- User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
+- Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
+- Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
+
+**Examples**
+
+- **eval-euclidean-division:** `(prim int/div -7 3)` → `-3`
+
+**Sources**
+
+- `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
+- `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3298,6 +3505,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3307,6 +3516,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3328,6 +3540,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3337,6 +3551,44 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
+
+</details>
+
+## `int/mod` {#int-mod-d72563f9}
+
+<span class="status-chip">core</span>
+
+**Signature:** `(prim int/mod arg1:Int arg2:Int) -> Int`
+
+**Domains:** values<br>
+**Effects:** pure; no ambient host effect<br>
+**Capabilities:** none<br>
+**Diagnostics:** BadForm, Type, MemoryLimit
+
+<details><summary>Contracts and examples</summary>
+
+**Contracts**
+
+- User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
+- Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
+- Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
+
+**Examples**
+
+- **eval-zero-divisor-sealed-error:** `(prim int/mod 7 0)` → `Sealed`
+
+**Sources**
+
+- `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
+- `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3358,6 +3610,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3367,6 +3621,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3388,6 +3645,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3397,6 +3656,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3418,6 +3680,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3427,6 +3691,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3578,6 +3845,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3587,6 +3856,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3638,6 +3910,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3647,6 +3921,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3668,6 +3945,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3677,6 +3956,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3698,6 +3980,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3707,6 +3991,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3728,6 +4015,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3737,6 +4026,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3758,6 +4050,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3767,6 +4061,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -3788,6 +4085,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -3797,6 +4096,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -4537,6 +4839,8 @@ path = "../escape.gc"
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -4546,6 +4850,9 @@ path = "../escape.gc"
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -4567,6 +4874,8 @@ path = "../escape.gc"
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -4576,6 +4885,9 @@ path = "../escape.gc"
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -4597,6 +4909,8 @@ path = "../escape.gc"
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -4606,6 +4920,9 @@ path = "../escape.gc"
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -4627,6 +4944,8 @@ path = "../escape.gc"
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -4636,6 +4955,9 @@ path = "../escape.gc"
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -4662,6 +4984,8 @@ path = "../escape.gc"
 **Examples**
 
 - **eval-arithmetic:** `(prim int/add 20 22)` → `42`
+- **eval-euclidean-division:** `(prim int/div -7 3)` → `-3`
+- **eval-zero-divisor-sealed-error:** `(prim int/mod 7 0)` → `Sealed`
 - **eval-lexical-closure:** `(let ((x 2)) ((fn (y) (prim int/mul x y)) 3))` → `6`
 
 **Sources**
@@ -4970,6 +5294,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -4979,6 +5305,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5000,6 +5329,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5009,6 +5340,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5030,6 +5364,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5039,6 +5375,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5060,6 +5399,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5069,6 +5410,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5090,6 +5434,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5099,6 +5445,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5150,6 +5499,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5159,6 +5510,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5180,6 +5534,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5189,6 +5545,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5210,6 +5569,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5219,6 +5580,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5361,6 +5725,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5370,6 +5736,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5391,6 +5760,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5400,6 +5771,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5421,6 +5795,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5430,6 +5806,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5451,6 +5830,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5460,6 +5841,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 
@@ -5481,6 +5865,8 @@ allow_unlimited = false
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
 - Primitive names are an exact allowlist; an unknown primitive is an error.
+- Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.
+- Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 
 **Examples**
 
@@ -5490,6 +5876,9 @@ allow_unlimited = false
 
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
+- `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
+- `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
+- `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 
 </details>
 

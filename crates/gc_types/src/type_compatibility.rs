@@ -72,7 +72,7 @@ fn collect_effect_row_declaration(
                 collect_effect_row_declaration(method, variables, has_anonymous_tail);
             }
         }
-        Ty::Any | Ty::Int | Ty::Bool | Ty::Nil | Ty::Str | Ty::Bytes | Ty::Symbol => {}
+        Ty::Any | Ty::Int | Ty::Dec | Ty::Bool | Ty::Nil | Ty::Str | Ty::Bytes | Ty::Symbol => {}
     }
 }
 
@@ -125,6 +125,7 @@ fn type_compatible_with_bindings(
     match (inferred, declared) {
         (Ty::Any, _) => false,
         (Ty::Int, Ty::Int)
+        | (Ty::Dec, Ty::Dec)
         | (Ty::Bool, Ty::Bool)
         | (Ty::Nil, Ty::Nil)
         | (Ty::Str, Ty::Str)

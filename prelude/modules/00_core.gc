@@ -24,6 +24,10 @@
 
 (def core/int::mul (fn (a) (fn (b) (prim int/mul a b))))
 
+(def core/int::div (fn (a) (fn (b) (prim int/div a b))))
+
+(def core/int::mod (fn (a) (fn (b) (prim int/mod a b))))
+
 (def core/int::eq? (fn (a) (fn (b) (prim int/eq? a b))))
 
 (def core/int::lt? (fn (a) (fn (b) (prim int/lt? a b))))
@@ -485,4 +489,3 @@
             {
               :task/args args
               :task/eval expr}))))))
-

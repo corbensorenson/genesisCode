@@ -21,7 +21,7 @@ If an exported symbol is missing from `:types`, typecheck fails.
 Type terms are CoreForm data terms. The supported constructors are:
 
 - `?` top / unknown type
-- `Int`, `Bool`, `Nil`, `Str`, `Bytes`, `Symbol`
+- `Int`, `Dec`, `Bool`, `Nil`, `Str`, `Bytes`, `Symbol`
 - `(Msg PayloadType)`
 - `(Fn ParamType ReturnType (Eff [op1 op2 ...] tail))`
 - `(Prog ReturnType (Eff [op1 op2 ...] tail))`
@@ -100,9 +100,12 @@ direct syntax inference.
 
 The typechecker infers types most precisely for:
 
-- literals (`Int`, `Bool`, `Nil`, `Str`, `Bytes`)
+- literals (`Int`, `Bool`, `Nil`, `Str`, `Bytes`); `Dec` has no literal and is constructed by
+  `dec/parse` or `dec/from-int`
 - `fn`, `if`, `begin`, `let`
-- `(prim ...)` for core integer primitives and row-aware map operations (`map/get`, `map/put`, `map/merge`)
+- `(prim ...)` for the integer and fixed-decimal operations frozen by
+  `docs/spec/NUMERIC_PROFILE_v0.1.md`, plus row-aware map operations (`map/get`, `map/put`,
+  `map/merge`)
 - `core/msg::*`
 - `core/contract::*` (including contract-row extraction from override map literals)
 - `core/effect::*` including `core/effect::bind` sequencing (returns a `Prog` type with merged effect rows)

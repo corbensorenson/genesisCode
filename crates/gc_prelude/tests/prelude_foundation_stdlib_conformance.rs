@@ -8,6 +8,8 @@ use serde_json::Value as JsonValue;
 use sha2::{Digest, Sha256};
 
 const FOUNDATION_REQUIRED_SYMBOLS: &[&str] = &[
+    "core/int::div",
+    "core/int::mod",
     "core/list::is-nil?",
     "core/list::len",
     "core/list::reverse",
@@ -479,10 +481,7 @@ fn binding_and_pattern_contract_is_closed_and_enforced() {
     let value = matrix();
     let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut source_ids = std::collections::BTreeSet::new();
-    for binding in value["sourceBindings"]
-        .as_array()
-        .expect("source bindings")
-    {
+    for binding in value["sourceBindings"].as_array().expect("source bindings") {
         let id = json_string(binding, "id");
         let path = json_string(binding, "path");
         assert!(source_ids.insert(id), "duplicate source binding {id}");

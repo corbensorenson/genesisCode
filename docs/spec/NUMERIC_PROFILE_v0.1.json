@@ -1,0 +1,67 @@
+{
+  "auditDate": "2026-08-11",
+  "backends": {
+    "compiledAst": "reference-equivalent",
+    "gcWasm": "inherits-gc-kernel-reference",
+    "gpu": "no-core-arithmetic-v0.2",
+    "reference": "gc-kernel-arbitrary-precision",
+    "stage1": "arbitrary-precision-no-narrowing",
+    "stage2": "i64-candidate-exact-translation-validation-required-before-emission"
+  },
+  "canonicalSpec": "docs/spec/NUMERIC_PROFILE_v0.1.md",
+  "canonicalSpecSha256": "1849d81d1d9ce546f59635be156eaf5e40c577a135c85fe9fd8f254a49c37af5",
+  "contentIdentitySha256": "e1bc94ca7620944fe7a40ab9b628eefb642bb8bf5d41b1fd8920c6226dbac74d",
+  "decimal": {
+    "canonicalEncoding": "{:num/kind :fixed-decimal :num/scale Int :num/unscaled Int}",
+    "canonicalString": "ordinary-decimal-no-exponent-no-redundant-fractional-zeroes",
+    "constructors": ["dec/from-int", "dec/parse"],
+    "errorCodes": {
+      "invalidNumericInput": "core/numeric-error",
+      "wrongType": "core/type-error"
+    },
+    "grammar": "[+-]?[0-9]+(\\.[0-9]+)?",
+    "maxScale": 4096,
+    "normalization": "zero-scale-zero-and-remove-trailing-fractional-zeroes",
+    "operations": ["dec/add", "dec/eq?", "dec/from-int", "dec/lt?", "dec/mul", "dec/parse", "dec/sub", "dec/to-str"],
+    "representation": "opaque-Dec-over-canonical-map",
+    "unsupported": ["decimal-div", "decimal-literal", "exponent-syntax", "implicit-int-coercion", "rounding"]
+  },
+  "float": {
+    "coreStatus": "unsupported",
+    "hostBoundary": "profile-scoped-bytes-or-data-not-core-number",
+    "semantics": ["no-infinity", "no-nan", "no-rounding-mode", "no-signed-zero", "no-subnormal"]
+  },
+  "integer": {
+    "canonicalSerialization": "normalized-base10-no-leading-zeroes",
+    "division": "euclidean-a=b*q+r-and-0<=r<abs(b)",
+    "grammar": "-?[0-9]+",
+    "operations": ["int/add", "int/div", "int/eq?", "int/lt?", "int/mod", "int/mul", "int/sub", "int/to-str"],
+    "overflow": "impossible-promote-never-wrap-saturate-or-trap",
+    "representation": "arbitrary-precision-signed",
+    "zeroDivisorError": "core/numeric-error"
+  },
+  "kind": "genesis/numeric-profile-v0.1",
+  "nonclaims": [
+    "No Core float, rational, complex, units, decimal division, or rounding semantics are provided.",
+    "Stage2 is not claimed to support every integer program; unsupported or mismatched candidates fail closed.",
+    "GPU arithmetic is not Core arithmetic and host capabilities are not granted.",
+    "No self-host, optimizer, backend, Foundry result, or release level is promoted."
+  ],
+  "schema": "docs/spec/NUMERIC_PROFILE_v0.1.schema.json",
+  "schemaSha256": "760efc9c947d03817ddf0d1d9a775ba57ad2be967d444dcf57ecb213aade3490",
+  "sourceBindings": [
+    {"id": "source/compiled-evaluator", "mode": "compiled", "path": "crates/gc_kernel/src/compiled.rs"},
+    {"id": "source/decimal-canonical-data", "mode": "canonical-data", "path": "crates/gc_coreform/src/fixed_decimal.rs"},
+    {"id": "source/decimal-runtime", "mode": "reference", "path": "crates/gc_kernel/src/eval_decimal_ops.rs"},
+    {"id": "source/numeric-primitives", "mode": "reference", "path": "crates/gc_kernel/src/eval_prims.rs"},
+    {"id": "source/numeric-division", "mode": "reference", "path": "crates/gc_kernel/src/eval_prims/int_div.rs"},
+    {"id": "source/prelude", "mode": "prelude", "path": "prelude/modules/00_core.gc"},
+    {"id": "source/selfhost-parser-core", "mode": "selfhost-preview", "path": "selfhost/parse_core_v1.gc"},
+    {"id": "source/selfhost-parser-lexical", "mode": "selfhost-preview", "path": "selfhost/parse.gc"},
+    {"id": "source/stage1", "mode": "optimizer", "path": "crates/gc_opt/src/lib.rs"},
+    {"id": "source/stage2", "mode": "wasm-validated-candidate", "path": "crates/gc_opt/src/stage2_wasm.rs"},
+    {"id": "source/type-inference", "mode": "type-inference", "path": "crates/gc_types/src/infer_prim.rs"},
+    {"id": "source/wasm-route", "mode": "wasm-inherited-reference", "path": "crates/gc_wasm/src/lib.rs"}
+  ],
+  "version": "0.1"
+}

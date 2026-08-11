@@ -24,6 +24,20 @@
         "source": "(prim int/add 20 22)"
       },
       {
+        "expected": "-3",
+        "expectedErrorKind": null,
+        "expectedValueKind": "Int",
+        "id": "eval-euclidean-division",
+        "source": "(prim int/div -7 3)"
+      },
+      {
+        "expected": null,
+        "expectedErrorKind": null,
+        "expectedValueKind": "Sealed",
+        "id": "eval-zero-divisor-sealed-error",
+        "source": "(prim int/mod 7 0)"
+      },
+      {
         "expected": "6",
         "expectedErrorKind": null,
         "expectedValueKind": "Int",
@@ -368,6 +382,34 @@
             "\"crypto/blake3\""
           ],
           "path": "crates/gc_kernel/src/eval_prims.rs"
+        },
+        {
+          "anchors": [
+            "pub(super) fn prim_int_div_mod",
+            "pub(super) fn prim_int_div_mod_values",
+            "\"int/div\"",
+            "\"int/mod\""
+          ],
+          "path": "crates/gc_kernel/src/eval_prims/int_div.rs"
+        },
+        {
+          "anchors": [
+            "pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096",
+            "pub fn from_unscaled",
+            "pub fn parse",
+            "pub fn mul"
+          ],
+          "path": "crates/gc_coreform/src/fixed_decimal.rs"
+        },
+        {
+          "anchors": [
+            "genesis/numeric-profile-v0.1",
+            "euclidean",
+            "core/numeric-error",
+            "\"maxScale\": 4096",
+            "No Core float"
+          ],
+          "path": "docs/spec/NUMERIC_PROFILE_v0.1.json"
         }
       ],
       "conformanceChecks": [
@@ -378,13 +420,16 @@
       "invariants": [
         "User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.",
         "Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.",
-        "Primitive names are an exact allowlist; an unknown primitive is an error."
+        "Primitive names are an exact allowlist; an unknown primitive is an error.",
+        "Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.",
+        "Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error."
       ],
       "limitations": [
-        "CompiledClosure and NativeFn are implementation values, not forgeable source literals; SealToken and Sealed cannot be serialized as ordinary data."
+        "CompiledClosure and NativeFn are implementation values, not forgeable source literals; SealToken and Sealed cannot be serialized as ordinary data.",
+        "The Core profile has no floating-point values or operations, decimal division, implicit numeric coercion, or GPU-defined arithmetic semantics."
       ],
       "status": "core",
-      "summary": "Immutable data plus opaque closure, seal, contract, and effect runtime values.",
+      "summary": "Immutable data, deterministic arbitrary-precision integers and bounded fixed decimals, plus opaque closure, seal, contract, and effect runtime values.",
       "surface": [
         "Data",
         "Int",
@@ -420,8 +465,10 @@
         "dec/sub",
         "dec/to-str",
         "int/add",
+        "int/div",
         "int/eq?",
         "int/lt?",
+        "int/mod",
         "int/mul",
         "int/sub",
         "int/to-str",
@@ -830,19 +877,21 @@
   ],
   "kind": "genesis/gc-agent-profile-v0.3",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "55b66ef7b03bd65a72f47a0a9421ba710b5cd95c3b0c727d2f74618a2cb9b0f8",
+  "profileIdentitySha256": "b31a025d927459a96c11444c2b80b883e7666dac01da6755b5c823b0e6704dc6",
   "sourceIdentities": {
     "crates/gc_cli/tests/gc_agent_profile_v03.rs": "04716e0603e8eace128099de6c5b479df40c43f8dbc96a9b238fab89641c99c3",
     "crates/gc_cli_driver/src/diagnostics.rs": "57f4f8b7e9057a81c5f641ea8c3a96f3668c0f6935e4b5613637483903802307",
+    "crates/gc_coreform/src/fixed_decimal.rs": "be55956b0a833485f7cdda109abf1d6ff71359440616fd4f41249bb45a4032ba",
     "crates/gc_coreform/src/parse.rs": "3dccaa205943c8f4cdfbcc9ea50b4a34336737171c5a6d054a8944ae4d58c439",
     "crates/gc_coreform/src/term.rs": "8d6cd05c43f203e0f653e801e4702df1ae07bb7307ca5d6db6b0ce3d37858c26",
     "crates/gc_effects/src/policy.rs": "5cd4a8cae9a322affc2943ebf7e9ed93da1b3b5622d300391d3ff5a25136a6b5",
     "crates/gc_kernel/src/error.rs": "2809950c07c0c53101de67031a153c05f23012736a8a5f46ae83e7a7f6180d01",
-    "crates/gc_kernel/src/eval.rs": "1815283a0a5898177d5254cb9af37af250cae649c563885bd13ad52be47becbb",
+    "crates/gc_kernel/src/eval.rs": "07b7709f054c8196910713cb7058e792543f4330690ef083ee1f0d683ee8032d",
     "crates/gc_kernel/src/eval_forms.rs": "4d353e8b66f09bb819784e7798a2ba897f25e51087a1ceac79bfbc36b1dba8a1",
-    "crates/gc_kernel/src/eval_prims.rs": "958d70dfb0e392cd8c19abc3d1146303d6b87b91862f5d96bc997160c1dc6eba",
+    "crates/gc_kernel/src/eval_prims.rs": "7a082a0c5a0703ac7f1ce5370563b4e05a1ea21a2026f147a5b88d15e35cd1f2",
+    "crates/gc_kernel/src/eval_prims/int_div.rs": "ba69c937f1332eb21779bca731469d907382d5b07ef0dbb2c10cf6eb0c426bf7",
     "crates/gc_kernel/src/eval_treewalk.rs": "7d908d1172673e1204d52adb9ccf77d7cd5407a28168570ac09cbfb9a9e30d0f",
-    "crates/gc_kernel/src/tests.rs": "f2c361921a21186c0c1d895e43b02317fc01907814aabaad4f850df81c14e13e",
+    "crates/gc_kernel/src/tests.rs": "097f1f66612f1b517f41dd945f688ff5f4ec7109efecc3c1f21bd178f4677464",
     "crates/gc_kernel/src/value.rs": "e92c047d5a64a3adf4a5c50fe0960c4f33e3bb7d8fb6084bd7e5a75cd968d5e3",
     "crates/gc_pkg/src/manifest.rs": "d60e84b07dcfc18246bf8587203aa75bf2426dc8ee58262ea7718021e4be3792",
     "crates/gc_prelude/src/lib.rs": "ad73ecfc8833497ef1a885181fddbe325310eba40c8e7b37ff2ce1abb025cfbc",
@@ -851,11 +900,12 @@
     "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json": "559ffafe661d3d95696107717acb159a38c60d7735bbc940ef2ac19f18be6314",
     "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json": "d4009ae238f2fb8f6a596f214768e9858e3d944e87ad910998a5ae2a2881ec7c",
     "docs/spec/MODULE_SCOPE.md": "57ea8d9e5a2091efe7cc5ec766f6a4a92e67625f7fff604fcc79f235e00830af",
+    "docs/spec/NUMERIC_PROFILE_v0.1.json": "a1e998667d9d7669740c62a0de2a56320c233f73d5263697d9bba8019ddbc8dc",
     "docs/spec/PACKAGE_TOML.md": "bdef0a7fc03d943984969ca9a5198d205b845691d2243096c07bdc594ee5cc65",
     "docs/spec/SEALS_DISPATCH_REPLAY.md": "c7e77a6ea8874fd3cea3d65a393fa1ea9b061b4201e05b3f85fb34d89e7a611a",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.version-surfaces.json": "643402a19527b77ef0432b7a0197d4ee658e413640961e0b93d826f8801e3278",
-    "policies/gc_agent_profile_v0.3.json": "6d9e563e0748a4ec7e83f1d56f1e0b9fd2f7ef061063b8a179970980e0e828fc",
+    "policies/gc_agent_profile_v0.3.json": "ea16ce3d82c06d5affb46e37845eef828372ad9cca91799323adaea41984fa4e",
     "scripts/check_agent_authoring_bundle.sh": "f265b2dd9c89d403f66902dda21efb08372bea1457081404a928590a0b6b4238",
     "scripts/check_cli_diagnostics_contract.sh": "08969ab30ebda815ad82c1170bcd3235d1b3c0b8dc87ab4cfe99b6a08f271984",
     "scripts/check_evidence_adversarial_matrix.sh": "756b5126afd525e765847f211f23a109c8a839405dce1910c6637d5cd6e86af1",
@@ -891,6 +941,17 @@
       "roadmapClass": "additional-safety-boundary",
       "roadmapTask": null,
       "safeAlternative": "Return a new persistent value and thread it explicitly through pure functions.",
+      "status": "unsupported"
+    },
+    {
+      "behavior": "Core floating-point literals or operations, NaN, infinity, signed zero, subnormal or rounding semantics, decimal division, and implicit numeric coercion",
+      "category": "numeric",
+      "enforcement": "reject",
+      "id": "U-CORE-FLOAT-AND-DECIMAL-DIVISION",
+      "rationale": "The frozen numeric profile provides arbitrary-precision Int and bounded fixed Dec semantics only; inventing backend-dependent arithmetic would violate cross-tier determinism.",
+      "roadmapClass": "additional-safety-boundary",
+      "roadmapTask": "R5.1.d",
+      "safeAlternative": "Use Int, construct Dec explicitly through dec/from-int or dec/parse, and keep any profile-scoped floating-point payload behind an explicit host boundary.",
       "status": "unsupported"
     },
     {

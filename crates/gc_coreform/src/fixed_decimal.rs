@@ -6,6 +6,8 @@ use num_traits::{Signed, ToPrimitive, Zero};
 use crate::{Term, TermOrdKey};
 
 pub const FIXED_DEC_KIND: &str = ":fixed-decimal";
+pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096;
+const SCALE_LIMIT_ERROR: &str = "decimal scale exceeds maximum 4096";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixedDecimal {
@@ -14,8 +16,9 @@ pub struct FixedDecimal {
 }
 
 impl FixedDecimal {
-    pub fn from_unscaled(unscaled: BigInt, scale: u32) -> Self {
-        normalize(unscaled, scale)
+    pub fn from_unscaled(unscaled: BigInt, scale: u32) -> Result<Self, String> {
+        ensure_scale(scale)?;
+        Ok(normalize(unscaled, scale))
     }
 
     pub fn from_int(i: BigInt) -> Self {
@@ -54,6 +57,7 @@ impl FixedDecimal {
                 .len()
                 .try_into()
                 .map_err(|_| "decimal parse: too many fractional digits".to_string())?;
+            ensure_scale(scale)?;
             (w, f, scale)
         } else {
             if !is_ascii_digits(s) {
@@ -137,6 +141,9 @@ impl FixedDecimal {
             Some(Term::Int(i)) if i.sign() != num_bigint::Sign::Minus => i.to_u32()?,
             _ => return None,
         };
+        if scale > MAX_FIXED_DECIMAL_SCALE {
+            return None;
+        }
         Some(normalize(unscaled, scale))
     }
 
@@ -156,6 +163,9 @@ impl FixedDecimal {
 
     pub fn mul(&self, rhs: &Self) -> Option<Self> {
         let scale = self.scale.checked_add(rhs.scale)?;
+        if scale > MAX_FIXED_DECIMAL_SCALE {
+            return None;
+        }
         Some(normalize(
             self.unscaled.clone() * rhs.unscaled.clone(),
             scale,
@@ -209,13 +219,25 @@ fn ten_pow(exp: u32) -> BigInt {
     out
 }
 
+fn ensure_scale(scale: u32) -> Result<(), String> {
+    if scale > MAX_FIXED_DECIMAL_SCALE {
+        return Err(SCALE_LIMIT_ERROR.to_string());
+    }
+    Ok(())
+}
+
 fn is_ascii_digits(s: &str) -> bool {
     !s.is_empty() && s.as_bytes().iter().all(|b| b.is_ascii_digit())
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use num_bigint::BigInt;
+
     use super::FixedDecimal;
+    use crate::{Term, TermOrdKey};
 
     #[test]
     fn parse_and_canonical_string_normalize_trailing_zeros() {
@@ -244,5 +266,29 @@ mod tests {
         let d2 = FixedDecimal::from_term(&t).expect("decode");
         assert_eq!(d2.to_canonical_string(), "-10.5");
         assert_eq!(d, d2);
+    }
+
+    #[test]
+    fn rejects_scale_above_profile_limit() {
+        let too_precise = format!("0.{}1", "0".repeat(4096));
+        assert_eq!(
+            FixedDecimal::parse(&too_precise).unwrap_err(),
+            "decimal scale exceeds maximum 4096"
+        );
+
+        let mut map = BTreeMap::new();
+        map.insert(
+            TermOrdKey(Term::symbol(":num/kind")),
+            Term::symbol(":fixed-decimal"),
+        );
+        map.insert(
+            TermOrdKey(Term::symbol(":num/unscaled")),
+            Term::Int(BigInt::from(1)),
+        );
+        map.insert(
+            TermOrdKey(Term::symbol(":num/scale")),
+            Term::Int(BigInt::from(4097)),
+        );
+        assert!(FixedDecimal::from_term(&Term::Map(map)).is_none());
     }
 }

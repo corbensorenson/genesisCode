@@ -29,7 +29,7 @@ pub use eval_coverage::{DecisionCoverageCounters, DecisionSample};
 use eval_decimal_ops::{
     prim_dec_bin, prim_dec_cmp, prim_dec_from_int, prim_dec_parse, prim_dec_to_str,
 };
-pub(crate) use eval_prims::{PrimOp, prim, prim_op, prim_op2, type_err};
+pub(crate) use eval_prims::{PrimOp, numeric_err, prim, prim_op, prim_op2, type_err};
 use eval_value_ops::{eq_value, escape_bytes, escape_str};
 
 #[cfg(test)]

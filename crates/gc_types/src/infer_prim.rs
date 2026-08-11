@@ -5,7 +5,7 @@ use crate::ty::{RowTail, Ty};
 
 pub(crate) fn prim_type(op: &str, args: &[Ty], arg_terms: &[&Term], sess: &mut InferSession) -> Ty {
     match op {
-        "int/add" | "int/sub" | "int/mul" => {
+        "int/add" | "int/sub" | "int/mul" | "int/div" | "int/mod" => {
             if args.len() != 2 {
                 sess.errors
                     .push(format!("prim {op} expects 2 args, got {}", args.len()));
@@ -29,6 +29,11 @@ pub(crate) fn prim_type(op: &str, args: &[Ty], arg_terms: &[&Term], sess: &mut I
             }
             Ty::Bool
         }
+        "dec/parse" => unary_prim(op, args, Ty::Str, Ty::Dec, sess),
+        "dec/to-str" => unary_prim(op, args, Ty::Dec, Ty::Str, sess),
+        "dec/from-int" => unary_prim(op, args, Ty::Int, Ty::Dec, sess),
+        "dec/add" | "dec/sub" | "dec/mul" => binary_prim(op, args, Ty::Dec, Ty::Dec, sess),
+        "dec/eq?" | "dec/lt?" => binary_prim(op, args, Ty::Dec, Ty::Bool, sess),
         "core/eq?" | "sym/eq?" => Ty::Bool,
         "str/concat" => Ty::Str,
         "bytes/len" => Ty::Int,
@@ -131,6 +136,37 @@ pub(crate) fn prim_type(op: &str, args: &[Ty], arg_terms: &[&Term], sess: &mut I
         "vec/get" | "vec/push" => Ty::Any,
         _ => Ty::Any,
     }
+}
+
+fn unary_prim(op: &str, args: &[Ty], input: Ty, output: Ty, sess: &mut InferSession) -> Ty {
+    if args.len() != 1 {
+        sess.errors
+            .push(format!("prim {op} expects 1 arg, got {}", args.len()));
+        return Ty::Any;
+    }
+    if args[0] != input {
+        sess.errors.push(format!(
+            "prim {op} expects {}",
+            gc_coreform::print_term(&input.to_term())
+        ));
+        return Ty::Any;
+    }
+    output
+}
+
+fn binary_prim(op: &str, args: &[Ty], input: Ty, output: Ty, sess: &mut InferSession) -> Ty {
+    if args.len() != 2 {
+        sess.errors
+            .push(format!("prim {op} expects 2 args, got {}", args.len()));
+        return Ty::Any;
+    }
+    if args[0] != input || args[1] != input {
+        let name = gc_coreform::print_term(&input.to_term());
+        sess.errors
+            .push(format!("prim {op} expects {name}, {name}"));
+        return Ty::Any;
+    }
+    output
 }
 
 fn literal_map_key(t: &Term) -> Option<String> {

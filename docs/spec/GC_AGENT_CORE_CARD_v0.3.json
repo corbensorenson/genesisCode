@@ -1,11 +1,11 @@
 {
   "budget": {
     "asciiOnly": true,
-    "byteCount": 3947,
+    "byteCount": 3963,
     "maxAsciiBytes": 4000,
-    "tokenUpperBound": 3947
+    "tokenUpperBound": 3963
   },
-  "cardSha256": "51fe48aaacc9abcee5ccd5b31df43eee963d957a079537f0fe4b8199244f1ffb",
+  "cardSha256": "ee57b5288513c9c305def396d57592fca82716a4414ea589cfce5af981314900",
   "examples": [
     {
       "expected": "42",
@@ -45,11 +45,11 @@
     }
   ],
   "kind": "genesis/gc-agent-core-card-v0.3",
-  "manifestIdentitySha256": "4ae9342177d672f468adfe6cfdff7b0031495511e7ce85d6444a05fd1b5231c3",
+  "manifestIdentitySha256": "2e3e3d1b637242d4ed1a0cfec9e89a803c7424c3dc7095f94ea4602fa2bcc50f",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "55b66ef7b03bd65a72f47a0a9421ba710b5cd95c3b0c727d2f74618a2cb9b0f8",
+  "profileIdentitySha256": "b31a025d927459a96c11444c2b80b883e7666dac01da6755b5c823b0e6704dc6",
   "sourceIdentities": {
-    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "2ac31c4f1202c9d66ae4d2f1a24ec806ca11fda2c5c20db1b905bd5cb98cc3f4",
+    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "eb33f3fdd2eb023cd155784774b9ff2a74228420910d8f1d5441f32bbfec580d",
     "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json": "559ffafe661d3d95696107717acb159a38c60d7735bbc940ef2ac19f18be6314",
     "policies/gc_agent_core_card_v0.3.json": "1d6a5caff18bd42895fdbdcddcd8b27c88cd05786918879ab1ebbc2bec30f996"
   },
@@ -115,8 +115,10 @@
     "dec/sub",
     "dec/to-str",
     "int/add",
+    "int/div",
     "int/eq?",
     "int/lt?",
+    "int/mod",
     "int/mul",
     "int/sub",
     "int/to-str",
@@ -246,6 +248,17 @@
       "roadmapClass": "additional-safety-boundary",
       "roadmapTask": null,
       "safeAlternative": "Return a new persistent value and thread it explicitly through pure functions.",
+      "status": "unsupported"
+    },
+    {
+      "behavior": "Core floating-point literals or operations, NaN, infinity, signed zero, subnormal or rounding semantics, decimal division, and implicit numeric coercion",
+      "category": "numeric",
+      "enforcement": "reject",
+      "id": "U-CORE-FLOAT-AND-DECIMAL-DIVISION",
+      "rationale": "The frozen numeric profile provides arbitrary-precision Int and bounded fixed Dec semantics only; inventing backend-dependent arithmetic would violate cross-tier determinism.",
+      "roadmapClass": "additional-safety-boundary",
+      "roadmapTask": "R5.1.d",
+      "safeAlternative": "Use Int, construct Dec explicitly through dec/from-int or dec/parse, and keep any profile-scoped floating-point payload behind an explicit host boundary.",
       "status": "unsupported"
     },
     {

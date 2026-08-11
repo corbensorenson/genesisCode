@@ -299,9 +299,9 @@ fn stage2_validates_let_bound_function_call() {
 fn stage2_validates_let_bound_function_lexical_capture_before_shadow() {
     let src = r#"
           (let ((a 1)
-                (f (fn (x) (prim int/add x a)))
-                (a 10))
-            (f 1))
+                (f (fn (x) (prim int/add x a))))
+            (let ((a 10))
+              (f 1)))
         "#;
     let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
     let r = stage2_validation_report(&forms);

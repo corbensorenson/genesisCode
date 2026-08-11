@@ -289,6 +289,47 @@ fn infer_application_uses_declared_function_types() {
 }
 
 #[test]
+fn numeric_profile_types_are_precise() {
+    let dec = parse_type_term(&Term::symbol("Dec")).expect("parse Dec");
+    assert_eq!(dec, Ty::Dec);
+    assert_eq!(dec.to_term(), Term::symbol("Dec"));
+
+    let forms = canonicalize_module(
+        parse_module(
+            r#"
+              (def m::decimal (prim dec/parse "1.25"))
+              (def m::rendered (prim dec/to-str m::decimal))
+              (def m::quotient (prim int/div 7 3))
+              (def m::remainder (prim int/mod -7 3))
+              m::rendered
+            "#,
+        )
+        .expect("parse"),
+    )
+    .expect("canonicalize");
+    let mut session = InferSession::default();
+    let (_env, defs) = infer_module_types(&forms, &mut session, &BTreeMap::new());
+    assert!(
+        session.errors.is_empty(),
+        "unexpected errors: {:?}",
+        session.errors
+    );
+    assert_eq!(defs.get("m::decimal"), Some(&Ty::Dec));
+    assert_eq!(defs.get("m::rendered"), Some(&Ty::Str));
+    assert_eq!(defs.get("m::quotient"), Some(&Ty::Int));
+    assert_eq!(defs.get("m::remainder"), Some(&Ty::Int));
+
+    let invalid = canonicalize_module(
+        parse_module("(def m::bad (prim dec/add (prim dec/parse \"1\") 2))")
+            .expect("parse invalid"),
+    )
+    .expect("canonicalize invalid");
+    let mut invalid_session = InferSession::default();
+    infer_module_types(&invalid, &mut invalid_session, &BTreeMap::new());
+    assert_eq!(invalid_session.errors, ["prim dec/add expects Dec, Dec"]);
+}
+
+#[test]
 fn strict_effects_reject_unknown_effect_ops() {
     let src = r#"
           (def ::meta

@@ -276,6 +276,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
   - `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md` - normative closed v0.2 lexical/executable-form grammar, semantics, tier reconciliation, and change rule.
   - `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.json` - content-addressed 19-row form matrix and exact special-form/source bindings.
   - `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json` - closed schema for the normative form matrix.
+  - `docs/spec/NUMERIC_PROFILE_v0.1.md` - normative arbitrary-precision integer, bounded fixed-decimal, unsupported-float, serialization, hashing, and backend-validation contract.
+  - `docs/spec/NUMERIC_PROFILE_v0.1.json` - content-addressed closed numeric profile and exact implementation source bindings.
+  - `docs/spec/NUMERIC_PROFILE_v0.1.schema.json` - closed schema for the numeric profile.
   - `docs/spec/SEALS_DISPATCH_REPLAY.md`
   - `docs/spec/DETERMINISM.md`
   - `docs/spec/VALUE_EFFECT_HASH.md` - normative runtime value graph, ownership, sharing, recursive-cycle, lifetime, host-handle boundary, logical-memory, and stable value/effect hashing contract.

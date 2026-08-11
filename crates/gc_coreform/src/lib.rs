@@ -6,7 +6,7 @@ mod special_form;
 mod term;
 
 pub use canon::{canonicalize_form, canonicalize_module};
-pub use fixed_decimal::{FIXED_DEC_KIND, FixedDecimal};
+pub use fixed_decimal::{FIXED_DEC_KIND, FixedDecimal, MAX_FIXED_DECIMAL_SCALE};
 pub use parse::{ParseError, parse_module, parse_term};
 pub use print::{print_module, print_term, print_term_compact};
 pub use special_form::SpecialForm;

@@ -15,7 +15,7 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "check-wasm-production-surface" \
-  root-host
+  root-wasm
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {

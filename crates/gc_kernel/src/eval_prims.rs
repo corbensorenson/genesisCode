@@ -1,6 +1,8 @@
 use super::*;
 use std::collections::BTreeMap;
 
+#[path = "eval_prims/int_div.rs"]
+mod int_div;
 #[path = "eval_prims/text_bytes.rs"]
 mod text_bytes;
 
@@ -9,6 +11,8 @@ pub(crate) enum PrimOp {
     IntAdd,
     IntSub,
     IntMul,
+    IntDiv,
+    IntMod,
     IntEq,
     IntLt,
     DecParse,
@@ -78,6 +82,8 @@ impl PrimOp {
         PrimOp::IntAdd,
         PrimOp::IntSub,
         PrimOp::IntMul,
+        PrimOp::IntDiv,
+        PrimOp::IntMod,
         PrimOp::IntEq,
         PrimOp::IntLt,
         PrimOp::DecParse,
@@ -133,6 +139,8 @@ impl PrimOp {
             "int/add" => Some(PrimOp::IntAdd),
             "int/sub" => Some(PrimOp::IntSub),
             "int/mul" => Some(PrimOp::IntMul),
+            "int/div" => Some(PrimOp::IntDiv),
+            "int/mod" => Some(PrimOp::IntMod),
             "int/eq?" => Some(PrimOp::IntEq),
             "int/lt?" => Some(PrimOp::IntLt),
             "dec/parse" => Some(PrimOp::DecParse),
@@ -190,6 +198,8 @@ impl PrimOp {
             PrimOp::IntAdd => "int/add",
             PrimOp::IntSub => "int/sub",
             PrimOp::IntMul => "int/mul",
+            PrimOp::IntDiv => "int/div",
+            PrimOp::IntMod => "int/mod",
             PrimOp::IntEq => "int/eq?",
             PrimOp::IntLt => "int/lt?",
             PrimOp::DecParse => "dec/parse",
@@ -261,6 +271,8 @@ pub(crate) fn prim_op(
         PrimOp::IntAdd => prim_int_bin(ctx, &args, "int op expects 2 args", IntBinOp::Add),
         PrimOp::IntSub => prim_int_bin(ctx, &args, "int op expects 2 args", IntBinOp::Sub),
         PrimOp::IntMul => prim_int_bin(ctx, &args, "int op expects 2 args", IntBinOp::Mul),
+        PrimOp::IntDiv => int_div::prim_int_div_mod(ctx, &args, true),
+        PrimOp::IntMod => int_div::prim_int_div_mod(ctx, &args, false),
         PrimOp::IntEq => prim_int_cmp(ctx, &args, "int cmp expects 2 args", IntCmpOp::Eq),
         PrimOp::IntLt => prim_int_cmp(ctx, &args, "int cmp expects 2 args", IntCmpOp::Lt),
         PrimOp::DecParse => prim_dec_parse(ctx, &args),
@@ -657,6 +669,8 @@ pub(crate) fn prim_op2(
         PrimOp::IntAdd => prim_int_bin_values(ctx, &a, &b, IntBinOp::Add),
         PrimOp::IntSub => prim_int_bin_values(ctx, &a, &b, IntBinOp::Sub),
         PrimOp::IntMul => prim_int_bin_values(ctx, &a, &b, IntBinOp::Mul),
+        PrimOp::IntDiv => int_div::prim_int_div_mod_values(ctx, &a, &b, true),
+        PrimOp::IntMod => int_div::prim_int_div_mod_values(ctx, &a, &b, false),
         PrimOp::IntEq => prim_int_cmp_values(ctx, &a, &b, IntCmpOp::Eq),
         PrimOp::IntLt => prim_int_cmp_values(ctx, &a, &b, IntCmpOp::Lt),
         PrimOp::CoreEq => Ok(Value::data(Term::Bool(eq_value(&a, &b)))),
@@ -819,11 +833,31 @@ fn prim_vec_push_values(
 }
 
 pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelError> {
+    sealed_error(ctx, "core/type-error", "type", msg, KernelErrorKind::Type)
+}
+
+pub(crate) fn numeric_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelError> {
+    sealed_error(
+        ctx,
+        "core/numeric-error",
+        "numeric",
+        msg,
+        KernelErrorKind::Type,
+    )
+}
+
+fn sealed_error(
+    ctx: &mut EvalCtx,
+    code: &str,
+    context_kind: &str,
+    msg: &str,
+    fallback_kind: KernelErrorKind,
+) -> Result<Value, KernelError> {
     if let Some(p) = ctx.protocol {
         let mut m = BTreeMap::new();
         m.insert(
             TermOrdKey(Term::Symbol(":error/code".to_string())),
-            Term::Str("core/type-error".to_string()),
+            Term::Str(code.to_string()),
         );
         m.insert(
             TermOrdKey(Term::Symbol(":error/message".to_string())),
@@ -834,7 +868,7 @@ pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelErro
             Term::Map(
                 [(
                     TermOrdKey(Term::Symbol(":kind".to_string())),
-                    Term::Str("type".to_string()),
+                    Term::Str(context_kind.to_string()),
                 )]
                 .into_iter()
                 .collect(),
@@ -842,5 +876,5 @@ pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelErro
         );
         return Ok(Value::sealed(p.error, Value::data(Term::Map(m))));
     }
-    Err(KernelError::new(KernelErrorKind::Type, msg))
+    Err(KernelError::new(fallback_kind, msg))
 }

@@ -237,7 +237,7 @@ fn prim_type_error_is_sealed_error_with_protocol() {
 #[test]
 fn prim_op_table_roundtrips_all_current_ops() {
     let mut names = BTreeSet::new();
-    assert_eq!(PrimOp::ALL.len(), 51);
+    assert_eq!(PrimOp::ALL.len(), 53);
     for op in PrimOp::ALL {
         let name = op.as_str();
         assert!(names.insert(name), "duplicate prim op name: {name}");
@@ -311,6 +311,72 @@ fn int_prims_keep_small_fast_path_and_bignum_overflow_semantics() {
         let mut compiled_env = Env::empty();
         let compiled = eval_module_compiled(&mut compiled_ctx, &mut compiled_env, &forms).unwrap();
         assert_value_bool(&compiled, expected);
+    }
+}
+
+#[test]
+fn integer_division_and_modulo_are_euclidean_and_tier_identical() {
+    let cases = [
+        ("7", "3", "2", "1"),
+        ("-7", "3", "-3", "2"),
+        ("7", "-3", "-2", "1"),
+        ("-7", "-3", "3", "2"),
+        (
+            "1000000000000000000000000000001",
+            "3",
+            "333333333333333333333333333333",
+            "2",
+        ),
+    ];
+    for (a, b, quotient, remainder) in cases {
+        for (op, expected) in [("int/div", quotient), ("int/mod", remainder)] {
+            let forms = parse_module(&format!("(prim {op} {a} {b})")).expect("parse");
+
+            let mut tree_ctx = EvalCtx::new();
+            let mut tree_env = Env::empty();
+            let tree = eval_module(&mut tree_ctx, &mut tree_env, &forms).expect("tree eval");
+
+            let mut compiled_ctx = EvalCtx::new();
+            let mut compiled_env = Env::empty();
+            let compiled = eval_module_compiled(&mut compiled_ctx, &mut compiled_env, &forms)
+                .expect("compiled eval");
+
+            let expected = parse_module(expected).expect("expected");
+            assert_eq!(tree.to_plain_term(), Some(expected[0].clone()));
+            assert_eq!(compiled.to_plain_term(), tree.to_plain_term());
+        }
+    }
+}
+
+#[test]
+fn integer_zero_divisors_return_identical_sealed_numeric_errors() {
+    for op in ["int/div", "int/mod"] {
+        let forms = parse_module(&format!("(prim {op} 7 0)")).expect("parse");
+        let mut payloads = Vec::new();
+        for compiled in [false, true] {
+            let mut ctx = EvalCtx::new();
+            let protocol = ctx.protocol.expect("reserved protocol tokens");
+            let mut env = Env::empty();
+            let value = if compiled {
+                eval_module_compiled(&mut ctx, &mut env, &forms).expect("compiled eval")
+            } else {
+                eval_module(&mut ctx, &mut env, &forms).expect("tree eval")
+            };
+            let Value::Sealed { token, payload } = value else {
+                panic!("{op} must return a sealed error");
+            };
+            assert_eq!(token, protocol.error);
+            let plain = payload.to_plain_term().expect("plain error payload");
+            let Term::Map(map) = &plain else {
+                panic!("{op} error payload must be a map");
+            };
+            assert_eq!(
+                map.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
+                Some(&Term::Str("core/numeric-error".to_string()))
+            );
+            payloads.push(plain);
+        }
+        assert_eq!(payloads[0], payloads[1]);
     }
 }
 

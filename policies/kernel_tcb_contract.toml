@@ -27,6 +27,7 @@ expected_kernel_surface_files = [
   "eval_decimal_ops.rs",
   "eval_forms.rs",
   "eval_prims.rs",
+  "eval_prims/int_div.rs",
   "eval_prims/text_bytes.rs",
   "eval_treewalk.rs",
   "eval_value_ops.rs",
@@ -174,6 +175,7 @@ required_test_markers = [
 "eval_decimal_ops.rs" = "shared-semantics"
 "eval_forms.rs" = "reference-semantics"
 "eval_prims.rs" = "shared-semantics"
+"eval_prims/int_div.rs" = "shared-semantics"
 "eval_prims/text_bytes.rs" = "shared-semantics"
 "eval_treewalk.rs" = "reference-semantics"
 "eval_value_ops.rs" = "shared-semantics"
@@ -223,6 +225,7 @@ optimized-tier = [
 "crates/gc_kernel/src/eval_treewalk.rs" = 260
 "crates/gc_kernel/src/eval_forms.rs" = 320
 "crates/gc_kernel/src/eval_prims.rs" = 900
+"crates/gc_kernel/src/eval_prims/int_div.rs" = 80
 "crates/gc_kernel/src/eval_prims/text_bytes.rs" = 450
 "crates/gc_kernel/src/eval_decimal_ops.rs" = 160
 "crates/gc_kernel/src/eval_value_ops.rs" = 140
