@@ -71,10 +71,13 @@ PARALLEL_LANE_REQUIRED_PHRASES = {
     ],
 }
 TASK_PREREQUISITE_CONTRACTS = {
-    "R1.4.o": ["R0.4.k", "R1.4.n", "F2.r"],
-    "R1.4.q": ["R1.4.j", "F2.r"],
-    "R1.4.r": ["R1.4.l", "R1.4.n", "F2.r"],
-    "R8.5.u": ["F2.r"],
+    "R1.4.o": ["R0.4.k", "R1.4.n", "F2.r", "R8.3.b"],
+    "R1.4.p": ["R1.4.o", "R1.4.q", "R1.4.r", "F2.r", "R8.3.b"],
+    "R1.4.q": ["R1.4.j", "F2.r", "R8.3.b"],
+    "R1.4.r": ["R1.4.l", "R1.4.n", "F2.r", "R8.3.b"],
+    "R8.3.a": ["F2.r"],
+    "R8.3.b": ["R8.2.a", "R8.2.b", "R8.2.d", "R8.2.e", "R8.2.k"],
+    "R8.5.u": ["F2.r", "R8.3.b"],
     "R8.5.v": ["R8.5.u"],
     "R8.5.i": ["R8.5.h", "F2.r"],
     "F2.y": ["R8.5.s"],
@@ -1993,13 +1996,13 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
     )["prerequisites"].append("R8.3.e")
     lane_cases.append(("bench-platform-leak", bench_platform_leak))
 
-    bench_generator_gate_leak = copy.deepcopy(baseline)
+    bench_device_soak_leak = copy.deepcopy(baseline)
     next(
         task
-        for task in bench_generator_gate_leak["tasks"]
+        for task in bench_device_soak_leak["tasks"]
         if task["id"] == "R8.5.s"
-    )["prerequisites"].append("R7.1.f")
-    lane_cases.append(("bench-generator-gate-leak", bench_generator_gate_leak))
+    )["prerequisites"].append("R7.4.d")
+    lane_cases.append(("bench-device-soak-leak", bench_device_soak_leak))
 
     bench_model_leak = copy.deepcopy(baseline)
     next(
@@ -2009,13 +2012,31 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
 
     bench_foundry_bypass = copy.deepcopy(baseline)
     for task in bench_foundry_bypass["tasks"]:
-        if task["id"] in {"R1.4.o", "R1.4.p", "R1.4.q", "R1.4.r", "R8.5.a"}:
+        if task["id"] in {
+            "R1.4.o",
+            "R1.4.p",
+            "R1.4.q",
+            "R1.4.r",
+            "R8.3.a",
+            "R8.3.b",
+            "R8.5.a",
+        }:
             task["prerequisites"] = [
                 prerequisite
                 for prerequisite in task["prerequisites"]
                 if prerequisite != "F2.r"
             ]
     lane_cases.append(("bench-foundry-bypass", bench_foundry_bypass))
+
+    bench_examples_bypass = copy.deepcopy(baseline)
+    for task in bench_examples_bypass["tasks"]:
+        if task["id"] in {"R1.4.o", "R1.4.p", "R1.4.q", "R1.4.r", "R8.5.a"}:
+            task["prerequisites"] = [
+                prerequisite
+                for prerequisite in task["prerequisites"]
+                if prerequisite != "R8.3.b"
+            ]
+    lane_cases.append(("bench-examples-bypass", bench_examples_bypass))
 
     foundry_platform_leak = copy.deepcopy(baseline)
     next(
@@ -2055,7 +2076,19 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
     next(
         task for task in challenge_foundry_bypass["tasks"] if task["id"] == "R8.5.u"
     )["prerequisites"].remove("F2.r")
+    next(
+        task for task in challenge_foundry_bypass["tasks"] if task["id"] == "R8.3.a"
+    )["prerequisites"].remove("F2.r")
+    next(
+        task for task in challenge_foundry_bypass["tasks"] if task["id"] == "R8.3.b"
+    )["prerequisites"].remove("F2.r")
     lane_cases.append(("challenge-foundry-bypass", challenge_foundry_bypass))
+
+    challenge_examples_bypass = copy.deepcopy(baseline)
+    next(
+        task for task in challenge_examples_bypass["tasks"] if task["id"] == "R8.5.u"
+    )["prerequisites"].remove("R8.3.b")
+    lane_cases.append(("challenge-examples-bypass", challenge_examples_bypass))
 
     model_gate_bypass = copy.deepcopy(baseline)
     model_gate = next(
