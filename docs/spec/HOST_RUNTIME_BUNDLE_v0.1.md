@@ -18,6 +18,9 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md`
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json`
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json`
+- `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md`
+- `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`
+- `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json`
 - `docs/spec/WASM.md`
 - `docs/spec/WASI.md`
 
@@ -33,3 +36,6 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - Self-host levels are cumulative per semantic decision under
   `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json`; `N/A` is a reviewed
   non-promoting disposition, not a closure level.
+- Current command-to-decision production authority, verifier, host binding, fallback,
+  and H-level facts are authoritative only in
+  `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`.

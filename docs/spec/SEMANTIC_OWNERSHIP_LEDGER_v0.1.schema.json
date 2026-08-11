@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/semantic-ownership-ledger-v0.1.json",
+  "title": "GenesisCode Semantic Ownership Ledger v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "auditDate",
+    "canonicalSpec",
+    "canonicalSpecSha256",
+    "closureContract",
+    "closureContractIdentitySha256",
+    "commandSourcePaths",
+    "commandInventoryCount",
+    "commandBindings",
+    "semanticDecisions",
+    "nonclaims",
+    "schema",
+    "schemaSha256",
+    "contentIdentitySha256"
+  ],
+  "properties": {
+    "kind": { "const": "genesis/semantic-ownership-ledger-v0.1" },
+    "version": { "const": "0.1" },
+    "auditDate": { "type": "string", "format": "date" },
+    "canonicalSpec": { "const": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md" },
+    "canonicalSpecSha256": { "$ref": "#/$defs/sha256" },
+    "closureContract": { "const": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json" },
+    "closureContractIdentitySha256": { "$ref": "#/$defs/sha256" },
+    "commandSourcePaths": { "$ref": "#/$defs/paths" },
+    "commandInventoryCount": { "type": "integer", "minimum": 1 },
+    "commandBindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/commandBinding" }
+    },
+    "semanticDecisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/semanticDecision" }
+    },
+    "nonclaims": { "$ref": "#/$defs/strings" },
+    "schema": { "const": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json" },
+    "schemaSha256": { "$ref": "#/$defs/sha256" },
+    "contentIdentitySha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "strings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "not": { "pattern": "^(?:/|.*(?:^|/)\\.\\.(?:/|$))" }
+      }
+    },
+    "commandBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selector",
+        "expectedLeafCount",
+        "includesHidden",
+        "semanticDecisionIds",
+        "routingImplementationPaths",
+        "testPaths"
+      ],
+      "properties": {
+        "selector": { "type": "string", "pattern": "^[a-z0-9-]+(?:/\\*)?$" },
+        "expectedLeafCount": { "type": "integer", "minimum": 1 },
+        "includesHidden": { "type": "boolean" },
+        "semanticDecisionIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^SD-[A-Z0-9]+(?:-[A-Z0-9]+)*$" }
+        },
+        "routingImplementationPaths": { "$ref": "#/$defs/paths" },
+        "testPaths": { "$ref": "#/$defs/paths" }
+      }
+    },
+    "semanticDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "stage0Domains",
+        "applicability",
+        "currentLevel",
+        "specAuthorityPaths",
+        "producingImplementationPaths",
+        "productionAuthorityPaths",
+        "hostBindingPaths",
+        "verifierPaths",
+        "testPaths",
+        "fallbackReachability",
+        "rollbackPosture",
+        "commandSelectors",
+        "internalOnly",
+        "migrationTasks",
+        "limitations"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^SD-[A-Z0-9]+(?:-[A-Z0-9]+)*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "stage0Domains": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["S0-K", "S0-R", "S0-P", "S0-X", "S0-A", "S0-H"] }
+        },
+        "applicability": { "enum": ["applicable", "residual-stage0", "not-semantic-decision"] },
+        "currentLevel": { "type": ["string", "null"], "enum": [null, "H0", "H1", "H2", "H3", "H4"] },
+        "specAuthorityPaths": { "$ref": "#/$defs/paths" },
+        "producingImplementationPaths": { "$ref": "#/$defs/paths" },
+        "productionAuthorityPaths": { "$ref": "#/$defs/paths" },
+        "hostBindingPaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "verifierPaths": { "$ref": "#/$defs/paths" },
+        "testPaths": { "$ref": "#/$defs/paths" },
+        "fallbackReachability": {
+          "enum": [
+            "host-authoritative",
+            "reachable-parity-harness",
+            "declared-stage0-residual",
+            "none-proven"
+          ]
+        },
+        "rollbackPosture": { "type": "string", "minLength": 1 },
+        "commandSelectors": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9-]+(?:/\\*)?$" }
+        },
+        "internalOnly": { "type": "boolean" },
+        "migrationTasks": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^R[0-9]+\\.[0-9]+\\.[a-z]$" }
+        },
+        "limitations": { "$ref": "#/$defs/strings" }
+      }
+    }
+  }
+}

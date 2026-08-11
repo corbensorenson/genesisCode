@@ -91,6 +91,14 @@ python3 scripts/lib/selfhost_closure_levels.py \
   --stage0 docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json \
   --self-test
 
+python3 scripts/lib/semantic_ownership_ledger.py \
+  --root "$ROOT_DIR" \
+  --ledger docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json \
+  --schema docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json \
+  --spec docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md \
+  --closure docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json \
+  --self-test
+
 resolve_base() {
   if [[ -n "${SELFHOST_BOUNDARY_BASE:-}" ]]; then
     echo "$SELFHOST_BOUNDARY_BASE"

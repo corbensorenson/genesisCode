@@ -26,6 +26,8 @@ Deliver the smallest complete deterministic, obligation-gated change while prese
 - `docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md`
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json`
+- `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md`
+- `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`
 - `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 - `ROADMAP.md`
 - `upgrade_plan.md`
