@@ -9,6 +9,7 @@ publish.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 unicode-normalization.workspace = true
+stacker.workspace = true
 
 # local
 gc_coreform = { path = "../gc_coreform" }

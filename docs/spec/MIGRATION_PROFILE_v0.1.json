@@ -1,0 +1,89 @@
+{
+  "auditDate": "2026-08-11",
+  "canonicalSpec": "docs/spec/MIGRATION_PROFILE_v0.1.md",
+  "canonicalSpecSha256": "48da29532390d1f7de56150901ad49d2e76cd88975bf585707ae9de25eb7c859",
+  "contentIdentitySha256": "d3c96d807a62f0a4144b5b1d293f6dbdfec538fa40f49ec43d58b0cf8f5db0b1",
+  "dryRun": {
+    "effects": "before-after-added-removed-plus-unknown-per-module-and-package",
+    "mutation": "clone-only-no-filesystem-write",
+    "patchOrdering": "manifest-module-order-then-top-form-index",
+    "targetAdmission": "complete-current-typecheck-and-profile-negotiation",
+    "targetIdentity": "required-and-distinct-from-source"
+  },
+  "failure": {
+    "identity": "none-for-invalid-input-plan-or-target",
+    "mode": "explicit-MigrationError-no-panic",
+    "timing": "before-file-mutation-or-execution"
+  },
+  "identity": {
+    "hashProfile": "genesis/hash-profile/gcv0.2-blake3",
+    "plan": "profile-id-plus-intent-plus-expected-source-plus-provenance-plus-canonical-steps",
+    "receipt": "hash-of-report-payload-excluding-envelope-hash",
+    "sourcePackage": "profile-id-plus-manifest-ordered-portable-path-and-module-hash"
+  },
+  "kind": "genesis/migration-profile-v0.1",
+  "nonclaims": [
+    "No compatibility, deprecation, reader, or v1 stability promise is made.",
+    "No compatibility is inferred from version labels, filenames, prose, or model output.",
+    "The planner does not write files, execute code, grant capabilities, apply patches, or satisfy obligations.",
+    "Quoted user data is not an API or syntax rewrite surface outside canonical metadata.",
+    "No Rust-to-GenesisCode authority switch or R4.2 migration is claimed.",
+    "No package, target, backend, benchmark, Foundry result, model, assurance level, or release level is promoted."
+  ],
+  "operations": [
+    {
+      "data": "quoted-and-vector-data-preserved",
+      "kind": "rewrite-syntax-head",
+      "scope": "one-module-executable-list-heads"
+    },
+    {
+      "collision": "existing-package-target-definition-rejected",
+      "kind": "rename-api-symbol",
+      "scope": "package-definitions-unshadowed-references-and-metadata"
+    },
+    {
+      "kind": "replace-format-field",
+      "precondition": "exact-presence-and-value",
+      "scope": "one-existing-unique-metadata-map"
+    }
+  ],
+  "patchTarget": {
+    "application": "external-exact-snapshot-session-only",
+    "operation": ":replace-node",
+    "profile": "genesis/patch-profile/v0.2",
+    "version": 1
+  },
+  "planning": {
+    "countPrecondition": "exact-positive",
+    "operationOrder": "unique-strict-syntax-api-format-then-canonical-operands",
+    "rewriteChains": "separate-receipted-migrations-required",
+    "staleSource": "reject-before-rewrite"
+  },
+  "provenance": {
+    "fields": ["producer", "source-artifact", "parent-receipt-h-or-nil"],
+    "preservation": "complete-value-bound-to-plan-patch-and-receipt"
+  },
+  "resourceLimits": {
+    "diagnosticCharsPerError": 512,
+    "diagnosticErrors": 8,
+    "idBytes": 1024,
+    "intentBytes": 16384,
+    "modules": 65536,
+    "pathOrSymbolBytes": 4096,
+    "stackGrowthBytes": 4194304,
+    "steps": 65536
+  },
+  "schema": "docs/spec/MIGRATION_PROFILE_v0.1.schema.json",
+  "schemaSha256": "5057a98fd37ca5fdcce89b32f623431bb6e94ed5c940aaf78b3035b1a00d57e2",
+  "sourceBindings": [
+    {"id": "source/coreform-identity", "mode": "canonical-identity", "path": "crates/gc_coreform/src/term.rs"},
+    {"id": "source/effect-analysis", "mode": "effect-analysis", "path": "crates/gc_types/src/effect_inference.rs"},
+    {"id": "source/migration-encoding", "mode": "encoding", "path": "crates/gc_types/src/profile_migration_encode.rs"},
+    {"id": "source/migration-planning", "mode": "planning", "path": "crates/gc_types/src/profile_migration.rs"},
+    {"id": "source/migration-rewrite", "mode": "rewrite", "path": "crates/gc_types/src/profile_migration_rewrite.rs"},
+    {"id": "source/migration-verification", "mode": "verification", "path": "crates/gc_types/tests/profile_migration.rs"},
+    {"id": "source/patch-schema", "mode": "normative-patch", "path": "docs/spec/PATCH_SCHEMA.md"},
+    {"id": "source/profile-negotiation", "mode": "profile-admission", "path": "crates/gc_types/src/profile_negotiation.rs"}
+  ],
+  "version": "0.1"
+}

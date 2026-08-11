@@ -7,16 +7,16 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**308 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**311 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
 | Source | Title / kind | Type | SHA-256 |
 |---|---|---|---|
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `833e7da1c6c8` |
-| [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `40559a58f821` |
+| [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `ceb2bd0589ba` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `0dd915fba729` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `91add896e0f1` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `38fee0067c4d` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-11) | md | `bd0e7b8580e7` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `ebf50143ae88` |
@@ -60,8 +60,8 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json`](../docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json) | genesis/evidence-adversarial-matrix-v0.1 | json | `f9f281eb2bf7` |
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
-| [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `216b4136563d` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `a0379309a391` |
+| [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `10c14eba91e0` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `7b131666fba5` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -258,6 +258,9 @@ toc-depth: 2
 | [`docs/spec/HOST_BRIDGE_PROTOCOL.md`](../docs/spec/HOST_BRIDGE_PROTOCOL.md) | Host Bridge Protocol v0.1 | md | `5bbb1e377724` |
 | [`docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`](../docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md) | Host Runtime Bundle v0.1 | md | `b9210c8e90ca` |
 | [`docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md`](../docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md) | Large Workspace Agent Perf v0.1 | md | `97abcd034ee7` |
+| [`docs/spec/MIGRATION_PROFILE_v0.1.json`](../docs/spec/MIGRATION_PROFILE_v0.1.json) | genesis/migration-profile-v0.1 | json | `9eb8fcbc88ab` |
+| [`docs/spec/MIGRATION_PROFILE_v0.1.md`](../docs/spec/MIGRATION_PROFILE_v0.1.md) | GenesisCode Canonical Migration Profile v0.1 | md | `48da29532390` |
+| [`docs/spec/MIGRATION_PROFILE_v0.1.schema.json`](../docs/spec/MIGRATION_PROFILE_v0.1.schema.json) | GenesisCode Canonical Migration Profile v0.1 | schema | `5057a98fd37c` |
 | [`docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.json`](../docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.json) | genesis/module-resolution-profile-v0.1 | json | `57d1048fa1de` |
 | [`docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.md`](../docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.md) | Module Resolution Profile v0.1 | md | `8f541bf3b1ce` |
 | [`docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.schema.json`](../docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.schema.json) | GenesisCode Module Resolution Profile v0.1 | schema | `397dcc559fb4` |

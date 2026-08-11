@@ -7,6 +7,7 @@ mod diagnostics;
 mod effect_inference;
 mod infer;
 mod module_resolution;
+pub mod profile_migration;
 pub mod profile_negotiation;
 mod ty;
 mod type_compatibility;
@@ -42,7 +43,7 @@ pub struct ModuleForTypecheck {
     pub meta: Option<Term>, // expected to be a map datum
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InferredEffects {
     pub ops: BTreeSet<String>,
     pub unknown: bool,
