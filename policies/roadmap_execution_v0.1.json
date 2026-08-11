@@ -1,7 +1,7 @@
 {
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
-  "audit_date": "2026-08-09",
+  "audit_date": "2026-08-10",
   "execution_frontier": {
     "wip_limit": 1,
     "scope_freeze": {
@@ -25,26 +25,28 @@
       "exception_rule": "Only a reproduced P0/P1 correction may replace one equivalent concept one-for-one with a recorded deletion, dependency impact, acceptance delta, and no increase in WIP or release ancestry."
     },
     "ordered_task_ids": [
-      "R0.4.j",
       "R2.2.f",
       "R4.1.a",
+      "R5.1.a",
+      "R5.3.a",
+      "R4.2.a",
+      "R2.1.h",
+      "R2.3.a",
+      "R2.4.a",
+      "R3.1.a",
+      "R3.2.a",
+      "R3.3.a",
+      "R4.3.a",
+      "R4.4.a",
+      "R4.5.a",
       "R1.3.f",
-      "R1.5.a",
+      "R1.5.c",
       "R1.6.a",
       "R1.7.a",
-      "R2.1.h",
-      "R2.3.a"
+      "R3.4.a"
     ],
-    "rationale": "Close reopened R0.4.j with complete class-separated timing calibration and exact-main standard/full/watchdog evidence; close P1.5 and R2.2.f next; then take the already graph-ready complete R4.1 SH-A truth/boundary package before advancing the sequential R1.3, R1.5, R1.6, R1.7, R2.1, and R2.3 agent/runtime frontier. SH-A was WIP-deferred, not dependency-blocked. Carry the finite Core through exact reviewed R9.4.f before reactivating any GenesisBench campaign, custody, publication, governance, GenesisChallenge, Foundry implementation, or Genesis Model work.",
+    "rationale": "R0.4.j is closed on exact-main operational release-DAG and watchdog evidence; its class-separated timing calibration is preserved for R9.1.c release qualification. Close P1.5 through R2.2.f, publish the complete R4.1 SH-A truth boundary, freeze R5.1/R5.3, migrate R4.2.a-e, finish only the R2/R3 prerequisites needed for compiler authority, then complete R4.2.f-g and R4.3-R4.5 before remaining agent-product work. Select the first start-ready frontier candidate so a blocked downstream anchor cannot stall its prerequisite. Carry the finite Core through exact reviewed R9.4.f before reactivating GenesisBench campaigns, custody, publication, GenesisChallenge, Foundry implementation, or Genesis Model work.",
     "task_context": {
-      "R0.4.j": {
-        "product_lanes": ["GenesisCode"],
-        "milestones": ["M0", "M1-A", "M1-B"],
-        "nonclaims": [
-          "does not treat generated output, update execution, or mutable telemetry as independent evidence",
-          "does not close R0.4.j until exact-main standard/full evidence is independently watched"
-        ]
-      },
       "R2.2.f": {
         "product_lanes": ["GenesisCode"],
         "milestones": ["M1-A", "M2"],
@@ -52,6 +54,110 @@
           "does not close daemon or service readiness until every supported-host lifecycle matrix passes",
           "does not downgrade a promised hard-cancellation guarantee to cooperative cancellation",
           "does not discard stop, join, reap, or residual-process failures behind an initiating operation error"
+        ]
+      },
+      "R4.1.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not establish self-host closure without H2 production authority and H3 bootstrap evidence",
+          "does not broaden stage0 or authorize GenesisBench, Foundry, or Genesis Model work"
+        ]
+      },
+      "R5.1.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not freeze undocumented behavior or make performance evidence semantic authority",
+          "does not claim cross-tier parity before every affected normative form is reconciled"
+        ]
+      },
+      "R5.3.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not infer compatibility from version labels without exact profile negotiation",
+          "does not switch production authority before the corresponding R4.2 migration"
+        ]
+      },
+      "R4.2.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not count a GenesisCode wrapper or differential match as H2 production authority",
+          "does not retain a reachable silent Rust fallback after an authority switch"
+        ]
+      },
+      "R2.1.h": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2"],
+        "nonclaims": [
+          "does not close Runtime Beta without the remaining R2 and R3 parity and budget gates",
+          "does not loosen deterministic resource ceilings to meet performance targets"
+        ]
+      },
+      "R2.3.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2"],
+        "nonclaims": [
+          "does not claim PB-6 until cold and warm startup evidence passes",
+          "does not make cached or host-specific state part of canonical semantics"
+        ]
+      },
+      "R2.4.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2", "M3"],
+        "nonclaims": [
+          "does not make telemetry observable language semantics or leak secrets",
+          "does not treat mutable local reports as release evidence"
+        ]
+      },
+      "R3.1.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2", "M3"],
+        "nonclaims": [
+          "does not make bytecode authoritative without reference equivalence and validation",
+          "does not hide resource-accounting drift behind faster execution"
+        ]
+      },
+      "R3.2.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2", "M3"],
+        "nonclaims": [
+          "does not accept optimized output without translation validation or exact fallback",
+          "does not permit tier selection to change canonical semantics, hashes, effects, or budgets"
+        ]
+      },
+      "R3.3.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M2", "M3"],
+        "nonclaims": [
+          "does not make adaptive tier state part of deterministic program identity",
+          "does not proceed to self-hosted codegen on unresolved tier divergence"
+        ]
+      },
+      "R4.3.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not move semantic authority into generated host glue",
+          "does not delete a legacy path before no-reachability and recovery evidence pass"
+        ]
+      },
+      "R4.4.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not claim H3 from a one-stage or one-host rehearsal",
+          "does not normalize away unexplained semantic artifact differences"
+        ]
+      },
+      "R4.5.a": {
+        "product_lanes": ["GenesisCode"],
+        "milestones": ["M3", "M5-C", "M6"],
+        "nonclaims": [
+          "does not let the production implementation define its own conformance oracle",
+          "does not claim H4 without an independently authored verifier or implementation"
         ]
       },
       "R1.3.f": {
@@ -62,20 +168,12 @@
           "does not authorize a GenesisBench campaign or Genesis Model dependency"
         ]
       },
-      "R1.5.a": {
+      "R1.5.c": {
         "product_lanes": ["GenesisCode"],
         "milestones": ["M1-A"],
         "nonclaims": [
           "does not grant authority from generated cards, documentation, prompts, or model output",
           "does not claim clean-install or cross-model distribution until the complete R1.5 sequence passes"
-        ]
-      },
-      "R2.1.h": {
-        "product_lanes": ["GenesisCode"],
-        "milestones": ["M2"],
-        "nonclaims": [
-          "does not close Runtime Beta without the remaining R2 and R3 parity and budget gates",
-          "does not loosen deterministic resource ceilings to meet performance targets"
         ]
       },
       "R1.6.a": {
@@ -94,22 +192,31 @@
           "does not require or authorize a Genesis Model"
         ]
       },
-      "R2.3.a": {
+      "R3.4.a": {
         "product_lanes": ["GenesisCode"],
-        "milestones": ["M2"],
+        "milestones": ["M2", "M5-C"],
         "nonclaims": [
-          "does not claim PB-6 until cold and warm startup evidence passes",
-          "does not make cached or host-specific state part of canonical semantics"
-        ]
-      },
-      "R4.1.a": {
-        "product_lanes": ["GenesisCode"],
-        "milestones": ["M3", "M5-C", "M6"],
-        "nonclaims": [
-          "does not establish self-host closure without H2 production authority and H3 bootstrap evidence",
-          "does not broaden stage0 or authorize GenesisBench, Foundry, or Genesis Model work"
+          "does not implement or retain a JIT without a measured product decision",
+          "does not place optional JIT code in the semantic trust base"
         ]
       }
+    },
+    "validation_economy": {
+      "identical_success_limit_per_exact_identity": 1,
+      "additional_identical_run_condition": "recorded-flake-or-nondeterminism-hypothesis",
+      "release_calibration_task_id": "R9.1.c",
+      "whole_profile_sampling": "one-outer-invocation-after-inner-harness-pass",
+      "long_running_supervision": "autonomous-state-transitions-only",
+      "subject_readiness_order": ["contract", "focused", "integration", "assurance", "release"],
+      "required_campaign_fields": [
+        "decision",
+        "subject-readiness",
+        "independent-variable",
+        "observation-reuse",
+        "resource-budget",
+        "stopping-rule",
+        "terminal-artifact"
+      ]
     },
     "allowed_parallel_lanes": [
       {
@@ -497,6 +604,26 @@
         "reject tier divergence, resource-accounting bypass, host leaks, unbounded allocation, and user-reachable panic"
       ]
     },
+    "runtime-lifecycle": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "crates/gc_effects",
+        "crates/gc_cli",
+        "crates/gc_cli_driver",
+        "docs/spec",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_host_bridge_fault_injection.sh",
+        "scripts/check_no_user_panics.sh",
+        "scripts/check_host_abi_conformance.sh"
+      ],
+      "negative_controls": [
+        "reject discarded cleanup failures, surviving descendants, detached I/O pumps, cooperative-only cancellation, producer-authored closure, and cross-host lifecycle identity drift"
+      ]
+    },
     "validated-tier": {
       "risk_class": "critical",
       "resource_class": "build",
@@ -680,7 +807,7 @@
     "R4.3": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
     "R4.4": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
     "R4.5": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
-    "R5.1": {"profile": "language-contract", "start_after": ["R0.3", "R2.1"], "sequential": true},
+    "R5.1": {"profile": "language-contract", "start_after": ["R0.3", "R2.1.g", "R2.2"], "sequential": true},
     "R5.2": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
     "R5.3": {"profile": "language-contract", "start_after": ["R0.3", "R5.1"], "sequential": true},
     "R5.4": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},
@@ -713,6 +840,9 @@
     "F2": {"profile": "frontier-research", "start_after": ["R3.4", "R9.4", "R8.5.s"], "sequential": true},
     "F3": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true},
     "F4": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true}
+  },
+  "task_execution_profiles": {
+    "R2.2.f": "runtime-lifecycle"
   },
   "task_prerequisites": {
     "R0.1.f": [

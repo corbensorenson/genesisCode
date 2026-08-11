@@ -71,6 +71,22 @@ PARALLEL_LANE_REQUIRED_PHRASES = {
         "creates no benchmark attempt, score, cohort, rank, result",
     ],
 }
+VALIDATION_READINESS_ORDER = [
+    "contract",
+    "focused",
+    "integration",
+    "assurance",
+    "release",
+]
+VALIDATION_CAMPAIGN_FIELDS = [
+    "decision",
+    "subject-readiness",
+    "independent-variable",
+    "observation-reuse",
+    "resource-budget",
+    "stopping-rule",
+    "terminal-artifact",
+]
 
 
 class ManifestError(ValueError):
@@ -257,6 +273,7 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
             "resource_classes",
             "execution_profiles",
             "workstreams",
+            "task_execution_profiles",
             "task_prerequisites",
         ),
         "policy",
@@ -416,6 +433,22 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
         )
 
     task_ids = {str(task["id"]) for task in tasks}
+    task_execution_profiles = require_object(
+        policy.get("task_execution_profiles"), "policy.task_execution_profiles"
+    )
+    for task_id, raw_profile_name in task_execution_profiles.items():
+        if task_id not in task_ids:
+            raise ManifestError(
+                f"task_execution_profiles contains unknown task: {task_id}"
+            )
+        profile_name = require_string(
+            raw_profile_name, f"policy.task_execution_profiles[{task_id}]"
+        )
+        if profile_name not in execution_profiles:
+            raise ManifestError(
+                f"{task_id} uses unknown task execution profile: {profile_name}"
+            )
+
     frontier = require_object(
         policy.get("execution_frontier"), "policy.execution_frontier"
     )
@@ -427,6 +460,7 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
             "ordered_task_ids",
             "rationale",
             "task_context",
+            "validation_economy",
             "allowed_parallel_lanes",
         ),
         "policy.execution_frontier",
@@ -520,6 +554,55 @@ def validate_policy(raw: Any, tasks: Sequence[Mapping[str, Any]]) -> Mapping[str
             f"execution_frontier.task_context[{task_id}].nonclaims",
             non_empty=True,
         )
+    validation_economy = require_object(
+        frontier.get("validation_economy"),
+        "execution_frontier.validation_economy",
+    )
+    reject_unknown_fields(
+        validation_economy,
+        (
+            "identical_success_limit_per_exact_identity",
+            "additional_identical_run_condition",
+            "release_calibration_task_id",
+            "whole_profile_sampling",
+            "long_running_supervision",
+            "subject_readiness_order",
+            "required_campaign_fields",
+        ),
+        "execution_frontier.validation_economy",
+    )
+    if validation_economy.get("identical_success_limit_per_exact_identity") != 1:
+        raise ManifestError("validation economy must allow one identical development success")
+    if (
+        validation_economy.get("additional_identical_run_condition")
+        != "recorded-flake-or-nondeterminism-hypothesis"
+    ):
+        raise ManifestError("validation economy duplicate-run condition drift")
+    calibration_task_id = require_string(
+        validation_economy.get("release_calibration_task_id"),
+        "execution_frontier.validation_economy.release_calibration_task_id",
+    )
+    if calibration_task_id != "R9.1.c" or calibration_task_id not in task_ids:
+        raise ManifestError("validation economy release calibration task drift")
+    if (
+        validation_economy.get("whole_profile_sampling")
+        != "one-outer-invocation-after-inner-harness-pass"
+        or validation_economy.get("long_running_supervision")
+        != "autonomous-state-transitions-only"
+    ):
+        raise ManifestError("validation economy execution contract drift")
+    if require_string_list(
+        validation_economy.get("subject_readiness_order"),
+        "execution_frontier.validation_economy.subject_readiness_order",
+        non_empty=True,
+    ) != VALIDATION_READINESS_ORDER:
+        raise ManifestError("validation economy readiness order drift")
+    if require_string_list(
+        validation_economy.get("required_campaign_fields"),
+        "execution_frontier.validation_economy.required_campaign_fields",
+        non_empty=True,
+    ) != VALIDATION_CAMPAIGN_FIELDS:
+        raise ManifestError("validation economy campaign field drift")
     parallel_lanes = frontier.get("allowed_parallel_lanes")
     if not isinstance(parallel_lanes, list) or not parallel_lanes:
         raise ManifestError(
@@ -881,6 +964,9 @@ def build_manifest(
     task_overrides = require_object(
         policy.get("task_prerequisites"), "policy.task_prerequisites"
     )
+    task_execution_profiles = require_object(
+        policy.get("task_execution_profiles"), "policy.task_execution_profiles"
+    )
     risk_classes = require_object(policy.get("risk_classes"), "policy.risk_classes")
     execution_profiles = require_object(
         policy.get("execution_profiles"), "policy.execution_profiles"
@@ -892,7 +978,7 @@ def build_manifest(
         task_id = str(task["id"])
         workstream = str(task["workstream"])
         rule = require_object(workstream_rules[workstream], f"workstream {workstream}")
-        profile_name = str(rule["profile"])
+        profile_name = str(task_execution_profiles.get(task_id, rule["profile"]))
         execution_profile = require_object(
             execution_profiles[profile_name], f"execution profile {profile_name}"
         )
@@ -1435,7 +1521,9 @@ def build_execution_slice(
     resolved = resolve_frontier_candidates(manifest, ordered_ids, workstreams)
     open_ids = [task_id for task_id, _ in resolved]
     context_anchors = {task_id: anchor_id for task_id, anchor_id in resolved}
-    focused_ids = open_ids[:wip_limit]
+    focused_ids = [
+        task_id for task_id in open_ids if tasks[task_id]["start_ready"] is True
+    ][:wip_limit]
     focus_tasks = []
     for task_id in focused_ids:
         task = tasks[task_id]
@@ -1468,7 +1556,7 @@ def build_execution_slice(
             }
         )
     ready_ids = list(manifest["ready_task_ids"])
-    queued_ids = open_ids[wip_limit:]
+    queued_ids = [task_id for task_id in open_ids if task_id not in focused_ids]
     queued_tasks = []
     for task_id in queued_ids:
         task = tasks[task_id]
@@ -1498,6 +1586,7 @@ def build_execution_slice(
         "input_identities": manifest["input_identities"],
         "wip_limit": wip_limit,
         "scope_freeze": frontier["scope_freeze"],
+        "validation_economy": frontier["validation_economy"],
         "rationale": require_string(
             frontier.get("rationale"), "execution_frontier.rationale"
         ),
@@ -1639,6 +1728,18 @@ def run_self_test(roadmap_path: Path, policy_path: Path, schema_path: Path) -> i
         raise ManifestError(
             "self-test failed to advance a completed sequential frontier anchor"
         )
+    blocked_frontier_probe = copy.deepcopy(baseline)
+    blocked_probe_by_id = {
+        str(task["id"]): task for task in blocked_frontier_probe["tasks"]
+    }
+    blocked_probe_by_id["R2.2.f"]["start_ready"] = False
+    if [
+        task["id"]
+        for task in build_execution_slice(blocked_frontier_probe, policy_path)[
+            "focus_tasks"
+        ]
+    ] != ["R4.1.a"]:
+        raise ManifestError("self-test let a blocked frontier anchor stall ready work")
     cases: List[Tuple[str, Any]] = []
 
     duplicate = copy.deepcopy(baseline)

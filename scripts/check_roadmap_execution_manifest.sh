@@ -16,7 +16,7 @@ python3 scripts/lib/roadmap_execution_manifest.py \
   --output "$TMP_DIR/rendered.json" >/dev/null
 python3 scripts/lib/roadmap_execution_manifest.py --slice >"$TMP_DIR/slice.json"
 python3 scripts/lib/roadmap_execution_manifest.py --ready >"$TMP_DIR/ready.json"
-python3 scripts/lib/roadmap_execution_manifest.py --explain R0.4.j >"$TMP_DIR/explain.json"
+python3 scripts/lib/roadmap_execution_manifest.py --explain R2.2.f >"$TMP_DIR/explain.json"
 
 python3 - "$TMP_DIR/slice.json" "$TMP_DIR/ready.json" "$TMP_DIR/explain.json" <<'PY'
 import json
@@ -32,6 +32,20 @@ if execution_slice["authority"]["derived_view_only"] is not True:
     raise SystemExit("roadmap-execution-manifest: execution slice claims authority")
 if len(execution_slice["focus_tasks"]) > execution_slice["wip_limit"]:
     raise SystemExit("roadmap-execution-manifest: execution slice exceeds WIP limit")
+validation = execution_slice.get("validation_economy")
+if validation != {
+    "identical_success_limit_per_exact_identity": 1,
+    "additional_identical_run_condition": "recorded-flake-or-nondeterminism-hypothesis",
+    "release_calibration_task_id": "R9.1.c",
+    "whole_profile_sampling": "one-outer-invocation-after-inner-harness-pass",
+    "long_running_supervision": "autonomous-state-transitions-only",
+    "subject_readiness_order": ["contract", "focused", "integration", "assurance", "release"],
+    "required_campaign_fields": [
+        "decision", "subject-readiness", "independent-variable", "observation-reuse",
+        "resource-budget", "stopping-rule", "terminal-artifact",
+    ],
+}:
+    raise SystemExit("roadmap-execution-manifest: validation economy drift")
 required = {
     "id", "title", "phase", "workstream", "product_lanes", "milestones",
     "start_ready", "prerequisites", "unsatisfied_prerequisites", "risk_class",
@@ -83,13 +97,28 @@ for required in (
             f"roadmap-execution-manifest: portability canary lost {required!r}"
         )
 if (
-    explanation["id"] != "R0.4.j"
+    explanation["id"] != "R2.2.f"
     or explanation["state"] != "open"
     or explanation["start_ready"] is not True
 ):
     raise SystemExit("roadmap-execution-manifest: task explanation drift")
-if [task["id"] for task in execution_slice["focus_tasks"]] != ["R0.4.j"]:
+if [task["id"] for task in execution_slice["focus_tasks"]] != ["R2.2.f"]:
     raise SystemExit("roadmap-execution-manifest: corrective focus drift")
+focus = execution_slice["focus_tasks"][0]
+if focus["resource_class"] != "build":
+    raise SystemExit("roadmap-execution-manifest: lifecycle focus is not build-class work")
+required_lifecycle_guards = {
+    "scripts/check_host_bridge_fault_injection.sh",
+    "scripts/check_no_user_panics.sh",
+    "scripts/check_host_abi_conformance.sh",
+}
+if not required_lifecycle_guards.issubset(focus["guard_checks"]):
+    raise SystemExit("roadmap-execution-manifest: lifecycle focus lost task-specific guards")
+if {
+    "scripts/check_runtime_workload_budgets.sh",
+    "scripts/check_perf_budgets.sh",
+}.intersection(focus["guard_checks"]):
+    raise SystemExit("roadmap-execution-manifest: lifecycle focus inherited performance guards")
 if set(readiness) != {
     "kind", "version", "authority", "inputIdentities", "wipLimit",
     "openTaskCount", "startReadyTaskCount", "frontierFocusTaskIds",
@@ -105,8 +134,8 @@ if (
         "selector": "--slice",
     }
     or readiness["wipLimit"] != execution_slice["wip_limit"]
-    or readiness["frontierFocusTaskIds"] != ["R0.4.j"]
-    or readiness["selectedReadyTaskIds"] != ["R0.4.j"]
+    or readiness["frontierFocusTaskIds"] != ["R2.2.f"]
+    or readiness["selectedReadyTaskIds"] != ["R2.2.f"]
     or readiness["startReadyTaskCount"] != len(readiness["startReadyTasks"])
 ):
     raise SystemExit("roadmap-execution-manifest: readiness report derivation drift")
@@ -118,10 +147,10 @@ ready_fields = {
 if any(set(task) != ready_fields for task in readiness["startReadyTasks"]):
     raise SystemExit("roadmap-execution-manifest: readiness task field drift")
 ready_ids = [task["id"] for task in readiness["startReadyTasks"]]
-if ready_ids != ["R0.4.j", "R1.5.c", "R2.1.h", "R2.2.f", "R4.1.a"]:
+if ready_ids != ["R1.5.c", "R2.1.h", "R2.2.f", "R4.1.a", "R7.1.a"]:
     raise SystemExit("roadmap-execution-manifest: global readiness set drift")
 for task in readiness["startReadyTasks"]:
-    selected = task["id"] == "R0.4.j"
+    selected = task["id"] == "R2.2.f"
     if (
         task["selectedByFrontier"] is not selected
         or task["selectionDisposition"]
@@ -161,6 +190,44 @@ if python3 scripts/lib/roadmap_execution_manifest.py \
   --policy "$TMP_DIR/duplicate-key-policy.json" \
   --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
   echo "roadmap-execution-manifest: duplicate-key policy fixture was accepted" >&2
+  exit 1
+fi
+
+cp policies/roadmap_execution_v0.1.json "$TMP_DIR/validation-economy-broadened-policy.json"
+python3 - "$TMP_DIR/validation-economy-broadened-policy.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+policy["execution_frontier"]["validation_economy"]["identical_success_limit_per_exact_identity"] = 2
+path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+PY
+if python3 scripts/lib/roadmap_execution_manifest.py \
+  --render \
+  --policy "$TMP_DIR/validation-economy-broadened-policy.json" \
+  --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
+  echo "roadmap-execution-manifest: broadened validation economy was accepted" >&2
+  exit 1
+fi
+
+cp policies/roadmap_execution_v0.1.json "$TMP_DIR/unknown-task-profile-policy.json"
+python3 - "$TMP_DIR/unknown-task-profile-policy.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+policy["task_execution_profiles"]["R2.2.f"] = "unknown-profile"
+path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+PY
+if python3 scripts/lib/roadmap_execution_manifest.py \
+  --render \
+  --policy "$TMP_DIR/unknown-task-profile-policy.json" \
+  --output "$TMP_DIR/rejected.json" >/dev/null 2>&1; then
+  echo "roadmap-execution-manifest: unknown task execution profile was accepted" >&2
   exit 1
 fi
 
@@ -217,4 +284,4 @@ after="$(cksum docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json)"
   exit 1
 }
 
-echo "roadmap-execution-manifest-contract: ok (negative_controls=28 query_views=2 lane_isolation=13 parallel_lanes=2 scope_freeze=active check_mode=read_only)"
+echo "roadmap-execution-manifest-contract: ok (negative_controls=30 query_views=2 lane_isolation=13 parallel_lanes=2 validation_economy=active scope_freeze=active check_mode=read_only)"

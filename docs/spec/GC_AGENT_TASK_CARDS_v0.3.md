@@ -70,7 +70,7 @@ Authorities: docs/spec/GCLOG.md, docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_e
 
 ## Testing and obligations
 
-Card: testing | Profile: GC-AGENT-v0.3 | Source: sha256:43dea18b52d8b5c2bc9904b386c3620e9969704e56ea7bddf258c5537fe538f8
+Card: testing | Profile: GC-AGENT-v0.3 | Source: sha256:fd61db9b3fd324de1971ab7696ae8bd1ef2c0a6bc9b9997b5b7021b0348f27fa
 
 - Run focused parser/type/eval/obligation checks before broader deterministic profiles.
 - Checks are read-only; only explicit update commands may refresh retained artifacts.
@@ -85,7 +85,7 @@ Authorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES
 
 ## Build and deployment targets
 
-Card: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:fd8a6c62e3d8cb3ae488ee58deebe14b88784ecc82714d9425786a4a887272a2
+Card: deployment | Profile: GC-AGENT-v0.3 | Source: sha256:3e4f7fd1be3de30e3f84c3ab730f3570ffd107daef01d92f7276807ae98b8a43
 
 - Select an explicit web, desktop, service, ios, android, edge, or service-runtime target.
 - Build deterministic bundles with manifest, provenance, policy, and replay identities.

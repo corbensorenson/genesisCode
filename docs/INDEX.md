@@ -36,7 +36,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json` - closed schema for one governed gate resource observation.
 - `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#engineering-gate-budgets` - normative GB-1 through GB-8 enforcement, panic-assurance split, source-waiver, and prerequisite-closure contract.
 - `docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json` - closed engineering budget authority for static, changed-file, profile, footprint, verifier, concentration, and fresh-clone limits.
-- `docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json` - closed class-separated R0.4.j warmup, retained-sample, hard-failure, statistics, trend, and hard-ceiling evidence contract.
+- `docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json` - closed class-separated R9.1.c release-candidate warmup, retained-sample, hard-failure, statistics, trend, and hard-ceiling evidence contract.
 - `docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json` - closed non-authoritative local/hosted timing observation envelope with terminal containment, canonical environment facts, workload identity, and append-chain identity.
 - `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#reference-host-profiles` - normative tier-1/tier-2 benchmark host classes, metadata dimensions, privacy boundary, and promotion rules.
 - `docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json` - closed reference-host policy schema.

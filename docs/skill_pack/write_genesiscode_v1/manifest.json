@@ -47,12 +47,12 @@
     "docs/spec/GC_AGENT_CORE_CARD_v0.3.md": "e9dfcbffc29b362a2a56e05ea57b75a7753934009dc1282534973a3a6ddf38db",
     "docs/spec/GC_AGENT_PROFILE_v0.3.json": "f520285c016fef4d64058c06e00ab0958d7dc201fa6458fde06d1687bcdf762b",
     "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "01b6198d1c0d52416c14f737c4ea2cbc74889e342fd2372caff61f7942be3794",
-    "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json": "9fe7407c6c5b2492b752bdf74bfe6bb2ceb64e0cc798f421d0fa9eeca91a7b02",
+    "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json": "cb617b81d24b2a7b8c3b27d5d9ba2504559352963ce915a6d1eeeb6ed5ca714e",
     "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "45bbcc20dd2c0a2777795167adc221f4085fa7c3cea31e2f27d27d735540ed61",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2",
     "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json": "34eb570715c0947a7b3fccf15ba4fbf7d182badfa5ae8fe771e902b2d9026fe3",
     "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json": "0fc989913bb1ac06af8f3f96f4a6a9e5b98c73153238f0fd81e68f9dbef64c17",
-    "policies/genesiscode_authoring_workflow_v0.1.json": "2163929e7a4ebd06e1e1a14ca0092031405ef9cbb8073e273b23d3ee0c505d71"
+    "policies/genesiscode_authoring_workflow_v0.1.json": "06069bf7a56d0dcbaa9aac424447cf6ba77b97bf18ef347fa5306d4df087ce2b"
   },
   "kind": "genesis/write-genesiscode-skill-distribution-v1",
   "prompt_cards": "prompt-cards.json",
@@ -267,7 +267,7 @@
   ],
   "skill": ".agents/skills/genesiscode-authoring/SKILL.md",
   "source": "policies/genesiscode_authoring_workflow_v0.1.json",
-  "source_sha256": "2163929e7a4ebd06e1e1a14ca0092031405ef9cbb8073e273b23d3ee0c505d71",
+  "source_sha256": "06069bf7a56d0dcbaa9aac424447cf6ba77b97bf18ef347fa5306d4df087ce2b",
   "verification_scripts": [
     "scripts/check_write_genesiscode_skill_distribution.sh",
     "scripts/check_write_genesiscode_skill_conformance.sh"

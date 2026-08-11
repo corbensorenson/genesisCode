@@ -1134,7 +1134,7 @@ def render_candidate(
         "nonclaims": [
             "This E0-derived candidate is not canonical evidence.",
             "A proposed ceiling does not authorize a policy or budget change.",
-            "This candidate cannot close R0.4.j or qualify a release.",
+            f"This candidate cannot close {policy['roadmapTask']} or qualify a release.",
         ],
     }
     require(set(candidate) == CANDIDATE_FIELDS, "candidate fields drift")

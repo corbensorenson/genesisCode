@@ -631,7 +631,10 @@
       "Optimizers, models, and benchmark solvers may propose but never verify, promote, grant authority, or rewrite evaluators.",
       "Prefer GenesisCode libraries and self-hosted modules; restrict Rust changes to measured bootstrap, host, and safety boundaries.",
       "Use generated core, task, symbol, capability, and diagnostic cards as reference authority; do not duplicate their content here.",
-      "Use generated-authority update commands only to produce candidates; only read-only checks and independently reviewed evidence can close work."
+      "Use generated-authority update commands only to produce candidates; only read-only checks and independently reviewed evidence can close work.",
+      "Run one successful identical development command per exact revision, inputs, host class, cache state, and seed; allow one additional run only for a recorded flake or nondeterminism hypothesis.",
+      "Keep statistical samples inside one bounded autonomous harness, run the surrounding whole-repository profile once, and never qualify a known-broken, stubbed, or unsupported subject.",
+      "Every campaign names the decision, subject readiness, independent variable, observation reuse, resource budget, stopping rule, and terminal artifact; report only material state transitions."
     ],
     "task_routing": {
       "routes": [
@@ -726,8 +729,10 @@
       },
       {
         "actions": [
-          "Run focused checks first, then the task guard set and bash scripts/test_changed_fast.sh.",
-          "Use canonical updaters for derived files, inspect the full diff, rerun read-only freshness checks, and prove a second update is byte-identical."
+          "Run focused checks first, then the task guard set, then exactly one V2 integration route for the exact revision: inspect bash scripts/test_changed_fast.sh --dry-run and run its impacted route for ordinary changes, or use one canonical generated-authority transaction when its read-only check set subsumes the generated closure; never run both for the same facts.",
+          "Do not repeat an identical successful command; a second run requires a recorded flake or nondeterminism hypothesis, while statistical sampling stays inside one bounded task-specific harness.",
+          "Do not start cross-host, performance, soak, or release qualification before the measured subject reaches its declared readiness stage.",
+          "Use one canonical updater transaction for derived files, inspect the full diff and terminal read-only check set, and rely on its staged fixed-point proof; do not rerun the updater merely to prove that the completed transaction is byte-identical."
         ],
         "name": "Verify"
       },

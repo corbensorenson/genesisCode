@@ -541,7 +541,7 @@ def validate_policy(policy: Any) -> dict[str, Any]:
     require(
         policy["kind"] == "genesis/engineering-gate-timing-calibration-policy-v0.1"
         and policy["version"] == "0.1"
-        and policy["roadmapTask"] == "R0.4.j",
+        and policy["roadmapTask"] == "R9.1.c",
         "timing policy identity mismatch",
     )
     canonical_path(policy["schemaPath"], "docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json", "schema")
@@ -988,8 +988,12 @@ def verify(
     )
     require((evidence["status"] == "complete") == complete, "timing evidence completion claim mismatch")
     roadmap = (ROOT / "ROADMAP.md").read_text(encoding="utf-8") if roadmap_text is None else roadmap_text
-    task_done = "- [x] **R0.4.j Restore an authentic, hermetic release-full profile within GB-4.**" in roadmap
-    require(not task_done or complete, "R0.4.j is checked without complete timing calibration")
+    task_prefix = f"- [x] **{policy['roadmapTask']} "
+    task_done = any(line.startswith(task_prefix) for line in roadmap.splitlines())
+    require(
+        not task_done or complete,
+        f"{policy['roadmapTask']} is checked without complete timing calibration",
+    )
     return {"status": evidence["status"], "classes": summaries}
 
 
@@ -1167,7 +1171,7 @@ def self_test() -> int:
     expect_rejection(
         policy,
         evidence,
-        "- [x] **R0.4.j Restore an authentic, hermetic release-full profile within GB-4.**",
+        "- [x] **R9.1.c Qualify at least two release candidates without redundant execution.**",
     )
     controls += 1
 

@@ -250,13 +250,19 @@ Strict/full profile runtime reports:
     - `GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY` (default `1`, fail-closed)
     - `GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY` (default `policies/perf/upgrade_plan_health_release_full_seed_history.jsonl`)
     - `GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY`
-  - R0.4.j timing calibration is governed by
+  - R9.1.c release-candidate timing calibration is governed by
     `policies/engineering_gate_timing_calibration_v0.1.json`, validated through
     the existing `scripts/check_engineering_gate_contract.sh`, and retained in
     `docs/program/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.json` under the closed
     `docs/spec/ENGINEERING_GATE_TIMING_CALIBRATION_v0.1.schema.json` schema.
     Raw observations use the separately closed
     `docs/spec/ENGINEERING_GATE_TIMING_OBSERVATION_v0.1.schema.json` envelope.
+    This is V4 release qualification under `ROADMAP.md` section 7. It does not
+    block R0 implementation, ordinary development, runtime/self-host work, or a
+    task whose focused and impacted-profile checks have passed. Before R9.1.c,
+    the existing ceilings remain fail-closed containment limits and the
+    collector may retain compatible observations without creating an active
+    campaign.
     The authority keeps `local-warm`, `local-clean-fallback`, and
     `hosted-cold-shared-runner` as three ordered, non-interchangeable classes.
     Each observation binds its exact commit, host, toolchain, workload,
@@ -305,7 +311,7 @@ Strict/full profile runtime reports:
     exact host, toolchain, control, timestamp, terminal, and chain material and
     recompute the originating observation identity, so review remains possible
     after mutable collection storage is gone.
-  - A class remains `collecting` until exactly five semantic-pass warmups have
+  - Once R9.1.c is active, a class remains `collecting` until exactly five semantic-pass warmups have
     been discarded and at least 30 semantic-pass measurements are retained.
     The first 30 retained measurements form the immutable calibration population:
     exact-rational median and MAD, nearest-rank p95, and the distribution-free
@@ -321,7 +327,10 @@ Strict/full profile runtime reports:
     720,000ms local and 7,200,000ms hosted values are provisional containment
     limits only. A semantic pass cannot override a timing overrun, collection
     cannot authorize a budget increase, and neither mutable E0 observations nor
-    a `collecting` evidence file can close R0.4.j or qualify a release.
+    a `collecting` evidence file can close R9.1.c or qualify a release. Collection
+    runs as one bounded autonomous campaign with a declared decision, observation
+    reuse rule, resource budget, and stopping rule; agents do not poll unchanged
+    runs or repeat an already-green whole profile outside that campaign.
   - strict profiles (`prepush-standard`, `release-full`, `full-selfhost-cutover`)
     fail closed on low-disk preflight by default
     (`GENESIS_HEALTH_STRICT_DISK_POLICY=fail`)

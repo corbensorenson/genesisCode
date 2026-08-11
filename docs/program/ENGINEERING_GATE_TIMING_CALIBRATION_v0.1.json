@@ -2,7 +2,7 @@
   "kind": "genesis/engineering-gate-timing-calibration-evidence-v0.1",
   "version": "0.1",
   "status": "collecting",
-  "policySha256": "2a0787eca646f95c8f14c741bd59fe1acf964c4173a2c9f36e88eefef03baf6b",
+  "policySha256": "415503ffd198a1fca7153362be233501672be977f3b68d2ad912e753ebbf1105",
   "schemaSha256": "18805722e1b1e17b43af3fab0076b750c39259253471e2c08664ab9b8f2f87a4",
   "classes": [
     {"id": "local-warm", "warmups": [], "retainedSamples": [], "failedSamples": [], "statistics": null, "trend": null, "derivedHardCeiling": null},
@@ -11,7 +11,7 @@
   ],
   "nonclaims": [
     "Collecting calibration evidence does not weaken or replace any provisional hard containment ceiling.",
-    "Local mutable observations do not independently close R0.4.j.",
+    "Local mutable observations do not independently close R9.1.c.",
     "Calibration evidence does not qualify a GenesisCode product release."
   ]
 }
