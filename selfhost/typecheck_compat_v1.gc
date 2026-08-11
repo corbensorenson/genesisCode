@@ -1,0 +1,650 @@
+(def selfhost/typecheck::tail-closed?
+  (fn (tail) ((core/sym::eq? tail) (quote :closed))))
+
+(def selfhost/typecheck::tail-any?
+  (fn (tail) ((core/sym::eq? tail) (quote :any))))
+
+(def selfhost/typecheck::tail-var?
+  (fn (tail)
+    (if (selfhost/typecheck::tail-closed? tail)
+      false
+      (if (selfhost/typecheck::tail-any? tail) false true))))
+
+(def selfhost/typecheck::effect-scan-empty {:anonymous false :vars {}})
+
+(def selfhost/typecheck::collect-effect-tail
+  (fn (tail)
+    (fn (scan)
+      (if (selfhost/typecheck::tail-closed? tail)
+        scan
+        (if (selfhost/typecheck::tail-any? tail)
+          (((core/map::put scan) (quote :anonymous)) true)
+          (((core/map::put scan) (quote :vars))
+            ((selfhost/typecheck::set-add ((core/map::get scan) (quote :vars))) tail)))))))
+
+(def selfhost/typecheck::collect-effect-rows
+  (fn (ty)
+    (fn (scan)
+      (let ((tag (selfhost/typecheck::ty-tag ty)))
+        (if ((core/sym::eq? tag) (quote :fn))
+          (let
+            ((s1
+               ((selfhost/typecheck::collect-effect-tail
+                  ((core/map::get ((core/map::get ty) (quote :eff))) (quote :tail)))
+                 scan)))
+            ((selfhost/typecheck::collect-effect-rows ((core/map::get ty) (quote :ret)))
+              ((selfhost/typecheck::collect-effect-rows ((core/map::get ty) (quote :param))) s1)))
+          (if ((core/sym::eq? tag) (quote :prog))
+            (let
+              ((s1
+                 ((selfhost/typecheck::collect-effect-tail
+                    ((core/map::get ((core/map::get ty) (quote :eff))) (quote :tail)))
+                   scan)))
+              ((selfhost/typecheck::collect-effect-rows ((core/map::get ty) (quote :ret))) s1))
+            (if ((core/sym::eq? tag) (quote :msg))
+              ((selfhost/typecheck::collect-effect-rows ((core/map::get ty) (quote :payload))) scan)
+              (if ((core/sym::eq? tag) (quote :rec))
+                (((selfhost/typecheck::collect-effect-fields
+                    ((core/map::get ty) (quote :fields)))
+                   (core/map::entries ((core/map::get ty) (quote :fields))))
+                  scan)
+                (if ((core/sym::eq? tag) (quote :contract))
+                  (((selfhost/typecheck::collect-effect-fields
+                      ((core/map::get ty) (quote :methods)))
+                     (core/map::entries ((core/map::get ty) (quote :methods))))
+                    scan)
+                  scan)))))))))
+
+(def selfhost/typecheck::collect-effect-fields
+  (fn (fields)
+    (fn (entries)
+      (fn (scan)
+        ((((selfhost/typecheck::collect-effect-fields-loop entries)
+            (core/vec::len entries))
+           0)
+          scan)))))
+
+(def selfhost/typecheck::collect-effect-fields-loop
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (scan)
+          (if ((core/int::eq? i) n)
+            scan
+            (let
+              ((entry ((core/vec::get entries) i)))
+              ((((selfhost/typecheck::collect-effect-fields-loop entries) n)
+                 ((core/int::add i) 1))
+                ((selfhost/typecheck::collect-effect-rows ((core/vec::get entry) 1)) scan)))))))))
+
+(def selfhost/typecheck::validate-effect-row-declaration
+  (fn (ty)
+    (fn (strict-effects)
+      (let ((scan ((selfhost/typecheck::collect-effect-rows ty) selfhost/typecheck::effect-scan-empty)))
+        (if
+          (if strict-effects ((core/map::get scan) (quote :anonymous)) false)
+          (selfhost/typecheck::err
+            "strict effect mode requires a closed declared effect row or a named row variable bound by a function parameter")
+          (let
+            ((parameter-scan
+               (if ((core/sym::eq? (selfhost/typecheck::ty-tag ty)) (quote :fn))
+                 ((selfhost/typecheck::collect-effect-rows ((core/map::get ty) (quote :param)))
+                   selfhost/typecheck::effect-scan-empty)
+                 selfhost/typecheck::effect-scan-empty)))
+            (let
+              ((unbound
+                 ((selfhost/typecheck::set-difference ((core/map::get scan) (quote :vars)))
+                   ((core/map::get parameter-scan) (quote :vars)))))
+              (let ((names (selfhost/typecheck::set-keys unbound)))
+                (if ((core/int::eq? (core/vec::len names)) 0)
+                  (selfhost/typecheck::ok true)
+                  (selfhost/typecheck::err
+                    ((selfhost/typecheck::str3 "unbound effect row variable(s) "
+                       ((core/str::join
+                          ((selfhost/typecheck::vec-map names) selfhost/typecheck::symbol-str))
+                         ", "))
+                      "; named tails must occur in the outermost function parameter")))))))))))
+
+(def selfhost/typecheck::has-unresolved-contract-ops?
+  (fn (ty)
+    (let ((tag (selfhost/typecheck::ty-tag ty)))
+      (if ((core/sym::eq? tag) (quote :msg))
+        (if (selfhost/typecheck::nil? ((core/map::get ty) (quote :op)))
+          true
+          (selfhost/typecheck::has-unresolved-contract-ops?
+            ((core/map::get ty) (quote :payload))))
+        (if ((core/sym::eq? tag) (quote :fn))
+          (if
+            (selfhost/typecheck::has-unresolved-contract-ops?
+              ((core/map::get ty) (quote :param)))
+            true
+            (selfhost/typecheck::has-unresolved-contract-ops?
+              ((core/map::get ty) (quote :ret))))
+          (if ((core/sym::eq? tag) (quote :prog))
+            (selfhost/typecheck::has-unresolved-contract-ops?
+              ((core/map::get ty) (quote :ret)))
+            (if ((core/sym::eq? tag) (quote :rec))
+              (selfhost/typecheck::fields-have-unresolved?
+                (core/map::entries ((core/map::get ty) (quote :fields))))
+              (if ((core/sym::eq? tag) (quote :contract))
+                (selfhost/typecheck::fields-have-unresolved?
+                  (core/map::entries ((core/map::get ty) (quote :methods))))
+                false))))))))
+
+(def selfhost/typecheck::fields-have-unresolved?
+  (fn (entries)
+    (((selfhost/typecheck::fields-have-unresolved-loop entries) (core/vec::len entries)) 0)))
+
+(def selfhost/typecheck::fields-have-unresolved-loop
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          false
+          (if
+            (selfhost/typecheck::has-unresolved-contract-ops?
+              ((core/vec::get ((core/vec::get entries) i)) 1))
+            true
+            (((selfhost/typecheck::fields-have-unresolved-loop entries) n)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/typecheck::bind-unknown-row
+  (fn (row)
+    (fn (bindings)
+      (let ((tail ((core/map::get row) (quote :tail))))
+        (if (selfhost/typecheck::tail-var? tail)
+          (if (selfhost/typecheck::nil? ((core/map::get bindings) tail))
+            (((core/map::put bindings) tail)
+              ((selfhost/typecheck::eff-row {}) (quote :any)))
+            bindings)
+          bindings)))))
+
+(def selfhost/typecheck::bind-unknowns-in-type
+  (fn (ty)
+    (fn (bindings)
+      (let ((tag (selfhost/typecheck::ty-tag ty)))
+        (if ((core/sym::eq? tag) (quote :fn))
+          ((selfhost/typecheck::bind-unknown-row ((core/map::get ty) (quote :eff)))
+            ((selfhost/typecheck::bind-unknowns-in-type ((core/map::get ty) (quote :ret)))
+              ((selfhost/typecheck::bind-unknowns-in-type ((core/map::get ty) (quote :param)))
+                bindings)))
+          (if ((core/sym::eq? tag) (quote :prog))
+            ((selfhost/typecheck::bind-unknown-row ((core/map::get ty) (quote :eff)))
+              ((selfhost/typecheck::bind-unknowns-in-type ((core/map::get ty) (quote :ret)))
+                bindings))
+            (if ((core/sym::eq? tag) (quote :msg))
+              ((selfhost/typecheck::bind-unknowns-in-type
+                 ((core/map::get ty) (quote :payload)))
+                bindings)
+              (if ((core/sym::eq? tag) (quote :rec))
+                ((selfhost/typecheck::bind-unknowns-in-fields
+                   (core/map::entries ((core/map::get ty) (quote :fields))))
+                  bindings)
+                (if ((core/sym::eq? tag) (quote :contract))
+                  ((selfhost/typecheck::bind-unknowns-in-fields
+                     (core/map::entries ((core/map::get ty) (quote :methods))))
+                    bindings)
+                  bindings)))))))))
+
+(def selfhost/typecheck::bind-unknowns-in-fields
+  (fn (entries)
+    (fn (bindings)
+      ((((selfhost/typecheck::bind-unknowns-in-fields-loop entries)
+          (core/vec::len entries))
+         0)
+        bindings))))
+
+(def selfhost/typecheck::bind-unknowns-in-fields-loop
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (bindings)
+          (if ((core/int::eq? i) n)
+            bindings
+            ((((selfhost/typecheck::bind-unknowns-in-fields-loop entries) n)
+               ((core/int::add i) 1))
+              ((selfhost/typecheck::bind-unknowns-in-type
+                 ((core/vec::get ((core/vec::get entries) i)) 1))
+                bindings))))))))
+
+(def selfhost/typecheck::match-effect-row
+  (fn (inferred)
+    (fn (declared)
+      (fn (bindings)
+        (let ((tail ((core/map::get declared) (quote :tail))))
+          (if (selfhost/typecheck::tail-closed? tail)
+            {:bindings bindings
+              :ok
+                (if
+                  (selfhost/typecheck::tail-closed?
+                    ((core/map::get inferred) (quote :tail)))
+                  ((selfhost/typecheck::set-subset?
+                     ((core/map::get inferred) (quote :ops)))
+                    ((core/map::get declared) (quote :ops)))
+                  false)}
+            (if (selfhost/typecheck::tail-any? tail)
+              {:bindings bindings :ok true}
+              (let
+                ((remainder
+                   ((selfhost/typecheck::eff-row
+                      ((selfhost/typecheck::set-difference
+                         ((core/map::get inferred) (quote :ops)))
+                        ((core/map::get declared) (quote :ops))))
+                     ((core/map::get inferred) (quote :tail))))
+                  (bound ((core/map::get bindings) tail)))
+                (if (selfhost/typecheck::nil? bound)
+                  {:bindings (((core/map::put bindings) tail) remainder) :ok true}
+                  (if
+                    (if
+                      (selfhost/typecheck::tail-any?
+                        ((core/map::get bound) (quote :tail)))
+                      true
+                      (selfhost/typecheck::tail-any?
+                        ((core/map::get remainder) (quote :tail))))
+                    {:bindings
+                       (((core/map::put bindings) tail)
+                         ((selfhost/typecheck::eff-row
+                            ((selfhost/typecheck::set-union
+                               ((core/map::get bound) (quote :ops)))
+                              ((core/map::get remainder) (quote :ops))))
+                           (quote :any)))
+                      :ok true}
+                    {:bindings bindings :ok ((core/eq? bound) remainder)}))))))))))
+
+(def selfhost/typecheck::apply-effect-row
+  (fn (row)
+    (fn (bindings)
+      (let
+        ((tail ((core/map::get row) (quote :tail)))
+          (ops ((core/map::get row) (quote :ops))))
+        (if (selfhost/typecheck::tail-var? tail)
+          (let ((bound ((core/map::get bindings) tail)))
+            (if (selfhost/typecheck::nil? bound)
+              row
+              ((selfhost/typecheck::eff-row
+                 ((selfhost/typecheck::set-union ops)
+                   ((core/map::get bound) (quote :ops))))
+                ((core/map::get bound) (quote :tail)))))
+          row)))))
+
+(def selfhost/typecheck::apply-type-bindings
+  (fn (ty)
+    (fn (bindings)
+      (let ((tag (selfhost/typecheck::ty-tag ty)))
+        (if ((core/sym::eq? tag) (quote :fn))
+          (((selfhost/typecheck::ty-fn
+              ((selfhost/typecheck::apply-type-bindings
+                 ((core/map::get ty) (quote :param)))
+                bindings))
+             ((selfhost/typecheck::apply-type-bindings
+                ((core/map::get ty) (quote :ret)))
+               bindings))
+            ((selfhost/typecheck::apply-effect-row ((core/map::get ty) (quote :eff))) bindings))
+          (if ((core/sym::eq? tag) (quote :prog))
+            ((selfhost/typecheck::ty-prog
+               ((selfhost/typecheck::apply-type-bindings
+                  ((core/map::get ty) (quote :ret)))
+                 bindings))
+              ((selfhost/typecheck::apply-effect-row ((core/map::get ty) (quote :eff))) bindings))
+            (if ((core/sym::eq? tag) (quote :msg))
+              ((selfhost/typecheck::ty-msg ((core/map::get ty) (quote :op)))
+                ((selfhost/typecheck::apply-type-bindings
+                   ((core/map::get ty) (quote :payload)))
+                  bindings))
+              (if ((core/sym::eq? tag) (quote :rec))
+                ((selfhost/typecheck::ty-rec
+                   ((selfhost/typecheck::apply-field-bindings
+                      ((core/map::get ty) (quote :fields)))
+                     bindings))
+                  ((core/map::get ty) (quote :tail)))
+                (if ((core/sym::eq? tag) (quote :contract))
+                  ((selfhost/typecheck::ty-contract
+                     ((selfhost/typecheck::apply-field-bindings
+                        ((core/map::get ty) (quote :methods)))
+                       bindings))
+                    ((core/map::get ty) (quote :tail)))
+                  ty)))))))))
+
+(def selfhost/typecheck::apply-field-bindings
+  (fn (fields)
+    (fn (bindings)
+      (let ((entries (core/map::entries fields)))
+        (((((selfhost/typecheck::apply-field-bindings-loop entries) bindings)
+            (core/vec::len entries))
+           0)
+          {})))))
+
+(def selfhost/typecheck::apply-field-bindings-loop
+  (fn (entries)
+    (fn (bindings)
+      (fn (n)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) n)
+              out
+              (let ((entry ((core/vec::get entries) i)))
+                (((((selfhost/typecheck::apply-field-bindings-loop entries) bindings) n)
+                   ((core/int::add i) 1))
+                  (((core/map::put out) ((core/vec::get entry) 0))
+                    ((selfhost/typecheck::apply-type-bindings ((core/vec::get entry) 1))
+                      bindings)))))))))))
+
+(def selfhost/typecheck::bind-declared-effect-rows
+  (fn (inferred)
+    (fn (declared)
+      (fn (bindings)
+        (if ((core/sym::eq? (selfhost/typecheck::ty-tag inferred)) (quote :any))
+          {:bindings ((selfhost/typecheck::bind-unknowns-in-type declared) bindings) :ok true}
+          (let
+            ((it (selfhost/typecheck::ty-tag inferred))
+              (dt (selfhost/typecheck::ty-tag declared)))
+            (if ((core/sym::eq? dt) (quote :any))
+              {:bindings bindings :ok true}
+              (if
+                (if ((core/sym::eq? it) (quote :msg)) ((core/sym::eq? dt) (quote :msg)) false)
+                (((selfhost/typecheck::bind-declared-effect-rows
+                    ((core/map::get inferred) (quote :payload)))
+                   ((core/map::get declared) (quote :payload)))
+                  bindings)
+                (if
+                  (if ((core/sym::eq? it) (quote :fn)) ((core/sym::eq? dt) (quote :fn)) false)
+                  (let
+                    ((p
+                       (((selfhost/typecheck::bind-declared-effect-rows
+                           ((core/map::get inferred) (quote :param)))
+                          ((core/map::get declared) (quote :param)))
+                         bindings)))
+                    (if ((core/map::get p) (quote :ok))
+                      (let
+                        ((r
+                           (((selfhost/typecheck::bind-declared-effect-rows
+                               ((core/map::get inferred) (quote :ret)))
+                              ((core/map::get declared) (quote :ret)))
+                             ((core/map::get p) (quote :bindings)))))
+                        (if ((core/map::get r) (quote :ok))
+                          (((selfhost/typecheck::bind-declared-effect-row
+                              ((core/map::get inferred) (quote :eff)))
+                             ((core/map::get declared) (quote :eff)))
+                            ((core/map::get r) (quote :bindings)))
+                          r))
+                      p))
+                  (if
+                    (if ((core/sym::eq? it) (quote :prog)) ((core/sym::eq? dt) (quote :prog)) false)
+                    (let
+                      ((r
+                         (((selfhost/typecheck::bind-declared-effect-rows
+                             ((core/map::get inferred) (quote :ret)))
+                            ((core/map::get declared) (quote :ret)))
+                           bindings)))
+                      (if ((core/map::get r) (quote :ok))
+                        (((selfhost/typecheck::bind-declared-effect-row
+                            ((core/map::get inferred) (quote :eff)))
+                           ((core/map::get declared) (quote :eff)))
+                          ((core/map::get r) (quote :bindings)))
+                        r))
+                    (if
+                      (if
+                        (if ((core/sym::eq? it) (quote :rec)) ((core/sym::eq? dt) (quote :rec)) false)
+                        true
+                        (if
+                          ((core/sym::eq? it) (quote :contract))
+                          ((core/sym::eq? dt) (quote :contract))
+                          false))
+                      (((selfhost/typecheck::bind-declared-fields
+                          ((core/map::get inferred)
+                            (if ((core/sym::eq? it) (quote :rec)) (quote :fields) (quote :methods))))
+                         ((core/map::get declared)
+                           (if ((core/sym::eq? dt) (quote :rec)) (quote :fields) (quote :methods))))
+                        bindings)
+                      {:bindings bindings :ok true})))))))))))
+
+(def selfhost/typecheck::bind-declared-effect-row
+  (fn (inferred)
+    (fn (declared)
+      (fn (bindings)
+        (if
+          (selfhost/typecheck::tail-var? ((core/map::get declared) (quote :tail)))
+          (((selfhost/typecheck::match-effect-row inferred) declared) bindings)
+          {:bindings bindings :ok true})))))
+
+(def selfhost/typecheck::bind-declared-fields
+  (fn (inferred-fields)
+    (fn (declared-fields)
+      (fn (bindings)
+        (let ((entries (core/map::entries declared-fields)))
+          (((((selfhost/typecheck::bind-declared-fields-loop entries) inferred-fields)
+              (core/vec::len entries))
+             0)
+            bindings))))))
+
+(def selfhost/typecheck::bind-declared-fields-loop
+  (fn (entries)
+    (fn (inferred-fields)
+      (fn (n)
+        (fn (i)
+          (fn (bindings)
+            (if ((core/int::eq? i) n)
+              {:bindings bindings :ok true}
+              (let
+                ((entry ((core/vec::get entries) i))
+                  (inferred ((core/map::get inferred-fields) ((core/vec::get entry) 0))))
+                (if (selfhost/typecheck::nil? inferred)
+                  (((((selfhost/typecheck::bind-declared-fields-loop entries) inferred-fields) n)
+                     ((core/int::add i) 1))
+                    bindings)
+                  (let
+                    ((matched
+                       (((selfhost/typecheck::bind-declared-effect-rows inferred)
+                          ((core/vec::get entry) 1))
+                         bindings)))
+                    (if ((core/map::get matched) (quote :ok))
+                      (((((selfhost/typecheck::bind-declared-fields-loop entries) inferred-fields) n)
+                         ((core/int::add i) 1))
+                        ((core/map::get matched) (quote :bindings)))
+                      matched)))))))))))
+
+(def selfhost/typecheck::effect-row-subtype?
+  (fn (actual)
+    (fn (expected)
+      (let ((tail ((core/map::get expected) (quote :tail))))
+        (if (selfhost/typecheck::tail-any? tail)
+          true
+          (if (selfhost/typecheck::tail-closed? tail)
+            (if
+              (selfhost/typecheck::tail-closed? ((core/map::get actual) (quote :tail)))
+              ((selfhost/typecheck::set-subset? ((core/map::get actual) (quote :ops)))
+                ((core/map::get expected) (quote :ops)))
+              false)
+            (if ((core/sym::eq? ((core/map::get actual) (quote :tail))) tail)
+              ((selfhost/typecheck::set-subset? ((core/map::get actual) (quote :ops)))
+                ((core/map::get expected) (quote :ops)))
+              false)))))))
+
+(def selfhost/typecheck::shape-tail-compatible?
+  (fn (actual-fields)
+    (fn (actual-tail)
+      (fn (expected-fields)
+        (fn (expected-tail)
+          (fn (strict-shapes)
+            (if strict-shapes
+              (if (selfhost/typecheck::tail-closed? expected-tail)
+                (if (selfhost/typecheck::tail-closed? actual-tail)
+                  ((core/int::eq? (core/map::len actual-fields)) (core/map::len expected-fields))
+                  false)
+                true)
+              true)))))))
+
+(def selfhost/typecheck::bind-contract-operation
+  (fn (ty)
+    (fn (operation)
+      (if ((core/sym::eq? (selfhost/typecheck::ty-tag ty)) (quote :fn))
+        (let ((param ((core/map::get ty) (quote :param))))
+          (((selfhost/typecheck::ty-fn
+              (if
+                (if
+                  ((core/sym::eq? (selfhost/typecheck::ty-tag param)) (quote :msg))
+                  (selfhost/typecheck::nil? ((core/map::get param) (quote :op)))
+                  false)
+                ((selfhost/typecheck::ty-msg operation)
+                  ((core/map::get param) (quote :payload)))
+                param))
+             ((core/map::get ty) (quote :ret)))
+            ((core/map::get ty) (quote :eff))))
+        ty))))
+
+(def selfhost/typecheck::shape-fields-subtype?
+  (fn (actual-fields)
+    (fn (expected-fields)
+      (fn (strict-shapes)
+        (fn (contract-mode)
+          (let ((entries (core/map::entries expected-fields)))
+            ((((((selfhost/typecheck::shape-fields-subtype-loop entries) actual-fields)
+                strict-shapes)
+               contract-mode)
+              (core/vec::len entries))
+             0)))))))
+
+(def selfhost/typecheck::shape-fields-subtype-loop
+  (fn (entries)
+    (fn (actual-fields)
+      (fn (strict-shapes)
+        (fn (contract-mode)
+          (fn (n)
+            (fn (i)
+              (if ((core/int::eq? i) n)
+                true
+                (let
+                  ((entry ((core/vec::get entries) i))
+                    (name ((core/vec::get ((core/vec::get entries) i)) 0)))
+                  (let ((actual ((core/map::get actual-fields) name)))
+                    (if (selfhost/typecheck::nil? actual)
+                      false
+                      (if
+                        (((selfhost/typecheck::type-subtype?
+                            (if contract-mode
+                              ((selfhost/typecheck::bind-contract-operation actual) name)
+                              actual))
+                           (if contract-mode
+                             ((selfhost/typecheck::bind-contract-operation
+                                ((core/vec::get entry) 1))
+                               name)
+                             ((core/vec::get entry) 1)))
+                          strict-shapes)
+                        ((((((selfhost/typecheck::shape-fields-subtype-loop entries) actual-fields)
+                            strict-shapes)
+                           contract-mode)
+                          n)
+                         ((core/int::add i) 1))
+                        false))))))))))))
+
+(def selfhost/typecheck::scalar-tag?
+  (fn (tag)
+    (if ((core/sym::eq? tag) (quote :int))
+      true
+      (if ((core/sym::eq? tag) (quote :dec))
+        true
+        (if ((core/sym::eq? tag) (quote :bool))
+          true
+          (if ((core/sym::eq? tag) (quote :nil))
+            true
+            (if ((core/sym::eq? tag) (quote :str))
+              true
+              (if ((core/sym::eq? tag) (quote :bytes))
+                true
+                ((core/sym::eq? tag) (quote :symbol))))))))))
+
+(def selfhost/typecheck::type-subtype?
+  (fn (actual)
+    (fn (expected)
+      (fn (strict-shapes)
+        (let
+          ((at (selfhost/typecheck::ty-tag actual))
+            (et (selfhost/typecheck::ty-tag expected)))
+          (if ((core/sym::eq? et) (quote :any))
+            true
+            (if ((core/sym::eq? at) (quote :any))
+              false
+              (if
+                (if (selfhost/typecheck::scalar-tag? at) ((core/sym::eq? at) et) false)
+                true
+                (if
+                  (if ((core/sym::eq? at) (quote :msg)) ((core/sym::eq? et) (quote :msg)) false)
+                  (let ((expected-op ((core/map::get expected) (quote :op))))
+                    (if
+                      (if (selfhost/typecheck::nil? expected-op)
+                        true
+                        ((core/eq? ((core/map::get actual) (quote :op))) expected-op))
+                      (((selfhost/typecheck::type-subtype?
+                          ((core/map::get actual) (quote :payload)))
+                         ((core/map::get expected) (quote :payload)))
+                        strict-shapes)
+                      false))
+                  (if
+                    (if ((core/sym::eq? at) (quote :fn)) ((core/sym::eq? et) (quote :fn)) false)
+                    (if
+                      (((selfhost/typecheck::type-subtype?
+                          ((core/map::get expected) (quote :param)))
+                         ((core/map::get actual) (quote :param)))
+                        strict-shapes)
+                      (if
+                        (((selfhost/typecheck::type-subtype?
+                            ((core/map::get actual) (quote :ret)))
+                           ((core/map::get expected) (quote :ret)))
+                          strict-shapes)
+                        ((selfhost/typecheck::effect-row-subtype?
+                           ((core/map::get actual) (quote :eff)))
+                          ((core/map::get expected) (quote :eff)))
+                        false)
+                      false)
+                    (if
+                      (if ((core/sym::eq? at) (quote :prog)) ((core/sym::eq? et) (quote :prog)) false)
+                      (if
+                        (((selfhost/typecheck::type-subtype?
+                            ((core/map::get actual) (quote :ret)))
+                           ((core/map::get expected) (quote :ret)))
+                          strict-shapes)
+                        ((selfhost/typecheck::effect-row-subtype?
+                           ((core/map::get actual) (quote :eff)))
+                          ((core/map::get expected) (quote :eff)))
+                        false)
+                      (if
+                        (if ((core/sym::eq? at) (quote :rec)) ((core/sym::eq? et) (quote :rec)) false)
+                        (let
+                          ((af ((core/map::get actual) (quote :fields)))
+                            (ef ((core/map::get expected) (quote :fields))))
+                          (if ((((selfhost/typecheck::shape-fields-subtype? af) ef) strict-shapes) false)
+                            (((((selfhost/typecheck::shape-tail-compatible? af)
+                                 ((core/map::get actual) (quote :tail)))
+                                ef)
+                               ((core/map::get expected) (quote :tail)))
+                              strict-shapes)
+                            false))
+                        (if
+                          (if
+                            ((core/sym::eq? at) (quote :contract))
+                            ((core/sym::eq? et) (quote :contract))
+                            false)
+                          (let
+                            ((af ((core/map::get actual) (quote :methods)))
+                              (ef ((core/map::get expected) (quote :methods))))
+                            (if ((((selfhost/typecheck::shape-fields-subtype? af) ef) strict-shapes) true)
+                              (((((selfhost/typecheck::shape-tail-compatible? af)
+                                   ((core/map::get actual) (quote :tail)))
+                                  ef)
+                                 ((core/map::get expected) (quote :tail)))
+                                strict-shapes)
+                              false))
+                          false)))))))))))))
+
+(def selfhost/typecheck::type-compatible?
+  (fn (inferred)
+    (fn (declared)
+      (fn (strict-shapes)
+        (let
+          ((bound (((selfhost/typecheck::bind-declared-effect-rows inferred) declared) {})))
+          (if ((core/map::get bound) (quote :ok))
+            (((selfhost/typecheck::type-subtype? inferred)
+               ((selfhost/typecheck::apply-type-bindings declared)
+                 ((core/map::get bound) (quote :bindings))))
+              strict-shapes)
+            false))))))

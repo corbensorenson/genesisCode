@@ -1,0 +1,549 @@
+(def selfhost/typecheck::infer-result
+  (fn (type) (fn (session) {:session session :type type})))
+
+(def selfhost/typecheck::infer-error
+  (fn (session)
+    (fn (message)
+      ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+        ((selfhost/typecheck::session-error session) message)))))
+
+(def selfhost/typecheck::env-with-prelude
+  (fn (declared)
+    (((core/map::put declared) (quote core/contract::genesis))
+      ((selfhost/typecheck::ty-contract {}) (quote r)))))
+
+(def selfhost/typecheck::effects-vec-to-set
+  (fn (ops)
+    ((((selfhost/typecheck::effects-vec-to-set-loop ops) (core/vec::len ops)) 0) {})))
+
+(def selfhost/typecheck::effects-vec-to-set-loop
+  (fn (ops)
+    (fn (n)
+      (fn (i)
+        (fn (set)
+          (if ((core/int::eq? i) n)
+            set
+            ((((selfhost/typecheck::effects-vec-to-set-loop ops) n) ((core/int::add i) 1))
+              ((selfhost/typecheck::set-add set) ((core/vec::get ops) i)))))))))
+
+(def selfhost/typecheck::infer-syntax-effects-term
+  (fn (term)
+    (let ((report (core/cli::infer-effects ((core/vec::push []) term))))
+      ((selfhost/typecheck::eff-row
+         (selfhost/typecheck::effects-vec-to-set
+           ((core/map::get report) (quote :ops))))
+        (if ((core/map::get report) (quote :unknown)) (quote :any) (quote :closed))))))
+
+(def selfhost/typecheck::infer-module-types
+  (fn (forms)
+    (fn (declared)
+      (let ((env (selfhost/typecheck::env-with-prelude declared)))
+        (((((selfhost/typecheck::infer-module-types-loop forms) (core/vec::len forms)) 0)
+           {:defs {} :env env})
+          selfhost/typecheck::session-empty)))))
+
+(def selfhost/typecheck::infer-module-types-loop
+  (fn (forms)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (fn (session)
+            (if ((core/int::eq? i) n)
+              {:defs ((core/map::get state) (quote :defs))
+                :env ((core/map::get state) (quote :env))
+                :session session}
+              (let ((parsed (selfhost/typecheck::parse-def-term ((core/vec::get forms) i))))
+                (if (selfhost/typecheck::nil? parsed)
+                  (((((selfhost/typecheck::infer-module-types-loop forms) n)
+                     ((core/int::add i) 1))
+                    state)
+                   session)
+                  (let
+                    ((name ((core/map::get parsed) (quote :name)))
+                      (expr ((core/map::get parsed) (quote :expr)))
+                      (env ((core/map::get state) (quote :env))))
+                    (let
+                      ((inferred
+                         (((selfhost/typecheck::infer-term-with-expected expr) env)
+                           ((core/map::get env) name))
+                         ))
+                      (let ((result (inferred session)))
+                        (((((selfhost/typecheck::infer-module-types-loop forms) n)
+                           ((core/int::add i) 1))
+                          {:defs
+                             (((core/map::put ((core/map::get state) (quote :defs))) name)
+                               ((core/map::get result) (quote :type)))
+                            :env
+                              (((core/map::put env) name)
+                                ((core/map::get result) (quote :type)))})
+                         ((core/map::get result) (quote :session)))))))))))))))
+
+(def selfhost/typecheck::parse-def-term
+  (fn (term)
+    (let ((items (selfhost/typecheck::list-items-or-nil term)))
+      (if (selfhost/typecheck::vec? items)
+        (if ((core/int::eq? (core/vec::len items)) 3)
+          (let ((head ((core/vec::get items) 0)) (name ((core/vec::get items) 1)))
+            (if
+              (if (selfhost/typecheck::sym? head)
+                (if ((core/sym::eq? head) (quote def)) (selfhost/typecheck::sym? name) false)
+                false)
+              {:expr ((core/vec::get items) 2) :name name}
+              nil))
+          nil)
+        nil))))
+
+(def selfhost/typecheck::infer-term
+  (fn (term)
+    (fn (env)
+      (fn (session)
+        (let ((tag (core/data::tag term)))
+          (if ((core/sym::eq? tag) (quote :nil))
+            ((selfhost/typecheck::infer-result selfhost/typecheck::ty-nil) session)
+            (if ((core/sym::eq? tag) (quote :bool))
+              ((selfhost/typecheck::infer-result selfhost/typecheck::ty-bool) session)
+              (if ((core/sym::eq? tag) (quote :int))
+                ((selfhost/typecheck::infer-result selfhost/typecheck::ty-int) session)
+                (if ((core/sym::eq? tag) (quote :str))
+                  ((selfhost/typecheck::infer-result selfhost/typecheck::ty-str) session)
+                  (if ((core/sym::eq? tag) (quote :bytes))
+                    ((selfhost/typecheck::infer-result selfhost/typecheck::ty-bytes) session)
+                    (if ((core/sym::eq? tag) (quote :sym))
+                      (let ((found ((core/map::get env) term)))
+                        ((selfhost/typecheck::infer-result
+                           (if (selfhost/typecheck::nil? found)
+                             selfhost/typecheck::ty-any
+                             found))
+                          session))
+                      (if ((core/sym::eq? tag) (quote :vec))
+                        ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any) session)
+                        (if ((core/sym::eq? tag) (quote :map))
+                          (((selfhost/typecheck::infer-map-literal term) env) session)
+                          (if ((core/sym::eq? tag) (quote :pair))
+                            (((selfhost/typecheck::infer-list-form term) env) session)
+                            ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                              session)))))))))))))))
+
+(def selfhost/typecheck::infer-term-with-expected
+  (fn (term)
+    (fn (env)
+      (fn (expected)
+        (fn (session)
+          (let ((items (selfhost/typecheck::list-items-or-nil term)))
+            (if (selfhost/typecheck::vec? items)
+              (if ((core/int::lt? 0) (core/vec::len items))
+                (let ((head ((core/vec::get items) 0)))
+                  (if
+                    (if (selfhost/typecheck::sym? head)
+                      ((core/sym::eq? head) (quote fn))
+                      false)
+                    ((((selfhost/typecheck::infer-fn items) env) expected) session)
+                    (((selfhost/typecheck::infer-term term) env) session)))
+                (((selfhost/typecheck::infer-term term) env) session))
+              (((selfhost/typecheck::infer-term term) env) session))))))))
+
+(def selfhost/typecheck::infer-map-literal
+  (fn (map-term)
+    (fn (env)
+      (fn (session)
+        (let ((entries (core/map::entries map-term)))
+          (((((selfhost/typecheck::infer-map-literal-loop entries) env)
+              (core/vec::len entries))
+             0)
+            {:fields {} :session session :tail (quote :closed)}))))))
+
+(def selfhost/typecheck::infer-map-literal-loop
+  (fn (entries)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              ((selfhost/typecheck::infer-result
+                 ((selfhost/typecheck::ty-rec ((core/map::get state) (quote :fields)))
+                   ((core/map::get state) (quote :tail))))
+                ((core/map::get state) (quote :session)))
+              (let
+                ((entry ((core/vec::get entries) i))
+                  (key ((core/vec::get ((core/vec::get entries) i)) 0))
+                  (value ((core/vec::get ((core/vec::get entries) i)) 1)))
+                (let ((inferred (((selfhost/typecheck::infer-term value) env)
+                                  ((core/map::get state) (quote :session)))))
+                  (let
+                    ((label-candidate
+                       (if (selfhost/typecheck::sym? key)
+                         key
+                         (if (selfhost/typecheck::str? key) (core/sym::from-str key) nil))))
+                    (let
+                      ((label
+                         (if (core/error::is? label-candidate) nil label-candidate)))
+                    (((((selfhost/typecheck::infer-map-literal-loop entries) env) n)
+                       ((core/int::add i) 1))
+                      {:fields
+                         (if (selfhost/typecheck::nil? label)
+                           ((core/map::get state) (quote :fields))
+                           (((core/map::put ((core/map::get state) (quote :fields))) label)
+                             ((core/map::get inferred) (quote :type))))
+                        :session ((core/map::get inferred) (quote :session))
+                        :tail
+                          (if (selfhost/typecheck::nil? label)
+                            (quote :any)
+                            ((core/map::get state) (quote :tail)))}))))))))))))
+
+(def selfhost/typecheck::infer-list-form
+  (fn (term)
+    (fn (env)
+      (fn (session)
+        (let ((items (core/pair::as-proper-list term)))
+          (if (selfhost/typecheck::vec? items)
+            (if ((core/int::eq? (core/vec::len items)) 0)
+              ((selfhost/typecheck::infer-result selfhost/typecheck::ty-nil) session)
+              (let ((head ((core/vec::get items) 0)))
+                (if (selfhost/typecheck::sym? head)
+                  ((((selfhost/typecheck::infer-special-or-app head) items) env) session)
+                  (let ((flat (core/cli::flatten-app term)))
+                    (if (selfhost/typecheck::map? flat)
+                      ((((selfhost/typecheck::infer-app
+                           ((core/map::get flat) (quote :head)))
+                          ((core/map::get flat) (quote :args)))
+                         env)
+                        session)
+                      ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any) session))))))
+            ((selfhost/typecheck::infer-error session)
+              "improper list is not a valid expression")))))))
+
+(def selfhost/typecheck::infer-special-or-app
+  (fn (head)
+    (fn (items)
+      (fn (env)
+        (fn (session)
+          (if ((core/sym::eq? head) (quote quote))
+            ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any) session)
+            (if ((core/sym::eq? head) (quote fn))
+              ((((selfhost/typecheck::infer-fn items) env) nil) session)
+              (if ((core/sym::eq? head) (quote if))
+                (((selfhost/typecheck::infer-if items) env) session)
+                (if ((core/sym::eq? head) (quote begin))
+                  (((selfhost/typecheck::infer-begin items) env) session)
+                  (if ((core/sym::eq? head) (quote let))
+                    (((selfhost/typecheck::infer-let items) env) session)
+                    (if ((core/sym::eq? head) (quote prim))
+                      (((selfhost/typecheck::infer-prim items) env) session)
+                      (if
+                        (if ((core/sym::eq? head) (quote seal))
+                          true
+                          ((core/sym::eq? head) (quote unseal)))
+                        (((((selfhost/typecheck::infer-terms-loop items) env)
+                            (core/vec::len items))
+                           1)
+                          session)
+                        (if ((core/sym::eq? head) (quote def))
+                          (let
+                            ((walked
+                               (((((selfhost/typecheck::infer-terms-loop items) env)
+                                   (core/vec::len items))
+                                  1)
+                                 session)))
+                            ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                              ((core/map::get walked) (quote :session))))
+                          (let ((flat (core/cli::flatten-app (selfhost/typecheck::list-from-vec items))))
+                            (if (selfhost/typecheck::map? flat)
+                              ((((selfhost/typecheck::infer-app
+                                   ((core/map::get flat) (quote :head)))
+                                  ((core/map::get flat) (quote :args)))
+                                 env)
+                                session)
+                              ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                                session))))))))))))))))
+
+(def selfhost/typecheck::infer-terms-loop
+  (fn (items)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (session)
+            (if ((core/int::eq? i) n)
+              ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any) session)
+              (let ((result (((selfhost/typecheck::infer-term ((core/vec::get items) i)) env) session)))
+                (((((selfhost/typecheck::infer-terms-loop items) env) n)
+                   ((core/int::add i) 1))
+                  ((core/map::get result) (quote :session)))))))))))
+
+(def selfhost/typecheck::fn-body-term
+  (fn (items)
+    (if ((core/int::eq? (core/vec::len items)) 3)
+      ((core/vec::get items) 2)
+      (selfhost/typecheck::list-from-vec
+        ((core/vec::push
+           ((core/vec::push []) (quote begin)))
+          ((core/cli::vec-slice-from items) 2))))))
+
+(def selfhost/typecheck::infer-fn
+  (fn (items)
+    (fn (env)
+      (fn (expected)
+        (fn (session)
+          (if ((core/int::lt? (core/vec::len items)) 3)
+            ((selfhost/typecheck::infer-error session)
+              "(fn (x) body...) expects at least 2 arguments")
+            (let ((params (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+              (if (selfhost/typecheck::vec? params)
+                (let ((validated (selfhost/typecheck::validate-fn-params params)))
+                  (if (selfhost/typecheck::result-ok? validated)
+                    ((((((selfhost/typecheck::infer-fn-params
+                           ((core/map::get validated) (quote :value)))
+                          0)
+                         (selfhost/typecheck::fn-body-term items))
+                        env)
+                       expected)
+                      session)
+                    ((selfhost/typecheck::infer-error session)
+                      ((core/map::get validated) (quote :error)))))
+                ((selfhost/typecheck::infer-error session)
+                  ((selfhost/typecheck::str2 "fn params must be a list of symbols, got ")
+                    (selfhost/typecheck::term-str ((core/vec::get items) 1))))))))))))
+
+(def selfhost/typecheck::validate-fn-params
+  (fn (params)
+    (if ((core/int::eq? (core/vec::len params)) 0)
+      (selfhost/typecheck::err "fn must have at least 1 param")
+      ((((selfhost/typecheck::validate-fn-params-loop params) (core/vec::len params)) 0) {}))))
+
+(def selfhost/typecheck::validate-fn-params-loop
+  (fn (params)
+    (fn (n)
+      (fn (i)
+        (fn (seen)
+          (if ((core/int::eq? i) n)
+            (selfhost/typecheck::ok params)
+            (let ((name ((core/vec::get params) i)))
+              (if (selfhost/typecheck::sym? name)
+                (if ((selfhost/typecheck::set-has? seen) name)
+                  (selfhost/typecheck::err
+                    ((selfhost/typecheck::str2 "(fn ...) duplicate parameter: ")
+                      (selfhost/typecheck::symbol-str name)))
+                  ((((selfhost/typecheck::validate-fn-params-loop params) n)
+                     ((core/int::add i) 1))
+                    ((selfhost/typecheck::set-add seen) name)))
+                (selfhost/typecheck::err "(fn ...) parameters must be symbols")))))))))
+
+(def selfhost/typecheck::infer-fn-params
+  (fn (params)
+    (fn (index)
+      (fn (body)
+        (fn (env)
+          (fn (expected)
+            (fn (session)
+              (let
+                ((name ((core/vec::get params) index))
+                  (expected-param
+                    (if
+                      (if (selfhost/typecheck::map? expected)
+                        ((core/sym::eq? (selfhost/typecheck::ty-tag expected)) (quote :fn))
+                        false)
+                      ((core/map::get expected) (quote :param))
+                      selfhost/typecheck::ty-any))
+                  (expected-ret
+                    (if
+                      (if (selfhost/typecheck::map? expected)
+                        ((core/sym::eq? (selfhost/typecheck::ty-tag expected)) (quote :fn))
+                        false)
+                      ((core/map::get expected) (quote :ret))
+                      nil)))
+                (let ((env2 (((core/map::put env) name) expected-param)))
+                  (let
+                    ((result
+                       (if ((core/int::eq? ((core/int::add index) 1)) (core/vec::len params))
+                         ((((selfhost/typecheck::infer-term-with-expected body) env2) expected-ret)
+                           session)
+                         ((((((selfhost/typecheck::infer-fn-params params)
+                                ((core/int::add index) 1))
+                               body)
+                              env2)
+                             expected-ret)
+                            session)))
+                      (effects
+                        (((selfhost/typecheck::effects-in-term-with-expected body) env2)
+                          expected-ret)))
+                    ((selfhost/typecheck::infer-result
+                       (((selfhost/typecheck::ty-fn expected-param)
+                          ((core/map::get result) (quote :type)))
+                         ((selfhost/typecheck::eff-row
+                            ((core/map::get effects) (quote :ops)))
+                           (if ((core/map::get effects) (quote :unknown))
+                             (quote :any)
+                             (quote :closed)))))
+                      ((core/map::get result) (quote :session)))))))))))))
+
+(def selfhost/typecheck::infer-if
+  (fn (items)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len items)) 4)
+          (let ((condition (((selfhost/typecheck::infer-term ((core/vec::get items) 1)) env) session)))
+            (let
+              ((then-result
+                 (((selfhost/typecheck::infer-term ((core/vec::get items) 2)) env)
+                   ((core/map::get condition) (quote :session)))))
+              (let
+                ((else-result
+                   (((selfhost/typecheck::infer-term ((core/vec::get items) 3)) env)
+                     ((core/map::get then-result) (quote :session)))))
+                ((selfhost/typecheck::infer-result
+                   ((selfhost/typecheck::join-types
+                      ((core/map::get then-result) (quote :type)))
+                     ((core/map::get else-result) (quote :type))))
+                  ((core/map::get else-result) (quote :session))))))
+          ((selfhost/typecheck::infer-error session)
+            "(if c t e) expects exactly 3 arguments"))))))
+
+(def selfhost/typecheck::join-types
+  (fn (left)
+    (fn (right) (if ((core/eq? left) right) left selfhost/typecheck::ty-any))))
+
+(def selfhost/typecheck::infer-begin
+  (fn (items)
+    (fn (env)
+      (fn (session)
+        (((((selfhost/typecheck::infer-sequence items) env) (core/vec::len items)) 1)
+          {:session session :type selfhost/typecheck::ty-nil})))))
+
+(def selfhost/typecheck::infer-sequence
+  (fn (items)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (let
+                ((result
+                   (((selfhost/typecheck::infer-term ((core/vec::get items) i)) env)
+                     ((core/map::get state) (quote :session)))))
+                (((((selfhost/typecheck::infer-sequence items) env) n)
+                   ((core/int::add i) 1))
+                  result)))))))))
+
+(def selfhost/typecheck::infer-let
+  (fn (items)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::lt? (core/vec::len items)) 3)
+          ((selfhost/typecheck::infer-error session)
+            "(let (bindings) body...) expects at least 2 arguments")
+          (let ((bindings (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+            (if (selfhost/typecheck::vec? bindings)
+              (let
+                ((bound
+                   (((((selfhost/typecheck::infer-let-bindings bindings) (core/vec::len bindings)) 0)
+                      {:env env :seen {}})
+                     session)))
+                (if ((core/map::get bound) (quote :ok))
+                  (((((selfhost/typecheck::infer-sequence items)
+                      ((core/map::get bound) (quote :env)))
+                     (core/vec::len items))
+                    2)
+                   {:session ((core/map::get bound) (quote :session))
+                     :type selfhost/typecheck::ty-nil})
+                  ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                    ((core/map::get bound) (quote :session)))))
+              ((selfhost/typecheck::infer-error session)
+                ((selfhost/typecheck::str2 "let bindings must be a list, got ")
+                  (selfhost/typecheck::term-str ((core/vec::get items) 1)))))))))))
+
+(def selfhost/typecheck::infer-let-bindings
+  (fn (bindings)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (fn (session)
+            (if ((core/int::eq? i) n)
+              {:env ((core/map::get state) (quote :env)) :ok true :session session}
+              (let ((pair (selfhost/typecheck::list-items-or-nil ((core/vec::get bindings) i))))
+                (if (selfhost/typecheck::vec? pair)
+                  (if ((core/int::eq? (core/vec::len pair)) 2)
+                    (let ((name ((core/vec::get pair) 0)))
+                      (if (selfhost/typecheck::sym? name)
+                        (if
+                          ((selfhost/typecheck::set-has? ((core/map::get state) (quote :seen))) name)
+                          {:env ((core/map::get state) (quote :env))
+                            :ok false
+                            :session
+                              ((selfhost/typecheck::session-error session)
+                                ((selfhost/typecheck::str2 "(let ...) duplicate binding: ")
+                                  (selfhost/typecheck::symbol-str name)))}
+                          (let
+                            ((result
+                               (((selfhost/typecheck::infer-term ((core/vec::get pair) 1))
+                                  ((core/map::get state) (quote :env)))
+                                 session)))
+                            (((((selfhost/typecheck::infer-let-bindings bindings) n)
+                               ((core/int::add i) 1))
+                              {:env
+                                 (((core/map::put ((core/map::get state) (quote :env))) name)
+                                   ((core/map::get result) (quote :type)))
+                                :seen
+                                  ((selfhost/typecheck::set-add
+                                     ((core/map::get state) (quote :seen)))
+                                    name)})
+                             ((core/map::get result) (quote :session)))))
+                        {:env ((core/map::get state) (quote :env))
+                          :ok false
+                          :session
+                            ((selfhost/typecheck::session-error session)
+                              "(let ...) binding name must be symbol")}))
+                    {:env ((core/map::get state) (quote :env))
+                      :ok false
+                      :session
+                        ((selfhost/typecheck::session-error session)
+                          "(let ...) binding must have exactly 2 forms")})
+                  {:env ((core/map::get state) (quote :env))
+                    :ok false
+                    :session
+                      ((selfhost/typecheck::session-error session)
+                        "(let ...) binding must be a list (name expr)")})))))))))
+
+(def selfhost/typecheck::infer-prim
+  (fn (items)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::lt? (core/vec::len items)) 2)
+          ((selfhost/typecheck::infer-error session) "prim missing op symbol")
+          (let ((op ((core/vec::get items) 1)))
+            (if (selfhost/typecheck::sym? op)
+              (let
+                ((arg-terms ((core/cli::vec-slice-from items) 2)))
+                (let ((inferred (((selfhost/typecheck::infer-arg-types arg-terms) env) session)))
+                  (((((selfhost/typecheck::prim-type op)
+                       ((core/map::get inferred) (quote :types)))
+                      arg-terms)
+                     ((core/map::get inferred) (quote :session))))))
+              ((selfhost/typecheck::infer-error session)
+                ((selfhost/typecheck::str2 "prim op must be a symbol, got ")
+                  (selfhost/typecheck::term-str op))))))))))
+
+(def selfhost/typecheck::infer-arg-types
+  (fn (terms)
+    (fn (env)
+      (fn (session)
+        (((((selfhost/typecheck::infer-arg-types-loop terms) env) (core/vec::len terms)) 0)
+          {:session session :types []})))))
+
+(def selfhost/typecheck::infer-arg-types-loop
+  (fn (terms)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (let
+                ((result
+                   (((selfhost/typecheck::infer-term ((core/vec::get terms) i)) env)
+                     ((core/map::get state) (quote :session)))))
+                (((((selfhost/typecheck::infer-arg-types-loop terms) env) n)
+                   ((core/int::add i) 1))
+                  {:session ((core/map::get result) (quote :session))
+                    :types
+                      ((core/vec::push ((core/map::get state) (quote :types)))
+                        ((core/map::get result) (quote :type)))})))))))))

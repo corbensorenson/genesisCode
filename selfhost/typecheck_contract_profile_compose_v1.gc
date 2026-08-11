@@ -1,0 +1,306 @@
+(def selfhost/typecheck::compose-contract-profile
+  (fn (modules)
+    (if (selfhost/typecheck::contract-profile-active? modules)
+      (let
+        ((state
+           (((selfhost/typecheck::compose-contract-modules modules)
+              (core/vec::len modules))
+             0)))
+        (let
+          ((errors
+             ((selfhost/typecheck::contract-duplicate-owner-errors
+                ((core/map::get state) (quote :owners)))
+               ((core/map::get state) (quote :errors)))))
+          {:active true
+            :errors (selfhost/typecheck::module-errors-to-vectors errors)
+            :ok ((core/int::eq? (core/map::len errors)) 0)}))
+      {:active false :errors {} :ok true})))
+
+(def selfhost/typecheck::compose-contract-modules
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {:errors {} :owners {}}
+          (let
+            ((rest
+               (((selfhost/typecheck::compose-contract-modules modules) n)
+                 ((core/int::add i) 1))))
+            ((selfhost/typecheck::compose-contract-module ((core/vec::get modules) i)) rest)))))))
+
+(def selfhost/typecheck::compose-contract-module
+  (fn (module)
+    (fn (state)
+      (let
+        ((path ((core/map::get module) (quote :path)))
+          (meta ((core/map::get module) (quote :meta))))
+        (if (selfhost/typecheck::map? meta)
+          (let
+            ((errors0
+               ((((selfhost/typecheck::contract-require-true meta)
+                   (quote :strict-effects))
+                  path)
+                 ((((selfhost/typecheck::contract-require-true meta)
+                     (quote :strict-shapes))
+                    path)
+                   (((selfhost/typecheck::contract-require-profiles meta) path)
+                     ((core/map::get state) (quote :errors)))))))
+            (let
+              ((exports ((selfhost/typecheck::contract-parse-exports meta) path errors0)))
+              (let
+                ((types
+                   ((((selfhost/typecheck::contract-parse-symbol-map meta) (quote :types))
+                      path)
+                     ((core/map::get exports) (quote :errors)))))
+                (let
+                  ((refinements
+                     (((selfhost/typecheck::contract-parse-refinements meta) path)
+                       ((core/map::get types) (quote :errors)))))
+                  (let
+                    ((export-set ((core/map::get exports) (quote :exports)))
+                      (type-set
+                        (selfhost/typecheck::entries-key-set
+                          ((core/map::get types) (quote :values))))
+                      (refinement-set
+                        (selfhost/typecheck::entries-key-set
+                          ((core/map::get refinements) (quote :refinements)))))
+                    (let
+                      ((errors1
+                         (((((selfhost/typecheck::contract-check-exact-keys export-set)
+                              type-set)
+                             (quote :types))
+                            path)
+                           ((core/map::get refinements) (quote :errors)))))
+                      (let
+                        ((errors2
+                           (((((selfhost/typecheck::contract-check-exact-keys export-set)
+                                refinement-set)
+                               (quote :refinements))
+                              path)
+                             errors1)))
+                        (((((selfhost/typecheck::compose-contract-exports
+                               (selfhost/typecheck::set-keys export-set))
+                              path)
+                             ((core/map::get types) (quote :values)))
+                            ((core/map::get refinements) (quote :refinements)))
+                           {:errors errors2
+                            :owners ((core/map::get state) (quote :owners))}))))))))
+          {:errors
+             (((selfhost/typecheck::module-error-add
+                  ((core/map::get state) (quote :errors)))
+                 path)
+               "[blame=boundary] contract-composition profile requires map-shaped ::meta")
+           :owners ((core/map::get state) (quote :owners))})))))
+
+(def selfhost/typecheck::entries-key-set
+  (fn (mapping)
+    (((selfhost/typecheck::entries-key-set-loop (core/map::entries mapping)) 0))))
+
+(def selfhost/typecheck::entries-key-set-loop
+  (fn (entries)
+    (fn (i)
+      (if ((core/int::eq? i) (core/vec::len entries))
+        {}
+        ((selfhost/typecheck::set-add
+           ((selfhost/typecheck::entries-key-set-loop entries)
+             ((core/int::add i) 1)))
+          ((core/vec::get ((core/vec::get entries) i)) 0))))))
+
+(def selfhost/typecheck::compose-contract-exports
+  (fn (exports)
+    (fn (path)
+      (fn (types)
+        (fn (refinements)
+          (fn (state)
+            ((((((selfhost/typecheck::compose-contract-exports-loop exports) path) types)
+                refinements)
+               0)
+              state)))))))
+
+(def selfhost/typecheck::compose-contract-exports-loop
+  (fn (exports)
+    (fn (path)
+      (fn (types)
+        (fn (refinements)
+          (fn (i)
+            (fn (state)
+              (if ((core/int::eq? i) (core/vec::len exports))
+                state
+                (let
+                  ((symbol ((core/vec::get exports) i))
+                    (type-term ((core/map::get types) ((core/vec::get exports) i))))
+                  (let
+                    ((state2
+                       {:errors ((core/map::get state) (quote :errors))
+                        :owners
+                          (((selfhost/typecheck::map-set-add
+                               ((core/map::get state) (quote :owners)))
+                              symbol)
+                            path)}))
+                    ((((((selfhost/typecheck::compose-contract-exports-loop exports) path)
+                         types)
+                        refinements)
+                       ((core/int::add i) 1))
+                      (if (selfhost/typecheck::nil? type-term)
+                        state2
+                        ((((selfhost/typecheck::validate-contract-export symbol) path)
+                          type-term)
+                          ((core/map::get refinements) symbol)
+                          state2)))))))))))))
+
+(def selfhost/typecheck::map-set-add
+  (fn (mapping)
+    (fn (key)
+      (fn (value)
+        (let ((current ((core/map::get mapping) key)))
+          (((core/map::put mapping) key)
+            ((selfhost/typecheck::set-add
+               (if (selfhost/typecheck::map? current) current {}))
+              value)))))))
+
+(def selfhost/typecheck::validate-contract-export
+  (fn (symbol)
+    (fn (path)
+      (fn (type-term)
+        (fn (refinements)
+          (fn (state)
+            (let ((parsed (selfhost/typecheck::parse-type type-term)))
+              (if (selfhost/typecheck::result-ok? parsed)
+                (((selfhost/typecheck::validate-contract-export-type symbol) path)
+                  ((core/map::get parsed) (quote :value))
+                  (if (selfhost/typecheck::map? refinements) refinements {})
+                  state)
+                {:errors
+                   (((selfhost/typecheck::module-error-add
+                        ((core/map::get state) (quote :errors)))
+                       path)
+                     ((selfhost/typecheck::str4 "[blame=boundary] "
+                        (selfhost/typecheck::symbol-str symbol))
+                       " has invalid contract type: "
+                       ((core/map::get parsed) (quote :error))))
+                 :owners ((core/map::get state) (quote :owners))}))))))))
+
+(def selfhost/typecheck::validate-contract-export-type
+  (fn (symbol)
+    (fn (path)
+      (fn (ty)
+        (fn (refinements)
+          (fn (state)
+            (let
+              ((errors0 ((core/map::get state) (quote :errors))))
+              (let
+                ((errors1
+                   (if (selfhost/typecheck::type-contains-gradual? ty)
+                     (((selfhost/typecheck::module-error-add errors0) path)
+                       ((selfhost/typecheck::str3 "[blame=provider] "
+                          (selfhost/typecheck::symbol-str symbol))
+                         " contract type contains unsupported gradual `?`"))
+                     errors0)))
+                (let
+                  ((errors2
+                     (if (selfhost/typecheck::type-contains-anonymous-row? ty)
+                       (((selfhost/typecheck::module-error-add errors1) path)
+                         ((selfhost/typecheck::str3 "[blame=provider] "
+                            (selfhost/typecheck::symbol-str symbol))
+                           " contract type contains unsupported anonymous row tail"))
+                       errors1))
+                    (effect-validation
+                      ((selfhost/typecheck::validate-effect-row-declaration ty) true)))
+                  (let
+                    ((errors3
+                       (if (selfhost/typecheck::result-ok? effect-validation)
+                         errors2
+                         (((selfhost/typecheck::module-error-add errors2) path)
+                           ((selfhost/typecheck::str4 "[blame=provider] "
+                             (selfhost/typecheck::symbol-str symbol))
+                             ": "
+                             ((core/map::get effect-validation) (quote :error)))))))
+                    (let
+                      ((errors4
+                         ((((selfhost/typecheck::validate-contract-methods ty) symbol) path)
+                           errors3)))
+                      {:errors
+                         ((((selfhost/typecheck::unsupported-refinement-errors
+                              (selfhost/typecheck::set-keys refinements))
+                            symbol)
+                           path)
+                          errors4)
+                       :owners ((core/map::get state) (quote :owners))})))))))))))
+
+(def selfhost/typecheck::unsupported-refinement-errors
+  (fn (refinements)
+    (fn (symbol)
+      (fn (path)
+        (fn (errors)
+          (((((selfhost/typecheck::unsupported-refinement-errors-loop refinements) symbol)
+              path)
+             0)
+            errors))))))
+
+(def selfhost/typecheck::unsupported-refinement-errors-loop
+  (fn (refinements)
+    (fn (symbol)
+      (fn (path)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) (core/vec::len refinements))
+              errors
+              (((((selfhost/typecheck::unsupported-refinement-errors-loop refinements)
+                   symbol)
+                  path)
+                 ((core/int::add i) 1))
+                (((selfhost/typecheck::module-error-add errors) path)
+                  ((selfhost/typecheck::str4 "[blame=boundary] "
+                     (selfhost/typecheck::symbol-str symbol))
+                    ((selfhost/typecheck::str2 " refinement ")
+                      (selfhost/typecheck::symbol-str ((core/vec::get refinements) i)))
+                    " is unsupported in genesis/contract-composition-profile-v0.1"))))))))))
+
+(def selfhost/typecheck::contract-duplicate-owner-errors
+  (fn (owners)
+    (fn (errors)
+      (((selfhost/typecheck::contract-duplicate-owner-entries
+           (core/map::entries owners))
+         0)
+        errors))))
+
+(def selfhost/typecheck::contract-duplicate-owner-entries
+  (fn (entries)
+    (fn (i)
+      (fn (errors)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          errors
+          (let
+            ((entry ((core/vec::get entries) i)))
+            (let
+              ((symbol ((core/vec::get entry) 0))
+                (paths (selfhost/typecheck::set-keys ((core/vec::get entry) 1))))
+              (((selfhost/typecheck::contract-duplicate-owner-entries entries)
+                 ((core/int::add i) 1))
+                (if ((core/int::lt? 1) (core/vec::len paths))
+                  (((selfhost/typecheck::contract-owner-errors paths)
+                     ((selfhost/typecheck::str4
+                        "[blame=boundary] duplicate contract export "
+                        (selfhost/typecheck::symbol-str symbol))
+                       " is owned by modules ["
+                       ((selfhost/typecheck::str2 ((core/str::join paths) ", ")) "]")))
+                    errors)
+                  errors)))))))))
+
+(def selfhost/typecheck::contract-owner-errors
+  (fn (paths)
+    (fn (message)
+      (fn (errors)
+        ((((selfhost/typecheck::contract-owner-errors-loop paths) message) 0) errors)))))
+
+(def selfhost/typecheck::contract-owner-errors-loop
+  (fn (paths)
+    (fn (message)
+      (fn (i)
+        (fn (errors)
+          (if ((core/int::eq? i) (core/vec::len paths))
+            errors
+            ((((selfhost/typecheck::contract-owner-errors-loop paths) message)
+               ((core/int::add i) 1))
+              (((selfhost/typecheck::module-error-add errors) ((core/vec::get paths) i))
+                message))))))))

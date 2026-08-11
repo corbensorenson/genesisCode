@@ -4,11 +4,10 @@ use std::path::Path;
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_kernel::{MemLimits, StepLimit};
 use gc_obligations::{
-    CoreformFrontend, hash_module_forms_with_frontend,
-    parse_canonicalize_module_source_with_frontend,
+    CoreformFrontend, TypecheckModuleInput, hash_module_forms_with_frontend,
+    parse_canonicalize_module_source_with_frontend, typecheck_modules_with_authority,
 };
 use gc_pkg::PackageManifest;
-use gc_types::{ModuleForTypecheck, typecheck_package};
 
 use crate::pkg_workspace_ops::LocalPkgResult;
 
@@ -53,15 +52,17 @@ pub(crate) fn handle_abi(
             hash,
             meta: meta.clone(),
         });
-        typecheck_modules.push(ModuleForTypecheck {
+        typecheck_modules.push(TypecheckModuleInput {
             path: module.path.clone(),
             forms,
             meta,
         });
     }
 
-    let typecheck = typecheck_package(&typecheck_modules);
-    let report_by_path: BTreeMap<String, gc_types::ModuleReport> = typecheck
+    let typecheck =
+        typecheck_modules_with_authority(&typecheck_modules, frontend, step_limit, mem_limits)
+            .map_err(|error| error.to_string())?;
+    let report_by_path: BTreeMap<String, gc_obligations::TypecheckModuleReport> = typecheck
         .modules
         .iter()
         .cloned()
@@ -97,54 +98,40 @@ pub(crate) fn handle_abi(
             .as_ref()
             .and_then(|meta| meta_optional_str(meta, ":intent"));
 
-        let report = report_by_path.get(&module.path);
-        let inferred_ops = report
-            .map(|r| r.inferred_effects.ops.clone())
-            .unwrap_or_default();
-        let unknown_ops = report.map(|r| r.inferred_effects.unknown).unwrap_or(false);
+        let report = report_by_path
+            .get(&module.path)
+            .ok_or_else(|| format!("typecheck report missing module {}", module.path))?;
+        let inferred_ops = report.inferred_ops.clone();
+        let unknown_ops = report.unknown_ops;
 
         let mut effect_by_export: BTreeMap<String, TypeEffectSummary> = BTreeMap::new();
-        if let Some(r) = report {
-            for eff in &r.export_effects {
-                effect_by_export.insert(
-                    eff.name.clone(),
-                    TypeEffectSummary {
-                        ops: eff.effects.ops.clone(),
-                        open: eff.effects.unknown,
-                    },
-                );
-            }
+        for eff in &report.export_effects {
+            effect_by_export.insert(
+                eff.name.clone(),
+                TypeEffectSummary {
+                    ops: eff.ops.clone(),
+                    open: eff.unknown,
+                },
+            );
         }
 
         let mut type_by_export: BTreeMap<String, (Option<Term>, Term)> = BTreeMap::new();
-        if let Some(r) = report {
-            for ty in &r.export_types {
-                type_by_export.insert(ty.name.clone(), (ty.declared.clone(), ty.inferred.clone()));
-            }
+        for ty in &report.export_types {
+            type_by_export.insert(ty.name.clone(), (ty.declared.clone(), ty.inferred.clone()));
         }
-        for (name, declared) in &declared_types {
-            type_by_export.entry(name.clone()).or_insert_with(|| {
-                (
-                    Some(declared.clone()),
-                    Term::Symbol("?".to_string()), // if typecheck report is absent, stay gradual
-                )
-            });
-        }
-
-        let mut module_export_names: BTreeSet<String> = BTreeSet::new();
-        module_export_names.extend(exports.iter().cloned());
-        module_export_names.extend(effect_by_export.keys().cloned());
-        module_export_names.extend(type_by_export.keys().cloned());
 
         let mut module_required_caps = declared_caps.clone();
         module_required_caps.extend(inferred_ops.iter().cloned());
 
         let mut export_entries = Vec::new();
-        for export_name in module_export_names {
-            let (declared_type, inferred_type) = type_by_export
-                .get(&export_name)
-                .cloned()
-                .unwrap_or_else(|| (None, Term::Symbol("?".to_string())));
+        for export_name in exports.iter().cloned() {
+            let (declared_type, inferred_type) =
+                type_by_export.get(&export_name).cloned().ok_or_else(|| {
+                    format!(
+                        "typecheck report missing declared export type {}::{}",
+                        module.path, export_name
+                    )
+                })?;
 
             let mut type_effect = TypeEffectSummary::default();
             if let Some(t) = declared_type.as_ref() {
@@ -152,10 +139,13 @@ pub(crate) fn handle_abi(
             }
             collect_effect_summary_from_type_term(&inferred_type, &mut type_effect);
 
-            let mut export_effect = effect_by_export
-                .get(&export_name)
-                .cloned()
-                .unwrap_or_default();
+            let mut export_effect =
+                effect_by_export.get(&export_name).cloned().ok_or_else(|| {
+                    format!(
+                        "typecheck report missing declared export effects {}::{}",
+                        module.path, export_name
+                    )
+                })?;
             export_effect.ops.extend(type_effect.ops.iter().cloned());
             export_effect.open = export_effect.open || type_effect.open;
 
@@ -222,13 +212,10 @@ pub(crate) fn handle_abi(
         required_caps.extend(declared_caps.iter().cloned());
         required_caps.extend(inferred_ops.iter().cloned());
 
-        let report_ok = report.map(|r| r.ok).unwrap_or(false);
-        let report_errors = report
-            .map(|r| Term::Vector(r.errors.iter().cloned().map(Term::Str).collect()))
-            .unwrap_or_else(|| Term::Vector(Vec::new()));
-        let report_warnings = report
-            .map(|r| Term::Vector(r.warnings.iter().cloned().map(Term::Str).collect()))
-            .unwrap_or_else(|| Term::Vector(Vec::new()));
+        let report_ok = report.ok;
+        let report_errors = Term::Vector(report.errors.iter().cloned().map(Term::Str).collect());
+        let report_warnings =
+            Term::Vector(report.warnings.iter().cloned().map(Term::Str).collect());
 
         let declared_types_term = Term::Map(
             declared_types

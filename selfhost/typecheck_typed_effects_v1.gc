@@ -1,0 +1,459 @@
+(def selfhost/typecheck::effects-empty {:ops {} :unknown false})
+
+(def selfhost/typecheck::effects-merge
+  (fn (left)
+    (fn (right)
+      {:ops
+         ((selfhost/typecheck::set-union ((core/map::get left) (quote :ops)))
+           ((core/map::get right) (quote :ops)))
+        :unknown
+          (if ((core/map::get left) (quote :unknown))
+            true
+            ((core/map::get right) (quote :unknown)))})))
+
+(def selfhost/typecheck::effects-with-unknown
+  (fn (effects) (((core/map::put effects) (quote :unknown)) true)))
+
+(def selfhost/typecheck::effects-add-row
+  (fn (effects)
+    (fn (row)
+      {:ops
+         ((selfhost/typecheck::set-union ((core/map::get effects) (quote :ops)))
+           ((core/map::get row) (quote :ops)))
+        :unknown
+          (if ((core/map::get effects) (quote :unknown))
+            true
+            (selfhost/typecheck::tail-any? ((core/map::get row) (quote :tail))))})))
+
+(def selfhost/typecheck::syntax-effects-forms
+  (fn (forms)
+    (let ((report (core/cli::infer-effects forms)))
+      {:ops
+         (selfhost/typecheck::effects-vec-to-set
+           ((core/map::get report) (quote :ops)))
+        :unknown ((core/map::get report) (quote :unknown))})))
+
+(def selfhost/typecheck::typed-effects-forms
+  (fn (forms)
+    (fn (env)
+      (((((selfhost/typecheck::typed-effects-forms-loop forms) env)
+           (core/vec::len forms))
+          0)
+        selfhost/typecheck::effects-empty))))
+
+(def selfhost/typecheck::typed-effects-forms-loop
+  (fn (forms)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (effects)
+            (if ((core/int::eq? i) n)
+              effects
+              (((((selfhost/typecheck::typed-effects-forms-loop forms) env) n)
+                 ((core/int::add i) 1))
+                ((selfhost/typecheck::effects-merge effects)
+                  (((selfhost/typecheck::collect-typed-effects
+                       ((core/vec::get forms) i))
+                      env)
+                    nil))))))))))
+
+(def selfhost/typecheck::effects-in-forms-with-env
+  (fn (forms)
+    (fn (env)
+      ((selfhost/typecheck::effects-merge
+         (selfhost/typecheck::syntax-effects-forms forms))
+        ((selfhost/typecheck::typed-effects-forms forms) env)))))
+
+(def selfhost/typecheck::effects-in-term-with-expected
+  (fn (term)
+    (fn (env)
+      (fn (expected)
+        ((selfhost/typecheck::effects-merge
+           (selfhost/typecheck::syntax-effects-forms ((core/vec::push []) term)))
+          (((selfhost/typecheck::collect-typed-effects term) env) expected))))))
+
+(def selfhost/typecheck::collect-typed-effects
+  (fn (term)
+    (fn (env)
+      (fn (expected)
+        (if (selfhost/typecheck::pair? term)
+          (let ((items (selfhost/typecheck::list-items-or-nil term)))
+            (if (selfhost/typecheck::vec? items)
+              (if ((core/int::eq? (core/vec::len items)) 0)
+                selfhost/typecheck::effects-empty
+                (((((selfhost/typecheck::collect-typed-list items) term) env) expected)))
+              selfhost/typecheck::effects-empty))
+          (if (selfhost/typecheck::map? term)
+            ((selfhost/typecheck::collect-typed-map term) env)
+            selfhost/typecheck::effects-empty))))))
+
+(def selfhost/typecheck::collect-typed-list
+  (fn (items)
+    (fn (term)
+      (fn (env)
+        (fn (expected)
+          (let ((head ((core/vec::get items) 0)))
+            (if (selfhost/typecheck::sym? head)
+              (if ((core/sym::eq? head) (quote quote))
+                selfhost/typecheck::effects-empty
+                (if ((core/sym::eq? head) (quote def))
+                  (if ((core/int::eq? (core/vec::len items)) 3)
+                    (let ((name ((core/vec::get items) 1)))
+                      (((selfhost/typecheck::collect-typed-effects
+                          ((core/vec::get items) 2))
+                         env)
+                        (if (selfhost/typecheck::sym? name) ((core/map::get env) name) nil)))
+                    selfhost/typecheck::effects-empty)
+                  (if ((core/sym::eq? head) (quote fn))
+                    (((selfhost/typecheck::collect-typed-fn items) env) expected)
+                    (if ((core/sym::eq? head) (quote if))
+                      (((selfhost/typecheck::collect-typed-if items) env) expected)
+                      (if ((core/sym::eq? head) (quote begin))
+                        ((((selfhost/typecheck::collect-typed-sequence items) env) 1) expected)
+                        (if ((core/sym::eq? head) (quote let))
+                          (((selfhost/typecheck::collect-typed-let items) env) expected)
+                          (if ((core/sym::eq? head) (quote prim))
+                            (((selfhost/typecheck::collect-typed-args items) env) 2)
+                            (if
+                              (if ((core/sym::eq? head) (quote seal))
+                                true
+                                ((core/sym::eq? head) (quote unseal)))
+                              (((selfhost/typecheck::collect-typed-args items) env) 1)
+                              ((selfhost/typecheck::collect-typed-application term) env)))))))))
+              ((selfhost/typecheck::collect-typed-application term) env))))))))
+
+(def selfhost/typecheck::collect-typed-map
+  (fn (map-term)
+    (fn (env)
+      (let ((entries (core/map::entries map-term)))
+        (((((selfhost/typecheck::collect-typed-map-loop entries) env)
+             (core/vec::len entries))
+            0)
+          selfhost/typecheck::effects-empty)))))
+
+(def selfhost/typecheck::collect-typed-map-loop
+  (fn (entries)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (effects)
+            (if ((core/int::eq? i) n)
+              effects
+              (((((selfhost/typecheck::collect-typed-map-loop entries) env) n)
+                 ((core/int::add i) 1))
+                ((selfhost/typecheck::effects-merge effects)
+                  (((selfhost/typecheck::collect-typed-effects
+                       ((core/vec::get ((core/vec::get entries) i)) 1))
+                      env)
+                    nil))))))))))
+
+(def selfhost/typecheck::collect-typed-args
+  (fn (items)
+    (fn (env)
+      (fn (start)
+        (((((selfhost/typecheck::collect-typed-args-loop items) env)
+             (core/vec::len items))
+            start)
+          selfhost/typecheck::effects-empty)))))
+
+(def selfhost/typecheck::collect-typed-args-loop
+  (fn (items)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (effects)
+            (if ((core/int::eq? i) n)
+              effects
+              (((((selfhost/typecheck::collect-typed-args-loop items) env) n)
+                 ((core/int::add i) 1))
+                ((selfhost/typecheck::effects-merge effects)
+                  (((selfhost/typecheck::collect-typed-effects
+                       ((core/vec::get items) i))
+                      env)
+                    nil))))))))))
+
+(def selfhost/typecheck::collect-typed-if
+  (fn (items)
+    (fn (env)
+      (fn (expected)
+        (if ((core/int::eq? (core/vec::len items)) 4)
+          (let
+            ((condition
+               (((selfhost/typecheck::collect-typed-effects
+                   ((core/vec::get items) 1))
+                  env)
+                nil))
+              (then-effects
+                (((selfhost/typecheck::collect-typed-effects
+                    ((core/vec::get items) 2))
+                   env)
+                 expected))
+              (else-effects
+                (((selfhost/typecheck::collect-typed-effects
+                    ((core/vec::get items) 3))
+                   env)
+                 expected)))
+            ((selfhost/typecheck::effects-merge
+               ((selfhost/typecheck::effects-merge condition) then-effects))
+              else-effects))
+          selfhost/typecheck::effects-empty)))))
+
+(def selfhost/typecheck::collect-typed-sequence
+  (fn (items)
+    (fn (env)
+      (fn (start)
+        (fn (expected)
+          (((((selfhost/typecheck::collect-typed-sequence-loop items) env)
+               (core/vec::len items))
+              start)
+             expected)
+            selfhost/typecheck::effects-empty)))))
+
+(def selfhost/typecheck::collect-typed-sequence-loop
+  (fn (items)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (expected)
+            (fn (effects)
+              (if ((core/int::eq? i) n)
+                effects
+                ((((((selfhost/typecheck::collect-typed-sequence-loop items) env) n)
+                    ((core/int::add i) 1))
+                   expected)
+                  ((selfhost/typecheck::effects-merge effects)
+                    (((selfhost/typecheck::collect-typed-effects
+                         ((core/vec::get items) i))
+                        env)
+                      (if ((core/int::eq? ((core/int::add i) 1)) n) expected nil))))))))))))
+
+(def selfhost/typecheck::bind-effect-fn-params
+  (fn (params)
+    (fn (env)
+      (fn (expected)
+        (((((selfhost/typecheck::bind-effect-fn-params-loop params)
+             (core/vec::len params))
+            0)
+           env)
+          expected)))))
+
+(def selfhost/typecheck::bind-effect-fn-params-loop
+  (fn (params)
+    (fn (n)
+      (fn (i)
+        (fn (env)
+          (fn (expected)
+            (if ((core/int::eq? i) n)
+              {:env env :expected expected}
+              (let
+                ((param ((core/vec::get params) i))
+                  (expected-tag
+                    (if (selfhost/typecheck::nil? expected)
+                      (quote :nil)
+                      (selfhost/typecheck::ty-tag expected))))
+                (((((selfhost/typecheck::bind-effect-fn-params-loop params) n)
+                    ((core/int::add i) 1))
+                   (if (selfhost/typecheck::sym? param)
+                     (((core/map::put env) param)
+                       (if ((core/sym::eq? expected-tag) (quote :fn))
+                         ((core/map::get expected) (quote :param))
+                         selfhost/typecheck::ty-any))
+                     env))
+                  (if ((core/sym::eq? expected-tag) (quote :fn))
+                    ((core/map::get expected) (quote :ret))
+                    nil))))))))))
+
+(def selfhost/typecheck::collect-typed-fn
+  (fn (items)
+    (fn (env)
+      (fn (expected)
+        (if ((core/int::lt? 2) (core/vec::len items))
+          (let ((params (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+            (if (selfhost/typecheck::vec? params)
+              (let ((bound (((selfhost/typecheck::bind-effect-fn-params params) env) expected)))
+                ((((selfhost/typecheck::collect-typed-sequence items)
+                    ((core/map::get bound) (quote :env)))
+                   2)
+                  ((core/map::get bound) (quote :expected))))
+              selfhost/typecheck::effects-empty))
+          selfhost/typecheck::effects-empty)))))
+
+(def selfhost/typecheck::collect-typed-let
+  (fn (items)
+    (fn (env)
+      (fn (expected)
+        (if ((core/int::lt? 2) (core/vec::len items))
+          (let ((bindings (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+            (if (selfhost/typecheck::vec? bindings)
+              (let
+                ((bound
+                   (((((selfhost/typecheck::collect-typed-let-bindings bindings)
+                        (core/vec::len bindings))
+                       0)
+                      env)
+                     selfhost/typecheck::effects-empty)))
+                ((selfhost/typecheck::effects-merge
+                   ((core/map::get bound) (quote :effects)))
+                  ((((selfhost/typecheck::collect-typed-sequence items)
+                      ((core/map::get bound) (quote :env)))
+                     2)
+                    expected)))
+              selfhost/typecheck::effects-empty))
+          selfhost/typecheck::effects-empty)))))
+
+(def selfhost/typecheck::collect-typed-let-bindings
+  (fn (bindings)
+    (fn (n)
+      (fn (i)
+        (fn (env)
+          (fn (effects)
+            (if ((core/int::eq? i) n)
+              {:effects effects :env env}
+              (let ((pair (selfhost/typecheck::list-items-or-nil ((core/vec::get bindings) i))))
+                (if
+                  (if (selfhost/typecheck::vec? pair)
+                    ((core/int::eq? (core/vec::len pair)) 2)
+                    false)
+                  (let
+                    ((name ((core/vec::get pair) 0))
+                      (value ((core/vec::get pair) 1)))
+                    (let
+                      ((value-effects
+                         (((selfhost/typecheck::collect-typed-effects value) env) nil))
+                        (inferred (((selfhost/typecheck::infer-term value) env)
+                                    selfhost/typecheck::session-empty)))
+                      (((((selfhost/typecheck::collect-typed-let-bindings bindings) n)
+                          ((core/int::add i) 1))
+                         (if (selfhost/typecheck::sym? name)
+                           (((core/map::put env) name)
+                             ((core/map::get inferred) (quote :type)))
+                           env))
+                        ((selfhost/typecheck::effects-merge effects) value-effects))))
+                  (((((selfhost/typecheck::collect-typed-let-bindings bindings) n)
+                      ((core/int::add i) 1))
+                     env)
+                    effects))))))))))
+
+(def selfhost/typecheck::collect-typed-application
+  (fn (term)
+    (fn (env)
+      (let ((flat (core/cli::flatten-app term)))
+        (if (selfhost/typecheck::map? flat)
+          (let
+            ((head ((core/map::get flat) (quote :head)))
+              (args ((core/map::get flat) (quote :args))))
+            (let
+              ((application-effects
+                 (if (selfhost/typecheck::sym? head)
+                   (((selfhost/typecheck::application-type-effects
+                       ((core/map::get env) head))
+                      args)
+                    env)
+                   selfhost/typecheck::effects-empty))
+                (head-effects
+                  (((selfhost/typecheck::collect-typed-effects head) env) nil))
+                (arg-effects (((selfhost/typecheck::collect-typed-args args) env) 0)))
+              ((selfhost/typecheck::effects-merge
+                 ((selfhost/typecheck::effects-merge application-effects) head-effects))
+                arg-effects)))
+          selfhost/typecheck::effects-empty)))))
+
+(def selfhost/typecheck::application-type-effects
+  (fn (head-type)
+    (fn (args)
+      (fn (env)
+        (if (selfhost/typecheck::nil? head-type)
+          selfhost/typecheck::effects-empty
+          ((((((selfhost/typecheck::application-type-effects-loop args) env)
+               (core/vec::len args))
+              0)
+             head-type)
+            selfhost/typecheck::effects-empty))))))
+
+(def selfhost/typecheck::application-type-effects-loop
+  (fn (args)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (current)
+            (fn (effects)
+              (if ((core/int::eq? i) n)
+                ((selfhost/typecheck::add-reachable-type-effects effects) current)
+                (let ((tag (selfhost/typecheck::ty-tag current)))
+                  (if ((core/sym::eq? tag) (quote :fn))
+                    (let
+                      ((argument
+                         (((selfhost/typecheck::infer-term ((core/vec::get args) i)) env)
+                           selfhost/typecheck::session-empty))
+                        (param ((core/map::get current) (quote :param))))
+                      (let
+                        ((matched
+                           (((selfhost/typecheck::arg-type-match
+                               ((core/map::get argument) (quote :type)))
+                              param)
+                             {})))
+                        (if ((core/map::get matched) (quote :ok))
+                          (let
+                            ((bindings ((core/map::get matched) (quote :bindings)))
+                              (next-current
+                                ((selfhost/typecheck::apply-type-bindings
+                                   ((core/map::get current) (quote :ret)))
+                                  bindings))
+                              (next-effects
+                                ((selfhost/typecheck::effects-add-row effects)
+                                  ((selfhost/typecheck::apply-effect-row
+                                     ((core/map::get current) (quote :eff)))
+                                    bindings))))
+                            ((((((selfhost/typecheck::application-type-effects-loop args) env) n)
+                                ((core/int::add i) 1))
+                               next-current)
+                              next-effects))
+                          (selfhost/typecheck::effects-with-unknown effects))))
+                    (if ((core/sym::eq? tag) (quote :any))
+                      (selfhost/typecheck::effects-with-unknown effects)
+                      effects)))))))))))
+
+(def selfhost/typecheck::add-reachable-type-effects
+  (fn (effects)
+    (fn (ty)
+      (let ((tag (selfhost/typecheck::ty-tag ty)))
+        (if ((core/sym::eq? tag) (quote :fn))
+          ((selfhost/typecheck::add-reachable-type-effects
+             ((selfhost/typecheck::effects-add-row effects)
+               ((core/map::get ty) (quote :eff))))
+            ((core/map::get ty) (quote :ret)))
+          (if ((core/sym::eq? tag) (quote :prog))
+            ((selfhost/typecheck::add-reachable-type-effects
+               ((selfhost/typecheck::effects-add-row effects)
+                 ((core/map::get ty) (quote :eff))))
+              ((core/map::get ty) (quote :ret)))
+            (if ((core/sym::eq? tag) (quote :msg))
+              ((selfhost/typecheck::add-reachable-type-effects effects)
+                ((core/map::get ty) (quote :payload)))
+              (if ((core/sym::eq? tag) (quote :rec))
+                ((selfhost/typecheck::add-reachable-field-effects effects)
+                  (core/map::entries ((core/map::get ty) (quote :fields))))
+                (if ((core/sym::eq? tag) (quote :contract))
+                  ((selfhost/typecheck::add-reachable-field-effects effects)
+                    (core/map::entries ((core/map::get ty) (quote :methods))))
+                  effects)))))))))
+
+(def selfhost/typecheck::add-reachable-field-effects
+  (fn (effects)
+    (fn (entries)
+      ((((selfhost/typecheck::add-reachable-field-effects-loop entries)
+          (core/vec::len entries))
+         0)
+        effects))))
+
+(def selfhost/typecheck::add-reachable-field-effects-loop
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (effects)
+          (if ((core/int::eq? i) n)
+            effects
+            ((((selfhost/typecheck::add-reachable-field-effects-loop entries) n)
+               ((core/int::add i) 1))
+              ((selfhost/typecheck::add-reachable-type-effects effects)
+                ((core/vec::get ((core/vec::get entries) i)) 1)))))))))

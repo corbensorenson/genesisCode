@@ -128,7 +128,7 @@ fn infer_map_literal(m: &BTreeMap<TermOrdKey, Term>, env: &TypeEnv, sess: &mut I
     for (k, v) in m {
         let key = match &k.0 {
             Term::Symbol(s) => Some(s.clone()),
-            Term::Str(s) => Some(s.clone()),
+            Term::Str(s) if is_symbol_text(s) => Some(s.clone()),
             _ => None,
         };
         if let Some(lbl) = key {
@@ -140,6 +140,27 @@ fn infer_map_literal(m: &BTreeMap<TermOrdKey, Term>, env: &TypeEnv, sess: &mut I
         }
     }
     Ty::Rec { fields, tail }
+}
+
+fn is_symbol_text(text: &str) -> bool {
+    !text.is_empty()
+        && !text.bytes().any(|byte| {
+            matches!(
+                byte,
+                b' ' | b'\t'
+                    | b'\n'
+                    | b'\r'
+                    | b'('
+                    | b')'
+                    | b'['
+                    | b']'
+                    | b'{'
+                    | b'}'
+                    | b'\''
+                    | b'"'
+                    | b';'
+            )
+        })
 }
 
 fn infer_list_form(t: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {

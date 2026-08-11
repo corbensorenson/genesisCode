@@ -1,0 +1,441 @@
+(def selfhost/typecheck::check-module-exports
+  (fn (state)
+    (fn (module-state)
+      (fn (context)
+        (let ((exports ((core/map::get module-state) (quote :exports))))
+          (let
+            ((with-effects
+               (((((selfhost/typecheck::check-export-effects-loop exports)
+                    (core/vec::len exports))
+                   0)
+                  module-state)
+                 state)))
+            (((((selfhost/typecheck::check-export-types-loop exports)
+                 (core/vec::len exports))
+                0)
+               module-state)
+              with-effects)))))))
+
+(def selfhost/typecheck::check-export-effects-loop
+  (fn (exports)
+    (fn (n)
+      (fn (i)
+        (fn (module-state)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (((((selfhost/typecheck::check-export-effects-loop exports) n)
+                   ((core/int::add i) 1))
+                  module-state)
+                (((selfhost/typecheck::check-export-effects
+                    ((core/vec::get exports) i))
+                   module-state)
+                  state)))))))))
+
+(def selfhost/typecheck::check-export-effects
+  (fn (export)
+    (fn (module-state)
+      (fn (state)
+        (let ((expr ((core/map::get ((core/map::get module-state) (quote :defs))) export)))
+          (if (selfhost/typecheck::nil? expr)
+            (let
+              ((state2
+                 ((selfhost/typecheck::state-path-error state)
+                   ((((selfhost/typecheck::str4 "exported symbol ")
+                        (selfhost/typecheck::symbol-str export))
+                      " has no (def ")
+                     ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str export))
+                       ") in module")))))
+              (((core/map::put state2) (quote :export-effects))
+                ((core/vec::push ((core/map::get state2) (quote :export-effects)))
+                  {:name export :ops [] :unknown false})))
+            (let
+              ((effects0
+                 (((selfhost/typecheck::effects-in-term-with-expected expr)
+                    ((core/map::get module-state) (quote :env)))
+                   ((core/map::get
+                      ((core/map::get module-state) (quote :inferred-defs)))
+                     export)))
+                (unknown-calls
+                  ((selfhost/typecheck::unknown-signature-symbols expr)
+                    ((core/map::get module-state) (quote :env))))
+                (unknown-signatures
+                  ((selfhost/typecheck::unknown-signature-symbols expr)
+                    ((core/map::get module-state) (quote :package-declarations)))))
+              (let
+                ((effects
+                   (if ((core/int::lt? 0) (core/map::len unknown-calls))
+                     (selfhost/typecheck::effects-with-unknown effects0)
+                     effects0)))
+                (let
+                  ((state2
+                   (((((selfhost/typecheck::validate-export-effects export) module-state)
+                       effects)
+                      unknown-signatures)
+                     state)))
+                  (((core/map::put state2) (quote :export-effects))
+                    ((core/vec::push ((core/map::get state2) (quote :export-effects)))
+                      {:name export
+                        :ops (selfhost/typecheck::set-keys
+                               ((core/map::get effects) (quote :ops)))
+                        :unknown ((core/map::get effects) (quote :unknown))})))))))))))
+
+(def selfhost/typecheck::validate-export-effects
+  (fn (export)
+    (fn (module-state)
+      (fn (effects)
+        (fn (unknown-signatures)
+          (fn (state)
+            (let
+              ((unknown ((core/map::get effects) (quote :unknown)))
+                (caps ((core/map::get module-state) (quote :caps)))
+                (strict ((core/map::get module-state) (quote :strict-effects)))
+                (unknown-signatures-text
+                  (selfhost/typecheck::symbol-set-joined unknown-signatures)))
+            (let
+              ((state1
+                 (if ((core/int::lt? 0) (core/map::len unknown-signatures))
+                   ((selfhost/typecheck::state-path-warning state)
+                     ((selfhost/typecheck::str4
+                        (selfhost/typecheck::symbol-str export)
+                        " has unknown imported effect signature(s): ")
+                       unknown-signatures-text
+                       ""))
+                   state))
+                (state2
+                 (if unknown
+                   ((selfhost/typecheck::state-path-warning state1)
+                     ((selfhost/typecheck::str3
+                        (selfhost/typecheck::symbol-str export)
+                        " effect ops could not be fully inferred ")
+                       "(non-literal op, open row, unknown imported signature, or unknown task wrapper arity)"))
+                   state1))
+                (state3
+                  (if
+                    (if unknown ((core/int::eq? (core/vec::len caps)) 0) false)
+                    ((selfhost/typecheck::state-path-error state2)
+                      ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str export))
+                        " declares :caps [] but has unknown effect ops"))
+                    state2)))
+              (let
+                ((state4
+                   (if (if unknown strict false)
+                     ((selfhost/typecheck::state-path-error state3)
+                       (if ((core/int::eq? (core/map::len unknown-signatures)) 0)
+                         ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str export))
+                           " strict effect mode forbids unknown effect ops; use literal op symbols and soundly bound effect rows")
+                         ((selfhost/typecheck::str4
+                            (selfhost/typecheck::symbol-str export)
+                            " strict effect mode forbids unknown imported effect signature(s): ")
+                           unknown-signatures-text
+                           "")))
+                     state3)))
+                (((((selfhost/typecheck::validate-effect-caps-loop
+                       (selfhost/typecheck::set-keys
+                         ((core/map::get effects) (quote :ops))))
+                      (core/map::get module-state))
+                     export)
+                    0)
+                   state4))))))))))
+
+(def selfhost/typecheck::validate-effect-caps-loop
+  (fn (ops)
+    (fn (module-state)
+      (fn (export)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) (core/vec::len ops))
+              state
+              (let ((op ((core/vec::get ops) i)))
+                (((((selfhost/typecheck::validate-effect-caps-loop ops) module-state) export)
+                    ((core/int::add i) 1))
+                  (if
+                    (selfhost/typecheck::set-has?
+                      ((core/map::get module-state) (quote :caps-set))
+                      op)
+                    state
+                    ((selfhost/typecheck::state-path-error state)
+                      ((selfhost/typecheck::str4
+                         (selfhost/typecheck::symbol-str export)
+                         " inferred effect op ")
+                        (selfhost/typecheck::symbol-str op)
+                        " not present in ::meta :caps"))))))))))))
+
+(def selfhost/typecheck::check-export-types-loop
+  (fn (exports)
+    (fn (n)
+      (fn (i)
+        (fn (module-state)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (((((selfhost/typecheck::check-export-types-loop exports) n)
+                   ((core/int::add i) 1))
+                  module-state)
+                (((selfhost/typecheck::check-export-type ((core/vec::get exports) i))
+                   module-state)
+                  state)))))))))
+
+(def selfhost/typecheck::check-export-type
+  (fn (export)
+    (fn (module-state)
+      (fn (state)
+        (let
+          ((term ((core/map::get ((core/map::get module-state) (quote :types))) export))
+            (inferred
+              (let
+                ((found
+                   ((core/map::get ((core/map::get module-state) (quote :inferred-defs))) export)))
+                (if (selfhost/typecheck::nil? found) selfhost/typecheck::ty-any found))))
+          (if (selfhost/typecheck::nil? term)
+            (let
+              ((message
+                 ((selfhost/typecheck::str3 "exported symbol "
+                    (selfhost/typecheck::symbol-str export))
+                   " has no type in ::meta :types")))
+              (let ((state2 ((selfhost/typecheck::state-path-error state) message)))
+                (((core/map::put state2) (quote :export-types))
+                  ((core/vec::push ((core/map::get state2) (quote :export-types)))
+                    {:declared nil
+                      :errors ["missing declared type"]
+                      :inferred (selfhost/typecheck::type-to-term inferred)
+                      :name export
+                      :ok false
+                      :warnings []}))))
+            (((((selfhost/typecheck::check-declared-export-type export)
+                  (((core/map::put module-state) (quote :current-export-effects))
+                    ((selfhost/typecheck::find-export-effects
+                       ((core/map::get state) (quote :export-effects)))
+                      export)))
+                inferred)
+                term)
+              state)))))))
+
+(def selfhost/typecheck::find-export-effects
+  (fn (reports)
+    (fn (export)
+      ((((selfhost/typecheck::find-export-effects-loop reports) export)
+         (core/vec::len reports))
+        0))))
+
+(def selfhost/typecheck::find-export-effects-loop
+  (fn (reports)
+    (fn (export)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            {:name export :ops [] :unknown false}
+            (let ((report ((core/vec::get reports) i)))
+              (if ((core/eq? ((core/map::get report) (quote :name))) export)
+                report
+                ((((selfhost/typecheck::find-export-effects-loop reports) export) n)
+                  ((core/int::add i) 1))))))))))
+
+(def selfhost/typecheck::check-declared-export-type
+  (fn (export)
+    (fn (module-state)
+      (fn (inferred)
+        (fn (term)
+          (fn (state)
+            (let
+              ((gradual
+                 (if (selfhost/typecheck::sym? term)
+                   ((core/sym::eq? term) (quote ?))
+                   false)))
+              (let
+                ((state2
+                   (if gradual
+                     ((selfhost/typecheck::state-path-warning state)
+                       ((selfhost/typecheck::str3 "export "
+                          (selfhost/typecheck::symbol-str export))
+                         " has type ?"))
+                     state))
+                  (checked
+                    (if gradual
+                      {:errors []
+                        :ok true
+                        :warnings
+                          (if ((core/sym::eq? (selfhost/typecheck::ty-tag inferred)) (quote :any))
+                            ["inferred type is ?"]
+                            [])}
+                      ((((selfhost/typecheck::validate-declared-type export) module-state)
+                         inferred)
+                        term))))
+                (let
+                  ((state3
+                     (((selfhost/typecheck::merge-export-type-errors state2)
+                        ((core/map::get checked) (quote :errors)))
+                       ((core/map::get module-state) (quote :path)))))
+                  (let
+                    ((report
+                       {:declared term
+                         :errors ((core/map::get checked) (quote :errors))
+                         :inferred (selfhost/typecheck::type-to-term inferred)
+                         :name export
+                         :ok ((core/map::get checked) (quote :ok))
+                         :warnings ((core/map::get checked) (quote :warnings))}))
+                    (((core/map::put state3) (quote :export-types))
+                      ((core/vec::push ((core/map::get state3) (quote :export-types))) report))))))))))))
+
+(def selfhost/typecheck::merge-export-type-errors
+  (fn (state)
+    (fn (errors)
+      (fn (path)
+        (((((selfhost/typecheck::merge-export-type-errors-loop errors)
+             (core/vec::len errors))
+            0)
+           path)
+          state)))))
+
+(def selfhost/typecheck::merge-export-type-errors-loop
+  (fn (errors)
+    (fn (n)
+      (fn (i)
+        (fn (path)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (((((selfhost/typecheck::merge-export-type-errors-loop errors) n)
+                   ((core/int::add i) 1))
+                  path)
+                ((selfhost/typecheck::state-error state)
+                  ((selfhost/typecheck::path-message path) ((core/vec::get errors) i)))))))))))
+
+(def selfhost/typecheck::declared-eff-row
+  (fn (ty)
+    (let ((tag (selfhost/typecheck::ty-tag ty)))
+      (if ((core/sym::eq? tag) (quote :fn))
+        ((core/map::get ty) (quote :eff))
+        (if ((core/sym::eq? tag) (quote :prog))
+          ((core/map::get ty) (quote :eff))
+          nil)))))
+
+(def selfhost/typecheck::validate-declared-type
+  (fn (export)
+    (fn (module-state)
+      (fn (inferred)
+        (fn (term)
+          (let ((parsed (selfhost/typecheck::parse-type term)))
+            (if (selfhost/typecheck::result-ok? parsed)
+              ((((selfhost/typecheck::validate-parsed-declared-type export) module-state)
+                 inferred)
+                ((core/map::get parsed) (quote :value)))
+              {:errors
+                 [((selfhost/typecheck::str4 "type parse error for "
+                     (selfhost/typecheck::symbol-str export))
+                    ": "
+                    ((core/map::get parsed) (quote :error)))]
+                :ok false
+                :warnings []})))))))
+
+(def selfhost/typecheck::validate-parsed-declared-type
+  (fn (export)
+    (fn (module-state)
+      (fn (inferred)
+        (fn (parsed)
+          (let
+            ((validation
+               ((selfhost/typecheck::validate-effect-row-declaration parsed)
+                 ((core/map::get module-state) (quote :strict-effects))))
+              (compatible
+                (((selfhost/typecheck::type-compatible? inferred) parsed)
+                  ((core/map::get module-state) (quote :strict-shapes)))))
+            (let
+              ((errors0
+                 (if (selfhost/typecheck::result-ok? validation)
+                   []
+                   ((core/vec::push [])
+                     (((selfhost/typecheck::str3
+                         (selfhost/typecheck::symbol-str export))
+                        ": ")
+                       ((core/map::get validation) (quote :error))))))
+                (errors1
+                  (if compatible
+                    []
+                    ((core/vec::push [])
+                      ((((selfhost/typecheck::str4 "declared type mismatch for ")
+                          (selfhost/typecheck::symbol-str export))
+                         ": declared ")
+                        (((selfhost/typecheck::str3
+                            (selfhost/typecheck::term-str
+                              (selfhost/typecheck::type-to-term parsed)))
+                           ", inferred ")
+                          (selfhost/typecheck::term-str
+                            (selfhost/typecheck::type-to-term inferred))))))))
+              (let
+                ((errors2
+                   ((core/vec::append errors0) errors1)))
+                (let
+                  ((errors3
+                     ((((selfhost/typecheck::validate-declared-effect-evidence export)
+                         parsed)
+                        ((core/map::get module-state) (quote :current-export-effects)))
+                       errors2))
+                    (errors4
+                      (if
+                        (if ((core/map::get module-state) (quote :strict-shapes))
+                          (selfhost/typecheck::has-unresolved-contract-ops? inferred)
+                          false)
+                        ((core/vec::push errors3)
+                          ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str export))
+                            ": strict shape mode forbids unresolved contract op signatures"))
+                        errors3)))
+                  {:errors errors4
+                    :ok ((core/int::eq? (core/vec::len errors4)) 0)
+                    :warnings []})))))))))
+
+(def selfhost/typecheck::validate-declared-effect-evidence
+  (fn (export)
+    (fn (declared)
+      (fn (effects)
+        (fn (errors)
+          (let ((row (selfhost/typecheck::declared-eff-row declared)))
+            (if (selfhost/typecheck::nil? row)
+              errors
+              (let
+                ((errors2
+                   (if
+                     (if ((core/map::get effects) (quote :unknown))
+                       (selfhost/typecheck::tail-closed?
+                         ((core/map::get row) (quote :tail)))
+                       false)
+                     ((core/vec::push errors)
+                       ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str export))
+                         ": inferred unknown effect ops but declared effect row is closed"))
+                     errors)))
+                (((((selfhost/typecheck::validate-declared-effect-ops-loop
+                       ((core/map::get effects) (quote :ops)))
+                      row)
+                     export)
+                    0)
+                   errors2)))))))))
+
+(def selfhost/typecheck::validate-declared-effect-ops-loop
+  (fn (ops)
+    (fn (row)
+      (fn (export)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) (core/vec::len ops))
+              errors
+              (let ((op ((core/vec::get ops) i)))
+                (((((selfhost/typecheck::validate-declared-effect-ops-loop ops) row) export)
+                    ((core/int::add i) 1))
+                  (if
+                    (if
+                      (selfhost/typecheck::tail-closed?
+                        ((core/map::get row) (quote :tail)))
+                      (if
+                        (selfhost/typecheck::set-has?
+                          ((core/map::get row) (quote :ops))
+                          op)
+                        false
+                        true)
+                      false)
+                    ((core/vec::push errors)
+                      ((selfhost/typecheck::str4
+                         (selfhost/typecheck::symbol-str export)
+                         ": inferred effect op ")
+                        (selfhost/typecheck::symbol-str op)
+                        " not present in declared effect row"))
+                    errors))))))))))

@@ -1,0 +1,565 @@
+(def selfhost/typecheck::profile-negotiation-id
+  (quote genesis/profile-negotiation-v0.1))
+
+(def selfhost/typecheck::profile-families
+  [genesis/profile-family/artifact
+    genesis/profile-family/capability
+    genesis/profile-family/language
+    genesis/profile-family/target])
+
+(def selfhost/typecheck::profile-lineages
+  (quote
+    {genesis/profile-family/artifact [genesis/artifact-profile/coreform-v0.2]
+      genesis/profile-family/capability
+        [genesis/capability-profile/pure-v0.1 genesis/capability-profile/host-abi-v0.1]
+      genesis/profile-family/language [genesis/language-profile/v0.2]
+      genesis/profile-family/target [genesis/target-profile/portable-host-v0.1]}))
+
+(def selfhost/typecheck::core-profile-offer selfhost/typecheck::profile-lineages)
+
+(def selfhost/typecheck::profile-negotiation-active?
+  (fn (modules)
+    (((selfhost/typecheck::profile-negotiation-active-loop modules)
+       (core/vec::len modules))
+      0)))
+
+(def selfhost/typecheck::profile-negotiation-active-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          false
+          (let ((meta ((core/map::get ((core/vec::get modules) i)) (quote :meta))))
+            (if
+              (if (selfhost/typecheck::map? meta)
+                (if
+                  ((selfhost/typecheck::map-has-key? meta) (quote :profile-negotiation))
+                  true
+                  ((selfhost/typecheck::map-has-key? meta)
+                    (quote :package-profile-requirements)))
+                false)
+              true
+              (((selfhost/typecheck::profile-negotiation-active-loop modules) n)
+                ((core/int::add i) 1)))))))))
+
+(def selfhost/typecheck::profile-errors-add-vector
+  (fn (errors)
+    (fn (path)
+      (fn (messages)
+        (((((selfhost/typecheck::profile-errors-add-vector-loop messages) path)
+         (core/vec::len messages))
+         0)
+         errors)))))
+
+(def selfhost/typecheck::profile-errors-add-vector-loop
+  (fn (messages)
+    (fn (path)
+      (fn (n)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) n)
+              errors
+              (((((selfhost/typecheck::profile-errors-add-vector-loop messages) path) n)
+                 ((core/int::add i) 1))
+                (((selfhost/typecheck::module-error-add errors) path)
+                  ((core/vec::get messages) i))))))))))
+
+(def selfhost/typecheck::profile-error-all
+  (fn (modules)
+    (fn (errors)
+      (fn (message)
+        (((((selfhost/typecheck::profile-error-all-loop modules) message)
+           (core/vec::len modules))
+          0)
+         errors)))))
+
+(def selfhost/typecheck::profile-error-all-loop
+  (fn (modules)
+    (fn (message)
+      (fn (n)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) n)
+              errors
+              ((((((selfhost/typecheck::profile-error-all-loop modules) message) n)
+                 ((core/int::add i) 1))
+                (((selfhost/typecheck::module-error-add errors)
+                   ((core/map::get ((core/vec::get modules) i)) (quote :path)))
+                  message))))))))))
+
+(def selfhost/typecheck::profile-registered?
+  (fn (family)
+    (fn (profile)
+      (let ((lineage ((core/map::get selfhost/typecheck::profile-lineages) family)))
+        (if (selfhost/typecheck::vec? lineage)
+          ((selfhost/typecheck::vec-contains? lineage) profile)
+          false)))))
+
+(def selfhost/typecheck::parse-profile-requirement
+  (fn (family)
+    (fn (value)
+      (if (selfhost/typecheck::map? value)
+        (if
+          (if ((core/int::eq? (core/map::len value)) 2)
+            (if ((selfhost/typecheck::map-has-key? value) (quote :mode))
+              ((selfhost/typecheck::map-has-key? value) (quote :profile))
+              false)
+            false)
+          (let
+            ((mode ((core/map::get value) (quote :mode)))
+              (profile ((core/map::get value) (quote :profile))))
+            (if (selfhost/typecheck::sym? mode)
+              (if
+                (if ((core/sym::eq? mode) (quote exact))
+                  true
+                  ((core/sym::eq? mode) (quote minimum)))
+                (if (selfhost/typecheck::sym? profile)
+                  (if ((selfhost/typecheck::profile-registered? family) profile)
+                    (selfhost/typecheck::ok {:mode mode :profile profile})
+                    (selfhost/typecheck::err
+                      ((selfhost/typecheck::str4 "profile "
+                         (selfhost/typecheck::symbol-str profile))
+                        " is not registered in family "
+                        (selfhost/typecheck::symbol-str family))))
+                  (selfhost/typecheck::err
+                    ((selfhost/typecheck::str2 "required profile for ")
+                      ((selfhost/typecheck::str2
+                         (selfhost/typecheck::symbol-str family))
+                        " must be a symbol"))))
+                (selfhost/typecheck::err
+                  ((selfhost/typecheck::str4 "unsupported requirement mode "
+                     (selfhost/typecheck::symbol-str mode))
+                    " for "
+                    (selfhost/typecheck::symbol-str family))))
+              (selfhost/typecheck::err
+                ((selfhost/typecheck::str2 "requirement mode for ")
+                  ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str family))
+                    " must be exact or minimum")))))
+          (selfhost/typecheck::err
+            ((selfhost/typecheck::str2 "requirement for ")
+              ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str family))
+                " must contain only :mode and :profile"))))
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "requirement for ")
+            ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str family))
+              " must be a map")))))))
+
+(def selfhost/typecheck::parse-profile-requirements
+  (fn (value)
+    (if (selfhost/typecheck::map? value)
+      (let ((entries (core/map::entries value)))
+        (((selfhost/typecheck::parse-profile-requirements-loop entries) 0)
+          {:errors [] :requirements {}}))
+      {:errors [":package-profile-requirements must be a map"]
+        :requirements nil})))
+
+(def selfhost/typecheck::parse-profile-requirements-loop
+  (fn (entries)
+    (fn (i)
+      (fn (state)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          (if
+            ((core/int::eq?
+               (core/map::len ((core/map::get state) (quote :requirements))))
+              (core/vec::len selfhost/typecheck::profile-families))
+            state
+            (((core/map::put state) (quote :errors))
+              ((core/vec::push ((core/map::get state) (quote :errors)))
+                ":package-profile-requirements must exactly declare [genesis/profile-family/artifact, genesis/profile-family/capability, genesis/profile-family/language, genesis/profile-family/target]")))
+          (let
+            ((entry ((core/vec::get entries) i))
+              (rest-i ((core/int::add i) 1)))
+            (let
+              ((family ((core/vec::get entry) 0))
+                (value ((core/vec::get entry) 1)))
+              (if (selfhost/typecheck::sym? family)
+                (let
+                  ((lineage
+                     ((core/map::get selfhost/typecheck::profile-lineages) family)))
+                  (if (selfhost/typecheck::vec? lineage)
+                    (let
+                      ((parsed
+                         ((selfhost/typecheck::parse-profile-requirement family) value)))
+                      (((selfhost/typecheck::parse-profile-requirements-loop entries) rest-i)
+                        (if (selfhost/typecheck::result-ok? parsed)
+                          (((core/map::put state) (quote :requirements))
+                            (((core/map::put
+                                 ((core/map::get state) (quote :requirements)))
+                                family)
+                              ((core/map::get parsed) (quote :value))))
+                          (((core/map::put state) (quote :errors))
+                            ((core/vec::push
+                               ((core/map::get state) (quote :errors)))
+                              ((core/map::get parsed) (quote :error)))))))
+                    (((selfhost/typecheck::parse-profile-requirements-loop entries) rest-i)
+                      (((core/map::put state) (quote :errors))
+                        ((core/vec::push ((core/map::get state) (quote :errors)))
+                          ((selfhost/typecheck::str2 "unknown profile family ")
+                            (selfhost/typecheck::symbol-str family)))))))
+                (((selfhost/typecheck::parse-profile-requirements-loop entries) rest-i)
+                  (((core/map::put state) (quote :errors))
+                    ((core/vec::push ((core/map::get state) (quote :errors)))
+                      "profile requirement family keys must be symbols")))))))))))
+
+(def selfhost/typecheck::parse-module-profile-negotiation
+  (fn (module)
+    (let
+      ((meta ((core/map::get module) (quote :meta)))
+        (path ((core/map::get module) (quote :path))))
+      (if (selfhost/typecheck::map? meta)
+        (let
+          ((profile ((core/map::get meta) (quote :profile-negotiation)))
+            (profile-errors
+              (if
+                ((selfhost/typecheck::map-has-key? meta) (quote :profile-negotiation))
+                (if
+                  (if (selfhost/typecheck::sym? profile)
+                    ((core/sym::eq? profile) selfhost/typecheck::profile-negotiation-id)
+                    false)
+                  []
+                  ((core/vec::push [])
+                    ((selfhost/typecheck::str4
+                       ":profile-negotiation must be exact symbol genesis/profile-negotiation-v0.1, got ")
+                      (selfhost/typecheck::term-str profile)
+                      ""
+                      "")))
+                ["every module in the package closure must declare :profile-negotiation genesis/profile-negotiation-v0.1"]))
+            (parsed
+              (if
+                ((selfhost/typecheck::map-has-key? meta)
+                  (quote :package-profile-requirements))
+                (selfhost/typecheck::parse-profile-requirements
+                  ((core/map::get meta) (quote :package-profile-requirements)))
+                {:errors ["profile negotiation requires :package-profile-requirements"]
+                  :requirements nil})))
+          {:errors
+             ((core/vec::append profile-errors)
+               ((core/map::get parsed) (quote :errors)))
+            :path path
+            :requirements ((core/map::get parsed) (quote :requirements))})
+        {:errors ["profile negotiation requires map-shaped ::meta"]
+          :path path
+          :requirements nil}))))
+
+(def selfhost/typecheck::collect-profile-requirements
+  (fn (modules)
+    (((selfhost/typecheck::collect-profile-requirements-loop modules)
+       (core/vec::len modules))
+      0)))
+
+(def selfhost/typecheck::collect-profile-requirements-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {:errors {} :mismatch false :requirements nil}
+          (let
+            ((parsed
+               (selfhost/typecheck::parse-module-profile-negotiation
+                 ((core/vec::get modules) i)))
+              (rest
+                (((selfhost/typecheck::collect-profile-requirements-loop modules) n)
+                  ((core/int::add i) 1))))
+            (let
+              ((incoming ((core/map::get parsed) (quote :requirements)))
+                (existing ((core/map::get rest) (quote :requirements))))
+              {:errors
+                 (((selfhost/typecheck::profile-errors-add-vector
+                      ((core/map::get rest) (quote :errors)))
+                    ((core/map::get parsed) (quote :path)))
+                   ((core/map::get parsed) (quote :errors)))
+               :mismatch
+                 (if ((core/map::get rest) (quote :mismatch))
+                   true
+                   (if (selfhost/typecheck::nil? incoming)
+                     false
+                     (if (selfhost/typecheck::nil? existing)
+                       false
+                       (if ((core/eq? incoming) existing) false true))))
+               :requirements
+                 (if (selfhost/typecheck::nil? existing) incoming existing)})))))))
+
+(def selfhost/typecheck::select-profile-minimum
+  (fn (lineage)
+    (fn (offered)
+      (fn (required)
+        ((((selfhost/typecheck::select-profile-minimum-loop lineage) offered) required) 0)))))
+
+(def selfhost/typecheck::select-profile-minimum-loop
+  (fn (lineage)
+    (fn (offered)
+      (fn (required)
+        (fn (i)
+          (if ((core/int::eq? i) (core/vec::len lineage))
+            nil
+            (let ((candidate ((core/vec::get lineage) i)))
+              (if
+                (if ((core/sym::eq? candidate) required)
+                  true
+                  false)
+                (selfhost/typecheck::select-profile-offered-at-or-after
+                  lineage offered i)
+                ((((selfhost/typecheck::select-profile-minimum-loop lineage) offered)
+                   required)
+                  ((core/int::add i) 1))))))))))
+
+(def selfhost/typecheck::select-profile-offered-at-or-after
+  (fn (lineage)
+    (fn (offered)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len lineage))
+          nil
+          (let ((candidate ((core/vec::get lineage) i)))
+            (if ((selfhost/typecheck::vec-contains? offered) candidate)
+              candidate
+              (((selfhost/typecheck::select-profile-offered-at-or-after lineage) offered)
+                ((core/int::add i) 1)))))))))
+
+(def selfhost/typecheck::select-profile
+  (fn (family)
+    (fn (requirement)
+      (let
+        ((mode ((core/map::get requirement) (quote :mode)))
+          (required ((core/map::get requirement) (quote :profile)))
+          (lineage ((core/map::get selfhost/typecheck::profile-lineages) family))
+          (offered ((core/map::get selfhost/typecheck::core-profile-offer) family)))
+        (let
+          ((selected
+             (if ((core/sym::eq? mode) (quote exact))
+               (if ((selfhost/typecheck::vec-contains? offered) required) required nil)
+               (((selfhost/typecheck::select-profile-minimum lineage) offered) required))))
+          (if (selfhost/typecheck::nil? selected)
+            (selfhost/typecheck::err
+              ((selfhost/typecheck::str4 "unsupported "
+                 (selfhost/typecheck::symbol-str mode))
+                " profile requirement "
+                ((selfhost/typecheck::str4
+                   (selfhost/typecheck::symbol-str required))
+                  " in family "
+                  ((selfhost/typecheck::str2 (selfhost/typecheck::symbol-str family))
+                    ((selfhost/typecheck::str2 "; offered [")
+                      ((selfhost/typecheck::str2
+                         ((core/str::join
+                            (selfhost/typecheck::vec-map
+                              offered selfhost/typecheck::symbol-str))
+                           ", "))
+                        "]"))))))
+            (selfhost/typecheck::ok selected)))))))
+
+(def selfhost/typecheck::select-package-profiles
+  (fn (requirements)
+    (((selfhost/typecheck::select-package-profiles-loop requirements)
+       (core/vec::len selfhost/typecheck::profile-families))
+      0)))
+
+(def selfhost/typecheck::select-package-profiles-loop
+  (fn (requirements)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {:errors [] :selected {}}
+          (let
+            ((family ((core/vec::get selfhost/typecheck::profile-families) i))
+              (rest
+                (((selfhost/typecheck::select-package-profiles-loop requirements) n)
+                  ((core/int::add i) 1))))
+            (let
+              ((selected
+                 ((selfhost/typecheck::select-profile family)
+                   ((core/map::get requirements) family))))
+              (if (selfhost/typecheck::result-ok? selected)
+                {:errors ((core/map::get rest) (quote :errors))
+                  :selected
+                    (((core/map::put ((core/map::get rest) (quote :selected))) family)
+                      ((core/map::get selected) (quote :value)))}
+                {:errors
+                   ((core/vec::push ((core/map::get rest) (quote :errors)))
+                     ((core/map::get selected) (quote :error)))
+                  :selected ((core/map::get rest) (quote :selected))}))))))))
+
+(def selfhost/typecheck::caps-profile-result
+  (fn (meta)
+    (if (selfhost/typecheck::map? meta)
+      (let ((caps ((core/map::get meta) (quote :caps))))
+        (if (selfhost/typecheck::vec? caps)
+          (((selfhost/typecheck::caps-profile-loop caps) (core/vec::len caps)) 0)
+          (selfhost/typecheck::err "profile negotiation requires :caps to be a symbol vector")))
+      (selfhost/typecheck::err "profile negotiation requires map-shaped ::meta"))))
+
+(def selfhost/typecheck::caps-profile-loop
+  (fn (caps)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          (selfhost/typecheck::ok {})
+          (let
+            ((cap ((core/vec::get caps) i))
+              (rest (((selfhost/typecheck::caps-profile-loop caps) n) ((core/int::add i) 1))))
+            (if (selfhost/typecheck::sym? cap)
+              (if (selfhost/typecheck::result-ok? rest)
+                (let ((set ((core/map::get rest) (quote :value))))
+                  (if ((selfhost/typecheck::set-has? set) cap)
+                    (selfhost/typecheck::err
+                      ((selfhost/typecheck::str2 "duplicate :caps entry ")
+                        (selfhost/typecheck::symbol-str cap)))
+                    (selfhost/typecheck::ok ((selfhost/typecheck::set-add set) cap))))
+                rest)
+              (selfhost/typecheck::err ":caps entries to be symbols"))))))))
+
+(def selfhost/typecheck::validate-selected-capabilities
+  (fn (modules)
+    (fn (selected)
+      (fn (errors)
+        (((((selfhost/typecheck::validate-selected-capabilities-loop modules) selected)
+           (core/vec::len modules))
+          0)
+         errors)))))
+
+(def selfhost/typecheck::validate-selected-capabilities-loop
+  (fn (modules)
+    (fn (selected)
+      (fn (n)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) n)
+              errors
+              (let
+                ((module ((core/vec::get modules) i))
+                  (profile
+                    ((core/map::get selected)
+                      (quote genesis/profile-family/capability))))
+                (let
+                  ((caps
+                     (selfhost/typecheck::caps-profile-result
+                       ((core/map::get module) (quote :meta))))
+                    (path ((core/map::get module) (quote :path))))
+                  (((((selfhost/typecheck::validate-selected-capabilities-loop modules)
+                       selected)
+                      n)
+                     ((core/int::add i) 1))
+                    (if (selfhost/typecheck::result-ok? caps)
+                      (if
+                        (if
+                          ((core/sym::eq? profile)
+                            (quote genesis/capability-profile/pure-v0.1))
+                          ((core/int::lt? 0)
+                            (core/map::len ((core/map::get caps) (quote :value))))
+                          false)
+                        (((selfhost/typecheck::module-error-add errors) path)
+                          ((selfhost/typecheck::str3
+                             "capability profile genesis/capability-profile/pure-v0.1 requires :caps [], got [")
+                            ((core/str::join
+                               (selfhost/typecheck::vec-map
+                                 (selfhost/typecheck::set-keys
+                                   ((core/map::get caps) (quote :value)))
+                                 selfhost/typecheck::symbol-str))
+                              ", ")
+                            "]"))
+                        errors)
+                      (((selfhost/typecheck::module-error-add errors) path)
+                        ((core/map::get caps) (quote :error))))))))))))))
+
+(def selfhost/typecheck::profile-negotiation-identity
+  (fn (resolution-identity)
+    (fn (requirements)
+      (fn (selected)
+        (core/bytes::from-hex
+          (selfhost/hash::hash-term
+            {:kind selfhost/typecheck::profile-negotiation-id
+              :requirements requirements
+              :resolution-h resolution-identity
+              :selected selected}))))))
+
+(def selfhost/typecheck::profile-error-all-messages
+  (fn (modules)
+    (fn (errors)
+      (fn (messages)
+        ((((selfhost/typecheck::profile-error-all-messages-loop modules) messages) 0)
+          errors)))))
+
+(def selfhost/typecheck::profile-error-all-messages-loop
+  (fn (modules)
+    (fn (messages)
+      (fn (i)
+        (fn (errors)
+          (if ((core/int::eq? i) (core/vec::len messages))
+            errors
+            ((((selfhost/typecheck::profile-error-all-messages-loop modules) messages)
+               ((core/int::add i) 1))
+              (((selfhost/typecheck::profile-error-all modules) errors)
+                ((core/vec::get messages) i)))))))))
+
+(def selfhost/typecheck::active-profile-negotiation
+  (fn (modules)
+    (fn (resolution)
+      (let ((collected (selfhost/typecheck::collect-profile-requirements modules)))
+        (let
+          ((requirements ((core/map::get collected) (quote :requirements)))
+            (errors0
+              (if
+                (if ((core/map::get resolution) (quote :active))
+                  ((core/map::get resolution) (quote :ok))
+                  false)
+                ((core/map::get collected) (quote :errors))
+                (((selfhost/typecheck::profile-error-all modules)
+                   ((core/map::get collected) (quote :errors)))
+                  "genesis/profile-negotiation-v0.1 requires successful module resolution"))))
+          (let
+            ((errors1
+               (if ((core/map::get collected) (quote :mismatch))
+                 (((selfhost/typecheck::profile-error-all modules) errors0)
+                   "package modules declare different :package-profile-requirements")
+                 errors0))
+              (selection
+                (if (selfhost/typecheck::map? requirements)
+                  (if
+                    ((core/int::eq? (core/map::len requirements))
+                      (core/vec::len selfhost/typecheck::profile-families))
+                    (selfhost/typecheck::select-package-profiles requirements)
+                    {:errors [] :selected {}})
+                  {:errors [] :selected {}})))
+            (let
+              ((selected ((core/map::get selection) (quote :selected)))
+                (errors2
+                  (((selfhost/typecheck::profile-error-all-messages modules) errors1)
+                    ((core/map::get selection) (quote :errors)))))
+              (let
+                ((errors3
+                   (((selfhost/typecheck::validate-selected-capabilities modules) selected)
+                     errors2)))
+                (let
+                  ((ok
+                     (if ((core/int::eq? (core/map::len errors3)) 0)
+                       (if (selfhost/typecheck::map? requirements)
+                         (if ((core/int::eq? (core/map::len requirements)) 4)
+                           ((core/int::eq? (core/map::len selected)) 4)
+                           false)
+                         false)
+                       false)))
+                  {:active true
+                    :errors (selfhost/typecheck::module-errors-to-vectors errors3)
+                    :identity
+                      (if ok
+                        (((selfhost/typecheck::profile-negotiation-identity
+                             ((core/map::get resolution) (quote :identity)))
+                           requirements)
+                          selected)
+                        nil)
+                    :kind selfhost/typecheck::profile-negotiation-id
+                    :ok ok
+                    :requirements
+                      (if (selfhost/typecheck::map? requirements) requirements {})
+                    :selected selected})))))))))
+
+(def selfhost/typecheck::negotiate-package-profiles
+  (fn (modules)
+    (fn (resolution)
+      (if (selfhost/typecheck::profile-negotiation-active? modules)
+        ((selfhost/typecheck::active-profile-negotiation modules) resolution)
+        {:active false
+          :errors {}
+          :identity nil
+          :kind selfhost/typecheck::profile-negotiation-id
+          :ok true
+          :requirements {}
+          :selected {}}))))

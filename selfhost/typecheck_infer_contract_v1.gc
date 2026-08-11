@@ -1,0 +1,247 @@
+(def selfhost/typecheck::infer-msg-make
+  (fn (args)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 2)
+          (let
+            ((payload
+               (((selfhost/typecheck::infer-term ((core/vec::get args) 1)) env) session)))
+            ((selfhost/typecheck::infer-result
+               ((selfhost/typecheck::ty-msg
+                  (core/cli::literal-op-sym-or-nil ((core/vec::get args) 0)))
+                 ((core/map::get payload) (quote :type))))
+              ((core/map::get payload) (quote :session))))
+          ((selfhost/typecheck::infer-error session)
+            ((selfhost/typecheck::str2 "core/msg::make expects 2 args (op, payload), got ")
+              (selfhost/typecheck::int-str (core/vec::len args)))))))))
+
+(def selfhost/typecheck::infer-msg-payload
+  (fn (args)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 1)
+          (let ((message (((selfhost/typecheck::infer-term ((core/vec::get args) 0)) env) session)))
+            (let ((tag (selfhost/typecheck::ty-tag ((core/map::get message) (quote :type)))))
+              (if ((core/sym::eq? tag) (quote :msg))
+                ((selfhost/typecheck::infer-result
+                   ((core/map::get ((core/map::get message) (quote :type))) (quote :payload)))
+                  ((core/map::get message) (quote :session)))
+                (if ((core/sym::eq? tag) (quote :any))
+                  ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                    ((core/map::get message) (quote :session)))
+                  ((selfhost/typecheck::infer-error
+                     ((core/map::get message) (quote :session)))
+                    "core/msg::payload expects a Msg")))))
+          ((selfhost/typecheck::infer-error session)
+            ((selfhost/typecheck::str2 "core/msg::payload expects 1 arg, got ")
+              (selfhost/typecheck::int-str (core/vec::len args)))))))))
+
+(def selfhost/typecheck::infer-contract-extend
+  (fn (args)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 3)
+          (let ((base (((selfhost/typecheck::infer-term ((core/vec::get args) 0)) env) session)))
+            (let
+              ((base-type ((core/map::get base) (quote :type)))
+                (base-session ((core/map::get base) (quote :session))))
+              (let ((tag (selfhost/typecheck::ty-tag base-type)))
+                (let
+                  ((state
+                     (if ((core/sym::eq? tag) (quote :contract))
+                       {:methods ((core/map::get base-type) (quote :methods))
+                         :session base-session
+                         :tail ((core/map::get base-type) (quote :tail))}
+                       (if ((core/sym::eq? tag) (quote :any))
+                         {:methods {} :session base-session :tail (quote :any)}
+                         {:methods {}
+                           :session
+                             ((selfhost/typecheck::session-error base-session)
+                               "core/contract::extend base must be a Contract")
+                           :tail (quote :any)}))))
+                  (let
+                    ((overrides
+                       (((selfhost/typecheck::infer-contract-overrides
+                           ((core/vec::get args) 1))
+                          env)
+                         state)))
+                    (let
+                      ((meta
+                         (((selfhost/typecheck::infer-term ((core/vec::get args) 2)) env)
+                           ((core/map::get overrides) (quote :session)))))
+                      ((selfhost/typecheck::infer-result
+                         ((selfhost/typecheck::ty-contract
+                            ((core/map::get overrides) (quote :methods)))
+                           ((core/map::get overrides) (quote :tail))))
+                        ((core/map::get meta) (quote :session)))))))))
+          ((selfhost/typecheck::infer-error session)
+            ((selfhost/typecheck::str2
+               "core/contract::extend expects 3 args (base overrides meta), got ")
+              (selfhost/typecheck::int-str (core/vec::len args)))))))))
+
+(def selfhost/typecheck::infer-contract-overrides
+  (fn (term)
+    (fn (env)
+      (fn (state)
+        (if (selfhost/typecheck::map? term)
+          (let ((entries (core/map::entries term)))
+            (((((selfhost/typecheck::infer-contract-overrides-loop entries) env)
+                (core/vec::len entries))
+               0)
+              state))
+          (let
+            ((walked
+               (((selfhost/typecheck::infer-term term) env)
+                 ((core/map::get state) (quote :session)))))
+            {:methods ((core/map::get state) (quote :methods))
+              :session ((core/map::get walked) (quote :session))
+              :tail (quote :any)}))))))
+
+(def selfhost/typecheck::infer-contract-overrides-loop
+  (fn (entries)
+    (fn (env)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (let
+                ((entry ((core/vec::get entries) i))
+                  (op ((core/vec::get ((core/vec::get entries) i)) 0))
+                  (handler ((core/vec::get ((core/vec::get entries) i)) 1)))
+                (if (selfhost/typecheck::sym? op)
+                  (let
+                    ((method
+                       (((selfhost/typecheck::infer-contract-method op) handler)
+                         env)
+                       ))
+                    (let
+                      ((result
+                         (method ((core/map::get state) (quote :session)))))
+                      (((((selfhost/typecheck::infer-contract-overrides-loop entries) env) n)
+                         ((core/int::add i) 1))
+                        {:methods
+                           (((core/map::put ((core/map::get state) (quote :methods))) op)
+                             ((core/map::get result) (quote :type)))
+                          :session ((core/map::get result) (quote :session))
+                          :tail ((core/map::get state) (quote :tail))})))
+                  (((((selfhost/typecheck::infer-contract-overrides-loop entries) env) n)
+                     ((core/int::add i) 1))
+                    {:methods ((core/map::get state) (quote :methods))
+                      :session ((core/map::get state) (quote :session))
+                      :tail (quote :any)}))))))))))
+
+(def selfhost/typecheck::infer-contract-method
+  (fn (op)
+    (fn (handler)
+      (fn (env)
+        (fn (session)
+          (let ((items (selfhost/typecheck::list-items-or-nil handler)))
+            (if (selfhost/typecheck::vec? items)
+              (if
+                (if ((core/int::lt? 2) (core/vec::len items))
+                  (let ((head ((core/vec::get items) 0)))
+                    (if (selfhost/typecheck::sym? head)
+                      ((core/sym::eq? head) (quote fn))
+                      false))
+                  false)
+                (let ((params (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+                  (if (selfhost/typecheck::vec? params)
+                    (let
+                      ((env2
+                         (if ((core/int::lt? 0) (core/vec::len params))
+                           (let ((name ((core/vec::get params) 0)))
+                             (if (selfhost/typecheck::sym? name)
+                               (((core/map::put env) name)
+                                 ((selfhost/typecheck::ty-msg op) selfhost/typecheck::ty-any))
+                               env))
+                           env))
+                        (body (selfhost/typecheck::fn-body-term items)))
+                      (let ((inferred (((selfhost/typecheck::infer-term body) env2) session)))
+                        ((selfhost/typecheck::infer-result
+                           (((selfhost/typecheck::ty-fn
+                               ((selfhost/typecheck::ty-msg op) selfhost/typecheck::ty-any))
+                              ((core/map::get inferred) (quote :type)))
+                             (selfhost/typecheck::infer-syntax-effects-term body)))
+                          ((core/map::get inferred) (quote :session)))))
+                    ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                      ((selfhost/typecheck::session-warning session)
+                        ((selfhost/typecheck::str3 "contract method "
+                           (selfhost/typecheck::symbol-str op))
+                          " has invalid param list; treating as ?")))))
+                (let ((walked (((selfhost/typecheck::infer-term handler) env) session)))
+                  ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                    ((selfhost/typecheck::session-warning
+                       ((core/map::get walked) (quote :session)))
+                      ((selfhost/typecheck::str3 "contract method "
+                         (selfhost/typecheck::symbol-str op))
+                        " is not a (fn ...) form; treating as ?")))))
+              (let ((walked (((selfhost/typecheck::infer-term handler) env) session)))
+                ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                  ((selfhost/typecheck::session-warning
+                     ((core/map::get walked) (quote :session)))
+                    ((selfhost/typecheck::str3 "contract method "
+                       (selfhost/typecheck::symbol-str op))
+                      " is not a function literal; treating as ?")))))))))))
+
+(def selfhost/typecheck::infer-contract-dispatch
+  (fn (args)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 2)
+          (let
+            ((contract
+               (((selfhost/typecheck::infer-term ((core/vec::get args) 0)) env) session)))
+            (let
+              ((message
+                 (((selfhost/typecheck::infer-term ((core/vec::get args) 1)) env)
+                   ((core/map::get contract) (quote :session)))))
+              (let
+                ((contract-type ((core/map::get contract) (quote :type)))
+                  (message-type ((core/map::get message) (quote :type)))
+                  (next-session ((core/map::get message) (quote :session))))
+                (let
+                  ((contract-tag (selfhost/typecheck::ty-tag contract-type))
+                    (message-tag (selfhost/typecheck::ty-tag message-type)))
+                  (if ((core/sym::eq? contract-tag) (quote :any))
+                    ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any) next-session)
+                    (if ((core/sym::eq? contract-tag) (quote :contract))
+                      (if ((core/sym::eq? message-tag) (quote :msg))
+                        (let ((op ((core/map::get message-type) (quote :op))))
+                          (if (selfhost/typecheck::nil? op)
+                            ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                              ((selfhost/typecheck::session-warning next-session)
+                                "core/contract::dispatch msg op is not literal; return type is ?"))
+                            (let
+                              ((method
+                                 ((core/map::get
+                                    ((core/map::get contract-type) (quote :methods)))
+                                   op)))
+                              (if (selfhost/typecheck::nil? method)
+                                (if
+                                  (selfhost/typecheck::tail-open?
+                                    ((core/map::get contract-type) (quote :tail)))
+                                  ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                                    ((selfhost/typecheck::session-warning next-session)
+                                      ((selfhost/typecheck::str3 "dispatch on op "
+                                         (selfhost/typecheck::symbol-str op))
+                                        " against open contract row; return type is ?")))
+                                  ((selfhost/typecheck::infer-error next-session)
+                                    ((selfhost/typecheck::str3 "dispatch on op "
+                                       (selfhost/typecheck::symbol-str op))
+                                      " against closed contract with no such method")))
+                                (if
+                                  ((core/sym::eq? (selfhost/typecheck::ty-tag method)) (quote :fn))
+                                  ((selfhost/typecheck::infer-result
+                                     ((core/map::get method) (quote :ret)))
+                                    next-session)
+                                  ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                                    next-session))))))
+                        ((selfhost/typecheck::infer-error next-session)
+                          "core/contract::dispatch msg must be a Msg"))
+                      ((selfhost/typecheck::infer-error next-session)
+                        "core/contract::dispatch contract must be a Contract")))))))
+          ((selfhost/typecheck::infer-error session)
+            ((selfhost/typecheck::str2
+               "core/contract::dispatch expects 2 args (contract msg), got ")
+              (selfhost/typecheck::int-str (core/vec::len args)))))))))

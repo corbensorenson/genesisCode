@@ -1,5 +1,27 @@
 use super::*;
 
+const TYPECHECK_AUTHORITY_PROFILE: &[u8] =
+    include_bytes!("../../../policies/selfhost_typecheck_authority_v0.1.json");
+const TYPECHECK_AUTHORITY_SCHEMA: &[u8] =
+    include_bytes!("../../../docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json");
+const DIAGNOSTIC_CATALOG: &[u8] =
+    include_bytes!("../../../docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json");
+
+#[derive(Clone, Copy)]
+pub(super) struct TypecheckCacheAuthorityIdentities {
+    pub(super) profile: [u8; 32],
+    pub(super) schema: [u8; 32],
+    pub(super) diagnostics: [u8; 32],
+}
+
+pub(super) fn typecheck_cache_authority_identities() -> TypecheckCacheAuthorityIdentities {
+    TypecheckCacheAuthorityIdentities {
+        profile: *blake3::hash(TYPECHECK_AUTHORITY_PROFILE).as_bytes(),
+        schema: *blake3::hash(TYPECHECK_AUTHORITY_SCHEMA).as_bytes(),
+        diagnostics: *blake3::hash(DIAGNOSTIC_CATALOG).as_bytes(),
+    }
+}
+
 pub(super) fn hash_optional_file(path: Option<&Path>) -> Result<Option<String>, ObligationError> {
     let Some(path) = path else {
         return Ok(None);
@@ -109,6 +131,26 @@ pub(super) fn obligation_cache_key(
     limits: KernelLimits,
     frontend: &CoreformFrontend,
 ) -> Result<String, ObligationError> {
+    obligation_cache_key_with_authorities(
+        pkg_toml,
+        manifest,
+        modules,
+        caps_policy_hash,
+        limits,
+        frontend,
+        typecheck_cache_authority_identities(),
+    )
+}
+
+pub(super) fn obligation_cache_key_with_authorities(
+    pkg_toml: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    caps_policy_hash: Option<&str>,
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
+    authority: TypecheckCacheAuthorityIdentities,
+) -> Result<String, ObligationError> {
     let pkg_toml_hash = hash_optional_file(Some(pkg_toml))?.unwrap_or_default();
     let module_hashes = Term::Vector(
         modules
@@ -137,6 +179,18 @@ pub(super) fn obligation_cache_key(
             (
                 TermOrdKey(Term::symbol(":toolchain")),
                 Term::Str(format!("genesis {}", env!("CARGO_PKG_VERSION"))),
+            ),
+            (
+                TermOrdKey(Term::symbol(":typecheck-authority-profile-h")),
+                Term::Str(hex32(authority.profile)),
+            ),
+            (
+                TermOrdKey(Term::symbol(":typecheck-authority-schema-h")),
+                Term::Str(hex32(authority.schema)),
+            ),
+            (
+                TermOrdKey(Term::symbol(":diagnostic-catalog-h")),
+                Term::Str(hex32(authority.diagnostics)),
             ),
             (
                 TermOrdKey(Term::symbol(":pkg-name")),

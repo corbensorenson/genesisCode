@@ -17,7 +17,13 @@ case "$component" in
     configure_genesis
     temporary="$(mktemp selfhost/.toolchain.gc.XXXXXX)"
     trap 'rm -f "$temporary"' EXIT
-    "$GENESIS_BIN" selfhost-artifact --out "$temporary" >/dev/null
+    source scripts/lib/selfhost_artifact_cache.sh
+    source_hash="$(selfhost_source_hash "$ROOT_DIR")"
+    artifact_args=(selfhost-artifact --out "$temporary")
+    if ! selfhost_repo_artifact_matches_source_hash "$ROOT_DIR" "$source_hash"; then
+      artifact_args+=(--recover-missing-artifact)
+    fi
+    "$GENESIS_BIN" "${artifact_args[@]}" >/dev/null
     chmod 0644 "$temporary"
     mv "$temporary" selfhost/toolchain.gc
     trap - EXIT

@@ -1,0 +1,403 @@
+(def selfhost/typecheck::ty-scalar
+  (fn (tag) {:tag tag}))
+
+(def selfhost/typecheck::ty-any (selfhost/typecheck::ty-scalar (quote :any)))
+(def selfhost/typecheck::ty-int (selfhost/typecheck::ty-scalar (quote :int)))
+(def selfhost/typecheck::ty-dec (selfhost/typecheck::ty-scalar (quote :dec)))
+(def selfhost/typecheck::ty-bool (selfhost/typecheck::ty-scalar (quote :bool)))
+(def selfhost/typecheck::ty-nil (selfhost/typecheck::ty-scalar (quote :nil)))
+(def selfhost/typecheck::ty-str (selfhost/typecheck::ty-scalar (quote :str)))
+(def selfhost/typecheck::ty-bytes (selfhost/typecheck::ty-scalar (quote :bytes)))
+(def selfhost/typecheck::ty-symbol (selfhost/typecheck::ty-scalar (quote :symbol)))
+
+(def selfhost/typecheck::ty-msg
+  (fn (op) (fn (payload) {:op op :payload payload :tag (quote :msg)})))
+
+(def selfhost/typecheck::ty-fn
+  (fn (param) (fn (ret) (fn (eff) {:eff eff :param param :ret ret :tag (quote :fn)}))))
+
+(def selfhost/typecheck::ty-prog
+  (fn (ret) (fn (eff) {:eff eff :ret ret :tag (quote :prog)})))
+
+(def selfhost/typecheck::ty-rec
+  (fn (fields) (fn (tail) {:fields fields :tag (quote :rec) :tail tail})))
+
+(def selfhost/typecheck::ty-contract
+  (fn (methods) (fn (tail) {:methods methods :tag (quote :contract) :tail tail})))
+
+(def selfhost/typecheck::eff-row
+  (fn (ops) (fn (tail) {:ops ops :tail tail})))
+
+(def selfhost/typecheck::eff-empty
+  ((selfhost/typecheck::eff-row {}) (quote :closed)))
+
+(def selfhost/typecheck::ty-tag
+  (fn (ty) ((core/map::get ty) (quote :tag))))
+
+(def selfhost/typecheck::tail-open?
+  (fn (tail) (if ((core/sym::eq? tail) (quote :closed)) false true)))
+
+(def selfhost/typecheck::tail-to-term
+  (fn (tail)
+    (if ((core/sym::eq? tail) (quote :closed))
+      nil
+      (if ((core/sym::eq? tail) (quote :any)) (quote ?) tail))))
+
+(def selfhost/typecheck::parse-row-tail
+  (fn (term)
+    (if (selfhost/typecheck::nil? term)
+      (selfhost/typecheck::ok (quote :closed))
+      (if (selfhost/typecheck::sym? term)
+        (if ((core/sym::eq? term) (quote ?))
+          (selfhost/typecheck::ok (quote :any))
+          (selfhost/typecheck::ok term))
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "row tail must be nil, ?, or a symbol var, got ")
+            (selfhost/typecheck::term-str term)))))))
+
+(def selfhost/typecheck::parse-type
+  (fn (term)
+    (if (selfhost/typecheck::sym? term)
+      (selfhost/typecheck::parse-type-symbol term)
+      (if (selfhost/typecheck::pair? term)
+        (selfhost/typecheck::parse-type-list term)
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "unsupported type term: ") (selfhost/typecheck::term-str term)))))))
+
+(def selfhost/typecheck::parse-type-symbol
+  (fn (symbol)
+    (if ((core/sym::eq? symbol) (quote ?))
+      (selfhost/typecheck::ok selfhost/typecheck::ty-any)
+      (if ((core/sym::eq? symbol) (quote Int))
+        (selfhost/typecheck::ok selfhost/typecheck::ty-int)
+        (if ((core/sym::eq? symbol) (quote Dec))
+          (selfhost/typecheck::ok selfhost/typecheck::ty-dec)
+          (if ((core/sym::eq? symbol) (quote Bool))
+            (selfhost/typecheck::ok selfhost/typecheck::ty-bool)
+            (if (if ((core/sym::eq? symbol) (quote Nil)) ((core/sym::eq? symbol) (quote nil)) false)
+              (selfhost/typecheck::ok selfhost/typecheck::ty-nil)
+              (if ((core/sym::eq? symbol) (quote Str))
+                (selfhost/typecheck::ok selfhost/typecheck::ty-str)
+                (if ((core/sym::eq? symbol) (quote Bytes))
+                  (selfhost/typecheck::ok selfhost/typecheck::ty-bytes)
+                  (if ((core/sym::eq? symbol) (quote Symbol))
+                    (selfhost/typecheck::ok selfhost/typecheck::ty-symbol)
+                    (selfhost/typecheck::err
+                      ((selfhost/typecheck::str2 "unsupported type term: ")
+                        (selfhost/typecheck::term-str symbol)))))))))))))
+
+(def selfhost/typecheck::parse-type-list
+  (fn (term)
+    (let ((items (core/pair::as-proper-list term)))
+      (if (selfhost/typecheck::vec? items)
+        (if ((core/int::eq? (core/vec::len items)) 0)
+          (selfhost/typecheck::err "empty type term list")
+          (let ((head ((core/vec::get items) 0)))
+            (if (selfhost/typecheck::sym? head)
+              ((selfhost/typecheck::parse-type-constructor head) items)
+              (selfhost/typecheck::err
+                ((selfhost/typecheck::str2 "type head must be a symbol: ")
+                  (selfhost/typecheck::term-str head))))))
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "type term must be a proper list: ")
+            (selfhost/typecheck::term-str term)))))))
+
+(def selfhost/typecheck::parse-type-constructor
+  (fn (head)
+    (fn (items)
+      (if ((core/sym::eq? head) (quote Fn))
+        (selfhost/typecheck::parse-fn-type items)
+        (if ((core/sym::eq? head) (quote Prog))
+          (selfhost/typecheck::parse-prog-type items)
+          (if ((core/sym::eq? head) (quote Msg))
+            (selfhost/typecheck::parse-msg-type items)
+            (if ((core/sym::eq? head) (quote Rec))
+              ((selfhost/typecheck::parse-shape-type (quote :rec)) items)
+              (if ((core/sym::eq? head) (quote Contract))
+                ((selfhost/typecheck::parse-shape-type (quote :contract)) items)
+                (if ((core/sym::eq? head) (quote Eff))
+                  (selfhost/typecheck::err "(Eff ...) is an effect-row term, not a type")
+                  (selfhost/typecheck::err
+                    ((selfhost/typecheck::str2 "unknown type constructor ")
+                      (selfhost/typecheck::symbol-str head))))))))))))
+
+(def selfhost/typecheck::parse-fn-type
+  (fn (items)
+    (let ((n (core/vec::len items)))
+      (if (if ((core/int::eq? n) 3) true ((core/int::eq? n) 4))
+        (let
+          ((param-result (selfhost/typecheck::parse-type ((core/vec::get items) 1)))
+            (ret-result (selfhost/typecheck::parse-type ((core/vec::get items) 2))))
+          (if (selfhost/typecheck::result-ok? param-result)
+            (if (selfhost/typecheck::result-ok? ret-result)
+              (let
+                ((eff-result
+                   (if ((core/int::eq? n) 4)
+                     (selfhost/typecheck::parse-eff-row ((core/vec::get items) 3))
+                     (selfhost/typecheck::ok selfhost/typecheck::eff-empty))))
+                (if (selfhost/typecheck::result-ok? eff-result)
+                  (selfhost/typecheck::ok
+                    (((selfhost/typecheck::ty-fn
+                        ((core/map::get param-result) (quote :value)))
+                       ((core/map::get ret-result) (quote :value)))
+                      ((core/map::get eff-result) (quote :value))))
+                  eff-result))
+              ret-result)
+            param-result))
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "(Fn A B (Eff ...)) expects 2 or 3 arguments, got ")
+            (selfhost/typecheck::int-str ((core/int::sub n) 1))))))))
+
+(def selfhost/typecheck::parse-prog-type
+  (fn (items)
+    (let ((n (core/vec::len items)))
+      (if ((core/int::eq? n) 3)
+        (let
+          ((ret-result (selfhost/typecheck::parse-type ((core/vec::get items) 1)))
+            (eff-result (selfhost/typecheck::parse-eff-row ((core/vec::get items) 2))))
+          (if (selfhost/typecheck::result-ok? ret-result)
+            (if (selfhost/typecheck::result-ok? eff-result)
+              (selfhost/typecheck::ok
+                ((selfhost/typecheck::ty-prog ((core/map::get ret-result) (quote :value)))
+                  ((core/map::get eff-result) (quote :value))))
+              eff-result)
+            ret-result))
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "(Prog T (Eff ...)) expects 2 arguments, got ")
+            (selfhost/typecheck::int-str ((core/int::sub n) 1))))))))
+
+(def selfhost/typecheck::parse-msg-type
+  (fn (items)
+    (let ((n (core/vec::len items)))
+      (if ((core/int::eq? n) 2)
+        (let ((payload-result (selfhost/typecheck::parse-type ((core/vec::get items) 1))))
+          (if (selfhost/typecheck::result-ok? payload-result)
+            (selfhost/typecheck::ok
+              ((selfhost/typecheck::ty-msg nil) ((core/map::get payload-result) (quote :value))))
+            payload-result))
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "(Msg Payload) expects 1 argument, got ")
+            (selfhost/typecheck::int-str ((core/int::sub n) 1))))))))
+
+(def selfhost/typecheck::parse-shape-type
+  (fn (kind)
+    (fn (items)
+      (let ((n (core/vec::len items)))
+        (if ((core/int::eq? n) 3)
+          (let
+            ((fields-result (selfhost/typecheck::parse-row-fields ((core/vec::get items) 1)))
+              (tail-result (selfhost/typecheck::parse-row-tail ((core/vec::get items) 2))))
+            (if (selfhost/typecheck::result-ok? fields-result)
+              (if (selfhost/typecheck::result-ok? tail-result)
+                (let
+                  ((fields ((core/map::get fields-result) (quote :value)))
+                    (tail ((core/map::get tail-result) (quote :value))))
+                  (if ((core/sym::eq? kind) (quote :rec))
+                    (selfhost/typecheck::ok ((selfhost/typecheck::ty-rec fields) tail))
+                    (selfhost/typecheck::ok ((selfhost/typecheck::ty-contract fields) tail))))
+                tail-result)
+              fields-result))
+          (let
+            ((label
+               (if ((core/sym::eq? kind) (quote :rec))
+                 "(Rec [[:k T] ...] tail) expects 2 arguments, got "
+                 "(Contract [[op Ty] ...] tail) expects 2 arguments, got ")))
+            (selfhost/typecheck::err
+              ((selfhost/typecheck::str2 label)
+                (selfhost/typecheck::int-str ((core/int::sub n) 1))))))))))
+
+(def selfhost/typecheck::parse-eff-row
+  (fn (term)
+    (let ((items (selfhost/typecheck::list-items-or-nil term)))
+      (if (selfhost/typecheck::vec? items)
+        (if ((core/int::eq? (core/vec::len items)) 3)
+          (let ((head ((core/vec::get items) 0)))
+            (if (selfhost/typecheck::sym? head)
+              (if ((core/sym::eq? head) (quote Eff))
+                (let
+                  ((ops-result (selfhost/typecheck::parse-eff-ops ((core/vec::get items) 1)))
+                    (tail-result (selfhost/typecheck::parse-row-tail ((core/vec::get items) 2))))
+                  (if (selfhost/typecheck::result-ok? ops-result)
+                    (if (selfhost/typecheck::result-ok? tail-result)
+                      (selfhost/typecheck::ok
+                        ((selfhost/typecheck::eff-row ((core/map::get ops-result) (quote :value)))
+                          ((core/map::get tail-result) (quote :value))))
+                      tail-result)
+                    ops-result))
+                (selfhost/typecheck::err
+                  ((selfhost/typecheck::str2 "eff row must look like (Eff [ops] tail), got ")
+                    (selfhost/typecheck::term-str term))))
+              (selfhost/typecheck::err
+                ((selfhost/typecheck::str2 "eff row must look like (Eff [ops] tail), got ")
+                  (selfhost/typecheck::term-str term)))))
+          (selfhost/typecheck::err
+            ((selfhost/typecheck::str2 "eff row must look like (Eff [ops] tail), got ")
+              (selfhost/typecheck::term-str term))))
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "eff row must be a list: ")
+            (selfhost/typecheck::term-str term)))))))
+
+(def selfhost/typecheck::parse-eff-ops
+  (fn (term)
+    (if (selfhost/typecheck::nil? term)
+      (selfhost/typecheck::ok {})
+      (if (selfhost/typecheck::vec? term)
+        ((((selfhost/typecheck::parse-eff-ops-loop term) (core/vec::len term)) 0) {})
+        (selfhost/typecheck::err
+          ((selfhost/typecheck::str2 "eff ops must be a vector, got ")
+            (selfhost/typecheck::term-str term)))))))
+
+(def selfhost/typecheck::parse-eff-ops-loop
+  (fn (items)
+    (fn (n)
+      (fn (i)
+        (fn (set)
+          (if ((core/int::eq? i) n)
+            (selfhost/typecheck::ok set)
+            (let ((op ((core/vec::get items) i)))
+              (if (selfhost/typecheck::sym? op)
+                (if ((selfhost/typecheck::set-has? set) op)
+                  (selfhost/typecheck::err
+                    ((selfhost/typecheck::str2 "duplicate effect op ")
+                      (selfhost/typecheck::symbol-str op)))
+                  ((((selfhost/typecheck::parse-eff-ops-loop items) n) ((core/int::add i) 1))
+                    ((selfhost/typecheck::set-add set) op)))
+                (selfhost/typecheck::err
+                  ((selfhost/typecheck::str2 "eff op must be a symbol, got ")
+                    (selfhost/typecheck::term-str op)))))))))))
+
+(def selfhost/typecheck::parse-row-fields
+  (fn (term)
+    (if (selfhost/typecheck::vec? term)
+      ((((selfhost/typecheck::parse-row-fields-loop term) (core/vec::len term)) 0) {})
+      (selfhost/typecheck::err
+        ((selfhost/typecheck::str2 "row fields must be a vector, got ")
+          (selfhost/typecheck::term-str term))))))
+
+(def selfhost/typecheck::parse-row-fields-loop
+  (fn (items)
+    (fn (n)
+      (fn (i)
+        (fn (fields)
+          (if ((core/int::eq? i) n)
+            (selfhost/typecheck::ok fields)
+            (let ((entry ((core/vec::get items) i)))
+              (if (selfhost/typecheck::vec? entry)
+                (if ((core/int::eq? (core/vec::len entry)) 2)
+                  (let ((label ((core/vec::get entry) 0)) (type-term ((core/vec::get entry) 1)))
+                    (if (selfhost/typecheck::sym? label)
+                      (if (selfhost/typecheck::nil? ((core/map::get fields) label))
+                        (let ((parsed (selfhost/typecheck::parse-type type-term)))
+                          (if (selfhost/typecheck::result-ok? parsed)
+                            ((((selfhost/typecheck::parse-row-fields-loop items) n)
+                               ((core/int::add i) 1))
+                              (((core/map::put fields) label) ((core/map::get parsed) (quote :value))))
+                            parsed))
+                        (selfhost/typecheck::err
+                          ((selfhost/typecheck::str2 "duplicate row label ")
+                            (selfhost/typecheck::symbol-str label))))
+                      (selfhost/typecheck::err
+                        ((selfhost/typecheck::str2 "row label must be a symbol, got ")
+                          (selfhost/typecheck::term-str label)))))
+                  (selfhost/typecheck::err
+                    ((selfhost/typecheck::str2 "row entry must have 2 items, got ")
+                      (selfhost/typecheck::term-str entry))))
+                (selfhost/typecheck::err
+                  ((selfhost/typecheck::str2 "row entry must be a 2-vector, got ")
+                    (selfhost/typecheck::term-str entry)))))))))))
+
+(def selfhost/typecheck::type-to-term
+  (fn (ty)
+    (let ((tag (selfhost/typecheck::ty-tag ty)))
+      (if ((core/sym::eq? tag) (quote :any))
+        (quote ?)
+        (if ((core/sym::eq? tag) (quote :int))
+          (quote Int)
+          (if ((core/sym::eq? tag) (quote :dec))
+            (quote Dec)
+            (if ((core/sym::eq? tag) (quote :bool))
+              (quote Bool)
+              (if ((core/sym::eq? tag) (quote :nil))
+                (quote Nil)
+                (if ((core/sym::eq? tag) (quote :str))
+                  (quote Str)
+                  (if ((core/sym::eq? tag) (quote :bytes))
+                    (quote Bytes)
+                    (if ((core/sym::eq? tag) (quote :symbol))
+                      (quote Symbol)
+                      (if ((core/sym::eq? tag) (quote :msg))
+                        (let ((items ((core/vec::push []) (quote Msg))))
+                          (selfhost/typecheck::list-from-vec
+                            ((core/vec::push items)
+                              (selfhost/typecheck::type-to-term
+                                ((core/map::get ty) (quote :payload))))))
+                        (if ((core/sym::eq? tag) (quote :fn))
+                          (selfhost/typecheck::type-fn-to-term ty)
+                          (if ((core/sym::eq? tag) (quote :prog))
+                            (selfhost/typecheck::type-prog-to-term ty)
+                            (if ((core/sym::eq? tag) (quote :rec))
+                              ((selfhost/typecheck::type-shape-to-term (quote Rec)) ty)
+                              ((selfhost/typecheck::type-shape-to-term (quote Contract)) ty))))))))))))))))
+
+(def selfhost/typecheck::eff-to-term
+  (fn (eff)
+    (let ((items1 ((core/vec::push []) (quote Eff))))
+      (let
+        ((items2
+           ((core/vec::push items1)
+             (selfhost/typecheck::set-keys ((core/map::get eff) (quote :ops))))))
+        (selfhost/typecheck::list-from-vec
+          ((core/vec::push items2)
+            (selfhost/typecheck::tail-to-term ((core/map::get eff) (quote :tail)))))))))
+
+(def selfhost/typecheck::type-fn-to-term
+  (fn (ty)
+    (let ((items1 ((core/vec::push []) (quote Fn))))
+      (let
+        ((items2
+           ((core/vec::push items1)
+             (selfhost/typecheck::type-to-term ((core/map::get ty) (quote :param))))))
+        (let
+          ((items3
+             ((core/vec::push items2)
+               (selfhost/typecheck::type-to-term ((core/map::get ty) (quote :ret))))))
+          (selfhost/typecheck::list-from-vec
+            ((core/vec::push items3)
+              (selfhost/typecheck::eff-to-term ((core/map::get ty) (quote :eff))))))))))
+
+(def selfhost/typecheck::type-prog-to-term
+  (fn (ty)
+    (let ((items1 ((core/vec::push []) (quote Prog))))
+      (let
+        ((items2
+           ((core/vec::push items1)
+             (selfhost/typecheck::type-to-term ((core/map::get ty) (quote :ret))))))
+        (selfhost/typecheck::list-from-vec
+          ((core/vec::push items2)
+            (selfhost/typecheck::eff-to-term ((core/map::get ty) (quote :eff)))))))))
+
+(def selfhost/typecheck::type-shape-to-term
+  (fn (head)
+    (fn (ty)
+      (let
+        ((tag (selfhost/typecheck::ty-tag ty))
+          (fields
+            ((core/map::get ty)
+              (if ((core/sym::eq? tag) (quote :rec)) (quote :fields) (quote :methods)))))
+        (let ((items1 ((core/vec::push []) head)))
+          (let
+            ((items2
+               ((core/vec::push items1)
+                 (selfhost/typecheck::shape-fields-to-term fields))))
+            (selfhost/typecheck::list-from-vec
+              ((core/vec::push items2)
+                (selfhost/typecheck::tail-to-term ((core/map::get ty) (quote :tail)))))))))))
+
+(def selfhost/typecheck::shape-fields-to-term
+  (fn (fields)
+    (let ((entries (core/map::entries fields)))
+      ((selfhost/typecheck::vec-map entries)
+        (fn (entry)
+          (let ((pair ((core/vec::push []) ((core/vec::get entry) 0))))
+            ((core/vec::push pair)
+              (selfhost/typecheck::type-to-term ((core/vec::get entry) 1)))))))))

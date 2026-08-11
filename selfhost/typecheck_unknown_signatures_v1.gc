@@ -1,0 +1,284 @@
+(def selfhost/typecheck::unknown-signature-symbols
+  (fn (term)
+    (fn (declarations)
+      (((selfhost/typecheck::collect-unknown-signatures term) declarations) {} {}))))
+
+(def selfhost/typecheck::collect-unknown-signatures
+  (fn (term)
+    (fn (declarations)
+      (fn (bound)
+        (fn (out)
+          (let ((items (selfhost/typecheck::list-items-or-nil term)))
+            (if (selfhost/typecheck::vec? items)
+              (selfhost/typecheck::collect-unknown-signatures-list
+                items declarations bound out)
+              (if (selfhost/typecheck::map? term)
+                ((((selfhost/typecheck::collect-unknown-signatures-map
+                     (core/map::entries term))
+                    declarations)
+                   bound)
+                  out)
+                out))))))))
+
+(def selfhost/typecheck::collect-unknown-signatures-list
+  (fn (items)
+    (fn (declarations)
+      (fn (bound)
+        (fn (out)
+          (let ((n (core/vec::len items)))
+            (if ((core/int::eq? n) 0)
+              out
+              (let ((head ((core/vec::get items) 0)))
+                (if (selfhost/typecheck::sym? head)
+                  (((((selfhost/typecheck::collect-unknown-special head) items)
+                       declarations)
+                      bound)
+                     out)
+                  ((((selfhost/typecheck::collect-unknown-app
+                       (selfhost/typecheck::list-from-vec items))
+                      declarations)
+                     bound)
+                    out))))))))))
+
+(def selfhost/typecheck::collect-unknown-special
+  (fn (head)
+    (fn (items)
+      (fn (declarations)
+        (fn (bound)
+          (fn (out)
+            (if ((core/sym::eq? head) (quote quote))
+              out
+              (if ((core/sym::eq? head) (quote def))
+                (if ((core/int::eq? (core/vec::len items)) 3)
+                  ((((selfhost/typecheck::collect-unknown-signatures
+                       ((core/vec::get items) 2))
+                      declarations)
+                     bound)
+                    out)
+                  out)
+                (if ((core/sym::eq? head) (quote fn))
+                  ((((selfhost/typecheck::collect-unknown-fn items) declarations) bound) out)
+                  (if
+                    (if ((core/sym::eq? head) (quote if))
+                      true
+                      ((core/sym::eq? head) (quote begin)))
+                    (((((selfhost/typecheck::collect-unknown-items items) declarations)
+                        bound)
+                       1)
+                      out)
+                    (if ((core/sym::eq? head) (quote let))
+                      ((((selfhost/typecheck::collect-unknown-let items) declarations) bound)
+                        out)
+                      (if ((core/sym::eq? head) (quote prim))
+                        (((((selfhost/typecheck::collect-unknown-items items) declarations)
+                            bound)
+                           2)
+                          out)
+                        (if
+                          (if ((core/sym::eq? head) (quote seal))
+                            true
+                            ((core/sym::eq? head) (quote unseal)))
+                          (((((selfhost/typecheck::collect-unknown-items items) declarations)
+                              bound)
+                             1)
+                            out)
+                          ((((selfhost/typecheck::collect-unknown-app
+                               (selfhost/typecheck::list-from-vec items))
+                              declarations)
+                             bound)
+                            out))))))))))))))
+
+(def selfhost/typecheck::collect-unknown-fn
+  (fn (items)
+    (fn (declarations)
+      (fn (bound)
+        (fn (out)
+          (let
+            ((params
+               (if ((core/int::lt? 1) (core/vec::len items))
+                 (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))
+                 nil)))
+            (let
+              ((body-bound
+                 (if (selfhost/typecheck::vec? params)
+                   ((selfhost/typecheck::bind-symbols params) bound)
+                   bound)))
+              (((((selfhost/typecheck::collect-unknown-items items) declarations)
+                  body-bound)
+                 2)
+                out))))))))
+
+(def selfhost/typecheck::bind-symbols
+  (fn (symbols)
+    (fn (bound)
+      ((((selfhost/typecheck::bind-symbols-loop symbols) (core/vec::len symbols)) 0)
+        bound))))
+
+(def selfhost/typecheck::bind-symbols-loop
+  (fn (symbols)
+    (fn (n)
+      (fn (i)
+        (fn (bound)
+          (if ((core/int::eq? i) n)
+            bound
+            (let ((symbol ((core/vec::get symbols) i)))
+              ((((selfhost/typecheck::bind-symbols-loop symbols) n)
+                 ((core/int::add i) 1))
+                (if (selfhost/typecheck::sym? symbol)
+                  ((selfhost/typecheck::set-add bound) symbol)
+                  bound)))))))))
+
+(def selfhost/typecheck::collect-unknown-let
+  (fn (items)
+    (fn (declarations)
+      (fn (bound)
+        (fn (out)
+          (let
+            ((bindings
+               (if ((core/int::lt? 1) (core/vec::len items))
+                 (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))
+                 nil)))
+            (let
+              ((binding-state
+                 (if (selfhost/typecheck::vec? bindings)
+                   ((((selfhost/typecheck::collect-unknown-bindings bindings) declarations)
+                      bound)
+                     out)
+                   {:bound bound :out out})))
+              (((((selfhost/typecheck::collect-unknown-items items) declarations)
+                  ((core/map::get binding-state) (quote :bound)))
+                 2)
+                ((core/map::get binding-state) (quote :out))))))))))
+
+(def selfhost/typecheck::collect-unknown-bindings
+  (fn (bindings)
+    (fn (declarations)
+      (fn (bound)
+        (fn (out)
+          (((((selfhost/typecheck::collect-unknown-bindings-loop bindings) declarations)
+              (core/vec::len bindings))
+             0)
+            {:bound bound :out out}))))))
+
+(def selfhost/typecheck::collect-unknown-bindings-loop
+  (fn (bindings)
+    (fn (declarations)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (let
+                ((pair
+                   (selfhost/typecheck::list-items-or-nil ((core/vec::get bindings) i))))
+                (if
+                  (if (selfhost/typecheck::vec? pair)
+                    ((core/int::eq? (core/vec::len pair)) 2)
+                    false)
+                  (let
+                    ((name ((core/vec::get pair) 0))
+                      (value ((core/vec::get pair) 1))
+                      (bound ((core/map::get state) (quote :bound))))
+                    (((((selfhost/typecheck::collect-unknown-bindings-loop bindings)
+                         declarations)
+                        n)
+                       ((core/int::add i) 1))
+                      {:bound
+                         (if (selfhost/typecheck::sym? name)
+                           ((selfhost/typecheck::set-add bound) name)
+                           bound)
+                       :out
+                         ((((selfhost/typecheck::collect-unknown-signatures value)
+                             declarations)
+                            bound)
+                           ((core/map::get state) (quote :out)))}))
+                  (((((selfhost/typecheck::collect-unknown-bindings-loop bindings)
+                       declarations)
+                      n)
+                     ((core/int::add i) 1))
+                    state))))))))))
+
+(def selfhost/typecheck::collect-unknown-app
+  (fn (term)
+    (fn (declarations)
+      (fn (bound)
+        (fn (out)
+          (let ((flat (core/cli::flatten-app term)))
+            (if (selfhost/typecheck::map? flat)
+              (let
+                ((head ((core/map::get flat) (quote :head)))
+                  (args ((core/map::get flat) (quote :args))))
+                (let
+                  ((out2
+                     (if
+                       (if (selfhost/typecheck::sym? head)
+                         (if ((selfhost/typecheck::set-has? bound) head)
+                           false
+                           (let ((declared ((core/map::get declarations) head)))
+                             (if (selfhost/typecheck::map? declared)
+                               ((core/sym::eq? (selfhost/typecheck::ty-tag declared))
+                                 (quote :any))
+                               false)))
+                         false)
+                       ((selfhost/typecheck::set-add out) head)
+                       out)))
+                  (((((selfhost/typecheck::collect-unknown-items
+                         ((core/vec::push args) head))
+                        declarations)
+                       bound)
+                      0)
+                    out2)))
+              out)))))))
+
+(def selfhost/typecheck::collect-unknown-items
+  (fn (items)
+    (fn (declarations)
+      (fn (bound)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len items))
+              out
+              (((((selfhost/typecheck::collect-unknown-items items) declarations) bound)
+                  ((core/int::add i) 1))
+                ((((selfhost/typecheck::collect-unknown-signatures
+                     ((core/vec::get items) i))
+                    declarations)
+                   bound)
+                  out)))))))))
+
+(def selfhost/typecheck::collect-unknown-signatures-map
+  (fn (entries)
+    (fn (declarations)
+      (fn (bound)
+        (fn (out)
+          (((((selfhost/typecheck::collect-unknown-signatures-map-loop entries)
+              declarations)
+             bound)
+            0)
+           out))))))
+
+(def selfhost/typecheck::collect-unknown-signatures-map-loop
+  (fn (entries)
+    (fn (declarations)
+      (fn (bound)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len entries))
+              out
+              (let
+                ((entry ((core/vec::get entries) i)))
+                (((((selfhost/typecheck::collect-unknown-signatures-map-loop entries)
+                     declarations)
+                    bound)
+                   ((core/int::add i) 1))
+                  ((((selfhost/typecheck::collect-unknown-signatures
+                       ((core/vec::get entry) 1))
+                      declarations)
+                     bound)
+                    out))))))))))
+
+(def selfhost/typecheck::symbol-set-joined
+  (fn (set)
+    (let ((symbols (selfhost/typecheck::set-keys set)))
+      ((core/str::join (selfhost/typecheck::vec-map symbols selfhost/typecheck::symbol-str))
+        ", "))))

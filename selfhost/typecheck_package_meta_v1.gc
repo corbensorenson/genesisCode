@@ -1,0 +1,179 @@
+(def selfhost/typecheck::path-message
+  (fn (path) (fn (message) ((selfhost/typecheck::str3 path ": ") message))))
+
+(def selfhost/typecheck::map-vec-push
+  (fn (mapping)
+    (fn (key)
+      (fn (value)
+        (let ((current ((core/map::get mapping) key)))
+          (((core/map::put mapping) key)
+            ((core/vec::push (if (selfhost/typecheck::vec? current) current [])) value)))))))
+
+(def selfhost/typecheck::symbol-vector
+  (fn (value)
+    (if (selfhost/typecheck::vec? value)
+      ((((selfhost/typecheck::symbol-vector-loop value) (core/vec::len value)) 0) [])
+      [])))
+
+(def selfhost/typecheck::symbol-vector-loop
+  (fn (items)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((item ((core/vec::get items) i)))
+              ((((selfhost/typecheck::symbol-vector-loop items) n) ((core/int::add i) 1))
+                (if (selfhost/typecheck::sym? item) ((core/vec::push out) item) out)))))))))
+
+(def selfhost/typecheck::meta-exports
+  (fn (meta)
+    (if (selfhost/typecheck::map? meta)
+      (selfhost/typecheck::symbol-vector ((core/map::get meta) (quote :exports)))
+      [])))
+
+(def selfhost/typecheck::meta-caps-result
+  (fn (meta)
+    (if (selfhost/typecheck::map? meta)
+      (let ((caps ((core/map::get meta) (quote :caps))))
+        (if (selfhost/typecheck::vec? caps)
+          (selfhost/typecheck::ok (selfhost/typecheck::symbol-vector caps))
+          (selfhost/typecheck::err "::meta missing :caps")))
+      (selfhost/typecheck::err "::meta missing :caps"))))
+
+(def selfhost/typecheck::meta-types-result
+  (fn (meta)
+    (if (selfhost/typecheck::map? meta)
+      (let ((types ((core/map::get meta) (quote :types))))
+        (if (selfhost/typecheck::map? types)
+          (selfhost/typecheck::ok types)
+          (selfhost/typecheck::err "::meta missing :types")))
+      (selfhost/typecheck::err "::meta missing :types"))))
+
+(def selfhost/typecheck::meta-bool-result
+  (fn (meta)
+    (fn (key)
+      (fn (label)
+        (if (selfhost/typecheck::map? meta)
+          (let ((value ((core/map::get meta) key)))
+            (if (selfhost/typecheck::nil? value)
+              (selfhost/typecheck::ok false)
+              (if (selfhost/typecheck::bool? value)
+                (selfhost/typecheck::ok value)
+                (selfhost/typecheck::err
+                  ((selfhost/typecheck::str3 label " must be bool, got ")
+                    (selfhost/typecheck::term-str value))))))
+          (selfhost/typecheck::ok false))))))
+
+(def selfhost/typecheck::meta-strict-effects-result
+  (fn (meta)
+    (((selfhost/typecheck::meta-bool-result meta) (quote :strict-effects))
+      "::meta :strict-effects")))
+
+(def selfhost/typecheck::meta-strict-shapes-result
+  (fn (meta)
+    (((selfhost/typecheck::meta-bool-result meta) (quote :strict-shapes))
+      "::meta :strict-shapes")))
+
+(def selfhost/typecheck::task-effect-ops
+  {core/task::await true
+    core/task::cancel true
+    core/task::channel-close true
+    core/task::channel-open true
+    core/task::channel-recv true
+    core/task::channel-send true
+    core/task::channel-status true
+    core/task::scope true
+    core/task::spawn true
+    core/task::status true})
+
+(def selfhost/typecheck::caps-enable-strict?
+  (fn (caps)
+    ((((selfhost/typecheck::caps-enable-strict-loop caps) (core/vec::len caps)) 0))))
+
+(def selfhost/typecheck::caps-enable-strict-loop
+  (fn (caps)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          false
+          (if (selfhost/typecheck::set-has? selfhost/typecheck::task-effect-ops
+                ((core/vec::get caps) i))
+            true
+            (((selfhost/typecheck::caps-enable-strict-loop caps) n)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/typecheck::defs-map
+  (fn (forms)
+    ((((selfhost/typecheck::defs-map-loop forms) (core/vec::len forms)) 0) {})))
+
+(def selfhost/typecheck::defs-map-loop
+  (fn (forms)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((parsed (selfhost/typecheck::parse-def-term ((core/vec::get forms) i))))
+              ((((selfhost/typecheck::defs-map-loop forms) n) ((core/int::add i) 1))
+                (if (selfhost/typecheck::nil? parsed)
+                  out
+                  (((core/map::put out) ((core/map::get parsed) (quote :name)))
+                    ((core/map::get parsed) (quote :expr))))))))))))
+
+(def selfhost/typecheck::validate-typecheck-module
+  (fn (module)
+    (if (selfhost/typecheck::map? module)
+      (let
+        ((path ((core/map::get module) (quote :path)))
+          (forms ((core/map::get module) (quote :forms)))
+          (meta ((core/map::get module) (quote :meta))))
+        (if (selfhost/typecheck::str? path)
+          (if (selfhost/typecheck::vec? forms)
+            (selfhost/typecheck::ok {:forms forms :meta meta :path path})
+            (selfhost/typecheck::err "typecheck module :forms must be vector"))
+          (selfhost/typecheck::err "typecheck module :path must be string")))
+      (selfhost/typecheck::err "typecheck module must be map"))))
+
+(def selfhost/typecheck::validate-typecheck-modules
+  (fn (modules)
+    (if (selfhost/typecheck::vec? modules)
+      ((((selfhost/typecheck::validate-typecheck-modules-loop modules)
+          (core/vec::len modules))
+         0)
+        [])
+      (selfhost/typecheck::err "typecheck request :modules must be vector"))))
+
+(def selfhost/typecheck::validate-typecheck-modules-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            (selfhost/typecheck::ok out)
+            (let ((checked (selfhost/typecheck::validate-typecheck-module
+                             ((core/vec::get modules) i))))
+              (if (selfhost/typecheck::result-ok? checked)
+                ((((selfhost/typecheck::validate-typecheck-modules-loop modules) n)
+                   ((core/int::add i) 1))
+                  ((core/vec::push out) ((core/map::get checked) (quote :value))))
+                (selfhost/typecheck::err
+                  ((selfhost/typecheck::str3 "typecheck request module "
+                     (selfhost/typecheck::int-str i))
+                    ((selfhost/typecheck::str2 ": ")
+                      ((core/map::get checked) (quote :error)))))))))))))
+
+(def selfhost/typecheck::validate-typecheck-request
+  (fn (request)
+    (if (selfhost/typecheck::map? request)
+      (let
+        ((kind ((core/map::get request) (quote :kind)))
+          (version ((core/map::get request) (quote :v))))
+        (if ((core/eq? kind) "genesis/typecheck-request-v0.1")
+          (if ((core/eq? version) 1)
+            (selfhost/typecheck::validate-typecheck-modules
+              ((core/map::get request) (quote :modules)))
+            (selfhost/typecheck::err "typecheck request :v must be 1"))
+          (selfhost/typecheck::err
+            "typecheck request :kind must be genesis/typecheck-request-v0.1")))
+      (selfhost/typecheck::err "typecheck request must be map"))))

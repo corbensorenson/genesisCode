@@ -67,6 +67,8 @@ pub(crate) fn platform_process_id() -> u32 {
 }
 
 include!("obligations/types_api.rs");
+include!("obligations/typecheck_authority.rs");
+include!("obligations/typecheck_authority_decode.rs");
 include!("obligations/frontend_module_ops.rs");
 include!("obligations/manifest_hashing.rs");
 include!("obligations/test_exec.rs");

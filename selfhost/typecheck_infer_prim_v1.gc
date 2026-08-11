@@ -1,0 +1,266 @@
+(def selfhost/typecheck::prim-int-arith
+  {int/add true int/div true int/mod true int/mul true int/sub true})
+
+(def selfhost/typecheck::prim-int-compare {int/eq? true int/lt? true})
+
+(def selfhost/typecheck::prim-dec-arith {dec/add true dec/mul true dec/sub true})
+
+(def selfhost/typecheck::prim-dec-compare {dec/eq? true dec/lt? true})
+
+(def selfhost/typecheck::prim-str-lengths
+  {str/grapheme-len true str/len true str/scalar-len true})
+
+(def selfhost/typecheck::prim-result
+  (fn (type) (fn (session) {:session session :type type})))
+
+(def selfhost/typecheck::prim-fail
+  (fn (session)
+    (fn (message)
+      ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any)
+        ((selfhost/typecheck::session-error session) message)))))
+
+(def selfhost/typecheck::prim-arity-message
+  (fn (op)
+    (fn (expected)
+      (fn (actual)
+        ((selfhost/typecheck::str4 "prim "
+           (selfhost/typecheck::symbol-str op))
+          ((selfhost/typecheck::str3 " expects " (selfhost/typecheck::int-str expected)) " args, got ")
+          (selfhost/typecheck::int-str actual))))))
+
+(def selfhost/typecheck::prim-unary
+  (fn (op)
+    (fn (args)
+      (fn (input)
+        (fn (output)
+          (fn (session)
+            (if ((core/int::eq? (core/vec::len args)) 1)
+              (if ((core/eq? ((core/vec::get args) 0)) input)
+                ((selfhost/typecheck::prim-result output) session)
+                ((selfhost/typecheck::prim-fail session)
+                  ((selfhost/typecheck::str3 "prim " (selfhost/typecheck::symbol-str op))
+                    ((selfhost/typecheck::str2 " expects ")
+                      (selfhost/typecheck::term-str
+                        (selfhost/typecheck::type-to-term input))))))
+              ((selfhost/typecheck::prim-fail session)
+                (((selfhost/typecheck::prim-arity-message op) 1) (core/vec::len args))))))))))
+
+(def selfhost/typecheck::prim-binary
+  (fn (op)
+    (fn (args)
+      (fn (input)
+        (fn (output)
+          (fn (session)
+            (if ((core/int::eq? (core/vec::len args)) 2)
+              (if
+                (if ((core/eq? ((core/vec::get args) 0)) input)
+                  ((core/eq? ((core/vec::get args) 1)) input)
+                  false)
+                ((selfhost/typecheck::prim-result output) session)
+                (let
+                  ((name
+                     (selfhost/typecheck::term-str
+                       (selfhost/typecheck::type-to-term input))))
+                  ((selfhost/typecheck::prim-fail session)
+                    ((selfhost/typecheck::str4 "prim " (selfhost/typecheck::symbol-str op))
+                      ((selfhost/typecheck::str3 " expects " name) ", ")
+                      name))))
+              ((selfhost/typecheck::prim-fail session)
+                (((selfhost/typecheck::prim-arity-message op) 2) (core/vec::len args))))))))))
+
+(def selfhost/typecheck::literal-map-key
+  (fn (term)
+    (if (selfhost/typecheck::sym? term)
+      term
+      (if (selfhost/typecheck::str? term)
+        (core/sym::from-str term)
+        (let ((items (selfhost/typecheck::list-items-or-nil term)))
+          (if (selfhost/typecheck::vec? items)
+            (if ((core/int::eq? (core/vec::len items)) 2)
+              (let ((head ((core/vec::get items) 0)) (value ((core/vec::get items) 1)))
+                (if
+                  (if (selfhost/typecheck::sym? head)
+                    ((core/sym::eq? head) (quote quote))
+                    false)
+                  (if (selfhost/typecheck::sym? value)
+                    value
+                    (if (selfhost/typecheck::str? value) (core/sym::from-str value) nil))
+                  nil))
+              nil)
+            nil))))))
+
+(def selfhost/typecheck::prim-map-get
+  (fn (op)
+    (fn (args)
+      (fn (arg-terms)
+        (fn (session)
+          (if ((core/int::eq? (core/vec::len args)) 2)
+            (let
+              ((source ((core/vec::get args) 0))
+                (key (selfhost/typecheck::literal-map-key ((core/vec::get arg-terms) 1))))
+              (let ((tag (selfhost/typecheck::ty-tag source)))
+                (if ((core/sym::eq? tag) (quote :rec))
+                  (if (selfhost/typecheck::nil? key)
+                    ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any) session)
+                    (let
+                      ((found ((core/map::get ((core/map::get source) (quote :fields))) key)))
+                      (if (selfhost/typecheck::nil? found)
+                        (if
+                          (selfhost/typecheck::tail-closed?
+                            ((core/map::get source) (quote :tail)))
+                          ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any)
+                            ((selfhost/typecheck::session-warning session)
+                              ((selfhost/typecheck::str2 "prim map/get missing closed-row key ")
+                                (selfhost/typecheck::symbol-str key))))
+                          ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any) session))
+                        ((selfhost/typecheck::prim-result found) session))))
+                  (if ((core/sym::eq? tag) (quote :any))
+                    ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any) session)
+                    ((selfhost/typecheck::prim-fail session) "prim map/get expects Rec, key")))))
+            ((selfhost/typecheck::prim-fail session)
+              (((selfhost/typecheck::prim-arity-message op) 2) (core/vec::len args)))))))))
+
+(def selfhost/typecheck::prim-map-put
+  (fn (op)
+    (fn (args)
+      (fn (arg-terms)
+        (fn (session)
+          (if ((core/int::eq? (core/vec::len args)) 3)
+            (let ((source ((core/vec::get args) 0)))
+              (let ((tag (selfhost/typecheck::ty-tag source)))
+                (if ((core/sym::eq? tag) (quote :rec))
+                  (let ((key (selfhost/typecheck::literal-map-key ((core/vec::get arg-terms) 1))))
+                    ((selfhost/typecheck::prim-result
+                       ((selfhost/typecheck::ty-rec
+                          (if (selfhost/typecheck::nil? key)
+                            ((core/map::get source) (quote :fields))
+                            (((core/map::put ((core/map::get source) (quote :fields))) key)
+                              ((core/vec::get args) 2))))
+                         (if (selfhost/typecheck::nil? key)
+                           (quote :any)
+                           ((core/map::get source) (quote :tail)))))
+                      session))
+                  (if ((core/sym::eq? tag) (quote :any))
+                    ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any) session)
+                    ((selfhost/typecheck::prim-fail session)
+                      "prim map/put expects Rec, key, value")))))
+            ((selfhost/typecheck::prim-fail session)
+              (((selfhost/typecheck::prim-arity-message op) 3) (core/vec::len args)))))))))
+
+(def selfhost/typecheck::prim-map-merge
+  (fn (op)
+    (fn (args)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 2)
+          (let
+            ((left ((core/vec::get args) 0))
+              (right ((core/vec::get args) 1)))
+            (let
+              ((lt (selfhost/typecheck::ty-tag left))
+                (rt (selfhost/typecheck::ty-tag right)))
+              (if
+                (if ((core/sym::eq? lt) (quote :rec)) ((core/sym::eq? rt) (quote :rec)) false)
+                ((selfhost/typecheck::prim-result
+                   ((selfhost/typecheck::ty-rec
+                      ((core/map::merge ((core/map::get left) (quote :fields)))
+                        ((core/map::get right) (quote :fields))))
+                     (if
+                       (if
+                         (selfhost/typecheck::tail-closed?
+                           ((core/map::get left) (quote :tail)))
+                         (selfhost/typecheck::tail-closed?
+                           ((core/map::get right) (quote :tail)))
+                         false)
+                       (quote :closed)
+                       (quote :any))))
+                  session)
+                (if
+                  (if ((core/sym::eq? lt) (quote :any)) true ((core/sym::eq? rt) (quote :any)))
+                  ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any) session)
+                  ((selfhost/typecheck::prim-fail session) "prim map/merge expects Rec, Rec")))))
+          ((selfhost/typecheck::prim-fail session)
+            (((selfhost/typecheck::prim-arity-message op) 2) (core/vec::len args))))))))
+
+(def selfhost/typecheck::prim-str-grapheme-slice
+  (fn (op)
+    (fn (args)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 3)
+          (if
+            (if ((core/eq? ((core/vec::get args) 0)) selfhost/typecheck::ty-str)
+              (if ((core/eq? ((core/vec::get args) 1)) selfhost/typecheck::ty-int)
+                ((core/eq? ((core/vec::get args) 2)) selfhost/typecheck::ty-int)
+                false)
+              false)
+            ((selfhost/typecheck::prim-result selfhost/typecheck::ty-str) session)
+            ((selfhost/typecheck::prim-fail session)
+              ((selfhost/typecheck::str3 "prim " (selfhost/typecheck::symbol-str op))
+                " expects Str, Int, Int")))
+          ((selfhost/typecheck::prim-fail session)
+            (((selfhost/typecheck::prim-arity-message op) 3) (core/vec::len args))))))))
+
+(def selfhost/typecheck::prim-type
+  (fn (op)
+    (fn (args)
+      (fn (arg-terms)
+        (fn (session)
+          (if ((selfhost/typecheck::set-has? selfhost/typecheck::prim-int-arith) op)
+            (((((selfhost/typecheck::prim-binary op) args) selfhost/typecheck::ty-int)
+               selfhost/typecheck::ty-int)
+              session)
+            (if ((selfhost/typecheck::set-has? selfhost/typecheck::prim-int-compare) op)
+              (((((selfhost/typecheck::prim-binary op) args) selfhost/typecheck::ty-int)
+                 selfhost/typecheck::ty-bool)
+                session)
+              (if ((core/sym::eq? op) (quote dec/parse))
+                (((((selfhost/typecheck::prim-unary op) args) selfhost/typecheck::ty-str)
+                   selfhost/typecheck::ty-dec)
+                  session)
+                (if ((core/sym::eq? op) (quote dec/to-str))
+                  (((((selfhost/typecheck::prim-unary op) args) selfhost/typecheck::ty-dec)
+                     selfhost/typecheck::ty-str)
+                    session)
+                  (if ((core/sym::eq? op) (quote dec/from-int))
+                    (((((selfhost/typecheck::prim-unary op) args) selfhost/typecheck::ty-int)
+                       selfhost/typecheck::ty-dec)
+                      session)
+                    (if ((selfhost/typecheck::set-has? selfhost/typecheck::prim-dec-arith) op)
+                      (((((selfhost/typecheck::prim-binary op) args) selfhost/typecheck::ty-dec)
+                         selfhost/typecheck::ty-dec)
+                        session)
+                      (if ((selfhost/typecheck::set-has? selfhost/typecheck::prim-dec-compare) op)
+                        (((((selfhost/typecheck::prim-binary op) args) selfhost/typecheck::ty-dec)
+                           selfhost/typecheck::ty-bool)
+                          session)
+                        (if
+                          (if ((core/sym::eq? op) (quote core/eq?))
+                            true
+                            ((core/sym::eq? op) (quote sym/eq?)))
+                          ((selfhost/typecheck::prim-result selfhost/typecheck::ty-bool) session)
+                          (if ((core/sym::eq? op) (quote str/concat))
+                            (((((selfhost/typecheck::prim-binary op) args) selfhost/typecheck::ty-str)
+                               selfhost/typecheck::ty-str)
+                              session)
+                            (if
+                              ((selfhost/typecheck::set-has? selfhost/typecheck::prim-str-lengths) op)
+                              (((((selfhost/typecheck::prim-unary op) args) selfhost/typecheck::ty-str)
+                                 selfhost/typecheck::ty-int)
+                                session)
+                              (if ((core/sym::eq? op) (quote str/nfc))
+                                (((((selfhost/typecheck::prim-unary op) args) selfhost/typecheck::ty-str)
+                                   selfhost/typecheck::ty-str)
+                                  session)
+                                (if ((core/sym::eq? op) (quote str/grapheme-slice))
+                                  (((selfhost/typecheck::prim-str-grapheme-slice op) args) session)
+                                  (if ((core/sym::eq? op) (quote bytes/len))
+                                    ((selfhost/typecheck::prim-result selfhost/typecheck::ty-int) session)
+                                    (if ((core/sym::eq? op) (quote bytes/concat))
+                                      ((selfhost/typecheck::prim-result selfhost/typecheck::ty-bytes) session)
+                                      (if ((core/sym::eq? op) (quote map/get))
+                                        ((((selfhost/typecheck::prim-map-get op) args) arg-terms) session)
+                                        (if ((core/sym::eq? op) (quote map/put))
+                                          ((((selfhost/typecheck::prim-map-put op) args) arg-terms) session)
+                                          (if ((core/sym::eq? op) (quote map/merge))
+                                            (((selfhost/typecheck::prim-map-merge op) args) session)
+                                            ((selfhost/typecheck::prim-result selfhost/typecheck::ty-any)
+                                              session)))))))))))))))))))))))

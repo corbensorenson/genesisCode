@@ -915,6 +915,30 @@
         "reject tier divergence, resource-accounting bypass, host leaks, unbounded allocation, user-reachable panic, implicit text normalization, Unicode-table drift, locale-dependent identity, and lossy or nonrelative path material"
       ]
     },
+    "runtime-component-snapshot": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "selfhost",
+        "crates/gc_cli_driver",
+        "crates/gc_kernel",
+        "crates/gc_obligations",
+        "crates/gc_prelude",
+        "prelude",
+        "docs/spec",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_selfhost_artifact_fresh.sh",
+        "scripts/check_kernel_tcb_contract.sh",
+        "scripts/check_runtime_workload_budgets.sh",
+        "scripts/check_perf_budgets.sh"
+      ],
+      "negative_controls": [
+        "reject component identity or dependency drift, monolithic unrelated-command loading, cache-dependent semantics, source/snapshot divergence, profile confusion, unbounded validation, and startup improvements obtained by skipping required authority checks"
+      ]
+    },
     "runtime-lifecycle": {
       "risk_class": "critical",
       "resource_class": "build",
@@ -976,6 +1000,84 @@
       ],
       "negative_controls": [
         "reject routed-only selfhost claims, hidden Rust semantic fallback, non-fixpoint bootstrap, and trusting-trust blind spots"
+      ]
+    },
+    "selfhost-typecheck-authority": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "selfhost",
+        "crates/gc_cli_driver",
+        "crates/gc_obligations",
+        "crates/gc_prelude",
+        "crates/gc_types",
+        "crates/gc_wasi_cli",
+        "docs/INDEX.md",
+        "docs/spec",
+        "docs/status",
+        "policies",
+        "scripts",
+        "tests"
+      ],
+      "guard_checks": [
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/check_selfhost_readiness_scorecard.sh",
+        "scripts/check_source_decomposition_progress.sh",
+        "scripts/check_selfhost_artifact_fresh.sh",
+        "scripts/check_selfhost_doc_runtime_parity.sh",
+        "scripts/check_selfhost_symbol_ownership.sh"
+      ],
+      "negative_controls": [
+        "reject request/report module or export inventory drift, contradictory report facts, profile incoherence, stale incremental results, hidden Rust type/effect decisions, ordinary-build oracle reachability, cross-target divergence, unbounded checker resources, unrelated-command artifact-loading regressions, and decomposition coverage that omits manifest-listed GenesisCode sources"
+      ]
+    },
+    "selfhost-source-decomposition": {
+      "risk_class": "high",
+      "resource_class": "static",
+      "owner_paths": [
+        "selfhost",
+        "crates/gc_cli_driver",
+        "crates/gc_effects",
+        "crates/gc_obligations",
+        "crates/gc_patches",
+        "crates/gc_prelude",
+        "docs/spec",
+        "docs/status",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_source_decomposition_progress.sh",
+        "scripts/check_source_decomposition_tracked_parity.sh",
+        "scripts/check_selfhost_boundary.sh"
+      ],
+      "negative_controls": [
+        "reject fixed-list false greens, omitted manifest-listed GenesisCode sources, unknown over-budget production modules, symlink or path escapes, unowned exclusions, stale parity rows, and a reported maximum smaller than the discovered production maximum"
+      ]
+    },
+    "selfhost-bootstrap-authority": {
+      "risk_class": "critical",
+      "resource_class": "build",
+      "owner_paths": [
+        "selfhost",
+        "crates/gc_cli_driver",
+        "crates/gc_coreform",
+        "crates/gc_kernel",
+        "crates/gc_prelude",
+        "docs/INDEX.md",
+        "docs/spec",
+        "docs/status",
+        "policies",
+        "scripts"
+      ],
+      "guard_checks": [
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/check_selfhost_artifact_fresh.sh",
+        "scripts/check_kernel_tcb_contract.sh",
+        "scripts/check_selfhost_readiness_scorecard.sh"
+      ],
+      "negative_controls": [
+        "reject inherited frontend identity claims for non-frontend artifacts, unbound component or composition identities, host-specific envelope facts presented as canonical, unverified admission, bootstrap stage confusion, and a widened stage0 trust boundary"
       ]
     },
     "language-contract": {
@@ -1175,7 +1277,12 @@
     "F4": {"profile": "frontier-research", "start_after": ["R9.4"], "sequential": true}
   },
   "task_execution_profiles": {
-    "R2.2.f": "runtime-lifecycle"
+    "R2.2.f": "runtime-lifecycle",
+    "R2.3.a": "runtime-component-snapshot",
+    "R2.3.b": "runtime-component-snapshot",
+    "R4.2.b": "selfhost-typecheck-authority",
+    "R4.3.a": "selfhost-source-decomposition",
+    "R4.4.a": "selfhost-bootstrap-authority"
   },
   "task_prerequisites": {
     "R0.1.f": [

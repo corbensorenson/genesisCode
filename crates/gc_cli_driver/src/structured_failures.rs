@@ -509,7 +509,7 @@ pub(super) fn obligation_context(
 }
 
 pub(super) fn typecheck_diagnostics_json(
-    diagnostics: &[gc_types::TypecheckDiagnostic],
+    diagnostics: &[gc_obligations::TypecheckDiagnostic],
 ) -> Vec<Value> {
     diagnostics
         .iter()

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscodelang.dev/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json",
+  "title": "GenesisCode self-host typecheck authority profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "binding",
+    "checkerProfile",
+    "compatibilityOracle",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "independentVerifier",
+    "kind",
+    "limits",
+    "nonclaims",
+    "productionEntrypoints",
+    "reportKind",
+    "requestKind",
+    "runtimeEvidence",
+    "schema",
+    "sourceModules",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/cli::typecheck-package"},
+    "checkerProfile": {"const": "genesis/typecheck-authority-v0.1"},
+    "compatibilityOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["crate", "feature", "package", "sunsetReviewDate"],
+      "properties": {
+        "crate": {"const": "gc_types"},
+        "feature": {"const": "parity-oracle"},
+        "package": {"const": "gc_cli_driver_parity"},
+        "sunsetReviewDate": {"type": "string", "format": "date"}
+      }
+    },
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {
+      "type": "array",
+      "minItems": 18,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9-]+$"}
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_typecheck_authority.py"},
+    "kind": {"const": "genesis/selfhost-typecheck-authority-v0.1"},
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxSourceLines", "requestMemoryPolicy", "requestStepPolicy"],
+      "properties": {
+        "maxSourceLines": {"const": 700},
+        "requestMemoryPolicy": {"const": "caller-and-package-minimum"},
+        "requestStepPolicy": {"const": "caller-and-package-minimum"}
+      }
+    },
+    "nonclaims": {"type": "array", "minItems": 5, "uniqueItems": true, "items": {"type": "string"}},
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "reportKind": {"const": "genesis/typecheck-v0.2"},
+    "requestKind": {"const": "genesis/typecheck-request-v0.1"},
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allocationLimit",
+        "classification",
+        "coldDefinition",
+        "corpusFixtureCount",
+        "corpusGlob",
+        "lowAllocationControl",
+        "lowStepControl",
+        "optimizationOwner",
+        "performanceBudget",
+        "performanceClaim",
+        "stepLimit",
+        "unrelatedCommand",
+        "warmDefinition"
+      ],
+      "properties": {
+        "allocationLimit": {"const": 50000000},
+        "classification": {"const": "E0-observation"},
+        "coldDefinition": {"const": "first-fresh-process-after-build"},
+        "corpusFixtureCount": {"const": 23},
+        "corpusGlob": {"const": "tests/spec/pkg_*/package.toml"},
+        "lowAllocationControl": {"const": 1},
+        "lowStepControl": {"const": 1},
+        "optimizationOwner": {"const": "R2.3"},
+        "performanceBudget": {"const": "PB-6"},
+        "performanceClaim": {"const": "none"},
+        "stepLimit": {"const": 50000000},
+        "unrelatedCommand": {"const": "--help"},
+        "warmDefinition": {"const": "immediate-fresh-process-repeat-with-page-cache-retained"}
+      }
+    },
+    "schema": {"const": "docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json"},
+    "sourceModules": {
+      "type": "array",
+      "minItems": 20,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^selfhost/typecheck_[a-z0-9_]+_v1\\.gc$"}
+    },
+    "spec": {"const": "docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

@@ -1553,7 +1553,8 @@
           "diagnostics"
         ],
         "dependencies": [
-          "generate/agent-profile"
+          "generate/agent-profile",
+          "generate/selfhost-artifact"
         ],
         "diskMiB": 4096,
         "id": "generate/agent-diagnostics",
@@ -1570,6 +1571,7 @@
           "benchmarks/diagnostics/repair_utility/v0.1/workloads.json",
           "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
           "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "selfhost/toolchain.gc",
           "tests/diagnostics/goldens/v0.1/diagnostics.json",
           "benchmarks/diagnostics/repair_utility/v0.1/report.json",
           "scripts/lib/gc_diagnostic_catalog.py",
@@ -2445,6 +2447,7 @@
           "crates/gc_types/**",
           "selfhost/*.gc",
           "selfhost/toolchain.gc",
+          "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/update_selfhost_toolchain_review.sh"
         ],
         "mode": "automatic",

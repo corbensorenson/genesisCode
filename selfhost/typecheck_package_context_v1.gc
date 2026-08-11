@@ -1,0 +1,205 @@
+(def selfhost/typecheck::package-context-empty
+  {:declarations {} :errors {} :owners {} :parsed {}})
+
+(def selfhost/typecheck::package-error-add
+  (fn (errors)
+    (fn (path)
+      (fn (message) (((selfhost/typecheck::map-vec-push errors) path) message)))))
+
+(def selfhost/typecheck::collect-package-context
+  (fn (modules)
+    (let
+      ((collected
+         ((((selfhost/typecheck::collect-package-context-loop modules)
+             (core/vec::len modules))
+            0)
+           selfhost/typecheck::package-context-empty)))
+      (selfhost/typecheck::finalize-package-context collected))))
+
+(def selfhost/typecheck::collect-package-context-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (fn (context)
+          (if ((core/int::eq? i) n)
+            context
+            (let ((module ((core/vec::get modules) i)))
+              ((((selfhost/typecheck::collect-package-context-loop modules) n)
+                 ((core/int::add i) 1))
+                ((selfhost/typecheck::collect-module-context module) context)))))))))
+
+(def selfhost/typecheck::collect-module-context
+  (fn (module)
+    (fn (context)
+      (let
+        ((meta ((core/map::get module) (quote :meta)))
+          (path ((core/map::get module) (quote :path))))
+        (if (selfhost/typecheck::map? meta)
+          (let
+            ((exports (selfhost/typecheck::meta-exports meta))
+              (types-result (selfhost/typecheck::meta-types-result meta))
+              (caps-result (selfhost/typecheck::meta-caps-result meta))
+              (strict-result (selfhost/typecheck::meta-strict-effects-result meta)))
+            (let
+              ((types
+                 (if (selfhost/typecheck::result-ok? types-result)
+                   ((core/map::get types-result) (quote :value))
+                   {}))
+                (caps
+                  (if (selfhost/typecheck::result-ok? caps-result)
+                    ((core/map::get caps-result) (quote :value))
+                    []))
+                (strict
+                  (if (selfhost/typecheck::result-ok? strict-result)
+                    ((core/map::get strict-result) (quote :value))
+                    false)))
+              (((((selfhost/typecheck::collect-export-context-loop exports)
+                   (core/vec::len exports))
+                  0)
+                 {:caps caps :path path :strict strict :types types})
+                context)))
+          context)))))
+
+(def selfhost/typecheck::collect-export-context-loop
+  (fn (exports)
+    (fn (n)
+      (fn (i)
+        (fn (module-state)
+          (fn (context)
+            (if ((core/int::eq? i) n)
+              context
+              (let ((export ((core/vec::get exports) i)))
+                (((((selfhost/typecheck::collect-export-context-loop exports) n)
+                    ((core/int::add i) 1))
+                   module-state)
+                  (((selfhost/typecheck::collect-export-context export) module-state)
+                    context))))))))))
+
+(def selfhost/typecheck::collect-export-context
+  (fn (export)
+    (fn (module-state)
+      (fn (context)
+        (let
+          ((path ((core/map::get module-state) (quote :path)))
+            (types ((core/map::get module-state) (quote :types))))
+          (let
+            ((owners ((core/map::get context) (quote :owners)))
+              (parsed ((core/map::get context) (quote :parsed))))
+            (let
+              ((owner-set ((core/map::get owners) export))
+                (term ((core/map::get types) export)))
+              (let
+                ((owners2
+                   (((core/map::put owners) export)
+                     ((selfhost/typecheck::set-add
+                        (if (selfhost/typecheck::map? owner-set) owner-set {}))
+                       path)))
+                  (parsed-result
+                    (if (selfhost/typecheck::nil? term)
+                      (selfhost/typecheck::err "missing")
+                      (if
+                        (if (selfhost/typecheck::sym? term)
+                          ((core/sym::eq? term) (quote ?))
+                          false)
+                        (selfhost/typecheck::ok selfhost/typecheck::ty-any)
+                        (selfhost/typecheck::parse-type term)))))
+                (let
+                  ((parsed2
+                     (if (selfhost/typecheck::result-ok? parsed-result)
+                       (let
+                         ((ty ((core/map::get parsed-result) (quote :value)))
+                           (valid
+                             ((selfhost/typecheck::validate-effect-row-declaration
+                                ((core/map::get parsed-result) (quote :value)))
+                               (if ((core/map::get module-state) (quote :strict))
+                                 true
+                                 (selfhost/typecheck::caps-enable-strict?
+                                   ((core/map::get module-state) (quote :caps)))))))
+                         (if (selfhost/typecheck::result-ok? valid)
+                           (((core/map::put parsed)
+                              ((core/vec::push ((core/vec::push []) path)) export))
+                             ty)
+                           parsed))
+                       parsed)))
+                  (((core/map::put
+                       (((core/map::put context) (quote :owners)) owners2))
+                      (quote :parsed))
+                    parsed2))))))))))
+
+(def selfhost/typecheck::finalize-package-context
+  (fn (context)
+    (let ((entries (core/map::entries ((core/map::get context) (quote :owners)))))
+      ((((selfhost/typecheck::finalize-package-context-loop entries)
+          (core/vec::len entries))
+         0)
+        context))))
+
+(def selfhost/typecheck::finalize-package-context-loop
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (context)
+          (if ((core/int::eq? i) n)
+            context
+            (let
+              ((entry ((core/vec::get entries) i))
+                (export ((core/vec::get ((core/vec::get entries) i)) 0))
+                (owners ((core/vec::get ((core/vec::get entries) i)) 1)))
+              ((((selfhost/typecheck::finalize-package-context-loop entries) n)
+                 ((core/int::add i) 1))
+                (((selfhost/typecheck::finalize-package-export export) owners) context)))))))))
+
+(def selfhost/typecheck::finalize-package-export
+  (fn (export)
+    (fn (owners)
+      (fn (context)
+        (let ((paths (selfhost/typecheck::set-keys owners)))
+          (if ((core/int::eq? (core/vec::len paths)) 1)
+            (let
+              ((path ((core/vec::get paths) 0))
+                (parsed
+                  ((core/map::get ((core/map::get context) (quote :parsed)))
+                    ((core/vec::push
+                       ((core/vec::push []) ((core/vec::get paths) 0)))
+                      export))))
+              (if (selfhost/typecheck::nil? parsed)
+                context
+                (((core/map::put context) (quote :declarations))
+                  (((core/map::put ((core/map::get context) (quote :declarations))) export)
+                    parsed))))
+            (let
+              ((message
+                 ((selfhost/typecheck::str4 "duplicate export "
+                    (selfhost/typecheck::symbol-str export))
+                   " is owned by modules ["
+                   ((selfhost/typecheck::str2 ((core/str::join paths) ", ")) "]"))))
+              (((selfhost/typecheck::add-package-error-for-paths paths) message) context))))))))
+
+(def selfhost/typecheck::add-package-error-for-paths
+  (fn (paths)
+    (fn (message)
+      (fn (context)
+        (((((selfhost/typecheck::add-package-error-for-paths-loop paths)
+             (core/vec::len paths))
+            0)
+           message)
+          context)))))
+
+(def selfhost/typecheck::add-package-error-for-paths-loop
+  (fn (paths)
+    (fn (n)
+      (fn (i)
+        (fn (message)
+          (fn (context)
+            (if ((core/int::eq? i) n)
+              context
+              (let
+                ((errors2
+                   (((selfhost/typecheck::package-error-add
+                       ((core/map::get context) (quote :errors)))
+                      ((core/vec::get paths) i))
+                     message)))
+                (((((selfhost/typecheck::add-package-error-for-paths-loop paths) n)
+                    ((core/int::add i) 1))
+                   message)
+                  (((core/map::put context) (quote :errors)) errors2))))))))))

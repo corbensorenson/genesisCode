@@ -22,10 +22,33 @@
     "selfhost/cli_reachability_v1.gc"
     "selfhost/cli_reachability_rules_v1.gc"
     "selfhost/cli_reachability_closure_v1.gc"
+    "selfhost/typecheck_core_v1.gc"
+    "selfhost/typecheck_types_v1.gc"
+    "selfhost/typecheck_compat_v1.gc"
+    "selfhost/typecheck_infer_apply_v1.gc"
+    "selfhost/typecheck_infer_prim_v1.gc"
+    "selfhost/typecheck_infer_core_v1.gc"
+    "selfhost/typecheck_infer_contract_v1.gc"
+    "selfhost/typecheck_infer_effect_v1.gc"
+    "selfhost/typecheck_infer_app_v1.gc"
+    "selfhost/typecheck_typed_effects_v1.gc"
+    "selfhost/typecheck_unknown_signatures_v1.gc"
+    "selfhost/typecheck_package_meta_v1.gc"
+    "selfhost/typecheck_module_profile_descriptor_v1.gc"
+    "selfhost/typecheck_module_profile_references_v1.gc"
+    "selfhost/typecheck_module_profile_resolution_v1.gc"
+    "selfhost/typecheck_profile_negotiation_v1.gc"
+    "selfhost/typecheck_contract_profile_v1.gc"
+    "selfhost/typecheck_contract_profile_compose_v1.gc"
+    "selfhost/typecheck_package_context_v1.gc"
+    "selfhost/typecheck_package_module_v1.gc"
+    "selfhost/typecheck_package_exports_v1.gc"
+    "selfhost/typecheck_package_report_v1.gc"
     "selfhost/patch_schema_v1.gc"
     "selfhost/patch_schema_apply_v1.gc"
     "selfhost/patch_schema_manifest_v1.gc"
     "selfhost/patch_schema_refactor_v1.gc"
+    "selfhost/patch_schema_refactor_meta_migrate_v1.gc"
     "selfhost/stage1_v1.gc"
   ]
   :required-symbols [
@@ -39,6 +62,7 @@
     core/cli::gc-unpin-program
     core/cli::hash-module-forms
     core/cli::hash-src-with-kind
+    core/cli::typecheck-package
     core/cli::pkg-add-program
     core/cli::pkg-export-program
     core/cli::pkg-import-program

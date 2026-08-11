@@ -1,0 +1,246 @@
+(def selfhost/typecheck::eff-unknown {:ops {} :tail (quote :any)})
+
+(def selfhost/typecheck::merge-eff-rows
+  (fn (left)
+    (fn (right)
+      ((selfhost/typecheck::eff-row
+         ((selfhost/typecheck::set-union ((core/map::get left) (quote :ops)))
+           ((core/map::get right) (quote :ops))))
+        (if
+          (selfhost/typecheck::tail-open? ((core/map::get right) (quote :tail)))
+          ((core/map::get right) (quote :tail))
+          ((core/map::get left) (quote :tail)))))))
+
+(def selfhost/typecheck::infer-effect-pure
+  (fn (args)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 1)
+          (let ((value (((selfhost/typecheck::infer-term ((core/vec::get args) 0)) env) session)))
+            ((selfhost/typecheck::infer-result
+               ((selfhost/typecheck::ty-prog ((core/map::get value) (quote :type)))
+                 selfhost/typecheck::eff-empty))
+              ((core/map::get value) (quote :session))))
+          ((selfhost/typecheck::infer-error session)
+            ((selfhost/typecheck::str2 "core/effect::pure expects 1 arg, got ")
+              (selfhost/typecheck::int-str (core/vec::len args)))))))))
+
+(def selfhost/typecheck::infer-effect-bind
+  (fn (args)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 2)
+          (let ((program (((selfhost/typecheck::infer-term ((core/vec::get args) 0)) env) session)))
+            (let
+              ((program-type ((core/map::get program) (quote :type)))
+                (program-session ((core/map::get program) (quote :session))))
+              (let ((tag (selfhost/typecheck::ty-tag program-type)))
+                (if ((core/sym::eq? tag) (quote :prog))
+                  (((((selfhost/typecheck::infer-effect-bind-program
+                         ((core/map::get program-type) (quote :ret)))
+                        ((core/map::get program-type) (quote :eff)))
+                       ((core/vec::get args) 1))
+                      env)
+                     program-session)
+                  (if ((core/sym::eq? tag) (quote :any))
+                    ((selfhost/typecheck::infer-result
+                       ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                         selfhost/typecheck::eff-unknown))
+                      program-session)
+                    ((selfhost/typecheck::infer-error program-session)
+                      "core/effect::bind first arg must be a Prog"))))))
+          ((selfhost/typecheck::infer-error session)
+            ((selfhost/typecheck::str2 "core/effect::bind expects 2 args (prog k), got ")
+              (selfhost/typecheck::int-str (core/vec::len args)))))))))
+
+(def selfhost/typecheck::infer-effect-bind-program
+  (fn (program-ret)
+    (fn (program-eff)
+      (fn (continuation)
+        (fn (env)
+          (fn (session)
+            (let
+              ((inferred
+                 ((((selfhost/typecheck::infer-bind-continuation continuation) program-ret)
+                    env)
+                   session)))
+              (let
+                ((continuation-type ((core/map::get inferred) (quote :type)))
+                  (next-session ((core/map::get inferred) (quote :session))))
+                (let ((tag (selfhost/typecheck::ty-tag continuation-type)))
+                  (if ((core/sym::eq? tag) (quote :fn))
+                    (((((selfhost/typecheck::finish-effect-bind program-ret) program-eff)
+                       continuation-type)
+                      next-session))
+                    (if ((core/sym::eq? tag) (quote :any))
+                      ((selfhost/typecheck::infer-result
+                         ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                           selfhost/typecheck::eff-unknown))
+                        next-session)
+                      ((selfhost/typecheck::infer-error next-session)
+                        "core/effect::bind continuation must be a function"))))))))))))
+
+(def selfhost/typecheck::infer-bind-continuation
+  (fn (continuation)
+    (fn (parameter-type)
+      (fn (env)
+        (fn (session)
+          (let ((items (selfhost/typecheck::list-items-or-nil continuation)))
+            (if (selfhost/typecheck::vec? items)
+              (if
+                (if ((core/int::lt? 2) (core/vec::len items))
+                  (let ((head ((core/vec::get items) 0)))
+                    (if (selfhost/typecheck::sym? head)
+                      ((core/sym::eq? head) (quote fn))
+                      false))
+                  false)
+                (let ((params (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+                  (if (selfhost/typecheck::vec? params)
+                    (if ((core/int::eq? (core/vec::len params)) 1)
+                      (let ((name ((core/vec::get params) 0)))
+                        (if (selfhost/typecheck::sym? name)
+                          (let
+                            ((body (selfhost/typecheck::fn-body-term items))
+                              (env2 (((core/map::put env) name) parameter-type)))
+                            (let ((result (((selfhost/typecheck::infer-term body) env2) session)))
+                              ((selfhost/typecheck::infer-result
+                                 (((selfhost/typecheck::ty-fn parameter-type)
+                                    ((core/map::get result) (quote :type)))
+                                   (selfhost/typecheck::infer-syntax-effects-term body)))
+                                ((core/map::get result) (quote :session)))))
+                          (((selfhost/typecheck::infer-term continuation) env) session)))
+                      (((selfhost/typecheck::infer-term continuation) env) session))
+                    (((selfhost/typecheck::infer-term continuation) env) session)))
+                (((selfhost/typecheck::infer-term continuation) env) session))
+              (((selfhost/typecheck::infer-term continuation) env) session))))))))
+
+(def selfhost/typecheck::finish-effect-bind
+  (fn (program-ret)
+    (fn (program-eff)
+      (fn (continuation-type)
+        (fn (session)
+          (let
+            ((param ((core/map::get continuation-type) (quote :param)))
+              (ret ((core/map::get continuation-type) (quote :ret)))
+              (fn-eff ((core/map::get continuation-type) (quote :eff))))
+            (let
+              ((checked-session
+                 (if ((selfhost/typecheck::arg-type-compatible? program-ret) param)
+                   session
+                   ((selfhost/typecheck::session-error session)
+                     ((selfhost/typecheck::str4
+                        "core/effect::bind continuation param mismatch; prog returns "
+                        (selfhost/typecheck::term-str
+                          (selfhost/typecheck::type-to-term program-ret)))
+                       ", continuation expects "
+                       (selfhost/typecheck::term-str
+                         (selfhost/typecheck::type-to-term param)))))))
+              (let ((tag (selfhost/typecheck::ty-tag ret)))
+                (if ((core/sym::eq? tag) (quote :prog))
+                  ((selfhost/typecheck::infer-result
+                     ((selfhost/typecheck::ty-prog ((core/map::get ret) (quote :ret)))
+                       ((selfhost/typecheck::merge-eff-rows
+                          ((selfhost/typecheck::merge-eff-rows program-eff) fn-eff))
+                         ((core/map::get ret) (quote :eff)))))
+                    checked-session)
+                  (if ((core/sym::eq? tag) (quote :any))
+                    ((selfhost/typecheck::infer-result
+                       ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                         ((selfhost/typecheck::merge-eff-rows
+                            ((selfhost/typecheck::merge-eff-rows program-eff) fn-eff))
+                           selfhost/typecheck::eff-unknown)))
+                      checked-session)
+                    ((selfhost/typecheck::infer-result
+                       ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                         ((selfhost/typecheck::merge-eff-rows
+                            ((selfhost/typecheck::merge-eff-rows program-eff) fn-eff))
+                           selfhost/typecheck::eff-unknown)))
+                      ((selfhost/typecheck::session-error checked-session)
+                        ((selfhost/typecheck::str2
+                           "core/effect::bind continuation must return Prog, got ")
+                          (selfhost/typecheck::term-str
+                            (selfhost/typecheck::type-to-term ret)))))))))))))))
+
+(def selfhost/typecheck::infer-effect-perform
+  (fn (args)
+    (fn (env)
+      (fn (session)
+        (if ((core/int::eq? (core/vec::len args)) 3)
+          (let
+            ((payload
+               (((selfhost/typecheck::infer-term ((core/vec::get args) 1)) env) session)))
+            (let
+              ((continuation
+                 (((selfhost/typecheck::infer-term ((core/vec::get args) 2)) env)
+                   ((core/map::get payload) (quote :session)))))
+              (((selfhost/typecheck::finish-effect-perform
+                  (core/cli::literal-op-sym-or-nil ((core/vec::get args) 0)))
+                 ((core/map::get continuation) (quote :type)))
+                ((core/map::get continuation) (quote :session)))))
+          ((selfhost/typecheck::infer-error session)
+            ((selfhost/typecheck::str2
+               "core/effect::perform expects 3 args (op payload k), got ")
+              (selfhost/typecheck::int-str (core/vec::len args)))))))))
+
+(def selfhost/typecheck::finish-effect-perform
+  (fn (operation)
+    (fn (continuation-type)
+      (fn (session)
+        (let ((tag (selfhost/typecheck::ty-tag continuation-type)))
+          (if ((core/sym::eq? tag) (quote :fn))
+            (((selfhost/typecheck::finish-effect-perform-fn operation) continuation-type) session)
+            (if ((core/sym::eq? tag) (quote :any))
+              ((selfhost/typecheck::infer-result
+                 ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                   (selfhost/typecheck::perform-add-operation selfhost/typecheck::eff-unknown operation)))
+                session)
+              ((selfhost/typecheck::infer-result
+                 ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                   (selfhost/typecheck::perform-add-operation selfhost/typecheck::eff-unknown operation)))
+                ((selfhost/typecheck::session-error session)
+                  "core/effect::perform k must be a function")))))))))
+
+(def selfhost/typecheck::finish-effect-perform-fn
+  (fn (operation)
+    (fn (continuation-type)
+      (fn (session)
+        (let
+          ((ret ((core/map::get continuation-type) (quote :ret)))
+            (fn-eff ((core/map::get continuation-type) (quote :eff))))
+          (let ((tag (selfhost/typecheck::ty-tag ret)))
+            (if ((core/sym::eq? tag) (quote :prog))
+              ((selfhost/typecheck::infer-result
+                 ((selfhost/typecheck::ty-prog ((core/map::get ret) (quote :ret)))
+                   (selfhost/typecheck::perform-add-operation
+                     ((selfhost/typecheck::merge-eff-rows fn-eff)
+                       ((core/map::get ret) (quote :eff)))
+                     operation)))
+                session)
+              (if ((core/sym::eq? tag) (quote :any))
+                ((selfhost/typecheck::infer-result
+                   ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                     (selfhost/typecheck::perform-add-operation
+                       ((selfhost/typecheck::merge-eff-rows fn-eff)
+                         selfhost/typecheck::eff-unknown)
+                       operation)))
+                  session)
+                ((selfhost/typecheck::infer-result
+                   ((selfhost/typecheck::ty-prog selfhost/typecheck::ty-any)
+                     (selfhost/typecheck::perform-add-operation
+                       ((selfhost/typecheck::merge-eff-rows fn-eff)
+                         selfhost/typecheck::eff-unknown)
+                       operation)))
+                  ((selfhost/typecheck::session-error session)
+                    ((selfhost/typecheck::str2
+                       "core/effect::perform continuation must return a Prog, got ")
+                      (selfhost/typecheck::term-str
+                        (selfhost/typecheck::type-to-term ret)))))))))))))
+
+(def selfhost/typecheck::perform-add-operation
+  (fn (eff)
+    (fn (operation)
+      (if (selfhost/typecheck::nil? operation)
+        ((selfhost/typecheck::eff-row ((core/map::get eff) (quote :ops))) (quote :any))
+        ((selfhost/typecheck::eff-row
+           ((selfhost/typecheck::set-add ((core/map::get eff) (quote :ops))) operation))
+          ((core/map::get eff) (quote :tail)))))))

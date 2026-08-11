@@ -59,6 +59,12 @@ if not isinstance(coverage_paths, list) or not coverage_paths:
         "source-decomposition-progress: coverage_module_paths must be a non-empty list"
     )
 
+gc_manifest_paths = policy.get("gc_manifest_paths", [])
+if not isinstance(gc_manifest_paths, list) or not gc_manifest_paths:
+    raise SystemExit(
+        "source-decomposition-progress: gc_manifest_paths must be a non-empty list"
+    )
+
 tracked_rows_raw = policy.get("tracked_over_budget_rows", [])
 if not isinstance(tracked_rows_raw, list):
     raise SystemExit(
@@ -177,6 +183,51 @@ for rel in coverage_paths:
         continue
     coverage_rows.append({"path": rel, "exists": True})
 
+gc_manifest_rows = []
+gc_module_rows = []
+gc_module_seen = set()
+for manifest_rel in gc_manifest_paths:
+    if not isinstance(manifest_rel, str) or not manifest_rel:
+        raise SystemExit(
+            "source-decomposition-progress: gc_manifest_paths entries must be non-empty strings"
+        )
+    manifest_abs = (root / manifest_rel).resolve()
+    try:
+        manifest_abs.relative_to(root)
+    except ValueError:
+        coverage_errors.append(f"gc-manifest-escape:{manifest_rel}")
+        continue
+    if manifest_abs.is_symlink() or not manifest_abs.is_file():
+        coverage_errors.append(f"gc-manifest-missing-or-symlink:{manifest_rel}")
+        continue
+    manifest_text = manifest_abs.read_text(encoding="utf-8")
+    module_section = manifest_text.split(":required-symbols", 1)[0]
+    module_paths = re.findall(r'"([^"\n]+\.gc)"', module_section)
+    if not module_paths:
+        coverage_errors.append(f"gc-manifest-empty:{manifest_rel}")
+    gc_manifest_rows.append({"path": manifest_rel, "module_count": len(module_paths)})
+    for rel in module_paths:
+        if rel in gc_module_seen:
+            coverage_errors.append(f"gc-module-duplicate:{rel}")
+            continue
+        gc_module_seen.add(rel)
+        abs_path = (root / rel).resolve()
+        try:
+            abs_path.relative_to(root)
+        except ValueError:
+            coverage_errors.append(f"gc-module-escape:{rel}")
+            gc_module_rows.append({"path": rel, "exists": False, "lines": None, "ok": False})
+            continue
+        if abs_path.is_symlink() or not abs_path.is_file():
+            coverage_errors.append(f"gc-module-missing-or-symlink:{rel}")
+            gc_module_rows.append({"path": rel, "exists": False, "lines": None, "ok": False})
+            continue
+        lines = sum(1 for _ in abs_path.open("r", encoding="utf-8"))
+        ok = lines <= target
+        if not ok:
+            coverage_errors.append(f"gc-module-over-budget:{rel}:{lines}>{target}")
+        gc_module_rows.append({"path": rel, "exists": True, "lines": lines, "ok": ok})
+
 rows = []
 errors = []
 for rel in paths:
@@ -251,10 +302,14 @@ report = {
     "disallowed_statuses": sorted(disallowed_statuses),
     "module_count": len(rows),
     "coverage_module_count": len(coverage_rows),
+    "gc_manifest_count": len(gc_manifest_rows),
+    "gc_module_count": len(gc_module_rows),
     "ok": not errors,
     "errors": errors,
     "modules": rows,
     "coverage_modules": coverage_rows,
+    "gc_manifests": gc_manifest_rows,
+    "gc_modules": gc_module_rows,
     "tracked_over_budget_modules": tracked_over_budget,
     "untracked_over_budget_modules": untracked_over_budget,
     "regressions": regressions,
@@ -265,9 +320,14 @@ report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", enco
 if errors:
     raise SystemExit("source-decomposition-progress: " + " | ".join(errors))
 
-max_lines = max((row["lines"] or 0 for row in rows), default=0)
+max_lines = max(
+    [row["lines"] or 0 for row in rows]
+    + [row["lines"] or 0 for row in gc_module_rows]
+    + [0]
+)
 print(
     "source-decomposition-progress: ok "
-    f"(modules={len(rows)} target_max_lines={target} observed_max_lines={max_lines})"
+    f"(rust_modules={len(rows)} gc_modules={len(gc_module_rows)} "
+    f"target_max_lines={target} observed_max_lines={max_lines})"
 )
 PY

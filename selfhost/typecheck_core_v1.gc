@@ -1,0 +1,241 @@
+(def selfhost/typecheck::empty-vec [])
+
+(def selfhost/typecheck::probe-ok?
+  (fn (value) (if (core/error::is? value) false true)))
+
+(def selfhost/typecheck::sym?
+  (fn (x) (selfhost/typecheck::probe-ok? (core/sym::to-str x))))
+
+(def selfhost/typecheck::str?
+  (fn (x) (selfhost/typecheck::probe-ok? (core/str::to-utf8 x))))
+
+(def selfhost/typecheck::vec?
+  (fn (x) (selfhost/typecheck::probe-ok? (core/vec::len x))))
+
+(def selfhost/typecheck::map?
+  (fn (x) (selfhost/typecheck::probe-ok? (core/map::entries x))))
+
+(def selfhost/typecheck::pair?
+  (fn (x) (selfhost/typecheck::probe-ok? (core/pair::car x))))
+
+(def selfhost/typecheck::bool?
+  (fn (x) (if ((core/eq? x) true) true ((core/eq? x) false))))
+
+(def selfhost/typecheck::nil? core/list::is-nil?)
+
+(def selfhost/typecheck::ok (fn (value) {:ok true :value value}))
+
+(def selfhost/typecheck::err (fn (message) {:error message :ok false}))
+
+(def selfhost/typecheck::result-ok?
+  (fn (result)
+    (if (selfhost/typecheck::map? result)
+      (let ((ok ((core/map::get result) (quote :ok))))
+        (if (selfhost/typecheck::bool? ok) ok false))
+      false)))
+
+(def selfhost/typecheck::str2
+  (fn (a) (fn (b) ((core/str::concat a) b))))
+
+(def selfhost/typecheck::str3
+  (fn (a) (fn (b) (fn (c) ((core/str::concat ((core/str::concat a) b)) c)))))
+
+(def selfhost/typecheck::str4
+  (fn (a)
+    (fn (b)
+      (fn (c) (fn (d) ((core/str::concat ((core/str::concat ((core/str::concat a) b)) c)) d))))))
+
+(def selfhost/typecheck::term-str
+  (fn (term) (selfhost/printer::print-term term)))
+
+(def selfhost/typecheck::symbol-str (fn (symbol) (core/sym::to-str symbol)))
+
+(def selfhost/typecheck::int-str (fn (value) (core/int::to-str value)))
+
+(def selfhost/typecheck::vec-contains?
+  (fn (items)
+    (fn (needle)
+      ((((selfhost/typecheck::vec-contains-loop items) needle) (core/vec::len items)) 0))))
+
+(def selfhost/typecheck::vec-contains-loop
+  (fn (items)
+    (fn (needle)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            false
+            (if ((core/eq? ((core/vec::get items) i)) needle)
+              true
+              ((((selfhost/typecheck::vec-contains-loop items) needle) n)
+                ((core/int::add i) 1)))))))))
+
+(def selfhost/typecheck::set-add
+  (fn (set) (fn (key) (((core/map::put set) key) true))))
+
+(def selfhost/typecheck::set-has?
+  (fn (set)
+    (fn (key)
+      (let ((value ((core/map::get set) key)))
+        (if (selfhost/typecheck::bool? value) value false)))))
+
+(def selfhost/typecheck::set-keys
+  (fn (set)
+    (let ((entries (core/map::entries set)))
+      ((((selfhost/typecheck::set-keys-loop entries) (core/vec::len entries)) 0) []))))
+
+(def selfhost/typecheck::set-keys-loop
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((entry ((core/vec::get entries) i)))
+              ((((selfhost/typecheck::set-keys-loop entries) n) ((core/int::add i) 1))
+                ((core/vec::push out) ((core/vec::get entry) 0))))))))))
+
+(def selfhost/typecheck::set-subset?
+  (fn (left)
+    (fn (right)
+      (let ((keys (selfhost/typecheck::set-keys left)))
+        ((((selfhost/typecheck::set-subset-loop keys) right) (core/vec::len keys)) 0)))))
+
+(def selfhost/typecheck::set-subset-loop
+  (fn (keys)
+    (fn (right)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            true
+            (if ((selfhost/typecheck::set-has? right) ((core/vec::get keys) i))
+              ((((selfhost/typecheck::set-subset-loop keys) right) n) ((core/int::add i) 1))
+              false)))))))
+
+(def selfhost/typecheck::set-union
+  (fn (left)
+    (fn (right)
+      (let ((keys (selfhost/typecheck::set-keys right)))
+        ((((selfhost/typecheck::set-union-loop keys) (core/vec::len keys)) 0) left)))))
+
+(def selfhost/typecheck::set-union-loop
+  (fn (keys)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((selfhost/typecheck::set-union-loop keys) n) ((core/int::add i) 1))
+              ((selfhost/typecheck::set-add out) ((core/vec::get keys) i)))))))))
+
+(def selfhost/typecheck::set-difference
+  (fn (left)
+    (fn (right)
+      (let ((keys (selfhost/typecheck::set-keys left)))
+        ((((selfhost/typecheck::set-difference-loop keys) right) (core/vec::len keys)) 0)))))
+
+(def selfhost/typecheck::set-difference-loop
+  (fn (keys)
+    (fn (right)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            {}
+            (let
+              ((rest ((((selfhost/typecheck::set-difference-loop keys) right) n) ((core/int::add i) 1)))
+                (key ((core/vec::get keys) i)))
+              (if ((selfhost/typecheck::set-has? right) key)
+                rest
+                ((selfhost/typecheck::set-add rest) key)))))))))
+
+(def selfhost/typecheck::vec-map
+  (fn (items)
+    (fn (f) ((((selfhost/typecheck::vec-map-loop items) f) (core/vec::len items)) 0))))
+
+(def selfhost/typecheck::vec-map-loop
+  (fn (items)
+    (fn (f)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            []
+            (let ((tail ((((selfhost/typecheck::vec-map-loop items) f) n) ((core/int::add i) 1))))
+              ((core/vec::append (core/vec::push [] (f ((core/vec::get items) i)))) tail))))))))
+
+(def selfhost/typecheck::vec-filter
+  (fn (items)
+    (fn (predicate)
+      ((((selfhost/typecheck::vec-filter-loop items) predicate) (core/vec::len items)) 0))))
+
+(def selfhost/typecheck::vec-filter-loop
+  (fn (items)
+    (fn (predicate)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            []
+            (let
+              ((item ((core/vec::get items) i))
+                (tail ((((selfhost/typecheck::vec-filter-loop items) predicate) n) ((core/int::add i) 1))))
+              (if (predicate item) ((core/vec::append (core/vec::push [] item)) tail) tail))))))))
+
+(def selfhost/typecheck::vec-last-or
+  (fn (items)
+    (fn (fallback)
+      (let ((n (core/vec::len items)))
+        (if ((core/int::eq? n) 0) fallback ((core/vec::get items) ((core/int::sub n) 1)))))))
+
+(def selfhost/typecheck::list-items-or-nil
+  (fn (term)
+    (if (selfhost/typecheck::pair? term)
+      (let ((items (core/pair::as-proper-list term)))
+        (if (selfhost/typecheck::vec? items) items nil))
+      (if (selfhost/typecheck::nil? term) [] nil))))
+
+(def selfhost/typecheck::list-from-vec
+  (fn (items) (selfhost/canon::vec->list items)))
+
+(def selfhost/typecheck::quoted-symbol-or-nil
+  (fn (term)
+    (let ((items (selfhost/typecheck::list-items-or-nil term)))
+      (if (selfhost/typecheck::vec? items)
+        (if ((core/int::eq? (core/vec::len items)) 2)
+          (let ((head ((core/vec::get items) 0)) (value ((core/vec::get items) 1)))
+            (if (selfhost/typecheck::sym? head)
+              (if ((core/sym::eq? head) (quote quote))
+                (if (selfhost/typecheck::sym? value) value nil)
+                nil)
+              nil))
+          nil)
+        nil))))
+
+(def selfhost/typecheck::append-message
+  (fn (state)
+    (fn (field)
+      (fn (message)
+        (let ((messages ((core/map::get state) field)))
+          (((core/map::put state) field) ((core/vec::push messages) message)))))))
+
+(def selfhost/typecheck::merge-messages
+  (fn (state)
+    (fn (incoming)
+      (let
+        ((errors ((core/map::get incoming) (quote :errors)))
+          (warnings ((core/map::get incoming) (quote :warnings))))
+        (let
+          ((state2
+             (((core/map::put state) (quote :errors))
+               ((core/vec::append ((core/map::get state) (quote :errors))) errors))))
+          (((core/map::put state2) (quote :warnings))
+            ((core/vec::append ((core/map::get state2) (quote :warnings))) warnings)))))))
+
+(def selfhost/typecheck::session-empty {:errors [] :warnings []})
+
+(def selfhost/typecheck::session-error
+  (fn (session)
+    (fn (message)
+      (((selfhost/typecheck::append-message session) (quote :errors)) message))))
+
+(def selfhost/typecheck::session-warning
+  (fn (session)
+    (fn (message)
+      (((selfhost/typecheck::append-message session) (quote :warnings)) message))))

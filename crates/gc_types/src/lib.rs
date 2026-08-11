@@ -9,6 +9,7 @@ mod infer;
 mod module_resolution;
 pub mod profile_migration;
 pub mod profile_negotiation;
+mod report;
 pub mod support_policy;
 mod ty;
 mod type_compatibility;
@@ -36,56 +37,10 @@ pub use crate::module_resolution::{
 pub use crate::profile_negotiation::{
     ProfileNegotiationReport, ProfileOffer, negotiate_package_profiles,
 };
-
-#[derive(Debug, Clone)]
-pub struct ModuleForTypecheck {
-    pub path: String,
-    pub forms: Vec<Term>,
-    pub meta: Option<Term>, // expected to be a map datum
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InferredEffects {
-    pub ops: BTreeSet<String>,
-    pub unknown: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct TypecheckReport {
-    pub ok: bool,
-    pub errors: Vec<String>,
-    pub warnings: Vec<String>,
-    pub diagnostics: Vec<TypecheckDiagnostic>,
-    pub modules: Vec<ModuleReport>,
-    pub profile_negotiation: ProfileNegotiationReport,
-}
-
-#[derive(Debug, Clone)]
-pub struct ModuleReport {
-    pub path: String,
-    pub ok: bool,
-    pub errors: Vec<String>,
-    pub warnings: Vec<String>,
-    pub inferred_effects: InferredEffects,
-    pub export_effects: Vec<ExportEffectReport>,
-    pub export_types: Vec<ExportTypeReport>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ExportEffectReport {
-    pub name: String,
-    pub effects: InferredEffects,
-}
-
-#[derive(Debug, Clone)]
-pub struct ExportTypeReport {
-    pub name: String,
-    pub declared: Option<Term>,
-    pub inferred: Term,
-    pub ok: bool,
-    pub errors: Vec<String>,
-    pub warnings: Vec<String>,
-}
+pub use crate::report::{
+    ExportEffectReport, ExportTypeReport, InferredEffects, ModuleForTypecheck, ModuleReport,
+    TypecheckReport,
+};
 
 #[derive(Default)]
 struct PackageTypeContext {
@@ -331,6 +286,10 @@ fn typecheck_one(
                 "{}: exported symbol {} has no (def {}) in module",
                 m.path, e, e
             ));
+            export_effects.push(ExportEffectReport {
+                name: e.clone(),
+                effects: InferredEffects::default(),
+            });
             continue;
         };
         let eff = infer_effects_in_term_with_expected(expr, &env, inferred_defs.get(e));

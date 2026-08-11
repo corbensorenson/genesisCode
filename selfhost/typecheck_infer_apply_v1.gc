@@ -1,0 +1,168 @@
+(def selfhost/typecheck::arg-type-match
+  (fn (inferred)
+    (fn (declared)
+      (fn (bindings)
+        (let
+          ((it (selfhost/typecheck::ty-tag inferred))
+            (dt (selfhost/typecheck::ty-tag declared)))
+          (if ((core/sym::eq? dt) (quote :any))
+            {:bindings bindings :ok true}
+            (if ((core/sym::eq? it) (quote :any))
+              {:bindings ((selfhost/typecheck::bind-unknowns-in-type declared) bindings) :ok true}
+              (if
+                (if (selfhost/typecheck::scalar-tag? it) ((core/sym::eq? it) dt) false)
+                {:bindings bindings :ok true}
+                (if
+                  (if ((core/sym::eq? it) (quote :msg)) ((core/sym::eq? dt) (quote :msg)) false)
+                  (let ((declared-op ((core/map::get declared) (quote :op))))
+                    (if
+                      (if (selfhost/typecheck::nil? declared-op)
+                        true
+                        ((core/eq? ((core/map::get inferred) (quote :op))) declared-op))
+                      (((selfhost/typecheck::arg-type-match
+                          ((core/map::get inferred) (quote :payload)))
+                         ((core/map::get declared) (quote :payload)))
+                        bindings)
+                      {:bindings bindings :ok false}))
+                  (if
+                    (if ((core/sym::eq? it) (quote :fn)) ((core/sym::eq? dt) (quote :fn)) false)
+                    (let
+                      ((p
+                         (((selfhost/typecheck::arg-type-match
+                             ((core/map::get inferred) (quote :param)))
+                            ((core/map::get declared) (quote :param)))
+                           bindings)))
+                      (if ((core/map::get p) (quote :ok))
+                        (let
+                          ((r
+                             (((selfhost/typecheck::arg-type-match
+                                 ((core/map::get inferred) (quote :ret)))
+                                ((core/map::get declared) (quote :ret)))
+                               ((core/map::get p) (quote :bindings)))))
+                          (if ((core/map::get r) (quote :ok))
+                            (((selfhost/typecheck::match-effect-row
+                                ((core/map::get inferred) (quote :eff)))
+                               ((core/map::get declared) (quote :eff)))
+                              ((core/map::get r) (quote :bindings)))
+                            r))
+                        p))
+                    (if
+                      (if ((core/sym::eq? it) (quote :prog)) ((core/sym::eq? dt) (quote :prog)) false)
+                      (let
+                        ((r
+                           (((selfhost/typecheck::arg-type-match
+                               ((core/map::get inferred) (quote :ret)))
+                              ((core/map::get declared) (quote :ret)))
+                             bindings)))
+                        (if ((core/map::get r) (quote :ok))
+                          (((selfhost/typecheck::match-effect-row
+                              ((core/map::get inferred) (quote :eff)))
+                             ((core/map::get declared) (quote :eff)))
+                            ((core/map::get r) (quote :bindings)))
+                          r))
+                      (if
+                        (if ((core/sym::eq? it) (quote :rec)) ((core/sym::eq? dt) (quote :rec)) false)
+                        (((selfhost/typecheck::arg-shape-match
+                            ((core/map::get inferred) (quote :fields)))
+                           ((core/map::get declared) (quote :fields)))
+                          bindings)
+                        (if
+                          (if
+                            ((core/sym::eq? it) (quote :contract))
+                            ((core/sym::eq? dt) (quote :contract))
+                            false)
+                          (((selfhost/typecheck::arg-shape-match
+                              ((core/map::get inferred) (quote :methods)))
+                             ((core/map::get declared) (quote :methods)))
+                            bindings)
+                          {:bindings bindings :ok false})))))))))))))
+
+(def selfhost/typecheck::arg-shape-match
+  (fn (inferred-fields)
+    (fn (declared-fields)
+      (fn (bindings)
+        (let ((entries (core/map::entries declared-fields)))
+          (((((selfhost/typecheck::arg-shape-match-loop entries) inferred-fields)
+              (core/vec::len entries))
+             0)
+            bindings))))))
+
+(def selfhost/typecheck::arg-shape-match-loop
+  (fn (entries)
+    (fn (inferred-fields)
+      (fn (n)
+        (fn (i)
+          (fn (bindings)
+            (if ((core/int::eq? i) n)
+              {:bindings bindings :ok true}
+              (let
+                ((entry ((core/vec::get entries) i))
+                  (actual
+                    ((core/map::get inferred-fields)
+                      ((core/vec::get ((core/vec::get entries) i)) 0))))
+                (if (selfhost/typecheck::nil? actual)
+                  {:bindings bindings :ok false}
+                  (let
+                    ((matched
+                       (((selfhost/typecheck::arg-type-match actual)
+                          ((core/vec::get entry) 1))
+                         bindings)))
+                    (if ((core/map::get matched) (quote :ok))
+                      (((((selfhost/typecheck::arg-shape-match-loop entries) inferred-fields) n)
+                         ((core/int::add i) 1))
+                        ((core/map::get matched) (quote :bindings)))
+                      matched)))))))))))
+
+(def selfhost/typecheck::arg-type-compatible?
+  (fn (inferred)
+    (fn (declared)
+      ((core/map::get (((selfhost/typecheck::arg-type-match inferred) declared) {}))
+        (quote :ok)))))
+
+(def selfhost/typecheck::infer-apply-types
+  (fn (head-type)
+    (fn (arg-types)
+      (fn (session)
+        (((((selfhost/typecheck::infer-apply-types-loop arg-types)
+            (core/vec::len arg-types))
+           0)
+          head-type)
+         session)))))
+
+(def selfhost/typecheck::infer-apply-types-loop
+  (fn (arg-types)
+    (fn (n)
+      (fn (i)
+        (fn (current)
+          (fn (session)
+            (if ((core/int::eq? i) n)
+              {:recognized true :session session :type current}
+              (let ((tag (selfhost/typecheck::ty-tag current)))
+                (if ((core/sym::eq? tag) (quote :fn))
+                  (let
+                    ((arg ((core/vec::get arg-types) i))
+                      (param ((core/map::get current) (quote :param))))
+                    (let ((matched (((selfhost/typecheck::arg-type-match arg) param) {})))
+                      (if ((core/map::get matched) (quote :ok))
+                        (((((selfhost/typecheck::infer-apply-types-loop arg-types) n)
+                           ((core/int::add i) 1))
+                          ((selfhost/typecheck::apply-type-bindings
+                             ((core/map::get current) (quote :ret)))
+                            ((core/map::get matched) (quote :bindings))))
+                         session)
+                        {:recognized true
+                          :session
+                            ((selfhost/typecheck::session-error session)
+                              ((selfhost/typecheck::str4 "application arg type mismatch: expected "
+                                 (selfhost/typecheck::term-str
+                                   (selfhost/typecheck::type-to-term param)))
+                                ", got "
+                                (selfhost/typecheck::term-str
+                                  (selfhost/typecheck::type-to-term arg))))
+                          :type selfhost/typecheck::ty-any})))
+                  (if ((core/sym::eq? tag) (quote :any))
+                    (((((selfhost/typecheck::infer-apply-types-loop arg-types) n)
+                       ((core/int::add i) 1))
+                      selfhost/typecheck::ty-any)
+                     session)
+                    {:recognized false :session session :type selfhost/typecheck::ty-any}))))))))))

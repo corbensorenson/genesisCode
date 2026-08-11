@@ -1,0 +1,177 @@
+(def selfhost/typecheck::module-state-to-report
+  (fn (state)
+    (let ((effects ((core/map::get state) (quote :inferred-effects))))
+      {:errors ((core/map::get state) (quote :errors))
+        :exports ((core/map::get state) (quote :export-effects))
+        :inferred-ops (selfhost/typecheck::set-keys ((core/map::get effects) (quote :ops)))
+        :ok ((core/map::get state) (quote :ok))
+        :path ((core/map::get state) (quote :path))
+        :types ((core/map::get state) (quote :export-types))
+        :unknown-ops ((core/map::get effects) (quote :unknown))
+        :warnings ((core/map::get state) (quote :warnings))})))
+
+(def selfhost/typecheck::merge-context-errors
+  (fn (context)
+    (fn (incoming)
+      (let
+        ((merged
+           (((selfhost/typecheck::merge-context-errors-loop
+                (core/map::entries incoming))
+              0)
+             ((core/map::get context) (quote :errors)))))
+        (((core/map::put context) (quote :errors)) merged)))))
+
+(def selfhost/typecheck::merge-context-errors-loop
+  (fn (entries)
+    (fn (i)
+      (fn (errors)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          errors
+          (let ((entry ((core/vec::get entries) i)))
+            (let
+              ((path ((core/vec::get entry) 0))
+                (messages ((core/vec::get entry) 1))
+                (existing ((core/map::get errors) ((core/vec::get entry) 0))))
+              (((selfhost/typecheck::merge-context-errors-loop entries)
+                 ((core/int::add i) 1))
+                (((core/map::put errors) path)
+                  ((core/vec::append
+                     (if (selfhost/typecheck::vec? existing) existing []))
+                    messages))))))))))
+
+(def selfhost/typecheck::typecheck-package-modules
+  (fn (modules)
+    (fn (context)
+      (((((selfhost/typecheck::typecheck-package-modules-loop modules) context)
+           (core/vec::len modules))
+          0)
+        {:diagnostics [] :errors [] :modules [] :ok true :warnings []}))))
+
+(def selfhost/typecheck::typecheck-package-modules-loop
+  (fn (modules)
+    (fn (context)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (let
+                ((module-state
+                   ((selfhost/typecheck::typecheck-module ((core/vec::get modules) i))
+                     context)))
+                (((((selfhost/typecheck::typecheck-package-modules-loop modules) context) n)
+                    ((core/int::add i) 1))
+                  ((selfhost/typecheck::merge-module-report state) module-state))))))))))
+
+(def selfhost/typecheck::merge-module-report
+  (fn (state)
+    (fn (module-state)
+      (let
+        ((path ((core/map::get module-state) (quote :path)))
+          (errors ((core/map::get module-state) (quote :errors)))
+          (warnings ((core/map::get module-state) (quote :warnings))))
+        {:diagnostics
+           ((core/vec::append ((core/map::get state) (quote :diagnostics)))
+             (((selfhost/typecheck::module-diagnostics path) errors) warnings))
+          :errors ((core/vec::append ((core/map::get state) (quote :errors))) errors)
+          :modules
+            ((core/vec::push ((core/map::get state) (quote :modules)))
+              (selfhost/typecheck::module-state-to-report module-state))
+          :ok
+            (if ((core/map::get state) (quote :ok))
+              ((core/map::get module-state) (quote :ok))
+              false)
+          :warnings ((core/vec::append ((core/map::get state) (quote :warnings))) warnings)}))))
+
+(def selfhost/typecheck::module-diagnostics
+  (fn (path)
+    (fn (errors)
+      (fn (warnings)
+        (let
+          ((error-diagnostics
+             ((((((selfhost/typecheck::diagnostics-loop errors) path) (quote :error))
+                  (core/vec::len errors))
+                 0)
+                [])))
+          (let
+            ((warning-diagnostics
+               ((((((selfhost/typecheck::diagnostics-loop warnings) path) (quote :warning))
+                    (core/vec::len warnings))
+                   0)
+                  [])))
+            ((core/vec::append error-diagnostics) warning-diagnostics)))))))
+
+(def selfhost/typecheck::diagnostics-loop
+  (fn (messages)
+    (fn (path)
+      (fn (severity)
+        (fn (n)
+          (fn (i)
+            (fn (out)
+              (if ((core/int::eq? i) n)
+                out
+                ((((((selfhost/typecheck::diagnostics-loop messages) path) severity) n)
+                    ((core/int::add i) 1))
+                  ((core/vec::push out)
+                    ((((selfhost/typecheck::diagnostic-term path) severity) i)
+                      ((core/vec::get messages) i))))))))))))
+
+(def selfhost/typecheck::diagnostic-term
+  (fn (path)
+    (fn (severity)
+      (fn (ordinal)
+        (fn (message)
+          (let
+            ((label
+               (if ((core/sym::eq? severity) (quote :error)) "error" "warning"))
+              (code
+                (if ((core/sym::eq? severity) (quote :error))
+                  (quote typecheck/error)
+                  (quote typecheck/warning))))
+            {:code code
+              :domain (quote typechecker)
+              :id
+                ((selfhost/typecheck::str4 path "#")
+                  label
+                  ((selfhost/typecheck::str2 "#")
+                    (selfhost/typecheck::int-str ordinal)))
+              :message message
+              :module path
+              :ordinal ordinal
+              :severity
+                (if ((core/sym::eq? severity) (quote :error))
+                  (quote error)
+                  (quote warning))}))))))
+
+(def selfhost/typecheck::typecheck-package-report
+  (fn (modules)
+    (let
+      ((resolution (selfhost/typecheck::resolve-module-profile modules))
+        (context0 (selfhost/typecheck::collect-package-context modules)))
+      (let
+        ((negotiation
+           ((selfhost/typecheck::negotiate-package-profiles modules) resolution))
+          (context1
+           ((selfhost/typecheck::merge-context-errors context0)
+             ((core/map::get resolution) (quote :errors)))))
+        (let
+          ((context
+             ((selfhost/typecheck::merge-context-errors context1)
+               ((core/map::get negotiation) (quote :errors)))))
+        (let ((state ((selfhost/typecheck::typecheck-package-modules modules) context)))
+          {:diagnostics ((core/map::get state) (quote :diagnostics))
+            :errors ((core/map::get state) (quote :errors))
+            :kind "genesis/typecheck-v0.2"
+            :modules ((core/map::get state) (quote :modules))
+            :ok ((core/map::get state) (quote :ok))
+            :profile-negotiation negotiation
+            :warnings ((core/map::get state) (quote :warnings))}))))))
+
+(def core/cli::typecheck-package
+  (fn (request)
+    (let ((validated (selfhost/typecheck::validate-typecheck-request request)))
+      (if (selfhost/typecheck::result-ok? validated)
+        (selfhost/typecheck::typecheck-package-report
+          ((core/map::get validated) (quote :value)))
+        ((core/error::make2 "core/type-error")
+          ((core/map::get validated) (quote :error)))))))

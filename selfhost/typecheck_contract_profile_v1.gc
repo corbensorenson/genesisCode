@@ -1,0 +1,552 @@
+(def selfhost/typecheck::contract-composition-profile
+  (quote genesis/contract-composition-profile-v0.1))
+
+(def selfhost/typecheck::contract-profile-active?
+  (fn (modules)
+    (((selfhost/typecheck::contract-profile-active-loop modules)
+       (core/vec::len modules))
+      0)))
+
+(def selfhost/typecheck::contract-profile-active-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          false
+          (let ((meta ((core/map::get ((core/vec::get modules) i)) (quote :meta))))
+            (if
+              (if (selfhost/typecheck::map? meta)
+                ((selfhost/typecheck::map-has-key? meta)
+                  (quote :contract-composition-profile))
+                false)
+              true
+              (((selfhost/typecheck::contract-profile-active-loop modules) n)
+                ((core/int::add i) 1)))))))))
+
+(def selfhost/typecheck::contract-require-profiles
+  (fn (meta)
+    (fn (path)
+      (fn (errors)
+        (let
+          ((errors1
+             (if
+               ((selfhost/typecheck::map-has-key? meta)
+                 (quote :contract-composition-profile))
+               (let
+                 ((profile
+                    ((core/map::get meta) (quote :contract-composition-profile))))
+                 (if
+                   (if (selfhost/typecheck::sym? profile)
+                     ((core/sym::eq? profile)
+                       selfhost/typecheck::contract-composition-profile)
+                     false)
+                   errors
+                   (((selfhost/typecheck::module-error-add errors) path)
+                     ((selfhost/typecheck::str4
+                        "[blame=boundary] :contract-composition-profile must be exact symbol genesis/contract-composition-profile-v0.1, got "
+                        (selfhost/typecheck::term-str profile))
+                       ""
+                       ""))))
+               (((selfhost/typecheck::module-error-add errors) path)
+                 "[blame=boundary] every module in the contract closure must declare :contract-composition-profile genesis/contract-composition-profile-v0.1"))))
+          (let ((module-profile ((core/map::get meta) (quote :module-profile))))
+            (if
+              (if (selfhost/typecheck::sym? module-profile)
+                ((core/sym::eq? module-profile)
+                  selfhost/typecheck::module-resolution-profile)
+                false)
+              errors1
+              (((selfhost/typecheck::module-error-add errors1) path)
+                "[blame=boundary] genesis/contract-composition-profile-v0.1 requires :module-profile genesis/module-resolution-profile-v0.1"))))))))
+
+(def selfhost/typecheck::contract-require-true
+  (fn (meta)
+    (fn (field)
+      (fn (path)
+        (fn (errors)
+          (let ((value ((core/map::get meta) field)))
+            (if
+              (if (selfhost/typecheck::bool? value) value false)
+              errors
+              (((selfhost/typecheck::module-error-add errors) path)
+                ((selfhost/typecheck::str4
+                   "[blame=boundary] contract-composition profile requires "
+                   (selfhost/typecheck::symbol-str field))
+                  " true"
+                  "")))))))))
+
+(def selfhost/typecheck::contract-parse-exports
+  (fn (meta)
+    (fn (path)
+      (fn (errors)
+        (let ((value ((core/map::get meta) (quote :exports))))
+          (if (selfhost/typecheck::vec? value)
+            (((selfhost/typecheck::contract-parse-exports-loop value) path)
+              {:errors errors :exports {}})
+            {:errors
+               (((selfhost/typecheck::module-error-add errors) path)
+                 "[blame=boundary] contract-composition profile requires :exports symbol vector")
+             :exports {}}))))))
+
+(def selfhost/typecheck::contract-parse-exports-loop
+  (fn (items)
+    (fn (path)
+      (fn (state)
+        ((((selfhost/typecheck::contract-parse-exports-items items) path) 0) state)))))
+
+(def selfhost/typecheck::contract-parse-exports-items
+  (fn (items)
+    (fn (path)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) (core/vec::len items))
+            state
+            (let ((item ((core/vec::get items) i)))
+              (let
+                ((state2
+                   (if (selfhost/typecheck::sym? item)
+                     (let
+                       ((errors1
+                          (if (selfhost/typecheck::qualified-symbol-loose? item)
+                            ((core/map::get state) (quote :errors))
+                            (((selfhost/typecheck::module-error-add
+                                 ((core/map::get state) (quote :errors)))
+                                path)
+                              ((selfhost/typecheck::str3
+                                 "[blame=boundary] contract export "
+                                 (selfhost/typecheck::symbol-str item))
+                                " must be qualified"))))
+                        (duplicate
+                          ((selfhost/typecheck::set-has?
+                             ((core/map::get state) (quote :exports)))
+                            item)))
+                       {:errors
+                          (if duplicate
+                            (((selfhost/typecheck::module-error-add errors1) path)
+                              ((selfhost/typecheck::str3
+                                 "[blame=boundary] duplicate :exports entry "
+                                 (selfhost/typecheck::symbol-str item))
+                                ""))
+                            errors1)
+                        :exports
+                          ((selfhost/typecheck::set-add
+                             ((core/map::get state) (quote :exports)))
+                            item)})
+                     {:errors
+                        (((selfhost/typecheck::module-error-add
+                             ((core/map::get state) (quote :errors)))
+                            path)
+                          ((selfhost/typecheck::str3
+                             "[blame=boundary] :exports entry must be symbol, got "
+                             (selfhost/typecheck::term-str item))
+                            ""))
+                      :exports ((core/map::get state) (quote :exports))})))
+                ((((selfhost/typecheck::contract-parse-exports-items items) path)
+                   ((core/int::add i) 1))
+                  state2)))))))))
+
+(def selfhost/typecheck::qualified-symbol-loose?
+  (fn (symbol)
+    (let
+      ((scan
+         (selfhost/typecheck::double-colon-scan
+           (core/str::to-utf8 (selfhost/typecheck::symbol-str symbol)))))
+      ((core/int::lt? 0) ((core/map::get scan) (quote :count))))))
+
+(def selfhost/typecheck::contract-parse-symbol-map
+  (fn (meta)
+    (fn (field)
+      (fn (path)
+        (fn (errors)
+          (let ((value ((core/map::get meta) field)))
+            (if (selfhost/typecheck::map? value)
+              ((((selfhost/typecheck::contract-parse-symbol-map-loop
+                   (core/map::entries value))
+                  field)
+                 path)
+                {:errors errors :values {}})
+              {:errors
+                 (((selfhost/typecheck::module-error-add errors) path)
+                   ((selfhost/typecheck::str4
+                      "[blame=boundary] contract-composition profile requires "
+                      (selfhost/typecheck::symbol-str field))
+                     " map"
+                     ""))
+               :values {}})))))))
+
+(def selfhost/typecheck::contract-parse-symbol-map-loop
+  (fn (entries)
+    (fn (field)
+      (fn (path)
+        (fn (state)
+          (((((selfhost/typecheck::contract-parse-symbol-map-items entries) field) path)
+             0)
+            state))))))
+
+(def selfhost/typecheck::contract-parse-symbol-map-items
+  (fn (entries)
+    (fn (field)
+      (fn (path)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) (core/vec::len entries))
+              state
+              (let
+                ((entry ((core/vec::get entries) i)))
+                (let
+                  ((key ((core/vec::get entry) 0))
+                    (value ((core/vec::get entry) 1)))
+                  (((((selfhost/typecheck::contract-parse-symbol-map-items entries) field)
+                      path)
+                     ((core/int::add i) 1))
+                    (if (selfhost/typecheck::sym? key)
+                      {:errors ((core/map::get state) (quote :errors))
+                       :values
+                         (((core/map::put ((core/map::get state) (quote :values))) key)
+                           value)}
+                      {:errors
+                         (((selfhost/typecheck::module-error-add
+                              ((core/map::get state) (quote :errors)))
+                             path)
+                           ((selfhost/typecheck::str4 "[blame=boundary] "
+                              (selfhost/typecheck::symbol-str field))
+                             " key must be symbol, got "
+                             (selfhost/typecheck::term-str key)))
+                       :values ((core/map::get state) (quote :values))})))))))))))
+
+(def selfhost/typecheck::contract-parse-refinements
+  (fn (meta)
+    (fn (path)
+      (fn (errors)
+        (let
+          ((raw
+             ((((selfhost/typecheck::contract-parse-symbol-map meta)
+                 (quote :refinements))
+                path)
+               errors)))
+          (((selfhost/typecheck::contract-parse-refinement-entries
+               (core/map::entries ((core/map::get raw) (quote :values))))
+             path)
+            {:errors ((core/map::get raw) (quote :errors)) :refinements {}}))))))
+
+(def selfhost/typecheck::contract-parse-refinement-entries
+  (fn (entries)
+    (fn (path)
+      (fn (state)
+        ((((selfhost/typecheck::contract-parse-refinement-items entries) path) 0)
+          state)))))
+
+(def selfhost/typecheck::contract-parse-refinement-items
+  (fn (entries)
+    (fn (path)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) (core/vec::len entries))
+            state
+            (let
+              ((entry ((core/vec::get entries) i)))
+              (let
+                ((symbol ((core/vec::get entry) 0))
+                  (value ((core/vec::get entry) 1)))
+                (let
+                  ((parsed
+                     (if (selfhost/typecheck::vec? value)
+                       (((selfhost/typecheck::contract-parse-refinement-vector value)
+                          symbol)
+                         path
+                         ((core/map::get state) (quote :errors)))
+                       {:errors
+                          (((selfhost/typecheck::module-error-add
+                               ((core/map::get state) (quote :errors)))
+                              path)
+                            ((selfhost/typecheck::str3
+                               "[blame=boundary] refinement set for "
+                               (selfhost/typecheck::symbol-str symbol))
+                              " must be a symbol vector"))
+                        :set {}})))
+                  (((selfhost/typecheck::contract-parse-refinement-items entries) path)
+                    ((core/int::add i) 1)
+                    {:errors ((core/map::get parsed) (quote :errors))
+                     :refinements
+                       (((core/map::put
+                            ((core/map::get state) (quote :refinements)))
+                           symbol)
+                         ((core/map::get parsed) (quote :set)))}))))))))))
+
+(def selfhost/typecheck::contract-parse-refinement-vector
+  (fn (items)
+    (fn (symbol)
+      (fn (path)
+        (fn (errors)
+          (((((selfhost/typecheck::contract-parse-refinement-vector-loop items) symbol)
+              path)
+             0)
+            {:errors errors :set {}}))))))
+
+(def selfhost/typecheck::contract-parse-refinement-vector-loop
+  (fn (items)
+    (fn (symbol)
+      (fn (path)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) (core/vec::len items))
+              state
+              (let ((item ((core/vec::get items) i)))
+                (let
+                  ((state2
+                     (if (selfhost/typecheck::sym? item)
+                       (let
+                         ((errors1
+                            (if (selfhost/typecheck::qualified-symbol-loose? item)
+                              ((core/map::get state) (quote :errors))
+                              (((selfhost/typecheck::module-error-add
+                                   ((core/map::get state) (quote :errors)))
+                                  path)
+                                ((selfhost/typecheck::str4
+                                   "[blame=boundary] refinement "
+                                   (selfhost/typecheck::symbol-str item))
+                                  ((selfhost/typecheck::str2 " for ")
+                                    (selfhost/typecheck::symbol-str symbol))
+                                  " must be qualified"))))
+                          (duplicate
+                            ((selfhost/typecheck::set-has?
+                               ((core/map::get state) (quote :set)))
+                              item)))
+                         {:errors
+                            (if duplicate
+                              (((selfhost/typecheck::module-error-add errors1) path)
+                                ((selfhost/typecheck::str4
+                                   "[blame=boundary] duplicate refinement "
+                                   (selfhost/typecheck::symbol-str item))
+                                  ((selfhost/typecheck::str2 " for ")
+                                    (selfhost/typecheck::symbol-str symbol))
+                                  ""))
+                              errors1)
+                          :set
+                            ((selfhost/typecheck::set-add
+                               ((core/map::get state) (quote :set)))
+                              item)})
+                       {:errors
+                          (((selfhost/typecheck::module-error-add
+                               ((core/map::get state) (quote :errors)))
+                              path)
+                            ((selfhost/typecheck::str3
+                               "[blame=boundary] refinement for "
+                               (selfhost/typecheck::symbol-str symbol))
+                              " must be a symbol"))
+                        :set ((core/map::get state) (quote :set))})))
+                  (((((selfhost/typecheck::contract-parse-refinement-vector-loop items)
+                       symbol)
+                      path)
+                     ((core/int::add i) 1))
+                    state2))))))))))
+
+(def selfhost/typecheck::contract-check-exact-keys
+  (fn (expected)
+    (fn (actual)
+      (fn (field)
+        (fn (path)
+          (fn (errors)
+            (let
+              ((with-missing
+                 (((((selfhost/typecheck::contract-key-errors
+                         (selfhost/typecheck::set-keys
+                           ((selfhost/typecheck::set-difference expected) actual)))
+                       field)
+                      ((selfhost/typecheck::str2 "[blame=boundary] ")
+                        ((selfhost/typecheck::str2
+                           (selfhost/typecheck::symbol-str field))
+                          " missing export ")))
+                     path)
+                    errors)))
+              (((((selfhost/typecheck::contract-key-errors
+                       (selfhost/typecheck::set-keys
+                         ((selfhost/typecheck::set-difference actual) expected)))
+                     field)
+                    ((selfhost/typecheck::str2 "[blame=boundary] ")
+                      ((selfhost/typecheck::str2
+                         (selfhost/typecheck::symbol-str field))
+                        " contains non-export ")))
+                   path)
+                  with-missing))))))))
+
+(def selfhost/typecheck::contract-key-errors
+  (fn (symbols)
+    (fn (field)
+      (fn (prefix)
+        (fn (path)
+          (fn (errors)
+            (((((selfhost/typecheck::contract-key-errors-loop symbols) prefix) path) 0)
+              errors)))))))
+
+(def selfhost/typecheck::contract-key-errors-loop
+  (fn (symbols)
+    (fn (prefix)
+      (fn (path)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) (core/vec::len symbols))
+              errors
+              (((((selfhost/typecheck::contract-key-errors-loop symbols) prefix) path)
+                 ((core/int::add i) 1))
+                (((selfhost/typecheck::module-error-add errors) path)
+                  ((selfhost/typecheck::str2 prefix)
+                    (selfhost/typecheck::symbol-str ((core/vec::get symbols) i))))))))))))
+
+(def selfhost/typecheck::type-contains-gradual?
+  (fn (ty)
+    (let ((tag (selfhost/typecheck::ty-tag ty)))
+      (if ((core/sym::eq? tag) (quote :any))
+        true
+        (if ((core/sym::eq? tag) (quote :msg))
+          (selfhost/typecheck::type-contains-gradual?
+            ((core/map::get ty) (quote :payload)))
+          (if ((core/sym::eq? tag) (quote :fn))
+            (if
+              (selfhost/typecheck::type-contains-gradual?
+                ((core/map::get ty) (quote :param)))
+              true
+              (selfhost/typecheck::type-contains-gradual?
+                ((core/map::get ty) (quote :ret))))
+            (if ((core/sym::eq? tag) (quote :prog))
+              (selfhost/typecheck::type-contains-gradual?
+                ((core/map::get ty) (quote :ret)))
+              (if ((core/sym::eq? tag) (quote :rec))
+                (selfhost/typecheck::type-map-any?
+                  ((core/map::get ty) (quote :fields))
+                  selfhost/typecheck::type-contains-gradual?)
+                (if ((core/sym::eq? tag) (quote :contract))
+                  (selfhost/typecheck::type-map-any?
+                    ((core/map::get ty) (quote :methods))
+                    selfhost/typecheck::type-contains-gradual?)
+                  false)))))))))
+
+(def selfhost/typecheck::type-map-any?
+  (fn (mapping)
+    (fn (predicate)
+      (((selfhost/typecheck::type-map-any-loop (core/map::entries mapping)) predicate) 0))))
+
+(def selfhost/typecheck::type-map-any-loop
+  (fn (entries)
+    (fn (predicate)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          false
+          (if (predicate ((core/vec::get ((core/vec::get entries) i)) 1))
+            true
+            (((selfhost/typecheck::type-map-any-loop entries) predicate)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/typecheck::type-contains-anonymous-row?
+  (fn (ty)
+    (let ((tag (selfhost/typecheck::ty-tag ty)))
+      (if ((core/sym::eq? tag) (quote :msg))
+        (selfhost/typecheck::type-contains-anonymous-row?
+          ((core/map::get ty) (quote :payload)))
+        (if ((core/sym::eq? tag) (quote :fn))
+          (if
+            ((core/sym::eq?
+               ((core/map::get ((core/map::get ty) (quote :eff))) (quote :tail)))
+              (quote :any))
+            true
+            (if
+              (selfhost/typecheck::type-contains-anonymous-row?
+                ((core/map::get ty) (quote :param)))
+              true
+              (selfhost/typecheck::type-contains-anonymous-row?
+                ((core/map::get ty) (quote :ret)))))
+          (if ((core/sym::eq? tag) (quote :prog))
+            (if
+              ((core/sym::eq?
+                 ((core/map::get ((core/map::get ty) (quote :eff))) (quote :tail)))
+                (quote :any))
+              true
+              (selfhost/typecheck::type-contains-anonymous-row?
+                ((core/map::get ty) (quote :ret))))
+            (if ((core/sym::eq? tag) (quote :rec))
+              (if ((core/sym::eq? ((core/map::get ty) (quote :tail))) (quote :any))
+                true
+                (selfhost/typecheck::type-map-any?
+                  ((core/map::get ty) (quote :fields))
+                  selfhost/typecheck::type-contains-anonymous-row?))
+              (if ((core/sym::eq? tag) (quote :contract))
+                (if ((core/sym::eq? ((core/map::get ty) (quote :tail))) (quote :any))
+                  true
+                  (selfhost/typecheck::type-map-any?
+                    ((core/map::get ty) (quote :methods))
+                    selfhost/typecheck::type-contains-anonymous-row?))
+                false))))))))
+
+(def selfhost/typecheck::validate-contract-methods
+  (fn (ty)
+    (fn (export)
+      (fn (path)
+        (fn (errors)
+          (let ((tag (selfhost/typecheck::ty-tag ty)))
+            (if ((core/sym::eq? tag) (quote :contract))
+              (((((selfhost/typecheck::validate-contract-method-entries
+                     (core/map::entries ((core/map::get ty) (quote :methods))))
+                    export)
+                   path)
+                  0)
+                 errors)
+              (if ((core/sym::eq? tag) (quote :fn))
+                ((((selfhost/typecheck::validate-contract-methods
+                      ((core/map::get ty) (quote :ret)))
+                    export)
+                   path)
+                  ((((selfhost/typecheck::validate-contract-methods
+                        ((core/map::get ty) (quote :param)))
+                      export)
+                     path)
+                    errors))
+                (if ((core/sym::eq? tag) (quote :prog))
+                  ((((selfhost/typecheck::validate-contract-methods
+                        ((core/map::get ty) (quote :ret)))
+                      export)
+                     path)
+                    errors)
+                  (if ((core/sym::eq? tag) (quote :msg))
+                    ((((selfhost/typecheck::validate-contract-methods
+                          ((core/map::get ty) (quote :payload)))
+                        export)
+                       path)
+                      errors)
+                    (if ((core/sym::eq? tag) (quote :rec))
+                      (((((selfhost/typecheck::validate-contract-method-entries
+                             (core/map::entries ((core/map::get ty) (quote :fields))))
+                            export)
+                           path)
+                          0)
+                         errors)
+                      errors)))))))))))
+
+(def selfhost/typecheck::validate-contract-method-entries
+  (fn (entries)
+    (fn (export)
+      (fn (path)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) (core/vec::len entries))
+              errors
+              (let
+                ((entry ((core/vec::get entries) i)))
+                (let
+                  ((operation ((core/vec::get entry) 0))
+                    (method ((core/vec::get entry) 1)))
+                  (let
+                    ((errors1
+                       (if
+                         ((core/sym::eq? (selfhost/typecheck::ty-tag method)) (quote :fn))
+                         errors
+                         (((selfhost/typecheck::module-error-add errors) path)
+                           ((selfhost/typecheck::str4 "[blame=provider] "
+                              (selfhost/typecheck::symbol-str export))
+                             ((selfhost/typecheck::str2 " contract method ")
+                               (selfhost/typecheck::symbol-str operation))
+                             " must have Fn type")))))
+                    (((((selfhost/typecheck::validate-contract-method-entries entries) export)
+                        path)
+                       ((core/int::add i) 1))
+                      ((((selfhost/typecheck::validate-contract-methods method) export) path)
+                        errors1))))))))))))

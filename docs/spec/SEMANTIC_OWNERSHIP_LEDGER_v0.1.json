@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "63d83038edda3ced2cc87db807d5d26462f387085eaa97b92f8e63fd313dd046",
+  "contentIdentitySha256": "c0e4f04b9eefc6b064434bc77b8dd128ccdb2d679331707b9579b33ed2a9b3d5",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -860,10 +860,12 @@
       "id": "SD-CANON-IDENTITY",
       "internalOnly": false,
       "limitations": [
-        "VCS, semantic-edit, and bootstrap artifact identities still retain host semantic authority and are not covered by the H2 frontend profile"
+        "Semantic-patch identities remain assigned to R4.2.c, package/lock/VCS object identities to R4.2.e, and self-host component/composition/compiled/bootstrap artifact identity and admission to R4.4.a; each remains host-authoritative until its assigned task closes"
       ],
       "migrationTasks": [
-        "R4.2.a"
+        "R4.2.c",
+        "R4.2.e",
+        "R4.4.a"
       ],
       "producingImplementationPaths": [
         "selfhost/canon.gc",
@@ -1190,25 +1192,53 @@
       "commandSelectors": [
         "typecheck"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
-      "hostBindingPaths": [],
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
+      "hostBindingPaths": [
+        "crates/gc_cli_driver/src/pkg_abi.rs",
+        "crates/gc_obligations/src/obligations/typecheck_authority.rs",
+        "crates/gc_obligations/src/obligations/typecheck_authority_decode.rs",
+        "crates/gc_obligations/src/obligations/types_api.rs"
+      ],
       "id": "SD-TYPE-EFFECT",
       "internalOnly": false,
       "limitations": [
-        "Rust remains the production checker"
+        "H2 is scoped to genesis/typecheck-authority-v0.1; the compile-time parity-only Rust compatibility oracle remains independently invocable until its 2026-11-11 sunset review, and H3/H4 bootstrap or independent-reimplementation closure is not claimed"
       ],
       "migrationTasks": [
         "R4.2.b"
       ],
       "producingImplementationPaths": [
-        "crates/gc_types/src"
+        "selfhost/typecheck_compat_v1.gc",
+        "selfhost/typecheck_contract_profile_compose_v1.gc",
+        "selfhost/typecheck_contract_profile_v1.gc",
+        "selfhost/typecheck_core_v1.gc",
+        "selfhost/typecheck_infer_app_v1.gc",
+        "selfhost/typecheck_infer_apply_v1.gc",
+        "selfhost/typecheck_infer_contract_v1.gc",
+        "selfhost/typecheck_infer_core_v1.gc",
+        "selfhost/typecheck_infer_effect_v1.gc",
+        "selfhost/typecheck_infer_prim_v1.gc",
+        "selfhost/typecheck_module_profile_descriptor_v1.gc",
+        "selfhost/typecheck_module_profile_references_v1.gc",
+        "selfhost/typecheck_module_profile_resolution_v1.gc",
+        "selfhost/typecheck_package_context_v1.gc",
+        "selfhost/typecheck_package_exports_v1.gc",
+        "selfhost/typecheck_package_meta_v1.gc",
+        "selfhost/typecheck_package_module_v1.gc",
+        "selfhost/typecheck_package_report_v1.gc",
+        "selfhost/typecheck_profile_negotiation_v1.gc",
+        "selfhost/typecheck_typed_effects_v1.gc",
+        "selfhost/typecheck_types_v1.gc",
+        "selfhost/typecheck_unknown_signatures_v1.gc"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_types/src"
+        "selfhost/toolchain.gc",
+        "selfhost/typecheck_package_report_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
+        "docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.md",
         "docs/spec/TYPES.md",
         "docs/spec/CONCURRENCY_v0.1.md"
       ],
@@ -1216,11 +1246,14 @@
         "S0-R"
       ],
       "testPaths": [
+        "crates/gc_obligations/src/tests/typecheck_authority.rs",
         "crates/gc_types/src/lib_tests.rs"
       ],
       "title": "Type, effect, contract, and diagnostic checking",
       "verifierPaths": [
-        "scripts/check_write_genesiscode_skill_conformance.sh"
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/lib/selfhost_typecheck_authority.py",
+        "scripts/selfhost_typecheck_authority_guard.sh"
       ]
     },
     {

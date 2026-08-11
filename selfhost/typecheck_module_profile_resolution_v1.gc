@@ -1,0 +1,671 @@
+(def selfhost/typecheck::module-content-identity
+  (fn (forms)
+    (core/bytes::from-hex (core/cli::hash-module-forms forms))))
+
+(def selfhost/typecheck::module-paths
+  (fn (modules)
+    (((selfhost/typecheck::module-paths-loop modules) (core/vec::len modules)) 0)))
+
+(def selfhost/typecheck::module-paths-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          []
+          ((core/vec::append
+             ((core/vec::push [])
+               ((core/map::get ((core/vec::get modules) i)) (quote :path))))
+            (((selfhost/typecheck::module-paths-loop modules) n)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/typecheck::module-identities
+  (fn (modules)
+    (((selfhost/typecheck::module-identities-loop modules)
+       (core/vec::len modules))
+      0)))
+
+(def selfhost/typecheck::module-identities-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {}
+          (let
+            ((module ((core/vec::get modules) i))
+              (rest
+                (((selfhost/typecheck::module-identities-loop modules) n)
+                  ((core/int::add i) 1))))
+            (((core/map::put rest) ((core/map::get module) (quote :path)))
+              (selfhost/typecheck::module-content-identity
+                ((core/map::get module) (quote :forms))))))))))
+
+(def selfhost/typecheck::validate-module-paths
+  (fn (modules)
+    (((selfhost/typecheck::validate-module-paths-loop modules)
+       (core/vec::len modules))
+      0)))
+
+(def selfhost/typecheck::validate-module-paths-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {:errors {} :paths {}}
+          (let
+            ((module ((core/vec::get modules) i))
+              (rest
+                (((selfhost/typecheck::validate-module-paths-loop modules) n)
+                  ((core/int::add i) 1))))
+            (let
+              ((path ((core/map::get module) (quote :path)))
+                (valid
+                  (selfhost/typecheck::validate-portable-module-path
+                    ((core/map::get module) (quote :path)))))
+              {:errors
+                 (if (selfhost/typecheck::result-ok? valid)
+                   ((core/map::get rest) (quote :errors))
+                   (((selfhost/typecheck::module-error-add
+                        ((core/map::get rest) (quote :errors)))
+                       path)
+                     ((core/map::get valid) (quote :error))))
+               :paths
+                 (((selfhost/typecheck::map-vec-push
+                      ((core/map::get rest) (quote :paths)))
+                     path)
+                   i)})))))))
+
+(def selfhost/typecheck::add-duplicate-path-errors
+  (fn (paths)
+    (fn (errors)
+      (((selfhost/typecheck::add-duplicate-path-errors-loop (core/map::entries paths))
+         0)
+        errors))))
+
+(def selfhost/typecheck::add-duplicate-path-errors-loop
+  (fn (entries)
+    (fn (i)
+      (fn (errors)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          errors
+          (let
+            ((entry ((core/vec::get entries) i)))
+            (let
+              ((path ((core/vec::get entry) 0))
+                (indices ((core/vec::get entry) 1)))
+              (((selfhost/typecheck::add-duplicate-path-errors-loop entries)
+                 ((core/int::add i) 1))
+                (if ((core/int::lt? 1) (core/vec::len indices))
+                  (((selfhost/typecheck::module-error-add errors) path)
+                    ((selfhost/typecheck::str4 "duplicate module path " path)
+                      " at manifest indices ["
+                      ((selfhost/typecheck::str2
+                         ((core/str::join
+                            (selfhost/typecheck::vec-map
+                              indices selfhost/typecheck::int-str))
+                           ", "))
+                        "]")))
+                  errors)))))))))
+
+(def selfhost/typecheck::build-definition-owners
+  (fn (descriptors)
+    (((selfhost/typecheck::build-definition-owners-loop descriptors)
+       (core/vec::len descriptors))
+      0)))
+
+(def selfhost/typecheck::build-definition-owners-loop
+  (fn (descriptors)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {}
+          (let
+            ((rest
+               (((selfhost/typecheck::build-definition-owners-loop descriptors) n)
+                 ((core/int::add i) 1)))
+              (definitions
+                (selfhost/typecheck::set-keys
+                  ((core/map::get ((core/vec::get descriptors) i))
+                    (quote :definitions)))))
+            (((selfhost/typecheck::add-definition-owner-loop definitions) i) rest)))))))
+
+(def selfhost/typecheck::add-definition-owner-loop
+  (fn (definitions)
+    (fn (owner)
+      (fn (owners)
+        (((((selfhost/typecheck::add-definition-owner-items definitions) owner)
+            (core/vec::len definitions))
+           0)
+          owners)))))
+
+(def selfhost/typecheck::add-definition-owner-items
+  (fn (definitions)
+    (fn (owner)
+      (fn (n)
+        (fn (i)
+          (fn (owners)
+            (if ((core/int::eq? i) n)
+              owners
+              (let
+                ((symbol ((core/vec::get definitions) i))
+                  (current
+                    ((core/map::get owners) ((core/vec::get definitions) i))))
+                (((((selfhost/typecheck::add-definition-owner-items definitions) owner) n)
+                   ((core/int::add i) 1))
+                  (((core/map::put owners) symbol)
+                    ((selfhost/typecheck::set-add
+                       (if (selfhost/typecheck::map? current) current {}))
+                      owner)))))))))))
+
+(def selfhost/typecheck::validate-exports-defined
+  (fn (modules)
+    (fn (descriptors)
+      (fn (errors)
+        (((((selfhost/typecheck::validate-exports-defined-loop modules) descriptors)
+           (core/vec::len modules))
+           0)
+          errors)))))
+
+(def selfhost/typecheck::validate-exports-defined-loop
+  (fn (modules)
+    (fn (descriptors)
+      (fn (n)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) n)
+              errors
+              (let
+                ((descriptor ((core/vec::get descriptors) i))
+                  (path ((core/map::get ((core/vec::get modules) i)) (quote :path))))
+                (((((selfhost/typecheck::validate-exports-defined-loop modules) descriptors)
+                    n)
+                   ((core/int::add i) 1))
+                  ((((selfhost/typecheck::validate-export-symbols
+                       (selfhost/typecheck::set-keys
+                         ((core/map::get descriptor) (quote :exports))))
+                      ((core/map::get descriptor) (quote :definitions)))
+                     path)
+                    errors))))))))))
+
+(def selfhost/typecheck::validate-export-symbols
+  (fn (exports)
+    (fn (definitions)
+      (fn (path)
+        (fn (errors)
+          (((((selfhost/typecheck::validate-export-symbols-loop exports) definitions)
+              path)
+             0)
+            errors))))))
+
+(def selfhost/typecheck::validate-export-symbols-loop
+  (fn (exports)
+    (fn (definitions)
+      (fn (path)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) (core/vec::len exports))
+              errors
+              (let ((export ((core/vec::get exports) i)))
+                (((((selfhost/typecheck::validate-export-symbols-loop exports) definitions)
+                    path)
+                   ((core/int::add i) 1))
+                  (if ((selfhost/typecheck::set-has? definitions) export)
+                    errors
+                    (((selfhost/typecheck::module-error-add errors) path)
+                      ((selfhost/typecheck::str3 "export "
+                         (selfhost/typecheck::symbol-str export))
+                        " is not defined by this module"))))))))))))
+
+(def selfhost/typecheck::validate-definition-owners
+  (fn (modules)
+    (fn (owners)
+      (fn (errors)
+        ((((selfhost/typecheck::validate-definition-owners-loop
+               (core/map::entries owners))
+              modules)
+             0)
+            errors)))))
+
+(def selfhost/typecheck::validate-definition-owners-loop
+  (fn (entries)
+    (fn (modules)
+      (fn (i)
+        (fn (errors)
+          (if ((core/int::eq? i) (core/vec::len entries))
+            errors
+            (let ((entry ((core/vec::get entries) i)))
+              (let
+                ((symbol ((core/vec::get entry) 0))
+                  (owner-indices
+                    (selfhost/typecheck::set-keys ((core/vec::get entry) 1))))
+                (let
+                  ((next-errors
+                     (if ((core/int::lt? 1) (core/vec::len owner-indices))
+                       ((((selfhost/typecheck::add-owner-error-to-indices owner-indices)
+                           modules)
+                          ((selfhost/typecheck::str4 "definition "
+                             (selfhost/typecheck::symbol-str symbol))
+                            " has multiple module owners ["
+                            ((selfhost/typecheck::str2
+                               ((core/str::join
+                                  (selfhost/typecheck::vec-map
+                                    owner-indices
+                                    (fn (index)
+                                      ((core/map::get ((core/vec::get modules) index))
+                                        (quote :path)))))
+                                 ", "))
+                              "]")))
+                         errors)
+                       errors)))
+                  ((((selfhost/typecheck::validate-definition-owners-loop entries)
+                       modules)
+                      ((core/int::add i) 1))
+                    next-errors))))))))))
+
+(def selfhost/typecheck::add-owner-error-to-indices
+  (fn (indices)
+    (fn (modules)
+      (fn (message)
+        (fn (errors)
+          (((((selfhost/typecheck::add-owner-error-to-indices-loop indices) modules)
+              message)
+             0)
+            errors))))))
+
+(def selfhost/typecheck::add-owner-error-to-indices-loop
+  (fn (indices)
+    (fn (modules)
+      (fn (message)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) (core/vec::len indices))
+              errors
+              (let
+                ((path
+                   ((core/map::get
+                      ((core/vec::get modules) ((core/vec::get indices) i)))
+                     (quote :path))))
+                (((((selfhost/typecheck::add-owner-error-to-indices-loop indices) modules)
+                    message)
+                   ((core/int::add i) 1))
+                  (((selfhost/typecheck::module-error-add errors) path) message))))))))))
+
+(def selfhost/typecheck::validate-imports-and-references
+  (fn (modules)
+    (fn (descriptors)
+      (fn (owners)
+        (fn (errors)
+          (((((selfhost/typecheck::validate-imports-and-references-loop modules)
+              descriptors)
+             owners)
+            0)
+           errors))))))
+
+(def selfhost/typecheck::validate-imports-and-references-loop
+  (fn (modules)
+    (fn (descriptors)
+      (fn (owners)
+        (fn (i)
+          (fn (errors)
+            (if ((core/int::eq? i) (core/vec::len modules))
+              errors
+              (let
+                ((descriptor ((core/vec::get descriptors) i))
+                  (path ((core/map::get ((core/vec::get modules) i)) (quote :path))))
+                (let
+                  ((with-imports
+                     ((((((selfhost/typecheck::validate-import-items
+                              (selfhost/typecheck::set-keys
+                                ((core/map::get descriptor) (quote :imports))))
+                            modules)
+                           descriptors)
+                          owners)
+                         i)
+                        errors))
+                    (references
+                      ((selfhost/typecheck::collect-module-references
+                         ((core/map::get ((core/vec::get modules) i)) (quote :forms)))
+                        ((core/map::get descriptor) (quote :definitions)))))
+                  (((((selfhost/typecheck::validate-imports-and-references-loop modules)
+                       descriptors)
+                      owners)
+                     ((core/int::add i) 1))
+                    ((((((selfhost/typecheck::validate-reference-items
+                             (selfhost/typecheck::set-keys references))
+                           modules)
+                          descriptors)
+                        owners)
+                        i)
+                       with-imports)))))))))))
+
+(def selfhost/typecheck::validate-import-items
+  (fn (imports)
+    (fn (modules)
+      (fn (descriptors)
+        (fn (owners)
+          (fn (consumer)
+            (fn (errors)
+              (((((((selfhost/typecheck::validate-import-items-loop imports) modules)
+                    descriptors)
+                   owners)
+                  consumer)
+                 0)
+                errors))))))))
+
+(def selfhost/typecheck::validate-import-items-loop
+  (fn (imports)
+    (fn (modules)
+      (fn (descriptors)
+        (fn (owners)
+          (fn (consumer)
+            (fn (i)
+              (fn (errors)
+                (if ((core/int::eq? i) (core/vec::len imports))
+                  errors
+                  (((((((selfhost/typecheck::validate-import-items-loop imports) modules)
+                        descriptors)
+                       owners)
+                      consumer)
+                     ((core/int::add i) 1))
+                    ((((((selfhost/typecheck::validate-one-import
+                             ((core/vec::get imports) i))
+                           modules)
+                          descriptors)
+                        owners)
+                        consumer)
+                       errors)))))))))))
+
+(def selfhost/typecheck::validate-one-import
+  (fn (import)
+    (fn (modules)
+      (fn (descriptors)
+        (fn (owners)
+          (fn (consumer)
+            (fn (errors)
+              (let
+                ((path
+                   ((core/map::get ((core/vec::get modules) consumer)) (quote :path)))
+                  (import-owners ((core/map::get owners) import)))
+                (if (selfhost/typecheck::map? import-owners)
+                  (let ((indices (selfhost/typecheck::set-keys import-owners)))
+                    (if ((core/int::eq? (core/vec::len indices)) 1)
+                      (let ((owner ((core/vec::get indices) 0)))
+                        (if ((core/int::eq? owner) consumer)
+                          (((selfhost/typecheck::module-error-add errors) path)
+                            ((selfhost/typecheck::str3 "local symbol "
+                               (selfhost/typecheck::symbol-str import))
+                              " must not be listed in :imports"))
+                          (if
+                            ((selfhost/typecheck::set-has?
+                               ((core/map::get ((core/vec::get descriptors) owner))
+                                 (quote :exports)))
+                              import)
+                            (if ((core/int::lt? consumer) owner)
+                              (((selfhost/typecheck::module-error-add errors) path)
+                                ((selfhost/typecheck::str4 "import "
+                                   (selfhost/typecheck::symbol-str import))
+                                  " resolves to later module "
+                                  ((selfhost/typecheck::str2
+                                     ((core/map::get ((core/vec::get modules) owner))
+                                       (quote :path)))
+                                    "; imports must target earlier manifest entries (cycles and forward imports are forbidden)")))
+                              errors)
+                            (((selfhost/typecheck::module-error-add errors) path)
+                              ((selfhost/typecheck::str4 "import "
+                                 (selfhost/typecheck::symbol-str import))
+                                " is private to module "
+                                ((core/map::get ((core/vec::get modules) owner))
+                                  (quote :path))
+                                "")))))
+                      (((selfhost/typecheck::module-error-add errors) path)
+                        ((selfhost/typecheck::str3 "import "
+                           (selfhost/typecheck::symbol-str import))
+                          " has ambiguous ownership"))))
+                  (((selfhost/typecheck::module-error-add errors) path)
+                    ((selfhost/typecheck::str3 "import "
+                       (selfhost/typecheck::symbol-str import))
+                      " has no owner in the supplied package closure")))))))))))
+
+(def selfhost/typecheck::validate-reference-items
+  (fn (references)
+    (fn (modules)
+      (fn (descriptors)
+        (fn (owners)
+          (fn (consumer)
+            (fn (errors)
+              (((((((selfhost/typecheck::validate-reference-items-loop references) modules)
+                    descriptors)
+                   owners)
+                  consumer)
+                 0)
+                errors))))))))
+
+(def selfhost/typecheck::validate-reference-items-loop
+  (fn (references)
+    (fn (modules)
+      (fn (descriptors)
+        (fn (owners)
+          (fn (consumer)
+            (fn (i)
+              (fn (errors)
+                (if ((core/int::eq? i) (core/vec::len references))
+                  errors
+                  (((((((selfhost/typecheck::validate-reference-items-loop references)
+                         modules)
+                        descriptors)
+                       owners)
+                      consumer)
+                     ((core/int::add i) 1))
+                    ((((((selfhost/typecheck::validate-one-reference
+                             ((core/vec::get references) i))
+                           modules)
+                          descriptors)
+                         owners)
+                        consumer)
+                       errors)))))))))))
+
+(def selfhost/typecheck::validate-one-reference
+  (fn (reference)
+    (fn (modules)
+      (fn (descriptors)
+        (fn (owners)
+          (fn (consumer)
+            (fn (errors)
+              (let ((reference-owners ((core/map::get owners) reference)))
+                (if (selfhost/typecheck::map? reference-owners)
+                  (let ((indices (selfhost/typecheck::set-keys reference-owners)))
+                    (if
+                      (if ((selfhost/typecheck::set-has? reference-owners) consumer)
+                        true
+                        (if ((core/int::eq? (core/vec::len indices)) 1) false true))
+                      errors
+                      (let
+                        ((owner ((core/vec::get indices) 0))
+                          (path
+                            ((core/map::get ((core/vec::get modules) consumer))
+                              (quote :path))))
+                        (if
+                          ((selfhost/typecheck::set-has?
+                             ((core/map::get ((core/vec::get descriptors) owner))
+                               (quote :exports)))
+                            reference)
+                          (if
+                            ((selfhost/typecheck::set-has?
+                               ((core/map::get ((core/vec::get descriptors) consumer))
+                                 (quote :imports)))
+                              reference)
+                            errors
+                            (((selfhost/typecheck::module-error-add errors) path)
+                              ((selfhost/typecheck::str3 "reference "
+                                 (selfhost/typecheck::symbol-str reference))
+                                " is not declared in :imports")))
+                          (((selfhost/typecheck::module-error-add errors) path)
+                            ((selfhost/typecheck::str4 "reference "
+                               (selfhost/typecheck::symbol-str reference))
+                              " crosses the private boundary of module "
+                              ((core/map::get ((core/vec::get modules) owner))
+                                (quote :path))
+                              ""))))))
+                  errors)))))))))
+
+(def selfhost/typecheck::module-errors-to-vectors
+  (fn (errors)
+    (((selfhost/typecheck::module-errors-to-vectors-loop (core/map::entries errors)) 0))))
+
+(def selfhost/typecheck::module-errors-to-vectors-loop
+  (fn (entries)
+    (fn (i)
+      (if ((core/int::eq? i) (core/vec::len entries))
+        {}
+        (let
+          ((entry ((core/vec::get entries) i))
+            (rest
+              ((selfhost/typecheck::module-errors-to-vectors-loop entries)
+                ((core/int::add i) 1))))
+          (((core/map::put rest) ((core/vec::get entry) 0))
+            (selfhost/typecheck::set-keys ((core/vec::get entry) 1))))))))
+
+(def selfhost/typecheck::resolution-identity-modules
+  (fn (modules)
+    (fn (descriptors)
+      (fn (identities)
+        (((((selfhost/typecheck::resolution-identity-modules-loop modules) descriptors)
+           identities)
+           (core/vec::len modules))
+          0)))))
+
+(def selfhost/typecheck::resolution-identity-modules-loop
+  (fn (modules)
+    (fn (descriptors)
+      (fn (identities)
+        (fn (n)
+          (fn (i)
+            (if ((core/int::eq? i) n)
+              []
+              (let
+                ((module ((core/vec::get modules) i))
+                  (descriptor ((core/vec::get descriptors) i)))
+                ((core/vec::append
+                   ((core/vec::push [])
+                     {:content-h
+                        ((core/map::get identities)
+                          ((core/map::get module) (quote :path)))
+                       :exports
+                         (selfhost/typecheck::set-keys
+                           ((core/map::get descriptor) (quote :exports)))
+                       :imports
+                         (selfhost/typecheck::set-keys
+                           ((core/map::get descriptor) (quote :imports)))
+                       :path ((core/map::get module) (quote :path))
+                       :requires-profiles
+                         ((core/map::get descriptor) (quote :required-profiles))})
+                  (((((selfhost/typecheck::resolution-identity-modules-loop modules)
+                       descriptors)
+                      identities)
+                     n)
+                    ((core/int::add i) 1))))))))))))
+
+(def selfhost/typecheck::resolution-identity
+  (fn (modules)
+    (fn (descriptors)
+      (fn (identities)
+        (core/bytes::from-hex
+          (selfhost/hash::hash-term
+            {:kind selfhost/typecheck::module-resolution-profile
+              :modules
+                (((selfhost/typecheck::resolution-identity-modules modules) descriptors)
+                  identities)}))))))
+
+(def selfhost/typecheck::resolve-module-profile
+  (fn (modules)
+    (let
+      ((active (selfhost/typecheck::module-profile-active? modules))
+        (identities (selfhost/typecheck::module-identities modules))
+        (order (selfhost/typecheck::module-paths modules)))
+      (if active
+        (let
+          ((path-state (selfhost/typecheck::validate-module-paths modules)))
+          (let
+            ((errors0
+               ((selfhost/typecheck::add-duplicate-path-errors
+                  ((core/map::get path-state) (quote :paths)))
+                 ((core/map::get path-state) (quote :errors))))
+              (parsed (selfhost/typecheck::parse-module-descriptors modules)))
+            (let
+              ((descriptors ((core/map::get parsed) (quote :descriptors)))
+                (owners
+                  (selfhost/typecheck::build-definition-owners
+                    ((core/map::get parsed) (quote :descriptors)))))
+              (let
+                ((errors1
+                   (((selfhost/typecheck::validate-exports-defined modules)
+                      descriptors)
+                     ((selfhost/typecheck::merge-module-error-sets errors0)
+                       ((core/map::get parsed) (quote :errors))))))
+                (let
+                  ((errors2
+                     (((selfhost/typecheck::validate-definition-owners modules) owners)
+                       errors1)))
+                  (let
+                    ((errors3
+                       ((((selfhost/typecheck::validate-imports-and-references modules)
+                           descriptors)
+                          owners)
+                         errors2)))
+                    {:active true
+                      :descriptors descriptors
+                      :errors (selfhost/typecheck::module-errors-to-vectors errors3)
+                      :identity
+                        (if ((core/int::eq? (core/map::len errors3)) 0)
+                          (((selfhost/typecheck::resolution-identity modules) descriptors)
+                            identities)
+                          nil)
+                      :module-identities identities
+                      :ok ((core/int::eq? (core/map::len errors3)) 0)
+                      :resolution-order order}))))))
+        {:active false
+          :descriptors []
+          :errors {}
+          :identity nil
+          :module-identities identities
+          :ok true
+          :resolution-order order}))))
+
+(def selfhost/typecheck::merge-module-error-sets
+  (fn (left)
+    (fn (right)
+      (((selfhost/typecheck::merge-module-error-sets-loop (core/map::entries right)) 0)
+        left))))
+
+(def selfhost/typecheck::merge-module-error-sets-loop
+  (fn (entries)
+    (fn (i)
+      (fn (out)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          out
+          (let
+            ((entry ((core/vec::get entries) i)))
+            (let
+              ((path ((core/vec::get entry) 0))
+                (messages (selfhost/typecheck::set-keys ((core/vec::get entry) 1))))
+              (((selfhost/typecheck::merge-module-error-sets-loop entries)
+                 ((core/int::add i) 1))
+                (((selfhost/typecheck::merge-module-error-items messages) path) out)))))))))
+
+(def selfhost/typecheck::merge-module-error-items
+  (fn (messages)
+    (fn (path)
+      (fn (errors)
+        ((((selfhost/typecheck::merge-module-error-items-loop messages) path) 0)
+          errors)))))
+
+(def selfhost/typecheck::merge-module-error-items-loop
+  (fn (messages)
+    (fn (path)
+      (fn (i)
+        (fn (errors)
+          (if ((core/int::eq? i) (core/vec::len messages))
+            errors
+            ((((selfhost/typecheck::merge-module-error-items-loop messages) path)
+               ((core/int::add i) 1))
+              (((selfhost/typecheck::module-error-add errors) path)
+                ((core/vec::get messages) i)))))))))

@@ -1347,3 +1347,31 @@ fn unicode_text_primitives_reject_wrong_arity_and_types() {
         );
     }
 }
+
+#[test]
+fn inferred_record_rows_only_promote_parseable_symbol_labels() {
+    let forms = canonicalize_module(
+        parse_module(r#"(def m::row {"valid" 1 "not a symbol" true}) m::row"#).unwrap(),
+    )
+    .unwrap();
+    let mut session = InferSession::default();
+    let (_env, definitions) = infer_module_types(&forms, &mut session, &BTreeMap::new());
+
+    assert!(
+        session.errors.is_empty(),
+        "unexpected errors: {:?}",
+        session.errors
+    );
+    assert_eq!(
+        definitions.get("m::row"),
+        Some(&Ty::Rec {
+            fields: [("valid".to_string(), Ty::Int)].into_iter().collect(),
+            tail: RowTail::Any,
+        })
+    );
+    let term = definitions.get("m::row").expect("inferred row").to_term();
+    assert_eq!(
+        parse_type_term(&term).expect("round-trip inferred row"),
+        *definitions.get("m::row").unwrap()
+    );
+}

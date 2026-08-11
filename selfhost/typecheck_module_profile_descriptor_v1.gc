@@ -1,0 +1,537 @@
+(def selfhost/typecheck::module-resolution-profile
+  (quote genesis/module-resolution-profile-v0.1))
+
+(def selfhost/typecheck::module-required-profiles
+  (quote
+    {genesis/coreform-profile genesis/coreform/v0.2
+      genesis/hash-profile genesis/hash-profile/gcv0.2-blake3
+      genesis/language-profile genesis/language-profile/v0.2
+      genesis/module-resolution-profile genesis/module-resolution-profile-v0.1}))
+
+(def selfhost/typecheck::module-required-profiles-message
+  ":requires-profiles must exactly bind [genesis/coreform-profile genesis/coreform/v0.2, genesis/hash-profile genesis/hash-profile/gcv0.2-blake3, genesis/language-profile genesis/language-profile/v0.2, genesis/module-resolution-profile genesis/module-resolution-profile-v0.1]")
+
+(def selfhost/typecheck::map-has-key?
+  (fn (mapping)
+    (fn (key)
+      ((((selfhost/typecheck::map-has-key-loop (core/map::entries mapping)) key) 0)))))
+
+(def selfhost/typecheck::map-has-key-loop
+  (fn (entries)
+    (fn (key)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          false
+          (if ((core/eq? ((core/vec::get ((core/vec::get entries) i)) 0)) key)
+            true
+            (((selfhost/typecheck::map-has-key-loop entries) key)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/typecheck::module-error-add
+  (fn (errors)
+    (fn (path)
+      (fn (message)
+        (let ((current ((core/map::get errors) path)))
+          (((core/map::put errors) path)
+            ((selfhost/typecheck::set-add
+               (if (selfhost/typecheck::map? current) current {}))
+              message)))))))
+
+(def selfhost/typecheck::module-profile-active?
+  (fn (modules)
+    (((selfhost/typecheck::module-profile-active-loop modules)
+       (core/vec::len modules))
+      0)))
+
+(def selfhost/typecheck::module-profile-active-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          false
+          (let ((meta ((core/map::get ((core/vec::get modules) i)) (quote :meta))))
+            (if
+              (if (selfhost/typecheck::map? meta)
+                ((selfhost/typecheck::map-has-key? meta) (quote :module-profile))
+                false)
+              true
+              (((selfhost/typecheck::module-profile-active-loop modules) n)
+                ((core/int::add i) 1)))))))))
+
+(def selfhost/typecheck::bytes-has?
+  (fn (bytes)
+    (fn (needle)
+      ((((selfhost/typecheck::bytes-has-loop bytes) needle)
+         (core/bytes::len bytes))
+        0))))
+
+(def selfhost/typecheck::bytes-has-loop
+  (fn (bytes)
+    (fn (needle)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            false
+            (if ((core/int::eq? ((core/bytes::get bytes) i)) needle)
+              true
+              ((((selfhost/typecheck::bytes-has-loop bytes) needle) n)
+                ((core/int::add i) 1)))))))))
+
+(def selfhost/typecheck::component-invalid?
+  (fn (bytes)
+    (fn (start)
+      (fn (end)
+        (let ((len ((core/int::sub end) start)))
+          (if ((core/int::eq? len) 0)
+            true
+            (if ((core/int::eq? len) 1)
+              ((core/int::eq? ((core/bytes::get bytes) start)) 46)
+              (if ((core/int::eq? len) 2)
+                (if ((core/int::eq? ((core/bytes::get bytes) start)) 46)
+                  ((core/int::eq?
+                     ((core/bytes::get bytes) ((core/int::add start) 1)))
+                    46)
+                  false)
+                false))))))))
+
+(def selfhost/typecheck::portable-components?
+  (fn (bytes)
+    (fn (reject-drive)
+      (((((selfhost/typecheck::portable-components-loop bytes) reject-drive)
+          (core/bytes::len bytes))
+         0)
+        0))))
+
+(def selfhost/typecheck::portable-components-loop
+  (fn (bytes)
+    (fn (reject-drive)
+      (fn (n)
+        (fn (start)
+          (fn (i)
+            (if ((core/int::eq? i) n)
+              (if (((selfhost/typecheck::component-invalid? bytes) start) i)
+                false
+                (if
+                  (if reject-drive
+                    ((core/int::eq? start) 0)
+                    false)
+                  (if ((core/int::lt? start) i)
+                    (if
+                      ((core/int::eq?
+                         ((core/bytes::get bytes) ((core/int::sub i) 1)))
+                        58)
+                      false
+                      true)
+                    true)
+                  true))
+              (if ((core/int::eq? ((core/bytes::get bytes) i)) 47)
+                (if (((selfhost/typecheck::component-invalid? bytes) start) i)
+                  false
+                  (if
+                    (if reject-drive
+                      ((core/int::eq? start) 0)
+                      false)
+                    (if
+                      ((core/int::eq?
+                         ((core/bytes::get bytes) ((core/int::sub i) 1)))
+                        58)
+                      false
+                      (((((selfhost/typecheck::portable-components-loop bytes)
+                           reject-drive)
+                          n)
+                         ((core/int::add i) 1))
+                        ((core/int::add i) 1)))
+                    (((((selfhost/typecheck::portable-components-loop bytes)
+                         reject-drive)
+                        n)
+                       ((core/int::add i) 1))
+                      ((core/int::add i) 1))))
+                (((((selfhost/typecheck::portable-components-loop bytes) reject-drive) n)
+                   start)
+                  ((core/int::add i) 1))))))))))
+
+(def selfhost/typecheck::validate-portable-module-path
+  (fn (path)
+    (let ((bytes (core/str::to-utf8 path)))
+      (let ((n (core/bytes::len bytes)))
+        (if ((core/int::eq? n) 0)
+          (selfhost/typecheck::err "module path must be non-empty")
+          (if ((core/eq? (core/str::nfc path)) path)
+            (if
+              (if ((core/int::eq? ((core/bytes::get bytes) 0)) 47)
+                true
+                ((selfhost/typecheck::bytes-has? bytes) 92))
+              (selfhost/typecheck::err
+                "module path must be base-relative and use '/' separators")
+              (if ((selfhost/typecheck::portable-components? bytes) true)
+                (selfhost/typecheck::ok path)
+                (selfhost/typecheck::classify-portable-path-error bytes)))
+            (selfhost/typecheck::err "module path must be Unicode NFC")))))))
+
+(def selfhost/typecheck::classify-portable-path-error
+  (fn (bytes)
+    (let ((first-end (selfhost/typecheck::first-byte-or-end bytes 47)))
+      (if
+        (if ((core/int::lt? 0) first-end)
+          ((core/int::eq?
+             ((core/bytes::get bytes) ((core/int::sub first-end) 1)))
+            58)
+          false)
+        (selfhost/typecheck::err "module path must not contain a drive prefix")
+        (selfhost/typecheck::err
+          "module path must not contain empty, '.', or '..' components")))))
+
+(def selfhost/typecheck::first-byte-or-end
+  (fn (bytes)
+    (fn (needle)
+      (((selfhost/typecheck::first-byte-or-end-loop bytes) needle) 0))))
+
+(def selfhost/typecheck::first-byte-or-end-loop
+  (fn (bytes)
+    (fn (needle)
+      (fn (i)
+        (if ((core/int::eq? i) (core/bytes::len bytes))
+          i
+          (if ((core/int::eq? ((core/bytes::get bytes) i)) needle)
+            i
+            (((selfhost/typecheck::first-byte-or-end-loop bytes) needle)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/typecheck::double-colon-scan
+  (fn (bytes)
+    (((((selfhost/typecheck::double-colon-scan-loop bytes)
+        (core/bytes::len bytes))
+       0)
+      {:count 0 :position 0}))))
+
+(def selfhost/typecheck::double-colon-scan-loop
+  (fn (bytes)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::lt? ((core/int::add i) 1)) n)
+            (if
+              (if ((core/int::eq? ((core/bytes::get bytes) i)) 58)
+                ((core/int::eq?
+                   ((core/bytes::get bytes) ((core/int::add i) 1)))
+                  58)
+                false)
+              ((((selfhost/typecheck::double-colon-scan-loop bytes) n)
+                 ((core/int::add i) 2))
+                {:count
+                   ((core/int::add ((core/map::get state) (quote :count))) 1)
+                 :position i})
+              ((((selfhost/typecheck::double-colon-scan-loop bytes) n)
+                 ((core/int::add i) 1))
+                state))
+            state))))))
+
+(def selfhost/typecheck::validate-qualified-symbol
+  (fn (symbol)
+    (let ((bytes (core/str::to-utf8 (selfhost/typecheck::symbol-str symbol))))
+      (let ((scan (selfhost/typecheck::double-colon-scan bytes)))
+        (let
+          ((count ((core/map::get scan) (quote :count)))
+            (position ((core/map::get scan) (quote :position)))
+            (n (core/bytes::len bytes)))
+          (if
+            (if ((core/int::eq? count) 1)
+              (if ((core/int::lt? 0) position)
+                ((core/int::lt? ((core/int::add position) 2)) n)
+                false)
+              false)
+            (let ((namespace (((core/bytes::slice bytes) 0) position)))
+              (if
+                (if ((core/int::eq? ((core/bytes::get namespace) 0)) 47)
+                  true
+                  ((selfhost/typecheck::bytes-has? namespace) 92))
+                (selfhost/typecheck::err
+                  "namespace must be a portable slash-separated path")
+                (if ((selfhost/typecheck::portable-components? namespace) false)
+                  (selfhost/typecheck::ok symbol)
+                  (selfhost/typecheck::err
+                    "namespace must be a portable slash-separated path"))))
+            (selfhost/typecheck::err
+              "namespace and name must be non-empty with exactly one '::'")))))))
+
+(def selfhost/typecheck::parse-unique-symbol-vector
+  (fn (meta)
+    (fn (field)
+      (fn (path)
+        (fn (errors)
+          (if ((selfhost/typecheck::map-has-key? meta) field)
+            (let ((value ((core/map::get meta) field)))
+              (if (selfhost/typecheck::vec? value)
+                (((((selfhost/typecheck::parse-unique-symbol-vector-loop value) field)
+                    path)
+                   0)
+                  {:errors errors :set {}})
+                {:errors
+                   (((selfhost/typecheck::module-error-add errors) path)
+                     ((selfhost/typecheck::str2
+                        (selfhost/typecheck::symbol-str field))
+                       " must be a vector of symbols"))
+                 :set {}}))
+            {:errors
+               (((selfhost/typecheck::module-error-add errors) path)
+                 ((selfhost/typecheck::str2 "module-resolution profile requires ")
+                   (selfhost/typecheck::symbol-str field)))
+             :set {}}))))))
+
+(def selfhost/typecheck::parse-unique-symbol-vector-loop
+  (fn (items)
+    (fn (field)
+      (fn (path)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) (core/vec::len items))
+              state
+              (let ((item ((core/vec::get items) i)))
+                (let
+                  ((state2
+                     (if (selfhost/typecheck::sym? item)
+                       (let
+                         ((duplicate
+                            ((selfhost/typecheck::set-has?
+                               ((core/map::get state) (quote :set)))
+                              item))
+                           (valid (selfhost/typecheck::validate-qualified-symbol item)))
+                         {:errors
+                            (let
+                              ((with-duplicate
+                                 (if duplicate
+                                   (((selfhost/typecheck::module-error-add
+                                        ((core/map::get state) (quote :errors)))
+                                       path)
+                                     ((selfhost/typecheck::str4 "duplicate "
+                                        (selfhost/typecheck::symbol-str field))
+                                       " entry "
+                                       (selfhost/typecheck::symbol-str item)))
+                                   ((core/map::get state) (quote :errors)))))
+                              (if (selfhost/typecheck::result-ok? valid)
+                                with-duplicate
+                                (((selfhost/typecheck::module-error-add with-duplicate) path)
+                                  ((selfhost/typecheck::str4 "invalid "
+                                     (selfhost/typecheck::symbol-str field))
+                                    ((selfhost/typecheck::str2 " entry ")
+                                      (selfhost/typecheck::symbol-str item))
+                                    ((selfhost/typecheck::str2 ": ")
+                                      ((core/map::get valid) (quote :error)))))))
+                          :set
+                            ((selfhost/typecheck::set-add
+                               ((core/map::get state) (quote :set)))
+                              item)})
+                       {:errors
+                          (((selfhost/typecheck::module-error-add
+                               ((core/map::get state) (quote :errors)))
+                              path)
+                            ((selfhost/typecheck::str2
+                               (selfhost/typecheck::symbol-str field))
+                              " entries must be symbols"))
+                        :set ((core/map::get state) (quote :set))})))
+                  (((((selfhost/typecheck::parse-unique-symbol-vector-loop items) field)
+                      path)
+                     ((core/int::add i) 1))
+                    state2))))))))))
+
+(def selfhost/typecheck::parse-required-profiles
+  (fn (meta)
+    (fn (path)
+      (fn (errors)
+        (if ((selfhost/typecheck::map-has-key? meta) (quote :requires-profiles))
+          (let ((value ((core/map::get meta) (quote :requires-profiles))))
+            (if (selfhost/typecheck::map? value)
+              (let
+                ((parsed
+                   ((selfhost/typecheck::symbol-map-or-error value)
+                     ":requires-profiles must be a symbol-to-symbol map")))
+                (let
+                  ((errors2
+                     (if (selfhost/typecheck::result-ok? parsed)
+                       errors
+                       (((selfhost/typecheck::module-error-add errors) path)
+                         ((core/map::get parsed) (quote :error)))))
+                    (profiles
+                      (if (selfhost/typecheck::result-ok? parsed)
+                        ((core/map::get parsed) (quote :value))
+                        {})))
+                  {:errors
+                     (if (selfhost/typecheck::required-profiles-exact? profiles)
+                       errors2
+                       (((selfhost/typecheck::module-error-add errors2) path)
+                         selfhost/typecheck::module-required-profiles-message))
+                   :profiles profiles}))
+              {:errors
+                 (((selfhost/typecheck::module-error-add errors) path)
+                   ":requires-profiles must be a symbol-to-symbol map")
+               :profiles {}}))
+          {:errors
+             (((selfhost/typecheck::module-error-add errors) path)
+               "module-resolution profile requires :requires-profiles")
+           :profiles {}})))))
+
+(def selfhost/typecheck::required-profiles-exact?
+  (fn (profiles)
+    (if ((core/int::eq? (core/map::len profiles)) 4)
+      (if
+        (((selfhost/typecheck::profile-binding-exact? profiles)
+           (quote genesis/coreform-profile))
+          (quote genesis/coreform/v0.2))
+        (if
+          (((selfhost/typecheck::profile-binding-exact? profiles)
+             (quote genesis/hash-profile))
+            (quote genesis/hash-profile/gcv0.2-blake3))
+          (if
+            (((selfhost/typecheck::profile-binding-exact? profiles)
+               (quote genesis/language-profile))
+              (quote genesis/language-profile/v0.2))
+            (((selfhost/typecheck::profile-binding-exact? profiles)
+               (quote genesis/module-resolution-profile))
+              (quote genesis/module-resolution-profile-v0.1))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/typecheck::profile-binding-exact?
+  (fn (profiles)
+    (fn (key)
+      (fn (expected)
+        (let ((actual ((core/map::get profiles) key)))
+          (if (selfhost/typecheck::sym? actual)
+            ((core/sym::eq? actual) expected)
+            false))))))
+
+(def selfhost/typecheck::symbol-map-or-error
+  (fn (mapping)
+    (fn (message)
+      (((selfhost/typecheck::symbol-map-or-error-loop (core/map::entries mapping)) message)
+        0))))
+
+(def selfhost/typecheck::symbol-map-or-error-loop
+  (fn (entries)
+    (fn (message)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          (selfhost/typecheck::ok {})
+          (let
+            ((entry ((core/vec::get entries) i)))
+            (let
+              ((key ((core/vec::get entry) 0))
+                (value ((core/vec::get entry) 1)))
+              (if
+                (if (selfhost/typecheck::sym? key)
+                  (selfhost/typecheck::sym? value)
+                  false)
+                (let
+                  ((rest
+                     (((selfhost/typecheck::symbol-map-or-error-loop entries) message)
+                       ((core/int::add i) 1))))
+                  (if (selfhost/typecheck::result-ok? rest)
+                    (selfhost/typecheck::ok
+                      (((core/map::put ((core/map::get rest) (quote :value))) key) value))
+                    rest))
+                (selfhost/typecheck::err message)))))))))
+
+(def selfhost/typecheck::module-definitions
+  (fn (forms)
+    (((selfhost/typecheck::module-definitions-loop forms) (core/vec::len forms)) 0)))
+
+(def selfhost/typecheck::module-definitions-loop
+  (fn (forms)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {}
+          (let
+            ((rest
+               (((selfhost/typecheck::module-definitions-loop forms) n)
+                 ((core/int::add i) 1)))
+              (parsed (selfhost/typecheck::parse-def-term ((core/vec::get forms) i))))
+            (if (selfhost/typecheck::nil? parsed)
+              rest
+              (let ((name ((core/map::get parsed) (quote :name))))
+                (if ((core/sym::eq? name) (quote ::meta))
+                  rest
+                  ((selfhost/typecheck::set-add rest) name))))))))))
+
+(def selfhost/typecheck::parse-module-descriptor
+  (fn (module)
+    (fn (errors)
+      (let
+        ((path ((core/map::get module) (quote :path)))
+          (meta ((core/map::get module) (quote :meta))))
+        (if (selfhost/typecheck::map? meta)
+          (let
+            ((errors1
+               (if ((selfhost/typecheck::map-has-key? meta) (quote :module-profile))
+                 (let ((profile ((core/map::get meta) (quote :module-profile))))
+                   (if
+                     (if (selfhost/typecheck::sym? profile)
+                       ((core/sym::eq? profile)
+                         selfhost/typecheck::module-resolution-profile)
+                       false)
+                     errors
+                     (((selfhost/typecheck::module-error-add errors) path)
+                       ((selfhost/typecheck::str4
+                          ":module-profile must be exact symbol genesis/module-resolution-profile-v0.1, got "
+                          (selfhost/typecheck::term-str profile))
+                         ""
+                         ""))))
+                 (((selfhost/typecheck::module-error-add errors) path)
+                   "every module in the resolution closure must declare :module-profile genesis/module-resolution-profile-v0.1"))))
+            (let
+              ((imports
+                 ((((selfhost/typecheck::parse-unique-symbol-vector meta) (quote :imports))
+                    path)
+                   errors1)))
+              (let
+                ((exports
+                   ((((selfhost/typecheck::parse-unique-symbol-vector meta) (quote :exports))
+                      path)
+                     ((core/map::get imports) (quote :errors)))))
+                (let
+                  ((profiles
+                     (((selfhost/typecheck::parse-required-profiles meta) path)
+                       ((core/map::get exports) (quote :errors)))))
+                  {:descriptor
+                     {:definitions
+                        (selfhost/typecheck::module-definitions
+                          ((core/map::get module) (quote :forms)))
+                       :exports ((core/map::get exports) (quote :set))
+                       :imports ((core/map::get imports) (quote :set))
+                       :required-profiles
+                         ((core/map::get profiles) (quote :profiles))}
+                   :errors ((core/map::get profiles) (quote :errors))}))))
+          {:descriptor
+             {:definitions {} :exports {} :imports {} :required-profiles {}}
+           :errors
+             (((selfhost/typecheck::module-error-add errors) path)
+               "module-resolution profile requires map-shaped ::meta")})))))
+
+(def selfhost/typecheck::parse-module-descriptors
+  (fn (modules)
+    (((selfhost/typecheck::parse-module-descriptors-loop modules)
+       (core/vec::len modules))
+      0)))
+
+(def selfhost/typecheck::parse-module-descriptors-loop
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          {:descriptors [] :errors {}}
+          (let
+            ((rest
+               (((selfhost/typecheck::parse-module-descriptors-loop modules) n)
+                 ((core/int::add i) 1))))
+            (let
+              ((parsed
+                 ((selfhost/typecheck::parse-module-descriptor
+                    ((core/vec::get modules) i))
+                   ((core/map::get rest) (quote :errors)))))
+              {:descriptors
+                 ((core/vec::append
+                    ((core/vec::push []) ((core/map::get parsed) (quote :descriptor))))
+                   ((core/map::get rest) (quote :descriptors)))
+               :errors ((core/map::get parsed) (quote :errors))})))))))

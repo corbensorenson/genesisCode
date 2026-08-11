@@ -248,19 +248,19 @@ fn selfhost_hash_module_forms(
         )
     })?;
     let out = hash_forms_fn
-            .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
-            .map_err(|e| ObligationError::Module(e.to_string()))?;
-        if let Some(e) = extract_protocol_error(ctx, &out) {
-            return Err(ObligationError::Module(format!(
-                "selfhost core/cli hash-module-forms failed: {e}"
-            )));
-        }
-        let Some(Term::Str(hex)) = out.as_data() else {
-            return Err(ObligationError::Module(format!(
-                "selfhost core/cli hash-module-forms returned non-string: {}",
-                out.debug_repr()
-            )));
-        };
+        .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
+        .map_err(|e| ObligationError::Module(e.to_string()))?;
+    if let Some(e) = extract_protocol_error(ctx, &out) {
+        return Err(ObligationError::Module(format!(
+            "selfhost core/cli hash-module-forms failed: {e}"
+        )));
+    }
+    let Some(Term::Str(hex)) = out.as_data() else {
+        return Err(ObligationError::Module(format!(
+            "selfhost core/cli hash-module-forms returned non-string: {}",
+            out.debug_repr()
+        )));
+    };
     parse_hex32_str(hex, "selfhost core/cli hash-module-forms")
 }
 
@@ -289,6 +289,7 @@ fn selfhost_optimize_module_forms(
     Ok(opt_forms.clone())
 }
 
+#[cfg(test)]
 fn selfhost_infer_effects_forms(
     ctx: &mut EvalCtx,
     env: &Env,
@@ -299,62 +300,61 @@ fn selfhost_infer_effects_forms(
     })?;
     let out = infer_fn
         .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
-        .map_err(|e| ObligationError::Typecheck(e.to_string()))?;
-    if let Some(e) = extract_protocol_error(ctx, &out) {
+        .map_err(|error| ObligationError::Typecheck(error.to_string()))?;
+    if let Some(error) = extract_protocol_error(ctx, &out) {
         return Err(ObligationError::Typecheck(format!(
-            "selfhost core/cli infer-effects failed: {e}"
+            "selfhost core/cli infer-effects failed: {error}"
         )));
     }
     let out_term = out
         .as_data()
         .cloned()
-        .unwrap_or_else(|| out.to_term_for_log(ctx.protocol.map(|p| p.error)));
-    let Term::Map(m) = out_term else {
+        .unwrap_or_else(|| out.to_term_for_log(ctx.protocol.map(|protocol| protocol.error)));
+    let Term::Map(map) = out_term else {
         return Err(ObligationError::Typecheck(format!(
             "selfhost core/cli infer-effects returned non-map: {}",
             out.debug_repr()
         )));
     };
 
-    let mut ops = BTreeSet::new();
-    let ops_term = m
-        .get(&TermOrdKey(Term::symbol(":ops")))
-        .ok_or_else(|| {
-            ObligationError::Typecheck(
-                "selfhost core/cli infer-effects result missing :ops".to_string(),
-            )
-        })?
-        .clone();
-    let Term::Vector(xs) = ops_term else {
+    let Term::Vector(op_terms) = map.get(&TermOrdKey(Term::symbol(":ops"))).ok_or_else(|| {
+        ObligationError::Typecheck(
+            "selfhost core/cli infer-effects result missing :ops".to_string(),
+        )
+    })?
+    else {
         return Err(ObligationError::Typecheck(
             "selfhost core/cli infer-effects :ops must be vector".to_string(),
         ));
     };
-    for x in xs {
-        match x {
-            Term::Symbol(s) => {
-                ops.insert(s);
-            }
-            other => {
-                return Err(ObligationError::Typecheck(format!(
-                    "selfhost core/cli infer-effects :ops must contain symbols, got {}",
-                    print_term(&other)
-                )));
-            }
+    let mut ops = BTreeSet::new();
+    for op in op_terms {
+        let Term::Symbol(op) = op else {
+            return Err(ObligationError::Typecheck(format!(
+                "selfhost core/cli infer-effects :ops must contain symbols, got {}",
+                print_term(op)
+            )));
+        };
+        if !ops.insert(op.clone()) {
+            return Err(ObligationError::Typecheck(format!(
+                "selfhost core/cli infer-effects :ops contains duplicate {op}"
+            )));
         }
     }
-
-    let unknown = match m.get(&TermOrdKey(Term::symbol(":unknown"))) {
-        Some(Term::Bool(b)) => *b,
+    let unknown = match map.get(&TermOrdKey(Term::symbol(":unknown"))) {
+        Some(Term::Bool(value)) => *value,
         Some(other) => {
             return Err(ObligationError::Typecheck(format!(
                 "selfhost core/cli infer-effects :unknown must be bool, got {}",
                 print_term(other)
             )));
         }
-        None => false,
+        None => {
+            return Err(ObligationError::Typecheck(
+                "selfhost core/cli infer-effects result missing :unknown".to_string(),
+            ));
+        }
     };
-
     Ok(gc_types::InferredEffects { ops, unknown })
 }
 

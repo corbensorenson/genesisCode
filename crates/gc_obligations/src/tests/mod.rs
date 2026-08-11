@@ -4,6 +4,7 @@ use gc_kernel::eval_module;
 
 mod frontend_contracts;
 mod selfhost_literal_op;
+mod typecheck_authority;
 
 fn eval_gc_term(src: &str) -> Term {
     let forms = canonicalize_module(parse_module(src).expect("parse")).expect("canon");
@@ -315,6 +316,108 @@ fn obligation_cache_key_changes_when_selfhost_artifact_bytes_change() {
         first, second,
         "selfhost cache keys must include artifact content, not only artifact path"
     );
+}
+
+#[test]
+fn obligation_cache_key_rejects_every_authority_identity_change() {
+    let dir = tempfile::tempdir().unwrap();
+    let (pkg_toml, manifest, modules) = cache_key_fixture(dir.path());
+    let limits = KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+    let frontend = CoreformFrontend::Rust;
+    let current = typecheck_cache_authority_identities();
+    let baseline = obligation_cache_key_with_authorities(
+        &pkg_toml, &manifest, &modules, None, limits, &frontend, current,
+    )
+    .unwrap();
+
+    for changed in [
+        TypecheckCacheAuthorityIdentities {
+            profile: [1; 32],
+            ..current
+        },
+        TypecheckCacheAuthorityIdentities {
+            schema: [2; 32],
+            ..current
+        },
+        TypecheckCacheAuthorityIdentities {
+            diagnostics: [3; 32],
+            ..current
+        },
+    ] {
+        let candidate = obligation_cache_key_with_authorities(
+            &pkg_toml, &manifest, &modules, None, limits, &frontend, changed,
+        )
+        .unwrap();
+        assert_ne!(baseline, candidate);
+    }
+}
+
+#[test]
+fn obligation_cache_key_rejects_every_request_semantic_input_change() {
+    let dir = tempfile::tempdir().unwrap();
+    let (pkg_toml, manifest, modules) = cache_key_fixture(dir.path());
+    let limits = KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+    let frontend = CoreformFrontend::Rust;
+    let baseline =
+        obligation_cache_key(&pkg_toml, &manifest, &modules, None, limits, &frontend).unwrap();
+
+    std::fs::write(
+        &pkg_toml,
+        "name = \"pkg_cache\"\nversion = \"0.0.1\"\ndependencies = [\"dep@sha256:00\"]\n",
+    )
+    .unwrap();
+    let dependency_changed =
+        obligation_cache_key(&pkg_toml, &manifest, &modules, None, limits, &frontend).unwrap();
+    assert_ne!(baseline, dependency_changed);
+
+    let mut source_changed = modules.clone();
+    source_changed[0].forms = vec![Term::symbol("changed/import-contract-profile")];
+    source_changed[0].hash = hash_module(&source_changed[0].forms);
+    let source_changed_key = obligation_cache_key(
+        &pkg_toml,
+        &manifest,
+        &source_changed,
+        None,
+        limits,
+        &frontend,
+    )
+    .unwrap();
+    assert_ne!(dependency_changed, source_changed_key);
+
+    let capability_changed = obligation_cache_key(
+        &pkg_toml,
+        &manifest,
+        &source_changed,
+        Some("changed-capability-policy"),
+        limits,
+        &frontend,
+    )
+    .unwrap();
+    assert_ne!(source_changed_key, capability_changed);
+
+    let bounded = KernelLimits {
+        step_limit: StepLimit::Limit(1234),
+        mem_limits: MemLimits {
+            max_alloc_units: Some(5678),
+            ..MemLimits::default()
+        },
+    };
+    let limits_changed = obligation_cache_key(
+        &pkg_toml,
+        &manifest,
+        &source_changed,
+        Some("changed-capability-policy"),
+        bounded,
+        &frontend,
+    )
+    .unwrap();
+    assert_ne!(capability_changed, limits_changed);
 }
 
 #[test]

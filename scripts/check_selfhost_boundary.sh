@@ -107,6 +107,13 @@ python3 scripts/lib/selfhost_frontend_authority.py \
   --schema docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.b type/effect authority is closed, dependency-isolated, and mutation-checked.
+python3 scripts/lib/selfhost_typecheck_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_typecheck_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 python3 scripts/lib/semantic_ownership_ledger.py \
   --root "$ROOT_DIR" \
   --ledger docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json \

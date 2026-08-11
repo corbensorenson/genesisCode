@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54`
-- Freshness artifact hash: `9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54`
-- Freshness source hash: `d9c34d162f0856cbf68f94b039e85f18e20c3e6f716d7c6e64accbf6030f75c6`
-- Source aggregate hash (module path + module sha256): `baac85d67cae860be87e784d3cacc89f7fad528f5f8f5a69f6a4c4767a2843c5`
+- Artifact sha256: `f619acdcec011eb26a942dd5c64b7f6c7524ddf1ec5526e894c99b4c7b902491`
+- Freshness artifact hash: `f619acdcec011eb26a942dd5c64b7f6c7524ddf1ec5526e894c99b4c7b902491`
+- Freshness source hash: `e5d5750c9fbf47adbff2f776314b3221edeb4faee71d57b49d9139a8d0cd47fe`
+- Source aggregate hash (module path + module sha256): `c306bc28a75db9c76a57b65e01c91079b1b439fdb09f5c7a81e80f00e8b534cb`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `25`
+- Module count: `48`
 
 ## Module Summary
 
@@ -25,7 +25,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/printer/03_fmt_list_module.gc` | 133 | 5620 | 10 | `de51e99e34b710f5` |
 | `selfhost/hash.gc` | 28 | 1055 | 5 | `54f123181935d454` |
 | `selfhost/tool_coreform_v1.gc` | 28 | 1101 | 4 | `cc8247e0a315fff3` |
-| `selfhost/cli_coreform_v1.gc` | 429 | 18040 | 42 | `f405f69443475c39` |
+| `selfhost/cli_coreform_v1.gc` | 453 | 19245 | 43 | `8c7e539dd64a35b5` |
 | `selfhost/cli_coreform_vcs_queries_v1.gc` | 210 | 9125 | 13 | `96fbbb8f4b9f1e06` |
 | `selfhost/cli_coreform_vcs_blame_v1.gc` | 327 | 17092 | 13 | `24b55511a286997b` |
 | `selfhost/cli_coreform_vcs_pkg_v1.gc` | 465 | 22278 | 21 | `befd359a9422d577` |
@@ -36,10 +36,33 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/cli_reachability_v1.gc` | 398 | 14168 | 24 | `2dae442240dbd8b8` |
 | `selfhost/cli_reachability_rules_v1.gc` | 218 | 9499 | 17 | `bfc421a3bc682517` |
 | `selfhost/cli_reachability_closure_v1.gc` | 297 | 13959 | 21 | `0c82e8d660c258b3` |
+| `selfhost/typecheck_core_v1.gc` | 241 | 8119 | 43 | `5b2830c81fd26f4b` |
+| `selfhost/typecheck_types_v1.gc` | 403 | 19013 | 39 | `b7a8e2d27a56f1c6` |
+| `selfhost/typecheck_compat_v1.gc` | 650 | 29109 | 33 | `3e1f2ce06ff0e3c9` |
+| `selfhost/typecheck_infer_apply_v1.gc` | 168 | 8162 | 6 | `aa7cab6697449377` |
+| `selfhost/typecheck_infer_prim_v1.gc` | 266 | 13774 | 16 | `a5ce190b718fd6e9` |
+| `selfhost/typecheck_infer_core_v1.gc` | 549 | 25892 | 30 | `33b7afd6f8f3e6f3` |
+| `selfhost/typecheck_infer_contract_v1.gc` | 247 | 13495 | 7 | `d2983313e1643216` |
+| `selfhost/typecheck_infer_effect_v1.gc` | 246 | 12871 | 11 | `91b0db8eb51fc8f3` |
+| `selfhost/typecheck_infer_app_v1.gc` | 52 | 2975 | 2 | `37717b57a1889f67` |
+| `selfhost/typecheck_typed_effects_v1.gc` | 459 | 19025 | 29 | `b107915572a5a97c` |
+| `selfhost/typecheck_unknown_signatures_v1.gc` | 284 | 10852 | 15 | `a4a29935a360a898` |
+| `selfhost/typecheck_package_meta_v1.gc` | 179 | 7022 | 19 | `9538a470ef806390` |
+| `selfhost/typecheck_module_profile_descriptor_v1.gc` | 537 | 22236 | 32 | `92079ecb7f6059cc` |
+| `selfhost/typecheck_module_profile_references_v1.gc` | 280 | 10816 | 12 | `b9b912429ee5502e` |
+| `selfhost/typecheck_module_profile_resolution_v1.gc` | 671 | 26954 | 39 | `fa393406afad8487` |
+| `selfhost/typecheck_profile_negotiation_v1.gc` | 565 | 24821 | 32 | `a0175e2cdb0a40d2` |
+| `selfhost/typecheck_contract_profile_v1.gc` | 552 | 23757 | 26 | `cbe864f1462a92f2` |
+| `selfhost/typecheck_contract_profile_compose_v1.gc` | 306 | 13030 | 16 | `aff6753bdde8a76b` |
+| `selfhost/typecheck_package_context_v1.gc` | 205 | 8451 | 12 | `4b03250139f9bc8b` |
+| `selfhost/typecheck_package_module_v1.gc` | 208 | 8545 | 15 | `c60cd21982394e96` |
+| `selfhost/typecheck_package_exports_v1.gc` | 441 | 18981 | 18 | `b792e2c0340a0127` |
+| `selfhost/typecheck_package_report_v1.gc` | 177 | 7165 | 11 | `e38ce8e915a1fc7a` |
 | `selfhost/patch_schema_v1.gc` | 356 | 17578 | 32 | `2d406bff742c79a1` |
 | `selfhost/patch_schema_apply_v1.gc` | 163 | 8681 | 10 | `59117ea31903a5b8` |
 | `selfhost/patch_schema_manifest_v1.gc` | 406 | 17939 | 33 | `a1f23ac0a6708185` |
-| `selfhost/patch_schema_refactor_v1.gc` | 935 | 45840 | 61 | `6824fd2deced077f` |
+| `selfhost/patch_schema_refactor_v1.gc` | 523 | 23095 | 46 | `a8be5b06db03d9e2` |
+| `selfhost/patch_schema_refactor_meta_migrate_v1.gc` | 411 | 22744 | 15 | `9aa240b249e5a43d` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -64,8 +87,31 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/cli_reachability_v1.gc`: `core/cli::empty-vec`, `core/cli::vec2`, `core/cli::vec-slice-from`, `core/cli::vec-slice-from2`, `core/cli::literal-op-sym-or-nil`, `core/cli::flatten-app`, `core/cli::infer-effects`, `core/cli::infer-effects-vec`
 - `selfhost/cli_reachability_rules_v1.gc`: `core/cli::set-keys->vec`, `core/cli::set-keys->vec2`, `core/cli::reach-str?`, `core/cli::reach-int?`, `core/cli::hash-hex?`, `core/cli::hash-vec?`, `core/cli::hash-vec2`, `core/cli::vcs-make-commit`
 - `selfhost/cli_reachability_closure_v1.gc`: `core/cli::vec-append`, `core/cli::vec-append2`, `core/cli::push-if-hash`, `core/cli::push-hashes-from-vec`, `core/cli::push-hashes-from-vec2`, `core/cli::map-entries-vec`, `core/cli::push-hash-values-from-map`, `core/cli::push-hash-values-from-map2`
+- `selfhost/typecheck_core_v1.gc`: `selfhost/typecheck::empty-vec`, `selfhost/typecheck::probe-ok?`, `selfhost/typecheck::sym?`, `selfhost/typecheck::str?`, `selfhost/typecheck::vec?`, `selfhost/typecheck::map?`, `selfhost/typecheck::pair?`, `selfhost/typecheck::bool?`
+- `selfhost/typecheck_types_v1.gc`: `selfhost/typecheck::ty-scalar`, `selfhost/typecheck::ty-any`, `selfhost/typecheck::ty-int`, `selfhost/typecheck::ty-dec`, `selfhost/typecheck::ty-bool`, `selfhost/typecheck::ty-nil`, `selfhost/typecheck::ty-str`, `selfhost/typecheck::ty-bytes`
+- `selfhost/typecheck_compat_v1.gc`: `selfhost/typecheck::tail-closed?`, `selfhost/typecheck::tail-any?`, `selfhost/typecheck::tail-var?`, `selfhost/typecheck::effect-scan-empty`, `selfhost/typecheck::collect-effect-tail`, `selfhost/typecheck::collect-effect-rows`, `selfhost/typecheck::collect-effect-fields`, `selfhost/typecheck::collect-effect-fields-loop`
+- `selfhost/typecheck_infer_apply_v1.gc`: `selfhost/typecheck::arg-type-match`, `selfhost/typecheck::arg-shape-match`, `selfhost/typecheck::arg-shape-match-loop`, `selfhost/typecheck::arg-type-compatible?`, `selfhost/typecheck::infer-apply-types`, `selfhost/typecheck::infer-apply-types-loop`
+- `selfhost/typecheck_infer_prim_v1.gc`: `selfhost/typecheck::prim-int-arith`, `selfhost/typecheck::prim-int-compare`, `selfhost/typecheck::prim-dec-arith`, `selfhost/typecheck::prim-dec-compare`, `selfhost/typecheck::prim-str-lengths`, `selfhost/typecheck::prim-result`, `selfhost/typecheck::prim-fail`, `selfhost/typecheck::prim-arity-message`
+- `selfhost/typecheck_infer_core_v1.gc`: `selfhost/typecheck::infer-result`, `selfhost/typecheck::infer-error`, `selfhost/typecheck::env-with-prelude`, `selfhost/typecheck::effects-vec-to-set`, `selfhost/typecheck::effects-vec-to-set-loop`, `selfhost/typecheck::infer-syntax-effects-term`, `selfhost/typecheck::infer-module-types`, `selfhost/typecheck::infer-module-types-loop`
+- `selfhost/typecheck_infer_contract_v1.gc`: `selfhost/typecheck::infer-msg-make`, `selfhost/typecheck::infer-msg-payload`, `selfhost/typecheck::infer-contract-extend`, `selfhost/typecheck::infer-contract-overrides`, `selfhost/typecheck::infer-contract-overrides-loop`, `selfhost/typecheck::infer-contract-method`, `selfhost/typecheck::infer-contract-dispatch`
+- `selfhost/typecheck_infer_effect_v1.gc`: `selfhost/typecheck::eff-unknown`, `selfhost/typecheck::merge-eff-rows`, `selfhost/typecheck::infer-effect-pure`, `selfhost/typecheck::infer-effect-bind`, `selfhost/typecheck::infer-effect-bind-program`, `selfhost/typecheck::infer-bind-continuation`, `selfhost/typecheck::finish-effect-bind`, `selfhost/typecheck::infer-effect-perform`
+- `selfhost/typecheck_infer_app_v1.gc`: `selfhost/typecheck::infer-app`, `selfhost/typecheck::infer-fallback-app`
+- `selfhost/typecheck_typed_effects_v1.gc`: `selfhost/typecheck::effects-empty`, `selfhost/typecheck::effects-merge`, `selfhost/typecheck::effects-with-unknown`, `selfhost/typecheck::effects-add-row`, `selfhost/typecheck::syntax-effects-forms`, `selfhost/typecheck::typed-effects-forms`, `selfhost/typecheck::typed-effects-forms-loop`, `selfhost/typecheck::effects-in-forms-with-env`
+- `selfhost/typecheck_unknown_signatures_v1.gc`: `selfhost/typecheck::unknown-signature-symbols`, `selfhost/typecheck::collect-unknown-signatures`, `selfhost/typecheck::collect-unknown-signatures-list`, `selfhost/typecheck::collect-unknown-special`, `selfhost/typecheck::collect-unknown-fn`, `selfhost/typecheck::bind-symbols`, `selfhost/typecheck::bind-symbols-loop`, `selfhost/typecheck::collect-unknown-let`
+- `selfhost/typecheck_package_meta_v1.gc`: `selfhost/typecheck::path-message`, `selfhost/typecheck::map-vec-push`, `selfhost/typecheck::symbol-vector`, `selfhost/typecheck::symbol-vector-loop`, `selfhost/typecheck::meta-exports`, `selfhost/typecheck::meta-caps-result`, `selfhost/typecheck::meta-types-result`, `selfhost/typecheck::meta-bool-result`
+- `selfhost/typecheck_module_profile_descriptor_v1.gc`: `selfhost/typecheck::module-resolution-profile`, `selfhost/typecheck::module-required-profiles`, `selfhost/typecheck::module-required-profiles-message`, `selfhost/typecheck::map-has-key?`, `selfhost/typecheck::map-has-key-loop`, `selfhost/typecheck::module-error-add`, `selfhost/typecheck::module-profile-active?`, `selfhost/typecheck::module-profile-active-loop`
+- `selfhost/typecheck_module_profile_references_v1.gc`: `selfhost/typecheck::collect-module-references`, `selfhost/typecheck::collect-module-references-loop`, `selfhost/typecheck::collect-references`, `selfhost/typecheck::symbol-keyword?`, `selfhost/typecheck::collect-pair-references`, `selfhost/typecheck::collect-fn-references`, `selfhost/typecheck::collect-let-references`, `selfhost/typecheck::collect-let-binding-references`
+- `selfhost/typecheck_module_profile_resolution_v1.gc`: `selfhost/typecheck::module-content-identity`, `selfhost/typecheck::module-paths`, `selfhost/typecheck::module-paths-loop`, `selfhost/typecheck::module-identities`, `selfhost/typecheck::module-identities-loop`, `selfhost/typecheck::validate-module-paths`, `selfhost/typecheck::validate-module-paths-loop`, `selfhost/typecheck::add-duplicate-path-errors`
+- `selfhost/typecheck_profile_negotiation_v1.gc`: `selfhost/typecheck::profile-negotiation-id`, `selfhost/typecheck::profile-families`, `selfhost/typecheck::profile-lineages`, `selfhost/typecheck::core-profile-offer`, `selfhost/typecheck::profile-negotiation-active?`, `selfhost/typecheck::profile-negotiation-active-loop`, `selfhost/typecheck::profile-errors-add-vector`, `selfhost/typecheck::profile-errors-add-vector-loop`
+- `selfhost/typecheck_contract_profile_v1.gc`: `selfhost/typecheck::contract-composition-profile`, `selfhost/typecheck::contract-profile-active?`, `selfhost/typecheck::contract-profile-active-loop`, `selfhost/typecheck::contract-require-profiles`, `selfhost/typecheck::contract-require-true`, `selfhost/typecheck::contract-parse-exports`, `selfhost/typecheck::contract-parse-exports-loop`, `selfhost/typecheck::contract-parse-exports-items`
+- `selfhost/typecheck_contract_profile_compose_v1.gc`: `selfhost/typecheck::compose-contract-profile`, `selfhost/typecheck::compose-contract-modules`, `selfhost/typecheck::compose-contract-module`, `selfhost/typecheck::entries-key-set`, `selfhost/typecheck::entries-key-set-loop`, `selfhost/typecheck::compose-contract-exports`, `selfhost/typecheck::compose-contract-exports-loop`, `selfhost/typecheck::map-set-add`
+- `selfhost/typecheck_package_context_v1.gc`: `selfhost/typecheck::package-context-empty`, `selfhost/typecheck::package-error-add`, `selfhost/typecheck::collect-package-context`, `selfhost/typecheck::collect-package-context-loop`, `selfhost/typecheck::collect-module-context`, `selfhost/typecheck::collect-export-context-loop`, `selfhost/typecheck::collect-export-context`, `selfhost/typecheck::finalize-package-context`
+- `selfhost/typecheck_package_module_v1.gc`: `selfhost/typecheck::state-error`, `selfhost/typecheck::state-warning`, `selfhost/typecheck::state-path-error`, `selfhost/typecheck::state-path-warning`, `selfhost/typecheck::module-report-base`, `selfhost/typecheck::prefix-package-errors`, `selfhost/typecheck::prefix-package-errors-loop`, `selfhost/typecheck::typecheck-module`
+- `selfhost/typecheck_package_exports_v1.gc`: `selfhost/typecheck::check-module-exports`, `selfhost/typecheck::check-export-effects-loop`, `selfhost/typecheck::check-export-effects`, `"`, `selfhost/typecheck::validate-export-effects`, `selfhost/typecheck::validate-effect-caps-loop`, `selfhost/typecheck::check-export-types-loop`, `selfhost/typecheck::check-export-type`
+- `selfhost/typecheck_package_report_v1.gc`: `selfhost/typecheck::module-state-to-report`, `selfhost/typecheck::merge-context-errors`, `selfhost/typecheck::merge-context-errors-loop`, `selfhost/typecheck::typecheck-package-modules`, `selfhost/typecheck::typecheck-package-modules-loop`, `selfhost/typecheck::merge-module-report`, `selfhost/typecheck::module-diagnostics`, `selfhost/typecheck::diagnostics-loop`
 - `selfhost/patch_schema_v1.gc`: `selfhost/patch_schema::is-int?`, `selfhost/patch_schema::is-str?`, `selfhost/patch_schema::is-sym?`, `selfhost/patch_schema::is-sym-or-str?`, `selfhost/patch_schema::is-vec?`, `selfhost/patch_schema::is-map?`, `selfhost/patch_schema::err`, `selfhost/patch_schema::require`
 - `selfhost/patch_schema_apply_v1.gc`: `selfhost/patch_schema::vec-replace-loop`, `selfhost/patch_schema::step-tag`, `selfhost/patch_schema::apply-replace-step-sym`, `selfhost/patch_schema::apply-replace-step`, `selfhost/patch_schema::apply-replace-term`, `core/cli::apply-replace-node`, `core/cli::print-module-forms`, `core/cli::canonicalize-module-content`
 - `selfhost/patch_schema_manifest_v1.gc`: `selfhost/patch_schema::empty-vec`, `selfhost/patch_schema_manifest::err`, `selfhost/patch_schema::str?`, `selfhost/patch_schema::sym?`, `selfhost/patch_schema::vec?`, `selfhost/patch_schema::map?`, `selfhost/patch_schema::key->str`, `selfhost/patch_schema::require-map-field`
 - `selfhost/patch_schema_refactor_v1.gc`: `selfhost/patch_refactor::is-error`, `selfhost/patch_refactor::err`, `selfhost/patch_refactor::empty-vec`, `selfhost/patch_refactor::vec2`, `selfhost/patch_refactor::res`, `selfhost/patch_refactor::res-term`, `selfhost/patch_refactor::res-count`, `selfhost/patch_refactor::rename-result`
+- `selfhost/patch_schema_refactor_meta_migrate_v1.gc`: `selfhost/patch_refactor::vec-filter-remove`, `selfhost/patch_refactor::vec-filter-remove2`, `selfhost/patch_refactor::vec-str->sym-vec`, `selfhost/patch_refactor::vec-str->sym-vec2`, `selfhost/patch_refactor::rewrite-meta-field`, `selfhost/patch_refactor::rewrite-meta-forms-loop`, `selfhost/patch_refactor::rewrite-meta-list-apply`, `core/cli::rewrite-meta-list-forms`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

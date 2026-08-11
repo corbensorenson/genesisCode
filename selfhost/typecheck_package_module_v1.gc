@@ -1,0 +1,208 @@
+(def selfhost/typecheck::state-error
+  (fn (state)
+    (fn (message)
+      (((core/map::put
+           (((core/map::put state) (quote :errors))
+             ((core/vec::push ((core/map::get state) (quote :errors))) message)))
+          (quote :ok))
+        false))))
+
+(def selfhost/typecheck::state-warning
+  (fn (state)
+    (fn (message)
+      (((core/map::put state) (quote :warnings))
+        ((core/vec::push ((core/map::get state) (quote :warnings))) message)))))
+
+(def selfhost/typecheck::state-path-error
+  (fn (state)
+    (fn (message)
+      ((selfhost/typecheck::state-error state)
+        ((selfhost/typecheck::path-message ((core/map::get state) (quote :path))) message)))))
+
+(def selfhost/typecheck::state-path-warning
+  (fn (state)
+    (fn (message)
+      ((selfhost/typecheck::state-warning state)
+        ((selfhost/typecheck::path-message ((core/map::get state) (quote :path))) message)))))
+
+(def selfhost/typecheck::module-report-base
+  (fn (path)
+    (fn (syntax-effects)
+      {:errors []
+        :export-effects []
+        :export-types []
+        :inferred-effects syntax-effects
+        :ok true
+        :path path
+        :warnings []})))
+
+(def selfhost/typecheck::prefix-package-errors
+  (fn (state)
+    (fn (errors)
+      ((((selfhost/typecheck::prefix-package-errors-loop errors)
+          (core/vec::len errors))
+         0)
+        state))))
+
+(def selfhost/typecheck::prefix-package-errors-loop
+  (fn (errors)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) n)
+            state
+            ((((selfhost/typecheck::prefix-package-errors-loop errors) n)
+               ((core/int::add i) 1))
+              ((selfhost/typecheck::state-path-error state)
+                ((core/vec::get errors) i)))))))))
+
+(def selfhost/typecheck::typecheck-module
+  (fn (module)
+    (fn (context)
+      (let
+        ((path ((core/map::get module) (quote :path)))
+          (forms ((core/map::get module) (quote :forms)))
+          (meta ((core/map::get module) (quote :meta))))
+        (let
+          ((syntax-effects (selfhost/typecheck::syntax-effects-forms forms))
+            (package-errors
+              ((core/map::get ((core/map::get context) (quote :errors))) path)))
+          (let
+            ((state0
+               ((selfhost/typecheck::prefix-package-errors
+                  ((selfhost/typecheck::module-report-base path) syntax-effects))
+                 (if (selfhost/typecheck::vec? package-errors) package-errors []))))
+            (if (selfhost/typecheck::nil? meta)
+              ((selfhost/typecheck::state-path-error state0) "missing ::meta")
+              (if (selfhost/typecheck::map? meta)
+                (((selfhost/typecheck::typecheck-module-map module) context) state0)
+                ((selfhost/typecheck::state-path-error state0)
+                  ((selfhost/typecheck::str2 "::meta must be a map datum, got ")
+                    (selfhost/typecheck::term-str meta)))))))))))
+
+(def selfhost/typecheck::typecheck-module-map
+  (fn (module)
+    (fn (context)
+      (fn (state0)
+        (let
+          ((path ((core/map::get module) (quote :path)))
+            (forms ((core/map::get module) (quote :forms)))
+            (meta ((core/map::get module) (quote :meta))))
+          (let
+            ((exports (selfhost/typecheck::meta-exports meta))
+              (caps-result (selfhost/typecheck::meta-caps-result meta))
+              (types-result (selfhost/typecheck::meta-types-result meta))
+              (strict-effects-result (selfhost/typecheck::meta-strict-effects-result meta))
+              (strict-shapes-result (selfhost/typecheck::meta-strict-shapes-result meta)))
+            (let
+              ((state1
+                 (if ((core/int::eq? (core/vec::len exports)) 0)
+                   ((selfhost/typecheck::state-path-warning state0)
+                     "::meta :exports is empty")
+                   state0))
+                (caps
+                  (if (selfhost/typecheck::result-ok? caps-result)
+                    ((core/map::get caps-result) (quote :value))
+                    []))
+                (types
+                  (if (selfhost/typecheck::result-ok? types-result)
+                    ((core/map::get types-result) (quote :value))
+                    {})))
+              (let
+                ((state2
+                   ((selfhost/typecheck::apply-meta-result-errors
+                      ((selfhost/typecheck::apply-meta-result-errors
+                         ((selfhost/typecheck::apply-meta-result-errors
+                            ((selfhost/typecheck::apply-meta-result-errors state1) caps-result))
+                           types-result))
+                        strict-effects-result))
+                     strict-shapes-result))
+                  (strict-effects
+                    (if (selfhost/typecheck::result-ok? strict-effects-result)
+                      (if ((core/map::get strict-effects-result) (quote :value))
+                        true
+                        (selfhost/typecheck::caps-enable-strict? caps))
+                      (selfhost/typecheck::caps-enable-strict? caps)))
+                  (strict-shapes
+                    (if (selfhost/typecheck::result-ok? strict-shapes-result)
+                      ((core/map::get strict-shapes-result) (quote :value))
+                      false)))
+                (let
+                  ((inferred
+                     ((selfhost/typecheck::infer-module-types forms)
+                       ((core/map::get context) (quote :declarations)))))
+                  (let
+                    ((state3
+                       ((selfhost/typecheck::merge-infer-session state2)
+                         ((core/map::get inferred) (quote :session))))
+                      (env ((core/map::get inferred) (quote :env)))
+                      (defs ((core/map::get inferred) (quote :defs))))
+                    (let
+                      ((effects ((selfhost/typecheck::effects-in-forms-with-env forms) env)))
+                      (((selfhost/typecheck::check-module-exports
+                          (((core/map::put state3) (quote :inferred-effects)) effects))
+                         {:caps caps
+                           :caps-set (selfhost/typecheck::effects-vec-to-set caps)
+                           :defs (selfhost/typecheck::defs-map forms)
+                           :env env
+                           :exports exports
+                           :inferred-defs defs
+                           :package-declarations
+                             ((core/map::get context) (quote :declarations))
+                           :path path
+                           :strict-effects strict-effects
+                           :strict-shapes strict-shapes
+                           :types types})
+                        context))))))))))))
+
+(def selfhost/typecheck::apply-meta-result-errors
+  (fn (state)
+    (fn (result)
+      (if (selfhost/typecheck::result-ok? result)
+        state
+        ((selfhost/typecheck::state-path-error state)
+          ((core/map::get result) (quote :error)))))))
+
+(def selfhost/typecheck::merge-infer-session
+  (fn (state)
+    (fn (session)
+      (let
+        ((errors ((core/map::get session) (quote :errors)))
+          (warnings ((core/map::get session) (quote :warnings))))
+        ((selfhost/typecheck::merge-infer-warnings
+           ((selfhost/typecheck::merge-infer-errors state) errors))
+          warnings)))))
+
+(def selfhost/typecheck::merge-infer-errors
+  (fn (state)
+    (fn (errors)
+      ((((selfhost/typecheck::merge-infer-errors-loop errors) (core/vec::len errors)) 0)
+        state))))
+
+(def selfhost/typecheck::merge-infer-errors-loop
+  (fn (errors)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) n)
+            state
+            ((((selfhost/typecheck::merge-infer-errors-loop errors) n)
+               ((core/int::add i) 1))
+              ((selfhost/typecheck::state-path-error state) ((core/vec::get errors) i)))))))))
+
+(def selfhost/typecheck::merge-infer-warnings
+  (fn (state)
+    (fn (warnings)
+      ((((selfhost/typecheck::merge-infer-warnings-loop warnings) (core/vec::len warnings)) 0)
+        state))))
+
+(def selfhost/typecheck::merge-infer-warnings-loop
+  (fn (warnings)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) n)
+            state
+            ((((selfhost/typecheck::merge-infer-warnings-loop warnings) n)
+               ((core/int::add i) 1))
+              ((selfhost/typecheck::state-path-warning state) ((core/vec::get warnings) i)))))))))

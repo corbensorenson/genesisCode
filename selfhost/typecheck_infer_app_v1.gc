@@ -1,0 +1,52 @@
+(def selfhost/typecheck::infer-app
+  (fn (head)
+    (fn (args)
+      (fn (env)
+        (fn (session)
+          (if (selfhost/typecheck::sym? head)
+            (if ((core/sym::eq? head) (quote core/msg::make))
+              (((selfhost/typecheck::infer-msg-make args) env) session)
+              (if ((core/sym::eq? head) (quote core/msg::op))
+                ((selfhost/typecheck::infer-result selfhost/typecheck::ty-symbol) session)
+                (if ((core/sym::eq? head) (quote core/msg::payload))
+                  (((selfhost/typecheck::infer-msg-payload args) env) session)
+                  (if ((core/sym::eq? head) (quote core/contract::make))
+                    ((selfhost/typecheck::infer-result
+                       ((selfhost/typecheck::ty-contract {}) (quote :any)))
+                      session)
+                    (if ((core/sym::eq? head) (quote core/contract::extend))
+                      (((selfhost/typecheck::infer-contract-extend args) env) session)
+                      (if ((core/sym::eq? head) (quote core/contract::dispatch))
+                        (((selfhost/typecheck::infer-contract-dispatch args) env) session)
+                        (if ((core/sym::eq? head) (quote core/effect::pure))
+                          (((selfhost/typecheck::infer-effect-pure args) env) session)
+                          (if ((core/sym::eq? head) (quote core/effect::bind))
+                            (((selfhost/typecheck::infer-effect-bind args) env) session)
+                            (if ((core/sym::eq? head) (quote core/effect::perform))
+                              (((selfhost/typecheck::infer-effect-perform args) env) session)
+                              ((((selfhost/typecheck::infer-fallback-app head) args) env)
+                                session))))))))))
+            ((((selfhost/typecheck::infer-fallback-app head) args) env) session)))))))
+
+(def selfhost/typecheck::infer-fallback-app
+  (fn (head)
+    (fn (args)
+      (fn (env)
+        (fn (session)
+          (let ((head-result (((selfhost/typecheck::infer-term head) env) session)))
+            (let
+              ((arg-result
+                 (((selfhost/typecheck::infer-arg-types args) env)
+                   ((core/map::get head-result) (quote :session)))))
+              (let
+                ((applied
+                   (((selfhost/typecheck::infer-apply-types
+                       ((core/map::get head-result) (quote :type)))
+                      ((core/map::get arg-result) (quote :types)))
+                     ((core/map::get arg-result) (quote :session)))))
+                (if ((core/map::get applied) (quote :recognized))
+                  ((selfhost/typecheck::infer-result
+                     ((core/map::get applied) (quote :type)))
+                    ((core/map::get applied) (quote :session)))
+                  ((selfhost/typecheck::infer-result selfhost/typecheck::ty-any)
+                    ((core/map::get applied) (quote :session))))))))))))

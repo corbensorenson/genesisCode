@@ -17,7 +17,7 @@ pub struct PackageTestResult {
 pub struct PackageTypecheckResult {
     pub ok: bool,
     pub report_coreform: String,
-    pub diagnostics: Vec<gc_types::TypecheckDiagnostic>,
+    pub diagnostics: Vec<TypecheckDiagnostic>,
 }
 
 #[derive(Debug, Clone)]
@@ -216,13 +216,7 @@ pub fn package_artifact_hash_with_limits_and_frontend(
         step_limit,
         mem_limits,
     };
-    compute_package_artifact_hash(
-        pkg_toml,
-        true,
-        &mut visited,
-        &frontend,
-        limits,
-    )
+    compute_package_artifact_hash(pkg_toml, true, &mut visited, &frontend, limits)
 }
 
 pub fn test_package(
@@ -420,7 +414,7 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_name: "core/obligation::coverage-mcdc",
             }),
             "core/obligation::determinism" => {
-                obligation_determinism(&store, &manifest, &modules, &test_runs)
+                obligation_determinism(&store, &manifest, &modules, &test_runs, &frontend, limits)
             }
             "core/obligation::capabilities-declared" => {
                 obligation_caps_declared(&store, &manifest, &modules, &test_runs)

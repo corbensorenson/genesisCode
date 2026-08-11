@@ -177,6 +177,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked frontend-authority profile.
 - `policies/selfhost_frontend_authority_v0.1.json` - content-addressed native/WASI frontend identity, vector, span, diagnostic, and nonclaim authority.
 - `scripts/selfhost_frontend_authority_guard.sh` - focused independent static, mutation, and native/WASI runtime guard; static enforcement is also part of `scripts/check_selfhost_boundary.sh`, while `scripts/lib/selfhost_frontend_authority.py --refresh-identity` only refreshes the reviewed profile identity.
+- `docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.md` - normative R4.2.b type/effect request, report, pipeline, consumer, resource, and Rust-oracle isolation contract.
+- `docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked typecheck-authority profile.
+- `policies/selfhost_typecheck_authority_v0.1.json` - content-addressed decision inventory and manifest-complete GenesisCode checker source authority.
+- `scripts/selfhost_typecheck_authority_guard.sh` - focused static, mutation, dependency-isolation, and native/WASI production authority guard.
 - `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md` - normative exhaustive command/semantic ownership and current-level rules.
 - `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` - canonical 114-command and 38-decision ownership ledger.
 - `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json` - closed machine schema for semantic ownership facts.

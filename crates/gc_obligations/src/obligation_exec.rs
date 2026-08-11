@@ -232,25 +232,27 @@ pub(super) fn obligation_determinism(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     tests: &[TestRun],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
     // Rule: if a module declares :caps = [], then its inferred effect ops must be empty,
     // and any tests defined by that module must not perform effects.
     let mut errors = Vec::new();
     let mut ok = true;
 
-    // Static scan.
-    for m in modules {
-        let inf = gc_types::infer_effects(&m.forms);
+    let typecheck = typecheck_report_with_frontend(modules, frontend, limits, false)?;
+    // The bound authority decoder guarantees this report is in exact module order.
+    for (m, inferred) in modules.iter().zip(&typecheck.modules) {
         let meta = extract_meta_static(&m.forms);
         if let Some(meta) = meta
             && let Some(caps) = meta_caps(&meta)
             && caps.is_empty()
-            && (inf.unknown || !inf.ops.is_empty())
+            && (inferred.unknown_ops || !inferred.inferred_ops.is_empty())
         {
             ok = false;
             errors.push(format!(
                 "{} declares :caps [] but has inferred effects (unknown={}, ops={:?})",
-                m.entry.path, inf.unknown, inf.ops
+                m.entry.path, inferred.unknown_ops, inferred.inferred_ops
             ));
         }
     }
@@ -380,7 +382,7 @@ pub(super) fn typecheck_report_with_frontend(
     frontend: &CoreformFrontend,
     limits: KernelLimits,
     strict_sound: bool,
-) -> Result<gc_types::TypecheckReport, ObligationError> {
+) -> Result<AuthoritativeTypecheckReport, ObligationError> {
     let mut mods = Vec::new();
     for m in modules {
         let meta = if strict_sound {
@@ -388,15 +390,13 @@ pub(super) fn typecheck_report_with_frontend(
         } else {
             m.meta.clone()
         };
-        mods.push(gc_types::ModuleForTypecheck {
+        mods.push(TypecheckModuleInput {
             path: m.entry.path.clone(),
             forms: m.forms.clone(),
             meta,
         });
     }
-    let report = gc_types::typecheck_package(&mods);
-    verify_selfhost_infer_effects_parity(modules, frontend, limits)?;
-    Ok(report)
+    typecheck_modules_with_authority(&mods, frontend, limits.step_limit, limits.mem_limits)
 }
 
 fn strict_sound_meta(meta: Option<&Term>) -> Option<Term> {
@@ -410,44 +410,4 @@ fn strict_sound_meta(meta: Option<&Term>) -> Option<Term> {
     );
     map.insert(TermOrdKey(Term::symbol(":strict-shapes")), Term::Bool(true));
     Some(Term::Map(map))
-}
-
-pub(super) fn verify_selfhost_infer_effects_parity(
-    modules: &[LoadedModule],
-    frontend: &CoreformFrontend,
-    limits: KernelLimits,
-) -> Result<(), ObligationError> {
-    let CoreformFrontend::Selfhost(cfg) = frontend else {
-        return Ok(());
-    };
-
-    // Toolchain bootstrap is trusted and therefore uncharged.
-    let mut ctx = EvalCtx::with_step_limit(None);
-    ctx.set_mem_limits(limits.mem_limits);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        cfg.bootstrap_mode,
-        cfg.artifact.as_deref(),
-    )
-    .map_err(|e| ObligationError::Typecheck(format!("selfhost/init: {e}")))?;
-    // Apply user/configured limits to inference work.
-    ctx.steps = 0;
-    ctx.step_limit = limits.step_limit.resolve();
-
-    for m in modules {
-        let rust = gc_types::infer_effects(&m.forms);
-        let selfhost = selfhost_infer_effects_forms(&mut ctx, &env, &m.forms)?;
-        if rust.ops != selfhost.ops || rust.unknown != selfhost.unknown {
-            let rust_ops = rust.ops.into_iter().collect::<Vec<_>>().join(",");
-            let self_ops = selfhost.ops.into_iter().collect::<Vec<_>>().join(",");
-            return Err(ObligationError::Typecheck(format!(
-                "selfhost core/cli::infer-effects parity mismatch for {} (rust_ops=[{}] rust_unknown={} selfhost_ops=[{}] selfhost_unknown={})",
-                m.entry.path, rust_ops, rust.unknown, self_ops, selfhost.unknown
-            )));
-        }
-    }
-    Ok(())
 }

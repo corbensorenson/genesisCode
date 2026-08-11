@@ -1,0 +1,280 @@
+(def selfhost/typecheck::collect-module-references
+  (fn (forms)
+    (fn (local-definitions)
+      (((((selfhost/typecheck::collect-module-references-loop forms)
+          local-definitions)
+         (core/vec::len forms))
+        0)
+       {}))))
+
+(def selfhost/typecheck::collect-module-references-loop
+  (fn (forms)
+    (fn (local-definitions)
+      (fn (n)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) n)
+              out
+              (let
+                ((form ((core/vec::get forms) i))
+                  (parsed (selfhost/typecheck::parse-def-term ((core/vec::get forms) i))))
+                (((((selfhost/typecheck::collect-module-references-loop forms)
+                     local-definitions)
+                    n)
+                   ((core/int::add i) 1))
+                  ((((selfhost/typecheck::collect-references
+                       (if (selfhost/typecheck::nil? parsed)
+                         form
+                         ((core/map::get parsed) (quote :expr))))
+                      local-definitions)
+                     {})
+                    out))))))))))
+
+(def selfhost/typecheck::collect-references
+  (fn (term)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (out)
+          (if (selfhost/typecheck::sym? term)
+            (if
+              (if (selfhost/typecheck::symbol-keyword? term)
+                true
+                (if ((selfhost/typecheck::set-has? local-definitions) term)
+                  true
+                  ((selfhost/typecheck::set-has? bound) term)))
+              out
+              ((selfhost/typecheck::set-add out) term))
+            (if (selfhost/typecheck::pair? term)
+              ((((selfhost/typecheck::collect-pair-references term)
+                  local-definitions)
+                 bound)
+                out)
+              (if (selfhost/typecheck::vec? term)
+                (((((selfhost/typecheck::collect-reference-items term)
+                     local-definitions)
+                    bound)
+                   0)
+                  out)
+                (if (selfhost/typecheck::map? term)
+                  ((((selfhost/typecheck::collect-reference-map
+                       (core/map::entries term))
+                      local-definitions)
+                     bound)
+                    out)
+                  out)))))))))
+
+(def selfhost/typecheck::symbol-keyword?
+  (fn (symbol)
+    (let ((bytes (core/str::to-utf8 (selfhost/typecheck::symbol-str symbol))))
+      (if ((core/int::eq? (core/bytes::len bytes)) 0)
+        false
+        ((core/int::eq? ((core/bytes::get bytes) 0)) 58)))))
+
+(def selfhost/typecheck::collect-pair-references
+  (fn (term)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (out)
+          (let ((items (selfhost/typecheck::list-items-or-nil term)))
+            (if (selfhost/typecheck::vec? items)
+              (if ((core/int::eq? (core/vec::len items)) 0)
+                out
+                (let ((head ((core/vec::get items) 0)))
+                  (if
+                    (if (selfhost/typecheck::sym? head)
+                      ((core/sym::eq? head) (quote quote))
+                      false)
+                    out
+                    (if
+                      (if (selfhost/typecheck::sym? head)
+                        (if ((core/sym::eq? head) (quote fn))
+                          ((core/int::lt? 2) (core/vec::len items))
+                          false)
+                        false)
+                      ((((selfhost/typecheck::collect-fn-references items)
+                          local-definitions)
+                         bound)
+                        out)
+                      (if
+                        (if (selfhost/typecheck::sym? head)
+                          (if ((core/sym::eq? head) (quote let))
+                            ((core/int::lt? 2) (core/vec::len items))
+                            false)
+                          false)
+                        ((((selfhost/typecheck::collect-let-references items)
+                            local-definitions)
+                           bound)
+                          out)
+                        (if
+                          (if (selfhost/typecheck::sym? head)
+                            ((core/sym::eq? head) (quote prim))
+                            false)
+                          (((((selfhost/typecheck::collect-reference-items items)
+                               local-definitions)
+                              bound)
+                             2)
+                            out)
+                          (if
+                            (if (selfhost/typecheck::sym? head)
+                              (if ((core/sym::eq? head) (quote def))
+                                ((core/int::eq? (core/vec::len items)) 3)
+                                false)
+                              false)
+                            ((((selfhost/typecheck::collect-references
+                                 ((core/vec::get items) 2))
+                                local-definitions)
+                               bound)
+                              out)
+                            (((((selfhost/typecheck::collect-reference-items items)
+                                 local-definitions)
+                               bound)
+                               0)
+                              out))))))))
+              (let
+                ((with-car
+                   ((((selfhost/typecheck::collect-references (core/pair::car term))
+                       local-definitions)
+                      bound)
+                     out)))
+                ((((selfhost/typecheck::collect-references (core/pair::cdr term))
+                    local-definitions)
+                   bound)
+                  with-car)))))))))
+
+(def selfhost/typecheck::collect-fn-references
+  (fn (items)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (out)
+          (let
+            ((params
+               (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+            (let
+              ((body-bound
+                 (if (selfhost/typecheck::vec? params)
+                   ((selfhost/typecheck::bind-symbols params) bound)
+                   bound)))
+              (((((selfhost/typecheck::collect-reference-items items)
+                   local-definitions)
+                  body-bound)
+                 2)
+                out))))))))
+
+(def selfhost/typecheck::collect-let-references
+  (fn (items)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (out)
+          (let
+            ((bindings
+               (selfhost/typecheck::list-items-or-nil ((core/vec::get items) 1))))
+            (let
+              ((binding-state
+                 (if (selfhost/typecheck::vec? bindings)
+                   ((((selfhost/typecheck::collect-let-binding-references bindings)
+                       local-definitions)
+                      bound)
+                     out)
+                   {:bound bound :out out})))
+              (((((selfhost/typecheck::collect-reference-items items)
+                   local-definitions)
+                  ((core/map::get binding-state) (quote :bound)))
+                 2)
+                ((core/map::get binding-state) (quote :out))))))))))
+
+(def selfhost/typecheck::collect-let-binding-references
+  (fn (bindings)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (out)
+          (((((selfhost/typecheck::collect-let-binding-references-loop bindings)
+              local-definitions)
+             bound)
+            0)
+           {:bound bound :out out}))))))
+
+(def selfhost/typecheck::collect-let-binding-references-loop
+  (fn (bindings)
+    (fn (local-definitions)
+      (fn (original-bound)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) (core/vec::len bindings))
+              state
+              (let
+                ((pair
+                   (selfhost/typecheck::list-items-or-nil
+                     ((core/vec::get bindings) i))))
+                (if
+                  (if (selfhost/typecheck::vec? pair)
+                    ((core/int::eq? (core/vec::len pair)) 2)
+                    false)
+                  (let
+                    ((name ((core/vec::get pair) 0))
+                      (value ((core/vec::get pair) 1)))
+                    (((((selfhost/typecheck::collect-let-binding-references-loop bindings)
+                         local-definitions)
+                        original-bound)
+                       ((core/int::add i) 1))
+                      {:bound
+                         (if (selfhost/typecheck::sym? name)
+                           ((selfhost/typecheck::set-add
+                              ((core/map::get state) (quote :bound)))
+                             name)
+                           ((core/map::get state) (quote :bound)))
+                       :out
+                         ((((selfhost/typecheck::collect-references value)
+                             local-definitions)
+                            original-bound)
+                           ((core/map::get state) (quote :out)))}))
+                  (((((selfhost/typecheck::collect-let-binding-references-loop bindings)
+                       local-definitions)
+                      original-bound)
+                     ((core/int::add i) 1))
+                    state))))))))))
+
+(def selfhost/typecheck::collect-reference-items
+  (fn (items)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len items))
+              out
+              (((((selfhost/typecheck::collect-reference-items items) local-definitions)
+                  bound)
+                 ((core/int::add i) 1))
+                ((((selfhost/typecheck::collect-references
+                     ((core/vec::get items) i))
+                    local-definitions)
+                   bound)
+                  out)))))))))
+
+(def selfhost/typecheck::collect-reference-map
+  (fn (entries)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (out)
+          (((((selfhost/typecheck::collect-reference-map-loop entries)
+              local-definitions)
+             bound)
+            0)
+           out))))))
+
+(def selfhost/typecheck::collect-reference-map-loop
+  (fn (entries)
+    (fn (local-definitions)
+      (fn (bound)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len entries))
+              out
+              (((((selfhost/typecheck::collect-reference-map-loop entries)
+                   local-definitions)
+                  bound)
+                 ((core/int::add i) 1))
+                ((((selfhost/typecheck::collect-references
+                     ((core/vec::get ((core/vec::get entries) i)) 1))
+                    local-definitions)
+                   bound)
+                  out)))))))))
