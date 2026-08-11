@@ -728,6 +728,7 @@ for lifecycle_probe in \
   'host_bridge_daemon_lifecycle.py --self-test' \
   'network-close-failures-cross-public-boundary-after-handle-removal' \
   'spawn-pumps-cancel-before-fallback-reap' \
+  'task-worker-cancel-join-failures-cross-run-boundary' \
   'warm-daemon-provider-success-error-timeout-restart-shutdown-eof' \
   'warm-worker-cleanup-failures-cross-warm-and-mcp-boundaries' \
   'warm-worker-pumps-cancel-before-fallback-reap' \
@@ -737,6 +738,7 @@ for lifecycle_probe in \
   '--features gfx-desktop-backend' \
   '--features gpu-device-backend' \
   'device_runtime_resources_are_scoped_and_reaped' \
+  'tests::task_worker_join_failure_crosses_the_public_run_boundary_after_real_cancellation' \
   '"coverage_complete": False' \
   '"status": "bridge-profile-implemented"' \
   '"standard_model_api_owner": "R5.4.e"'; do

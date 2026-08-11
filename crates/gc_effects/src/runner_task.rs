@@ -19,6 +19,8 @@ pub(crate) use runner_task_policy::{
     TaskBudgetState, enforce_task_policy_limits, task_schedule_event_for,
 };
 use runner_task_terms::{map_field, map_field_int_u64, map_field_str_or_symbol, task_map};
+#[cfg(test)]
+pub(crate) use runner_task_workers::with_task_join_failure_for_tests;
 
 #[derive(Debug, Default)]
 pub(crate) struct TaskRuntime {
@@ -64,14 +66,12 @@ struct TaskWorkerPool {
     tx: Option<mpsc::Sender<TaskJob>>,
     rx: Option<mpsc::Receiver<TaskCompletion>>,
     workers: Vec<JoinHandle<()>>,
+    active: Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl Drop for TaskWorkerPool {
     fn drop(&mut self) {
-        self.tx.take();
-        for worker in self.workers.drain(..) {
-            let _ = worker.join();
-        }
+        let _ = self.shutdown();
     }
 }
 

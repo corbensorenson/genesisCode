@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `8694b3288c72` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `b06f0e087ddc` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `80368c73cde9` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `38fe6d48e2f9` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `2d7e4a23ffe4` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-08) | md | `44928f49c48d` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `ab8cd51869ac` |
@@ -61,7 +61,7 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
 | [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `4238b6443fc5` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `6fe3aa325f3b` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `ec478d9299c0` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -109,10 +109,10 @@ toc-depth: 2
 | [`docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json`](../docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json) | genesis/capability-coverage-status-v0.1 | json | `f69150c81e83` |
 | [`docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json`](../docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json) | genesis/capability-evidence-ledger-v0.1 | json | `64875e17d645` |
 | [`docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json`](../docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json) | GenesisCode Capability Evidence Ledger v0.1 | schema | `cd3c5b62c057` |
-| [`docs/spec/CAPS_TOML.md`](../docs/spec/CAPS_TOML.md) | caps.toml (Capability Policy) v0.2 | md | `e718c78fd6de` |
+| [`docs/spec/CAPS_TOML.md`](../docs/spec/CAPS_TOML.md) | caps.toml (Capability Policy) v0.2 | md | `703a5c3ff3c0` |
 | [`docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json`](../docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json) | GenesisCode Cargo Cache Policy v0.1 | schema | `10c82a4c531b` |
 | [`docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json`](../docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json) | GenesisCode Changed Impact Policy v0.1 | schema | `dd72983c147a` |
-| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `29487df5c721` |
+| [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `23e57a59479e` |
 | [`docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`](../docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md) | Check/Update Boundary v0.1 | md | `405aa30e45eb` |
 | [`docs/spec/CLI.md`](../docs/spec/CLI.md) | Genesis CLI v0.2 (Exit Codes + JSON) | md | `a37c7bfc8ee0` |
 | [`docs/spec/CLI_JSON_SCHEMAS_v0.1.md`](../docs/spec/CLI_JSON_SCHEMAS_v0.1.md) | CLI JSON Schemas v0.1 (Non-GCPM) | md | `cf632e03dda6` |
@@ -268,7 +268,7 @@ toc-depth: 2
 | [`docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json`](../docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json) | GenesisCode Reference Host Observation v0.1 | schema | `8a94e816ed67` |
 | [`docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json`](../docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json) | GenesisCode Reference Host Profiles v0.1 | schema | `6c5999814fa0` |
 | [`docs/spec/REGISTRY_POLICY.md`](../docs/spec/REGISTRY_POLICY.md) | Registry Policy (Local) (v0.2) | md | `30c1e4d1d4d4` |
-| [`docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json) | GenesisCode release evidence aggregate v0.2 | schema | `ecaf4a2026a3` |
+| [`docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json) | GenesisCode release evidence aggregate v0.2 | schema | `25723ddd0982` |
 | [`docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json) | GenesisCode release evidence DAG v0.2 | schema | `2487aa377656` |
 | [`docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json) | GenesisCode same-run release evidence fanout authentication v0.2 | schema | `2c7d5ef909ea` |
 | [`docs/spec/RELEASE_EVIDENCE_WORKER_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_WORKER_v0.2.schema.json) | GenesisCode release evidence worker observation v0.2 | schema | `3969620200f4` |

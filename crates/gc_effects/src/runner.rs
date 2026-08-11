@@ -80,6 +80,8 @@ mod runner_cap_store;
 mod runner_cap_vcs_low;
 #[path = "runner_capability_dispatch.rs"]
 mod runner_capability_dispatch;
+#[path = "runner_cleanup.rs"]
+mod runner_cleanup;
 #[path = "runner_gc_ops.rs"]
 mod runner_gc_ops;
 #[path = "runner_remote_ops.rs"]
@@ -96,6 +98,7 @@ use runner_cap_refs::*;
 use runner_cap_store::*;
 use runner_cap_vcs_low::*;
 use runner_capability_dispatch::*;
+use runner_cleanup::finalize_run_with_runtime_cleanup;
 use runner_gc_ops::*;
 use runner_remote_ops::*;
 use runner_response_budget::*;
@@ -193,9 +196,12 @@ pub fn run(
             match $result {
                 Ok(value) => value,
                 Err(error) => {
-                    return finalize_run_with_bridge_cleanup(
+                    let task_cleanup = task_runtime.shutdown();
+                    let bridge_cleanup = bridge_runtime.shutdown();
+                    return finalize_run_with_runtime_cleanup(
                         Err(error.into()),
-                        bridge_runtime.shutdown(),
+                        task_cleanup,
+                        bridge_cleanup,
                     );
                 }
             }
@@ -204,9 +210,12 @@ pub fn run(
 
     loop {
         let Value::EffectProgram(p) = cur else {
-            return finalize_run_with_bridge_cleanup(
+            let task_cleanup = task_runtime.shutdown();
+            let bridge_cleanup = bridge_runtime.shutdown();
+            return finalize_run_with_runtime_cleanup(
                 Err(EffectsError::NotAnEffectProgram),
-                bridge_runtime.shutdown(),
+                task_cleanup,
+                bridge_cleanup,
             );
         };
         match p.as_ref() {
@@ -217,21 +226,27 @@ pub fn run(
                     toolchain,
                     entries,
                 };
-                return finalize_run_with_bridge_cleanup(
+                let task_cleanup = task_runtime.shutdown();
+                let bridge_cleanup = bridge_runtime.shutdown();
+                return finalize_run_with_runtime_cleanup(
                     Ok(RunResult {
                         value: (*v.as_ref()).clone(),
                         log,
                     }),
-                    bridge_runtime.shutdown(),
+                    task_cleanup,
+                    bridge_cleanup,
                 );
             }
             EffectProgram::Perform { request } => {
                 let (req, sealed_token) =
                     run_try!(unseal_effect_request(request.as_ref(), proto.effect));
                 if sealed_token != proto.effect {
-                    return finalize_run_with_bridge_cleanup(
+                    let task_cleanup = task_runtime.shutdown();
+                    let bridge_cleanup = bridge_runtime.shutdown();
+                    return finalize_run_with_runtime_cleanup(
                         Err(EffectsError::BadEffectSeal),
-                        bridge_runtime.shutdown(),
+                        task_cleanup,
+                        bridge_cleanup,
                     );
                 }
 
@@ -398,52 +413,6 @@ pub fn run(
                 };
             }
         }
-    }
-}
-
-fn finalize_run_with_bridge_cleanup(
-    outcome: Result<RunResult, EffectsError>,
-    cleanup: Result<(), crate::runner_host_bridge::BridgeError>,
-) -> Result<RunResult, EffectsError> {
-    match cleanup {
-        Ok(()) => outcome,
-        Err(cleanup) => Err(EffectsError::Cleanup {
-            subsystem: "host-bridge".to_string(),
-            reason: format!("{}: {}", cleanup.code, cleanup.message),
-            prior_error: outcome.err().map(|error| error.to_string()),
-        }),
-    }
-}
-
-#[cfg(test)]
-mod cleanup_tests {
-    use super::*;
-
-    #[test]
-    fn bridge_cleanup_failure_preserves_the_prior_run_error() {
-        let outcome = Err(EffectsError::BadEffectSeal);
-        let cleanup = Err(crate::runner_host_bridge::BridgeError {
-            code: "net/bridge-reap".to_string(),
-            message: "worker reap failed".to_string(),
-        });
-        let error = match finalize_run_with_bridge_cleanup(outcome, cleanup) {
-            Ok(_) => panic!("cleanup failure must cross the run boundary"),
-            Err(error) => error,
-        };
-        let EffectsError::Cleanup {
-            subsystem,
-            reason,
-            prior_error,
-        } = error
-        else {
-            panic!("expected typed cleanup failure");
-        };
-        assert_eq!(subsystem, "host-bridge");
-        assert_eq!(reason, "net/bridge-reap: worker reap failed");
-        assert_eq!(
-            prior_error.as_deref(),
-            Some("effect request is not sealed with the EFFECT protocol token")
-        );
     }
 }
 

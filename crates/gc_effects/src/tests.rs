@@ -1532,6 +1532,51 @@ max_workers = {max_workers}
 }
 
 #[test]
+fn task_worker_join_failure_crosses_the_public_run_boundary_after_real_cancellation() {
+    let (forms, h) = mk_prog_for(
+        "core/task::spawn",
+        "{:task/sleep-ms 5000 :task/result {:ok true}}",
+    );
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["core/task::spawn"]
+
+[task]
+max_workers = 1
+"#,
+    )
+    .expect("task policy");
+
+    let started = std::time::Instant::now();
+    let error = crate::runner_task::with_task_join_failure_for_tests(|| {
+        match run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()) {
+            Ok(_) => panic!("injected task cleanup failure must cross run"),
+            Err(error) => error,
+        }
+    });
+    let EffectsError::Cleanup {
+        subsystem,
+        reason,
+        prior_error,
+    } = error
+    else {
+        panic!("expected typed cleanup failure");
+    };
+    assert_eq!(subsystem, "task-worker");
+    assert!(reason.contains("injected task worker join failure"));
+    assert!(prior_error.is_none());
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(1),
+        "task cancellation did not quiesce promptly: {:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
 fn task_runtime_await_surfaces_failed_state_and_error_payload() {
     let src = r#"
             (def prog

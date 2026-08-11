@@ -78,6 +78,13 @@ Supported keys:
 - `max_steps_per_task` (int >= 0, optional): logical-step ceiling per task.
 - `max_time_ms_per_task` (int >= 0, optional): logical elapsed-step budget per task.
 
+Task workers are owned by one effect run. Every run exit cancels unfinished jobs,
+closes worker admission, and joins all workers in creation order before returning.
+A failed join or post-join liveness check takes precedence over the run outcome as
+typed `EffectsError::Cleanup` with subsystem `task-worker`; simultaneous task and
+host-bridge cleanup failures are retained in deterministic owner order. Cancellation
+is cooperative within a task worker, not hard thread preemption.
+
 Example:
 ```toml
 [task]

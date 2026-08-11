@@ -124,6 +124,7 @@ PY
      run_exact_test warm_worker_process::io_cleanup::tests::residual_and_pipe_join_failures_are_not_discarded active -p gc_cli_driver --lib && \
      run_exact_test warm_session::tests::worker_cleanup_failure_precedes_cancellation_and_fails_session_closed active -p gc_cli_driver --lib && \
      run_exact_test mcp::session::tests::worker_cleanup_failure_precedes_mcp_cancellation_and_closes_uncontained_server active -p gc_cli_driver --lib && \
+     run_exact_test tests::task_worker_join_failure_crosses_the_public_run_boundary_after_real_cancellation active -p gc_effects --lib && \
      run_exact_test runner_host_bridge::tests::persistent_bridge_owner_closes_all_families_on_error_drop_and_restart active -p gc_effects --lib && \
      run_exact_test runner_host_bridge::tests::persistent_stdio_timeout_kills_process_trees_and_workers ignored -p gc_effects --lib && \
      run_exact_test runner_host_bridge::tests::spawn_per_op_timeout_kills_bridge_processes_and_recovers ignored -p gc_effects --lib && \
@@ -306,6 +307,7 @@ report = {
             "model-provider-session-success-error-timeout-drop-restart",
             "network-close-failures-cross-public-boundary-after-handle-removal",
             "spawn-pumps-cancel-before-fallback-reap",
+            "task-worker-cancel-join-failures-cross-run-boundary",
             "warm-daemon-provider-success-error-timeout-restart-shutdown-eof",
             "warm-worker-cleanup-failures-cross-warm-and-mcp-boundaries",
             "warm-worker-pumps-cancel-before-fallback-reap",

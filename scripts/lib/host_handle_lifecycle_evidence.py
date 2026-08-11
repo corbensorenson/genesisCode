@@ -46,6 +46,7 @@ VERIFIED_CONTROLS = [
     "model-provider-session-success-error-timeout-drop-restart",
     "network-close-failures-cross-public-boundary-after-handle-removal",
     "spawn-pumps-cancel-before-fallback-reap",
+    "task-worker-cancel-join-failures-cross-run-boundary",
     "warm-daemon-provider-success-error-timeout-restart-shutdown-eof",
     "warm-worker-cleanup-failures-cross-warm-and-mcp-boundaries",
     "warm-worker-pumps-cancel-before-fallback-reap",

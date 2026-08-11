@@ -1,8 +1,29 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
 
 use super::*;
+
+struct ActiveTaskWorker(Arc<AtomicUsize>);
+
+impl ActiveTaskWorker {
+    fn enter(active: Arc<AtomicUsize>) -> Self {
+        active.fetch_add(1, Ordering::SeqCst);
+        Self(active)
+    }
+}
+
+impl Drop for ActiveTaskWorker {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+#[cfg(test)]
+std::thread_local! {
+    static INJECT_TASK_JOIN_FAILURE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
 impl TaskRuntime {
     pub(super) fn wait_for_completion(&mut self, task_id: &str) -> Result<TaskCompletion, String> {
@@ -10,6 +31,15 @@ impl TaskRuntime {
             return Ok(c);
         }
         self.pool.wait_for_completion(task_id, &mut self.completed)
+    }
+
+    pub(crate) fn shutdown(&mut self) -> Result<(), String> {
+        for task in self.tasks.values() {
+            if let Some(cancel_flag) = &task.cancel_flag {
+                cancel_flag.store(true, Ordering::Release);
+            }
+        }
+        self.pool.shutdown()
     }
 }
 
@@ -27,9 +57,10 @@ impl TaskWorkerPool {
             let shared_rx = Arc::clone(&shared_rx);
             let done_tx = done_tx.clone();
             let ready_tx = ready_tx.clone();
+            let active = Arc::clone(&self.active);
             let worker_result = thread::Builder::new()
                 .name(format!("genesis-task-{idx}"))
-                .spawn(move || worker_loop(shared_rx, done_tx, ready_tx));
+                .spawn(move || worker_loop(shared_rx, done_tx, ready_tx, active));
             match worker_result {
                 Ok(worker) => {
                     self.workers.push(worker);
@@ -46,6 +77,34 @@ impl TaskWorkerPool {
         }
         self.tx = Some(tx);
         self.rx = Some(done_rx);
+    }
+
+    pub(super) fn shutdown(&mut self) -> Result<(), String> {
+        self.tx.take();
+        let mut failures = Vec::new();
+        let mut joined = 0_usize;
+        for (index, worker) in self.workers.drain(..).enumerate() {
+            match worker.join() {
+                Ok(()) => joined = joined.saturating_add(1),
+                Err(_) => failures.push(format!("task worker {index} panicked during join")),
+            }
+        }
+        self.rx.take();
+        let active = self.active.load(Ordering::SeqCst);
+        if active != 0 {
+            failures.push(format!(
+                "{active} task worker(s) remained active after deterministic join"
+            ));
+        }
+        #[cfg(test)]
+        if joined > 0 && INJECT_TASK_JOIN_FAILURE.get() {
+            failures.push("injected task worker join failure".to_string());
+        }
+        if failures.is_empty() {
+            Ok(())
+        } else {
+            Err(failures.join("; "))
+        }
     }
 
     pub(super) fn dispatch(&self, job: TaskJob) -> Result<(), String> {
@@ -85,7 +144,9 @@ fn worker_loop(
     shared_rx: Arc<Mutex<mpsc::Receiver<TaskJob>>>,
     done_tx: mpsc::Sender<TaskCompletion>,
     ready_tx: mpsc::Sender<()>,
+    active: Arc<AtomicUsize>,
 ) {
+    let _active = ActiveTaskWorker::enter(active);
     let _ = ready_tx.send(());
     loop {
         let recv = match shared_rx.lock() {
@@ -102,4 +163,19 @@ fn worker_loop(
             outcome,
         });
     }
+}
+
+#[cfg(test)]
+pub(crate) fn with_task_join_failure_for_tests<T>(operation: impl FnOnce() -> T) -> T {
+    struct ResetFault(bool);
+
+    impl Drop for ResetFault {
+        fn drop(&mut self) {
+            INJECT_TASK_JOIN_FAILURE.set(self.0);
+        }
+    }
+
+    let previous = INJECT_TASK_JOIN_FAILURE.replace(true);
+    let _reset = ResetFault(previous);
+    operation()
 }
