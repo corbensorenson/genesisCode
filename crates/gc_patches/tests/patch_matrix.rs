@@ -610,6 +610,41 @@ fn patch_normalization_rejects_unknown_fields() {
 }
 
 #[test]
+fn patch_normalization_rejects_module_paths_outside_package_before_mutation() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let escaped_name = format!(
+        "gc-patch-escape-{}.gc",
+        td.path().file_name().unwrap().to_string_lossy()
+    );
+    let escaped = td.path().parent().unwrap().join(&escaped_name);
+    assert!(!escaped.exists());
+    let patch = write_patch(
+        td.path(),
+        &format!(
+            r#"{{
+              :version 1
+              :intent "attempt path escape"
+              :provenance {{}}
+              :ops [{{
+                :op :add-module
+                :module-path "../{escaped_name}"
+                :content "(def escaped::value 1)"
+              }}]
+            }}"#
+        ),
+    );
+
+    let error = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
+    assert!(
+        error.to_string().contains("portable package-relative path"),
+        "unexpected path validation failure: {error}"
+    );
+    assert!(!escaped.exists(), "path escape created an external file");
+    assert!(td.path().join("mod.gc").exists());
+}
+
+#[test]
 fn patch_normalization_rejects_tampered_report_without_rust_fallback() {
     let td = tempfile::tempdir().unwrap();
     let pkg = write_pkg(td.path());

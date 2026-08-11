@@ -75,6 +75,16 @@
       ((core/int::lt? 0) (core/str::len value))
       false)))
 
+(def selfhost/patch_normalize::portable-module-path?
+  (fn (value)
+    (if (selfhost/patch_normalize::nonempty-str? value)
+      (let ((result (selfhost/typecheck::validate-portable-module-path value)))
+        (if (selfhost/patch_schema::is-map? result)
+          (let ((ok ((core/map::get result) (quote :ok))))
+            (if (core/cli::bool? ok) ok false))
+          false))
+      false)))
+
 (def selfhost/patch_normalize::sym-or-str
   (fn (value)
     (if (selfhost/patch_schema::is-str? value)
@@ -134,7 +144,7 @@
         (let
           ((module-path ((core/map::get op) (quote :module-path)))
             (path ((core/map::get op) (quote :path))))
-          (if (selfhost/patch_normalize::nonempty-str? module-path)
+          (if (selfhost/patch_normalize::portable-module-path? module-path)
             (let ((valid-path (selfhost/patch_schema::validate-path path)))
               (if (core/error::is? valid-path)
                 valid-path
@@ -142,7 +152,7 @@
                   :new ((core/map::get op) (quote :new))
                   :op (quote :replace-node)
                   :path path}))
-            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+            (selfhost/patch_normalize::err ":module-path must be a portable package-relative path")))))))
 
 (def selfhost/patch_normalize::normalize-replace-node-id
   (fn (op)
@@ -154,7 +164,7 @@
         (let
           ((module-path ((core/map::get op) (quote :module-path)))
             (node-id ((core/map::get op) (quote :node-id))))
-          (if (selfhost/patch_normalize::nonempty-str? module-path)
+          (if (selfhost/patch_normalize::portable-module-path? module-path)
             (if
               (if (selfhost/patch_normalize::nonempty-str? node-id)
                 ((core/int::eq? (core/str::len node-id)) 64)
@@ -164,7 +174,7 @@
                 :node-id node-id
                 :op (quote :replace-node-id)}
               (selfhost/patch_normalize::err ":node-id must be a non-empty hex64 string"))
-            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+            (selfhost/patch_normalize::err ":module-path must be a portable package-relative path")))))))
 
 (def selfhost/patch_normalize::normalize-add-module
   (fn (op)
@@ -175,14 +185,14 @@
         (let
           ((module-path ((core/map::get op) (quote :module-path)))
             (content ((core/map::get op) (quote :content))))
-          (if (selfhost/patch_normalize::nonempty-str? module-path)
+          (if (selfhost/patch_normalize::portable-module-path? module-path)
             (if
               (if (selfhost/patch_schema::is-str? content)
                 true
                 (selfhost/patch_schema::is-vec? content))
               {:content content :module-path module-path :op (quote :add-module)}
               (selfhost/patch_normalize::err ":content must be a string or vector"))
-            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+            (selfhost/patch_normalize::err ":module-path must be a portable package-relative path")))))))
 
 (def selfhost/patch_normalize::normalize-remove-module
   (fn (op)
@@ -191,9 +201,9 @@
       (if (core/error::is? shape)
         shape
         (let ((module-path ((core/map::get op) (quote :module-path))))
-          (if (selfhost/patch_normalize::nonempty-str? module-path)
+          (if (selfhost/patch_normalize::portable-module-path? module-path)
             {:module-path module-path :op (quote :remove-module)}
-            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+            (selfhost/patch_normalize::err ":module-path must be a portable package-relative path")))))))
 
 (def selfhost/patch_normalize::normalize-update-manifest
   (fn (op)
@@ -256,13 +266,13 @@
           ((module-path ((core/map::get op) (quote :module-path)))
             (from (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :from))))
             (to (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :to)))))
-          (if (selfhost/patch_normalize::nonempty-str? module-path)
+          (if (selfhost/patch_normalize::portable-module-path? module-path)
             (if (core/error::is? from)
               from
               (if (core/error::is? to)
                 to
                 {:from from :module-path module-path :op (quote :rename-symbol) :to to}))
-            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+            (selfhost/patch_normalize::err ":module-path must be a portable package-relative path")))))))
 
 (def selfhost/patch_normalize::normalize-move-module
   (fn (op)
@@ -275,11 +285,11 @@
           ((from-path ((core/map::get op) (quote :from-module-path)))
             (to-path ((core/map::get op) (quote :to-module-path))))
           (if
-            (if (selfhost/patch_normalize::nonempty-str? from-path)
-              (selfhost/patch_normalize::nonempty-str? to-path)
+            (if (selfhost/patch_normalize::portable-module-path? from-path)
+              (selfhost/patch_normalize::portable-module-path? to-path)
               false)
             {:from-module-path from-path :op (quote :move-module) :to-module-path to-path}
-            (selfhost/patch_normalize::err "module paths must be non-empty strings")))))))
+            (selfhost/patch_normalize::err "module paths must be portable package-relative paths")))))))
 
 (def selfhost/patch_normalize::normalize-split-module
   (fn (op)
@@ -293,8 +303,8 @@
             (to-path ((core/map::get op) (quote :to-module-path)))
             (symbols (selfhost/patch_normalize::strings ((core/map::get op) (quote :symbols)))))
           (if
-            (if (selfhost/patch_normalize::nonempty-str? from-path)
-              (selfhost/patch_normalize::nonempty-str? to-path)
+            (if (selfhost/patch_normalize::portable-module-path? from-path)
+              (selfhost/patch_normalize::portable-module-path? to-path)
               false)
             (if (core/error::is? symbols)
               symbols
@@ -304,7 +314,7 @@
                   :symbols symbols
                   :to-module-path to-path}
                 (selfhost/patch_normalize::err ":symbols must be non-empty")))
-            (selfhost/patch_normalize::err "module paths must be non-empty strings")))))))
+            (selfhost/patch_normalize::err "module paths must be portable package-relative paths")))))))
 
 (def selfhost/patch_normalize::normalize-rewrite-meta
   (fn (op)
@@ -324,7 +334,7 @@
                 (if ((selfhost/patch_normalize::has-key op) (quote :replace))
                   (selfhost/patch_normalize::strings ((core/map::get op) (quote :replace)))
                   nil)))
-            (if (selfhost/patch_normalize::nonempty-str? module-path)
+            (if (selfhost/patch_normalize::portable-module-path? module-path)
               (if (core/error::is? add)
                 add
                 (if (core/error::is? remove)
@@ -336,7 +346,7 @@
                       :op op-symbol
                       :remove remove
                       :replace replace})))
-              (selfhost/patch_normalize::err ":module-path must be a non-empty string"))))))))
+              (selfhost/patch_normalize::err ":module-path must be a portable package-relative path"))))))))
 
 (def selfhost/patch_normalize::normalize-migrate-contract
   (fn (op)
@@ -356,7 +366,7 @@
               (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :from-param))))
             (to-param
               (selfhost/patch_normalize::sym-or-str ((core/map::get op) (quote :to-param)))))
-          (if (selfhost/patch_normalize::nonempty-str? module-path)
+          (if (selfhost/patch_normalize::portable-module-path? module-path)
             (if (core/error::is? contract-symbol)
               contract-symbol
               (if (core/error::is? from-param)
@@ -368,7 +378,7 @@
                     :module-path module-path
                     :op (quote :migrate-contract-signature)
                     :to-param to-param})))
-            (selfhost/patch_normalize::err ":module-path must be a non-empty string")))))))
+            (selfhost/patch_normalize::err ":module-path must be a portable package-relative path")))))))
 
 (def selfhost/patch_normalize::normalize-op
   (fn (op)

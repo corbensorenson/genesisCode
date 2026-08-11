@@ -18,6 +18,11 @@ Top-level term is a map with keys:
 
 Each op is a map and must include:
 
+Every module path field (`:module-path`, `:from-module-path`, and `:to-module-path`) is a
+portable package-relative path. It must be Unicode NFC, use `/` separators, and contain no
+empty, `.`, `..`, root, or drive-prefix component. Implementations must reject an invalid path
+before reading or mutating package state.
+
 - `:op` (symbol) one of:
   - `:replace-node`
   - `:replace-node-id`

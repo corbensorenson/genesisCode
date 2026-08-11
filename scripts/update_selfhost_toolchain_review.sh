@@ -16,14 +16,21 @@ case "$component" in
   artifact)
     configure_genesis
     temporary="$(mktemp selfhost/.toolchain.gc.XXXXXX)"
-    trap 'rm -f "$temporary"' EXIT
+    recovery_seed=""
+    trap 'rm -f "$temporary" ${recovery_seed:+"$recovery_seed"}' EXIT
     source scripts/lib/selfhost_artifact_cache.sh
     source_hash="$(selfhost_source_hash "$ROOT_DIR")"
-    artifact_args=(selfhost-artifact --out "$temporary")
     if ! selfhost_repo_artifact_matches_source_hash "$ROOT_DIR" "$source_hash"; then
-      artifact_args+=(--recover-missing-artifact)
+      # Recovery is a stage0 bootstrap seed, not the self-hosted publication fixed point.
+      recovery_seed="$(mktemp selfhost/.toolchain.recovery.gc.XXXXXX)"
+      "$GENESIS_BIN" selfhost-artifact \
+        --recover-missing-artifact \
+        --out "$recovery_seed" >/dev/null
+      chmod 0644 "$recovery_seed"
+      mv "$recovery_seed" selfhost/toolchain.gc
+      recovery_seed=""
     fi
-    "$GENESIS_BIN" "${artifact_args[@]}" >/dev/null
+    "$GENESIS_BIN" selfhost-artifact --out "$temporary" >/dev/null
     chmod 0644 "$temporary"
     mv "$temporary" selfhost/toolchain.gc
     trap - EXIT

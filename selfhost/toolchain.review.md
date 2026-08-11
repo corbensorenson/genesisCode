@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `f619acdcec011eb26a942dd5c64b7f6c7524ddf1ec5526e894c99b4c7b902491`
-- Freshness artifact hash: `f619acdcec011eb26a942dd5c64b7f6c7524ddf1ec5526e894c99b4c7b902491`
-- Freshness source hash: `e5d5750c9fbf47adbff2f776314b3221edeb4faee71d57b49d9139a8d0cd47fe`
-- Source aggregate hash (module path + module sha256): `c306bc28a75db9c76a57b65e01c91079b1b439fdb09f5c7a81e80f00e8b534cb`
+- Artifact sha256: `e95cda305fc6e5f9eda0346ed3274023a0eec44a6c742ee4a3cda89ae6d30081`
+- Freshness artifact hash: `e95cda305fc6e5f9eda0346ed3274023a0eec44a6c742ee4a3cda89ae6d30081`
+- Freshness source hash: `1eb9ca02d6507d9af6fb479eaa86a13ecdb79f74d6019dfcbf6a836fd6aa59e3`
+- Source aggregate hash (module path + module sha256): `38966736692c4777cf0c86edbc4762f4510567fca17638da17446a8a61d070c9`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `48`
+- Module count: `50`
 
 ## Module Summary
 
@@ -63,6 +63,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/patch_schema_manifest_v1.gc` | 406 | 17939 | 33 | `a1f23ac0a6708185` |
 | `selfhost/patch_schema_refactor_v1.gc` | 523 | 23095 | 46 | `a8be5b06db03d9e2` |
 | `selfhost/patch_schema_refactor_meta_migrate_v1.gc` | 411 | 22744 | 15 | `9aa240b249e5a43d` |
+| `selfhost/patch_authority_identity_v1.gc` | 223 | 9534 | 16 | `11e3c072866e00cc` |
+| `selfhost/patch_authority_normalize_v1.gc` | 519 | 24075 | 30 | `08756fa8a988ad6b` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -114,4 +116,6 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/patch_schema_manifest_v1.gc`: `selfhost/patch_schema::empty-vec`, `selfhost/patch_schema_manifest::err`, `selfhost/patch_schema::str?`, `selfhost/patch_schema::sym?`, `selfhost/patch_schema::vec?`, `selfhost/patch_schema::map?`, `selfhost/patch_schema::key->str`, `selfhost/patch_schema::require-map-field`
 - `selfhost/patch_schema_refactor_v1.gc`: `selfhost/patch_refactor::is-error`, `selfhost/patch_refactor::err`, `selfhost/patch_refactor::empty-vec`, `selfhost/patch_refactor::vec2`, `selfhost/patch_refactor::res`, `selfhost/patch_refactor::res-term`, `selfhost/patch_refactor::res-count`, `selfhost/patch_refactor::rename-result`
 - `selfhost/patch_schema_refactor_meta_migrate_v1.gc`: `selfhost/patch_refactor::vec-filter-remove`, `selfhost/patch_refactor::vec-filter-remove2`, `selfhost/patch_refactor::vec-str->sym-vec`, `selfhost/patch_refactor::vec-str->sym-vec2`, `selfhost/patch_refactor::rewrite-meta-field`, `selfhost/patch_refactor::rewrite-meta-forms-loop`, `selfhost/patch_refactor::rewrite-meta-list-apply`, `core/cli::rewrite-meta-list-forms`
+- `selfhost/patch_authority_identity_v1.gc`: `selfhost/patch_authority::PROFILE`, `selfhost/patch_authority::REQUEST_KIND`, `selfhost/patch_authority::REPORT_KIND`, `selfhost/patch_authority::NODE_ID_PREFIX`, `selfhost/patch_authority::err`, `selfhost/patch_authority::vec1`, `selfhost/patch_authority::vec2`, `selfhost/patch_authority::vec4`
+- `selfhost/patch_authority_normalize_v1.gc`: `selfhost/patch_normalize::REQUEST_KIND`, `selfhost/patch_normalize::REPORT_KIND`, `selfhost/patch_normalize::err`, `selfhost/patch_normalize::has-key-loop`, `selfhost/patch_normalize::has-key`, `selfhost/patch_normalize::vec-has`, `selfhost/patch_normalize::keys-allowed-loop`, `selfhost/patch_normalize::keys-required-loop`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

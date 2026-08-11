@@ -1,5 +1,38 @@
 use super::*;
 
+fn validate_module_path(path: String, context: &str) -> Result<String, PatchError> {
+    if path.is_empty()
+        || path.contains('\\')
+        || path.starts_with('/')
+        || path
+            .split('/')
+            .any(|component| component.is_empty() || component == "." || component == "..")
+        || path
+            .split('/')
+            .next()
+            .is_some_and(|first| first.ends_with(':'))
+        || !matches!(
+            gc_kernel::text_profile::normalize_nfc(&path),
+            Ok(normalized) if normalized == path
+        )
+    {
+        return Err(PatchError::Validate(format!(
+            "{context} must be a portable package-relative path"
+        )));
+    }
+    Ok(path)
+}
+
+fn get_module_path(
+    m: &BTreeMap<TermOrdKey, Term>,
+    key: &str,
+    context: &str,
+) -> Result<String, PatchError> {
+    let path =
+        get_str(m, key)?.ok_or_else(|| PatchError::Validate(format!("{context} missing {key}")))?;
+    validate_module_path(path, &format!("{context} {key}"))
+}
+
 impl Patch {
     pub(super) fn from_term(t: &Term) -> Result<Self, PatchError> {
         let Term::Map(m) = t else {
@@ -53,9 +86,7 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
     };
     match op {
         ":replace-node" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("replace-node missing :module-path".to_string())
-            })?;
+            let module_path = get_module_path(m, ":module-path", "replace-node")?;
             let path_t = m
                 .get(&TermOrdKey(Term::Symbol(":path".to_string())))
                 .ok_or_else(|| PatchError::Validate("replace-node missing :path".to_string()))?;
@@ -71,9 +102,7 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             })
         }
         ":replace-node-id" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("replace-node-id missing :module-path".to_string())
-            })?;
+            let module_path = get_module_path(m, ":module-path", "replace-node-id")?;
             let node_id = get_str(m, ":node-id")?.ok_or_else(|| {
                 PatchError::Validate("replace-node-id missing :node-id".to_string())
             })?;
@@ -93,9 +122,7 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             })
         }
         ":add-module" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("add-module missing :module-path".to_string())
-            })?;
+            let module_path = get_module_path(m, ":module-path", "add-module")?;
             let content_t = m
                 .get(&TermOrdKey(Term::Symbol(":content".to_string())))
                 .ok_or_else(|| PatchError::Validate("add-module missing :content".to_string()))?;
@@ -114,9 +141,7 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             })
         }
         ":remove-module" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("remove-module missing :module-path".to_string())
-            })?;
+            let module_path = get_module_path(m, ":module-path", "remove-module")?;
             Ok(PatchOp::RemoveModule { module_path })
         }
         ":update-manifest" => {
@@ -148,9 +173,7 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             })
         }
         ":rename-symbol" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("rename-symbol missing :module-path".to_string())
-            })?;
+            let module_path = get_module_path(m, ":module-path", "rename-symbol")?;
             let from = req_sym_or_str(m, ":from", "rename-symbol")?;
             let to = req_sym_or_str(m, ":to", "rename-symbol")?;
             if from.trim().is_empty() || to.trim().is_empty() {
@@ -165,24 +188,16 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             })
         }
         ":move-module" => {
-            let from_module_path = get_str(m, ":from-module-path")?.ok_or_else(|| {
-                PatchError::Validate("move-module missing :from-module-path".to_string())
-            })?;
-            let to_module_path = get_str(m, ":to-module-path")?.ok_or_else(|| {
-                PatchError::Validate("move-module missing :to-module-path".to_string())
-            })?;
+            let from_module_path = get_module_path(m, ":from-module-path", "move-module")?;
+            let to_module_path = get_module_path(m, ":to-module-path", "move-module")?;
             Ok(PatchOp::MoveModule {
                 from_module_path,
                 to_module_path,
             })
         }
         ":split-module" => {
-            let from_module_path = get_str(m, ":from-module-path")?.ok_or_else(|| {
-                PatchError::Validate("split-module missing :from-module-path".to_string())
-            })?;
-            let to_module_path = get_str(m, ":to-module-path")?.ok_or_else(|| {
-                PatchError::Validate("split-module missing :to-module-path".to_string())
-            })?;
+            let from_module_path = get_module_path(m, ":from-module-path", "split-module")?;
+            let to_module_path = get_module_path(m, ":to-module-path", "split-module")?;
             let symbols = get_sym_or_str_vec(m, ":symbols")?;
             if symbols.is_empty() {
                 return Err(PatchError::Validate(
@@ -196,8 +211,7 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             })
         }
         ":rewrite-imports" | ":rewrite-exports" => {
-            let module_path = get_str(m, ":module-path")?
-                .ok_or_else(|| PatchError::Validate(format!("{op} missing :module-path")))?;
+            let module_path = get_module_path(m, ":module-path", op)?;
             let add = get_sym_or_str_vec(m, ":add")?;
             let remove = get_sym_or_str_vec(m, ":remove")?;
             let replace = get_optional_sym_or_str_vec(m, ":replace")?;
@@ -215,9 +229,7 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             })
         }
         ":migrate-contract-signature" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("migrate-contract-signature missing :module-path".to_string())
-            })?;
+            let module_path = get_module_path(m, ":module-path", "migrate-contract-signature")?;
             let contract_symbol =
                 req_sym_or_str(m, ":contract-symbol", "migrate-contract-signature")?;
             let from_param = req_sym_or_str(m, ":from-param", "migrate-contract-signature")?;
@@ -382,6 +394,35 @@ pub(super) fn get_optional_sym_or_str_vec(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn module_path_decoder_rejects_nonportable_or_escaping_paths() {
+        for path in [
+            "",
+            "/absolute.gc",
+            "C:/drive.gc",
+            "nested\\windows.gc",
+            "nested//empty.gc",
+            "./dot.gc",
+            "nested/../escape.gc",
+            "e\u{301}.gc",
+        ] {
+            assert!(
+                validate_module_path(path.to_string(), "test path").is_err(),
+                "accepted invalid module path {path:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn module_path_decoder_accepts_normalized_package_relative_paths() {
+        for path in ["mod.gc", "nested/module.gc", "\u{e9}.gc"] {
+            assert_eq!(
+                validate_module_path(path.to_string(), "test path").unwrap(),
+                path
+            );
+        }
+    }
 
     fn patch_term(version: Option<u64>) -> Term {
         let mut m = BTreeMap::from([
