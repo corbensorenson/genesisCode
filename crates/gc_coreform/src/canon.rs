@@ -1,6 +1,6 @@
 use anyhow::{Context, anyhow, bail};
 
-use crate::term::Term;
+use crate::{SpecialForm, term::Term};
 
 pub fn canonicalize_module(forms: Vec<Term>) -> anyhow::Result<Vec<Term>> {
     forms
@@ -70,8 +70,11 @@ fn canon_data(t: Term) -> anyhow::Result<Term> {
     }
 }
 
-fn is_sym(t: &Term, name: &str) -> bool {
-    matches!(t, Term::Symbol(s) if s == name)
+fn special_form(term: &Term) -> Option<SpecialForm> {
+    let Term::Symbol(symbol) = term else {
+        return None;
+    };
+    SpecialForm::from_symbol(symbol)
 }
 
 fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
@@ -81,7 +84,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
 
     // Special forms.
     let head = items[0].clone();
-    if is_sym(&head, "quote") {
+    if special_form(&head) == Some(SpecialForm::Quote) {
         if items.len() != 2 {
             bail!("(quote ...) expects exactly 1 argument");
         }
@@ -89,7 +92,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         return Ok(Term::list(vec![Term::symbol("quote"), datum]));
     }
 
-    if is_sym(&head, "def") {
+    if special_form(&head) == Some(SpecialForm::Def) {
         if items.len() != 3 {
             bail!("(def name expr) expects exactly 2 arguments");
         }
@@ -101,7 +104,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         return Ok(Term::list(vec![Term::symbol("def"), name, expr]));
     }
 
-    if is_sym(&head, "fn") {
+    if special_form(&head) == Some(SpecialForm::Fn) {
         // (fn (x) body) where (x) can have multiple params in input; canonicalize to unary.
         if items.len() < 3 {
             bail!("(fn (x) body) expects at least 2 arguments");
@@ -144,7 +147,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         return Ok(out);
     }
 
-    if is_sym(&head, "if") {
+    if special_form(&head) == Some(SpecialForm::If) {
         if items.len() != 4 {
             let rendered = crate::print_term(&Term::list(items.clone()));
             bail!("(if cond then else) expects exactly 3 arguments: {rendered}");
@@ -155,7 +158,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         return Ok(Term::list(vec![Term::symbol("if"), c, t, e]));
     }
 
-    if is_sym(&head, "begin") {
+    if special_form(&head) == Some(SpecialForm::Begin) {
         if items.len() < 2 {
             bail!("(begin ...) expects at least 1 argument");
         }
@@ -167,7 +170,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         return Ok(Term::list(out));
     }
 
-    if is_sym(&head, "let") {
+    if special_form(&head) == Some(SpecialForm::Let) {
         if items.len() < 3 {
             bail!("(let ((x e) ...) body...) expects bindings and body");
         }
@@ -215,7 +218,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         ]));
     }
 
-    if is_sym(&head, "prim") {
+    if special_form(&head) == Some(SpecialForm::Prim) {
         if items.len() < 2 {
             bail!("(prim op ...) expects op");
         }
@@ -232,7 +235,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         return Ok(Term::list(out));
     }
 
-    if is_sym(&head, "seal") {
+    if special_form(&head) == Some(SpecialForm::Seal) {
         if items.len() == 1 {
             return Ok(Term::list(vec![Term::symbol("seal")]));
         }
@@ -244,7 +247,7 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         return Ok(Term::list(vec![Term::symbol("seal"), v, tok]));
     }
 
-    if is_sym(&head, "unseal") {
+    if special_form(&head) == Some(SpecialForm::Unseal) {
         if items.len() != 3 {
             bail!("(unseal w tok) expects exactly 2 arguments");
         }

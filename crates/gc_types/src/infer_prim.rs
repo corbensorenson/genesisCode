@@ -139,7 +139,9 @@ fn literal_map_key(t: &Term) -> Option<String> {
         Term::Str(s) => Some(s.clone()),
         _ => {
             let items = t.as_proper_list()?;
-            if items.len() == 2 && matches!(items[0], Term::Symbol(s) if s == "quote") {
+            if items.len() == 2
+                && matches!(items[0], Term::Symbol(s) if gc_coreform::SpecialForm::from_symbol(s) == Some(gc_coreform::SpecialForm::Quote))
+            {
                 match items[1] {
                     Term::Symbol(s) => Some(s.clone()),
                     Term::Str(s) => Some(s.clone()),

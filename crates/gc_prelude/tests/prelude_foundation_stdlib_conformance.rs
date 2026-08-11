@@ -1,6 +1,11 @@
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
-use gc_kernel::{Env, EvalCtx, Value, ValueMap, eval_module};
+use gc_kernel::{
+    Env, EvalCtx, KernelErrorKind, Value, ValueMap, eval_module, eval_module_compiled, value_hash,
+};
 use gc_prelude::build_prelude;
+use gc_types::{ModuleForTypecheck, infer_effects, typecheck_package};
+use serde_json::Value as JsonValue;
+use sha2::{Digest, Sha256};
 
 const FOUNDATION_REQUIRED_SYMBOLS: &[&str] = &[
     "core/list::is-nil?",
@@ -199,4 +204,269 @@ fn foundation_required_behavior_conforms() {
         expected_list_map.debug_repr(),
         "core/list::map output mismatch"
     );
+}
+
+const FORM_MATRIX: &str = include_str!("../../../docs/spec/NORMATIVE_FORM_MATRIX_v0.1.json");
+const FORM_SPEC: &[u8] = include_bytes!("../../../docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md");
+const FORM_SCHEMA: &[u8] =
+    include_bytes!("../../../docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json");
+const REFERENCE_EVALUATOR: &str = include_str!("../../gc_kernel/src/eval_treewalk.rs");
+const COMPILED_EVALUATOR: &str = include_str!("../../gc_kernel/src/compiled_compile.rs");
+const WASM_RUNTIME: &str = include_str!("../../gc_wasm/src/lib.rs");
+
+fn json_string<'a>(value: &'a JsonValue, key: &str) -> &'a str {
+    value[key]
+        .as_str()
+        .unwrap_or_else(|| panic!("matrix field {key} must be a string"))
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+fn content_identity(value: &JsonValue) -> String {
+    let mut payload = value.clone();
+    payload
+        .as_object_mut()
+        .expect("matrix root object")
+        .remove("contentIdentitySha256");
+    sha256_hex(
+        serde_json::to_string(&payload)
+            .expect("canonical matrix JSON")
+            .as_bytes(),
+    )
+}
+
+fn matrix() -> JsonValue {
+    let value: JsonValue = serde_json::from_str(FORM_MATRIX).expect("valid normative form matrix");
+    let object = value.as_object().expect("matrix root object");
+    let expected = [
+        "auditDate",
+        "canonicalSpec",
+        "canonicalSpecSha256",
+        "contentIdentitySha256",
+        "forms",
+        "kind",
+        "nonclaims",
+        "schema",
+        "schemaSha256",
+        "sourceBindings",
+        "specialFormSymbols",
+        "version",
+    ];
+    assert_eq!(
+        object.keys().map(String::as_str).collect::<Vec<_>>(),
+        expected
+    );
+    assert_eq!(value["canonicalSpecSha256"], sha256_hex(FORM_SPEC));
+    assert_eq!(value["schemaSha256"], sha256_hex(FORM_SCHEMA));
+    assert_eq!(value["contentIdentitySha256"], content_identity(&value));
+    value
+}
+
+fn match_arm_heads(source: &str, begin: &str, end: &str) -> std::collections::BTreeSet<String> {
+    let body = source
+        .split_once(begin)
+        .unwrap_or_else(|| panic!("missing form-dispatch start marker: {begin}"))
+        .1
+        .split_once(end)
+        .unwrap_or_else(|| panic!("missing form-dispatch end marker: {end}"))
+        .0;
+    body.lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            let rest = line.strip_prefix('"')?;
+            let (head, suffix) = rest.split_once('"')?;
+            suffix
+                .trim_start()
+                .starts_with("=>")
+                .then(|| head.to_string())
+        })
+        .collect()
+}
+
+fn type_source(id: &str, source: &str) -> String {
+    match id {
+        "form/variable" => "(def x 42)\n(def result x)".to_string(),
+        "form/def" => "(def result 42)".to_string(),
+        _ => format!("(def result {source})"),
+    }
+}
+
+fn inferred_type_head(term: &Term) -> &str {
+    match term {
+        Term::Symbol(symbol) => symbol,
+        Term::Pair(_, _) => term
+            .as_proper_list()
+            .and_then(|items| items.first().copied())
+            .and_then(|head| match head {
+                Term::Symbol(symbol) => Some(symbol.as_str()),
+                _ => None,
+            })
+            .expect("compound inferred type head"),
+        other => panic!("unexpected inferred type term: {other:?}"),
+    }
+}
+
+#[test]
+fn normative_form_inventory_rejects_undocumented_tier_heads() {
+    let value = matrix();
+    let documented: std::collections::BTreeSet<String> = value["specialFormSymbols"]
+        .as_array()
+        .expect("special form symbols")
+        .iter()
+        .map(|item| item.as_str().expect("special form symbol").to_string())
+        .collect();
+    let exported: std::collections::BTreeSet<String> = gc_coreform::SpecialForm::ALL
+        .iter()
+        .map(|form| form.symbol().to_string())
+        .collect();
+    assert_eq!(documented, exported, "CoreForm inventory drift");
+
+    let reference = match_arm_heads(
+        REFERENCE_EVALUATOR,
+        "// Special forms keyed by head symbol.",
+        "// General application",
+    );
+    let compiled = match_arm_heads(
+        COMPILED_EVALUATOR,
+        "if let Term::Symbol(h) = items[0] {",
+        "let f = with_child_path(path, 0",
+    );
+    assert_eq!(reference, documented, "reference evaluator form drift");
+    assert_eq!(compiled, documented, "compiled evaluator form drift");
+    assert!(WASM_RUNTIME.contains("canonicalize_module"));
+    assert!(WASM_RUNTIME.contains("eval_module"));
+    assert!(!WASM_RUNTIME.contains("match h.as_str()"));
+}
+
+#[test]
+fn normative_form_rows_match_canonical_runtime_type_and_effect_behavior() {
+    let value = matrix();
+    let rows = value["forms"].as_array().expect("form rows");
+    assert_eq!(rows.len(), 19);
+    let mut ids = std::collections::BTreeSet::new();
+
+    for row in rows {
+        let id = json_string(row, "id");
+        let source = json_string(row, "source");
+        assert!(ids.insert(id), "duplicate form row {id}");
+
+        let forms = canonicalize_module(parse_module(source).expect(id)).expect(id);
+        let mut reference_ctx = EvalCtx::new();
+        let mut reference_env = Env::empty();
+        let reference = eval_module(&mut reference_ctx, &mut reference_env, &forms).expect(id);
+        let mut compiled_ctx = EvalCtx::new();
+        let mut compiled_env = Env::empty();
+        let compiled =
+            eval_module_compiled(&mut compiled_ctx, &mut compiled_env, &forms).expect(id);
+        assert_eq!(
+            compiled.debug_repr(),
+            reference.debug_repr(),
+            "{id} tier value"
+        );
+        assert_eq!(
+            value_hash(&compiled),
+            value_hash(&reference),
+            "{id} tier hash"
+        );
+
+        let expectation = &row["evaluation"];
+        match json_string(expectation, "kind") {
+            "data" => {
+                let expected =
+                    gc_coreform::parse_term(json_string(expectation, "value")).expect(id);
+                assert_eq!(reference.to_plain_term(), Some(expected), "{id} value");
+            }
+            "closure" => assert!(matches!(reference, Value::Closure(_)), "{id} value"),
+            "seal-token" => assert!(matches!(reference, Value::SealToken(_)), "{id} value"),
+            other => panic!("unknown evaluation kind {other}"),
+        }
+
+        let typed_forms = canonicalize_module(
+            parse_module(&type_source(id, source)).expect("parse type witness"),
+        )
+        .expect("canonicalize type witness");
+        let meta = gc_coreform::parse_term("{:exports [result] :types {result ?} :caps []}")
+            .expect("type witness metadata");
+        let report = typecheck_package(&[ModuleForTypecheck {
+            path: format!("matrix/{id}.gc"),
+            forms: typed_forms,
+            meta: Some(meta),
+        }]);
+        assert!(report.ok, "{id} typecheck errors: {:?}", report.errors);
+        let inferred = &report.modules[0]
+            .export_types
+            .iter()
+            .find(|entry| entry.name == "result")
+            .expect("result type")
+            .inferred;
+        assert_eq!(
+            inferred_type_head(inferred),
+            json_string(row, "typeExpectation"),
+            "{id} inferred type"
+        );
+
+        let effects = infer_effects(&forms);
+        let expected_ops: std::collections::BTreeSet<String> = row["effectOps"]
+            .as_array()
+            .expect("effect ops")
+            .iter()
+            .map(|item| item.as_str().expect("effect op").to_string())
+            .collect();
+        assert_eq!(effects.ops, expected_ops, "{id} effect ops");
+        assert_eq!(
+            effects.unknown,
+            row["effectUnknown"].as_bool().unwrap(),
+            "{id} effect tail"
+        );
+    }
+}
+
+#[test]
+fn malformed_reserved_forms_fail_in_both_runtime_tiers() {
+    let cases = [
+        ("quote", "(quote)"),
+        ("def", "((fn (x) x) (def x 1))"),
+        ("fn", "(fn () nil)"),
+        ("if", "(if true 1)"),
+        ("begin", "(begin)"),
+        ("let", "(let x 1)"),
+        ("prim", "(prim)"),
+        ("seal", "(seal 1)"),
+        ("unseal", "(unseal nil)"),
+    ];
+    let documented: std::collections::BTreeSet<String> = matrix()["specialFormSymbols"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item.as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(
+        cases
+            .iter()
+            .map(|(head, _)| head.to_string())
+            .collect::<std::collections::BTreeSet<_>>(),
+        documented
+    );
+
+    for (head, source) in cases {
+        let parsed = parse_module(source).expect(head);
+        if let Ok(forms) = canonicalize_module(parsed.clone()) {
+            for compiled in [false, true] {
+                let mut ctx = EvalCtx::new();
+                let mut env = Env::empty();
+                let error = if compiled {
+                    eval_module_compiled(&mut ctx, &mut env, &forms).unwrap_err()
+                } else {
+                    eval_module(&mut ctx, &mut env, &forms).unwrap_err()
+                };
+                assert_eq!(
+                    error.kind.to_string(),
+                    KernelErrorKind::BadForm.to_string(),
+                    "{head} {compiled}"
+                );
+            }
+        }
+    }
 }

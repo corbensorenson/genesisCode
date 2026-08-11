@@ -116,6 +116,11 @@ Gλ is the smallest normative semantic core. Everything else is desugaring or li
 
 ### **5.1 Syntax (conceptual)**
 
+This section is an architectural sketch, not the current executable grammar. The closed
+v0.2 authority is `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md` and its machine matrix; it
+also specifies `def`, `fn`, `if`, `begin`, `let`, collections, grouping, and application
+behavior implemented by the current toolchain.
+
 Terms `e`:
 
 * `x` (variable)  

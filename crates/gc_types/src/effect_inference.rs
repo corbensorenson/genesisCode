@@ -1,4 +1,4 @@
-use gc_coreform::Term;
+use gc_coreform::{SpecialForm, Term};
 
 use crate::InferredEffects;
 
@@ -28,67 +28,61 @@ fn infer_effects_term(out: &mut InferredEffects, t: &Term) {
         if items.is_empty() {
             return;
         }
-        // Special forms with known shapes.
-        if matches!(items[0], Term::Symbol(s) if s == "quote") {
-            return;
-        }
-        if matches!(items[0], Term::Symbol(s) if s == "def") {
-            if items.len() == 3 {
-                infer_effects_term(out, items[2]);
-            }
-            return;
-        }
-        if matches!(items[0], Term::Symbol(s) if s == "fn") {
-            if items.len() >= 3 {
-                for b in items.iter().skip(2) {
-                    infer_effects_term(out, b);
+        if let Term::Symbol(head) = items[0]
+            && let Some(form) = SpecialForm::from_symbol(head)
+        {
+            match form {
+                SpecialForm::Quote => return,
+                SpecialForm::Def => {
+                    if items.len() == 3 {
+                        infer_effects_term(out, items[2]);
+                    }
                 }
-            }
-            return;
-        }
-        if matches!(items[0], Term::Symbol(s) if s == "if") {
-            if items.len() == 4 {
-                infer_effects_term(out, items[1]);
-                infer_effects_term(out, items[2]);
-                infer_effects_term(out, items[3]);
-            }
-            return;
-        }
-        if matches!(items[0], Term::Symbol(s) if s == "begin") {
-            for e in items.iter().skip(1) {
-                infer_effects_term(out, e);
-            }
-            return;
-        }
-        if matches!(items[0], Term::Symbol(s) if s == "let") {
-            if items.len() >= 3 {
-                // (let ((x e) ...) body...)
-                if let Some(binds) = items[1].as_proper_list() {
-                    for b in binds {
-                        if let Some(pair) = b.as_proper_list()
-                            && pair.len() == 2
-                        {
-                            infer_effects_term(out, pair[1]);
+                SpecialForm::Fn => {
+                    if items.len() >= 3 {
+                        for body in items.iter().skip(2) {
+                            infer_effects_term(out, body);
                         }
                     }
                 }
-                for b in items.iter().skip(2) {
-                    infer_effects_term(out, b);
+                SpecialForm::If => {
+                    if items.len() == 4 {
+                        infer_effects_term(out, items[1]);
+                        infer_effects_term(out, items[2]);
+                        infer_effects_term(out, items[3]);
+                    }
                 }
-            }
-            return;
-        }
-        if matches!(items[0], Term::Symbol(s) if s == "prim") {
-            // Primitive args are expressions.
-            for a in items.iter().skip(2) {
-                infer_effects_term(out, a);
-            }
-            return;
-        }
-        if matches!(items[0], Term::Symbol(s) if s == "seal" || s == "unseal") {
-            // Skip; sealing is pure but treated as opaque in optimizer/type world.
-            for a in items.iter().skip(1) {
-                infer_effects_term(out, a);
+                SpecialForm::Begin => {
+                    for expression in items.iter().skip(1) {
+                        infer_effects_term(out, expression);
+                    }
+                }
+                SpecialForm::Let => {
+                    if items.len() >= 3 {
+                        if let Some(bindings) = items[1].as_proper_list() {
+                            for binding in bindings {
+                                if let Some(pair) = binding.as_proper_list()
+                                    && pair.len() == 2
+                                {
+                                    infer_effects_term(out, pair[1]);
+                                }
+                            }
+                        }
+                        for body in items.iter().skip(2) {
+                            infer_effects_term(out, body);
+                        }
+                    }
+                }
+                SpecialForm::Prim => {
+                    for argument in items.iter().skip(2) {
+                        infer_effects_term(out, argument);
+                    }
+                }
+                SpecialForm::Seal | SpecialForm::Unseal => {
+                    for argument in items.iter().skip(1) {
+                        infer_effects_term(out, argument);
+                    }
+                }
             }
             return;
         }

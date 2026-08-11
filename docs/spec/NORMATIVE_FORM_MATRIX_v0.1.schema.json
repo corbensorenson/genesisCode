@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.org/spec/normative-form-matrix-v0.1.schema.json",
+  "title": "GenesisCode Normative Form Matrix v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "auditDate",
+    "canonicalSpec",
+    "canonicalSpecSha256",
+    "contentIdentitySha256",
+    "forms",
+    "kind",
+    "nonclaims",
+    "schema",
+    "schemaSha256",
+    "sourceBindings",
+    "specialFormSymbols",
+    "version"
+  ],
+  "properties": {
+    "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "canonicalSpec": {"const": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md"},
+    "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "forms": {
+      "type": "array",
+      "minItems": 19,
+      "maxItems": 19,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "canonicalDisposition",
+          "class",
+          "effectOps",
+          "effectUnknown",
+          "evaluation",
+          "head",
+          "id",
+          "preludeRole",
+          "scope",
+          "source",
+          "typeExpectation"
+        ],
+        "properties": {
+          "canonicalDisposition": {"enum": ["atom", "data", "module-definition", "preserved-special", "binary-application"]},
+          "class": {"enum": ["application", "collection", "grouping", "literal", "module", "special", "variable"]},
+          "effectOps": {"$ref": "#/$defs/stringArray"},
+          "effectUnknown": {"type": "boolean"},
+          "evaluation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "value"],
+            "properties": {
+              "kind": {"enum": ["closure", "data", "seal-token"]},
+              "value": {"type": ["string", "null"]}
+            }
+          },
+          "head": {"type": ["string", "null"]},
+          "id": {"type": "string", "pattern": "^form/[a-z0-9-]+$"},
+          "preludeRole": {"enum": ["none", "ordinary-binding-consumer"]},
+          "scope": {"enum": ["expression", "module-only"]},
+          "source": {"type": "string", "minLength": 1},
+          "typeExpectation": {"enum": ["Bool", "Bytes", "Fn", "Int", "Nil", "Rec", "Str", "?"]}
+        }
+      }
+    },
+    "kind": {"const": "genesis/normative-form-matrix-v0.1"},
+    "nonclaims": {"$ref": "#/$defs/stringArray"},
+    "schema": {"const": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "sourceBindings": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "mode", "path"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "mode": {"enum": ["canonicalizer", "compiled", "effect-inference", "frontend", "prelude", "reference", "type-inference", "wasm-inherited-reference"]},
+          "path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "specialFormSymbols": {"$ref": "#/$defs/stringArray"},
+    "version": {"const": "0.1"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stringArray": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    }
+  }
+}

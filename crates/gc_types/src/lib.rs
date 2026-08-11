@@ -667,7 +667,8 @@ fn parse_def(t: &Term) -> Option<(String, Term)> {
     if items.len() != 3 {
         return None;
     }
-    if !matches!(items[0], Term::Symbol(s) if s == "def") {
+    if !matches!(items[0], Term::Symbol(s) if gc_coreform::SpecialForm::from_symbol(s) == Some(gc_coreform::SpecialForm::Def))
+    {
         return None;
     }
     let Term::Symbol(name) = items[1] else {

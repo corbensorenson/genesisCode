@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 290,
+    "canonicalSources": 293,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 106,
+    "schemas": 107,
     "symbols": 170
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "7b300e506f306f4e660e2e1f9022e057f604cdf7deeb9b7800682edebb4e4ba3"
+      "sha256": "5b334ae7a1678aeec7fd191b4ccb52b79bb8f866bdbb2551da074f4978a343cb"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,11 +48,11 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "b68684dc8a9ceaee0af4a8c68a71563d720b997a770c0b4b524b9ce7f2cae09f"
+      "sha256": "a378e6d12fc6cebae0e34a2ed9a60999beca47dc0809054ce554031729d80dfb"
     },
     {
       "path": "docs/PAPER_v0.2.md",
-      "sha256": "53c93937e42c032753763a817cc0d372362734803909cff1a7db43bf220ab7f6"
+      "sha256": "a580551652c7856aa99be209da22039cc24ea9654af5203b7cbdaca1df939e58"
     },
     {
       "path": "docs/POLICY_DEFAULTS_v0.1.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/TECH_HANDOFF.md",
-      "sha256": "cd1bf7cb4ee25b0f1846a3f0bb29a603f840359b4480cd5156ee5e30e975887c"
+      "sha256": "e3e5f4499205386ff4e55e85a05c8d61a82c087f62533ada992e0f293b33435e"
     },
     {
       "path": "docs/policies/README.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "04dc10634b864ed2047083e5598febed4eabffeefb616b269ce2b47c46de7388"
+      "sha256": "679c0a8b80ea627acb5c21b10b9577c69a79b91de3f9b22896e7f29a26032872"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -208,7 +208,7 @@
     },
     {
       "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-      "sha256": "b2f2be2b3b5862c6dae20fc2292e76fa72b0b06eda1d5ddd6d6cdb6b01efdd78"
+      "sha256": "e2a8e4e7cf631c635ab800716ea30685c76925443d186ae49e089f6e272c409f"
     },
     {
       "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
@@ -324,7 +324,7 @@
     },
     {
       "path": "docs/spec/COREFORM_CANON_HASH.md",
-      "sha256": "3c766978c3da644dcba698cfd32674fba732d91b46fe06a7762bf9f3c77b8782"
+      "sha256": "20714e4317750e1e3f17398bd04b1fcfb2c5b5f9a874915abc3cdf167f417610"
     },
     {
       "path": "docs/spec/DEPENDENCY_MIRROR_MANIFEST_v0.1.schema.json",
@@ -368,7 +368,7 @@
     },
     {
       "path": "docs/spec/DOC_TOPOLOGY_v0.1.md",
-      "sha256": "632d8156f81695b0a1aa416a99b39a3e0afbf216f57ae8376b679a7778645159"
+      "sha256": "6c2818db8669cf9f5b1b660c5531383b38a6ed54f561f1df80ce812d9e9748a0"
     },
     {
       "path": "docs/spec/DOMAIN_KITS_v0.1.md",
@@ -871,6 +871,18 @@
       "sha256": "e042607f7d78d09f9519463934351c6cef5bc73f285893cff6bba98aa3b42727"
     },
     {
+      "path": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.json",
+      "sha256": "fe84e7b8d5230c29f099e2c3585bb842dd575bd0b12f472d2a93948bddfa5c89"
+    },
+    {
+      "path": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md",
+      "sha256": "f470d7c1ce1c7de15982fd0344cc8358e2a174021add27de23e637e4f597e590"
+    },
+    {
+      "path": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json",
+      "sha256": "97bc67089f31b95f9a04435e54382f2a74f9b1d116b1780838d9ecd73b8ec943"
+    },
+    {
       "path": "docs/spec/OPTIMIZER.md",
       "sha256": "7c7d0377f16cf3ed69206c69d3aef83b4148678ab1bb60a0e937730a17d87585"
     },
@@ -1080,7 +1092,7 @@
     },
     {
       "path": "docs/spec/TYPES.md",
-      "sha256": "77a4be2f2f3e5cf1ec35b255d1bce9b4547f4fec08852ceb8ce5ec4ad76b5e7c"
+      "sha256": "18b615fb5fefbb18f0759b290194ae8fcbd39b857cb06ce325efa1f58eeba398"
     },
     {
       "path": "docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json",

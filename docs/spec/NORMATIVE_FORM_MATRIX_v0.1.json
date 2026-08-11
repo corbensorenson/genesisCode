@@ -1,0 +1,375 @@
+{
+  "auditDate": "2026-08-11",
+  "canonicalSpec": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md",
+  "canonicalSpecSha256": "f470d7c1ce1c7de15982fd0344cc8358e2a174021add27de23e637e4f597e590",
+  "contentIdentitySha256": "b3265433eff8c885fa769348c6a88f0df0ba02c06ae0ef6c720b7db9d29c2ff8",
+  "forms": [
+    {
+      "canonicalDisposition": "atom",
+      "class": "literal",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "nil"
+      },
+      "head": null,
+      "id": "form/nil",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "nil",
+      "typeExpectation": "Nil"
+    },
+    {
+      "canonicalDisposition": "atom",
+      "class": "literal",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "true"
+      },
+      "head": null,
+      "id": "form/bool",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "true",
+      "typeExpectation": "Bool"
+    },
+    {
+      "canonicalDisposition": "atom",
+      "class": "literal",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "42"
+      },
+      "head": null,
+      "id": "form/int",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "42",
+      "typeExpectation": "Int"
+    },
+    {
+      "canonicalDisposition": "atom",
+      "class": "literal",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "\"hi\""
+      },
+      "head": null,
+      "id": "form/string",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "\"hi\"",
+      "typeExpectation": "Str"
+    },
+    {
+      "canonicalDisposition": "atom",
+      "class": "literal",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "b\"\\x01\""
+      },
+      "head": null,
+      "id": "form/bytes",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "b\"\\x01\"",
+      "typeExpectation": "Bytes"
+    },
+    {
+      "canonicalDisposition": "atom",
+      "class": "variable",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "42"
+      },
+      "head": null,
+      "id": "form/variable",
+      "preludeRole": "ordinary-binding-consumer",
+      "scope": "expression",
+      "source": "(def x 42)\nx",
+      "typeExpectation": "Int"
+    },
+    {
+      "canonicalDisposition": "data",
+      "class": "collection",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "[1 2]"
+      },
+      "head": null,
+      "id": "form/vector",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "[1 2]",
+      "typeExpectation": "?"
+    },
+    {
+      "canonicalDisposition": "data",
+      "class": "collection",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "{:a 3}"
+      },
+      "head": null,
+      "id": "form/map",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "{:a (prim int/add 1 2)}",
+      "typeExpectation": "Rec"
+    },
+    {
+      "canonicalDisposition": "atom",
+      "class": "grouping",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "nil"
+      },
+      "head": null,
+      "id": "form/empty-list",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "()",
+      "typeExpectation": "Nil"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "(1 2)"
+      },
+      "head": "quote",
+      "id": "form/quote",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "'(1 2)",
+      "typeExpectation": "?"
+    },
+    {
+      "canonicalDisposition": "module-definition",
+      "class": "module",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "42"
+      },
+      "head": "def",
+      "id": "form/def",
+      "preludeRole": "ordinary-binding-consumer",
+      "scope": "module-only",
+      "source": "(def result 42)\nresult",
+      "typeExpectation": "Int"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "closure",
+        "value": null
+      },
+      "head": "fn",
+      "id": "form/fn",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "(fn (x) x)",
+      "typeExpectation": "Fn"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "2"
+      },
+      "head": "if",
+      "id": "form/if",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "(if false 1 2)",
+      "typeExpectation": "Int"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "2"
+      },
+      "head": "begin",
+      "id": "form/begin",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "(begin 1 2)",
+      "typeExpectation": "Int"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "42"
+      },
+      "head": "let",
+      "id": "form/let",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "(let ((x 40) (y (prim int/add x 2))) y)",
+      "typeExpectation": "Int"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "42"
+      },
+      "head": "prim",
+      "id": "form/prim",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "(prim int/add 40 2)",
+      "typeExpectation": "Int"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "seal-token",
+        "value": null
+      },
+      "head": "seal",
+      "id": "form/seal",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "(seal)",
+      "typeExpectation": "?"
+    },
+    {
+      "canonicalDisposition": "preserved-special",
+      "class": "special",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "nil"
+      },
+      "head": "unseal",
+      "id": "form/unseal",
+      "preludeRole": "none",
+      "scope": "expression",
+      "source": "(let ((a (seal)) (b (seal))) (unseal (seal 42 a) b))",
+      "typeExpectation": "?"
+    },
+    {
+      "canonicalDisposition": "binary-application",
+      "class": "application",
+      "effectOps": [],
+      "effectUnknown": false,
+      "evaluation": {
+        "kind": "data",
+        "value": "42"
+      },
+      "head": null,
+      "id": "form/application",
+      "preludeRole": "ordinary-binding-consumer",
+      "scope": "expression",
+      "source": "((fn (x) x) 42)",
+      "typeExpectation": "?"
+    }
+  ],
+  "kind": "genesis/normative-form-matrix-v0.1",
+  "nonclaims": [
+    "changes-no-stage0-authority-fallback-release-or-downstream-product-gate",
+    "does-not-freeze-adjacent-language-or-platform-surfaces",
+    "does-not-promote-selfhost-closure-levels",
+    "does-not-prove-independent-wasm-or-cross-host-parity"
+  ],
+  "schema": "docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json",
+  "schemaSha256": "97bc67089f31b95f9a04435e54382f2a74f9b1d116b1780838d9ecd73b8ec943",
+  "sourceBindings": [
+    {
+      "id": "source/coreform-canonicalizer",
+      "mode": "canonicalizer",
+      "path": "crates/gc_coreform/src/canon.rs"
+    },
+    {
+      "id": "source/coreform-inventory",
+      "mode": "frontend",
+      "path": "crates/gc_coreform/src/special_form.rs"
+    },
+    {
+      "id": "source/compiled-evaluator",
+      "mode": "compiled",
+      "path": "crates/gc_kernel/src/compiled_compile.rs"
+    },
+    {
+      "id": "source/effect-inference",
+      "mode": "effect-inference",
+      "path": "crates/gc_types/src/effect_inference.rs"
+    },
+    {
+      "id": "source/prelude",
+      "mode": "prelude",
+      "path": "crates/gc_prelude/src/prelude.rs"
+    },
+    {
+      "id": "source/reference-evaluator",
+      "mode": "reference",
+      "path": "crates/gc_kernel/src/eval_treewalk.rs"
+    },
+    {
+      "id": "source/type-inference",
+      "mode": "type-inference",
+      "path": "crates/gc_types/src/infer.rs"
+    },
+    {
+      "id": "source/wasm-route",
+      "mode": "wasm-inherited-reference",
+      "path": "crates/gc_wasm/src/lib.rs"
+    }
+  ],
+  "specialFormSymbols": [
+    "begin",
+    "def",
+    "fn",
+    "if",
+    "let",
+    "prim",
+    "quote",
+    "seal",
+    "unseal"
+  ],
+  "version": "0.1"
+}

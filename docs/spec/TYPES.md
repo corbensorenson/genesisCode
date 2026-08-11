@@ -11,6 +11,8 @@ Each module must define `::meta` as a quoted map datum that includes:
 
 - `:exports` vector of exported symbols
 - `:types` map from exported symbol -> type term
+- `:caps` vector of declared effect-operation symbols; every statically inferred operation
+  must be listed
 
 If an exported symbol is missing from `:types`, typecheck fails.
 
@@ -63,3 +65,7 @@ The typechecker infers types most precisely for:
 - typed fallback function application for declared/known `Fn` values (including curried application chains)
 
 Applications with unknown/non-function heads are treated conservatively as `?` (but still walked for effect inference).
+
+Unknown effect operations emit a warning and are rejected when `:caps` is empty or
+`:strict-effects true`; strict mode therefore requires literal operation symbols and
+closed declared effect rows. Task-effect declarations enable strict mode automatically.

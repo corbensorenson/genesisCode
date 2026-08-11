@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use gc_coreform::{Term, print_term};
+use gc_coreform::{SpecialForm, Term, print_term};
 
 use crate::ty::{EffRow, RowTail, Ty};
 
@@ -114,7 +114,9 @@ fn infer_bind_continuation_with_param(
     let Some(items) = continuation.as_proper_list() else {
         return infer_term(continuation, env, sess);
     };
-    if items.len() < 3 || !matches!(items[0], Term::Symbol(s) if s == "fn") {
+    if items.len() < 3
+        || !matches!(items[0], Term::Symbol(s) if SpecialForm::from_symbol(s) == Some(SpecialForm::Fn))
+    {
         return infer_term(continuation, env, sess);
     }
     let Some(params) = items[1].as_proper_list() else {

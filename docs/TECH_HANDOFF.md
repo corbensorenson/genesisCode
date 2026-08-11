@@ -133,6 +133,11 @@ genesiscode/
 
 ### **3.1 Parsing and printing goals**
 
+Current authority note: this handoff records the original implementation direction. The
+accepted production grammar and executable-form/tier matrix are now normative in
+`docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md`; disagreements are resolved in favor of that
+closed authority.
+
 * Parser must accept a minimal Lisp-like syntax: parentheses, symbols, integers, strings/bytes, quote sugar (`'x` \=\> `(quote x)`).  
 * Printer must emit a canonical, stable form (for hashing and patching).  
 * Canonicalization must preserve semantics but normalize irrelevant surface differences.

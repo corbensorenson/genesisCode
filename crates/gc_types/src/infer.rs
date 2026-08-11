@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use gc_coreform::{Term, TermOrdKey, print_term};
+use gc_coreform::{SpecialForm, Term, TermOrdKey, print_term};
 
 use crate::ty::{EffRow, RowTail, Ty};
 
@@ -67,7 +67,7 @@ pub fn infer_module_types(
             continue;
         };
         if items.len() == 3
-            && matches!(items[0], Term::Symbol(s) if s == "def")
+            && matches!(items[0], Term::Symbol(s) if SpecialForm::from_symbol(s) == Some(SpecialForm::Def))
             && let Term::Symbol(name) = items[1]
         {
             let ty = infer_term(items[2], &env, sess);
@@ -122,37 +122,31 @@ fn infer_list_form(t: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {
         return Ty::Nil;
     }
 
-    if matches!(items[0], Term::Symbol(s) if s == "quote") {
-        return Ty::Any;
-    }
-    if matches!(items[0], Term::Symbol(s) if s == "fn") {
-        return infer_fn(items, env, sess);
-    }
-    if matches!(items[0], Term::Symbol(s) if s == "if") {
-        return infer_if(items, env, sess);
-    }
-    if matches!(items[0], Term::Symbol(s) if s == "begin") {
-        return infer_begin(items, env, sess);
-    }
-    if matches!(items[0], Term::Symbol(s) if s == "let") {
-        return infer_let(items, env, sess);
-    }
-    if matches!(items[0], Term::Symbol(s) if s == "prim") {
-        return infer_prim(items, env, sess);
-    }
-    if matches!(items[0], Term::Symbol(s) if s == "seal" || s == "unseal") {
-        // Seals are intentionally treated as opaque under gradual typing.
-        for a in items.iter().skip(1) {
-            let _ = infer_term(a, env, sess);
+    if let Term::Symbol(head) = items[0]
+        && let Some(form) = SpecialForm::from_symbol(head)
+    {
+        match form {
+            SpecialForm::Quote => return Ty::Any,
+            SpecialForm::Fn => return infer_fn(items, env, sess),
+            SpecialForm::If => return infer_if(items, env, sess),
+            SpecialForm::Begin => return infer_begin(items, env, sess),
+            SpecialForm::Let => return infer_let(items, env, sess),
+            SpecialForm::Prim => return infer_prim(items, env, sess),
+            SpecialForm::Seal | SpecialForm::Unseal => {
+                // Seals are intentionally opaque under gradual typing.
+                for argument in items.iter().skip(1) {
+                    let _ = infer_term(argument, env, sess);
+                }
+                return Ty::Any;
+            }
+            SpecialForm::Def => {
+                // Module definitions are not expressions, but still traverse malformed use.
+                for argument in items.iter().skip(1) {
+                    let _ = infer_term(argument, env, sess);
+                }
+                return Ty::Any;
+            }
         }
-        return Ty::Any;
-    }
-    if matches!(items[0], Term::Symbol(s) if s == "def") {
-        // (def ...) is a top-level form; if it appears as an expression, treat as Any but walk it.
-        for a in items.iter().skip(1) {
-            let _ = infer_term(a, env, sess);
-        }
-        return Ty::Any;
     }
 
     if let Some((head, args)) = flatten_app(t) {

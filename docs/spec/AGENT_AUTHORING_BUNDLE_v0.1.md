@@ -6,6 +6,9 @@ Use this bundle first; open split specs only when a task requires field-level de
 
 ## Included Specs
 
+- `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md`
+- `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.json`
+- `docs/spec/NORMATIVE_FORM_MATRIX_v0.1.schema.json`
 - `docs/spec/GC_AGENT_CORE_CARD_v0.3.md`
 - `docs/spec/GC_AGENT_CORPUS_v0.1.json`
 - `docs/spec/GC_AGENT_CORPUS_v0.1.schema.json`

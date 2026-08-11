@@ -4,6 +4,11 @@ This document is **normative** for GenesisCode v0.2.
 
 GenesisCode v0.2 defines stable canonical printing and uses **BLAKE3** hashes over **canonical printed bytes**.
 
+The complete accepted lexical and executable-form inventory, arities, scopes, runtime
+semantics, and tier bindings are normative in
+`docs/spec/NORMATIVE_FORM_MATRIX_v0.1.md`. This document governs representation,
+canonicalization, printing, ordering, and hashing only.
+
 ## Terms
 
 CoreForm is represented as immutable `Term` values:
