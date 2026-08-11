@@ -68,6 +68,13 @@ legacy context into the same schema, preserves scrubbed legacy details under
 fallback. Human messages remain concise renderings and are not the only
 failure contract.
 
+Runtime teardown failures use the existing evaluator authority with
+`kind = "cleanup"`. `facts.cleanup_subsystem` names the failed owner,
+`facts.reason` carries its typed family error such as `net/bridge-reap`, and
+`facts.prior_error` is present when cleanup superseded an initiating execution
+failure. Agents route on these fields and never infer cleanup success from a
+returned primary result or message text.
+
 Without `--json`, every cataloged CLI failure is rendered from that same
 normalized diagnostic rather than from separately maintained prose. The first
 line identifies the exact diagnostic code, failed `operation`, and one safe

@@ -1,7 +1,7 @@
 {
   "authorities": {
-    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "01b6198d1c0d52416c14f737c4ea2cbc74889e342fd2372caff61f7942be3794",
-    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "45bbcc20dd2c0a2777795167adc221f4085fa7c3cea31e2f27d27d735540ed61",
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "670e964ae25184c62dedb424023af11ae3207ca420c7761b4bac25d49616e66e",
+    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "278e8ebd3fc3065c6923a4d56c17faee574228ec4ae1d373391d6106a7aaab96",
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "fb4cd8eb4bbe16168005cbddd10a5e2632a1eeb5dbf8013e88a177cb84cfed2d"
+      "sha256": "ee615d91917edaf1158fd3b2775154cef41eae99624d84b4cf882a21d35e3a80"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "682a97815c0939d42a280efdb808eed262a8a7101ca10690d90b368e2b50258f"
+      "sha256": "42d0e0a6f13d4e909e94f95a39c1d1c323b817f5dfbecd8441d6cf77f0a48376"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -196,7 +196,7 @@
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
-      "sha256": "fca07fe268e9682ef80d0a71a322646350e51f63486a9957285d10ec00826158"
+      "sha256": "7558fc0689806430dfc68820b6f6f0c67f64aab6ae48726cf9ffadcaeaa23e78"
     },
     {
       "path": "docs/skill_pack/write_genesiscode_v1/prompt-cards.json",
@@ -308,7 +308,7 @@
     },
     {
       "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
-      "sha256": "17a47959003b826b694f673091f83cd8e20f9573589699490c706224390a8ed0"
+      "sha256": "00f815969c6577c84d6f26ec576bdef225e422c27bb17c769d14f6570fff338b"
     },
     {
       "path": "docs/spec/CLI_TOOLING_BUNDLE_v0.1.md",
@@ -468,7 +468,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "6e038c9e75262d1cd5b4e1227111ccb4a5a44f104a00af8372f4ee573183e923"
+      "sha256": "ecbe518571599a8161880f8876e1462ff12a141d314602ff4fe50183efe8f268"
     },
     {
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json",
@@ -476,15 +476,15 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
-      "sha256": "c83ba203b2057c8626c2d3ce344b9d7376ea40a802e9ecaf686247913a4e7859"
+      "sha256": "ace4800ab0a69d36f30cdaa9f239f2fec0ef636cfc5941edd8f7de4370a33db4"
     },
     {
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
-      "sha256": "e9dfcbffc29b362a2a56e05ea57b75a7753934009dc1282534973a3a6ddf38db"
+      "sha256": "7b1b73187447d725e1a1481994e0034ead0da03221a9092ea98ff33904198c19"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "5914e22774f65266862c84aff6c3accc43bdf0724926824522d0f5cc09be8a55"
+      "sha256": "150cd33ad459b847518cf66b30c5fdd978100b3ed4cb7e43bbce424aa04877ed"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -492,7 +492,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json",
-      "sha256": "bd80c7a7e9ffd9f4a3d77369521889136639f7f6abd627194d11b9de518e55b2"
+      "sha256": "a2d697af65d3298516505960be0cdc5c04a79308abd6f87bcba3e68be1d55dca"
     },
     {
       "path": "docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json",
@@ -508,7 +508,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
-      "sha256": "f520285c016fef4d64058c06e00ab0958d7dc201fa6458fde06d1687bcdf762b"
+      "sha256": "14384952756e16414f3e67d5e5975481d8f6b7b0fdec5328d44870af9d3d8892"
     },
     {
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
@@ -516,7 +516,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
-      "sha256": "01b6198d1c0d52416c14f737c4ea2cbc74889e342fd2372caff61f7942be3794"
+      "sha256": "670e964ae25184c62dedb424023af11ae3207ca420c7761b4bac25d49616e66e"
     },
     {
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
@@ -528,11 +528,11 @@
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "cb617b81d24b2a7b8c3b27d5d9ba2504559352963ce915a6d1eeeb6ed5ca714e"
+      "sha256": "21d7acf5b8527a6e96959eb0ca0ecf64d2f32c1cb25146c192cec3b250627387"
     },
     {
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
-      "sha256": "ae2702b76f13757db2a7e8bcc6c24faae99489a8a6f01eab5eb83510788d249d"
+      "sha256": "1f1f1f9a3ffc434419cc6f0d2f66a508a9add5a2ffa4d03c46a6cff7adb48892"
     },
     {
       "path": "docs/spec/GC_CANONICAL_EXAMPLES_v0.1.schema.json",
@@ -548,7 +548,7 @@
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
-      "sha256": "45bbcc20dd2c0a2777795167adc221f4085fa7c3cea31e2f27d27d735540ed61"
+      "sha256": "278e8ebd3fc3065c6923a4d56c17faee574228ec4ae1d373391d6106a7aaab96"
     },
     {
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "313104cf433571023032ce07b636cd9d49ebaa08fc8d268319789ca6fca24f25"
+      "sha256": "d375a3634542238a372df3490b3d71f50f89cba6b0948833df477159b56276d9"
     },
     {
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.schema.json",
@@ -628,11 +628,11 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
-      "sha256": "12535b458be1b4429c8b67698bdb15ec9527e011e64e2fed83b8b67d8b84c90c"
+      "sha256": "43cefff6893fb82adc6ffed4632c18ed68710701953e53e1360818a5e0e095ae"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json",
-      "sha256": "1a22baa8cc2f78031905203c62ba24b5a0137ed00319c68b385e79562f7fbf87"
+      "sha256": "08d2e5bc02e63be3578a86bf50f8dfd5aec21e91b97108f577a24ff4283706f8"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
@@ -640,7 +640,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
-      "sha256": "b4449947c90d6507788fec04ca60677afd03c1901962ae69e2d421c1dfd7db37"
+      "sha256": "c4472422ab82d2d2282fe2d4731e22a85751656a1d2aa06e4a5afdf9d037a31f"
     },
     {
       "path": "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
@@ -664,7 +664,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
-      "sha256": "de2cecf3ad15840c48f7170d4b9f57606c11e76d03ab07f1873b4ea02e57a852"
+      "sha256": "8fc893211006483f5ac7b730c5f02602a6ef66a9ce30206f4b368f8ad290ebd6"
     },
     {
       "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
@@ -732,7 +732,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "6d20c1aab7f73da9a4003591c79dd7348b7a1df587655dada5e30dd336cca9ba"
+      "sha256": "8bd174bb9a4cb7729e213e60060acbdafd6cbd389913c680a6caab0dc746ced8"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -740,7 +740,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "dbee2b70b85176ed15b40d74163bb308c9abdbdbfdddd0ce6dd026018314c56e"
+      "sha256": "d064e7059957e93cd20bb393ae8f2b43c3464835b173026b24f4a8b7f685322e"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json",
@@ -752,7 +752,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "ea83a332f91c935801a36935927e510522f05c4875753e1972b5410814d39149"
+      "sha256": "0842bb6b6768504ade15ef1cad42457be9e073eab969d879b6f01b5e65061a0c"
     },
     {
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.schema.json",
@@ -856,7 +856,7 @@
     },
     {
       "path": "docs/spec/HOST_BRIDGE_PROTOCOL.md",
-      "sha256": "9f41210bb311ff39d033c478bf5dc4f0427bb2057a01c81110a179ab47cde1cb"
+      "sha256": "7baaf961f0be17e33be0700d16de57769e636172ae9d7c8074f870222353bc4b"
     },
     {
       "path": "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",

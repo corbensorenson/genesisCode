@@ -7,7 +7,7 @@ use crate::runner_process_control::{
 };
 
 #[cfg(not(target_os = "wasi"))]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct PersistentBridgeSessionKey {
     family: String,
     op: String,
@@ -27,7 +27,7 @@ struct PersistentBridgeRequest {
 struct PersistentBridgeSession {
     process_id: u32,
     requests: Option<std::sync::mpsc::SyncSender<PersistentBridgeRequest>>,
-    worker: Option<std::thread::JoinHandle<()>>,
+    worker: Option<std::thread::JoinHandle<std::io::Result<()>>>,
     worker_done: std::sync::mpsc::Receiver<()>,
 }
 
@@ -39,9 +39,51 @@ pub(super) struct PersistentBridgeRuntime {
 
 #[cfg(not(target_os = "wasi"))]
 impl PersistentBridgeRuntime {
-    fn clear(&mut self) {
-        for (_, mut session) in self.sessions.drain() {
-            let _ = session.stop();
+    fn clear(&mut self) -> Result<(), BridgeError> {
+        let mut sessions = self.sessions.drain().collect::<Vec<_>>();
+        sessions.sort_by(|(left, _), (right, _)| left.cmp(right));
+        let mut failures = Vec::new();
+        for (key, mut session) in sessions {
+            if let Err(error) = session.stop() {
+                failures.push((key.family, error));
+            }
+        }
+        let Some((family, first)) = failures.first() else {
+            return Ok(());
+        };
+        let details = failures
+            .iter()
+            .map(|(failed_family, error)| format!("{failed_family}: {error}"))
+            .collect::<Vec<_>>()
+            .join("; ");
+        Err(BridgeError {
+            code: format!("{family}/bridge-reap"),
+            message: format!(
+                "failed to stop {} persistent bridge session(s): {details}; first failure: {first}",
+                failures.len()
+            ),
+        })
+    }
+
+    pub(super) fn shutdown(&mut self) -> Result<(), BridgeError> {
+        self.clear()
+    }
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn cleanup_after_error(
+    runtime: &mut PersistentBridgeRuntime,
+    key: &PersistentBridgeSessionKey,
+    primary: BridgeError,
+) -> BridgeError {
+    match clear_persistent_bridge_session(runtime, key) {
+        Ok(()) => primary,
+        Err(mut cleanup) => {
+            cleanup.message = format!(
+                "{}; cleanup followed {}: {}",
+                cleanup.message, primary.code, primary.message
+            );
+            cleanup
         }
     }
 }
@@ -49,7 +91,7 @@ impl PersistentBridgeRuntime {
 #[cfg(not(target_os = "wasi"))]
 impl Drop for PersistentBridgeRuntime {
     fn drop(&mut self) {
-        self.clear();
+        let _ = self.clear();
     }
 }
 
@@ -111,9 +153,12 @@ impl PersistentBridgeSession {
         };
         completion_result?;
         let join_result = if let Some(worker) = self.worker.take() {
-            let result = worker.join().map_err(|_| {
-                std::io::Error::other("persistent bridge worker panicked during teardown")
-            });
+            let result = worker
+                .join()
+                .map_err(|_| {
+                    std::io::Error::other("persistent bridge worker panicked during teardown")
+                })
+                .and_then(|result| result);
             if result.is_ok() {
                 JOINED_PERSISTENT_BRIDGE_WORKERS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             }
@@ -173,11 +218,20 @@ impl PersistentBridgeSession {
                 })
             }
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                let _ = self.stop();
-                Err(BridgeError {
+                let primary = BridgeError {
                     code: format!("{family}/bridge-session"),
                     message: "persistent bridge worker disconnected".to_string(),
-                })
+                };
+                match self.stop() {
+                    Ok(()) => Err(primary),
+                    Err(error) => Err(BridgeError {
+                        code: format!("{family}/bridge-reap"),
+                        message: format!(
+                            "persistent bridge disconnect cleanup failed: {error}; prior error: {}",
+                            primary.message
+                        ),
+                    }),
+                }
             }
         }
     }
@@ -246,7 +300,7 @@ fn persistent_worker(
     key: PersistentBridgeSessionKey,
     requests: std::sync::mpsc::Receiver<PersistentBridgeRequest>,
     startup: std::sync::mpsc::SyncSender<Result<u32, BridgeError>>,
-) {
+) -> std::io::Result<()> {
     let _active = ActivePersistentBridgeWorker::enter();
     let mut command = Command::new(&key.cmd_path);
     command.current_dir(&key.base_dir);
@@ -266,30 +320,41 @@ fn persistent_worker(
                 code: format!("{}/bridge-spawn", key.family),
                 message: error.to_string(),
             }));
-            return;
+            return Ok(());
         }
     };
     let process_id = child.id();
     let Some(mut stdin) = child.stdin.take() else {
-        let _ = terminate_and_reap(&mut child);
-        let _ = startup.send(Err(BridgeError {
-            code: format!("{}/bridge-spawn", key.family),
-            message: "bridge process missing stdin pipe".to_string(),
+        let cleanup = terminate_and_reap(&mut child).map(|_| ());
+        let _ = startup.send(Err(match &cleanup {
+            Ok(()) => BridgeError {
+                code: format!("{}/bridge-spawn", key.family),
+                message: "bridge process missing stdin pipe".to_string(),
+            },
+            Err(error) => BridgeError {
+                code: format!("{}/bridge-reap", key.family),
+                message: format!("missing stdin pipe and process cleanup failed: {error}"),
+            },
         }));
-        return;
+        return cleanup;
     };
     let Some(stdout) = child.stdout.take() else {
-        let _ = terminate_and_reap(&mut child);
-        let _ = startup.send(Err(BridgeError {
-            code: format!("{}/bridge-spawn", key.family),
-            message: "bridge process missing stdout pipe".to_string(),
+        let cleanup = terminate_and_reap(&mut child).map(|_| ());
+        let _ = startup.send(Err(match &cleanup {
+            Ok(()) => BridgeError {
+                code: format!("{}/bridge-spawn", key.family),
+                message: "bridge process missing stdout pipe".to_string(),
+            },
+            Err(error) => BridgeError {
+                code: format!("{}/bridge-reap", key.family),
+                message: format!("missing stdout pipe and process cleanup failed: {error}"),
+            },
         }));
-        return;
+        return cleanup;
     };
     let mut stdout = BufReader::new(stdout);
     if startup.send(Ok(process_id)).is_err() {
-        let _ = terminate_and_reap(&mut child);
-        return;
+        return terminate_and_reap(&mut child).map(|_| ());
     }
     while let Ok(request) = requests.recv() {
         let result = stdin
@@ -307,7 +372,7 @@ fn persistent_worker(
             break;
         }
     }
-    let _ = terminate_and_reap(&mut child);
+    terminate_and_reap(&mut child).map(|_| ())
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -321,8 +386,9 @@ fn spawn_persistent_bridge_session(
     let worker = std::thread::Builder::new()
         .name("gc-persistent-bridge".to_string())
         .spawn(move || {
-            persistent_worker(worker_key, request_receiver, startup_sender);
+            let result = persistent_worker(worker_key, request_receiver, startup_sender);
             let _ = worker_done_sender.send(());
+            result
         })
         .map_err(|error| BridgeError {
             code: format!("{}/bridge-thread", key.family),
@@ -335,16 +401,39 @@ fn spawn_persistent_bridge_session(
             worker: Some(worker),
             worker_done: worker_done_receiver,
         }),
-        Ok(Err(error)) => {
-            let _ = worker.join();
-            Err(error)
-        }
+        Ok(Err(error)) => match worker.join() {
+            Ok(Ok(())) => Err(error),
+            Ok(Err(cleanup)) => Err(BridgeError {
+                code: format!("{}/bridge-reap", key.family),
+                message: format!(
+                    "persistent bridge startup cleanup failed: {cleanup}; prior error: {}",
+                    error.message
+                ),
+            }),
+            Err(_) => Err(BridgeError {
+                code: format!("{}/bridge-reap", key.family),
+                message: format!(
+                    "persistent bridge worker panicked during startup cleanup; prior error: {}",
+                    error.message
+                ),
+            }),
+        },
         Err(_) => {
-            let _ = worker.join();
-            Err(BridgeError {
-                code: format!("{}/bridge-session", key.family),
-                message: "persistent bridge worker disconnected during startup".to_string(),
-            })
+            let primary = "persistent bridge worker disconnected during startup";
+            match worker.join() {
+                Ok(Ok(())) => Err(BridgeError {
+                    code: format!("{}/bridge-session", key.family),
+                    message: primary.to_string(),
+                }),
+                Ok(Err(cleanup)) => Err(BridgeError {
+                    code: format!("{}/bridge-reap", key.family),
+                    message: format!("{primary}; cleanup failed: {cleanup}"),
+                }),
+                Err(_) => Err(BridgeError {
+                    code: format!("{}/bridge-reap", key.family),
+                    message: format!("{primary}; worker panicked during cleanup"),
+                }),
+            }
         }
     }
 }
@@ -366,10 +455,14 @@ fn ensure_persistent_bridge_session(
 fn clear_persistent_bridge_session(
     runtime: &mut PersistentBridgeRuntime,
     key: &PersistentBridgeSessionKey,
-) {
+) -> Result<(), BridgeError> {
     if let Some(mut session) = runtime.sessions.remove(key) {
-        let _ = session.stop();
+        session.stop().map_err(|error| BridgeError {
+            code: format!("{}/bridge-reap", key.family),
+            message: format!("persistent bridge session cleanup failed: {error}"),
+        })?;
     }
+    Ok(())
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -385,11 +478,10 @@ fn run_persistent_bridge_process_once(
         code: format!("{}/bridge-session", key.family),
         message: "persistent bridge session disappeared".to_string(),
     })?;
-    let result = session.call(&key.family, payload_frame, max_bytes, timeout_ms);
-    if result.is_err() {
-        clear_persistent_bridge_session(runtime, key);
+    match session.call(&key.family, payload_frame, max_bytes, timeout_ms) {
+        Ok(response) => Ok(response),
+        Err(primary) => Err(cleanup_after_error(runtime, key, primary)),
     }
-    result
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -425,13 +517,50 @@ pub(super) fn run_bridge_process_persistent(
 mod tests {
     use super::*;
 
+    fn synthetic_key(family: &str) -> PersistentBridgeSessionKey {
+        PersistentBridgeSessionKey {
+            family: family.to_string(),
+            op: "test/bridge::call".to_string(),
+            base_dir: std::path::PathBuf::from("."),
+            cmd_path: std::path::PathBuf::from("fixture"),
+            args: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn runtime_shutdown_reports_worker_reap_failure() {
+        let (done_sender, done_receiver) = std::sync::mpsc::sync_channel(1);
+        let worker = std::thread::spawn(move || -> std::io::Result<()> {
+            done_sender.send(()).expect("signal synthetic completion");
+            Err(std::io::Error::other("injected worker reap failure"))
+        });
+        let mut runtime = PersistentBridgeRuntime::default();
+        runtime.sessions.insert(
+            synthetic_key("model"),
+            PersistentBridgeSession {
+                process_id: u32::MAX,
+                requests: None,
+                worker: Some(worker),
+                worker_done: done_receiver,
+            },
+        );
+
+        let error = runtime
+            .shutdown()
+            .expect_err("worker reap failure must cross explicit owner shutdown");
+        assert_eq!(error.code, "model/bridge-reap");
+        assert!(error.message.contains("injected worker reap failure"));
+        assert!(runtime.sessions.is_empty());
+    }
+
     #[test]
     fn persistent_stop_is_bounded_when_signal_and_reap_fail() {
         let (release_sender, release_receiver) = std::sync::mpsc::sync_channel(1);
         let (done_sender, done_receiver) = std::sync::mpsc::sync_channel(1);
-        let worker = std::thread::spawn(move || {
+        let worker = std::thread::spawn(move || -> std::io::Result<()> {
             let _ = release_receiver.recv();
             let _ = done_sender.send(());
+            Ok(())
         });
         let joined_before = joined_persistent_bridge_workers_for_tests();
         let mut session = PersistentBridgeSession {

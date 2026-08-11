@@ -330,6 +330,19 @@ pub(super) fn effects_context(operation: &'static str, error: &gc_effects::Effec
                 .fact("reason", reason.clone())
                 .into_value()
         }
+        gc_effects::EffectsError::Cleanup {
+            subsystem,
+            reason,
+            prior_error,
+        } => {
+            let mut context = FailureContext::new("evaluator", "cleanup", operation)
+                .fact("cleanup_subsystem", subsystem.clone())
+                .fact("reason", reason.clone());
+            if let Some(prior_error) = prior_error {
+                context = context.fact("prior_error", prior_error.clone());
+            }
+            context.into_value()
+        }
         gc_effects::EffectsError::Io(error) => FailureContext::new("replay", "io", operation)
             .fact("io_kind", format!("{:?}", error.kind()))
             .into_value(),
@@ -498,8 +511,8 @@ mod tests {
     use serde_json::Value;
 
     use super::{
-        FAILURE_CONTEXT_SCHEMA_V1, FailureContext, evaluator_context, normalize_context,
-        parser_context,
+        FAILURE_CONTEXT_SCHEMA_V1, FailureContext, effects_context, evaluator_context,
+        normalize_context, parser_context,
     };
 
     #[test]
@@ -539,6 +552,20 @@ mod tests {
         assert_eq!(context["facts"]["resource_dimension"], "live-units");
         assert_eq!(context["facts"]["resource_observed"], 11);
         assert_eq!(context["facts"]["resource_limit"], 10);
+    }
+
+    #[test]
+    fn cleanup_context_preserves_subsystem_and_prior_failure() {
+        let error = gc_effects::EffectsError::Cleanup {
+            subsystem: "host-bridge".to_string(),
+            reason: "net/bridge-reap: worker failed".to_string(),
+            prior_error: Some("kernel error".to_string()),
+        };
+        let context = effects_context("run/execute", &error);
+        assert_eq!(context["domain"], "evaluator");
+        assert_eq!(context["kind"], "cleanup");
+        assert_eq!(context["facts"]["cleanup_subsystem"], "host-bridge");
+        assert_eq!(context["facts"]["prior_error"], "kernel error");
     }
 
     #[test]

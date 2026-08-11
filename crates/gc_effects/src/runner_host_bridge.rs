@@ -56,6 +56,19 @@ pub(crate) struct HostBridgeRuntime {
     persistent: runner_host_bridge_persistent::PersistentBridgeRuntime,
 }
 
+impl HostBridgeRuntime {
+    pub(crate) fn shutdown(&mut self) -> Result<(), BridgeError> {
+        #[cfg(not(target_os = "wasi"))]
+        {
+            self.persistent.shutdown()
+        }
+        #[cfg(target_os = "wasi")]
+        {
+            Ok(())
+        }
+    }
+}
+
 pub(crate) fn call_host_bridge(
     runtime: &mut HostBridgeRuntime,
     family: &str,

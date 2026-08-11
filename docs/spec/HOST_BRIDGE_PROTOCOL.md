@@ -95,8 +95,10 @@ Example:
 
 - `HostBridgeRuntime` is the explicit owner for all persistent bridge sessions in one runner execution.
 - The owner contains no ambient process-global session map. Production capability dispatch must receive the owner explicitly.
+- The effect runner explicitly shuts down the owner on every success and error exit before returning its public result. A shutdown failure returns `EffectsError::Cleanup { subsystem: "host-bridge", ... }`; it takes result precedence while retaining the initiating execution error as `prior_error`.
 - A persistent worker exclusively owns its `Child`. Teardown must signal before join, let that owner reap the leader, then perform the bounded residual-group verification. Waiting for group disappearance before joining the child owner is forbidden because it misclassifies the owner's unreaped leader as a surviving process.
 - Teardown is bounded. Failure to signal, join, reap, or eliminate a live residual member returns a family-scoped `bridge-reap` error; it is never rewritten as successful cancellation.
+- Persistent worker completion carries the worker's own child-reap result through the join handle. Session eviction and multi-session owner shutdown attempt every owned session, return cleanup failures in canonical session-key order, and preserve the error that initiated cleanup.
 - Recreating a runner after daemon restart creates a fresh bridge generation. Logical IDs or processes from the retired owner cannot be reused.
 
 ## WASI Profile

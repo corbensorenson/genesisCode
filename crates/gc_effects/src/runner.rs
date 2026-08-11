@@ -188,9 +188,26 @@ pub fn run(
     let mut artifact_budget_state = ArtifactBudgetState::default();
     let mut runtime_budget_state = RuntimeBudgetState::default();
 
+    macro_rules! run_try {
+        ($result:expr) => {
+            match $result {
+                Ok(value) => value,
+                Err(error) => {
+                    return finalize_run_with_bridge_cleanup(
+                        Err(error.into()),
+                        bridge_runtime.shutdown(),
+                    );
+                }
+            }
+        };
+    }
+
     loop {
         let Value::EffectProgram(p) = cur else {
-            return Err(EffectsError::NotAnEffectProgram);
+            return finalize_run_with_bridge_cleanup(
+                Err(EffectsError::NotAnEffectProgram),
+                bridge_runtime.shutdown(),
+            );
         };
         match p.as_ref() {
             EffectProgram::Pure(v) => {
@@ -200,15 +217,22 @@ pub fn run(
                     toolchain,
                     entries,
                 };
-                return Ok(RunResult {
-                    value: (*v.as_ref()).clone(),
-                    log,
-                });
+                return finalize_run_with_bridge_cleanup(
+                    Ok(RunResult {
+                        value: (*v.as_ref()).clone(),
+                        log,
+                    }),
+                    bridge_runtime.shutdown(),
+                );
             }
             EffectProgram::Perform { request } => {
-                let (req, sealed_token) = unseal_effect_request(request.as_ref(), proto.effect)?;
+                let (req, sealed_token) =
+                    run_try!(unseal_effect_request(request.as_ref(), proto.effect));
                 if sealed_token != proto.effect {
-                    return Err(EffectsError::BadEffectSeal);
+                    return finalize_run_with_bridge_cleanup(
+                        Err(EffectsError::BadEffectSeal),
+                        bridge_runtime.shutdown(),
+                    );
                 }
 
                 let payload_h = hash_term(&req.payload);
@@ -234,7 +258,7 @@ pub fn run(
                     )
                 } else {
                     let pol = policy.op_policy(&req.op);
-                    let cap_term = cap_term(&req.op, pol)?;
+                    let cap_term = run_try!(cap_term(&req.op, pol));
                     let resp = if let Some(task_resp) = task_runtime_call(
                         &mut task_runtime,
                         policy,
@@ -289,7 +313,7 @@ pub fn run(
                     ) {
                         editor_resp
                     } else {
-                        call_capability_with_runtime(
+                        run_try!(call_capability_with_runtime(
                             &req.op,
                             &req.payload,
                             pol,
@@ -299,7 +323,7 @@ pub fn run(
                             &mut artifact_budget_state,
                             &mut bridge_runtime,
                             proto.error,
-                        )?
+                        ))
                     };
                     (Decision::Allow, cap_term, resp)
                 };
@@ -321,28 +345,29 @@ pub fn run(
                     resp_val = limit_err;
                 };
                 if decision == Decision::Allow
-                    && let Some(limit_err) = enforce_log_artifact_budget(
+                    && let Some(limit_err) = run_try!(enforce_log_artifact_budget(
                         policy,
                         &mut artifact_budget_state,
                         &req.op,
                         &resp_val,
                         proto.error,
-                    )?
+                    ))
                 {
                     resp_val = limit_err;
                 }
-                if let Some(limit_err) = enforce_response_runtime_limits(
+                if let Some(limit_err) = run_try!(enforce_response_runtime_limits(
                     policy,
                     &mut runtime_budget_state,
                     &req.op,
                     &resp_val,
                     proto.error,
-                )? {
+                )) {
                     decision = Decision::Deny;
                     cap_term = Term::Nil;
                     resp_val = limit_err;
                 }
-                let resp_logged = logged_resp(policy, &req.op, &store, &resp_val, proto.error)?;
+                let resp_logged =
+                    run_try!(logged_resp(policy, &req.op, &store, &resp_val, proto.error,));
 
                 let resp_h = value_hash(&resp_val);
                 let task_event = task_schedule_event_for(i, &req.op, &req.payload, &resp_val);
@@ -366,13 +391,59 @@ pub fn run(
 
                 // Apply continuation; allow auto-lifting a non-effect-program result into Pure.
                 let k = (*req.k).clone();
-                let next = k.apply(ctx, resp_val)?;
+                let next = run_try!(k.apply(ctx, resp_val));
                 cur = match next {
                     Value::EffectProgram(_) => next,
                     other => Value::EffectProgram(Box::new(EffectProgram::Pure(Box::new(other)))),
                 };
             }
         }
+    }
+}
+
+fn finalize_run_with_bridge_cleanup(
+    outcome: Result<RunResult, EffectsError>,
+    cleanup: Result<(), crate::runner_host_bridge::BridgeError>,
+) -> Result<RunResult, EffectsError> {
+    match cleanup {
+        Ok(()) => outcome,
+        Err(cleanup) => Err(EffectsError::Cleanup {
+            subsystem: "host-bridge".to_string(),
+            reason: format!("{}: {}", cleanup.code, cleanup.message),
+            prior_error: outcome.err().map(|error| error.to_string()),
+        }),
+    }
+}
+
+#[cfg(test)]
+mod cleanup_tests {
+    use super::*;
+
+    #[test]
+    fn bridge_cleanup_failure_preserves_the_prior_run_error() {
+        let outcome = Err(EffectsError::BadEffectSeal);
+        let cleanup = Err(crate::runner_host_bridge::BridgeError {
+            code: "net/bridge-reap".to_string(),
+            message: "worker reap failed".to_string(),
+        });
+        let error = match finalize_run_with_bridge_cleanup(outcome, cleanup) {
+            Ok(_) => panic!("cleanup failure must cross the run boundary"),
+            Err(error) => error,
+        };
+        let EffectsError::Cleanup {
+            subsystem,
+            reason,
+            prior_error,
+        } = error
+        else {
+            panic!("expected typed cleanup failure");
+        };
+        assert_eq!(subsystem, "host-bridge");
+        assert_eq!(reason, "net/bridge-reap: worker reap failed");
+        assert_eq!(
+            prior_error.as_deref(),
+            Some("effect request is not sealed with the EFFECT protocol token")
+        );
     }
 }
 

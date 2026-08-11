@@ -29,6 +29,13 @@ pub enum EffectsError {
     #[error("replay mismatch: {0}")]
     ReplayMismatch(String),
 
+    #[error("runtime cleanup failed in {subsystem}: {reason}")]
+    Cleanup {
+        subsystem: String,
+        reason: String,
+        prior_error: Option<String>,
+    },
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 }
