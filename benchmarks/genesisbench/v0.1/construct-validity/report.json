@@ -35,8 +35,8 @@
       "caseId": "package-migration-small",
       "failedDimensions": [],
       "id": "alternative-package-migration",
-      "qualityScoreBasisPoints": 9784,
-      "scoreIdentitySha256": "f7507fd0ada64a682ac6dce8d4da37633e0cd4e5204a1e28e0cd5e55f6f05005",
+      "qualityScoreBasisPoints": 9788,
+      "scoreIdentitySha256": "a28de1147e4c9e2df72cbc3d959674fb9b1cca19fc12cd93a99a56492b575edd",
       "taskClass": "package-migration",
       "valid": true
     },
@@ -115,7 +115,7 @@
     "scoringIdentitySha256": "b7e1b59941efe75f1e00aaab8e6e42e65337551b569e5c49ebc9e745967bc10b",
     "studyRuntimeSha256": "8ef750406b50d6ea22fb5c43ce076a7b11d42e1e963446c67d029f3b4f94bb06"
   },
-  "contentIdentitySha256": "13127aefa797bfee2fcac6fc9164aab91780fc17bfd66530b603f309df20748f",
+  "contentIdentitySha256": "f9034981f9199532b0ec81d274c70257fb083b3b6b86f4483acd6c8491a0ab13",
   "coverage": [
     {
       "construct": "diagnostic-recovery",
@@ -377,7 +377,7 @@
       ],
       "id": "negative-package-migration",
       "qualityScoreBasisPoints": 0,
-      "scoreIdentitySha256": "cd9609eb3aa7d4cc88a6fd85c3f84932317583813665c618c88219c702bd74a4",
+      "scoreIdentitySha256": "17eecd6c50a7f80faa606ee68f2d7e7e086863f8b5a9326b401616d947a65608",
       "taskClass": "package-migration",
       "valid": false
     },

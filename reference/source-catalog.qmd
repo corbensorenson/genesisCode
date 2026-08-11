@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**305 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**308 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `833e7da1c6c8` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `40559a58f821` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `0dd915fba729` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `53aa72175f75` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `91add896e0f1` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-11) | md | `bd0e7b8580e7` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `ebf50143ae88` |
@@ -61,7 +61,7 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
 | [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `216b4136563d` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `a17905085d34` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `a0379309a391` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -162,7 +162,7 @@ toc-depth: 2
 | [`docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json`](../docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.schema.json) | GenesisCode model-agnostic agent benchmark scoring v0.1 | schema | `54fc999a4a03` |
 | [`docs/spec/GC_AGENT_CORE_CARD_v0.3.json`](../docs/spec/GC_AGENT_CORE_CARD_v0.3.json) | genesis/gc-agent-core-card-v0.3 | json | `6483f72edb86` |
 | [`docs/spec/GC_AGENT_CORE_CARD_v0.3.md`](../docs/spec/GC_AGENT_CORE_CARD_v0.3.md) | GC-AGENT-v0.3 Core Card | md | `02a1e51e58ad` |
-| [`docs/spec/GC_AGENT_CORPUS_v0.1.json`](../docs/spec/GC_AGENT_CORPUS_v0.1.json) | genesis/agent-corpus-manifest-v0.1 | json | `66daecdda8e0` |
+| [`docs/spec/GC_AGENT_CORPUS_v0.1.json`](../docs/spec/GC_AGENT_CORPUS_v0.1.json) | genesis/agent-corpus-manifest-v0.1 | json | `701c24ba92c4` |
 | [`docs/spec/GC_AGENT_CORPUS_v0.1.schema.json`](../docs/spec/GC_AGENT_CORPUS_v0.1.schema.json) | GenesisCode agent corpus manifest v0.1 | schema | `a9eb1799be59` |
 | [`docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json`](../docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.json) | genesis/agent-held-out-evaluation-v0.1 | json | `c39deea77f4e` |
 | [`docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json`](../docs/spec/GC_AGENT_HELD_OUT_EVALUATION_v0.1.schema.json) | GenesisCode Agent Held-Out Evaluation Commitments v0.1 | schema | `dbc25b471ac5` |
@@ -198,16 +198,16 @@ toc-depth: 2
 | [`docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json`](../docs/spec/GENESISBENCH_ANALYSIS_REPORT_v0.1.schema.json) | GenesisBench deterministic lineage analysis report v0.1 | schema | `3b4e2bb89896` |
 | [`docs/spec/GENESISBENCH_BASELINE_EVIDENCE_v0.1.schema.json`](../docs/spec/GENESISBENCH_BASELINE_EVIDENCE_v0.1.schema.json) | GenesisBench baseline evidence v0.1 | schema | `b6b15dbc232e` |
 | [`docs/spec/GENESISBENCH_BASELINE_PREDECLARATION_v0.1.schema.json`](../docs/spec/GENESISBENCH_BASELINE_PREDECLARATION_v0.1.schema.json) | GenesisBench baseline predeclaration v0.1 | schema | `660303b1ac16` |
-| [`docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json`](../docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json) | genesis/genesisbench-baseline-protocol-v0.1 | json | `398898d616ef` |
-| [`docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json`](../docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json) | GenesisBench baseline protocol v0.1 | schema | `0978d76c4a15` |
+| [`docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json`](../docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json) | genesis/genesisbench-baseline-protocol-v0.1 | json | `67cc7fec4560` |
+| [`docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json`](../docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json) | GenesisBench baseline protocol v0.1 | schema | `f284dbb8f929` |
 | [`docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json`](../docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json) | GenesisBench baseline publication v0.1 | schema | `0dbce7532880` |
-| [`docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json`](../docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json) | genesis/genesisbench-benchmark-card-v0.1 | json | `aa13d850d7f0` |
+| [`docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json`](../docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json) | genesis/genesisbench-benchmark-card-v0.1 | json | `5af1e57c4dac` |
 | [`docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json`](../docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json) | GenesisBench deterministic run bundle manifest v0.1 | schema | `af540b84ac2f` |
 | [`docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json`](../docs/spec/GENESISBENCH_CONSTRUCT_VALIDITY_v0.1.schema.json) | GenesisBench construct validity report v0.1 | schema | `b41e6da7f971` |
 | [`docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json`](../docs/spec/GENESISBENCH_CONTAMINATION_ATTESTATION_v0.1.schema.json) | GenesisBench contamination evidence attestation v0.1 | schema | `d8f5360a8ebd` |
 | [`docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json`](../docs/spec/GENESISBENCH_ELIGIBILITY_v0.1.schema.json) | GenesisBench deterministic run eligibility report v0.1 | schema | `cd3519ae2232` |
 | [`docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json`](../docs/spec/GENESISBENCH_EXECUTION_RUN_v0.1.schema.json) | GenesisBench canonical execution run v0.1 | schema | `9bea33234590` |
-| [`docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json`](../docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json) | genesis/genesisbench-failure-taxonomy-v0.1 | json | `8c8906f81143` |
+| [`docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json`](../docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json) | genesis/genesisbench-failure-taxonomy-v0.1 | json | `02f8842ae6ee` |
 | [`docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md`](../docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md) | GenesisBench Front Door v0.1 | md | `27410331dd3d` |
 | [`docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json`](../docs/spec/GENESISBENCH_HARDWARE_EVIDENCE_v0.1.schema.json) | GenesisBench embedded-local resident-footprint evidence v0.1 | schema | `c32ef46008f9` |
 | [`docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json`](../docs/spec/GENESISBENCH_LEADERBOARD_v0.1.schema.json) | GenesisBench static leaderboard v0.1 | schema | `7ed78f85992a` |
@@ -224,7 +224,7 @@ toc-depth: 2
 | [`docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json`](../docs/spec/GENESISBENCH_OPEN_AGENT_v0.3.json) | genesis/genesisbench-open-agent-harness-v0.3 | json | `05362bd6d3df` |
 | [`docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json`](../docs/spec/GENESISBENCH_OPEN_AGENT_v0.4.json) | genesis/genesisbench-open-agent-harness-v0.4 | json | `b1c0c7e13f02` |
 | [`docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json`](../docs/spec/GENESISBENCH_OPEN_AGENT_v0.5.json) | genesis/genesisbench-open-agent-harness-v0.5 | json | `9c286ee5c412` |
-| [`docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`](../docs/spec/GENESISBENCH_PROTOCOL_v0.1.json) | genesis/genesisbench-protocol-v0.1 | json | `6c400d2e395b` |
+| [`docs/spec/GENESISBENCH_PROTOCOL_v0.1.json`](../docs/spec/GENESISBENCH_PROTOCOL_v0.1.json) | genesis/genesisbench-protocol-v0.1 | json | `49ff654227bc` |
 | [`docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json`](../docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json) | GenesisBench self-hostable benchmark protocol v0.1 | schema | `7ba90c818d30` |
 | [`docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json`](../docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json) | genesis/genesisbench-reference-agent-ablations-v0.1 | json | `fda67f2c8a57` |
 | [`docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json`](../docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.schema.json) | GenesisBench fixed reference agent ablations v0.1 | schema | `760334fbf3e6` |
@@ -277,6 +277,9 @@ toc-depth: 2
 | [`docs/spec/PREREQUISITES_v0.1.md`](../docs/spec/PREREQUISITES_v0.1.md) | GenesisCode Prerequisite Contract v0.1 | md | `bbdab94eb747` |
 | [`docs/spec/PREREQUISITES_v0.1.schema.json`](../docs/spec/PREREQUISITES_v0.1.schema.json) | GenesisCode Prerequisite Manifest v0.1 | schema | `181f708c951a` |
 | [`docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json`](../docs/spec/PRODUCT_TARGET_MATRIX_v0.1.json) | genesis/product-target-matrix-v0.1 | json | `7d4efa68e0c3` |
+| [`docs/spec/PROFILE_NEGOTIATION_v0.1.json`](../docs/spec/PROFILE_NEGOTIATION_v0.1.json) | genesis/profile-negotiation-v0.1 | json | `a1dc654511a4` |
+| [`docs/spec/PROFILE_NEGOTIATION_v0.1.md`](../docs/spec/PROFILE_NEGOTIATION_v0.1.md) | GenesisCode Package Profile Negotiation v0.1 | md | `601238875ce9` |
+| [`docs/spec/PROFILE_NEGOTIATION_v0.1.schema.json`](../docs/spec/PROFILE_NEGOTIATION_v0.1.schema.json) | GenesisCode Package Profile Negotiation v0.1 | schema | `1b6b90a12d7c` |
 | [`docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json`](../docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json) | GenesisCode Reference Host Observation v0.1 | schema | `8a94e816ed67` |
 | [`docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json`](../docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json) | GenesisCode Reference Host Profiles v0.1 | schema | `6c5999814fa0` |
 | [`docs/spec/REGISTRY_POLICY.md`](../docs/spec/REGISTRY_POLICY.md) | Registry Policy (Local) (v0.2) | md | `30c1e4d1d4d4` |
@@ -323,7 +326,7 @@ toc-depth: 2
 | [`docs/spec/TEXT_PATH_PROFILE_v0.1.schema.json`](../docs/spec/TEXT_PATH_PROFILE_v0.1.schema.json) | GenesisCode Text and Path Profile v0.1 | schema | `6f272086440e` |
 | [`docs/spec/TRANSLATION_VALIDATION.md`](../docs/spec/TRANSLATION_VALIDATION.md) | Translation Validation Obligation v0.2 | md | `66e5e55bfa9e` |
 | [`docs/spec/TRANSPARENCY_LOG.md`](../docs/spec/TRANSPARENCY_LOG.md) | Transparency Log (Local) (v0.2) | md | `5a9fb6200962` |
-| [`docs/spec/TYPES.md`](../docs/spec/TYPES.md) | Type Terms and Typechecking v0.2 | md | `ed43bff03ac2` |
+| [`docs/spec/TYPES.md`](../docs/spec/TYPES.md) | Type Terms and Typechecking v0.2 | md | `dbdb58504d5b` |
 | [`docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json`](../docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json) | GenesisCode v1 Compatibility Registry v0.1 | schema | `2b3762c7a737` |
 | [`docs/spec/VALUE_EFFECT_HASH.md`](../docs/spec/VALUE_EFFECT_HASH.md) | Runtime Value Graph, Lifetime, and Hashing v0.2 | md | `bc9c851116e4` |
 | [`docs/spec/VERSIONING_v0.1.md`](../docs/spec/VERSIONING_v0.1.md) | Versioning Policy v0.1 | md | `ee885103b45d` |

@@ -114,6 +114,14 @@ no invalid closure receives a resolution identity. Unmarked v0.2 modules retain 
 export environment until the scheduled self-hosted migration and semantic migration tooling are
 complete; profile activation never occurs by inference.
 
+When either package-negotiation field appears, typechecking also applies
+`PROFILE_NEGOTIATION_v0.1.md` against an explicit `ProfileOffer`. All modules must declare identical
+closed `exact` or `minimum` requirements for language, capability, artifact, and target families.
+Compatibility follows only the reviewed registry; version strings are never ordered or inferred.
+Negotiation failure is a module error and produces no negotiated identity. The selected capability
+profile describes implementation availability only: module `:caps`, typed transitive effects, and
+deny-by-default runtime grants remain independent conjunctive requirements.
+
 ## Inference Coverage (v0.2)
 
 The typechecker infers types most precisely for:

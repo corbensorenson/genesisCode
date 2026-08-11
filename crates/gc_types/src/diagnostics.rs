@@ -110,6 +110,10 @@ impl crate::TypecheckReport {
                     .collect(),
             ),
         );
+        fields.insert(
+            TermOrdKey(Term::symbol(":profile-negotiation")),
+            self.profile_negotiation.to_term(),
+        );
         Term::Map(fields)
     }
 }

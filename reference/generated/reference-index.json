@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 305,
+    "canonicalSources": 308,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 111,
+    "schemas": 112,
     "symbols": 176
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "53aa72175f750e4d26d01a7d4dd5c79ee3df7ca8c8517f38f15549d2e75355d4"
+      "sha256": "91add896e0f1cc0a9cff4333b91618ac30bd5b200405cd81d1ef95b3ab8b4309"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "a17905085d348cefafcf04a88aefee2273c58ecfa017723e8d3fcff809284002"
+      "sha256": "a0379309a3916fbe9ba44918c4d3f5b4ffa78fa9f5f322f1c52603fce806a6f3"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -496,7 +496,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "66daecdda8e05c7c0111324b52b7bc8faded56e1738b7e0211ac8d33757b9139"
+      "sha256": "701c24ba92c40edacbcaa701dcf9b17ba06fdca8045c644f2a593f452463345b"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -640,11 +640,11 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
-      "sha256": "398898d616ef43697b648dec75323b8e560b42950e545378d6e47b901a0ee8ee"
+      "sha256": "67cc7fec456020aba7758a2cbf905a3716613680b3b546c85f5e35170120e5bf"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json",
-      "sha256": "0978d76c4a15cff7eaaf2fa0998a466bf4a0012f1308d49ae1e501b28b31d8c7"
+      "sha256": "f284dbb8f929e5e8d042461c47fae56185af191823fb3ac4301c3dfdf22feeca"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
@@ -652,7 +652,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
-      "sha256": "aa13d850d7f0369fd26fe1e702069fd501e36a7d846281dd5b6faf7c44f6fa66"
+      "sha256": "5af1e57c4dac19c9ebf590a344d4ea4559e534ee82cfc183b85fdf08484a67ac"
     },
     {
       "path": "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
@@ -676,7 +676,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
-      "sha256": "8c8906f811433e2d73e9f9992cf1c74e080a2f54f6d585166cdd6149680abe6c"
+      "sha256": "02f8842ae6ee48075c1d74ecec9898a71de60a07d1c5f80a18b5f6acf43292f3"
     },
     {
       "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
@@ -744,7 +744,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "6c400d2e395b1db39fe9e760830f411ba0ba66bf23b1d001b2a246746cfbd037"
+      "sha256": "49ff654227bc29de1165bcd4cd29f3dce8c96f37f999bd7ac83cb0e169de1ea9"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -955,6 +955,18 @@
       "sha256": "7d4efa68e0c3a3390345c730e4f71ee5f7d5f935faec01c3e4ede56435156ebc"
     },
     {
+      "path": "docs/spec/PROFILE_NEGOTIATION_v0.1.json",
+      "sha256": "a1dc654511a4ed94d5e13bc81a03456dd1ab93ff84bfc4216151df1a3027dec5"
+    },
+    {
+      "path": "docs/spec/PROFILE_NEGOTIATION_v0.1.md",
+      "sha256": "601238875ce9e76f613aa3acd0f312bc52357333ec0f0881e7c42710834713bf"
+    },
+    {
+      "path": "docs/spec/PROFILE_NEGOTIATION_v0.1.schema.json",
+      "sha256": "1b6b90a12d7cbce8b901442d89b91c9f8081dbcf450412c0deb6f20fa9c5e9f5"
+    },
+    {
       "path": "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
       "sha256": "8a94e816ed67cdb913a66b5729e687f078ea3dd256d7684c50ea68100810721a"
     },
@@ -1140,7 +1152,7 @@
     },
     {
       "path": "docs/spec/TYPES.md",
-      "sha256": "ed43bff03ac2fed087507800b3f64f162102304dae56cf685a270496d669c040"
+      "sha256": "dbdb58504d5b86b892956bc574d2c60735341a00e2abecad740ce30733a0294b"
     },
     {
       "path": "docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json",

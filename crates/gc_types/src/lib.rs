@@ -7,6 +7,7 @@ mod diagnostics;
 mod effect_inference;
 mod infer;
 mod module_resolution;
+pub mod profile_negotiation;
 mod ty;
 mod type_compatibility;
 
@@ -30,6 +31,9 @@ pub use crate::effect_inference::{infer_effects, infer_effects_in_term};
 pub use crate::module_resolution::{
     MODULE_RESOLUTION_PROFILE_ID, ModuleResolutionReport, resolve_module_profile,
 };
+pub use crate::profile_negotiation::{
+    ProfileNegotiationReport, ProfileOffer, negotiate_package_profiles,
+};
 
 #[derive(Debug, Clone)]
 pub struct ModuleForTypecheck {
@@ -51,6 +55,7 @@ pub struct TypecheckReport {
     pub warnings: Vec<String>,
     pub diagnostics: Vec<TypecheckDiagnostic>,
     pub modules: Vec<ModuleReport>,
+    pub profile_negotiation: ProfileNegotiationReport,
 }
 
 #[derive(Debug, Clone)]
@@ -87,7 +92,16 @@ struct PackageTypeContext {
 }
 
 pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
+    typecheck_package_with_profile_offer(mods, &ProfileOffer::core_host())
+}
+
+pub fn typecheck_package_with_profile_offer(
+    mods: &[ModuleForTypecheck],
+    offer: &ProfileOffer,
+) -> TypecheckReport {
     let mut context = collect_package_type_context(mods);
+    let profile_negotiation = negotiate_package_profiles(mods, offer);
+    profile_negotiation::merge_profile_errors(&profile_negotiation, &mut context.module_errors);
     let composition = compose_contract_profile(mods);
     for (path, errors) in composition.errors_by_module {
         context
@@ -110,6 +124,7 @@ pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
         warnings: Vec::new(),
         diagnostics: Vec::new(),
         modules: Vec::new(),
+        profile_negotiation,
     };
     for m in mods {
         let mr = typecheck_one(

@@ -1,0 +1,81 @@
+{
+  "auditDate": "2026-08-11",
+  "canonicalSpec": "docs/spec/PROFILE_NEGOTIATION_v0.1.md",
+  "canonicalSpecSha256": "601238875ce9e76f613aa3acd0f312bc52357333ec0f0881e7c42710834713bf",
+  "compatibility": {
+    "exact": "offered-set-membership-only",
+    "minimum": "earliest-offered-member-at-or-after-required-in-reviewed-lineage",
+    "versionInference": "forbidden"
+  },
+  "contentIdentitySha256": "3f088f61f86a8a8d5bc2306521005c7cf35562ed1c08220836a3851df534564e",
+  "failure": {
+    "inactiveIdentity": "none",
+    "invalidIdentity": "none",
+    "ordering": "portable-module-path-then-lexical-message",
+    "timing": "before-module-execution"
+  },
+  "identity": {
+    "hashProfile": "genesis/hash-profile/gcv0.2-blake3",
+    "inputs": ["profile-id", "module-resolution-identity", "sorted-requirements", "sorted-selected-profiles"],
+    "offerScope": "selected-members-only"
+  },
+  "kind": "genesis/profile-negotiation-v0.1",
+  "nonclaims": [
+    "No v1 stability or compatibility with undeclared profiles is claimed.",
+    "Portable host is not build or deployment evidence for native, browser, edge, WASI, mobile, OCI, component, GPU, game, embedded, Raspberry Pi, or MCU targets.",
+    "The CoreForm artifact profile does not stabilize bytecode, native objects, components, packages, snapshots, or containers.",
+    "Capability availability grants no authority and proves no platform-specific operation exists.",
+    "Minimum compatibility does not parse versions or cross profile families.",
+    "Inactive legacy packages receive no negotiated identity.",
+    "No self-host authority, package, backend, benchmark, Foundry result, model, product target, assurance level, or release level is promoted."
+  ],
+  "offer": {
+    "constructor": "reject-unknown-family-member-and-duplicate",
+    "coreHost": [
+      "genesis/language-profile/v0.2",
+      "genesis/capability-profile/pure-v0.1",
+      "genesis/capability-profile/host-abi-v0.1",
+      "genesis/artifact-profile/coreform-v0.2",
+      "genesis/target-profile/portable-host-v0.1"
+    ],
+    "meaning": "verified-implementation-availability-not-authorization"
+  },
+  "packageClosure": {
+    "activation": "either-field-activates-all-modules",
+    "capabilityPolicy": "availability-and-declaration-and-runtime-grant-are-conjunctive",
+    "fields": [":profile-negotiation", ":package-profile-requirements"],
+    "moduleResolution": "successful-genesis/module-resolution-profile-v0.1-required",
+    "requirements": "exactly-four-families-identical-across-modules"
+  },
+  "profiles": [
+    {
+      "family": "genesis/profile-family/language",
+      "lineage": ["genesis/language-profile/v0.2"]
+    },
+    {
+      "family": "genesis/profile-family/capability",
+      "lineage": ["genesis/capability-profile/pure-v0.1", "genesis/capability-profile/host-abi-v0.1"]
+    },
+    {
+      "family": "genesis/profile-family/artifact",
+      "lineage": ["genesis/artifact-profile/coreform-v0.2"]
+    },
+    {
+      "family": "genesis/profile-family/target",
+      "lineage": ["genesis/target-profile/portable-host-v0.1"]
+    }
+  ],
+  "schema": "docs/spec/PROFILE_NEGOTIATION_v0.1.schema.json",
+  "schemaSha256": "1b6b90a12d7cbce8b901442d89b91c9f8081dbcf450412c0deb6f20fa9c5e9f5",
+  "sourceBindings": [
+    {"id": "source/coreform-profiles", "mode": "identity", "path": "crates/gc_coreform/src/term.rs"},
+    {"id": "source/diagnostic-report", "mode": "report", "path": "crates/gc_types/src/diagnostics.rs"},
+    {"id": "source/host-abi-index", "mode": "capability-availability", "path": "docs/spec/HOST_ABI_INDEX_v0.1.json"},
+    {"id": "source/module-resolution", "mode": "module-resolution", "path": "crates/gc_types/src/module_resolution.rs"},
+    {"id": "source/module-resolution-spec", "mode": "normative-module-resolution", "path": "docs/spec/MODULE_RESOLUTION_PROFILE_v0.1.md"},
+    {"id": "source/negotiation", "mode": "negotiation", "path": "crates/gc_types/src/profile_negotiation.rs"},
+    {"id": "source/types-spec", "mode": "normative-types", "path": "docs/spec/TYPES.md"},
+    {"id": "source/typecheck", "mode": "typecheck", "path": "crates/gc_types/src/lib.rs"}
+  ],
+  "version": "0.1"
+}

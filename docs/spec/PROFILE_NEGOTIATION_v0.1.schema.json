@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.org/spec/profile-negotiation-v0.1.schema.json",
+  "title": "GenesisCode Package Profile Negotiation v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["auditDate", "canonicalSpec", "canonicalSpecSha256", "compatibility", "contentIdentitySha256", "failure", "identity", "kind", "nonclaims", "offer", "packageClosure", "profiles", "schema", "schemaSha256", "sourceBindings", "version"],
+  "properties": {
+    "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "canonicalSpec": {"const": "docs/spec/PROFILE_NEGOTIATION_v0.1.md"},
+    "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
+    "compatibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["exact", "minimum", "versionInference"],
+      "properties": {
+        "exact": {"const": "offered-set-membership-only"},
+        "minimum": {"const": "earliest-offered-member-at-or-after-required-in-reviewed-lineage"},
+        "versionInference": {"const": "forbidden"}
+      }
+    },
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "failure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["inactiveIdentity", "invalidIdentity", "ordering", "timing"],
+      "properties": {
+        "inactiveIdentity": {"const": "none"},
+        "invalidIdentity": {"const": "none"},
+        "ordering": {"const": "portable-module-path-then-lexical-message"},
+        "timing": {"const": "before-module-execution"}
+      }
+    },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["hashProfile", "inputs", "offerScope"],
+      "properties": {
+        "hashProfile": {"const": "genesis/hash-profile/gcv0.2-blake3"},
+        "inputs": {"const": ["profile-id", "module-resolution-identity", "sorted-requirements", "sorted-selected-profiles"]},
+        "offerScope": {"const": "selected-members-only"}
+      }
+    },
+    "kind": {"const": "genesis/profile-negotiation-v0.1"},
+    "nonclaims": {"$ref": "#/$defs/nonemptyStrings"},
+    "offer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["constructor", "coreHost", "meaning"],
+      "properties": {
+        "constructor": {"const": "reject-unknown-family-member-and-duplicate"},
+        "coreHost": {"const": ["genesis/language-profile/v0.2", "genesis/capability-profile/pure-v0.1", "genesis/capability-profile/host-abi-v0.1", "genesis/artifact-profile/coreform-v0.2", "genesis/target-profile/portable-host-v0.1"]},
+        "meaning": {"const": "verified-implementation-availability-not-authorization"}
+      }
+    },
+    "packageClosure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["activation", "capabilityPolicy", "fields", "moduleResolution", "requirements"],
+      "properties": {
+        "activation": {"const": "either-field-activates-all-modules"},
+        "capabilityPolicy": {"const": "availability-and-declaration-and-runtime-grant-are-conjunctive"},
+        "fields": {"const": [":profile-negotiation", ":package-profile-requirements"]},
+        "moduleResolution": {"const": "successful-genesis/module-resolution-profile-v0.1-required"},
+        "requirements": {"const": "exactly-four-families-identical-across-modules"}
+      }
+    },
+    "profiles": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "prefixItems": [
+        {"const": {"family": "genesis/profile-family/language", "lineage": ["genesis/language-profile/v0.2"]}},
+        {"const": {"family": "genesis/profile-family/capability", "lineage": ["genesis/capability-profile/pure-v0.1", "genesis/capability-profile/host-abi-v0.1"]}},
+        {"const": {"family": "genesis/profile-family/artifact", "lineage": ["genesis/artifact-profile/coreform-v0.2"]}},
+        {"const": {"family": "genesis/profile-family/target", "lineage": ["genesis/target-profile/portable-host-v0.1"]}}
+      ],
+      "items": false
+    },
+    "schema": {"const": "docs/spec/PROFILE_NEGOTIATION_v0.1.schema.json"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "sourceBindings": {
+      "type": "array", "minItems": 8, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "mode", "path"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "mode": {"enum": ["identity", "report", "capability-availability", "module-resolution", "normative-module-resolution", "negotiation", "normative-types", "typecheck"]},
+          "path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "version": {"const": "0.1"}
+  },
+  "$defs": {
+    "nonemptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
