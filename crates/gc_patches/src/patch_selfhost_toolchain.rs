@@ -1,8 +1,11 @@
 use super::*;
+use crate::patch_protocol::extract_protocol_error;
 
 pub(super) struct SelfhostPatchToolchain {
-    ctx: EvalCtx,
-    error_token: SealId,
+    pub(super) ctx: EvalCtx,
+    pub(super) error_token: SealId,
+    pub(super) patch_normalize: Value,
+    pub(super) patch_preflight: Value,
     validate_patch: Value,
     apply_replace_node: Value,
     print_module_forms: Value,
@@ -15,41 +18,6 @@ pub(super) struct SelfhostPatchToolchain {
     split_module_forms: Value,
     rewrite_meta_list_forms: Value,
     migrate_contract_signature_forms: Value,
-}
-
-pub(super) fn summarize_protocol_error_payload(payload: &Value) -> String {
-    let Some(t) = payload.as_data() else {
-        return payload.debug_repr();
-    };
-    match t {
-        Term::Map(m) => {
-            let code = m
-                .get(&TermOrdKey(Term::symbol(":error/code")))
-                .and_then(|t| match t {
-                    Term::Str(s) => Some(s.as_str()),
-                    _ => None,
-                })
-                .unwrap_or("core/error");
-            let msg = m
-                .get(&TermOrdKey(Term::symbol(":error/message")))
-                .and_then(|t| match t {
-                    Term::Str(s) => Some(s.as_str()),
-                    _ => None,
-                })
-                .unwrap_or("error");
-            format!("{code}: {msg}")
-        }
-        _ => print_term(t),
-    }
-}
-
-pub(super) fn extract_protocol_error(out: &Value, error_token: SealId) -> Option<String> {
-    match out {
-        Value::Sealed { token, payload } if *token == error_token => {
-            Some(summarize_protocol_error_payload(payload))
-        }
-        _ => None,
-    }
 }
 
 impl SelfhostPatchToolchain {
@@ -73,6 +41,12 @@ impl SelfhostPatchToolchain {
 
         let validate_patch = env.get("core/cli::validate-patch").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::validate-patch".to_string())
+        })?;
+        let patch_normalize = env.get("core/cli::patch-normalize").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::patch-normalize".to_string())
+        })?;
+        let patch_preflight = env.get("core/cli::patch-preflight").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::patch-preflight".to_string())
         })?;
         let apply_replace_node = env.get("core/cli::apply-replace-node").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::apply-replace-node".to_string())
@@ -138,6 +112,8 @@ impl SelfhostPatchToolchain {
         Ok(SelfhostPatchToolchain {
             ctx,
             error_token,
+            patch_normalize,
+            patch_preflight,
             validate_patch,
             apply_replace_node,
             print_module_forms,
@@ -153,7 +129,7 @@ impl SelfhostPatchToolchain {
         })
     }
 
-    fn with_limits(&mut self, step_limit: StepLimit) {
+    pub(super) fn with_limits(&mut self, step_limit: StepLimit) {
         self.ctx.steps = 0;
         self.ctx.step_limit = step_limit.resolve();
     }

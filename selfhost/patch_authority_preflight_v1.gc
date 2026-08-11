@@ -1,0 +1,353 @@
+(def selfhost/patch_preflight::REQUEST_KIND "genesis/patch-preflight-request-v0.1")
+(def selfhost/patch_preflight::REPORT_KIND "genesis/patch-preflight-v0.1")
+
+(def selfhost/patch_preflight::err
+  (fn (message) ((core/error::make2 "core/patch-authority") message)))
+
+(def selfhost/patch_preflight::valid-state?
+  (fn (state)
+    (if (selfhost/patch_schema::is-str? state)
+      (if ((core/eq? state) "absent")
+        true
+        (if ((core/eq? state) "file") true ((core/eq? state) "other")))
+      false)))
+
+(def selfhost/patch_preflight::state-record
+  (fn (path) (fn (state) {:path path :state state})))
+
+(def selfhost/patch_preflight::build-state
+  (fn (records)
+    (fn (i)
+      (fn (state)
+        (if ((core/int::eq? i) (core/vec::len records))
+          state
+          (let ((record ((core/vec::get records) i)))
+            (let
+              ((shape
+                 (((selfhost/patch_normalize::shape record) [:path :state])
+                   [:path :state])))
+              (if (core/error::is? shape)
+                shape
+                (let
+                  ((path ((core/map::get record) (quote :path)))
+                    (path-state ((core/map::get record) (quote :state))))
+                  (if (selfhost/patch_normalize::portable-module-path? path)
+                    (if (selfhost/patch_preflight::valid-state? path-state)
+                      (if (core/list::is-nil? ((core/map::get state) path))
+                        (((selfhost/patch_preflight::build-state records)
+                           ((core/int::add i) 1))
+                          (((core/map::put state) path) path-state))
+                        (selfhost/patch_preflight::err
+                          "path states must not contain duplicate paths"))
+                      (selfhost/patch_preflight::err
+                        "path state must be absent, file, or other"))
+                    (selfhost/patch_preflight::err
+                      "path state path must be a portable package-relative path")))))))))))
+
+(def selfhost/patch_preflight::state-records-loop
+  (fn (entries)
+    (fn (i)
+      (fn (out)
+        (if ((core/int::eq? i) (core/vec::len entries))
+          out
+          (let ((entry ((core/vec::get entries) i)))
+            (((selfhost/patch_preflight::state-records-loop entries)
+               ((core/int::add i) 1))
+              ((core/vec::push out)
+                ((selfhost/patch_preflight::state-record
+                   ((core/vec::get entry) 0))
+                  ((core/vec::get entry) 1))))))))))
+
+(def selfhost/patch_preflight::state-records
+  (fn (state)
+    (((selfhost/patch_preflight::state-records-loop (core/map::entries state)) 0) [])))
+
+(def selfhost/patch_preflight::check-record
+  (fn (ordinal)
+    (fn (op)
+      (fn (path)
+        (fn (expected)
+          (fn (actual)
+            {:actual actual :expected expected :op op :ordinal ordinal :path path}))))))
+
+(def selfhost/patch_preflight::conflict-record
+  (fn (ordinal)
+    (fn (op)
+      (fn (path)
+        (fn (expected)
+          (fn (actual)
+            {:actual actual
+              :code "patch/path-state-conflict"
+              :expected expected
+              :op op
+              :ordinal ordinal
+              :path path}))))))
+
+(def selfhost/patch_preflight::require-state
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (fn (path)
+            (fn (expected)
+              (let ((actual0 ((core/map::get state) path)))
+                (let
+                  ((actual (if (core/list::is-nil? actual0) "unbound" actual0)))
+                  (if ((core/eq? actual) expected)
+                    {:checks
+                       ((core/vec::push checks)
+                         (((((selfhost/patch_preflight::check-record ordinal) op) path)
+                            expected)
+                           actual))
+                      :conflict nil
+                      :ok true
+                      :state state}
+                    {:checks checks
+                      :conflict
+                        (((((selfhost/patch_preflight::conflict-record ordinal) op) path)
+                           expected)
+                          actual)
+                      :ok false
+                      :state state}))))))))))
+
+(def selfhost/patch_preflight::transition
+  (fn (result)
+    (fn (path)
+      (fn (next-state)
+        (if ((core/map::get result) (quote :ok))
+          (((core/map::put result) (quote :state))
+            (((core/map::put ((core/map::get result) (quote :state))) path) next-state))
+          result)))))
+
+(def selfhost/patch_preflight::require-one
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (fn (path)
+            ((((((selfhost/patch_preflight::require-state state) checks) ordinal) op) path)
+              "file")))))))
+
+(def selfhost/patch_preflight::add-module
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (let ((path ((core/map::get op) (quote :module-path))))
+            (((selfhost/patch_preflight::transition
+                ((((((selfhost/patch_preflight::require-state state) checks) ordinal)
+                    (quote :add-module))
+                   path)
+                  "absent"))
+               path)
+              "file")))))))
+
+(def selfhost/patch_preflight::remove-module
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (let ((path ((core/map::get op) (quote :module-path))))
+            (((selfhost/patch_preflight::transition
+                ((((((selfhost/patch_preflight::require-state state) checks) ordinal)
+                    (quote :remove-module))
+                   path)
+                  "file"))
+               path)
+              "absent")))))))
+
+(def selfhost/patch_preflight::move-module
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (let
+            ((from-path ((core/map::get op) (quote :from-module-path)))
+              (to-path ((core/map::get op) (quote :to-module-path))))
+            (let
+              ((source
+                 ((((((selfhost/patch_preflight::require-state state) checks) ordinal)
+                     (quote :move-module))
+                    from-path)
+                   "file")))
+              (if ((core/map::get source) (quote :ok))
+                (let
+                  ((target
+                     ((((((selfhost/patch_preflight::require-state
+                            ((core/map::get source) (quote :state)))
+                           ((core/map::get source) (quote :checks)))
+                          ordinal)
+                         (quote :move-module))
+                        to-path)
+                       "absent")))
+                  (if ((core/map::get target) (quote :ok))
+                    (((selfhost/patch_preflight::transition
+                        (((selfhost/patch_preflight::transition target) from-path) "absent"))
+                       to-path)
+                      "file")
+                    target))
+                source))))))))
+
+(def selfhost/patch_preflight::split-module
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (let
+            ((from-path ((core/map::get op) (quote :from-module-path)))
+              (to-path ((core/map::get op) (quote :to-module-path))))
+            (let
+              ((source
+                 ((((((selfhost/patch_preflight::require-state state) checks) ordinal)
+                     (quote :split-module))
+                    from-path)
+                   "file")))
+              (if ((core/map::get source) (quote :ok))
+                (let
+                  ((target
+                     ((((((selfhost/patch_preflight::require-state
+                            ((core/map::get source) (quote :state)))
+                           ((core/map::get source) (quote :checks)))
+                          ordinal)
+                         (quote :split-module))
+                        to-path)
+                       "absent")))
+                  (if ((core/map::get target) (quote :ok))
+                    (((selfhost/patch_preflight::transition target) to-path) "file")
+                    target))
+                source))))))))
+
+(def selfhost/patch_preflight::module-op
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (((((selfhost/patch_preflight::require-one state) checks) ordinal)
+             ((core/map::get op) (quote :op)))
+            ((core/map::get op) (quote :module-path))))))))
+
+(def selfhost/patch_preflight::module-op?
+  (fn (op-symbol)
+    (if ((core/sym::eq? op-symbol) (quote :replace-node))
+      true
+      (if ((core/sym::eq? op-symbol) (quote :replace-node-id))
+        true
+        (if ((core/sym::eq? op-symbol) (quote :rename-symbol))
+          true
+          (if ((core/sym::eq? op-symbol) (quote :rewrite-imports))
+            true
+            (if ((core/sym::eq? op-symbol) (quote :rewrite-exports))
+              true
+              ((core/sym::eq? op-symbol) (quote :migrate-contract-signature)))))))))
+
+(def selfhost/patch_preflight::step
+  (fn (state)
+    (fn (checks)
+      (fn (ordinal)
+        (fn (op)
+          (let ((op-symbol ((core/map::get op) (quote :op))))
+            (if ((core/sym::eq? op-symbol) (quote :update-manifest))
+              {:checks checks :conflict nil :ok true :state state}
+              (if ((core/sym::eq? op-symbol) (quote :add-module))
+                ((((selfhost/patch_preflight::add-module state) checks) ordinal) op)
+                (if ((core/sym::eq? op-symbol) (quote :remove-module))
+                  ((((selfhost/patch_preflight::remove-module state) checks) ordinal) op)
+                  (if ((core/sym::eq? op-symbol) (quote :move-module))
+                    ((((selfhost/patch_preflight::move-module state) checks) ordinal) op)
+                    (if ((core/sym::eq? op-symbol) (quote :split-module))
+                      ((((selfhost/patch_preflight::split-module state) checks) ordinal) op)
+                      (if (selfhost/patch_preflight::module-op? op-symbol)
+                        ((((selfhost/patch_preflight::module-op state) checks) ordinal) op)
+                        (selfhost/patch_preflight::err "preflight received unknown operation")))))))))))))
+
+(def selfhost/patch_preflight::run-loop
+  (fn (ops)
+    (fn (i)
+      (fn (state)
+        (fn (checks)
+          (if ((core/int::eq? i) (core/vec::len ops))
+            {:checks checks :conflict nil :ok true :state state}
+            (let
+              ((result
+                 ((((selfhost/patch_preflight::step state) checks) i)
+                   ((core/vec::get ops) i))))
+              (if (core/error::is? result)
+                result
+                (if ((core/map::get result) (quote :ok))
+                  (((((selfhost/patch_preflight::run-loop ops) ((core/int::add i) 1))
+                      ((core/map::get result) (quote :state)))
+                     ((core/map::get result) (quote :checks))))
+                  result)))))))))
+
+(def selfhost/patch_preflight::execute
+  (fn (patch)
+    (fn (path-states)
+      (let ((valid (core/cli::validate-patch patch)))
+        (if (core/error::is? valid)
+          valid
+          (let ((state (((selfhost/patch_preflight::build-state path-states) 0) {})))
+            (if (core/error::is? state)
+              state
+              (let
+                ((normalized-patch patch)
+                  (path-states-h (selfhost/hash::hash-term path-states)))
+                (if (core/error::is? path-states-h)
+                  path-states-h
+                  (let ((patch-h (selfhost/hash::hash-term normalized-patch)))
+                    (if (core/error::is? patch-h)
+                      patch-h
+                      (let
+                        ((result
+                           ((((selfhost/patch_preflight::run-loop
+                                  ((core/map::get normalized-patch) (quote :ops)))
+                                0)
+                               state)
+                              [])))
+                        (if (core/error::is? result)
+                          result
+                          {:checks ((core/map::get result) (quote :checks))
+                            :conflict ((core/map::get result) (quote :conflict))
+                            :final-path-states
+                              (selfhost/patch_preflight::state-records
+                                ((core/map::get result) (quote :state)))
+                            :kind selfhost/patch_preflight::REPORT_KIND
+                            :ok ((core/map::get result) (quote :ok))
+                            :patch-h patch-h
+                            :path-states-h path-states-h
+                            :profile selfhost/patch_authority::PROFILE
+                            :v 1})))))))))))))
+
+(def core/cli::patch-preflight
+  (fn (request)
+    (let
+      ((shape
+         (((selfhost/patch_normalize::shape request)
+            [:kind :patch :path-states :profile :v])
+           [:kind :patch :path-states :profile :v])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (profile ((core/map::get request) (quote :profile)))
+            (patch ((core/map::get request) (quote :patch)))
+            (path-states ((core/map::get request) (quote :path-states)))
+            (version ((core/map::get request) (quote :v))))
+          (if
+            (if (selfhost/patch_schema::is-str? kind)
+              ((core/eq? kind) selfhost/patch_preflight::REQUEST_KIND)
+              false)
+            (if
+              (if (selfhost/patch_schema::is-str? profile)
+                ((core/eq? profile) selfhost/patch_authority::PROFILE)
+                false)
+              (if
+                (if (selfhost/patch_schema::is-int? version)
+                  ((core/int::eq? version) 1)
+                  false)
+                (if (selfhost/patch_schema::is-vec? path-states)
+                  ((selfhost/patch_preflight::execute patch) path-states)
+                  (selfhost/patch_preflight::err
+                    "request :path-states must be a vector"))
+                (selfhost/patch_preflight::err "request :v must equal 1"))
+              (selfhost/patch_preflight::err "request :profile mismatch"))
+            (selfhost/patch_preflight::err "request :kind mismatch")))))))

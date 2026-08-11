@@ -33,8 +33,8 @@ pub fn apply_patch_with_step_limit_and_frontend(
         sh.validate_patch_term(&patch_term, step_limit)?;
     }
 
-    let patch = if let Some(config) = &selfhost_config {
-        selfhost_normalize_patch(&patch_term, config, step_limit, mem_limits)?
+    let patch = if let Some(sh) = selfhost.as_mut() {
+        selfhost_normalize_patch(&patch_term, sh, step_limit)?
     } else {
         #[cfg(not(feature = "parity-oracle"))]
         return Err(PatchError::Validate(
@@ -53,6 +53,9 @@ pub fn apply_patch_with_step_limit_and_frontend(
 
     let (_manifest, pkg_dir) =
         PackageManifest::load(pkg_toml).map_err(|e| PatchError::Validate(format!("{e}")))?;
+    if let Some(sh) = selfhost.as_mut() {
+        selfhost_preflight_patch(&patch, &pkg_dir, sh, step_limit)?;
+    }
     let store = EvidenceStore::open(&pkg_dir)?;
 
     // Store the patch artifact itself (as canonical CoreForm bytes).

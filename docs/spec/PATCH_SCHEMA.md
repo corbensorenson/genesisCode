@@ -23,6 +23,26 @@ portable package-relative path. It must be Unicode NFC, use `/` separators, and 
 empty, `.`, `..`, root, or drive-prefix component. Implementations must reject an invalid path
 before reading or mutating package state.
 
+Before opening the evidence store or mutating package state, production apply invokes the
+GenesisCode-authoritative `core/cli::patch-preflight` binding. Its closed request contains exactly
+`:kind`, `:patch`, `:path-states`, `:profile`, and `:v`, with fixed values
+`genesis/patch-preflight-request-v0.1`, `genesis/patch-authority-v0.1`, and `1`. `:patch` is the
+normalized semantic patch. `:path-states` is the canonical path-sorted vector of all
+operation-referenced paths, where each closed record is `{:path string :state string}` and state is
+one of `absent`, `file`, or `other`. The host boundary rejects symlinks in any inspected component
+instead of representing them as an admissible state.
+
+The closed report contains exactly `:checks`, `:conflict`, `:final-path-states`, `:kind`, `:ok`,
+`:patch-h`, `:path-states-h`, `:profile`, and `:v`. Its kind is
+`genesis/patch-preflight-v0.1`; its two hashes bind the normalized patch and input snapshot.
+GenesisCode evaluates operations in vector order. Existing-module edits and removals require
+`file`; additions require `absent`; moves and splits require a `file` source followed by an
+`absent` target. Successful transitions update the virtual state before the next operation. A
+failure stops at the first unsatisfied check and emits the closed conflict record
+`{:actual string :code "patch/path-state-conflict" :expected string :op symbol :ordinal int :path string}`.
+The host validates complete ordered check coverage and fails closed on malformed, incomplete,
+unbound, or identity-mismatched reports; it never retries with Rust precondition semantics.
+
 - `:op` (symbol) one of:
   - `:replace-node`
   - `:replace-node-id`

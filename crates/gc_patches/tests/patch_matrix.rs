@@ -278,6 +278,120 @@ fn poison_patch_authority_normalize(artifact: &Path) {
     fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
 }
 
+fn poison_patch_authority_preflight(artifact: &Path) {
+    let src = fs::read_to_string(artifact).expect("read toolchain artifact");
+    let mut term = parse_term(&src).expect("parse toolchain artifact");
+    let Term::Map(root) = &mut term else {
+        panic!("artifact root must be map");
+    };
+    let Term::Vector(entries) = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("artifact :modules")
+    else {
+        panic!("artifact :modules must be vector");
+    };
+    let patch_mod = entries
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(module)
+                if matches!(
+                    module.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path))
+                        if path == "selfhost/patch_authority_preflight_v1.gc"
+                ) =>
+            {
+                Some(module)
+            }
+            _ => None,
+        })
+        .expect("patch preflight authority module");
+    let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("patch preflight authority module missing :source"),
+    };
+    let poisoned_src = format!(
+        r#"{module_src}
+(def core/cli::patch-preflight
+  (fn (request)
+    {{:checks []
+      :conflict nil
+      :final-path-states ((core/map::get request) (quote :path-states))
+      :kind "genesis/patch-preflight-v0.1"
+      :ok true
+      :patch-h (selfhost/hash::hash-term ((core/map::get request) (quote :patch)))
+      :path-states-h (selfhost/hash::hash-term ((core/map::get request) (quote :path-states)))
+      :profile "genesis/patch-authority-v0.1"
+      :v 1}}))
+"#
+    );
+    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).expect("parse poisoned"))
+        .expect("canonicalize poisoned");
+    patch_mod.insert(TermOrdKey(Term::symbol(":source")), Term::Str(poisoned_src));
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms.clone()),
+    );
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(hash_module(&poisoned_forms).to_vec().into()),
+    );
+    fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
+}
+
+fn poison_patch_authority_preflight_final_state(artifact: &Path) {
+    let src = fs::read_to_string(artifact).expect("read toolchain artifact");
+    let mut term = parse_term(&src).expect("parse toolchain artifact");
+    let Term::Map(root) = &mut term else {
+        panic!("artifact root must be map");
+    };
+    let Term::Vector(entries) = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("artifact :modules")
+    else {
+        panic!("artifact :modules must be vector");
+    };
+    let patch_mod = entries
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(module)
+                if matches!(
+                    module.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path))
+                        if path == "selfhost/patch_authority_preflight_v1.gc"
+                ) =>
+            {
+                Some(module)
+            }
+            _ => None,
+        })
+        .expect("patch preflight authority module");
+    let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("patch preflight authority module missing :source"),
+    };
+    let poisoned_src = module_src.replacen(
+        "(((core/map::put result) (quote :state))\n            (((core/map::put ((core/map::get result) (quote :state))) path) next-state))",
+        "(((core/map::put result) (quote :state))\n            (((core/map::put ((core/map::get result) (quote :state))) path) \"other\"))",
+        1,
+    );
+    assert_ne!(
+        poisoned_src, module_src,
+        "preflight transition poison applied"
+    );
+    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).expect("parse poisoned"))
+        .expect("canonicalize poisoned");
+    patch_mod.insert(TermOrdKey(Term::symbol(":source")), Term::Str(poisoned_src));
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms.clone()),
+    );
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(hash_module(&poisoned_forms).to_vec().into()),
+    );
+    fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
+}
+
 fn poison_patch_refactor_rename_symbol_forms(artifact: &Path) {
     let src = fs::read_to_string(artifact).expect("read toolchain artifact");
     let mut term = parse_term(&src).expect("parse toolchain artifact");
@@ -642,6 +756,188 @@ fn patch_normalization_rejects_module_paths_outside_package_before_mutation() {
     );
     assert!(!escaped.exists(), "path escape created an external file");
     assert!(td.path().join("mod.gc").exists());
+}
+
+#[test]
+fn patch_preflight_reports_missing_module_conflict_before_mutation() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let manifest_before = fs::read_to_string(&pkg).unwrap();
+    let module_before = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    let patch = write_patch(
+        td.path(),
+        r#"{
+          :version 1
+          :intent "remove missing module"
+          :provenance {}
+          :ops [{:op :remove-module :module-path "missing.gc"}]
+        }"#,
+    );
+
+    let error = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
+    let message = error.to_string();
+    assert!(message.contains("patch/path-state-conflict"), "{message}");
+    assert!(message.contains("ordinal=0"), "{message}");
+    assert!(message.contains("path=missing.gc"), "{message}");
+    assert!(message.contains("expected=file actual=absent"), "{message}");
+    assert_eq!(fs::read_to_string(&pkg).unwrap(), manifest_before);
+    assert_eq!(
+        fs::read_to_string(td.path().join("mod.gc")).unwrap(),
+        module_before
+    );
+    assert!(!td.path().join(".genesis").exists());
+}
+
+#[test]
+fn patch_preflight_applies_ordered_remove_then_add_transition() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"{
+          :version 1
+          :intent "replace module through ordered path transition"
+          :provenance {}
+          :ops [
+            {:op :remove-module :module-path "mod.gc"}
+            {
+              :op :add-module
+              :module-path "mod.gc"
+              :content "(def my/pkg::tests {\"t1\" {:body (fn (_) 2) :expect 2}})"
+            }
+          ]
+        }"#,
+    );
+
+    let result = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(result.ok);
+    assert!(
+        fs::read_to_string(td.path().join("mod.gc"))
+            .unwrap()
+            .contains(":expect 2")
+    );
+}
+
+#[test]
+fn patch_preflight_rejects_incomplete_authority_report_without_rust_fallback() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        &patch_replace_form0(r#"(def my/pkg::tests {"t1" {:body (fn (_) 2) :expect 2}})"#),
+    );
+    let module_before = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    let artifact = copy_repo_toolchain_artifact(td.path());
+    poison_patch_authority_preflight(&artifact);
+    let frontend =
+        gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
+            bootstrap_mode: gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+            artifact: Some(artifact),
+        });
+
+    let error = gc_patches::apply_patch_with_step_limit_and_frontend(
+        &patch,
+        &pkg,
+        None,
+        StepLimit::Default,
+        MemLimits::default(),
+        frontend,
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("successful report is incomplete"),
+        "unexpected authority failure: {error}"
+    );
+    assert_eq!(
+        fs::read_to_string(td.path().join("mod.gc")).unwrap(),
+        module_before
+    );
+    assert!(!td.path().join(".genesis").exists());
+}
+
+#[test]
+fn patch_preflight_rejects_tampered_final_state_without_rust_fallback() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"{
+          :version 1
+          :intent "add module with poisoned final state"
+          :provenance {}
+          :ops [{
+            :op :add-module
+            :module-path "added.gc"
+            :content "(def my/pkg::added 1)"
+          }]
+        }"#,
+    );
+    let artifact = copy_repo_toolchain_artifact(td.path());
+    poison_patch_authority_preflight_final_state(&artifact);
+    let frontend =
+        gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
+            bootstrap_mode: gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+            artifact: Some(artifact),
+        });
+
+    let error = gc_patches::apply_patch_with_step_limit_and_frontend(
+        &patch,
+        &pkg,
+        None,
+        StepLimit::Default,
+        MemLimits::default(),
+        frontend,
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("final-path-states[0] facts mismatch"),
+        "unexpected authority failure: {error}"
+    );
+    assert!(!td.path().join("added.gc").exists());
+    assert!(!td.path().join(".genesis").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn patch_preflight_rejects_symlink_module_before_mutation() {
+    use std::os::unix::fs::symlink;
+
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let external = td.path().parent().unwrap().join(format!(
+        "gc-patch-symlink-target-{}.gc",
+        td.path().file_name().unwrap().to_string_lossy()
+    ));
+    assert!(!external.exists());
+    fs::write(&external, "(def external::value 1)\n").unwrap();
+    symlink(&external, td.path().join("alias.gc")).unwrap();
+    let patch = write_patch(
+        td.path(),
+        r#"{
+          :version 1
+          :intent "replace through symlink"
+          :provenance {}
+          :ops [{
+            :op :replace-node
+            :module-path "alias.gc"
+            :path [[:form 0]]
+            :new (def external::value 2)
+          }]
+        }"#,
+    );
+
+    let error = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
+    assert!(error.to_string().contains("symlink path component denied"));
+    assert_eq!(
+        fs::read_to_string(&external).unwrap(),
+        "(def external::value 1)\n"
+    );
+    assert!(!td.path().join(".genesis").exists());
+    fs::remove_file(external).unwrap();
 }
 
 #[test]

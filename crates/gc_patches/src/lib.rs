@@ -26,10 +26,16 @@ mod patch_authority;
 mod patch_manifest;
 #[path = "patch_parse.rs"]
 mod patch_parse;
+#[path = "patch_preflight.rs"]
+mod patch_preflight;
+#[path = "patch_protocol.rs"]
+mod patch_protocol;
 #[path = "patch_refactor.rs"]
 mod patch_refactor;
 #[path = "patch_replace.rs"]
 mod patch_replace;
+#[path = "patch_selfhost_authority.rs"]
+mod patch_selfhost_authority;
 #[path = "patch_selfhost_toolchain.rs"]
 mod patch_selfhost_toolchain;
 #[path = "patch_semantic.rs"]
@@ -41,6 +47,7 @@ use patch_manifest::{
     patch_manifest_add_module_path, patch_manifest_move_module_path, patch_string_vec_field,
     toml_to_coreform, update_manifest_op_to_term,
 };
+use patch_preflight::selfhost_preflight_patch;
 use patch_replace::apply_replace;
 use patch_selfhost_toolchain::SelfhostPatchToolchain;
 use patch_semantic::{

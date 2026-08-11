@@ -1,7 +1,8 @@
 use std::collections::BTreeSet;
 
 use super::*;
-use crate::patch_selfhost_toolchain::extract_protocol_error;
+use crate::patch_protocol::extract_protocol_error;
+use crate::patch_selfhost_toolchain::SelfhostPatchToolchain;
 use crate::patch_semantic::term_tag;
 
 const PATCH_AUTHORITY_PROFILE: &str = "genesis/patch-authority-v0.1";
@@ -440,37 +441,11 @@ pub(super) fn selfhost_semantic_node_index(
 
 pub(super) fn selfhost_normalize_patch(
     patch: &Term,
-    config: &gc_obligations::SelfhostFrontendConfig,
+    toolchain: &mut SelfhostPatchToolchain,
     step_limit: StepLimit,
-    mem_limits: MemLimits,
 ) -> Result<Patch, PatchError> {
-    let mut ctx = EvalCtx::with_step_limit(None);
-    ctx.set_mem_limits(mem_limits);
-    let prelude = build_prelude(&mut ctx);
-    let error_token = prelude.protocol.error;
-    let mut env = prelude.env;
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        config.bootstrap_mode,
-        config.artifact.as_deref(),
-    )
-    .map_err(|error| authority_error(format!("selfhost/init: {error}")))?;
-    ctx.steps = 0;
-    ctx.step_limit = step_limit.resolve();
-    let normalize = env
-        .get("core/cli::patch-normalize")
-        .ok_or_else(|| authority_error("missing binding core/cli::patch-normalize"))?;
-    let value = normalize
-        .apply(&mut ctx, Value::data(normalize_request_term(patch)))
-        .map_err(|error| authority_error(format!("patch-normalize apply: {error}")))?;
-    if let Some(error) = extract_protocol_error(&value, error_token) {
-        return Err(authority_error(format!("patch-normalize failed: {error}")));
-    }
-    let report = value
-        .as_data()
-        .cloned()
-        .unwrap_or_else(|| value.to_term_for_log(ctx.protocol.map(|protocol| protocol.error)));
+    let report =
+        toolchain.normalize_patch_report_term(normalize_request_term(patch), step_limit)?;
     decode_normalize_report(report, patch)
 }
 
