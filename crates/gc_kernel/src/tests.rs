@@ -237,7 +237,7 @@ fn prim_type_error_is_sealed_error_with_protocol() {
 #[test]
 fn prim_op_table_roundtrips_all_current_ops() {
     let mut names = BTreeSet::new();
-    assert_eq!(PrimOp::ALL.len(), 53);
+    assert_eq!(PrimOp::ALL.len(), 57);
     for op in PrimOp::ALL {
         let name = op.as_str();
         assert!(names.insert(name), "duplicate prim op name: {name}");

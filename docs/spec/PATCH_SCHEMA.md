@@ -2,6 +2,10 @@
 
 Semantic patches are stored as a single canonical CoreForm term in a `.gcpatch` file.
 
+Production workspace refactor planning is governed by
+`SEMANTIC_REFACTOR_PLAN_v0.1.md`. Its output is normalized into this schema; it does
+not introduce a separate patch format or identity.
+
 ## Top-level
 
 Top-level term is a map with keys:

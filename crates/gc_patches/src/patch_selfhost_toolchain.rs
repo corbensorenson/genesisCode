@@ -6,6 +6,7 @@ pub(super) struct SelfhostPatchToolchain {
     pub(super) error_token: SealId,
     pub(super) patch_normalize: Value,
     pub(super) patch_preflight: Value,
+    pub(super) refactor_plan: Value,
     validate_patch: Value,
     apply_replace_node: Value,
     print_module_forms: Value,
@@ -47,6 +48,9 @@ impl SelfhostPatchToolchain {
         })?;
         let patch_preflight = env.get("core/cli::patch-preflight").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::patch-preflight".to_string())
+        })?;
+        let refactor_plan = env.get("core/cli::refactor-plan").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::refactor-plan".to_string())
         })?;
         let apply_replace_node = env.get("core/cli::apply-replace-node").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::apply-replace-node".to_string())
@@ -114,6 +118,7 @@ impl SelfhostPatchToolchain {
             error_token,
             patch_normalize,
             patch_preflight,
+            refactor_plan,
             validate_patch,
             apply_replace_node,
             print_module_forms,

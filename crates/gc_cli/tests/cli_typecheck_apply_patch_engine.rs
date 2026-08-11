@@ -367,5 +367,5 @@ fn typecheck_selfhost_frontend_fails_when_hash_module_forms_contract_is_poisoned
         .assert()
         .failure()
         .code(10)
-        .stderr(predicate::str::contains("hash-module-forms"));
+        .stderr(predicate::str::contains("frontend-module :module-h"));
 }

@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**318 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**319 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
@@ -29,7 +29,7 @@ toc-depth: 2
 | [`docs/DEPRECATION_MAP_v0.1.md`](../docs/DEPRECATION_MAP_v0.1.md) | Documentation Deprecation Map v0.1 | md | `961d8acb5a56` |
 | [`docs/FOUNDATION_STDLIB_v0.2.md`](../docs/FOUNDATION_STDLIB_v0.2.md) | Foundation Standard Library (Level 1) v0.2 | md | `6f89ada78518` |
 | [`docs/GETTING_STARTED.md`](../docs/GETTING_STARTED.md) | Getting Started (GenesisCode v0.2) | md | `a603057137bd` |
-| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `d0b474f8329b` |
+| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `033d10cb5502` |
 | [`docs/PAPER_v0.2.md`](../docs/PAPER_v0.2.md) | **GenesisCode v0.2** | md | `a580551652c7` |
 | [`docs/POLICY_DEFAULTS_v0.1.md`](../docs/POLICY_DEFAULTS_v0.1.md) | Policy Defaults v0.1 | md | `3cd6800f37c2` |
 | [`docs/STACKS_v0.2.md`](../docs/STACKS_v0.2.md) | GenesisCode Stacks (Levels 0–2) v0.2 | md | `8c0df911adeb` |
@@ -114,7 +114,7 @@ toc-depth: 2
 | [`docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json`](../docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json) | GenesisCode Changed Impact Policy v0.1 | schema | `dd72983c147a` |
 | [`docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json`](../docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json) | genesis/check-update-boundary-audit-v0.1 | json | `056eea7f567e` |
 | [`docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md`](../docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md) | Check/Update Boundary v0.1 | md | `405aa30e45eb` |
-| [`docs/spec/CLI.md`](../docs/spec/CLI.md) | Genesis CLI v0.2 (Exit Codes + JSON) | md | `a37c7bfc8ee0` |
+| [`docs/spec/CLI.md`](../docs/spec/CLI.md) | Genesis CLI v0.2 (Exit Codes + JSON) | md | `6ad06a6427fd` |
 | [`docs/spec/CLI_JSON_SCHEMAS_v0.1.md`](../docs/spec/CLI_JSON_SCHEMAS_v0.1.md) | CLI JSON Schemas v0.1 (Non-GCPM) | md | `8b56c0249e4d` |
 | [`docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`](../docs/spec/CLI_TOOLING_BUNDLE_v0.1.md) | CLI Tooling Bundle v0.1 | md | `aad9743416b9` |
 | [`docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`](../docs/spec/CONCURRENCY_GPU_SLO_v0.1.md) | Concurrency + GPU SLO Contract v0.1 | md | `1a633479bb11` |
@@ -273,7 +273,7 @@ toc-depth: 2
 | [`docs/spec/NUMERIC_PROFILE_v0.1.schema.json`](../docs/spec/NUMERIC_PROFILE_v0.1.schema.json) | GenesisCode Numeric Profile v0.1 | schema | `760efc9c947d` |
 | [`docs/spec/OPTIMIZER.md`](../docs/spec/OPTIMIZER.md) | Optimizer (gc_opt) v0.2 | md | `1c3e6fe3c7a6` |
 | [`docs/spec/PACKAGE_TOML.md`](../docs/spec/PACKAGE_TOML.md) | package.toml (Package Manifest) v0.2 | md | `316a0dc82095` |
-| [`docs/spec/PATCH_SCHEMA.md`](../docs/spec/PATCH_SCHEMA.md) | GenesisCode v0.2 Patch Schema (Normative) | md | `b7eab617dd3a` |
+| [`docs/spec/PATCH_SCHEMA.md`](../docs/spec/PATCH_SCHEMA.md) | GenesisCode v0.2 Patch Schema (Normative) | md | `234ffe6da8ee` |
 | [`docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`](../docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md) | Plugin + FFI ABI Schemas v0.1 | md | `ba43db12facb` |
 | [`docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`](../docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json) | genesis/prelude-capability-index-v0.1 | json | `34eb570715c0` |
 | [`docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.md`](../docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.md) | Prelude Capability Index v0.1 | md | `9457b17b79a7` |
@@ -316,9 +316,10 @@ toc-depth: 2
 | [`docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json) | GenesisCode self-host typecheck authority profile v0.1 | schema | `b19283edd26a` |
 | [`docs/spec/SELF_HOST_BOOTSTRAP_API.md`](../docs/spec/SELF_HOST_BOOTSTRAP_API.md) | Self-Host Bootstrap API (CoreForm) v0.2 | md | `166103b6bfba` |
 | [`docs/spec/SELF_HOST_BOUNDARY.md`](../docs/spec/SELF_HOST_BOUNDARY.md) | Self-Host Boundary (WASM-First) v0.2 | md | `8f408100d4f8` |
-| [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json) | genesis/semantic-ownership-ledger-v0.1 | json | `ea1d228713db` |
+| [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json) | genesis/semantic-ownership-ledger-v0.1 | json | `1f869b0a3025` |
 | [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md) | Semantic Ownership Ledger v0.1 | md | `b9a7a8e55acb` |
 | [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json) | GenesisCode Semantic Ownership Ledger v0.1 | schema | `c3bc52735a9d` |
+| [`docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md`](../docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md) | Semantic Refactor Plan v0.1 | md | `4c194bc195a8` |
 | [`docs/spec/SIGNING.md`](../docs/spec/SIGNING.md) | Acceptance Signing (v0.2) | md | `6c71d3c67720` |
 | [`docs/spec/SOURCE_SIZE_BUDGET_v0.1.md`](../docs/spec/SOURCE_SIZE_BUDGET_v0.1.md) | Source Size Budget v0.1 | md | `f31895d3ca19` |
 | [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json) | genesis/stage0-dependency-boundary-v0.1 | json | `a14025d12860` |

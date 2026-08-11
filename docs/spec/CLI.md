@@ -182,10 +182,12 @@ CI strict selfhost gates:
   - emits a deterministic workspace symbol graph with cross-module dependency edges.
   - output kind: `genesis/semantic-edit-workspace-graph-v0.1`.
 - `genesis semantic-edit refactor-plan --pkg <package.toml> --kind <rename|move|extract> --from <symbol> --to <symbol> [--target-module-path <path>]`
-  - emits conflict previews and a machine-mergeable multi-file semantic patch plan.
+  - invokes the artifact-loaded GenesisCode `core/cli::refactor-plan` authority with no host planner fallback, then independently verifies the closed report.
+  - emits conflict previews and a minimized, machine-mergeable multi-file semantic patch plan.
   - output kind: `genesis/semantic-edit-refactor-plan-v0.1`.
+  - normative protocol: `docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md`.
 - `genesis semantic-edit apply-plan --pkg <package.toml> --kind <rename|move|extract> --from <symbol> --to <symbol> [--target-module-path <path>] [--caps <caps.toml>]`
-  - executes deterministic plan+apply in one command, returning workspace-wide conflict diagnostics when unsafe and obligation-gated apply artifacts when safe.
+  - executes verified deterministic plan+apply in one command, returning workspace-wide conflict diagnostics when unsafe and obligation-gated transactional apply artifacts when safe.
   - output kind: `genesis/semantic-edit-apply-plan-v0.1`.
 - `genesis vcs hash --in <file> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).

@@ -32,6 +32,8 @@ mod patch_preflight;
 mod patch_protocol;
 #[path = "patch_refactor.rs"]
 mod patch_refactor;
+#[path = "patch_refactor_plan.rs"]
+mod patch_refactor_plan;
 #[path = "patch_replace.rs"]
 mod patch_replace;
 #[path = "patch_selfhost_authority.rs"]
@@ -196,6 +198,11 @@ pub struct SemanticNodeRecord {
     pub term_tag: String,
     pub term_hash: String,
 }
+
+pub use patch_refactor_plan::{
+    SemanticRefactorConflict, SemanticRefactorModule, SemanticRefactorPlan,
+    plan_semantic_refactor_with_frontend,
+};
 
 #[derive(Debug, Clone)]
 struct AppliedSemanticEdit {

@@ -8,22 +8,12 @@ mod semantic_workspace_contract;
 mod semantic_workspace_misc;
 #[path = "semantic_workspace_plan.rs"]
 mod semantic_workspace_plan;
-#[path = "semantic_workspace_refactor_contract.rs"]
-mod semantic_workspace_refactor_contract;
 #[path = "semantic_workspace_types.rs"]
 mod semantic_workspace_types;
 use semantic_workspace_analysis::analyze_workspace;
 use semantic_workspace_contract::semantic_workspace_graph_model_from_contract;
-use semantic_workspace_misc::{refactor_kind_symbol, refactor_kind_token, term_tag};
-use semantic_workspace_plan::{
-    collect_symbol_replacements, dedupe_replace_targets, find_definition_sites, make_def_form,
-    map_patch_error, patch_term_from_plan, replace_symbol_in_term, validate_relative_module_path,
-};
-use semantic_workspace_refactor_contract::{
-    semantic_refactor_plan_conflicts_from_contract,
-    semantic_refactor_target_conflicts_from_contract, semantic_refactor_validate_from_contract,
-};
-use semantic_workspace_types::PlannedOp;
+use semantic_workspace_misc::refactor_kind_token;
+use semantic_workspace_plan::map_patch_error;
 
 pub(super) fn cmd_semantic_edit_workspace_graph(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
@@ -135,147 +125,88 @@ pub(super) fn cmd_semantic_edit_refactor_plan(
     let frontend = resolved_coreform_frontend(cli)?;
     let frontend_info = coreform_frontend_json(&frontend);
     let analysis = analyze_workspace(cli, pkg, &frontend)?;
-
-    let mut conflicts =
-        semantic_refactor_validate_from_contract(cli, kind, from_symbol, to_symbol)?;
-
-    let from_defs = find_definition_sites(&analysis, from_symbol);
-    let from_def_modules = from_defs
-        .iter()
-        .map(|d| d.module_path.clone())
-        .collect::<Vec<_>>();
-    let to_defs = find_definition_sites(&analysis, to_symbol);
-    let to_first = to_defs.first();
-    conflicts.extend(semantic_refactor_plan_conflicts_from_contract(
-        cli,
-        from_symbol,
-        to_symbol,
-        &from_def_modules,
-        to_first.map(|d| d.module_path.as_str()),
-        to_first.map(|d| d.symbol_path_repr.as_str()),
-    )?);
-
-    let validated_target_module_path = match kind {
-        RefactorKind::Rename => None,
-        RefactorKind::Move | RefactorKind::Extract => {
-            let target_valid =
-                target_module_path.is_some_and(|path| validate_relative_module_path(path).is_ok());
-            let target_exists = target_module_path
-                .is_some_and(|path| analysis.modules.iter().any(|m| m.module_path == path));
-            conflicts.extend(semantic_refactor_target_conflicts_from_contract(
-                cli,
-                kind,
-                target_module_path,
-                target_valid,
-                target_exists,
-            )?);
-            if conflicts.is_empty() {
-                target_module_path.map(str::to_string)
-            } else {
-                None
-            }
-        }
-    };
-
-    let mut planned_ops = Vec::new();
-    let mut replacement_count = 0_u64;
-    if conflicts.is_empty() {
-        let Some(source_def) = from_defs.first().cloned() else {
-            return Err(cli_err(
-                EX_INTERNAL,
-                "semantic-edit/refactor",
-                "refactor source symbol resolution invariant failed".to_string(),
-            ));
-        };
-        let mut replacements = collect_symbol_replacements(&analysis, from_symbol);
-        replacements.retain(|occ| {
-            !(matches!(kind, RefactorKind::Move | RefactorKind::Extract)
-                && occ.module_path == source_def.module_path
-                && occ.path_repr == source_def.symbol_path_repr)
+    let authority_artifact = resolved_selfhost_artifact_for_frontend(cli).ok_or_else(|| {
+        cli_err(
+            EX_VERIFY,
+            "selfhost/artifact-required",
+            "semantic refactor planning requires an artifact-loaded GenesisCode toolchain"
+                .to_string(),
+        )
+    })?;
+    let authority_frontend =
+        gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
+            bootstrap_mode: SelfhostBootstrapMode::ArtifactOnly,
+            artifact: Some(authority_artifact.clone()),
         });
-        replacement_count = replacements.len() as u64;
-
-        match kind {
-            RefactorKind::Rename => {
-                for occ in replacements {
-                    planned_ops.push(PlannedOp::ReplaceNode {
-                        module_path: occ.module_path,
-                        path: occ.path,
-                        path_repr: occ.path_repr,
-                        new_term: Term::symbol(to_symbol),
-                    });
-                }
-            }
-            RefactorKind::Move | RefactorKind::Extract => {
-                let target_module = validated_target_module_path.clone().ok_or_else(|| {
-                    cli_err(
-                        EX_INTERNAL,
-                        "semantic-edit/refactor",
-                        "target module path missing after validation".to_string(),
-                    )
-                })?;
-                let lifted_expr = replace_symbol_in_term(&source_def.expr, from_symbol, to_symbol);
-                let lifted_def = make_def_form(to_symbol, lifted_expr);
-                planned_ops.push(PlannedOp::AddModule {
-                    module_path: target_module,
-                    forms: vec![lifted_def],
-                });
-                planned_ops.push(PlannedOp::ReplaceNode {
-                    module_path: source_def.module_path.clone(),
-                    path: source_def.form_path.clone(),
-                    path_repr: source_def.form_path_repr.clone(),
-                    new_term: make_def_form(from_symbol, Term::symbol(to_symbol)),
-                });
-                for occ in replacements {
-                    planned_ops.push(PlannedOp::ReplaceNode {
-                        module_path: occ.module_path,
-                        path: occ.path,
-                        path_repr: occ.path_repr,
-                        new_term: Term::symbol(to_symbol),
-                    });
-                }
-            }
-        }
-    }
-
-    let planned_ops = dedupe_replace_targets(planned_ops, &mut conflicts);
-    let patch_term = patch_term_from_plan(kind, from_symbol, to_symbol, &planned_ops)?;
-    gc_patches::validate_patch_term_with_frontend(
-        &patch_term,
-        &frontend,
-        StepLimit::Default,
-        MemLimits::default(),
-    )
-    .map_err(map_patch_error)?;
-    let patch_coreform = print_term(&patch_term);
-    let patch_hash = hex32(gc_coreform::hash_term(&patch_term));
-    let ops_json = planned_ops
+    let modules = analysis
+        .modules
         .iter()
-        .map(|op| match op {
-            PlannedOp::AddModule { module_path, forms } => serde_json::json!({
-                "op": ":add-module",
-                "module_path": module_path,
-                "form_count": forms.len(),
-                "forms_hash": hex32(gc_coreform::hash_term(&Term::Vector(forms.clone()))),
-            }),
-            PlannedOp::ReplaceNode {
-                module_path,
-                path_repr,
-                new_term,
-                ..
-            } => serde_json::json!({
-                "op": ":replace-node",
-                "module_path": module_path,
-                "path_repr": path_repr,
-                "new_term_hash": hex32(gc_coreform::hash_term(new_term)),
-                "new_term_tag": term_tag(new_term),
-            }),
+        .map(|module| gc_patches::SemanticRefactorModule {
+            module_path: module.module_path.clone(),
+            forms: module.forms.clone(),
         })
         .collect::<Vec<_>>();
+    let plan = gc_patches::plan_semantic_refactor_with_frontend(
+        refactor_kind_token(kind),
+        from_symbol,
+        to_symbol,
+        target_module_path.unwrap_or_default(),
+        &modules,
+        &authority_frontend,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+    )
+    .map_err(map_patch_error)?;
+    let conflicts = plan.conflicts;
+    let patch_coreform = plan.patch.as_ref().map(print_term).unwrap_or_default();
+    let patch_hash = plan.patch_hash;
+    let ops_json = plan
+        .patch
+        .as_ref()
+        .and_then(|patch| match patch {
+            Term::Map(map) => map.get(&TermOrdKey(Term::symbol(":ops"))),
+            _ => None,
+        })
+        .and_then(|ops| match ops {
+            Term::Vector(ops) => Some(ops),
+            _ => None,
+        })
+        .map(|ops| {
+            ops.iter()
+                .map(|op| {
+                    let (op_name, module_path) = match op {
+                        Term::Map(map) => {
+                            let op_name = map
+                                .get(&TermOrdKey(Term::symbol(":op")))
+                                .and_then(|value| match value {
+                                    Term::Symbol(value) => Some(value.as_str()),
+                                    _ => None,
+                                })
+                                .unwrap_or(":unknown");
+                            let module_path = map
+                                .get(&TermOrdKey(Term::symbol(":module-path")))
+                                .or_else(|| map.get(&TermOrdKey(Term::symbol(":to-module-path"))))
+                                .and_then(|value| match value {
+                                    Term::Str(value) => Some(value.as_str()),
+                                    _ => None,
+                                });
+                            (op_name, module_path)
+                        }
+                        _ => (":unknown", None),
+                    };
+                    serde_json::json!({
+                        "op": op_name,
+                        "module_path": module_path,
+                        "op_hash": hex32(gc_coreform::hash_term(op)),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
 
     let mut stdout = String::new();
     if !cli.json {
-        if conflicts.is_empty() {
+        if plan.safe_to_apply {
             stdout.push_str(&format!("{patch_coreform}\n"));
         } else {
             for conflict in &conflicts {
@@ -283,21 +214,20 @@ pub(super) fn cmd_semantic_edit_refactor_plan(
             }
         }
     }
-
     let conflict_json = conflicts
         .iter()
-        .map(|c| {
+        .map(|conflict| {
             serde_json::json!({
-                "code": c.code,
-                "message": c.message,
-                "module_path": c.module_path,
-                "path_repr": c.path_repr,
+                "code": conflict.code,
+                "message": conflict.message,
+                "module_path": conflict.module_path,
+                "path_repr": conflict.path_repr,
             })
         })
         .collect::<Vec<_>>();
-
+    let safe_to_apply = plan.safe_to_apply;
     let env = JsonEnvelope {
-        ok: conflicts.is_empty(),
+        ok: safe_to_apply,
         kind: "genesis/semantic-edit-refactor-plan-v0.1",
         data: Some(serde_json::json!({
             "pkg": pkg.display().to_string(),
@@ -306,11 +236,16 @@ pub(super) fn cmd_semantic_edit_refactor_plan(
             "kind": refactor_kind_token(kind),
             "from_symbol": from_symbol,
             "to_symbol": to_symbol,
-            "target_module_path": validated_target_module_path,
-            "module_count": analysis.modules.len(),
-            "replacement_count": replacement_count,
-            "op_count": planned_ops.len(),
-            "safe_to_apply": conflicts.is_empty(),
+            "target_module_path": target_module_path,
+            "module_count": plan.module_count,
+            "replacement_count": plan.replacement_count,
+            "op_count": plan.op_count,
+            "safe_to_apply": safe_to_apply,
+            "refactor_authority": {
+                "name": "selfhost",
+                "bootstrap_mode": "artifact-only",
+                "artifact": authority_artifact.display().to_string(),
+            },
             "conflicts": conflict_json,
             "patch_hash": patch_hash,
             "patch_coreform": patch_coreform,
@@ -319,11 +254,7 @@ pub(super) fn cmd_semantic_edit_refactor_plan(
         error: None,
     };
     Ok(CmdOut {
-        exit_code: if conflicts.is_empty() {
-            EX_OK
-        } else {
-            EX_VERIFY
-        },
+        exit_code: if safe_to_apply { EX_OK } else { EX_VERIFY },
         stdout,
         json: json_envelope_value(env)?,
     })

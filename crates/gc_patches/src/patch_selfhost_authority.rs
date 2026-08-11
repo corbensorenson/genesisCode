@@ -48,4 +48,17 @@ impl SelfhostPatchToolchain {
             "patch-preflight: authority",
         )
     }
+
+    pub(super) fn refactor_plan_report_term(
+        &mut self,
+        request: Term,
+        step_limit: StepLimit,
+    ) -> Result<Term, PatchError> {
+        self.apply_authority_binding(
+            self.refactor_plan.clone(),
+            request,
+            step_limit,
+            "refactor-plan: authority",
+        )
+    }
 }

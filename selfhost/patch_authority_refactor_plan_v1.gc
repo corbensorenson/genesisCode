@@ -1,0 +1,508 @@
+(def selfhost/refactor_plan::REQUEST_KIND "genesis/refactor-plan-request-v0.1")
+(def selfhost/refactor_plan::REPORT_KIND "genesis/refactor-plan-v0.1")
+(def selfhost/refactor_plan::PROFILE "genesis/patch-authority-v0.1")
+
+(def selfhost/refactor_plan::err
+  (fn (msg) ((core/error::make2 "core/refactor-plan") msg)))
+
+(def selfhost/refactor_plan::conflict
+  (fn (code)
+    (fn (message)
+      (fn (module-path)
+        (fn (path-repr)
+          {:code code :message message :module-path module-path :path-repr path-repr})))))
+
+(def selfhost/refactor_plan::push-conflict
+  (fn (conflicts)
+    (fn (condition)
+      (fn (code)
+        (fn (message)
+          (if condition
+            ((core/vec::push conflicts)
+              ((((selfhost/refactor_plan::conflict code) message) "") ""))
+            conflicts))))))
+
+(def selfhost/refactor_plan::kind-valid?
+  (fn (kind)
+    (if ((core/eq? kind) "rename")
+      true
+      (if ((core/eq? kind) "move") true ((core/eq? kind) "extract")))))
+
+(def selfhost/refactor_plan::move-kind?
+  (fn (kind) (if ((core/eq? kind) "move") true ((core/eq? kind) "extract"))))
+
+(def selfhost/refactor_plan::module-shape
+  (fn (module)
+    (((selfhost/patch_normalize::shape module) [:forms :module-path]) [:forms :module-path])))
+
+(def selfhost/refactor_plan::validate-modules
+  (fn (modules)
+    (fn (i)
+      (fn (seen)
+        (if ((core/int::eq? i) (core/vec::len modules))
+          true
+          (let ((module ((core/vec::get modules) i)))
+            (let ((shape (selfhost/refactor_plan::module-shape module)))
+              (if (core/error::is? shape)
+                shape
+                (let
+                  ((path ((core/map::get module) (quote :module-path)))
+                    (forms ((core/map::get module) (quote :forms))))
+                  (if (selfhost/patch_schema::is-str? path)
+                    (if (selfhost/patch_normalize::portable-module-path? path)
+                      (if (selfhost/patch_schema::is-vec? forms)
+                        (if (core/list::is-nil? ((core/map::get seen) path))
+                          (((selfhost/refactor_plan::validate-modules modules)
+                             ((core/int::add i) 1))
+                            (((core/map::put seen) path) true))
+                          (selfhost/refactor_plan::err "duplicate workspace module path"))
+                        (selfhost/refactor_plan::err "module :forms must be a vector"))
+                      (selfhost/refactor_plan::err
+                        "module path must be a portable package-relative path"))
+                    (selfhost/refactor_plan::err "module :module-path must be a string")))))))))))
+
+(def selfhost/refactor_plan::collect-defs
+  (fn (modules)
+    (fn (module-index)
+      (fn (form-index)
+        (fn (out)
+          (if ((core/int::eq? module-index) (core/vec::len modules))
+            out
+            (let ((module ((core/vec::get modules) module-index)))
+              (let
+                ((forms ((core/map::get module) (quote :forms)))
+                  (module-path ((core/map::get module) (quote :module-path))))
+                (if ((core/int::eq? form-index) (core/vec::len forms))
+                  ((((selfhost/refactor_plan::collect-defs modules)
+                       ((core/int::add module-index) 1))
+                      0)
+                    out)
+                  (let ((form ((core/vec::get forms) form-index)))
+                    (let ((name (selfhost/patch_refactor::top-level-def-name form)))
+                      (let
+                        ((next
+                           (if (core/list::is-nil? name)
+                             out
+                             ((core/vec::push out)
+                               {:expr (selfhost/patch_refactor::top-level-def-rhs form)
+                                 :form-index form-index
+                                 :module-index module-index
+                                 :module-path module-path
+                                 :name name}))))
+                        ((((selfhost/refactor_plan::collect-defs modules) module-index)
+                           ((core/int::add form-index) 1))
+                          next)))))))))))))
+
+(def selfhost/refactor_plan::defs-named
+  (fn (defs)
+    (fn (name)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len defs))
+            out
+            (let ((record ((core/vec::get defs) i)))
+              ((((selfhost/refactor_plan::defs-named defs) name) ((core/int::add i) 1))
+                (if ((core/eq? ((core/map::get record) (quote :name))) name)
+                  ((core/vec::push out) record)
+                  out)))))))))
+
+(def selfhost/refactor_plan::affected-modules
+  (fn (modules)
+    (fn (from)
+      (fn (to)
+        (fn (i)
+          (fn (out)
+            (fn (rewrite-count)
+              (if ((core/int::eq? i) (core/vec::len modules))
+                {:modules out :rewrite-count rewrite-count}
+                (let ((module ((core/vec::get modules) i)))
+                  (let
+                    ((renamed
+                       (((selfhost/patch_refactor::rename-symbol-forms-core
+                            ((core/map::get module) (quote :forms)))
+                          from)
+                         to)))
+                    (if (core/error::is? renamed)
+                      renamed
+                      (let ((count ((core/map::get renamed) (quote :rewrite-count))))
+                        ((((((selfhost/refactor_plan::affected-modules modules) from) to)
+                             ((core/int::add i) 1))
+                            (if ((core/int::lt? 0) count)
+                              ((core/vec::push out) module)
+                              out))
+                           ((core/int::add rewrite-count) count))))))))))))))
+
+(def selfhost/refactor_plan::rename-ops
+  (fn (affected)
+    (fn (from)
+      (fn (to)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len affected))
+              out
+              (let ((module ((core/vec::get affected) i)))
+                (((((selfhost/refactor_plan::rename-ops affected) from) to)
+                   ((core/int::add i) 1))
+                  ((core/vec::push out)
+                    {:from from
+                      :module-path ((core/map::get module) (quote :module-path))
+                      :op (quote :rename-symbol)
+                      :to to}))))))))))
+
+(def selfhost/refactor_plan::late-dependency
+  (fn (defs)
+    (fn (expr)
+      (fn (source-index)
+        (fn (i)
+          (if ((core/int::eq? i) (core/vec::len defs))
+            nil
+            (let ((record ((core/vec::get defs) i)))
+              (let
+                ((module-index ((core/map::get record) (quote :module-index)))
+                  (name ((core/map::get record) (quote :name))))
+                (if ((core/int::lt? module-index) source-index)
+                  ((((selfhost/refactor_plan::late-dependency defs) expr) source-index)
+                    ((core/int::add i) 1))
+                  (let ((renamed (((selfhost/patch_refactor::rename-term expr) name) name)))
+                    (if (core/error::is? renamed)
+                      renamed
+                      (if
+                        ((core/int::lt? 0)
+                          (selfhost/patch_refactor::res-count renamed))
+                        record
+                        ((((selfhost/refactor_plan::late-dependency defs) expr)
+                           source-index)
+                          ((core/int::add i) 1))))))))))))))
+
+(def selfhost/refactor_plan::manifest-modules
+  (fn (modules)
+    (fn (target-path)
+      (fn (source-path)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len modules))
+              out
+              (let ((path ((core/map::get ((core/vec::get modules) i)) (quote :module-path))))
+                (let
+                  ((with-target
+                     (if ((core/eq? path) source-path)
+                       ((core/vec::push out) {"hash" "" "path" target-path})
+                       out)))
+                  (((((selfhost/refactor_plan::manifest-modules modules) target-path)
+                       source-path)
+                      ((core/int::add i) 1))
+                    ((core/vec::push with-target) {"hash" "" "path" path})))))))))))
+
+(def selfhost/refactor_plan::base-conflicts
+  (fn (kind)
+    (fn (from)
+      (fn (to)
+        (fn (from-defs)
+          (fn (to-defs)
+            (let
+              ((c0
+                 ((((selfhost/refactor_plan::push-conflict [])
+                      (if (selfhost/patch_schema::is-str? kind)
+                        (if (selfhost/refactor_plan::kind-valid? kind) false true)
+                        true))
+                    "refactor/kind-invalid")
+                   "refactor kind must be rename, move, or extract")))
+              (let
+                ((c1
+                   ((((selfhost/refactor_plan::push-conflict c0)
+                        (if (selfhost/patch_schema::is-str? from)
+                          ((core/int::eq? (core/str::len from)) 0)
+                          true))
+                      "refactor/source-symbol-invalid")
+                     "source symbol must be a non-empty string")))
+                (let
+                  ((c2
+                     ((((selfhost/refactor_plan::push-conflict c1)
+                          (if (selfhost/patch_schema::is-str? to)
+                            ((core/int::eq? (core/str::len to)) 0)
+                            true))
+                        "refactor/destination-symbol-invalid")
+                       "destination symbol must be a non-empty string")))
+                  (let
+                    ((c3
+                       ((((selfhost/refactor_plan::push-conflict c2)
+                            (if (if (selfhost/patch_schema::is-str? from)
+                                  (selfhost/patch_schema::is-str? to)
+                                  false)
+                              ((core/eq? from) to)
+                              false))
+                          "refactor/no-op")
+                         "source and destination symbols must differ")))
+                    (let
+                      ((c4
+                         ((((selfhost/refactor_plan::push-conflict c3)
+                              ((core/int::eq? (core/vec::len from-defs)) 0))
+                            "refactor/source-symbol-missing")
+                           "source symbol has no workspace definition")))
+                      (let
+                        ((c5
+                           ((((selfhost/refactor_plan::push-conflict c4)
+                                ((core/int::lt? 1) (core/vec::len from-defs)))
+                              "refactor/source-symbol-ambiguous")
+                             "source symbol has multiple workspace definitions")))
+                        ((((selfhost/refactor_plan::push-conflict c5)
+                           ((core/int::lt? 0) (core/vec::len to-defs)))
+                          "refactor/destination-symbol-exists")
+                         "destination symbol already has a workspace definition")))))))))))))
+
+(def selfhost/refactor_plan::target-conflicts
+  (fn (conflicts)
+    (fn (kind)
+      (fn (target)
+        (fn (modules)
+          (if (selfhost/refactor_plan::move-kind? kind)
+            (let
+              ((missing?
+                 (if (selfhost/patch_schema::is-str? target)
+                   ((core/int::eq? (core/str::len target)) 0)
+                   true)))
+              (let
+                ((c1
+                   ((((selfhost/refactor_plan::push-conflict conflicts) missing?)
+                      "refactor/target-module-required")
+                     "move and extract require a target module path")))
+                (let
+                  ((invalid?
+                     (if missing?
+                       false
+                       (if (selfhost/patch_schema::is-str? target)
+                         (if (selfhost/patch_normalize::portable-module-path? target)
+                           false
+                           true)
+                         true))))
+                  (let
+                    ((c2
+                       ((((selfhost/refactor_plan::push-conflict c1) invalid?)
+                          "refactor/target-module-invalid")
+                         "target module path must be portable and package-relative")))
+                    (let
+                      ((exists?
+                         (if (if missing? false (if invalid? false true))
+                           (selfhost/refactor_plan::module-path-exists? modules target 0)
+                           false)))
+                      ((((selfhost/refactor_plan::push-conflict c2) exists?)
+                         "refactor/target-module-exists")
+                        "target module path already exists"))))))
+            conflicts))))))
+
+(def selfhost/refactor_plan::module-path-exists?
+  (fn (modules)
+    (fn (target)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len modules))
+          false
+          (if
+            ((core/eq?
+               ((core/map::get ((core/vec::get modules) i)) (quote :module-path)))
+              target)
+            true
+            (((selfhost/refactor_plan::module-path-exists? modules) target)
+              ((core/int::add i) 1))))))))
+
+(def selfhost/refactor_plan::patch
+  (fn (kind)
+    (fn (from)
+      (fn (to)
+        (fn (target)
+          (fn (modules)
+            (fn (defs)
+              (fn (source)
+                (fn (affected)
+                  (let
+                    ((rename-ops
+                       ((((selfhost/refactor_plan::rename-ops affected) from) to) 0 [])))
+                    (if ((core/eq? kind) "rename")
+                      {:intent "semantic-refactor/rename"
+                        :ops rename-ops
+                        :provenance
+                          {:from from
+                            :kind (quote :rename)
+                            :to to
+                            :tool "genesis semantic-edit refactor-plan"}
+                        :version 1}
+                      (let
+                        ((source-path ((core/map::get source) (quote :module-path)))
+                          (ordered
+                            (((((selfhost/refactor_plan::manifest-modules modules)
+                                 target)
+                                ((core/map::get source) (quote :module-path)))
+                               0)
+                              [])))
+                        (let
+                          ((split-op
+                             {:from-module-path source-path
+                               :op (quote :split-module)
+                               :symbols ((core/vec::push []) to)
+                               :to-module-path target}))
+                          (let ((ops1 ((core/vec::push rename-ops) split-op)))
+                            (let
+                              ((ops2
+                                 ((core/vec::push ops1)
+                                   {:op (quote :update-manifest)
+                                     :set {:modules ordered}})))
+                              {:intent ((core/str::concat "semantic-refactor/") kind)
+                                :ops ops2
+                                :provenance
+                                  {:from from
+                                    :kind
+                                      (core/sym::from-str
+                                        ((core/str::concat ":") kind))
+                                    :to to
+                                    :tool "genesis semantic-edit refactor-plan"}
+                                :version 1})))))))))))))))
+
+(def selfhost/refactor_plan::report-conflicts
+  (fn (request)
+    (fn (modules)
+      (fn (conflicts)
+        {:conflicts conflicts
+          :kind selfhost/refactor_plan::REPORT_KIND
+          :module-count (core/vec::len modules)
+          :ok false
+          :op-count 0
+          :op-identities []
+          :patch nil
+          :patch-h ""
+          :profile selfhost/refactor_plan::PROFILE
+          :replacement-count 0
+          :request-h (selfhost/hash::hash-term request)
+          :safe-to-apply false
+          :v 1}))))
+
+(def selfhost/refactor_plan::report-patch
+  (fn (request)
+    (fn (modules)
+      (fn (rewrite-count)
+        (fn (patch)
+          (let
+            ((normalized
+               (core/cli::patch-normalize
+                 {:kind "genesis/patch-normalize-request-v0.1"
+                   :patch patch
+                   :profile selfhost/refactor_plan::PROFILE
+                   :v 1})))
+            (if (core/error::is? normalized)
+              normalized
+              {:conflicts []
+                :kind selfhost/refactor_plan::REPORT_KIND
+                :module-count (core/vec::len modules)
+                :ok true
+                :op-count
+                  (core/vec::len
+                    ((core/map::get
+                       ((core/map::get normalized) (quote :normalized-patch)))
+                      (quote :ops)))
+                :op-identities ((core/map::get normalized) (quote :op-identities))
+                :patch ((core/map::get normalized) (quote :normalized-patch))
+                :patch-h ((core/map::get normalized) (quote :patch-h))
+                :profile selfhost/refactor_plan::PROFILE
+                :replacement-count rewrite-count
+                :request-h (selfhost/hash::hash-term request)
+                :safe-to-apply true
+                :v 1})))))))
+
+(def selfhost/refactor_plan::execute
+  (fn (request)
+    (let
+      ((modules ((core/map::get request) (quote :modules)))
+        (kind ((core/map::get request) (quote :refactor-kind)))
+        (from ((core/map::get request) (quote :from-symbol)))
+        (to ((core/map::get request) (quote :to-symbol)))
+        (target ((core/map::get request) (quote :target-module-path))))
+      (if (selfhost/patch_schema::is-vec? modules)
+        (let ((valid ((((selfhost/refactor_plan::validate-modules modules) 0) {}))))
+          (if (core/error::is? valid)
+            valid
+            (let ((defs ((((selfhost/refactor_plan::collect-defs modules) 0) 0) [])))
+              (let
+                ((from-defs ((((selfhost/refactor_plan::defs-named defs) from) 0) []))
+                  (to-defs ((((selfhost/refactor_plan::defs-named defs) to) 0) [])))
+                (let
+                  ((base
+                     (((((selfhost/refactor_plan::base-conflicts kind) from) to)
+                         from-defs)
+                        to-defs)))
+                  (let
+                    ((conflicts
+                       ((((selfhost/refactor_plan::target-conflicts base) kind) target)
+                         modules)))
+                    (if ((core/int::lt? 0) (core/vec::len conflicts))
+                      (((selfhost/refactor_plan::report-conflicts request) modules) conflicts)
+                      (let ((source ((core/vec::get from-defs) 0)))
+                        (let
+                          ((late
+                             ((((selfhost/refactor_plan::late-dependency defs)
+                                  ((core/map::get source) (quote :expr)))
+                                ((core/map::get source) (quote :module-index)))
+                               0)))
+                          (if (core/error::is? late)
+                            late
+                            (if
+                              (if (selfhost/refactor_plan::move-kind? kind)
+                                (if (core/list::is-nil? late) false true)
+                                false)
+                              (((selfhost/refactor_plan::report-conflicts request) modules)
+                                ((core/vec::push [])
+                                  ((((selfhost/refactor_plan::conflict
+                                        "refactor/target-order-dependency")
+                                       "moved definition depends on a definition unavailable before the source module")
+                                      ((core/map::get late) (quote :module-path)))
+                                     "")))
+                              (let
+                                ((affected
+                                   ((((((selfhost/refactor_plan::affected-modules modules)
+                                        from)
+                                       to)
+                                      0)
+                                     [])
+                                    0)))
+                                (if (core/error::is? affected)
+                                  affected
+                                  (let
+                                    ((patch
+                                       ((((((((selfhost/refactor_plan::patch kind) from) to)
+                                                target)
+                                               modules)
+                                              defs)
+                                             source)
+                                            ((core/map::get affected) (quote :modules)))))
+                                    (if (core/error::is? patch)
+                                      patch
+                                      ((((selfhost/refactor_plan::report-patch request)
+                                           modules)
+                                          ((core/map::get affected)
+                                            (quote :rewrite-count)))
+                                         patch))))))))))))))))
+        (selfhost/refactor_plan::err "request :modules must be a vector")))))
+
+(def core/cli::refactor-plan
+  (fn (request)
+    (let
+      ((shape
+         (((selfhost/patch_normalize::shape request)
+            [:from-symbol :kind :modules :profile :refactor-kind :target-module-path :to-symbol :v])
+           [:from-symbol :kind :modules :profile :refactor-kind :target-module-path :to-symbol :v])))
+      (if (core/error::is? shape)
+        shape
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (profile ((core/map::get request) (quote :profile)))
+            (version ((core/map::get request) (quote :v))))
+          (if (if (selfhost/patch_schema::is-str? kind)
+                ((core/eq? kind) selfhost/refactor_plan::REQUEST_KIND)
+                false)
+            (if (if (selfhost/patch_schema::is-str? profile)
+                  ((core/eq? profile) selfhost/refactor_plan::PROFILE)
+                  false)
+              (if (if (selfhost/patch_schema::is-int? version)
+                    ((core/int::eq? version) 1)
+                    false)
+                (selfhost/refactor_plan::execute request)
+                (selfhost/refactor_plan::err "request :v must equal 1"))
+              (selfhost/refactor_plan::err "request :profile mismatch"))
+            (selfhost/refactor_plan::err "request :kind mismatch")))))))

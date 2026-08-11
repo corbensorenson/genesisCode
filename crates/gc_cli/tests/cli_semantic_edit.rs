@@ -108,7 +108,23 @@ tests = ["my/pkg::tests"]
     .unwrap();
 }
 
-fn poison_patch_schema_validate_patch_unknown_op(artifact: &Path) {
+fn write_workspace_pkg_with_late_dependency(dir: &Path) {
+    write_workspace_pkg(dir);
+    fs::write(
+        dir.join("a.gc"),
+        r#"
+(def my/pkg::helper 41)
+(def my/pkg::foo my/pkg::helper)
+(def my/pkg::tests
+  {
+    "t1" { :body (fn (_) my/pkg::foo) :expect 41 }
+  })
+"#,
+    )
+    .unwrap();
+}
+
+fn poison_refactor_plan_report(artifact: &Path) {
     let src = fs::read_to_string(artifact).expect("read toolchain artifact");
     let mut term = parse_term(&src).expect("parse toolchain artifact");
     let Term::Map(root) = &mut term else {
@@ -126,22 +142,21 @@ fn poison_patch_schema_validate_patch_unknown_op(artifact: &Path) {
             Term::Map(mm)
                 if matches!(
                     mm.get(&TermOrdKey(Term::symbol(":path"))),
-                    Some(Term::Str(path)) if path == "selfhost/patch_schema_apply_v1.gc"
+                    Some(Term::Str(path)) if path == "selfhost/patch_authority_refactor_plan_v1.gc"
                 ) =>
             {
                 Some(mm)
             }
             _ => None,
         })
-        .expect("selfhost/patch_schema_apply_v1.gc entry");
+        .expect("selfhost/patch_authority_refactor_plan_v1.gc entry");
 
     let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
         Some(Term::Str(src)) => src.clone(),
-        _ => panic!("patch schema apply module missing :source"),
+        _ => panic!("refactor plan module missing :source"),
     };
-    let poisoned_src = format!(
-        "{module_src}\n(def core/cli::validate-patch (fn (t) ((core/error::make2 \"core/patch-schema\") \"unknown :op\")))\n"
-    );
+    let poisoned_src =
+        format!("{module_src}\n(def core/cli::refactor-plan (fn (request) {{:ok true}}))\n");
     let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).expect("parse poisoned"))
         .expect("canonicalize poisoned");
     let poisoned_hash = hash_module(&poisoned_forms);
@@ -299,6 +314,18 @@ fn semantic_edit_refactor_plan_rename_emits_multifile_patch() {
             .and_then(|v| v.as_bool()),
         Some(true)
     );
+    assert_eq!(
+        envelope
+            .pointer("/data/refactor_authority/name")
+            .and_then(|v| v.as_str()),
+        Some("selfhost")
+    );
+    assert_eq!(
+        envelope
+            .pointer("/data/refactor_authority/bootstrap_mode")
+            .and_then(|v| v.as_str()),
+        Some("artifact-only")
+    );
     let patch = envelope
         .pointer("/data/patch_coreform")
         .and_then(|v| v.as_str())
@@ -311,6 +338,116 @@ fn semantic_edit_refactor_plan_rename_emits_multifile_patch() {
         patch.contains("a.gc") && patch.contains("b.gc"),
         "refactor patch should contain multi-file edits"
     );
+}
+
+#[test]
+fn semantic_edit_apply_plan_move_is_selfhosted_minimized_and_ordered() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+    let artifact = support::copy_repo_toolchain_artifact(dir);
+
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "semantic-edit",
+            "apply-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "move",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::moved",
+            "--target-module-path",
+            "moved.gc",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        envelope.get("ok").and_then(|value| value.as_bool()),
+        Some(true)
+    );
+    assert_eq!(
+        envelope
+            .pointer("/data/plan/op_count")
+            .and_then(|value| value.as_u64()),
+        Some(4)
+    );
+    let patch = envelope
+        .pointer("/data/plan/patch_coreform")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default();
+    assert_eq!(patch.matches(":rename-symbol").count(), 2);
+    assert_eq!(patch.matches(":split-module").count(), 1);
+    assert!(!patch.contains(":replace-node"));
+
+    let (manifest, _) = gc_pkg::PackageManifest::load(&dir.join("package.toml")).unwrap();
+    assert_eq!(manifest.modules[0].path, "moved.gc");
+    assert_eq!(manifest.modules[1].path, "a.gc");
+    assert!(
+        fs::read_to_string(dir.join("moved.gc"))
+            .unwrap()
+            .contains("(def my/pkg::moved 41)")
+    );
+    let source = fs::read_to_string(dir.join("a.gc")).unwrap();
+    assert!(!source.contains("(def my/pkg::foo"));
+    assert!(source.contains("my/pkg::moved"));
+}
+
+#[test]
+fn semantic_edit_refactor_plan_rejects_move_with_late_dependency() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg_with_late_dependency(dir);
+    let artifact = support::copy_repo_toolchain_artifact(dir);
+
+    let out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "semantic-edit",
+            "refactor-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "move",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::moved",
+            "--target-module-path",
+            "moved.gc",
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    let conflicts = envelope
+        .pointer("/data/conflicts")
+        .and_then(|value| value.as_array())
+        .unwrap();
+    assert!(conflicts.iter().any(|conflict| {
+        conflict.get("code").and_then(|value| value.as_str())
+            == Some("refactor/target-order-dependency")
+    }));
+    assert!(!dir.join("moved.gc").exists());
 }
 
 #[test]
@@ -584,12 +721,12 @@ fn semantic_edit_refactor_plan_move_reports_target_module_invalid_conflict() {
 }
 
 #[test]
-fn semantic_edit_refactor_plan_selfhost_fails_when_validate_patch_contract_is_poisoned() {
+fn semantic_edit_refactor_plan_rejects_incomplete_selfhost_report() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
     write_workspace_pkg(dir);
     let artifact = support::copy_repo_toolchain_artifact(dir);
-    poison_patch_schema_validate_patch_unknown_op(&artifact);
+    poison_refactor_plan_report(&artifact);
 
     cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
@@ -612,7 +749,7 @@ fn semantic_edit_refactor_plan_selfhost_fails_when_validate_patch_contract_is_po
         .assert()
         .failure()
         .code(10)
-        .stderr(predicate::str::contains("unknown :op"));
+        .stderr(predicate::str::contains("must contain exactly fields"));
 }
 
 #[test]

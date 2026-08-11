@@ -52,6 +52,7 @@
     "selfhost/patch_authority_identity_v1.gc"
     "selfhost/patch_authority_normalize_v1.gc"
     "selfhost/patch_authority_preflight_v1.gc"
+    "selfhost/patch_authority_refactor_plan_v1.gc"
     "selfhost/stage1_v1.gc"
   ]
   :required-symbols [
@@ -108,5 +109,6 @@
     core/cli::patch-semantic-node-index
     core/cli::patch-normalize
     core/cli::patch-preflight
+    core/cli::refactor-plan
   ]
 }
