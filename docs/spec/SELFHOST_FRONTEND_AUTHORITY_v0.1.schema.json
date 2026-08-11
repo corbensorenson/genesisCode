@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-frontend-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "binding",
+    "contentIdentitySha256",
+    "frontendProfile",
+    "kind",
+    "malformedCases",
+    "moduleHashDomainHex",
+    "nonclaims",
+    "productionEntrypoints",
+    "spanUnit",
+    "validCases",
+    "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "binding": {"const": "core/cli::frontend-module"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "frontendProfile": {"const": "genesis/coreform-canon-hash-v0.2"},
+    "kind": {"const": "genesis/selfhost-frontend-authority-v0.1"},
+    "malformedCases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/malformedCase"}
+    },
+    "moduleHashDomainHex": {"const": "474376302e32006d6f64756c6500"},
+    "nonclaims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "productionEntrypoints": {
+      "const": ["genesis", "genesis_wasi"]
+    },
+    "spanUnit": {"const": "utf8-byte"},
+    "validCases": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"$ref": "#/$defs/validCase"}
+    },
+    "version": {"const": "0.1.0"}
+  },
+  "$defs": {
+    "validCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalSource", "id", "moduleHashHex", "source"],
+      "properties": {
+        "canonicalSource": {"type": "string"},
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "moduleHashHex": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source": {"type": "string"}
+      }
+    },
+    "malformedCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "byteOffset",
+        "errorCode",
+        "exitCode",
+        "id",
+        "protocolCode",
+        "source"
+      ],
+      "properties": {
+        "byteOffset": {"type": "integer", "minimum": 0},
+        "errorCode": {"const": "selfhost/error"},
+        "exitCode": {"const": 10},
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "protocolCode": {"type": "string", "pattern": "^core/parse/"},
+        "source": {"type": "string"}
+      }
+    }
+  }
+}

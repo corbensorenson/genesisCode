@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use gc_coreform::Term;
 use serde_json::{Map, Value, json};
 
 pub(super) const FAILURE_CONTEXT_SCHEMA_V1: &str = "genesis/failure-context-v0.1";
@@ -442,6 +443,39 @@ pub(super) fn protocol_context(
         .fact("protocol_code", protocol_code);
     if let Some(payload) = payload {
         context = context.fact("payload", payload);
+    }
+    context.into_value()
+}
+
+pub(super) fn selfhost_parser_context(
+    operation: &'static str,
+    path: &Path,
+    source: &str,
+    protocol_code: &str,
+    payload: &Term,
+) -> Value {
+    let mut context = FailureContext::new("parser", "selfhost-protocol", operation)
+        .fact("protocol_code", protocol_code)
+        .fact("payload", gc_coreform::print_term(payload));
+    let offset = match payload {
+        Term::Map(error) => error
+            .get(&gc_coreform::TermOrdKey(Term::symbol(":error/context")))
+            .and_then(|term| match term {
+                Term::Map(error_context) => {
+                    error_context.get(&gc_coreform::TermOrdKey(Term::symbol(":at")))
+                }
+                _ => None,
+            })
+            .and_then(|term| match term {
+                Term::Int(value) => value.to_string().parse::<usize>().ok(),
+                _ => None,
+            }),
+        _ => None,
+    };
+    if let Some(offset) = offset.filter(|offset| *offset <= source.len()) {
+        context = context
+            .fact("byte_offset", u64::try_from(offset).unwrap_or(u64::MAX))
+            .primary_span(point_span(path, source, offset));
     }
     context.into_value()
 }

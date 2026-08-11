@@ -1,4 +1,5 @@
 use super::*;
+use gc_kernel::{KernelError, NativeFn};
 
 #[test]
 fn lint_autofix_builds_replace_node_patch_for_missing_types() {
@@ -130,18 +131,160 @@ fn selfhost_env() -> (EvalCtx, Env) {
 }
 
 #[test]
-fn selfhost_parse_prefers_core_cli_canonicalize_handler_when_present() {
+fn selfhost_parse_requires_closed_core_cli_frontend_handler() {
     let (mut ctx, mut env) = selfhost_env();
     env.set_local(
-        "core/cli::canonicalize-module-src",
+        "core/cli::frontend-module",
         Value::data(Term::Str("shadowed".to_string())),
     );
 
     let err = selfhost_parse_canonicalize_module(&mut ctx, &env, "(def x 1)\n x\n").unwrap_err();
     assert!(
         format!("{err}").contains("not callable"),
-        "expected core/cli path to be attempted first, got: {err}"
+        "expected the closed core/cli frontend path to be authoritative, got: {err}"
     );
+}
+
+fn frontend_result_term(
+    profile: &str,
+    module_hash: &str,
+    source_end_byte: u64,
+    extra_field: bool,
+) -> Term {
+    let mut result = BTreeMap::from([
+        (
+            TermOrdKey(Term::symbol(":canonical-source")),
+            Term::Str("1\n".to_string()),
+        ),
+        (
+            TermOrdKey(Term::symbol(":forms")),
+            Term::Vector(vec![Term::Int(1.into())]),
+        ),
+        (
+            TermOrdKey(Term::symbol(":kind")),
+            Term::Str("genesis/frontend-module-v0.1".to_string()),
+        ),
+        (
+            TermOrdKey(Term::symbol(":module-h")),
+            Term::Str(module_hash.to_string()),
+        ),
+        (
+            TermOrdKey(Term::symbol(":profile")),
+            Term::Str(profile.to_string()),
+        ),
+        (
+            TermOrdKey(Term::symbol(":source-span")),
+            Term::Map(BTreeMap::from([
+                (
+                    TermOrdKey(Term::symbol(":end-byte")),
+                    Term::Int(source_end_byte.into()),
+                ),
+                (TermOrdKey(Term::symbol(":start-byte")), Term::Int(0.into())),
+            ])),
+        ),
+        (
+            TermOrdKey(Term::symbol(":span-unit")),
+            Term::symbol(":utf8-byte"),
+        ),
+        (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+    ]);
+    if extra_field {
+        result.insert(TermOrdKey(Term::symbol(":unknown")), Term::Bool(true));
+    }
+    Term::Map(result)
+}
+
+fn frontend_result_extra(_ctx: &mut EvalCtx, _args: Vec<Value>) -> Result<Value, KernelError> {
+    Ok(Value::data(frontend_result_term(
+        "genesis/coreform-canon-hash-v0.2",
+        &"0".repeat(64),
+        2,
+        true,
+    )))
+}
+
+fn frontend_result_wrong_profile(
+    _ctx: &mut EvalCtx,
+    _args: Vec<Value>,
+) -> Result<Value, KernelError> {
+    Ok(Value::data(frontend_result_term(
+        "genesis/unknown",
+        &"0".repeat(64),
+        2,
+        false,
+    )))
+}
+
+fn frontend_result_wrong_span(_ctx: &mut EvalCtx, _args: Vec<Value>) -> Result<Value, KernelError> {
+    Ok(Value::data(frontend_result_term(
+        "genesis/coreform-canon-hash-v0.2",
+        &"0".repeat(64),
+        1,
+        false,
+    )))
+}
+
+fn frontend_result_noncanonical_hash(
+    _ctx: &mut EvalCtx,
+    _args: Vec<Value>,
+) -> Result<Value, KernelError> {
+    Ok(Value::data(frontend_result_term(
+        "genesis/coreform-canon-hash-v0.2",
+        &"A".repeat(64),
+        2,
+        false,
+    )))
+}
+
+#[test]
+fn selfhost_frontend_result_is_closed_and_span_checked() {
+    type FrontendStub = fn(&mut EvalCtx, Vec<Value>) -> Result<Value, KernelError>;
+    let cases: &[(&str, FrontendStub, &str)] = &[
+        (
+            "test/frontend-extra",
+            frontend_result_extra,
+            "exactly 8 fields",
+        ),
+        (
+            "test/frontend-profile",
+            frontend_result_wrong_profile,
+            "identity or profile mismatch",
+        ),
+        (
+            "test/frontend-span",
+            frontend_result_wrong_span,
+            ":source-span is invalid",
+        ),
+        (
+            "test/frontend-hash-shape",
+            frontend_result_noncanonical_hash,
+            "non-canonical lowercase 64-hex hash",
+        ),
+    ];
+    let (mut ctx, mut env) = selfhost_env();
+    for (name, stub, expected) in cases {
+        env.set_local(
+            "core/cli::frontend-module",
+            Value::native_fn(NativeFn::new(name, 1, *stub)),
+        );
+        let error = selfhost_frontend_module(&mut ctx, &env, "1\n")
+            .expect_err("malformed frontend result must fail closed");
+        assert!(
+            format!("{error}").contains(expected),
+            "{name} returned the wrong transport error: {error}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_frontend_atomically_matches_canonical_forms_and_identity() {
+    let source = "; UTF-8 byte custody\n(def café \"e\\u0301\")\n[{:z 2 :a 1}]\n";
+    let (mut ctx, env) = selfhost_env();
+    let frontend = selfhost_frontend_module(&mut ctx, &env, source).expect("frontend authority");
+    let expected_forms =
+        canonicalize_module(parse_module(source).expect("parse oracle")).expect("canonical oracle");
+    assert_eq!(frontend.forms, expected_forms);
+    assert_eq!(frontend.module_hash, hash_module(&expected_forms));
 }
 
 #[test]

@@ -408,6 +408,7 @@ def main() -> int:
     parser.add_argument("--spec", default="docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md")
     parser.add_argument("--stage0", default="docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--refresh-identities", action="store_true")
     args = parser.parse_args()
 
     root = args.root.resolve()
@@ -424,6 +425,15 @@ def main() -> int:
     except OSError as error:
         fail(f"cannot read bound authority: {error}")
 
+    if args.refresh_identities:
+        contract["stage0ContractIdentitySha256"] = stage0["contentIdentitySha256"]
+        reseal(contract, spec_bytes, schema_bytes)
+        validate_contract(contract, schema, spec_bytes, schema_bytes, stage0)
+        contract_path.write_text(
+            json.dumps(contract, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+        )
+        print(f"selfhost-closure-levels: refreshed {args.contract}")
+        return 0
     validate_contract(contract, schema, spec_bytes, schema_bytes, stage0)
     controls = run_self_tests(contract, schema, spec_bytes, schema_bytes, stage0) if args.self_test else 0
     print(

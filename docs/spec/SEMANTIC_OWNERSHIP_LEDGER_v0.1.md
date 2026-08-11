@@ -39,7 +39,13 @@ Every decision row names:
 `currentLevel: null` means the applicable decision has not proven H0. It is a
 fail-closed reporting state, not a new closure level. `N/A` is represented only by a
 non-applicable disposition under the closure-level contract and likewise is not an
-H-level. No row in v0.1 claims H1 or higher.
+H-level. Rows advance independently only when evidence closes every cumulative
+predicate for their exact semantic-decision and profile key.
+
+Frontend source-to-CoreForm canonicalization is deliberately separate from
+non-frontend canonical term and artifact identity. This prevents an H2 production
+frontend from lending authority to bootstrap recovery, VCS, patch, package, or evidence
+codecs that still have a reachable host semantic producer.
 
 ## Coverage and Authority Rules
 

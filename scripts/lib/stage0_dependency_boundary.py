@@ -45,7 +45,7 @@ REQUIRED_AMBIENT_DENYLIST = {
     "rand", "rand_core", "reqwest", "rusqlite", "socket2", "tiny_http", "tokio",
     "wasm-bindgen", "wgpu",
 }
-EXPECTED_STAGE0_IDENTITY = "9e59cb97538ffbb39156085a1e71997ba00f759c277a51724527795ac6f31651"
+EXPECTED_STAGE0_IDENTITY = "a44f3030762c4fe6cc10404ed737bf3c2a9d459e12012c375b4e968adab2c8b8"
 SPEC_MARKERS = (
     "permitted workspace graph is exact and acyclic",
     "Dev dependencies are separately enumerated",
@@ -279,6 +279,50 @@ def production_closure(
         )
     raw = json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     return workspace, all_names, len(canonical), sha256(raw.encode("utf-8"))
+
+
+def refresh_dynamic_bindings(
+    root: Path, contract: dict[str, Any], metadata: dict[str, Any]
+) -> None:
+    """Refresh exact Cargo-derived facts without changing reviewed boundary policy."""
+    manifests = workspace_manifests(root)
+    workspace_names = set(manifests)
+    rows = contract.get("stage0Packages")
+    if not isinstance(rows, list) or [row.get("name") for row in rows if isinstance(row, dict)] != list(STAGE0_PACKAGES):
+        fail("cannot refresh: stage0 package order or inventory drift")
+
+    contract["forbiddenWorkspacePackages"] = sorted(workspace_names - set(STAGE0_PACKAGES))
+    for row in rows:
+        name = row["name"]
+        manifest_path = manifests[name]
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        row["manifestPath"] = manifest_path.relative_to(root).as_posix()
+        row["manifestSha256"] = sha256(manifest_path.read_bytes())
+        for kind, local_field, external_field in (
+            ("production", "allowedProductionWorkspaceDependencies", "allowedProductionExternalDependencies"),
+            ("build", "allowedBuildWorkspaceDependencies", "allowedBuildExternalDependencies"),
+            ("dev", "allowedDevWorkspaceDependencies", "allowedDevExternalDependencies"),
+        ):
+            local, external = partition_dependencies(dependency_sections(manifest, kind), workspace_names)
+            row[local_field] = local
+            row[external_field] = external
+
+        features = manifest.get("features", {})
+        if not isinstance(features, dict):
+            fail(f"cannot refresh: {name} features must be an object")
+        normalized_features: dict[str, list[str]] = {}
+        for key, items in sorted(features.items()):
+            if not isinstance(key, str) or not isinstance(items, list) or not all(
+                isinstance(item, str) and item for item in items
+            ):
+                fail(f"cannot refresh: {name}.features.{key} must be a string array")
+            normalized_features[key] = sorted(set(items))
+        row["allowedFeatures"] = normalized_features
+
+        workspace_closure, _package_closure, package_count, closure_sha = production_closure(metadata, name)
+        row["productionWorkspaceClosure"] = sorted(workspace_closure)
+        row["productionResolvedPackageCount"] = package_count
+        row["productionResolvedClosureSha256"] = closure_sha
 
 
 def validate_sources(
@@ -584,6 +628,7 @@ def main() -> int:
     parser.add_argument("--spec", default="docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md")
     parser.add_argument("--stage0", default="docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--refresh-identities", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
     try:
@@ -593,6 +638,19 @@ def main() -> int:
         spec = (root / args.spec).read_bytes()
         schema_bytes = (root / args.schema).read_bytes()
         metadata = load_metadata(root)
+        if args.refresh_identities:
+            refresh_dynamic_bindings(root, contract, metadata)
+            contract["stage0TrustContractIdentitySha256"] = stage0[
+                "contentIdentitySha256"
+            ]
+            reseal(contract, spec, schema_bytes)
+            validate(root, contract, schema, spec, schema_bytes, stage0, metadata)
+            (root / args.contract).write_text(
+                json.dumps(contract, indent=2, ensure_ascii=True) + "\n",
+                encoding="utf-8",
+            )
+            print(f"stage0-dependency-boundary: refreshed {args.contract}")
+            return 0
         validate(root, contract, schema, spec, schema_bytes, stage0, metadata)
         controls = run_self_tests(root, contract, schema, spec, schema_bytes, stage0, metadata) if args.self_test else 0
         print(

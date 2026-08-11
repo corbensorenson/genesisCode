@@ -51,7 +51,7 @@ DECISION_IDS = {
     "SD-AGENT-INDEX", "SD-AGENT-PLAN", "SD-ARTIFACT-GC", "SD-BENCH",
     "SD-CANON-IDENTITY", "SD-CLI-SCHEMA", "SD-COMMIT", "SD-COMPILED-EXECUTION",
     "SD-DEBUG-TRACE", "SD-EFFECT-DISPATCH", "SD-EFFECT-POLICY",
-    "SD-EVIDENCE-VERIFY", "SD-OBLIGATION", "SD-OPTIMIZATION", "SD-PACKAGE-ABI-DEPLOY",
+    "SD-EVIDENCE-VERIFY", "SD-FRONTEND-CANON-IDENTITY", "SD-OBLIGATION", "SD-OPTIMIZATION", "SD-PACKAGE-ABI-DEPLOY",
     "SD-PACKAGE-DISTRIBUTION", "SD-PACKAGE-EXEC", "SD-PACKAGE-RESOLUTION",
     "SD-PACKAGE-WORKSPACE", "SD-PATCH", "SD-POLICY-ALIAS", "SD-PRINT-FORMAT",
     "SD-PURE-EVAL", "SD-REFS", "SD-REGISTRY", "SD-REMOTE-SYNC", "SD-REPLAY",
@@ -504,6 +504,7 @@ def main() -> int:
     parser.add_argument("--spec", default="docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md")
     parser.add_argument("--closure", default="docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--refresh-identities", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
     ledger_path, schema_path, spec_path, closure_path = (
@@ -511,6 +512,16 @@ def main() -> int:
     )
     ledger, schema, closure = load_json(ledger_path), load_json(schema_path), load_json(closure_path)
     spec_bytes, schema_bytes = spec_path.read_bytes(), schema_path.read_bytes()
+    if args.refresh_identities:
+        ledger["closureContractIdentitySha256"] = closure["contentIdentitySha256"]
+        reseal(ledger, spec_bytes, schema_bytes)
+        validate(root, ledger, schema, spec_bytes, schema_bytes, closure)
+        ledger_path.write_text(
+            json.dumps(ledger, indent=2, ensure_ascii=True) + "\n",
+            encoding="utf-8",
+        )
+        print(f"semantic-ownership-ledger: refreshed {ledger_path.relative_to(root)}")
+        return 0
     validate(root, ledger, schema, spec_bytes, schema_bytes, closure)
     controls = run_self_tests(root, ledger, schema, spec_bytes, schema_bytes, closure) if args.self_test else 0
     commands = parse_cli_commands(root)

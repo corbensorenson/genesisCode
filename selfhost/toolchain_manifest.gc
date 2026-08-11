@@ -30,6 +30,7 @@
   ]
   :required-symbols [
     core/cli::canonicalize-module-src
+    core/cli::frontend-module
     core/cli::fmt-module
     core/cli::gc-pin-program
     core/cli::gc-plan-program

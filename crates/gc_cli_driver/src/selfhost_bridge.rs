@@ -1,9 +1,12 @@
 use super::*;
 
-pub(super) fn extract_protocol_error(
-    ctx: &EvalCtx,
-    v: &Value,
-) -> Option<(String, String, Option<String>)> {
+struct ProtocolErrorDetails {
+    code: String,
+    message: String,
+    payload: Term,
+}
+
+fn extract_protocol_error_details(ctx: &EvalCtx, v: &Value) -> Option<ProtocolErrorDetails> {
     let tok = ctx.protocol?.error;
     let Value::Sealed { token, payload } = v else {
         return None;
@@ -13,7 +16,7 @@ pub(super) fn extract_protocol_error(
     }
 
     let payload_term = payload.to_term_for_log(Some(tok));
-    let (code, msg) = match &payload_term {
+    let (code, message) = match &payload_term {
         Term::Map(m) => {
             let code = m
                 .get(&gc_coreform::TermOrdKey(Term::Symbol(
@@ -24,7 +27,7 @@ pub(super) fn extract_protocol_error(
                     _ => None,
                 })
                 .unwrap_or_else(|| "core/error".to_string());
-            let msg = m
+            let message = m
                 .get(&gc_coreform::TermOrdKey(Term::Symbol(
                     ":error/message".to_string(),
                 )))
@@ -33,11 +36,28 @@ pub(super) fn extract_protocol_error(
                     _ => None,
                 })
                 .unwrap_or_else(|| "error".to_string());
-            (code, msg)
+            (code, message)
         }
         _ => ("core/error".to_string(), "error".to_string()),
     };
-    Some((code, msg, Some(gc_coreform::print_term(&payload_term))))
+    Some(ProtocolErrorDetails {
+        code,
+        message,
+        payload: payload_term,
+    })
+}
+
+pub(super) fn extract_protocol_error(
+    ctx: &EvalCtx,
+    v: &Value,
+) -> Option<(String, String, Option<String>)> {
+    extract_protocol_error_details(ctx, v).map(|details| {
+        (
+            details.code,
+            details.message,
+            Some(gc_coreform::print_term(&details.payload)),
+        )
+    })
 }
 
 pub(super) fn ensure_no_protocol_error(
@@ -75,157 +95,199 @@ pub(super) fn ensure_no_runner_protocol_error(
     ensure_no_protocol_error(ctx, value, denied, "policy", "run/result", "effects/run")
 }
 
-pub(super) fn selfhost_parse_canonicalize_module(
+#[derive(Debug, Clone)]
+pub(super) struct SelfhostFrontendModule {
+    pub(super) forms: Vec<Term>,
+    pub(super) canonical_source: String,
+    pub(super) module_hash: [u8; 32],
+    pub(super) source_start_byte: u64,
+    pub(super) source_end_byte: u64,
+}
+
+pub(super) fn selfhost_frontend_module(
     ctx: &mut EvalCtx,
     env: &gc_kernel::Env,
     src: &str,
-) -> Result<Vec<Term>, CliError> {
-    if let Some(canon_src_fn) = env.get("core/cli::canonicalize-module-src") {
-        let canon = canon_src_fn
-            .apply(ctx, Value::data(Term::Str(src.to_string())))
-            .map_err(|e| {
-                cli_err_with_context(
-                    EX_EVAL,
-                    "eval/error",
-                    format!("core/cli canonicalize-module-src failed: {e}"),
-                    structured_failures::evaluator_context("parser/canonicalize-module", &e),
-                )
-            })?;
+) -> Result<SelfhostFrontendModule, CliError> {
+    selfhost_frontend_module_at(ctx, env, src, Path::new("<source>"))
+}
 
-        if let Some((code, message, payload)) = extract_protocol_error(ctx, &canon) {
-            return Err(CliError {
-                exit_code: EX_PARSE,
-                json: JsonError {
-                    code: "selfhost/error",
-                    message: format!("{code}: {message}"),
-                    context: Some(structured_failures::protocol_context(
-                        "parser",
-                        "parser/canonicalize-module",
-                        &code,
-                        payload.as_deref(),
-                    )),
-                },
-            });
-        }
-
-        let Some(Term::Vector(forms)) = canon.as_data() else {
-            return Err(cli_err(
-                EX_INTERNAL,
-                "selfhost/bad-return",
-                format!(
-                    "core/cli canonicalize-module-src returned non-vector: {}",
-                    canon.debug_repr()
-                ),
-            ));
-        };
-        return Ok(forms.clone());
-    }
-
-    let parse_fn = env.get("selfhost/parse::parse-module").ok_or_else(|| {
+pub(super) fn selfhost_frontend_module_at(
+    ctx: &mut EvalCtx,
+    env: &gc_kernel::Env,
+    src: &str,
+    path: &Path,
+) -> Result<SelfhostFrontendModule, CliError> {
+    let frontend_fn = env.get("core/cli::frontend-module").ok_or_else(|| {
         cli_err(
             EX_INTERNAL,
             "selfhost/missing",
-            "missing binding selfhost/parse::parse-module",
+            "missing required production binding core/cli::frontend-module",
         )
     })?;
-    let parsed = parse_fn
+    let out = frontend_fn
         .apply(ctx, Value::data(Term::Str(src.to_string())))
         .map_err(|e| {
             cli_err_with_context(
                 EX_EVAL,
                 "eval/error",
-                format!("selfhost parse-module failed: {e}"),
-                structured_failures::evaluator_context("parser/parse-module", &e),
+                format!("core/cli frontend-module failed: {e}"),
+                structured_failures::evaluator_context("parser/frontend-module", &e),
             )
         })?;
-
-    if let Some((code, message, payload)) = extract_protocol_error(ctx, &parsed) {
+    if let Some(details) = extract_protocol_error_details(ctx, &out) {
         return Err(CliError {
             exit_code: EX_PARSE,
             json: JsonError {
                 code: "selfhost/error",
-                message: format!("{code}: {message}"),
-                context: Some(structured_failures::protocol_context(
-                    "parser",
-                    "parser/parse-module",
-                    &code,
-                    payload.as_deref(),
+                message: format!("{}: {}", details.code, details.message),
+                context: Some(structured_failures::selfhost_parser_context(
+                    "parser/frontend-module",
+                    path,
+                    src,
+                    &details.code,
+                    &details.payload,
                 )),
             },
         });
     }
-
-    let Some(Term::Vector(parsed_forms)) = parsed.as_data() else {
+    let result_term = out.to_term_for_log(ctx.protocol.map(|protocol| protocol.error));
+    let Term::Map(result) = &result_term else {
         return Err(cli_err(
             EX_INTERNAL,
             "selfhost/bad-return",
             format!(
-                "selfhost parse-module returned non-vector: {}",
-                parsed.debug_repr()
+                "core/cli frontend-module returned non-map: {}",
+                out.debug_repr()
             ),
         ));
     };
-
-    let canon_fn = env
-        .get("selfhost/canon::canonicalize-module")
-        .ok_or_else(|| {
+    if result.len() != 8 {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            "core/cli frontend-module result must contain exactly 8 fields",
+        ));
+    }
+    let get = |key: &str| result.get(&TermOrdKey(Term::symbol(key)));
+    if !matches!(get(":kind"), Some(Term::Str(kind)) if kind == "genesis/frontend-module-v0.1")
+        || !matches!(get(":v"), Some(Term::Int(v)) if v == &1.into())
+        || !matches!(get(":profile"), Some(Term::Str(profile)) if profile == "genesis/coreform-canon-hash-v0.2")
+        || !matches!(get(":span-unit"), Some(Term::Symbol(unit)) if unit == ":utf8-byte")
+    {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            "core/cli frontend-module identity or profile mismatch",
+        ));
+    }
+    let forms = match get(":forms") {
+        Some(Term::Vector(forms)) => forms.clone(),
+        _ => {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/bad-return",
+                "core/cli frontend-module :forms must be a vector",
+            ));
+        }
+    };
+    let canonical_source = match get(":canonical-source") {
+        Some(Term::Str(source)) => source.clone(),
+        _ => {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/bad-return",
+                "core/cli frontend-module :canonical-source must be a string",
+            ));
+        }
+    };
+    let module_hash = match get(":module-h") {
+        Some(Term::Str(hex)) => parse_hex32_for_cli(hex, "core/cli frontend-module :module-h")?,
+        _ => {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/bad-return",
+                "core/cli frontend-module :module-h must be a hex string",
+            ));
+        }
+    };
+    let Some(Term::Map(span)) = get(":source-span") else {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            "core/cli frontend-module :source-span must be a map",
+        ));
+    };
+    if span.len() != 2 {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            "core/cli frontend-module :source-span must contain exactly 2 fields",
+        ));
+    }
+    let span_u64 = |key: &str| -> Result<u64, CliError> {
+        let Some(Term::Int(value)) = span.get(&TermOrdKey(Term::symbol(key))) else {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/bad-return",
+                format!("core/cli frontend-module :source-span {key} must be an integer"),
+            ));
+        };
+        value.to_string().parse::<u64>().map_err(|_| {
             cli_err(
                 EX_INTERNAL,
-                "selfhost/missing",
-                "missing binding selfhost/canon::canonicalize-module",
+                "selfhost/bad-return",
+                format!("core/cli frontend-module :source-span {key} is out of range"),
             )
-        })?;
-    let canon = canon_fn
-        .apply(ctx, Value::data(Term::Vector(parsed_forms.clone())))
-        .map_err(|e| {
-            cli_err_with_context(
-                EX_EVAL,
-                "eval/error",
-                format!("selfhost canonicalize-module failed: {e}"),
-                structured_failures::evaluator_context("parser/canonicalize-module", &e),
-            )
-        })?;
-
-    if let Some((code, message, payload)) = extract_protocol_error(ctx, &canon) {
-        return Err(CliError {
-            exit_code: EX_PARSE,
-            json: JsonError {
-                code: "selfhost/error",
-                message: format!("{code}: {message}"),
-                context: Some(structured_failures::protocol_context(
-                    "parser",
-                    "parser/canonicalize-module",
-                    &code,
-                    payload.as_deref(),
-                )),
-            },
-        });
-    }
-
-    let Some(Term::Vector(forms)) = canon.as_data() else {
+        })
+    };
+    let source_start_byte = span_u64(":start-byte")?;
+    let source_end_byte = span_u64(":end-byte")?;
+    let expected_end = u64::try_from(src.len()).map_err(|_| {
+        cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            "source byte length exceeds the supported frontend transport range",
+        )
+    })?;
+    if source_start_byte != 0 || source_end_byte != expected_end {
         return Err(cli_err(
             EX_INTERNAL,
             "selfhost/bad-return",
-            format!(
-                "selfhost canonicalize-module returned non-vector: {}",
-                canon.debug_repr()
-            ),
+            "core/cli frontend-module source span does not cover the exact UTF-8 source bytes",
         ));
-    };
-    Ok(forms.clone())
+    }
+    Ok(SelfhostFrontendModule {
+        forms,
+        canonical_source,
+        module_hash,
+        source_start_byte,
+        source_end_byte,
+    })
+}
+
+pub(super) fn selfhost_parse_canonicalize_module(
+    ctx: &mut EvalCtx,
+    env: &gc_kernel::Env,
+    src: &str,
+) -> Result<Vec<Term>, CliError> {
+    Ok(selfhost_frontend_module(ctx, env, src)?.forms)
 }
 
 fn parse_hex32_for_cli(hex: &str, context: &str) -> Result<[u8; 32], CliError> {
-    let s = hex.trim();
-    if s.len() != 64 {
+    if hex.len() != 64
+        || !hex
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
         return Err(cli_err(
             EX_PARSE,
             "selfhost/hash",
-            format!("{context} returned non-64-byte hex hash"),
+            format!("{context} returned a non-canonical lowercase 64-hex hash"),
         ));
     }
     let mut out = [0u8; 32];
-    for (i, pair) in s.as_bytes().chunks_exact(2).enumerate() {
+    for (i, pair) in hex.as_bytes().chunks_exact(2).enumerate() {
         let hi = (pair[0] as char).to_digit(16).ok_or_else(|| {
             cli_err(
                 EX_PARSE,
@@ -250,53 +312,14 @@ pub(super) fn selfhost_hash_module_forms(
     env: &gc_kernel::Env,
     forms: &[Term],
 ) -> Result<[u8; 32], CliError> {
-    if let Some(hash_forms_fn) = env.get("core/cli::hash-module-forms") {
-        let out = hash_forms_fn
-            .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
-            .map_err(|e| {
-                cli_err_with_context(
-                    EX_EVAL,
-                    "eval/error",
-                    format!("selfhost hash failed: {e}"),
-                    structured_failures::evaluator_context("build/hash-module", &e),
-                )
-            })?;
-        if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
-            return Err(CliError {
-                exit_code: EX_PARSE,
-                json: JsonError {
-                    code: "selfhost/error",
-                    message: format!("{code}: {message}"),
-                    context: Some(structured_failures::protocol_context(
-                        "build",
-                        "build/hash-module",
-                        &code,
-                        payload.as_deref(),
-                    )),
-                },
-            });
-        }
-        let Some(Term::Str(hex)) = out.as_data() else {
-            return Err(cli_err(
-                EX_INTERNAL,
-                "selfhost/bad-return",
-                format!(
-                    "core/cli hash-module-forms returned non-string: {}",
-                    out.debug_repr()
-                ),
-            ));
-        };
-        return parse_hex32_for_cli(hex, "core/cli hash-module-forms");
-    }
-
-    let hash_fn = env.get("selfhost/hash::hash-module").ok_or_else(|| {
+    let hash_forms_fn = env.get("core/cli::hash-module-forms").ok_or_else(|| {
         cli_err(
             EX_INTERNAL,
             "selfhost/missing",
-            "missing binding selfhost/hash::hash-module",
+            "missing required production binding core/cli::hash-module-forms",
         )
     })?;
-    let out = hash_fn
+    let out = hash_forms_fn
         .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
         .map_err(|e| {
             cli_err_with_context(
@@ -326,12 +349,12 @@ pub(super) fn selfhost_hash_module_forms(
             EX_INTERNAL,
             "selfhost/bad-return",
             format!(
-                "selfhost hash-module returned non-string: {}",
+                "core/cli hash-module-forms returned non-string: {}",
                 out.debug_repr()
             ),
         ));
     };
-    parse_hex32_for_cli(hex, "selfhost hash-module")
+    parse_hex32_for_cli(hex, "core/cli hash-module-forms")
 }
 
 pub(super) fn selfhost_stage1_transform_module(
@@ -564,4 +587,16 @@ pub(super) fn planned_required_u64(
             format!("{cmd_name}: planner returned out-of-range {key}"),
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_hex32_for_cli;
+
+    #[test]
+    fn frontend_hash_transport_requires_canonical_lowercase_hex() {
+        assert!(parse_hex32_for_cli(&"0".repeat(64), "test").is_ok());
+        assert!(parse_hex32_for_cli(&"A".repeat(64), "test").is_err());
+        assert!(parse_hex32_for_cli(&format!(" {}", "0".repeat(64)), "test").is_err());
+    }
 }

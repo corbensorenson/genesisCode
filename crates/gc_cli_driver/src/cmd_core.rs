@@ -311,7 +311,7 @@ pub(super) fn cmd_run(
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let (mut ctx, mut env, forms) = match engine {
+    let (mut ctx, mut env, forms, program_hash) = match engine {
         #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src).map_err(|e| {
@@ -326,7 +326,8 @@ pub(super) fn cmd_run(
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
             let mut ctx = mk_ctx(cli);
             let prelude = build_prelude(&mut ctx);
-            (ctx, prelude.env, forms)
+            let program_hash = hash_module(&forms);
+            (ctx, prelude.env, forms, program_hash)
         }
         FmtEngine::Selfhost => {
             // Parse/canonicalize with selfhost bindings loaded, then evaluate in a fresh
@@ -339,14 +340,13 @@ pub(super) fn cmd_run(
 
             parse_ctx.steps = 0;
             parse_ctx.step_limit = None;
-            let forms = selfhost_parse_canonicalize_module(&mut parse_ctx, &parse_env, &src)?;
+            let frontend = selfhost_frontend_module_at(&mut parse_ctx, &parse_env, &src, file)?;
 
             let mut eval_ctx = mk_ctx(cli);
             let prelude = build_prelude(&mut eval_ctx);
-            (eval_ctx, prelude.env, forms)
+            (eval_ctx, prelude.env, frontend.forms, frontend.module_hash)
         }
     };
-    let program_hash = hash_module(&forms);
 
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
@@ -457,7 +457,7 @@ pub(super) fn cmd_replay(
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let (mut ctx, mut env, forms) = match engine {
+    let (mut ctx, mut env, forms, program_hash) = match engine {
         #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src).map_err(|e| {
@@ -472,7 +472,8 @@ pub(super) fn cmd_replay(
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
             let mut ctx = mk_ctx(cli);
             let prelude = build_prelude(&mut ctx);
-            (ctx, prelude.env, forms)
+            let program_hash = hash_module(&forms);
+            (ctx, prelude.env, forms, program_hash)
         }
         FmtEngine::Selfhost => {
             // Parse/canonicalize with selfhost bindings loaded, then evaluate in a fresh
@@ -485,14 +486,13 @@ pub(super) fn cmd_replay(
 
             parse_ctx.steps = 0;
             parse_ctx.step_limit = None;
-            let forms = selfhost_parse_canonicalize_module(&mut parse_ctx, &parse_env, &src)?;
+            let frontend = selfhost_frontend_module_at(&mut parse_ctx, &parse_env, &src, file)?;
 
             let mut eval_ctx = mk_ctx(cli);
             let prelude = build_prelude(&mut eval_ctx);
-            (eval_ctx, prelude.env, forms)
+            (eval_ctx, prelude.env, frontend.forms, frontend.module_hash)
         }
     };
-    let program_hash = hash_module(&forms);
 
     let log_src = std::fs::read_to_string(log_path)
         .with_context(|| format!("read {}", log_path.display()))

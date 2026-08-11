@@ -92,15 +92,14 @@ fn load_modules(
         for e in entries {
             let abs = pkg_dir.join(&e.path);
             let src = std::fs::read_to_string(&abs)?;
-            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
-            let meta = selfhost_extract_module_meta(&mut ctx, &env, &forms)?;
-            let h = selfhost_hash_module_forms(&mut ctx, &env, &forms)?;
+            let frontend = selfhost_frontend_module(&mut ctx, &env, &src)?;
+            let meta = selfhost_extract_module_meta(&mut ctx, &env, &frontend.forms)?;
             out.push(LoadedModule {
                 entry: e.clone(),
                 abs_path: abs,
-                forms,
+                forms: frontend.forms,
                 meta,
-                hash: h,
+                hash: frontend.module_hash,
             });
         }
     }
@@ -353,4 +352,3 @@ fn acceptance_term(manifest: &PackageManifest, ok: bool, obs: &[ObligationResult
     );
     Term::Map(m)
 }
-

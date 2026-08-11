@@ -223,6 +223,31 @@
       (selfhost/hash::hash-module forms)
       ((core/error::make2 "core/type-error") "core/cli::hash-module-forms expects vector of forms"))))
 
+; Closed production frontend result. The host may decode and transport these facts, but
+; must not recompute or replace the canonical source, hash, or UTF-8 byte-span profile.
+(def core/cli::frontend-module
+  (fn (src)
+    (let ((forms (core/cli::canonicalize-module-src src)))
+      (if (core/cli::is-error forms)
+        forms
+        (let ((canonical-source (selfhost/printer::print-module forms)))
+          (if (core/cli::is-error canonical-source)
+            canonical-source
+            (let ((module-h (core/cli::hash-module-forms forms)))
+              (if (core/cli::is-error module-h)
+                module-h
+                (let ((source-bytes (core/str::to-utf8 src)))
+                  (if (core/cli::is-error source-bytes)
+                    source-bytes
+                    {:canonical-source canonical-source
+                     :forms forms
+                     :kind "genesis/frontend-module-v0.1"
+                     :module-h module-h
+                     :profile "genesis/coreform-canon-hash-v0.2"
+                     :source-span {:end-byte (core/bytes::len source-bytes) :start-byte 0}
+                     :span-unit (quote :utf8-byte)
+                     :v 1}))))))))))
+
 (def core/cli::hash-src-with-kind
   (fn (src)
     (let ((t (selfhost/parse::parse-term src)))
@@ -426,4 +451,3 @@
                 (((core/map::put payload0) (quote :quarantine-dir)) qd))))
           (((core/effect::perform (quote core/gc-low::purge)) payload) (fn (r) (core/effect::pure r)))))
       ((core/error::make2 "core/type-error") "core/cli::gc-purge-program expects map"))))
-

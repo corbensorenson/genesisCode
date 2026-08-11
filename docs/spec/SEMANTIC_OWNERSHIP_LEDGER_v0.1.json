@@ -1,9 +1,9 @@
 {
   "auditDate": "2026-08-11",
   "canonicalSpec": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
-  "canonicalSpecSha256": "8d9fe2aed71fd82b49917ed8e0e640088fc00bf1ed81e954fc7c0189c8cebd03",
+  "canonicalSpecSha256": "b9a7a8e55acba113d6af38a5dcfc6333575462f6fe6a2ee1224ed263cd9441d0",
   "closureContract": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
-  "closureContractIdentitySha256": "93c437824ac6d5a8f6b022f66b898b0cca8d56ef317a99db710fe8ecb53eebdc",
+  "closureContractIdentitySha256": "18be84e1619f5efc9e0094efbb9d76a93a7707910109917afdb650b3cd3c0868",
   "commandBindings": [
     {
       "expectedLeafCount": 1,
@@ -126,7 +126,8 @@
         "SD-ROUTE-SELECTION",
         "SD-DEBUG-TRACE",
         "SD-SOURCE-DECODE",
-        "SD-PURE-EVAL"
+        "SD-PURE-EVAL",
+        "SD-FRONTEND-CANON-IDENTITY"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -144,7 +145,8 @@
       "semanticDecisionIds": [
         "SD-ROUTE-SELECTION",
         "SD-SOURCE-DECODE",
-        "SD-PURE-EVAL"
+        "SD-PURE-EVAL",
+        "SD-FRONTEND-CANON-IDENTITY"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -162,7 +164,8 @@
       "semanticDecisionIds": [
         "SD-ROUTE-SELECTION",
         "SD-SOURCE-DECODE",
-        "SD-PURE-EVAL"
+        "SD-PURE-EVAL",
+        "SD-FRONTEND-CANON-IDENTITY"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -180,7 +183,8 @@
       "semanticDecisionIds": [
         "SD-ROUTE-SELECTION",
         "SD-SOURCE-DECODE",
-        "SD-PRINT-FORMAT"
+        "SD-PRINT-FORMAT",
+        "SD-FRONTEND-CANON-IDENTITY"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -254,7 +258,8 @@
         "SD-ROUTE-SELECTION",
         "SD-SOURCE-DECODE",
         "SD-OPTIMIZATION",
-        "SD-WASM-TRANSLATION"
+        "SD-WASM-TRANSLATION",
+        "SD-FRONTEND-CANON-IDENTITY"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -290,7 +295,7 @@
       "semanticDecisionIds": [
         "SD-ROUTE-SELECTION",
         "SD-SOURCE-DECODE",
-        "SD-CANON-IDENTITY"
+        "SD-FRONTEND-CANON-IDENTITY"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -386,7 +391,9 @@
       "semanticDecisionIds": [
         "SD-ROUTE-SELECTION",
         "SD-REPLAY",
-        "SD-EFFECT-DISPATCH"
+        "SD-EFFECT-DISPATCH",
+        "SD-FRONTEND-CANON-IDENTITY",
+        "SD-SOURCE-DECODE"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -406,7 +413,8 @@
         "SD-SOURCE-DECODE",
         "SD-PURE-EVAL",
         "SD-EFFECT-POLICY",
-        "SD-EFFECT-DISPATCH"
+        "SD-EFFECT-DISPATCH",
+        "SD-FRONTEND-CANON-IDENTITY"
       ],
       "testPaths": [
         "crates/gc_cli/tests/cli_spec_surface.rs",
@@ -656,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "3e1ae2f6d6bf0e2565712de4c177f9067f692aa72f2181febd7e79d054a2145b",
+  "contentIdentitySha256": "63d83038edda3ced2cc87db807d5d26462f387085eaa97b92f8e63fd313dd046",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -788,21 +796,25 @@
     {
       "applicability": "applicable",
       "commandSelectors": [
-        "parse",
-        "fmt",
+        "debug/*",
         "eval",
         "explain",
-        "run",
+        "fmt",
         "optimize",
-        "debug/*"
+        "parse",
+        "replay",
+        "run"
       ],
-      "currentLevel": "H0",
-      "fallbackReachability": "reachable-parity-harness",
-      "hostBindingPaths": [],
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
+      "hostBindingPaths": [
+        "crates/gc_cli_driver/src/selfhost_bridge.rs",
+        "crates/gc_obligations/src/obligations/frontend_module_ops.rs"
+      ],
       "id": "SD-SOURCE-DECODE",
       "internalOnly": false,
       "limitations": [
-        "GenesisCode route exists; H1 implementation corpus and H2 no-fallback proof are not yet recorded"
+        "The exact production frontend profile is H2; bootstrap admission and non-frontend codecs are assessed separately"
       ],
       "migrationTasks": [
         "R4.2.a"
@@ -813,7 +825,8 @@
         "crates/gc_coreform/src/parse.rs"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_prelude/src/selfhost_coreform_v1.rs"
+        "selfhost/toolchain.gc",
+        "selfhost/cli_coreform_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
@@ -824,17 +837,19 @@
         "S0-R"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/cli_smoke.rs"
+        "crates/gc_obligations/src/tests/frontend_contracts.rs",
+        "crates/gc_wasi_cli/tests/cli_coreform_frontend_profile.rs"
       ],
       "title": "Source parsing and CoreForm lowering",
       "verifierPaths": [
+        "scripts/lib/selfhost_frontend_authority.py",
+        "scripts/selfhost_frontend_authority_guard.sh",
         "scripts/check_selfhost_boundary.sh"
       ]
     },
     {
       "applicability": "applicable",
       "commandSelectors": [
-        "parse",
         "vcs/*",
         "semantic-edit/*",
         "selfhost-artifact"
@@ -845,7 +860,7 @@
       "id": "SD-CANON-IDENTITY",
       "internalOnly": false,
       "limitations": [
-        "Rust remains identity authority for production artifacts"
+        "VCS, semantic-edit, and bootstrap artifact identities still retain host semantic authority and are not covered by the H2 frontend profile"
       ],
       "migrationTasks": [
         "R4.2.a"
@@ -869,7 +884,7 @@
       "testPaths": [
         "crates/gc_coreform/tests"
       ],
-      "title": "Canonical ordering, printing identity, and hashes",
+      "title": "Non-frontend canonical term and artifact identities",
       "verifierPaths": [
         "scripts/check_kernel_tcb_contract.sh"
       ]
@@ -879,13 +894,15 @@
       "commandSelectors": [
         "fmt"
       ],
-      "currentLevel": "H0",
-      "fallbackReachability": "reachable-parity-harness",
-      "hostBindingPaths": [],
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
+      "hostBindingPaths": [
+        "crates/gc_cli_driver/src/selfhost_bridge.rs"
+      ],
       "id": "SD-PRINT-FORMAT",
       "internalOnly": false,
       "limitations": [
-        "No H2 reachability proof yet"
+        "H2 is scoped to canonical source printing in the exact production frontend profile; non-source artifact codecs remain separate decisions"
       ],
       "migrationTasks": [
         "R4.2.a"
@@ -896,7 +913,8 @@
         "crates/gc_coreform/src/print.rs"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_prelude/src/selfhost_coreform_v1.rs"
+        "selfhost/toolchain.gc",
+        "selfhost/cli_coreform_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
@@ -906,10 +924,13 @@
         "S0-R"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/cli_smoke.rs"
+        "crates/gc_obligations/src/tests/frontend_contracts.rs",
+        "crates/gc_wasi_cli/tests/cli_coreform_frontend_profile.rs"
       ],
       "title": "Canonical and structured source printing",
       "verifierPaths": [
+        "scripts/lib/selfhost_frontend_authority.py",
+        "scripts/selfhost_frontend_authority_guard.sh",
         "scripts/check_selfhost_boundary.sh"
       ]
     },
@@ -2209,6 +2230,64 @@
       "title": "Warm daemon, worker, MCP catalog, and request orchestration",
       "verifierPaths": [
         "scripts/check_warm_protocol_contract.sh"
+      ]
+    },
+    {
+      "applicability": "applicable",
+      "commandSelectors": [
+        "debug/*",
+        "eval",
+        "explain",
+        "fmt",
+        "optimize",
+        "parse",
+        "replay",
+        "run"
+      ],
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
+      "hostBindingPaths": [
+        "crates/gc_cli_driver/src/selfhost_bridge.rs",
+        "crates/gc_obligations/src/obligations/frontend_module_ops.rs"
+      ],
+      "id": "SD-FRONTEND-CANON-IDENTITY",
+      "internalOnly": false,
+      "limitations": [
+        "H2 is limited to genesis/coreform-canon-hash-v0.2 source-to-CoreForm authority; Stage0 artifact admission and non-frontend term or artifact identities remain separate decisions"
+      ],
+      "migrationTasks": [
+        "R4.2.a"
+      ],
+      "producingImplementationPaths": [
+        "selfhost/canon.gc",
+        "selfhost/cli_coreform_v1.gc",
+        "selfhost/hash.gc",
+        "selfhost/parse.gc",
+        "selfhost/parse_core_v1.gc",
+        "selfhost/printer/03_fmt_list_module.gc"
+      ],
+      "productionAuthorityPaths": [
+        "selfhost/toolchain.gc",
+        "selfhost/cli_coreform_v1.gc"
+      ],
+      "rollbackPosture": "fail-closed; retain the last independently reviewed GenesisCode artifact and never select a host frontend semantic producer",
+      "specAuthorityPaths": [
+        "docs/spec/COREFORM_CANON_HASH.md",
+        "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md",
+        "docs/spec/SELF_HOST_BOUNDARY.md"
+      ],
+      "stage0Domains": [
+        "S0-R"
+      ],
+      "testPaths": [
+        "crates/gc_obligations/src/tests/frontend_contracts.rs",
+        "crates/gc_wasi_cli/tests/cli_coreform_frontend_profile.rs"
+      ],
+      "title": "Frontend canonical CoreForm bytes, module identity, and spans",
+      "verifierPaths": [
+        "scripts/lib/selfhost_frontend_authority.py",
+        "scripts/selfhost_frontend_authority_guard.sh",
+        "scripts/check_selfhost_boundary.sh"
       ]
     }
   ],

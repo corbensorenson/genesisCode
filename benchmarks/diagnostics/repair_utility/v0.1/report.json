@@ -71,7 +71,7 @@
     "baselineAgentId": "diagnostic-blind-v0.1",
     "primaryAgentId": "catalog-guided-v0.1",
     "recoveryRateDeltaBasisPoints": 6000,
-    "tokenCostDelta": 31667
+    "tokenCostDelta": 32183
   },
   "resultCount": 36,
   "results": [
@@ -253,7 +253,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 2018,
+          "inputTokens": 2106,
           "outputTokens": 280,
           "patchPaths": [
             "main.gc"
@@ -297,10 +297,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 2018,
+        "input": 2106,
         "output": 280,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2298
+        "total": 2386
       },
       "verificationOk": true
     },
@@ -311,7 +311,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 2011,
+          "inputTokens": 2099,
           "outputTokens": 273,
           "patchPaths": [
             "main.gc"
@@ -355,10 +355,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 2011,
+        "input": 2099,
         "output": 273,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2284
+        "total": 2372
       },
       "verificationOk": true
     },
@@ -369,7 +369,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 2005,
+          "inputTokens": 2090,
           "outputTokens": 268,
           "patchPaths": [
             "main.gc"
@@ -413,10 +413,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 2005,
+        "input": 2090,
         "output": 268,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2273
+        "total": 2358
       },
       "verificationOk": true
     },
@@ -601,7 +601,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 1993,
+          "inputTokens": 2078,
           "outputTokens": 280,
           "patchPaths": [
             "main.gc"
@@ -645,10 +645,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 1993,
+        "input": 2078,
         "output": 280,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2273
+        "total": 2358
       },
       "verificationOk": true
     },
@@ -659,7 +659,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 1984,
+          "inputTokens": 2069,
           "outputTokens": 273,
           "patchPaths": [
             "main.gc"
@@ -703,10 +703,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 1984,
+        "input": 2069,
         "output": 273,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2257
+        "total": 2342
       },
       "verificationOk": true
     },
@@ -717,7 +717,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 1985,
+          "inputTokens": 2070,
           "outputTokens": 268,
           "patchPaths": [
             "main.gc"
@@ -761,10 +761,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 1985,
+        "input": 2070,
         "output": 268,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2253
+        "total": 2338
       },
       "verificationOk": true
     },
@@ -2123,10 +2123,10 @@
     }
   ],
   "runtime": {
-    "diagnosticCatalogIdentitySha256": "8cb5da8442a642366cbefebf44c2a99892b0021660f5ee697bfe7737844eb3e3",
+    "diagnosticCatalogIdentitySha256": "b4c3f95791034709d39b57704df3dff539cd3c5fbb86a13d667581a7f72d172b",
     "name": "genesis",
     "profile": "host-cli/selfhost-artifact",
-    "selfhostArtifactSha256": "9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54",
+    "selfhostArtifactSha256": "a230e9be416a94d9bde27340ac834261d744c568927ff2a003d973390398d637",
     "version": "genesis 0.2.0"
   },
   "summaries": [
@@ -2144,10 +2144,10 @@
       "safeAbstentionCount": 3,
       "safeAbstentionRateBasisPoints": 10000,
       "tokenCost": {
-        "input": 36982,
+        "input": 37498,
         "output": 4883,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 41865
+        "total": 42381
       }
     },
     {

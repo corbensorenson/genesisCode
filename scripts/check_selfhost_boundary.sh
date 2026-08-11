@@ -100,6 +100,13 @@ python3 scripts/lib/selfhost_closure_levels.py \
   --stage0 docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json \
   --self-test
 
+# R4.2.a production frontend authority is closed, identity-bound, and fallback-free.
+python3 scripts/lib/selfhost_frontend_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_frontend_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 python3 scripts/lib/semantic_ownership_ledger.py \
   --root "$ROOT_DIR" \
   --ledger docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json \

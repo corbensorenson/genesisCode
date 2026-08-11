@@ -173,9 +173,14 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md` - normative per-decision H0-H4 lattice, applicability, evidence, aggregation, and invalidation rules.
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json` - content-addressed machine authority for cumulative self-host closure claims.
 - `docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json` - closed machine schema for the self-host closure lattice.
+- `docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md` - normative R4.2.a source-to-CoreForm production-authority and no-fallback transition contract.
+- `docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked frontend-authority profile.
+- `policies/selfhost_frontend_authority_v0.1.json` - content-addressed native/WASI frontend identity, vector, span, diagnostic, and nonclaim authority.
+- `scripts/selfhost_frontend_authority_guard.sh` - focused independent static, mutation, and native/WASI runtime guard; static enforcement is also part of `scripts/check_selfhost_boundary.sh`, while `scripts/lib/selfhost_frontend_authority.py --refresh-identity` only refreshes the reviewed profile identity.
 - `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md` - normative exhaustive command/semantic ownership and current-level rules.
-- `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` - canonical 114-command and 37-decision ownership ledger.
+- `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` - canonical 114-command and 38-decision ownership ledger.
 - `docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json` - closed machine schema for semantic ownership facts.
+- `scripts/lib/semantic_ownership_ledger.py --refresh-identities` - explicit identity refresh for reviewed ledger edits; validation remains read-only in `scripts/check_selfhost_boundary.sh`.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
 - `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.
 - `.genesis/perf/full_selfhost_cutover_profile_report.json` - optional local full-cutover aggregate observation, produced only by `scripts/update_full_selfhost_cutover_profile_report.sh`.

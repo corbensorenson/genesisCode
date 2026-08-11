@@ -263,6 +263,12 @@ def canonical_identity(value: dict[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def reseal(contract: dict[str, Any], spec_text: str, schema_bytes: bytes) -> None:
+    contract["canonicalSpecSha256"] = hashlib.sha256(spec_text.encode("utf-8")).hexdigest()
+    contract["schemaSha256"] = hashlib.sha256(schema_bytes).hexdigest()
+    contract["contentIdentitySha256"] = canonical_identity(contract)
+
+
 def validate_schema(schema: Any) -> None:
     if not isinstance(schema, dict):
         fail("schema root must be an object")
@@ -482,19 +488,31 @@ def main() -> int:
     parser.add_argument("--schema", type=pathlib.Path, required=True)
     parser.add_argument("--spec", type=pathlib.Path, required=True)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--refresh-identities", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
-    contract = load_json(args.contract)
+    contract_path = args.contract if args.contract.is_absolute() else root / args.contract
+    schema_path = args.schema if args.schema.is_absolute() else root / args.schema
+    spec_path = args.spec if args.spec.is_absolute() else root / args.spec
+    contract = load_json(contract_path)
     try:
-        schema_bytes = args.schema.read_bytes()
+        schema_bytes = schema_path.read_bytes()
     except OSError as error:
-        fail(f"cannot read {args.schema}: {error}")
-    schema = load_json(args.schema)
+        fail(f"cannot read {schema_path}: {error}")
+    schema = load_json(schema_path)
     validate_schema(schema)
     try:
-        spec_text = args.spec.read_text(encoding="utf-8")
+        spec_text = spec_path.read_text(encoding="utf-8")
     except OSError as error:
-        fail(f"cannot read {args.spec}: {error}")
+        fail(f"cannot read {spec_path}: {error}")
+    if args.refresh_identities:
+        reseal(contract, spec_text, schema_bytes)
+        validate_contract(root, contract, spec_text, schema_bytes)
+        contract_path.write_text(
+            json.dumps(contract, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+        )
+        print(f"stage0-trust-contract: refreshed {contract_path.relative_to(root)}")
+        return 0
     validate_contract(root, contract, spec_text, schema_bytes)
     controls = run_self_test(root, contract, spec_text, schema_bytes) if args.self_test else 0
     suffix = f" negative_controls={controls}" if args.self_test else ""

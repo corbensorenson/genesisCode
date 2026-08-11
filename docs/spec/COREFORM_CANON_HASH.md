@@ -61,7 +61,26 @@ The hash of a single term is:
 The hash of a module (vector of top-level forms) is:
 - `BLAKE3( "GCv0.2\\0module\\0" || canonical_print_module(forms) )`
 
+## Production Frontend Authority
+
+For the R4.2.a production profile, the accepted GenesisCode artifact binding
+`core/cli::frontend-module` produces one closed result containing the canonical forms,
+canonical module bytes, module hash, UTF-8 source span, and exact frontend profile. Native
+and WASI hosts validate and transport that result; they do not independently recompute or
+replace any of those semantic facts. A missing binding, sealed error, malformed result,
+profile mismatch, or span mismatch fails closed rather than selecting the Rust reference
+frontend.
+
+`docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md` defines the transition boundary and
+`policies/selfhost_frontend_authority_v0.1.json` freezes independently checked valid and
+malformed vectors. The Rust parser, canonicalizer, printer, and hasher remain available only
+to explicitly named parity harnesses and Stage0 artifact admission where the Stage0 trust
+contract permits them; their existence is not a production semantic fallback.
+
 ## Stability Requirements
 
 - Any change to canonical printing changes hashes and therefore invalidates pinned manifests and evidence; such changes must be treated as a versioned surface change.
 - If canonical printing changes intentionally, bump the prefix tag (e.g. `GCv0.3\\0`) and keep v0.2 behavior available if compatibility is required.
+- A production frontend profile change must update its schema, frozen vectors, content
+  identity, independent verifier, and every affected artifact or evidence identity in one
+  reviewed transition.

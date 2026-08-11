@@ -60,11 +60,11 @@
       "sha256": "a0a194baacdbb6646f6109c43c1ca768bf999e7ac125fa2573880a553126b652"
     },
     {
-      "bytes": 355002,
+      "bytes": 354878,
       "id": "gc-diagnostic-catalog",
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
       "role": "diagnostics",
-      "sha256": "9ff15e1e8a08552f98d5b2099a766910eeb05df9c374dd2c9966b52866983d74"
+      "sha256": "43e65a0d82f62a55ff0a9f1b762950d20d314dc94bcb1196fe88fb1414ace9e8"
     },
     {
       "bytes": 3618,
@@ -145,7 +145,7 @@
     "providerMutableFactsTreatment": "recorded-but-not-semantic-input",
     "scaffoldChangePolicy": "new-profile-and-cohort-required"
   },
-  "contentIdentitySha256": "3bea15b059ddb6d4ece146b8f7971ffc5473fc05f0515a43b2feb5f2fc92bf21",
+  "contentIdentitySha256": "f7bd60f9004ef4ef33d87faa838fdedd46439934634f858640ed481a5b52699a",
   "grammar": {
     "acceptanceAuthority": "production-parser-and-obligations",
     "authorityArtifactId": "gc-agent-profile",

@@ -1,0 +1,50 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "binding": "core/cli::frontend-module",
+  "contentIdentitySha256": "763f89ec2fa28eecc628130cf3a996dd490a4e18cdd2ba7455fd349502c6be39",
+  "frontendProfile": "genesis/coreform-canon-hash-v0.2",
+  "kind": "genesis/selfhost-frontend-authority-v0.1",
+  "malformedCases": [
+    {
+      "byteOffset": 7,
+      "errorCode": "selfhost/error",
+      "exitCode": 10,
+      "id": "unterminated-string",
+      "protocolCode": "core/parse/unexpected",
+      "source": "(def x \"unterminated)\n"
+    }
+  ],
+  "moduleHashDomainHex": "474376302e32006d6f64756c6500",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "exhaustive-language-conformance",
+    "h2-ledger-promotion",
+    "independent-full-parser"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "spanUnit": "utf8-byte",
+  "validCases": [
+    {
+      "canonicalSource": "(def x (prim int/add 1 2))\n\nx\n",
+      "id": "simple-module",
+      "moduleHashHex": "2b45b7589484cd1ca94c8c906d726f357ca156eadf12c35a38db191696996c00",
+      "source": "(def x (prim int/add 1 2))\nx\n"
+    },
+    {
+      "canonicalSource": "(fn (x) (fn (y) ((f x) y)))\n",
+      "id": "surface-sugar",
+      "moduleHashHex": "8979b35d002380dc6d4784113392c37693daa21801f604128edfec6cd3cb988b",
+      "source": "(fn (x y) (f x y))\n"
+    },
+    {
+      "canonicalSource": "(def caf\u00e9 \"e\u0301\")\n\n[\n  {:a 1 :z 2}]\n",
+      "id": "unicode-and-map-order",
+      "moduleHashHex": "170731a977ca684b557387d54988e26ec24024ee7f437276877ecdd93d935941",
+      "source": "; unicode byte custody\n(def caf\u00e9 \"e\\u0301\")\n[{:z 2 :a 1}]\n"
+    }
+  ],
+  "version": "0.1.0"
+}

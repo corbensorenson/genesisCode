@@ -84,69 +84,102 @@ fn extract_protocol_error(ctx: &EvalCtx, v: &Value) -> Option<String> {
     }
 }
 
+#[derive(Debug, Clone)]
+struct SelfhostFrontendModule {
+    forms: Vec<Term>,
+    module_hash: [u8; 32],
+}
+
+fn selfhost_frontend_module(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    src: &str,
+) -> Result<SelfhostFrontendModule, ObligationError> {
+    let frontend_fn = env.get("core/cli::frontend-module").ok_or_else(|| {
+        ObligationError::Module(
+            "missing required production binding core/cli::frontend-module".to_string(),
+        )
+    })?;
+    let out = frontend_fn
+        .apply(ctx, Value::data(Term::Str(src.to_string())))
+        .map_err(|e| ObligationError::Module(e.to_string()))?;
+    if let Some(e) = extract_protocol_error(ctx, &out) {
+        return Err(ObligationError::Module(format!(
+            "selfhost core/cli frontend-module failed: {e}"
+        )));
+    }
+    let result_term = out.to_term_for_log(ctx.protocol.map(|protocol| protocol.error));
+    let Term::Map(result) = &result_term else {
+        return Err(ObligationError::Module(format!(
+            "selfhost core/cli frontend-module returned non-map: {}",
+            out.debug_repr()
+        )));
+    };
+    if result.len() != 8 {
+        return Err(ObligationError::Module(
+            "selfhost core/cli frontend-module result must contain exactly 8 fields".to_string(),
+        ));
+    }
+    let get = |key: &str| result.get(&TermOrdKey(Term::symbol(key)));
+    if !matches!(get(":kind"), Some(Term::Str(kind)) if kind == "genesis/frontend-module-v0.1")
+        || !matches!(get(":v"), Some(Term::Int(v)) if v == &1.into())
+        || !matches!(get(":profile"), Some(Term::Str(profile)) if profile == "genesis/coreform-canon-hash-v0.2")
+        || !matches!(get(":span-unit"), Some(Term::Symbol(unit)) if unit == ":utf8-byte")
+    {
+        return Err(ObligationError::Module(
+            "selfhost core/cli frontend-module identity or profile mismatch".to_string(),
+        ));
+    }
+    let forms = match get(":forms") {
+        Some(Term::Vector(forms)) => forms.clone(),
+        _ => {
+            return Err(ObligationError::Module(
+                "selfhost core/cli frontend-module :forms must be a vector".to_string(),
+            ));
+        }
+    };
+    if !matches!(get(":canonical-source"), Some(Term::Str(_))) {
+        return Err(ObligationError::Module(
+            "selfhost core/cli frontend-module :canonical-source must be a string".to_string(),
+        ));
+    }
+    let module_hash = match get(":module-h") {
+        Some(Term::Str(hex)) => {
+            parse_hex32_str(hex, "selfhost core/cli frontend-module :module-h")?
+        }
+        _ => {
+            return Err(ObligationError::Module(
+                "selfhost core/cli frontend-module :module-h must be a hex string".to_string(),
+            ));
+        }
+    };
+    let Some(Term::Map(span)) = get(":source-span") else {
+        return Err(ObligationError::Module(
+            "selfhost core/cli frontend-module :source-span must be a map".to_string(),
+        ));
+    };
+    let expected_end = u64::try_from(src.len()).map_err(|_| {
+        ObligationError::Module(
+            "source byte length exceeds the supported frontend transport range".to_string(),
+        )
+    })?;
+    if span.len() != 2
+        || !matches!(span.get(&TermOrdKey(Term::symbol(":start-byte"))), Some(Term::Int(v)) if v == &0.into())
+        || !matches!(span.get(&TermOrdKey(Term::symbol(":end-byte"))), Some(Term::Int(v)) if v.to_string().parse::<u64>() == Ok(expected_end))
+    {
+        return Err(ObligationError::Module(
+            "selfhost core/cli frontend-module :source-span is invalid".to_string(),
+        ));
+    }
+    Ok(SelfhostFrontendModule { forms, module_hash })
+}
+
 fn selfhost_parse_canonicalize_module(
     ctx: &mut EvalCtx,
     env: &Env,
     src: &str,
 ) -> Result<Vec<Term>, ObligationError> {
-    if let Some(canon_src_fn) = env.get("core/cli::canonicalize-module-src") {
-        let out = canon_src_fn
-            .apply(ctx, Value::data(Term::Str(src.to_string())))
-            .map_err(|e| ObligationError::Module(e.to_string()))?;
-        if let Some(e) = extract_protocol_error(ctx, &out) {
-            return Err(ObligationError::Module(format!(
-                "selfhost core/cli canonicalize-module-src failed: {e}"
-            )));
-        }
-        let Some(Term::Vector(forms)) = out.as_data() else {
-            return Err(ObligationError::Module(format!(
-                "selfhost core/cli canonicalize-module-src returned non-vector: {}",
-                out.debug_repr()
-            )));
-        };
-        return Ok(forms.clone());
-    }
-
-    let parse_fn = env.get("selfhost/parse::parse-module").ok_or_else(|| {
-        ObligationError::Module("missing binding selfhost/parse::parse-module".to_string())
-    })?;
-    let parsed = parse_fn
-        .apply(ctx, Value::data(Term::Str(src.to_string())))
-        .map_err(|e| ObligationError::Module(e.to_string()))?;
-    if let Some(e) = extract_protocol_error(ctx, &parsed) {
-        return Err(ObligationError::Module(format!(
-            "selfhost parse-module failed: {e}"
-        )));
-    }
-    let Some(Term::Vector(parsed_forms)) = parsed.as_data() else {
-        return Err(ObligationError::Module(format!(
-            "selfhost parse-module returned non-vector: {}",
-            parsed.debug_repr()
-        )));
-    };
-
-    let canon_fn = env
-        .get("selfhost/canon::canonicalize-module")
-        .ok_or_else(|| {
-            ObligationError::Module(
-                "missing binding selfhost/canon::canonicalize-module".to_string(),
-            )
-        })?;
-    let canon = canon_fn
-        .apply(ctx, Value::data(Term::Vector(parsed_forms.clone())))
-        .map_err(|e| ObligationError::Module(e.to_string()))?;
-    if let Some(e) = extract_protocol_error(ctx, &canon) {
-        return Err(ObligationError::Module(format!(
-            "selfhost canonicalize-module failed: {e}"
-        )));
-    }
-    let Some(Term::Vector(forms)) = canon.as_data() else {
-        return Err(ObligationError::Module(format!(
-            "selfhost canonicalize-module returned non-vector: {}",
-            canon.debug_repr()
-        )));
-    };
-    Ok(forms.clone())
+    Ok(selfhost_frontend_module(ctx, env, src)?.forms)
 }
 
 fn selfhost_extract_module_meta(
@@ -182,14 +215,17 @@ fn selfhost_extract_module_meta(
 }
 
 fn parse_hex32_str(hex: &str, context: &str) -> Result<[u8; 32], ObligationError> {
-    let s = hex.trim();
-    if s.len() != 64 {
+    if hex.len() != 64
+        || !hex
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
         return Err(ObligationError::Module(format!(
-            "{context} returned non-64-byte hex hash"
+            "{context} returned a non-canonical lowercase 64-hex hash"
         )));
     }
     let mut out = [0u8; 32];
-    for (i, chunk) in s.as_bytes().chunks_exact(2).enumerate() {
+    for (i, chunk) in hex.as_bytes().chunks_exact(2).enumerate() {
         let hi = (chunk[0] as char).to_digit(16).ok_or_else(|| {
             ObligationError::Module(format!("{context} returned invalid hex hash"))
         })?;
@@ -206,8 +242,12 @@ fn selfhost_hash_module_forms(
     env: &Env,
     forms: &[Term],
 ) -> Result<[u8; 32], ObligationError> {
-    if let Some(hash_forms_fn) = env.get("core/cli::hash-module-forms") {
-        let out = hash_forms_fn
+    let hash_forms_fn = env.get("core/cli::hash-module-forms").ok_or_else(|| {
+        ObligationError::Module(
+            "missing required production binding core/cli::hash-module-forms".to_string(),
+        )
+    })?;
+    let out = hash_forms_fn
             .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
             .map_err(|e| ObligationError::Module(e.to_string()))?;
         if let Some(e) = extract_protocol_error(ctx, &out) {
@@ -221,30 +261,7 @@ fn selfhost_hash_module_forms(
                 out.debug_repr()
             )));
         };
-        return parse_hex32_str(hex, "selfhost core/cli hash-module-forms");
-    }
-
-    if let Some(hash_fn) = env.get("selfhost/hash::hash-module") {
-        let out = hash_fn
-            .apply(ctx, Value::data(Term::Vector(forms.to_vec())))
-            .map_err(|e| ObligationError::Module(e.to_string()))?;
-        if let Some(e) = extract_protocol_error(ctx, &out) {
-            return Err(ObligationError::Module(format!(
-                "selfhost hash-module failed: {e}"
-            )));
-        }
-        let Some(Term::Str(hex)) = out.as_data() else {
-            return Err(ObligationError::Module(format!(
-                "selfhost hash-module returned non-string: {}",
-                out.debug_repr()
-            )));
-        };
-        return parse_hex32_str(hex, "selfhost hash-module");
-    }
-
-    Err(ObligationError::Module(
-        "missing binding core/cli::hash-module-forms or selfhost/hash::hash-module".to_string(),
-    ))
+    parse_hex32_str(hex, "selfhost core/cli hash-module-forms")
 }
 
 fn selfhost_optimize_module_forms(

@@ -236,7 +236,7 @@
       "bytes": 16571,
       "id": "genesisbench-construct-report",
       "path": "benchmarks/genesisbench/v0.1/construct-validity/report.json",
-      "sha256": "50c3dca957f93c4f49c7a071da82609ba352500984770937caf7f895dcdc2f2a"
+      "sha256": "c5343ebd148c09bbd7636c57a02f6d8e8117bc67ebb9ba88dd8e7893d2747484"
     },
     {
       "bytes": 7614,
@@ -344,13 +344,13 @@
       "bytes": 8730,
       "id": "genesisbench-reference-agent",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "9260e3a56e3049b96c39f36aa9bf13df19b3b7de3263ab16ece97ce78ac0dd87"
+      "sha256": "1bc7a865daab2e5151207897c1dc4b13a5abde0af8ad6527a4327e1c46593b93"
     },
     {
       "bytes": 47673,
       "id": "genesisbench-reference-agent-ablations",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "fda67f2c8a57ef822581a0190f68847d49dab127b66d34f89345024c91de7b8d"
+      "sha256": "f8efad6622feed7565ae787df6281022624a1ad7dea6902235812c5f248970c3"
     },
     {
       "bytes": 4871,
@@ -362,7 +362,7 @@
       "bytes": 5733,
       "id": "genesisbench-reference-agent-plan-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
-      "sha256": "77931134eb9e3686899b74136b12d4e0903fd05972cb9c98fe2e7721d25fe5db"
+      "sha256": "df6129752ec19dfb331f7d51653df000e3c91d18a0b612be0cda5866ede063e4"
     },
     {
       "bytes": 1032,
@@ -386,7 +386,7 @@
       "bytes": 4427,
       "id": "genesisbench-reference-agent-trace-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
-      "sha256": "9f9af38f880ec2ad6a22cd971e8b93464b4fb7165e51c10c0dc00df238dc3550"
+      "sha256": "68eed483731a963a0c2e8cbf935f892675217153f51ff2eb949f2bc042ffe10b"
     },
     {
       "bytes": 2212,
@@ -554,7 +554,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "65f53decad7eaff7791388869a01d2c75ce4de92c65cdc11aa3febc7158fa086",
+  "contentIdentitySha256": "0d278db819fe53a833f504bad153a256f7ca0cfe7c05c033c1919ec367da98a7",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
