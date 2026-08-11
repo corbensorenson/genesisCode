@@ -5,6 +5,11 @@ value hashing, and effect request hashing. Effect logs and replay depend on the 
 rules. Resource enforcement and every future execution tier depend on the same graph and lifetime
 rules.
 
+String and byte payloads use the exact identity defined by
+`docs/spec/TEXT_PATH_PROFILE_v0.1.md`: strings hash their well-formed UTF-8 scalar sequence without
+implicit normalization or locale folding, and bytes hash their exact octet sequence. Explicit NFC
+therefore changes a hash exactly when it changes the scalar sequence.
+
 ## Runtime Value Graph
 
 ### Terms, values, roots, and edges

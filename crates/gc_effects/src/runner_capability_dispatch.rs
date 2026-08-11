@@ -1,5 +1,6 @@
 use super::*;
 use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
+use crate::runner_io_ops::base_relative_error_path;
 use crate::runner_plugin_schema::{
     parse_plugin_schema_ids, validate_plugin_request_schema, validate_plugin_response_schema,
 };
@@ -610,9 +611,7 @@ pub(super) fn call_capability_with_runtime(
                                 [
                                     (
                                         TermOrdKey(Term::symbol(":path")),
-                                        Term::Str(path_to_slash(
-                                            path.strip_prefix(&base_dir).unwrap_or(&path),
-                                        )),
+                                        Term::Str(base_relative_error_path(&base_dir, &path)),
                                     ),
                                     (
                                         TermOrdKey(Term::symbol(":limit-bytes")),
@@ -654,9 +653,7 @@ pub(super) fn call_capability_with_runtime(
                         [
                             (
                                 TermOrdKey(Term::symbol(":path")),
-                                Term::Str(path_to_slash(
-                                    path.strip_prefix(&base_dir).unwrap_or(&path),
-                                )),
+                                Term::Str(base_relative_error_path(&base_dir, &path)),
                             ),
                             (
                                 TermOrdKey(Term::symbol(":limit-bytes")),

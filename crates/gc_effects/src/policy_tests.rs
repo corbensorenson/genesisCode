@@ -320,3 +320,30 @@ base_dir = "."
     .expect_err("must reject retired high-level op in op table");
     assert!(format!("{err}").contains("legacy high-level op `core/pkg::lock`"));
 }
+
+#[cfg(unix)]
+#[test]
+fn rejects_non_utf8_resolved_tls_paths_without_lossy_replacement() {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let mut policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["net/http::request"]
+
+[op."net/http::request"]
+mtls_ca_pem = "ca.pem"
+"#,
+    )
+    .unwrap();
+    let base = std::path::PathBuf::from(OsString::from_vec(vec![
+        b'n', b'o', b'n', 0xff, b'u', b't', b'f',
+    ]));
+
+    let err = policy
+        .resolve_relative_paths(&base)
+        .expect_err("non-UTF-8 resolved path must fail closed");
+    let message = err.to_string();
+    assert!(message.contains("resolved TLS path is not valid UTF-8"));
+    assert!(!message.contains('\u{fffd}'));
+}

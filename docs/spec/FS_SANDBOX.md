@@ -33,14 +33,22 @@ Filesystem effect payloads are maps with op-specific required fields:
 
 Validation rules:
 
-- Any input containing `..` path components is rejected.
-- Absolute input paths are accepted only if they resolve (after canonicalization rules below) to a location inside the sandbox base.
+- Input is valid UTF-8 normalized to Unicode 17 NFC.
+- `.` alone names the sandbox base. Every other input is a non-empty, base-relative sequence of
+  non-empty components separated by `/` on every host.
+- Absolute paths, drive prefixes, backslashes, empty components, `.`, and `..` components are
+  rejected before filesystem access.
+- Path identity is case-sensitive and locale-independent. The runtime never folds requested case,
+  even when the host filesystem does.
+
+These language-facing rules are frozen by `docs/spec/TEXT_PATH_PROFILE_v0.1.md`. Absolute
+`base_dir` values remain policy configuration and never enter a language request or response.
 
 ## Read (`io/fs::read`)
 
 Read path resolution:
 
-1. Compute `candidate = input_path` if absolute, else `candidate = base.join(input_path)`.
+1. Compute `candidate = base.join(input_path)` after portable path validation.
 2. Compute `resolved = canonicalize(candidate)`.
 3. Require `resolved.starts_with(base)`.
 
@@ -54,7 +62,7 @@ Write payload additionally contains:
 
 Write path resolution:
 
-1. Compute `candidate = input_path` if absolute, else `candidate = base.join(input_path)`.
+1. Compute `candidate = base.join(input_path)` after portable path validation.
 2. Let `parent = candidate.parent()` and optionally create directories if `create_dirs = true`.
 3. Compute `parent_resolved = canonicalize(parent)` and require `parent_resolved.starts_with(base)`.
 4. If `candidate` already exists and is a symlink, the write is rejected (defense-in-depth).
@@ -78,6 +86,11 @@ List path resolution follows read-path sandbox checks and then reads directory e
 Response envelope:
 - vector of entry maps, deterministically sorted by canonical term order
 - each entry map contains `:name`, `:path`, `:kind`, `:len-bytes`
+
+Names and paths are strict UTF-8 normalized to NFC and use `/`. A non-UTF-8 entry returns trusted
+sealed `core/path-encoding-error`. If distinct host names normalize to the same response identity,
+the operation returns trusted sealed `core/path-collision-error`; no lossy replacement or silent
+merge is allowed.
 
 ## Mkdir (`io/fs::mkdir`)
 

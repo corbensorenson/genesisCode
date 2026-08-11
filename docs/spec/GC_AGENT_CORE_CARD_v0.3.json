@@ -1,11 +1,11 @@
 {
   "budget": {
     "asciiOnly": true,
-    "byteCount": 3963,
+    "byteCount": 3960,
     "maxAsciiBytes": 4000,
-    "tokenUpperBound": 3963
+    "tokenUpperBound": 3960
   },
-  "cardSha256": "ee57b5288513c9c305def396d57592fca82716a4414ea589cfce5af981314900",
+  "cardSha256": "89f583db0a01aa69e7d80a752c2c57045735eab86ae2b5603136a268682c5f29",
   "examples": [
     {
       "expected": "42",
@@ -45,11 +45,11 @@
     }
   ],
   "kind": "genesis/gc-agent-core-card-v0.3",
-  "manifestIdentitySha256": "2e3e3d1b637242d4ed1a0cfec9e89a803c7424c3dc7095f94ea4602fa2bcc50f",
+  "manifestIdentitySha256": "cde648cce231ce225f7ae8fed66ced607fc8b1c9c5a6e50ff2f0e47f964dcda6",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "b31a025d927459a96c11444c2b80b883e7666dac01da6755b5c823b0e6704dc6",
+  "profileIdentitySha256": "5a585e3bdcf30adcccdfc490b81bdafa832a1dbe485d9193e97a3bba0e350fd6",
   "sourceIdentities": {
-    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "eb33f3fdd2eb023cd155784774b9ff2a74228420910d8f1d5441f32bbfec580d",
+    "docs/spec/GC_AGENT_PROFILE_v0.3.json": "688fda6ef592c2d560fce2b1494a9189203e87b53f8a7372a3d56af1fb95b7a7",
     "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json": "559ffafe661d3d95696107717acb159a38c60d7735bbc940ef2ac19f18be6314",
     "policies/gc_agent_core_card_v0.3.json": "1d6a5caff18bd42895fdbdcddcd8b27c88cd05786918879ab1ebbc2bec30f996"
   },
@@ -134,9 +134,13 @@
     "pair/cdr",
     "pair/cons",
     "str/concat",
+    "str/grapheme-len",
+    "str/grapheme-slice",
     "str/join",
     "str/len",
+    "str/nfc",
     "str/repeat",
+    "str/scalar-len",
     "str/to-bytes-utf8",
     "sym/eq?",
     "sym/from-str",
@@ -259,6 +263,17 @@
       "roadmapClass": "additional-safety-boundary",
       "roadmapTask": "R5.1.d",
       "safeAlternative": "Use Int, construct Dec explicitly through dec/from-int or dec/parse, and keep any profile-scoped floating-point payload behind an explicit host boundary.",
+      "status": "unsupported"
+    },
+    {
+      "behavior": "Implicit Unicode normalization, locale-sensitive identity or ordering, case-folded map keys, lossy filesystem names, absolute or host-native path payloads, or unversioned Unicode segmentation",
+      "category": "text-path",
+      "enforcement": "reject",
+      "id": "U-IMPLICIT-TEXT-PATH-SEMANTICS",
+      "rationale": "The frozen text/path profile requires exact UTF-8 identity, explicit Unicode 17 NFC/grapheme APIs, no ambient locale, and NFC base-relative slash paths at effect boundaries.",
+      "roadmapClass": "additional-safety-boundary",
+      "roadmapTask": "R5.1.e",
+      "safeAlternative": "Use exact Str equality, call str/nfc explicitly when required, choose byte/scalar/grapheme units deliberately, and pass validated base-relative slash paths to filesystem effects.",
       "status": "unsupported"
     },
     {

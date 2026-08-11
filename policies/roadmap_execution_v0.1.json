@@ -900,8 +900,8 @@
       "risk_class": "critical",
       "resource_class": "benchmark",
       "owner_paths": [
-        "crates/gc_kernel",
         "crates/gc_effects",
+        "crates/gc_kernel",
         "crates/gc_prelude",
         "prelude",
         "scripts"
@@ -912,7 +912,7 @@
         "scripts/check_perf_budgets.sh"
       ],
       "negative_controls": [
-        "reject tier divergence, resource-accounting bypass, host leaks, unbounded allocation, and user-reachable panic"
+        "reject tier divergence, resource-accounting bypass, host leaks, unbounded allocation, user-reachable panic, implicit text normalization, Unicode-table drift, locale-dependent identity, and lossy or nonrelative path material"
       ]
     },
     "runtime-lifecycle": {
@@ -939,6 +939,7 @@
       "risk_class": "critical",
       "resource_class": "build",
       "owner_paths": [
+        "crates/gc_effects",
         "crates/gc_kernel",
         "crates/gc_opt",
         "crates/gc_wasm",
@@ -1137,7 +1138,7 @@
         "scripts/check_wasm_production_surface.sh"
       ],
       "negative_controls": [
-        "reject arbitrary-precision narrowing, unchecked emitted artifacts, noncanonical numeric encoding, unbounded decimal scale, and backend-specific arithmetic"
+        "reject undocumented semantics, profile confusion, tier divergence, noncanonical encodings, backend-specific behavior, implicit text normalization, Unicode-table drift, locale-dependent identity, and lossy or nonrelative path material"
       ]
     },
     "R5.2": {"profile": "language-contract", "start_after": ["R2.2", "R5.1"], "sequential": true},

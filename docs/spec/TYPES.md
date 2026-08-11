@@ -104,7 +104,8 @@ The typechecker infers types most precisely for:
   `dec/parse` or `dec/from-int`
 - `fn`, `if`, `begin`, `let`
 - `(prim ...)` for the integer and fixed-decimal operations frozen by
-  `docs/spec/NUMERIC_PROFILE_v0.1.md`, plus row-aware map operations (`map/get`, `map/put`,
+  `docs/spec/NUMERIC_PROFILE_v0.1.md`, the Unicode text operations frozen by
+  `docs/spec/TEXT_PATH_PROFILE_v0.1.md`, and row-aware map operations (`map/get`, `map/put`,
   `map/merge`)
 - `core/msg::*`
 - `core/contract::*` (including contract-row extraction from override map literals)

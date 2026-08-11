@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "7e165a6c676afa637e235fd912ca41e63c21d269cc033bb5d17c3648d45df6bc",
+  "contentIdentitySha256": "61d58d244eac24ba9aa9ba09c8a6ad02b1e92906f2dc73ab6ff47400e9aa5cda",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -1749,11 +1749,11 @@
           "gitPackageRecords": 0,
           "path": "Cargo.lock",
           "pathOrWorkspacePackageRecords": 18,
-          "registryPackageRecords": 441,
+          "registryPackageRecords": 443,
           "schemaVersion": 4,
-          "sha256": "d72fab43725d3a9b0c033644f4adad3e85c9404b864ce0fa42b59f989fd6accd",
-          "totalPackageRecords": 459,
-          "uniquePackageIdentities": 459
+          "sha256": "a19f76fcc9dd53426b1c7aa9ae518be1c974701bddd09255c163d6925ac2fd95",
+          "totalPackageRecords": 461,
+          "uniquePackageIdentities": 461
         },
         {
           "gitPackageRecords": 0,
@@ -2656,8 +2656,8 @@
     }
   },
   "sourceIdentities": {
-    "Cargo.lock": "d72fab43725d3a9b0c033644f4adad3e85c9404b864ce0fa42b59f989fd6accd",
-    "Cargo.toml": "63addc5871d2f2b420b093c4abe12bef9faece7015d127a73a1314362a67bcae",
+    "Cargo.lock": "a19f76fcc9dd53426b1c7aa9ae518be1c974701bddd09255c163d6925ac2fd95",
+    "Cargo.toml": "36566f84c9351572596298906707431245352296c7718aa1035087f61d83ab32",
     "deny.toml": "efdae31392b03f5228bd48e96eb14ef718520ae19b4d9de064ef9ed1c19978e5",
     "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json": "4ce9bed19d3dac8926a06a15f2edceaaaa038c3a9a814265b7bd13858359a173",
     "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json": "1ee6541e1f594edce44ae99a9e17c5288c9cab7a4f0818528c821bdc11b15546",

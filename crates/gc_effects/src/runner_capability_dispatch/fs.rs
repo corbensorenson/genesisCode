@@ -1,4 +1,7 @@
 use super::*;
+use std::collections::BTreeSet;
+
+use crate::runner_io_ops::{canonical_path_material, validate_portable_effect_path};
 
 fn fs_entry_kind(file_type: &std::fs::FileType) -> &'static str {
     if file_type.is_file() {
@@ -12,8 +15,17 @@ fn fs_entry_kind(file_type: &std::fs::FileType) -> &'static str {
     }
 }
 
-fn fs_rel_display_path(base_dir: &std::path::Path, path: &std::path::Path) -> String {
-    path_to_slash(path.strip_prefix(base_dir).unwrap_or(path))
+fn fs_rel_display_path(base_dir: &std::path::Path, path: &std::path::Path) -> Option<String> {
+    canonical_path_material(path.strip_prefix(base_dir).ok()?)
+}
+
+fn path_encoding_error(error_tok: SealId, op: &str) -> Value {
+    mk_error(
+        error_tok,
+        "core/path-encoding-error",
+        "filesystem path is outside the capability base, is not valid UTF-8/NFC, or contains a non-portable separator".to_string(),
+        Some(op),
+    )
 }
 
 pub(super) fn capability_io_fs_stat(
@@ -25,7 +37,9 @@ pub(super) fn capability_io_fs_stat(
     let path_s = payload_path(payload)?;
     let base_dir = effective_base_dir(pol)?;
     let path = sandbox_path_allow_missing(&base_dir, &path_s, false)?;
-    let rel_path = fs_rel_display_path(&base_dir, &path);
+    let Some(rel_path) = fs_rel_display_path(&base_dir, &path) else {
+        return Ok(path_encoding_error(error_tok, op));
+    };
     let md = match std::fs::symlink_metadata(&path) {
         Ok(md) => Some(md),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
@@ -38,10 +52,7 @@ pub(super) fn capability_io_fs_stat(
     };
 
     let mut out = BTreeMap::new();
-    out.insert(
-        TermOrdKey(Term::symbol(":path")),
-        Term::Str(rel_path.to_string()),
-    );
+    out.insert(TermOrdKey(Term::symbol(":path")), Term::Str(rel_path));
     out.insert(
         TermOrdKey(Term::symbol(":exists")),
         Term::Bool(md.is_some()),
@@ -96,6 +107,7 @@ pub(super) fn capability_io_fs_list(
     };
 
     let mut entries = Vec::new();
+    let mut canonical_paths = BTreeSet::new();
     for entry in read_dir {
         let entry = match entry {
             Ok(entry) => entry,
@@ -121,13 +133,24 @@ pub(super) fn capability_io_fs_list(
                 });
             }
         };
-        let name = entry.file_name().to_string_lossy().to_string();
+        let Some(name) = canonical_path_material(std::path::Path::new(&entry.file_name())) else {
+            return Ok(path_encoding_error(error_tok, op));
+        };
+        let Some(relative_path) = fs_rel_display_path(&base_dir, &entry_path) else {
+            return Ok(path_encoding_error(error_tok, op));
+        };
+        if !canonical_paths.insert(relative_path.clone()) {
+            return Ok(mk_error(
+                error_tok,
+                "core/path-collision-error",
+                "multiple filesystem entries have the same canonical Unicode 17 NFC path"
+                    .to_string(),
+                Some(op),
+            ));
+        }
         let mut row = BTreeMap::new();
         row.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name));
-        row.insert(
-            TermOrdKey(Term::symbol(":path")),
-            Term::Str(fs_rel_display_path(&base_dir, &entry_path)),
-        );
+        row.insert(TermOrdKey(Term::symbol(":path")), Term::Str(relative_path));
         row.insert(
             TermOrdKey(Term::symbol(":kind")),
             Term::Symbol(fs_entry_kind(&entry_md.file_type()).to_string()),
@@ -216,6 +239,8 @@ pub(super) fn capability_io_fs_rename(
 ) -> Result<Value, EffectsError> {
     let from_path = payload_required_string_field(payload, op, ":from")?;
     let to_path = payload_required_string_field(payload, op, ":to")?;
+    validate_portable_effect_path(&from_path)?;
+    validate_portable_effect_path(&to_path)?;
     let overwrite = payload_optional_bool_field(payload, op, ":overwrite", false)?;
     let base_dir = effective_base_dir(pol)?;
     let create_dirs = pol.is_some_and(|p| p.create_dirs);
@@ -227,7 +252,7 @@ pub(super) fn capability_io_fs_rename(
             "core/caps/policy-error",
             format!(
                 "{op} target `{}` already exists; set :overwrite true to allow replacing it",
-                fs_rel_display_path(&base_dir, &to)
+                fs_rel_display_path(&base_dir, &to).unwrap_or_else(|| "<invalid-path>".to_string())
             ),
             Some(op),
         ));

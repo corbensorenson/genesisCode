@@ -21,8 +21,11 @@ The parser accepts whitespace and semicolon line comments plus these term classe
 - `nil`, `true`, and `false`
 - unbounded base-10 integers with an optional leading minus; arithmetic, division, overflow,
   serialization, and backend behavior are frozen by `docs/spec/NUMERIC_PROFILE_v0.1.md`
-- UTF-8 strings with `\\`, `\"`, `\n`, `\r`, `\t`, `\xNN`, and `\uNNNN` escapes
-- byte strings `b"..."` with the same named escapes and byte-oriented `\xNN`
+- UTF-8 strings with `\\`, `\"`, `\n`, `\r`, `\t`, `\xNN`, and `\uNNNN` escapes; exact
+  identity, normalization, grapheme, case, and locale behavior are frozen by
+  `docs/spec/TEXT_PATH_PROFILE_v0.1.md`
+- byte strings `b"..."` with the same named escapes and byte-oriented `\xNN`; octet identity and
+  UTF-8 conversion behavior are frozen by `docs/spec/TEXT_PATH_PROFILE_v0.1.md`
 - symbols delimited by whitespace, brackets, braces, parentheses, quote, string quote,
   or comment start
 - proper lists `( ... )`, vectors `[ ... ]`, and even-entry maps `{k v ...}`

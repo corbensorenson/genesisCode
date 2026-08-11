@@ -506,7 +506,7 @@ fn collect_package_paths(root: &Path, max_packages: usize) -> Result<Vec<PathBuf
             if file_type.is_file()
                 && path
                     .file_name()
-                    .is_some_and(|name| name.to_string_lossy() == "package.toml")
+                    .is_some_and(|name| name == std::ffi::OsStr::new("package.toml"))
             {
                 package_paths.push(path);
                 if package_paths.len() >= max_packages {

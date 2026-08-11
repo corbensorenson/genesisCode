@@ -98,7 +98,7 @@ fn write_bridge_script(dir: &tempfile::TempDir) -> std::path::PathBuf {
 fn mk_bridge_policy(ops: &[&str]) -> HostBridgePolicyFixture {
     let dir = tempfile::tempdir().expect("tempdir");
     let bridge = write_bridge_script(&dir);
-    let base = toml_escape(dir.path().to_string_lossy().as_ref());
+    let base = toml_escape(dir.path().to_str().expect("temporary path must be UTF-8"));
     let bridge_name = toml_escape(
         bridge
             .file_name()

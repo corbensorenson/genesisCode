@@ -6,6 +6,7 @@ use std::path::Component;
 use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey};
+use gc_kernel::text_profile::normalize_nfc;
 
 use crate::EffectsError;
 use crate::policy::OpPolicy;
@@ -86,27 +87,74 @@ pub(crate) fn io_error_payload(op: &str, base_dir: &Path, path: &Path, e: &std::
     )
 }
 
-fn base_relative_error_path(base_dir: &Path, path: &Path) -> String {
+pub(crate) fn base_relative_error_path(base_dir: &Path, path: &Path) -> String {
     match path.strip_prefix(base_dir) {
-        Ok(rel) => {
-            let rel_s = path_to_slash(rel);
-            if rel_s.is_empty() {
-                ".".to_string()
-            } else {
-                rel_s
-            }
-        }
+        Ok(rel) => canonical_path_material(rel).unwrap_or_else(|| "<invalid-path>".to_string()),
         Err(_) => "<outside-base>".to_string(),
     }
 }
 
-pub(crate) fn path_to_slash(p: &Path) -> String {
-    let s = p.to_string_lossy().to_string();
-    if cfg!(windows) {
-        s.replace('\\', "/")
+pub(crate) fn canonical_path_material(path: &Path) -> Option<String> {
+    let raw = path.to_str()?;
+    let slash = if cfg!(windows) {
+        raw.replace('\\', "/")
     } else {
-        s
+        if raw.contains('\\') {
+            return None;
+        }
+        raw.to_string()
+    };
+    let material = if slash.is_empty() {
+        ".".to_string()
+    } else {
+        slash
+    };
+    normalize_nfc(&material).ok()
+}
+
+pub(crate) fn validate_portable_effect_path(path: &str) -> Result<(), EffectsError> {
+    if path == "." {
+        return Ok(());
     }
+    if path.is_empty()
+        || path.starts_with('/')
+        || path.starts_with('\\')
+        || path.contains('\\')
+        || path.as_bytes().get(1) == Some(&b':')
+    {
+        return Err(EffectsError::Log(
+            "filesystem path must be base-relative and use `/` separators".to_string(),
+        ));
+    }
+    if path
+        .split('/')
+        .any(|component| component.is_empty() || component == "." || component == "..")
+    {
+        return Err(EffectsError::Log(
+            "filesystem path contains an empty, `.` or `..` component".to_string(),
+        ));
+    }
+    let normalized = normalize_nfc(path).map_err(|error| {
+        EffectsError::Log(format!("filesystem path normalization failed: {error}"))
+    })?;
+    if normalized != path {
+        return Err(EffectsError::Log(
+            "filesystem path must use Unicode 17 NFC".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn path_to_slash(p: &Path) -> String {
+    let Some(raw) = p.to_str() else {
+        return "<invalid-path>".to_string();
+    };
+    let slash = if cfg!(windows) {
+        raw.replace('\\', "/")
+    } else {
+        raw.to_string()
+    };
+    normalize_nfc(&slash).unwrap_or_else(|_| "<invalid-path>".to_string())
 }
 
 pub(crate) fn payload_path(payload: &Term) -> Result<String, EffectsError> {
@@ -114,7 +162,10 @@ pub(crate) fn payload_path(payload: &Term) -> Result<String, EffectsError> {
         return Err(EffectsError::Log("payload must be a map".to_string()));
     };
     match m.get(&TermOrdKey(Term::symbol(":path"))) {
-        Some(Term::Str(s)) => Ok(s.clone()),
+        Some(Term::Str(s)) => {
+            validate_portable_effect_path(s)?;
+            Ok(s.clone())
+        }
         _ => Err(EffectsError::Log(
             "payload missing :path string".to_string(),
         )),
@@ -391,7 +442,7 @@ pub(crate) fn sandbox_path_allow_missing(
             base_dir.join(candidate)
         };
         if full.exists() {
-            return sandbox_path_read(base_dir, &full.to_string_lossy());
+            return sandbox_path_read(base_dir, input);
         }
         if let Some(parent) = full.parent() {
             if create_dirs {
@@ -445,5 +496,60 @@ mod tests {
         let payload = io_error_payload("io/fs::read", &base_dir, &path, &io_err);
         assert_eq!(map_value_str(&payload, ":base-dir"), Some("."));
         assert_eq!(map_value_str(&payload, ":path"), Some("<outside-base>"));
+    }
+
+    #[test]
+    fn portable_effect_paths_are_relative_slash_nfc_and_case_exact() {
+        for accepted in [".", "src/Main.gc", "café/data.bin"] {
+            validate_portable_effect_path(accepted).expect("portable path");
+        }
+        for rejected in [
+            "",
+            "/tmp/data",
+            "C:/data",
+            "src\\Main.gc",
+            "src//Main.gc",
+            "src/./Main.gc",
+            "src/../Main.gc",
+            "cafe\u{301}/data.bin",
+        ] {
+            assert!(
+                validate_portable_effect_path(rejected).is_err(),
+                "path must fail closed: {rejected:?}"
+            );
+        }
+        assert_ne!(
+            canonical_path_material(Path::new("src/Main.gc")),
+            canonical_path_material(Path::new("src/main.gc"))
+        );
+    }
+
+    #[test]
+    fn canonical_path_material_normalizes_unicode_without_host_prefixes() {
+        assert_eq!(
+            canonical_path_material(Path::new("cafe\u{301}/data.bin")),
+            Some("café/data.bin".to_string())
+        );
+        assert_eq!(
+            canonical_path_material(Path::new("")),
+            Some(".".to_string())
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn non_utf8_paths_never_enter_language_payloads_lossily() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let invalid = PathBuf::from(OsString::from_vec(vec![b'a', 0xff, b'b']));
+        assert_eq!(canonical_path_material(&invalid), None);
+
+        let base = PathBuf::from("workspace");
+        let invalid_path = base.join(invalid);
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "missing");
+        let payload = io_error_payload("io/fs::read", &base, &invalid_path, &io_err);
+        assert_eq!(map_value_str(&payload, ":path"), Some("<invalid-path>"));
+        assert!(!format!("{payload:?}").contains('�'));
     }
 }

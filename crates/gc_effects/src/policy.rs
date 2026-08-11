@@ -272,7 +272,7 @@ impl CapsPolicy {
         let s = std::fs::read_to_string(path)?;
         let mut pol = Self::from_toml_str(&s)?;
         let base = path.parent().unwrap_or_else(|| Path::new("."));
-        pol.resolve_relative_paths(base);
+        pol.resolve_relative_paths(base)?;
         if pol.log.inline_max_bytes.is_some() && pol.log.store_dir.is_none() {
             pol.log.store_dir = Some(base.join(".genesis").join("store"));
         }
@@ -285,7 +285,7 @@ impl CapsPolicy {
         Ok(pol)
     }
 
-    fn resolve_relative_paths(&mut self, base: &Path) {
+    fn resolve_relative_paths(&mut self, base: &Path) -> Result<(), EffectsError> {
         if let Some(sd) = &self.log.store_dir
             && sd.is_relative()
         {
@@ -323,11 +323,18 @@ impl CapsPolicy {
                 {
                     let pb = PathBuf::from(s);
                     if pb.is_relative() {
-                        *v = toml::Value::String(base.join(pb).to_string_lossy().to_string());
+                        let resolved = base.join(pb);
+                        let resolved = resolved.to_str().ok_or_else(|| {
+                            EffectsError::Log(
+                                "caps.toml: resolved TLS path is not valid UTF-8".to_string(),
+                            )
+                        })?;
+                        *v = toml::Value::String(resolved.to_string());
                     }
                 }
             }
         }
+        Ok(())
     }
 }
 

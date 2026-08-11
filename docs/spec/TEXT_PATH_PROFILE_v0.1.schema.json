@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.org/spec/text-path-profile-v0.1.schema.json",
+  "title": "GenesisCode Text and Path Profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["auditDate", "backends", "bytes", "canonicalSpec", "canonicalSpecSha256", "contentIdentitySha256", "kind", "nonclaims", "paths", "schema", "schemaSha256", "sourceBindings", "text", "unicode", "version"],
+  "properties": {
+    "auditDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "backends": {
+      "type": "object", "additionalProperties": false,
+      "required": ["compiledAst", "gcWasm", "reference", "stage1", "stage2"],
+      "properties": {
+        "compiledAst": {"const": "shared-unicode17-reference-equivalent"},
+        "gcWasm": {"const": "inherits-gc-kernel-reference"},
+        "reference": {"const": "gc-kernel-unicode17"},
+        "stage1": {"const": "exact-text-and-bytes-preservation"},
+        "stage2": {"const": "known-value-metrics-and-nfc-translation-validated-otherwise-fail-closed"}
+      }
+    },
+    "bytes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["identity", "invalidUtf8Error", "representation", "utf8Decode", "utf8Encode"],
+      "properties": {
+        "identity": {"const": "octet-exact"},
+        "invalidUtf8Error": {"const": "core/type-error"},
+        "representation": {"const": "immutable-octet-sequence"},
+        "utf8Decode": {"const": "bytes/to-str-utf8"},
+        "utf8Encode": {"const": "str/to-bytes-utf8"}
+      }
+    },
+    "canonicalSpec": {"const": "docs/spec/TEXT_PATH_PROFILE_v0.1.md"},
+    "canonicalSpecSha256": {"$ref": "#/$defs/sha256"},
+    "contentIdentitySha256": {"$ref": "#/$defs/sha256"},
+    "kind": {"const": "genesis/text-path-profile-v0.1"},
+    "nonclaims": {"$ref": "#/$defs/nonemptyStrings"},
+    "paths": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseIdentity", "case", "collisionError", "errorPayload", "input", "invalidEncodingError", "kind", "root", "separator"],
+      "properties": {
+        "baseIdentity": {"const": "capability-base-relative-no-host-prefix"},
+        "case": {"const": "language-identity-case-sensitive-no-folding"},
+        "collisionError": {"const": "core/path-collision-error"},
+        "errorPayload": {"const": "base-dir-dot-plus-relative-nfc-path-or-nondisclosing-sentinel"},
+        "input": {"const": "utf8-unicode17-nfc-relative-no-empty-dot-parent-drive-or-backslash"},
+        "invalidEncodingError": {"const": "core/path-encoding-error"},
+        "kind": {"const": "effect-boundary-string-not-kernel-value-kind"},
+        "root": {"const": "."},
+        "separator": {"const": "/"}
+      }
+    },
+    "schema": {"const": "docs/spec/TEXT_PATH_PROFILE_v0.1.schema.json"},
+    "schemaSha256": {"$ref": "#/$defs/sha256"},
+    "sourceBindings": {
+      "type": "array", "minItems": 10, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "mode", "path"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "mode": {"enum": ["compiled", "effect-boundary", "optimizer", "parser", "prelude", "reference", "selfhost-preview", "type-inference", "wasm-inherited-reference", "wasm-validated-candidate"]},
+          "path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "text": {
+      "type": "object", "additionalProperties": false,
+      "required": ["case", "graphemeRangeError", "identity", "locale", "normalization", "operations", "representation", "unsupported"],
+      "properties": {
+        "case": {"const": "case-sensitive-scalar-exact"},
+        "graphemeRangeError": {"const": "core/text-range-error"},
+        "identity": {"const": "exact-utf8-scalar-sequence-no-implicit-normalization"},
+        "locale": {"const": "none"},
+        "normalization": {"const": "explicit-nfc-only"},
+        "operations": {"const": ["str/grapheme-len", "str/grapheme-slice", "str/len", "str/nfc", "str/scalar-len", "str/to-bytes-utf8"]},
+        "representation": {"const": "immutable-well-formed-utf8"},
+        "unsupported": {"const": ["ambient-locale", "bidi-layout", "case-folded-identity", "collation", "display-width", "implicit-normalization", "line-breaking", "locale-casing", "nfkc", "regex", "word-sentence-segmentation"]}
+      }
+    },
+    "unicode": {
+      "type": "object", "additionalProperties": false,
+      "required": ["graphemes", "normalization", "normalizationImplementation", "segmentationImplementation", "version"],
+      "properties": {
+        "graphemes": {"const": "default-extended-grapheme-clusters-uax29-unicode17"},
+        "normalization": {"const": "nfc-uax15-unicode17"},
+        "normalizationImplementation": {"const": "unicode-normalization/0.1.25"},
+        "segmentationImplementation": {"const": "unicode-segmentation/1.13.3"},
+        "version": {"const": "17.0.0"}
+      }
+    },
+    "version": {"const": "0.1"}
+  },
+  "$defs": {
+    "nonemptyStrings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

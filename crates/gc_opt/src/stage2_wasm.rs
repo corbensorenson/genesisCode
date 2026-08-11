@@ -514,10 +514,10 @@ fn plan_list_expr(
     if xs.len() == 3
         && matches!(xs[0], Term::Symbol(s) if s == "prim")
         && let Term::Symbol(op) = &xs[1]
-        && op == "str/len"
+        && let Some(text_op) = UnicodeStringOp::from_primitive(op)
     {
         let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
-        return lower_str_len(arg, planner);
+        return text_op.lower(arg, planner);
     }
     if xs.len() == 3
         && matches!(xs[0], Term::Symbol(s) if s == "prim")
@@ -535,9 +535,12 @@ fn plan_list_expr(
         let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
         return lower_coreform_escape_bytes(arg, planner);
     }
-    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/str::len") {
+    if xs.len() == 2
+        && let Term::Symbol(op) = &xs[0]
+        && let Some(text_op) = UnicodeStringOp::from_wrapper(op)
+    {
         let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
-        return lower_str_len(arg, planner);
+        return text_op.lower(arg, planner);
     }
     if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/int::to-str") {
         let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;

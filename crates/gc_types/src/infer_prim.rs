@@ -35,7 +35,23 @@ pub(crate) fn prim_type(op: &str, args: &[Ty], arg_terms: &[&Term], sess: &mut I
         "dec/add" | "dec/sub" | "dec/mul" => binary_prim(op, args, Ty::Dec, Ty::Dec, sess),
         "dec/eq?" | "dec/lt?" => binary_prim(op, args, Ty::Dec, Ty::Bool, sess),
         "core/eq?" | "sym/eq?" => Ty::Bool,
-        "str/concat" => Ty::Str,
+        "str/concat" => binary_prim(op, args, Ty::Str, Ty::Str, sess),
+        "str/len" | "str/scalar-len" | "str/grapheme-len" => {
+            unary_prim(op, args, Ty::Str, Ty::Int, sess)
+        }
+        "str/nfc" => unary_prim(op, args, Ty::Str, Ty::Str, sess),
+        "str/grapheme-slice" => {
+            if args.len() != 3 {
+                sess.errors
+                    .push(format!("prim {op} expects 3 args, got {}", args.len()));
+                return Ty::Any;
+            }
+            if args[0] != Ty::Str || args[1] != Ty::Int || args[2] != Ty::Int {
+                sess.errors.push(format!("prim {op} expects Str, Int, Int"));
+                return Ty::Any;
+            }
+            Ty::Str
+        }
         "bytes/len" => Ty::Int,
         "bytes/concat" => Ty::Bytes,
         "pair/cons" | "pair/car" | "pair/cdr" | "list/is-nil?" => Ty::Any,

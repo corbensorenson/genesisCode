@@ -52,6 +52,8 @@ sha2 = "0.10"
 semver = "1"
 rust-cc = { version = "=0.6.2", default-features = false, features = ["std", "weak-ptrs"] }
 url = "2"
+unicode-normalization = "=0.1.25"
+unicode-segmentation = "=1.13.3"
 
 [profile.test]
 # Line tables retain actionable test backtraces without the multi-gigabyte full-debug cache.

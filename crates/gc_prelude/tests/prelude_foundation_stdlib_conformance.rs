@@ -29,6 +29,11 @@ const FOUNDATION_REQUIRED_SYMBOLS: &[&str] = &[
     "core/str::to-utf8",
     "core/str::from-utf8",
     "core/str::len",
+    "core/str::byte-len",
+    "core/str::scalar-len",
+    "core/str::grapheme-len",
+    "core/str::grapheme-slice",
+    "core/str::nfc",
     "core/str::concat",
     "core/str::repeat",
     "core/str::join",
@@ -111,6 +116,11 @@ fn foundation_required_behavior_conforms() {
         :vec-len (core/vec::len ((core/vec::push v1) 10))
         :str-join ((core/str::join ["a" "b" "c"]) "-")
         :str-roundtrip (core/str::from-utf8 (core/str::to-utf8 "hi✓"))
+        :str-byte-len (core/str::byte-len "é")
+        :str-scalar-len (core/str::scalar-len "é")
+        :str-grapheme-len (core/str::grapheme-len "👩‍👩‍👧‍👦")
+        :str-nfc (core/str::nfc "é")
+        :str-grapheme-slice (((core/str::grapheme-slice "a👩‍👩‍👧‍👦z") 1) 1)
         :bytes-slice (((core/bytes::slice (core/bytes::concat b"\x01\x02" b"\x03\x04")) 1) 2)
         :sym-eq ((core/sym::eq? 'pkg/example::op) 'pkg/example::op)
         :sym-str (core/sym::to-str 'pkg/example::op)
@@ -138,6 +148,17 @@ fn foundation_required_behavior_conforms() {
     assert!(matches!(
         map_value(&m, ":str-roundtrip").as_data(),
         Some(Term::Str(s)) if s == "hi✓"
+    ));
+    assert!(map_value_is_int(&m, ":str-byte-len", 2));
+    assert!(map_value_is_int(&m, ":str-scalar-len", 2));
+    assert!(map_value_is_int(&m, ":str-grapheme-len", 1));
+    assert!(matches!(
+        map_value(&m, ":str-nfc").as_data(),
+        Some(Term::Str(s)) if s == "é"
+    ));
+    assert!(matches!(
+        map_value(&m, ":str-grapheme-slice").as_data(),
+        Some(Term::Str(s)) if s == "👩‍👩‍👧‍👦"
     ));
     assert!(matches!(
         map_value(&m, ":bytes-slice").as_data(),

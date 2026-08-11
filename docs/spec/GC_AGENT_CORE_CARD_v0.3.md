@@ -1,13 +1,13 @@
 # GC-AGENT-v0.3 Core Card
 
-Training-frozen surface. Reject unlisted or unsupported behavior; do not guess.
-Pure evaluation is deterministic. Filesystem, time, network, process, and LLM work only through explicit deny-by-default effects with run/replay equivalence. User input must never panic; boundaries return sealed ERROR values. UNHANDLED, EFFECT, and ERROR are unforgeable.
+Training-frozen. Reject unlisted or unsupported behavior; do not guess.
+Pure evaluation is deterministic. Host work requires explicit deny-by-default effects with run/replay equivalence. User input never panics; boundaries return sealed ERROR. UNHANDLED, EFFECT, and ERROR are unforgeable.
 
 ## Surface
 - lexical-grammar: nil true false integer string bytes symbol quote list vector map comment
 - coreform-mapping: Nil Bool Int Str Bytes Symbol Pair Vector Map
 - evaluation: quote fn if begin let prim seal unseal def application
-- values: Data Int Vector Map Closure CompiledClosure SealToken Sealed NativeFn Contract EffectProgram EffectRequest bytes/concat bytes/from-hex bytes/get bytes/join bytes/len bytes/slice bytes/to-hex bytes/to-str-utf8 core/eq? coreform/escape-bytes coreform/escape-str crypto/blake3 data/tag dec/add dec/eq? dec/from-int dec/lt? dec/mul dec/parse dec/sub dec/to-str int/add int/div int/eq? int/lt? int/mod int/mul int/sub int/to-str list/is-nil? map/entries map/from-entries map/get map/len map/merge map/put pair/as-proper-list pair/car pair/cdr pair/cons str/concat str/join str/len str/repeat str/to-bytes-utf8 sym/eq? sym/from-str sym/to-str utf8/encode-codepoint vec/get vec/len vec/push vec/set
+- values: Data Int Vector Map Closure CompiledClosure SealToken Sealed NativeFn Contract EffectProgram EffectRequest bytes/concat bytes/from-hex bytes/get bytes/join bytes/len bytes/slice bytes/to-hex bytes/to-str-utf8 core/eq? coreform/escape-bytes coreform/escape-str crypto/blake3 data/tag dec/add dec/eq? dec/from-int dec/lt? dec/mul dec/parse dec/sub dec/to-str int/add int/div int/eq? int/lt? int/mod int/mul int/sub int/to-str list/is-nil? map/entries map/from-entries map/get map/len map/merge map/put pair/as-proper-list pair/car pair/cdr pair/cons str/concat str/grapheme-len str/grapheme-slice str/join str/len str/nfc str/repeat str/scalar-len str/to-bytes-utf8 sym/eq? sym/from-str sym/to-str utf8/encode-codepoint vec/get vec/len vec/push vec/set
 - contracts: core/contract::genesis core/contract::make core/contract::extend core/contract::dispatch core/contract::explain core/contract::meta core/contract::proto core/contract::shape core/msg::make core/msg::op core/msg::payload
 - modules: def ::meta :caps :exports :types module-path::name
 - effects: core/effect::pure core/effect::perform core/effect::bind core/effect::map core/effect::then core/effect::catch core/effect::catch-payload caps.toml .gclog replay
@@ -27,5 +27,5 @@ Pure evaluation is deterministic. Filesystem, time, network, process, and LLM wo
 Negative examples are valid syntax that must fail at the named semantic/resource boundary.
 Compatibility: agentProfile=GC-AGENT-v0.3 cliEnvelope=genesis/error-v0.2 coreformProfile=genesis/coreform/v0.2 diagnostics=genesis/diagnostics-schema-v1 effectLog=genesis/effect-log/v3 genesisLock=2 gpk=2 hashProfile=genesis/hash-profile/gcv0.2-blake3 languageProfile=genesis/language-profile/v0.2 packageManifest=1 releaseTrain=0.2.0 v1ReleaseClaim=reserved-not-stable valueEffectHashProfile=genesis/value-effect-hash/v0.2
 Unsupported classes: experimental-syntax host-only-operation unavailable-target nondeterministic-facility out-of-profile-capability
-Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=b31a025d927459a96c11444c2b80b883e7666dac01da6755b5c823b0e6704dc6
+Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=5a585e3bdcf30adcccdfc490b81bdafa832a1dbe485d9193e97a3bba0e350fd6
 Verify: bash scripts/check_gc_agent_core_card.sh

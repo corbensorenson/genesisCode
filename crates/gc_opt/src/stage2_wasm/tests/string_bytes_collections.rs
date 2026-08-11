@@ -1,6 +1,24 @@
 use super::*;
 
 #[test]
+fn stage2_validates_unicode_17_text_metrics_and_nfc() {
+    let src = r#"
+          (if (prim int/eq? (core/str::byte-len "é") 2)
+            (if (prim int/eq? (core/str::scalar-len "é") 2)
+              (if (prim int/eq? (core/str::grapheme-len "👩‍👩‍👧‍👦") 1)
+                (prim core/eq? (core/str::nfc "é") "é")
+                false)
+              false)
+            false)
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let report = stage2_validation_report(&forms);
+    assert!(report.supported, "{report:?}");
+    assert!(report.ok, "{report:?}");
+    assert_eq!(report.value_kind, Some(Stage2ValueKind::Bool));
+}
+
+#[test]
 fn stage2_validates_len_wrappers_on_def_bound_constant_values() {
     let src = r#"
           (def s ((core/str::concat "ab") "c"))

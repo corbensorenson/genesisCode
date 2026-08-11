@@ -105,8 +105,8 @@ def render() -> Tuple[str, Mapping[str, Any]]:
     lines = [
         "# GC-AGENT-v0.3 Core Card",
         "",
-        "Training-frozen surface. Reject unlisted or unsupported behavior; do not guess.",
-        "Pure evaluation is deterministic. Filesystem, time, network, process, and LLM work only through explicit deny-by-default effects with run/replay equivalence. User input must never panic; boundaries return sealed ERROR values. UNHANDLED, EFFECT, and ERROR are unforgeable.",
+        "Training-frozen. Reject unlisted or unsupported behavior; do not guess.",
+        "Pure evaluation is deterministic. Host work requires explicit deny-by-default effects with run/replay equivalence. User input never panics; boundaries return sealed ERROR. UNHANDLED, EFFECT, and ERROR are unforgeable.",
         "",
         "## Surface",
     ]

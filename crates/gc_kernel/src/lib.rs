@@ -6,6 +6,7 @@ mod eval;
 mod fallible_alloc;
 mod free_vars;
 mod logical_heap;
+pub mod text_profile;
 mod value;
 
 pub use compiled::{

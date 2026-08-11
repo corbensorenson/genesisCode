@@ -132,11 +132,13 @@ fn bridge_cmd_matches_allowlist(
     cmd_path: &std::path::Path,
     allowlist: &[String],
 ) -> bool {
-    let cmd_path_s = cmd_path.to_string_lossy();
+    let cmd_path_s = cmd_path.to_str();
     let cmd_name = cmd_path.file_name().and_then(|n| n.to_str());
     allowlist.iter().any(|allowed| {
         let token = allowed.trim();
-        token == cmd_raw || token == cmd_path_s || cmd_name.is_some_and(|n| n == token)
+        token == cmd_raw
+            || cmd_path_s.is_some_and(|path| token == path)
+            || cmd_name.is_some_and(|name| name == token)
     })
 }
 

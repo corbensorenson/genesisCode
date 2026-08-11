@@ -91,6 +91,10 @@ pub(super) fn dispatch_text_bytes_prim(
             };
             Ok(usize_to_int_value(s.len()))
         }
+        PrimOp::StrScalarLen
+        | PrimOp::StrGraphemeLen
+        | PrimOp::StrGraphemeSlice
+        | PrimOp::StrNfc => unicode_text::dispatch_unicode_text_prim(ctx, op, args),
         PrimOp::StrToBytesUtf8 => {
             if args.len() != 1 {
                 return type_err(ctx, "str/to-bytes-utf8 expects 1 arg");

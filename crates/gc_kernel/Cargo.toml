@@ -14,6 +14,8 @@ num-traits.workspace = true
 thiserror.workspace = true
 stacker.workspace = true
 rust-cc.workspace = true
+unicode-normalization.workspace = true
+unicode-segmentation.workspace = true
 
 # local
 gc_coreform = { path = "../gc_coreform" }

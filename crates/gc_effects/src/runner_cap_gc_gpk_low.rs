@@ -343,7 +343,9 @@ pub(super) fn capability_gc_gpk_low(
                 if !ft.is_file() {
                     continue;
                 }
-                let name = ent.file_name().to_string_lossy().to_string();
+                let Ok(name) = ent.file_name().into_string() else {
+                    continue;
+                };
                 if gc_vcs::validate_hex_hash(&name).is_err() {
                     continue;
                 }

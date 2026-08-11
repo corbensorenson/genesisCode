@@ -1,11 +1,11 @@
 use super::*;
 use std::collections::BTreeMap;
-
 #[path = "eval_prims/int_div.rs"]
 mod int_div;
 #[path = "eval_prims/text_bytes.rs"]
 mod text_bytes;
-
+#[path = "eval_prims/unicode_text.rs"]
+mod unicode_text;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum PrimOp {
     IntAdd,
@@ -45,6 +45,10 @@ pub(crate) enum PrimOp {
     SymFromStr,
     StrConcat,
     StrLen,
+    StrScalarLen,
+    StrGraphemeLen,
+    StrGraphemeSlice,
+    StrNfc,
     StrToBytesUtf8,
     StrRepeat,
     StrJoin,
@@ -116,6 +120,10 @@ impl PrimOp {
         PrimOp::SymFromStr,
         PrimOp::StrConcat,
         PrimOp::StrLen,
+        PrimOp::StrScalarLen,
+        PrimOp::StrGraphemeLen,
+        PrimOp::StrGraphemeSlice,
+        PrimOp::StrNfc,
         PrimOp::StrToBytesUtf8,
         PrimOp::StrRepeat,
         PrimOp::StrJoin,
@@ -173,6 +181,10 @@ impl PrimOp {
             "sym/from-str" => Some(PrimOp::SymFromStr),
             "str/concat" => Some(PrimOp::StrConcat),
             "str/len" => Some(PrimOp::StrLen),
+            "str/scalar-len" => Some(PrimOp::StrScalarLen),
+            "str/grapheme-len" => Some(PrimOp::StrGraphemeLen),
+            "str/grapheme-slice" => Some(PrimOp::StrGraphemeSlice),
+            "str/nfc" => Some(PrimOp::StrNfc),
             "str/to-bytes-utf8" => Some(PrimOp::StrToBytesUtf8),
             "str/repeat" => Some(PrimOp::StrRepeat),
             "str/join" => Some(PrimOp::StrJoin),
@@ -232,6 +244,10 @@ impl PrimOp {
             PrimOp::SymFromStr => "sym/from-str",
             PrimOp::StrConcat => "str/concat",
             PrimOp::StrLen => "str/len",
+            PrimOp::StrScalarLen => "str/scalar-len",
+            PrimOp::StrGraphemeLen => "str/grapheme-len",
+            PrimOp::StrGraphemeSlice => "str/grapheme-slice",
+            PrimOp::StrNfc => "str/nfc",
             PrimOp::StrToBytesUtf8 => "str/to-bytes-utf8",
             PrimOp::StrRepeat => "str/repeat",
             PrimOp::StrJoin => "str/join",
@@ -640,6 +656,10 @@ pub(crate) fn prim_op(
         | PrimOp::SymFromStr
         | PrimOp::StrConcat
         | PrimOp::StrLen
+        | PrimOp::StrScalarLen
+        | PrimOp::StrGraphemeLen
+        | PrimOp::StrGraphemeSlice
+        | PrimOp::StrNfc
         | PrimOp::StrToBytesUtf8
         | PrimOp::StrRepeat
         | PrimOp::StrJoin

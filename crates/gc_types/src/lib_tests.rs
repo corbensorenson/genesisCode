@@ -1104,3 +1104,54 @@ fn standalone_contract_method_cannot_introduce_effect_row_variable() {
         report.errors
     );
 }
+
+#[test]
+fn unicode_text_primitives_infer_precise_types() {
+    let src = r#"
+          (def m::scalar-count (prim str/scalar-len "é"))
+          (def m::grapheme-count (prim str/grapheme-len "é"))
+          (def m::slice (prim str/grapheme-slice "a👩‍👩‍👧‍👦z" 1 1))
+          (def m::normalized (prim str/nfc "é"))
+          m::normalized
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let mut sess = InferSession::default();
+    let (_env, defs) = infer_module_types(&forms, &mut sess, &BTreeMap::new());
+
+    assert!(
+        sess.errors.is_empty(),
+        "unexpected errors: {:?}",
+        sess.errors
+    );
+    assert_eq!(defs.get("m::scalar-count"), Some(&Ty::Int));
+    assert_eq!(defs.get("m::grapheme-count"), Some(&Ty::Int));
+    assert_eq!(defs.get("m::slice"), Some(&Ty::Str));
+    assert_eq!(defs.get("m::normalized"), Some(&Ty::Str));
+}
+
+#[test]
+fn unicode_text_primitives_reject_wrong_arity_and_types() {
+    let src = r#"
+          (def m::bad-scalar (prim str/scalar-len 1))
+          (def m::bad-grapheme (prim str/grapheme-len "a" "b"))
+          (def m::bad-slice (prim str/grapheme-slice "abc" 0 "1"))
+          (def m::bad-nfc (prim str/nfc false))
+          m::bad-nfc
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let mut sess = InferSession::default();
+    let _ = infer_module_types(&forms, &mut sess, &BTreeMap::new());
+
+    for expected in [
+        "prim str/scalar-len expects Str",
+        "prim str/grapheme-len expects 1 arg, got 2",
+        "prim str/grapheme-slice expects Str, Int, Int",
+        "prim str/nfc expects Str",
+    ] {
+        assert!(
+            sess.errors.iter().any(|error| error == expected),
+            "missing {expected:?} in {:?}",
+            sess.errors
+        );
+    }
+}

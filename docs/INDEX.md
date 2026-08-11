@@ -279,6 +279,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
   - `docs/spec/NUMERIC_PROFILE_v0.1.md` - normative arbitrary-precision integer, bounded fixed-decimal, unsupported-float, serialization, hashing, and backend-validation contract.
   - `docs/spec/NUMERIC_PROFILE_v0.1.json` - content-addressed closed numeric profile and exact implementation source bindings.
   - `docs/spec/NUMERIC_PROFILE_v0.1.schema.json` - closed schema for the numeric profile.
+  - `docs/spec/TEXT_PATH_PROFILE_v0.1.md` - normative Unicode 17 text, byte, grapheme, normalization, locale-independence, and portable path contract.
+  - `docs/spec/TEXT_PATH_PROFILE_v0.1.json` - content-addressed closed text/path profile and exact implementation source bindings.
+  - `docs/spec/TEXT_PATH_PROFILE_v0.1.schema.json` - closed schema for the text/path profile.
   - `docs/spec/SEALS_DISPATCH_REPLAY.md`
   - `docs/spec/DETERMINISM.md`
   - `docs/spec/VALUE_EFFECT_HASH.md` - normative runtime value graph, ownership, sharing, recursive-cycle, lifetime, host-handle boundary, logical-memory, and stable value/effect hashing contract.

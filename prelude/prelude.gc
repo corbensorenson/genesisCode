@@ -192,6 +192,17 @@
 
 (def core/str::len (fn (s) (prim str/len s)))
 
+(def core/str::byte-len core/str::len)
+
+(def core/str::scalar-len (fn (s) (prim str/scalar-len s)))
+
+(def core/str::grapheme-len (fn (s) (prim str/grapheme-len s)))
+
+(def core/str::grapheme-slice
+  (fn (s) (fn (start) (fn (len) (prim str/grapheme-slice s start len)))))
+
+(def core/str::nfc (fn (s) (prim str/nfc s)))
+
 (def core/str::to-utf8 (fn (s) (prim str/to-bytes-utf8 s)))
 
 (def core/str::from-utf8 (fn (b) (prim bytes/to-str-utf8 b)))

@@ -148,7 +148,8 @@ base_dir = "{base_dir}"
     };
     let msg = err.to_string();
     assert!(
-        msg.contains("escapes base_dir"),
+        msg.contains("filesystem path contains an empty, `.` or `..` component"),
         "unexpected sandbox error: {msg}"
     );
+    assert_eq!(std::fs::read_to_string(outside).unwrap(), "secret");
 }
