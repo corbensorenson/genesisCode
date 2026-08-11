@@ -2,8 +2,7 @@ use crate::policy::OpPolicy;
 use crate::runner_io_ops::{effective_base_dir, sandbox_path_read};
 #[cfg(not(target_os = "wasi"))]
 use crate::runner_process_control::{
-    configure_killable_process, hard_process_tree_termination_supported, terminate_and_reap,
-    terminate_descendants,
+    configure_killable_process, hard_process_tree_termination_supported,
 };
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 #[cfg(not(target_os = "wasi"))]
@@ -11,196 +10,10 @@ use std::io::{BufRead as _, BufReader, Read as _, Write as _};
 #[cfg(not(target_os = "wasi"))]
 use std::process::{ChildStdout, Command, Stdio};
 
-#[cfg(all(test, not(target_os = "wasi")))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum SpawnBridgeCleanupFault {
-    Reap,
-    ResidualVerification,
-    WriterJoin,
-}
-
-#[cfg(all(test, not(target_os = "wasi")))]
-std::thread_local! {
-    static SPAWN_BRIDGE_CLEANUP_FAULT: std::cell::Cell<Option<SpawnBridgeCleanupFault>> =
-        const { std::cell::Cell::new(None) };
-}
-
+#[path = "runner_host_bridge_spawn.rs"]
+mod runner_host_bridge_spawn;
 #[cfg(not(target_os = "wasi"))]
-static ACTIVE_BRIDGE_IO_PUMPS: std::sync::atomic::AtomicUsize =
-    std::sync::atomic::AtomicUsize::new(0);
-
-#[cfg(not(target_os = "wasi"))]
-struct ActiveBridgeIoPump;
-
-#[cfg(not(target_os = "wasi"))]
-impl ActiveBridgeIoPump {
-    fn enter() -> Self {
-        ACTIVE_BRIDGE_IO_PUMPS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        Self
-    }
-}
-
-#[cfg(not(target_os = "wasi"))]
-impl Drop for ActiveBridgeIoPump {
-    fn drop(&mut self) {
-        ACTIVE_BRIDGE_IO_PUMPS.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
-    }
-}
-
-#[cfg(not(target_os = "wasi"))]
-type BridgeWriterPump = std::thread::JoinHandle<std::io::Result<()>>;
-
-#[cfg(not(target_os = "wasi"))]
-type BridgeReaderPump = std::thread::JoinHandle<std::io::Result<Vec<u8>>>;
-
-#[cfg(not(target_os = "wasi"))]
-#[derive(Default)]
-struct SpawnBridgePumps {
-    writer: Option<BridgeWriterPump>,
-    stdout: Option<BridgeReaderPump>,
-    stderr: Option<BridgeReaderPump>,
-}
-
-#[cfg(not(target_os = "wasi"))]
-#[derive(Default)]
-struct SpawnBridgePumpResults {
-    write: Option<std::io::Result<()>>,
-    stdout: Option<std::io::Result<Vec<u8>>>,
-    stderr: Option<std::io::Result<Vec<u8>>>,
-    join_failures: Vec<&'static str>,
-}
-
-#[cfg(not(target_os = "wasi"))]
-impl SpawnBridgePumps {
-    fn join_all(mut self) -> SpawnBridgePumpResults {
-        let mut results = SpawnBridgePumpResults::default();
-        if let Some(writer) = self.writer.take() {
-            match writer.join() {
-                Ok(result) => results.write = Some(result),
-                Err(_) => results.join_failures.push("stdin pump join failed"),
-            }
-        }
-        if let Some(stdout) = self.stdout.take() {
-            match stdout.join() {
-                Ok(result) => results.stdout = Some(result),
-                Err(_) => results.join_failures.push("stdout pump join failed"),
-            }
-        }
-        if let Some(stderr) = self.stderr.take() {
-            match stderr.join() {
-                Ok(result) => results.stderr = Some(result),
-                Err(_) => results.join_failures.push("stderr pump join failed"),
-            }
-        }
-        #[cfg(test)]
-        if SPAWN_BRIDGE_CLEANUP_FAULT
-            .get()
-            .is_some_and(|fault| fault == SpawnBridgeCleanupFault::WriterJoin)
-        {
-            results
-                .join_failures
-                .push("injected stdin pump join failure");
-        }
-        results
-    }
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn spawn_bridge_reap_error(
-    family: &str,
-    context: &str,
-    failures: &[String],
-    prior: Option<&BridgeError>,
-) -> BridgeError {
-    let details = failures.join("; ");
-    let prior = prior
-        .map(|error| format!("; prior error: {}: {}", error.code, error.message))
-        .unwrap_or_default();
-    BridgeError {
-        code: format!("{family}/bridge-reap"),
-        message: format!("{context}: {details}{prior}"),
-    }
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn terminate_spawn_bridge(
-    child: &mut std::process::Child,
-) -> std::io::Result<std::process::ExitStatus> {
-    let result = terminate_and_reap(child);
-    #[cfg(test)]
-    if result.is_ok()
-        && SPAWN_BRIDGE_CLEANUP_FAULT
-            .get()
-            .is_some_and(|fault| fault == SpawnBridgeCleanupFault::Reap)
-    {
-        return Err(std::io::Error::other("injected spawn bridge reap failure"));
-    }
-    result
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn terminate_spawn_bridge_descendants(process_id: u32) -> std::io::Result<()> {
-    let result = terminate_descendants(process_id);
-    #[cfg(test)]
-    if result.is_ok()
-        && SPAWN_BRIDGE_CLEANUP_FAULT
-            .get()
-            .is_some_and(|fault| fault == SpawnBridgeCleanupFault::ResidualVerification)
-    {
-        return Err(std::io::Error::other(
-            "injected spawn bridge residual verification failure",
-        ));
-    }
-    result
-}
-
-#[cfg(all(test, not(target_os = "wasi")))]
-fn with_spawn_bridge_cleanup_fault_for_tests<T>(
-    fault: SpawnBridgeCleanupFault,
-    operation: impl FnOnce() -> T,
-) -> T {
-    struct ResetFault(Option<SpawnBridgeCleanupFault>);
-
-    impl Drop for ResetFault {
-        fn drop(&mut self) {
-            SPAWN_BRIDGE_CLEANUP_FAULT.set(self.0);
-        }
-    }
-
-    let previous = SPAWN_BRIDGE_CLEANUP_FAULT.replace(Some(fault));
-    let _reset = ResetFault(previous);
-    operation()
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn cleanup_failed_spawn_bridge(
-    family: &str,
-    child: &mut std::process::Child,
-    pumps: SpawnBridgePumps,
-    prior: BridgeError,
-) -> BridgeError {
-    let mut failures = Vec::new();
-    if let Err(error) = terminate_spawn_bridge(child) {
-        failures.push(format!("process termination/reap failed: {error}"));
-    }
-    let joined = pumps.join_all();
-    failures.extend(joined.join_failures.into_iter().map(str::to_string));
-    if failures.is_empty() {
-        prior
-    } else {
-        spawn_bridge_reap_error(
-            family,
-            "spawn-per-operation bridge cleanup failed",
-            &failures,
-            Some(&prior),
-        )
-    }
-}
-
-#[cfg(all(test, not(target_os = "wasi")))]
-fn active_bridge_io_pumps_for_tests() -> usize {
-    ACTIVE_BRIDGE_IO_PUMPS.load(std::sync::atomic::Ordering::SeqCst)
-}
+use runner_host_bridge_spawn::*;
 #[path = "runner_host_bridge_persistent.rs"]
 mod runner_host_bridge_persistent;
 #[path = "runner_host_bridge_policy.rs"]
@@ -364,7 +177,6 @@ fn run_bridge_process_once(
     args: &[String],
     timeout_ms: Option<u64>,
 ) -> Result<std::process::Output, BridgeError> {
-    use std::io::{Read as _, Write as _};
     use std::process::{Command, Stdio};
     use std::time::{Duration, Instant};
 
@@ -390,14 +202,15 @@ fn run_bridge_process_once(
     let stderr = child.stderr.take();
     let payload = payload_frame.as_bytes().to_vec();
     let mut pumps = SpawnBridgePumps::default();
+    let writer_cancel = pumps.cancellation_handle();
     let writer = std::thread::Builder::new()
         .name("gc-bridge-stdin".to_string())
         .spawn(move || {
             let _active = ActiveBridgeIoPump::enter();
-            let Some(mut stdin) = stdin else {
+            let Some(stdin) = stdin else {
                 return Ok(());
             };
-            stdin.write_all(&payload)
+            write_bridge_pipe(stdin, &payload, &writer_cancel)
         });
     let writer = match writer {
         Ok(writer) => writer,
@@ -412,15 +225,15 @@ fn run_bridge_process_once(
         }
     };
     pumps.writer = Some(writer);
+    let stdout_cancel = pumps.cancellation_handle();
     let reader = std::thread::Builder::new()
         .name("gc-bridge-stdout".to_string())
         .spawn(move || {
             let _active = ActiveBridgeIoPump::enter();
-            let mut bytes = Vec::new();
-            if let Some(mut stdout) = stdout {
-                stdout.read_to_end(&mut bytes)?;
+            match stdout {
+                Some(stdout) => read_bridge_pipe(stdout, &stdout_cancel),
+                None => Ok(Vec::new()),
             }
-            Ok::<_, std::io::Error>(bytes)
         });
     let reader = match reader {
         Ok(reader) => reader,
@@ -435,15 +248,15 @@ fn run_bridge_process_once(
         }
     };
     pumps.stdout = Some(reader);
+    let stderr_cancel = pumps.cancellation_handle();
     let error_reader = std::thread::Builder::new()
         .name("gc-bridge-stderr".to_string())
         .spawn(move || {
             let _active = ActiveBridgeIoPump::enter();
-            let mut bytes = Vec::new();
-            if let Some(mut stderr) = stderr {
-                stderr.read_to_end(&mut bytes)?;
+            match stderr {
+                Some(stderr) => read_bridge_pipe(stderr, &stderr_cancel),
+                None => Ok(Vec::new()),
             }
-            Ok::<_, std::io::Error>(bytes)
         });
     let error_reader = match error_reader {
         Ok(error_reader) => error_reader,

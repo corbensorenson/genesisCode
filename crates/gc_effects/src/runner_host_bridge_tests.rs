@@ -347,6 +347,37 @@ max_bytes = 4096
             .message
             .contains("prior error: gpu/bridge-timeout")
     );
+
+    let started = Instant::now();
+    let termination_error = super::with_spawn_bridge_cleanup_fault_for_tests(
+        super::SpawnBridgeCleanupFault::TerminationBeforeCleanup,
+        || {
+            super::call_host_bridge(
+                &mut runtime,
+                "gpu",
+                "gpu/compute::limits",
+                &Term::Nil,
+                timeout_policy.op_policy("gpu/compute::limits"),
+            )
+        },
+    )
+    .expect_err("pre-cleanup termination failure must cross the public boundary");
+    assert_eq!(termination_error.code, "gpu/bridge-reap");
+    assert!(
+        termination_error
+            .message
+            .contains("injected spawn bridge termination failure before cleanup")
+    );
+    assert!(
+        termination_error
+            .message
+            .contains("prior error: gpu/bridge-timeout")
+    );
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(1),
+        "pump cancellation and fallback reap exceeded bound: {:?}",
+        started.elapsed()
+    );
     let pids = std::fs::read_to_string(&pid_log).expect("cleanup fault pid log");
     for pid in pids
         .lines()

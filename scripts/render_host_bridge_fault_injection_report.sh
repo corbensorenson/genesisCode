@@ -277,6 +277,7 @@ report = {
             "gpu-device-restart-rejects-stale-handles",
             "model-provider-session-success-error-timeout-drop-restart",
             "network-close-failures-cross-public-boundary-after-handle-removal",
+            "spawn-pumps-cancel-before-fallback-reap",
             "warm-daemon-provider-success-error-timeout-restart-shutdown-eof",
             "xr-repeated-close-rejected",
         ],

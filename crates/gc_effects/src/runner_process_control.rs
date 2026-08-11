@@ -287,8 +287,15 @@ pub(crate) fn terminate_descendants(process_id: u32) -> std::io::Result<()> {
 #[cfg(all(not(target_os = "wasi"), unix))]
 pub(crate) fn terminate_and_reap(child: &mut Child) -> std::io::Result<ExitStatus> {
     let group_result = kill_process_group(child.id());
-    if group_result.is_err() {
-        let _ = child.kill();
+    if let Err(group_error) = &group_result
+        && let Err(child_error) = child.kill()
+    {
+        return Err(std::io::Error::new(
+            child_error.kind(),
+            format!(
+                "process-group signal failed ({group_error}); leader kill failed ({child_error})"
+            ),
+        ));
     }
     let status = child.wait()?;
     // A bridge can fork between the first group signal and leader termination.
