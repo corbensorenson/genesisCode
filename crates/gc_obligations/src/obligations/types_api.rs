@@ -482,7 +482,7 @@ pub fn test_package_with_step_limit_and_frontend(
                 &store, &pkg_dir, &manifest, &modules, limits,
             ),
             "core/obligation::gfx-api-stability" => {
-                obligation_gfx::obligation_gfx_api_stability(&store, &manifest, &modules, limits)
+                obligation_gfx_api_stability(&store, &manifest, &modules, &frontend, limits)
             }
             "core/obligation::lint" => {
                 obligation_lint(&store, &manifest, &modules, &frontend, limits)

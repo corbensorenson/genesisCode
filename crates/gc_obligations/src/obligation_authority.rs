@@ -2,6 +2,7 @@ use super::*;
 
 include!("obligation_authority_caps.rs");
 include!("obligation_authority_coverage.rs");
+include!("obligation_authority_gfx_api.rs");
 include!("obligation_authority_lint.rs");
 include!("obligation_authority_property.rs");
 include!("obligation_authority_property_finalize.rs");
@@ -21,6 +22,7 @@ pub(super) enum ObligationAuthorityOperation {
     CoverageDecision,
     CoverageMcdc,
     Determinism,
+    GfxApiStability,
     Lint,
     PropertyTests,
     ReplayableTests,
@@ -42,6 +44,7 @@ impl ObligationAuthorityOperation {
             Self::CoverageDecision => ":coverage-decision",
             Self::CoverageMcdc => ":coverage-mcdc",
             Self::Determinism => ":determinism",
+            Self::GfxApiStability => ":gfx-api-stability",
             Self::Lint => ":lint",
             Self::PropertyTests => ":property-tests",
             Self::ReplayableTests => ":replayable-tests",
@@ -63,6 +66,7 @@ impl ObligationAuthorityOperation {
             Self::CoverageDecision => "core/obligation::coverage-decision",
             Self::CoverageMcdc => "core/obligation::coverage-mcdc",
             Self::Determinism => "core/obligation::determinism",
+            Self::GfxApiStability => "core/obligation::gfx-api-stability",
             Self::Lint => "core/obligation::lint",
             Self::PropertyTests => "core/obligation::property-tests",
             Self::ReplayableTests => "core/obligation::replayable-tests",
@@ -295,6 +299,11 @@ fn request_term(
             ));
         }
         ObligationAuthorityOperation::Determinism => capability_inputs(modules, tests),
+        ObligationAuthorityOperation::GfxApiStability => {
+            return Err(authority_error(
+                "gfx API stability requires closed definition observations",
+            ));
+        }
         ObligationAuthorityOperation::Coverage
         | ObligationAuthorityOperation::CoverageDecision
         | ObligationAuthorityOperation::CoverageMcdc => {
@@ -595,6 +604,11 @@ fn decode_authority_result(
         }
         ObligationAuthorityOperation::Determinism => {
             validate_determinism_report(report, manifest, ok, &errors)?
+        }
+        ObligationAuthorityOperation::GfxApiStability => {
+            return Err(authority_error(
+                "gfx API stability requires the definition-observation decoder",
+            ));
         }
         ObligationAuthorityOperation::Lint => {
             validate_lint_report(report, manifest, modules, ok, &errors, &side_artifacts)?

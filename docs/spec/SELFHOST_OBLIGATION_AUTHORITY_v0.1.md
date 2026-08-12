@@ -12,6 +12,7 @@ does not promote the ledger row or close R4.2.d.
 `core/obligation::stage1-validation`,
 `core/obligation::coverage`, `core/obligation::coverage-decision`,
 `core/obligation::coverage-mcdc`,
+`core/obligation::gfx-api-stability`,
 `core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
 The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
@@ -206,6 +207,26 @@ and the canonical `genesis/translation-validation-v0.2` report. The host indepen
 reconstructs that report only to reject malformed, substituted, or contradictory
 output, then persists the validated GenesisCode report.
 
+For `:gfx-api-stability`, `:inputs` contains exactly ordered `:definitions`,
+canonical unique `:exports`, canonical unique `:expected-exports`, and nullable
+`:expected-surface-h`. Each definition row contains exactly its raw symbol and the
+32-byte canonical expression hash of that `def`; duplicate rows remain ordered so
+GenesisCode can detect the first conflicting cross-module definition. The host
+extracts definitions and module metadata, computes expression hashes, canonicalizes
+the two manifest/export sets, and lowercases the configured hash. These are
+mechanism facts, not gfx membership, surface, configuration-validity, or
+acceptance decisions.
+
+GenesisCode validates the closed inventory, selects only `core/gfx/` exports,
+chooses the configured set or discovered set as the tracked API, builds the exact
+`genesis/gfx-api-surface-v0.2` term from tracked symbols and definition hashes,
+computes its canonical hash, and owns all configuration, missing/extra export,
+empty surface, surface-hash mismatch, and missing-definition diagnostics in legacy
+order. It emits the exact `genesis/gfx-api-stability-v0.2` report. Rust independently
+reconstructs that report only to reject malformed, substituted, or contradictory
+output before persistence; it cannot provide a surface, verdict, diagnostic, or
+report to the production authority.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -229,6 +250,9 @@ MC/DC status, missing inventories, and errors.
 Translation reports preserve `genesis/translation-validation-v0.2`, including the
 legacy no-test shape, optimizer aggregates, module changes, stage-2 entries and
 counts, optimized-test hashes, and ordered errors.
+Gfx API reports preserve `genesis/gfx-api-stability-v0.2`, including the exact
+canonical surface term and hash, optional expected hash, ordered errors, and final
+disposition.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -285,6 +309,14 @@ observation construction, and an independently checked contradiction
 implementation. GenesisCode alone derives translation support, equivalence,
 errors, pass/fail, aggregates, and the persisted report.
 
+The former reachable Rust gfx API surface-selection, configuration-policy,
+diagnostic, report-production, and persistence path is absent from production
+obligation execution. Rust retains ordered definition and metadata extraction,
+canonical expression hashing, manifest fact normalization, and an independently
+checked contradiction implementation. GenesisCode alone derives tracked gfx
+membership, surface content and identity, all errors, pass/fail, and the persisted
+report.
+
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
 set, artifact,
 entrypoint, migrated and residual obligation inventories, primitive host facts, and
@@ -310,13 +342,16 @@ branches, missing MC/DC independence, open observations, exact request binding,
 report tampering, and a real uncovered-export package. Translation controls cover
 complete, divergent, and no-test observations, stage-2 and optimized-test
 mismatches, open and misaligned facts, exact request binding, report tampering, and
-the authentic optimized `pkg_basic` package. Runtime
+the authentic optimized `pkg_basic` package. Gfx API controls cover a valid
+configured surface, missing exports, conflicting definitions, open observations,
+request substitution, and surface-report tampering; native/WASI fixtures exercise
+both a complete graphics package and a configured surface-hash mismatch. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 4 obligation kinds remain host-authoritative or only partially routed.
+The other 3 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

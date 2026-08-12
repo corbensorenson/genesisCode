@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "07a550161ea7857f0e7b22da58f1e75206bfbc2bdd97e759489bcac96e55d50f",
+  "contentIdentitySha256": "fe925d6cfec92a8463c5105acfb8aa2722f913738bbd366900c8143cafa7a090",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -23,6 +23,10 @@
     "effect-log-entry-task-id",
     "effect-program-status",
     "expected-value-hash",
+    "gfx-api-configured-export-symbol",
+    "gfx-api-configured-surface-hash",
+    "gfx-api-definition-expression-hash",
+    "gfx-api-export-symbol",
     "module-path",
     "observed-effect-operation",
     "optimizer-original-evaluation-error",
@@ -63,6 +67,7 @@
     "core/obligation::coverage-decision",
     "core/obligation::coverage-mcdc",
     "core/obligation::determinism",
+    "core/obligation::gfx-api-stability",
     "core/obligation::lint",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
@@ -87,7 +92,6 @@
     "genesis_wasi"
   ],
   "residualObligations": [
-    "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
     "core/obligation::preflight"
@@ -110,9 +114,10 @@
     "selfhost/obligation_authority_stage_v1.gc",
     "selfhost/obligation_authority_coverage_v1.gc",
     "selfhost/obligation_authority_translation_v1.gc",
+    "selfhost/obligation_authority_gfx_api_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "9208da5af07953692940300f6cbe1b0a386995fca8765ffae66cacb9ccdc0822",
+  "sourceSetSha256": "b324c020055920e6f65bf9dc8fb90c7b54d8ff028fd6287f3f68c6f8c323e0fb",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

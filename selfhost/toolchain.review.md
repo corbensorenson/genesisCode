@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `3f274a5e0cedf811a10ff23fe83d5fc8a9a0cbe52130a1a46fc4da7777b6a04b`
-- Freshness artifact hash: `3f274a5e0cedf811a10ff23fe83d5fc8a9a0cbe52130a1a46fc4da7777b6a04b`
-- Freshness source hash: `1053112621ad8ffe64778ea4bb8242a6117fb2650f92fb5217d6e9cbf5948042`
-- Source aggregate hash (module path + module sha256): `35a86bc9484052e1348a990ef702601518a138e10ac6e86743d042ac6f26c4c9`
+- Artifact sha256: `47915efa733d9c7293bf538c7c086ea147812bdea8b66733a9029de6ccadd5fe`
+- Freshness artifact hash: `47915efa733d9c7293bf538c7c086ea147812bdea8b66733a9029de6ccadd5fe`
+- Freshness source hash: `47f7f44812ada9fac0f2c84d274822c5e03dfd594014c40b1c2366865bee97b9`
+- Source aggregate hash (module path + module sha256): `c34b30884fcde4c774025c14845f05e1b6606ec4cd49998f2fda5dfe4cfc8d84`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `67`
+- Module count: `68`
 
 ## Module Summary
 
@@ -81,7 +81,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/obligation_authority_stage_v1.gc` | 161 | 7200 | 9 | `ca1ff0651febd10d` |
 | `selfhost/obligation_authority_coverage_v1.gc` | 523 | 24182 | 29 | `77e5304e98081ef0` |
 | `selfhost/obligation_authority_translation_v1.gc` | 547 | 25227 | 24 | `d2f924dbde90c365` |
-| `selfhost/obligation_authority_v1.gc` | 83 | 5188 | 3 | `5d6676773f456512` |
+| `selfhost/obligation_authority_gfx_api_v1.gc` | 247 | 11297 | 16 | `d7824d7cb9d3a46f` |
+| `selfhost/obligation_authority_v1.gc` | 85 | 5384 | 3 | `033aaa8a235bcb85` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -151,5 +152,6 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/obligation_authority_stage_v1.gc`: `selfhost/obligation::stage-eval-valid?`, `selfhost/obligation::stage-optimizer-valid?`, `selfhost/obligation::stage-module-valid?`, `selfhost/obligation::stage-module-errors`, `selfhost/obligation::stage-prefix-errors-loop`, `selfhost/obligation::stage-prefix-errors`, `selfhost/obligation::stage-module-report`, `selfhost/obligation::stage-modules-loop`
 - `selfhost/obligation_authority_coverage_v1.gc`: `selfhost/obligation::coverage-profile-valid?`, `selfhost/obligation::coverage-structural?`, `selfhost/obligation::coverage-mcdc?`, `selfhost/obligation::coverage-name`, `selfhost/obligation::coverage-operation`, `selfhost/obligation::coverage-count-row-valid?`, `selfhost/obligation::coverage-site-row-valid?`, `selfhost/obligation::coverage-decision-counts-valid?`
 - `selfhost/obligation_authority_translation_v1.gc`: `selfhost/obligation::translation-vector-valid-loop?`, `selfhost/obligation::translation-vector-valid?`, `selfhost/obligation::translation-string-vector-valid?`, `selfhost/obligation::translation-status-valid?`, `selfhost/obligation::translation-value-kind-valid?`, `selfhost/obligation::translation-optional-bool?`, `selfhost/obligation::translation-rewrite-valid?`, `selfhost/obligation::translation-stage2-valid?`
+- `selfhost/obligation_authority_gfx_api_v1.gc`: `selfhost/obligation::gfx-api-symbol-vector-valid-loop?`, `selfhost/obligation::gfx-api-symbol-vector-valid?`, `selfhost/obligation::gfx-api-definition-valid?`, `selfhost/obligation::gfx-api-definition-error`, `selfhost/obligation::gfx-api-definitions-loop`, `selfhost/obligation::gfx-api-starts-with?`, `selfhost/obligation::gfx-api-filter-exports-loop`, `selfhost/obligation::gfx-api-filter-exports`
 - `selfhost/obligation_authority_v1.gc`: `selfhost/obligation::bind-result`, `selfhost/obligation::dispatch`, `core/cli::obligation-authority`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

@@ -78,6 +78,7 @@ MIGRATED = [
     "core/obligation::coverage-decision",
     "core/obligation::coverage-mcdc",
     "core/obligation::determinism",
+    "core/obligation::gfx-api-stability",
     "core/obligation::lint",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
@@ -88,7 +89,6 @@ MIGRATED = [
     "core/obligation::unit-tests",
 ]
 RESIDUAL = [
-    "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
     "core/obligation::preflight",
@@ -105,6 +105,7 @@ SOURCE_MODULES = [
     "selfhost/obligation_authority_stage_v1.gc",
     "selfhost/obligation_authority_coverage_v1.gc",
     "selfhost/obligation_authority_translation_v1.gc",
+    "selfhost/obligation_authority_gfx_api_v1.gc",
     "selfhost/obligation_authority_v1.gc",
 ]
 
@@ -155,6 +156,10 @@ def validate(profile, schema, check_identity=True):
             "effect-log-entry-task-id",
             "effect-program-status",
             "expected-value-hash",
+            "gfx-api-configured-export-symbol",
+            "gfx-api-configured-surface-hash",
+            "gfx-api-definition-expression-hash",
+            "gfx-api-export-symbol",
             "module-path",
             "observed-effect-operation",
             "optimizer-original-evaluation-error",
@@ -274,6 +279,7 @@ def validate_bridge(bridge: str) -> None:
         "ObligationAuthorityOperation::ConcurrencyReplay",
         "ObligationAuthorityOperation::PropertyTests",
         "ObligationAuthorityOperation::TranslationValidation",
+        "ObligationAuthorityOperation::GfxApiStability",
         "ObligationAuthorityOperation::TypecheckStrict",
         'Term::symbol(":request-h")',
         "let request_hash = hash_term(&request);",
@@ -292,6 +298,10 @@ def validate_bridge(bridge: str) -> None:
         "coverage_decoder_rejects_request_and_report_tampering",
         "translation_authority_decides_complete_divergent_and_no_test_observations",
         "translation_authority_rejects_open_substituted_and_tampered_results",
+        "gfx_api_authority_decides_surface_export_and_definition_facts",
+        "gfx_api_authority_rejects_open_substituted_and_tampered_results",
+        "evaluate_gfx_api_obligation_with_authority(",
+        "decode_gfx_api_result(",
     ]
     for token in required:
         if token not in bridge:
@@ -329,6 +339,8 @@ def static_check(root: Path, profile):
         fail("self-host coverage obligation route is absent")
     if "selfhost/obligation::translation-validation" not in combined_sources:
         fail("self-host translation-validation obligation route is absent")
+    if "selfhost/obligation::gfx-api-stability" not in combined_sources:
+        fail("self-host gfx API obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -350,6 +362,8 @@ def static_check(root: Path, profile):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_coverage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_translation.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_translation_finalize.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_gfx_api.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_gfx_api.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_translation.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs").read_text()
@@ -396,6 +410,10 @@ def static_check(root: Path, profile):
         fail("coverage authority production dispatch drift")
     if types_api.count("obligation_translation_validation(") != 1:
         fail("translation authority production dispatch drift")
+    if types_api.count(
+        "obligation_gfx_api_stability(&store, &manifest, &modules, &frontend, limits)"
+    ) != 1:
+        fail("gfx API authority production dispatch drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
@@ -408,6 +426,8 @@ def static_check(root: Path, profile):
     lint_host = (root / "crates/gc_obligations/src/obligation_lint.rs").read_text()
     replay_host = (root / "crates/gc_obligations/src/obligation_exec_replay.rs").read_text()
     property_host = (root / "crates/gc_obligations/src/obligation_exec_tests.rs").read_text()
+    gfx_api_host = (root / "crates/gc_obligations/src/obligation_gfx_api.rs").read_text()
+    gfx_residual_host = (root / "crates/gc_obligations/src/obligation_gfx.rs").read_text()
     forbidden = [
         "t.steps >",
         "t.effect_entries >",
@@ -515,6 +535,21 @@ def static_check(root: Path, profile):
         fail("reachable host capability-declaration decision restored")
     if "ObligationAuthorityOperation::UnitTests" in translation_host:
         fail("translation execution restored a host-selected unit-test verdict")
+    if gfx_api_host.count("evaluate_gfx_api_obligation_with_authority(") != 1:
+        fail("gfx API authority invocation drift")
+    for token in (
+        "api-stability-analysis",
+        "api-stability-report",
+        '"genesis/gfx-api-stability-v0.2"',
+        '"gfx API surface hash mismatch"',
+        '"missing exported gfx symbols"',
+        '"unexpected exported gfx symbols"',
+        '"no tracked gfx API exports found"',
+    ):
+        if token in gfx_api_host or token in gfx_residual_host:
+            fail(f"reachable host gfx API policy restored: {token}")
+    if "store.put_term(" in gfx_api_host:
+        fail("reachable host gfx API report persistence restored")
     for package in ("gc_cli", "gc_wasi_cli"):
         tree = cargo_tree(root, package)
         if 'gc_obligations feature "parity-oracle"' in tree:
@@ -693,6 +728,18 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
             False,
             ["core/obligation::unit-tests", "core/obligation::coverage"],
         ),
+        (
+            "tests/spec/pkg_gfx_obligations",
+            0,
+            True,
+            ["core/obligation::gfx-api-stability"],
+        ),
+        (
+            "tests/spec/pkg_fail_gfx_api",
+            30,
+            False,
+            ["core/obligation::gfx-api-stability"],
+        ),
     ]
     all_observations = []
     for binary in binaries:
@@ -744,6 +791,8 @@ def self_test(root: Path, profile, schema):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_coverage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_translation.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_translation_finalize.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_gfx_api.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_gfx_api.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_translation.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs").read_text()
@@ -792,6 +841,8 @@ def self_test(root: Path, profile, schema):
         ("coverage-host-facts", "evaluate_coverage_obligation_with_authority("),
         ("translation-route", "decode_translation_result("),
         ("translation-host-facts", "translation_inputs("),
+        ("gfx-api-route", "decode_gfx_api_result("),
+        ("gfx-api-host-facts", "evaluate_gfx_api_obligation_with_authority("),
     ]:
         try:
             validate_bridge(bridge.replace(route, ""))

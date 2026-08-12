@@ -1103,6 +1103,135 @@ fn translation_authority_rejects_open_substituted_and_tampered_results() {
     );
 }
 
+fn gfx_api_observation() -> GfxApiObservation {
+    GfxApiObservation {
+        definitions: vec![GfxApiDefinitionObservation {
+            symbol: "core/gfx/example::stable".to_string(),
+            expression_hash: [1; 32],
+        }],
+        exported_symbols: vec![
+            "core/gfx/example::stable".to_string(),
+            "pkg/example::internal".to_string(),
+        ],
+        expected_symbols: vec!["core/gfx/example::stable".to_string()],
+        expected_surface_hash: None,
+    }
+}
+
+fn invoke_gfx_api(manifest: &PackageManifest, observation: &GfxApiObservation) -> (Term, [u8; 32]) {
+    let request = authority_request_term(
+        ObligationAuthorityOperation::GfxApiStability,
+        &manifest.name,
+        gfx_api_inputs(observation),
+    );
+    let request_hash = hash_term(&request);
+    let result =
+        invoke_authority(request, &fixture_frontend(), limits()).expect("gfx API authority result");
+    (result, request_hash)
+}
+
+#[test]
+fn gfx_api_authority_decides_surface_export_and_definition_facts() {
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec/pkg_gfx_obligations/package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let store = EvidenceStore::open(&package_dir).expect("fixture evidence store");
+    let valid = gfx_api_observation();
+    let (result, request_hash) = invoke_gfx_api(&manifest, &valid);
+    let decoded = decode_gfx_api_result(&store, &manifest, &valid, request_hash, result)
+        .expect("valid gfx API result");
+    assert!(decoded.ok);
+
+    let mut missing = valid.clone();
+    missing.exported_symbols.clear();
+    let (result, request_hash) = invoke_gfx_api(&manifest, &missing);
+    let decoded = decode_gfx_api_result(&store, &manifest, &missing, request_hash, result)
+        .expect("missing export gfx API result");
+    assert_eq!(decoded.errors, vec!["missing exported gfx symbols"]);
+
+    let mut conflicting = valid.clone();
+    conflicting.definitions.push(GfxApiDefinitionObservation {
+        symbol: "core/gfx/example::stable".to_string(),
+        expression_hash: [2; 32],
+    });
+    let (result, request_hash) = invoke_gfx_api(&manifest, &conflicting);
+    let decoded = decode_gfx_api_result(&store, &manifest, &conflicting, request_hash, result)
+        .expect("conflicting definition gfx API result");
+    assert_eq!(
+        decoded.errors,
+        vec!["symbol core/gfx/example::stable has conflicting definitions across modules"]
+    );
+}
+
+#[test]
+fn gfx_api_authority_rejects_open_substituted_and_tampered_results() {
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec/pkg_gfx_obligations/package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let store = EvidenceStore::open(&package_dir).expect("fixture evidence store");
+    let observation = gfx_api_observation();
+    let (result, request_hash) = invoke_gfx_api(&manifest, &observation);
+
+    let mut substituted = observation.clone();
+    substituted.expected_symbols = vec!["core/gfx/example::different".to_string()];
+    let substituted_request = authority_request_term(
+        ObligationAuthorityOperation::GfxApiStability,
+        &manifest.name,
+        gfx_api_inputs(&substituted),
+    );
+    let error = decode_gfx_api_result(
+        &store,
+        &manifest,
+        &substituted,
+        hash_term(&substituted_request),
+        result.clone(),
+    )
+    .expect_err("substituted gfx API request must fail closed");
+    assert!(error.to_string().contains("identity mismatch"));
+
+    let mut open_inputs = gfx_api_inputs(&observation);
+    let Term::Map(inputs) = &mut open_inputs else {
+        panic!("gfx API inputs must be a map");
+    };
+    let Some(Term::Vector(definitions)) = inputs.get_mut(&TermOrdKey(Term::symbol(":definitions")))
+    else {
+        panic!("gfx API definitions must be a vector");
+    };
+    let Term::Map(definition) = &mut definitions[0] else {
+        panic!("gfx API definition must be a map");
+    };
+    definition.insert(TermOrdKey(Term::symbol(":verdict")), Term::Bool(true));
+    let request = authority_request_term(
+        ObligationAuthorityOperation::GfxApiStability,
+        &manifest.name,
+        open_inputs,
+    );
+    let error = invoke_authority(request, &fixture_frontend(), limits())
+        .expect_err("open gfx API observation must fail closed");
+    assert!(error.to_string().contains("definition observation"));
+
+    let mut tampered = result;
+    let Term::Map(outer) = &mut tampered else {
+        panic!("gfx API result must be a map");
+    };
+    let Some(Term::Map(report)) = outer.get_mut(&TermOrdKey(Term::symbol(":report"))) else {
+        panic!("gfx API report must be a map");
+    };
+    report.insert(
+        TermOrdKey(Term::symbol(":surface-h")),
+        Term::Str("0".repeat(64)),
+    );
+    let error = decode_gfx_api_result(&store, &manifest, &observation, request_hash, tampered)
+        .expect_err("tampered gfx API report must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("contradicts definition observations")
+    );
+}
+
 fn authority_fixture(
     fixture: &str,
 ) -> (

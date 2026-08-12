@@ -5,6 +5,7 @@ mod obligation_cache;
 mod obligation_eval_helpers;
 mod obligation_exec;
 mod obligation_gfx;
+mod obligation_gfx_api;
 mod obligation_lint;
 mod obligation_stage;
 mod obligation_translation;
@@ -45,6 +46,7 @@ use crate::obligation_authority::{
 use crate::obligation_cache::*;
 pub(crate) use crate::obligation_eval_helpers::*;
 use crate::obligation_exec::*;
+use crate::obligation_gfx_api::obligation_gfx_api_stability;
 use crate::obligation_lint::{obligation_ai_style, obligation_lint};
 use crate::obligation_stage::{PackageEval, obligation_stage1_validation};
 use crate::obligation_translation::obligation_translation_validation;

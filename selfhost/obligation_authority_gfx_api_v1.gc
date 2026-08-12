@@ -1,0 +1,247 @@
+(def selfhost/obligation::gfx-api-symbol-vector-valid-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/obligation::sym? ((core/vec::get values) index))
+          ((selfhost/obligation::gfx-api-symbol-vector-valid-loop? values)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/obligation::gfx-api-symbol-vector-valid?
+  (fn (value)
+    (if (selfhost/obligation::vec? value)
+      ((selfhost/obligation::gfx-api-symbol-vector-valid-loop? value) 0)
+      false)))
+
+(def selfhost/obligation::gfx-api-definition-valid?
+  (fn (definition)
+    (if (selfhost/obligation::map? definition)
+      (if ((core/int::eq? (core/map::len definition)) 2)
+        (if (selfhost/obligation::sym? ((core/map::get definition) (quote :sym)))
+          (selfhost/obligation::hash? ((core/map::get definition) (quote :expr-h)))
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::gfx-api-definition-error
+  (fn (symbol)
+    ((core/str::concat "symbol ")
+      ((core/str::concat (core/sym::to-str symbol))
+        " has conflicting definitions across modules"))))
+
+(def selfhost/obligation::gfx-api-definitions-loop
+  (fn (definitions)
+    (fn (index)
+      (fn (definition-map)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len definitions))
+            {:definition-map definition-map :errors errors}
+            (let ((definition ((core/vec::get definitions) index)))
+              (if (selfhost/obligation::gfx-api-definition-valid? definition)
+                (let
+                  ((symbol ((core/map::get definition) (quote :sym)))
+                    (expression-h ((core/map::get definition) (quote :expr-h))))
+                  (let ((previous ((core/map::get definition-map) symbol)))
+                    (((((selfhost/obligation::gfx-api-definitions-loop definitions)
+                          ((core/int::add index) 1))
+                        (((core/map::put definition-map) symbol) expression-h))
+                      (if (selfhost/obligation::nil? previous)
+                        errors
+                        (if ((core/eq? previous) expression-h)
+                          errors
+                          ((core/vec::push errors)
+                            (selfhost/obligation::gfx-api-definition-error symbol))))))))
+                (selfhost/obligation::error
+                  "gfx API definition observation must contain exactly :sym and :expr-h")))))))))
+
+(def selfhost/obligation::gfx-api-starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let
+            ((length (core/bytes::len bytes))
+              (prefix-length (core/bytes::len prefix-bytes)))
+            (if ((core/int::lt? length) prefix-length)
+              false
+              ((core/eq? (((core/bytes::slice bytes) 0) prefix-length)) prefix-bytes))))))))
+
+(def selfhost/obligation::gfx-api-filter-exports-loop
+  (fn (exports)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len exports))
+          out
+          (let ((symbol ((core/vec::get exports) index)))
+            (((selfhost/obligation::gfx-api-filter-exports-loop exports)
+               ((core/int::add index) 1))
+              (if
+                ((selfhost/obligation::gfx-api-starts-with? (core/sym::to-str symbol))
+                  "core/gfx/")
+                ((core/vec::push out) symbol)
+                out))))))))
+
+(def selfhost/obligation::gfx-api-filter-exports
+  (fn (exports) (((selfhost/obligation::gfx-api-filter-exports-loop exports) 0) [])))
+
+(def selfhost/obligation::gfx-api-surface-loop
+  (fn (tracked)
+    (fn (definition-map)
+      (fn (index)
+        (fn (entries)
+          (fn (missing)
+            (if ((core/int::eq? index) (core/vec::len tracked))
+              {:entries entries :missing missing}
+              (let ((symbol ((core/vec::get tracked) index)))
+                (let ((expression-h ((core/map::get definition-map) symbol)))
+                  ((((((selfhost/obligation::gfx-api-surface-loop tracked) definition-map)
+                         ((core/int::add index) 1))
+                       (if (selfhost/obligation::nil? expression-h)
+                         entries
+                         ((core/vec::push entries) {:expr-h expression-h :sym symbol})))
+                     (if (selfhost/obligation::nil? expression-h)
+                       ((core/vec::push missing) symbol)
+                       missing))))))))))))
+
+(def selfhost/obligation::gfx-api-surface
+  (fn (tracked)
+    (fn (definition-map)
+      (((((selfhost/obligation::gfx-api-surface-loop tracked) definition-map) 0) []) []))))
+
+(def selfhost/obligation::gfx-api-lower-hex-byte?
+  (fn (byte)
+    (if (if ((core/int::lt? 47) byte) ((core/int::lt? byte) 58) false)
+      true
+      (if ((core/int::lt? 96) byte) ((core/int::lt? byte) 103) false))))
+
+(def selfhost/obligation::gfx-api-lower-hex-loop?
+  (fn (bytes)
+    (fn (index)
+      (if ((core/int::eq? index) (core/bytes::len bytes))
+        true
+        (if (selfhost/obligation::gfx-api-lower-hex-byte? ((core/bytes::get bytes) index))
+          ((selfhost/obligation::gfx-api-lower-hex-loop? bytes) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/obligation::gfx-api-optional-surface-h-valid?
+  (fn (value)
+    (if (selfhost/obligation::nil? value)
+      true
+      (if (selfhost/obligation::str? value)
+        (let ((bytes (core/str::to-utf8 value)))
+          (if ((core/int::eq? (core/bytes::len bytes)) 64)
+            ((selfhost/obligation::gfx-api-lower-hex-loop? bytes) 0)
+            false))
+        false))))
+
+(def selfhost/obligation::gfx-api-finalize
+  (fn (package)
+    (fn (context)
+      (let
+        ((definition-state ((core/map::get context) (quote :definition-state)))
+          (filtered-exports ((core/map::get context) (quote :filtered-exports)))
+          (expected-exports ((core/map::get context) (quote :expected-exports)))
+          (expected-surface-h ((core/map::get context) (quote :expected-surface-h)))
+          (tracked ((core/map::get context) (quote :tracked)))
+          (surface-state ((core/map::get context) (quote :surface-state))))
+        (let
+          ((surface
+             {:defs ((core/map::get surface-state) (quote :entries))
+              :exports tracked
+              :kind "genesis/gfx-api-surface-v0.2"}))
+          (let ((surface-h (selfhost/hash::hash-term surface)))
+            (if (core/error::is? surface-h)
+              surface-h
+              (let
+                ((analysis
+                   (((((((core/gfx/obligation::api-stability-analysis filtered-exports)
+                          expected-exports)
+                         tracked)
+                        expected-surface-h)
+                       surface-h)
+                      (if ((core/int::eq? (core/vec::len expected-exports)) 0)
+                        (if (selfhost/obligation::nil? expected-surface-h) false true)
+                        true))
+                     ((core/map::get surface-state) (quote :missing)))))
+                (let
+                  ((format-errors
+                     (if
+                       (selfhost/obligation::gfx-api-optional-surface-h-valid? expected-surface-h)
+                       []
+                       ["gfx.api_surface_hash must be 64 lowercase hex chars"]))
+                    (errors
+                      ((selfhost/obligation::append-errors
+                         ((selfhost/obligation::append-errors
+                            ((core/map::get definition-state) (quote :errors)))
+                           format-errors))
+                        ((core/map::get analysis) (quote :errors)))))
+                  (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+                    {:errors errors
+                     :kind selfhost/obligation::RESULT_KIND
+                     :name "core/obligation::gfx-api-stability"
+                     :ok ok
+                     :operation (quote :gfx-api-stability)
+                     :report
+                       {:errors errors
+                        :expected-surface-h expected-surface-h
+                        :kind "genesis/gfx-api-stability-v0.2"
+                        :ok ok
+                        :package package
+                        :surface surface
+                        :surface-h surface-h}
+                     :v 2}))))))))))
+
+(def selfhost/obligation::gfx-api-build
+  (fn (package)
+    (fn (definitions)
+      (fn (exports)
+        (fn (expected-exports)
+          (fn (expected-surface-h)
+            (let
+              ((definition-state
+                 (((((selfhost/obligation::gfx-api-definitions-loop definitions) 0) {}) []))))
+              (if (core/error::is? definition-state)
+                definition-state
+                (let
+                  ((filtered-exports (selfhost/obligation::gfx-api-filter-exports exports))
+                    (tracked
+                      (if ((core/int::eq? (core/vec::len expected-exports)) 0)
+                        filtered-exports
+                        expected-exports)))
+                  ((selfhost/obligation::gfx-api-finalize package)
+                    {:definition-state definition-state
+                     :expected-exports expected-exports
+                     :expected-surface-h expected-surface-h
+                     :filtered-exports filtered-exports
+                     :surface-state
+                       ((selfhost/obligation::gfx-api-surface tracked)
+                         ((core/map::get definition-state) (quote :definition-map)))
+                     :tracked tracked}))))))))))
+
+(def selfhost/obligation::gfx-api-stability
+  (fn (package)
+    (fn (inputs)
+      (if ((core/int::eq? (core/map::len inputs)) 4)
+        (let
+          ((definitions ((core/map::get inputs) (quote :definitions)))
+            (exports ((core/map::get inputs) (quote :exports)))
+            (expected-exports ((core/map::get inputs) (quote :expected-exports)))
+            (expected-surface-h ((core/map::get inputs) (quote :expected-surface-h))))
+          (if (selfhost/obligation::vec? definitions)
+            (if (selfhost/obligation::gfx-api-symbol-vector-valid? exports)
+              (if (selfhost/obligation::gfx-api-symbol-vector-valid? expected-exports)
+                (if (selfhost/obligation::optional-str? expected-surface-h)
+                  (((((selfhost/obligation::gfx-api-build package) definitions) exports)
+                      expected-exports)
+                    expected-surface-h)
+                  (selfhost/obligation::error
+                    ":gfx-api-stability :expected-surface-h must be string or nil"))
+                (selfhost/obligation::error
+                  ":gfx-api-stability :expected-exports must contain only symbols"))
+              (selfhost/obligation::error
+                ":gfx-api-stability :exports must contain only symbols"))
+            (selfhost/obligation::error
+              ":gfx-api-stability :definitions must be a vector")))
+        (selfhost/obligation::error
+          ":gfx-api-stability inputs must contain exactly :definitions, :expected-exports, :expected-surface-h, and :exports")))))
