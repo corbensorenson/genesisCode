@@ -2,6 +2,8 @@ use super::*;
 
 include!("obligation_authority_caps.rs");
 include!("obligation_authority_lint.rs");
+include!("obligation_authority_property.rs");
+include!("obligation_authority_property_finalize.rs");
 include!("obligation_authority_replay.rs");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -13,6 +15,7 @@ pub(super) enum ObligationAuthorityOperation {
     ConcurrencyReplay,
     Determinism,
     Lint,
+    PropertyTests,
     ReplayableTests,
     Typecheck,
     TypecheckStrict,
@@ -28,6 +31,7 @@ impl ObligationAuthorityOperation {
             Self::ConcurrencyReplay => ":concurrency-replay",
             Self::Determinism => ":determinism",
             Self::Lint => ":lint",
+            Self::PropertyTests => ":property-tests",
             Self::ReplayableTests => ":replayable-tests",
             Self::Typecheck => ":typecheck",
             Self::TypecheckStrict => ":typecheck-strict",
@@ -43,6 +47,7 @@ impl ObligationAuthorityOperation {
             Self::ConcurrencyReplay => "core/obligation::concurrency-replay",
             Self::Determinism => "core/obligation::determinism",
             Self::Lint => "core/obligation::lint",
+            Self::PropertyTests => "core/obligation::property-tests",
             Self::ReplayableTests => "core/obligation::replayable-tests",
             Self::Typecheck => "core/obligation::typecheck",
             Self::TypecheckStrict => "core/obligation::typecheck-strict",
@@ -273,6 +278,11 @@ fn request_term(
         ObligationAuthorityOperation::Determinism => capability_inputs(modules, tests),
         ObligationAuthorityOperation::AiStyle | ObligationAuthorityOperation::Lint => {
             typecheck_inputs(modules)
+        }
+        ObligationAuthorityOperation::PropertyTests => {
+            return Err(authority_error(
+                "property tests require closed two-phase observations",
+            ));
         }
         ObligationAuthorityOperation::Typecheck | ObligationAuthorityOperation::TypecheckStrict => {
             typecheck_inputs(modules)
@@ -558,6 +568,11 @@ fn decode_authority_result(
             ok,
             &errors,
         )?,
+        ObligationAuthorityOperation::PropertyTests => {
+            return Err(authority_error(
+                "property tests require the two-phase authority decoder",
+            ));
+        }
         ObligationAuthorityOperation::Typecheck => {
             validate_typecheck_obligation_report(report, modules, false, ok, &errors)?
         }

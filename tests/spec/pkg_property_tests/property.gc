@@ -1,0 +1,14 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/property::properties]
+      :types {pkg/property::properties ?}}))
+
+(def pkg/property::properties
+  {
+    "direct" (fn (seed) true)
+    "explicit" {:body (fn (seed) true) :cases 2}
+  })
+
+pkg/property::properties

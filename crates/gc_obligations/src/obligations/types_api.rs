@@ -402,7 +402,7 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_budgets(&store, &manifest, &test_runs, &frontend, limits)
             }
             "core/obligation::property-tests" => {
-                obligation_property_tests(&store, &pkg_dir, &manifest, &modules, limits)
+                obligation_property_tests(&store, &pkg_dir, &manifest, &modules, &frontend, limits)
             }
             "core/obligation::coverage" => obligation_coverage(CoverageRunArgs {
                 store: &store,

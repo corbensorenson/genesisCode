@@ -8,6 +8,7 @@ does not promote the ledger row or close R4.2.d.
 `core/obligation::capabilities-declared`, `core/obligation::determinism`,
 `core/obligation::lint`, `core/obligation::ai-style`,
 `core/obligation::replayable-tests`, `core/obligation::concurrency-replay`,
+`core/obligation::property-tests`,
 `core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
 The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
@@ -120,6 +121,23 @@ logs are absent, preserving the existing obligation behavior. Replay execution o
 log decoding failure remains an explicit host-boundary error rather than a
 synthetic policy result.
 
+For `:property-tests`, authority is two-phase and both requests are bound in full.
+The `:plan` phase contains exactly `:configured`, `:default-cases`, `:phase`, and
+ordered `:suites`. Suite and entry observations carry only manifest position, raw
+shape, printable invalid values, callable presence, and the raw optional case
+integer. GenesisCode validates those facts, preserves legacy error order, derives
+every case count, constructs each seed with the normative
+`GCv0.2\0property\0seed\0` BLAKE3 domain and little-endian case index, and emits
+the exact ordered test plan with `:stop-rule :first-non-pass`. The host strictly
+checks request binding and plan contradictions, then invokes only the referenced
+callables with the authorized seeds. It records ordered raw value, apply-error, or
+effect-program outcomes and stops only when the plan's declared rule requires it.
+The `:finalize` phase contains the same immutable inputs plus exactly those raw
+outcomes. GenesisCode rejects omitted, additional, reordered, seed-substituted, or
+post-failure attempts and produces the canonical `genesis/property-tests-v0.2`
+report and errors. Rust independently reconstructs the report only to reject a
+contradiction before persistence; it does not supply the production verdict.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -132,7 +150,9 @@ report preserves the existing `genesis/unit-tests-v0.2`, `genesis/budgets-v0.2`,
 `genesis/ai-style-v0.1`, or `genesis/typecheck-v0.2` artifact shape and ordering.
 Replay reports preserve `genesis/replayable-tests-v0.2` and
 `genesis/concurrency-replay-v0.1`; both contain ordered errors and the latter binds
-the exact concurrent-test count.
+the exact concurrent-test count. Property reports preserve
+`genesis/property-tests-v0.2`; the intermediate closed plan is
+`genesis/property-test-plan-v0.1` and is never acceptance evidence by itself.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -162,7 +182,10 @@ strict-warning classifier, AI-style diagnostic producer, and artifact-loading
 composition path are also absent. The former Rust task-operation classifier,
 scheduling-policy checks, replay-hash comparison, concurrent-test counter, and
 replay report producer are absent; one bounded host observation pass is shared by
-both replay obligations. Neither an
+both replay obligations. The former reachable Rust property inventory, seed-plan,
+failure-decision, and report path is replaced by the two-phase authority; the host
+retains callable invocation and an independently checked implementation of the
+authorized first-non-pass stop mechanism. Neither an
 environment variable nor a feature can silently restore them.
 
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
@@ -181,14 +204,15 @@ unknown operations, host metadata and strictness injection, static/runtime
 determinism failures, lint errors and warnings, canonical autofix persistence,
 strict AI-style warnings, side-artifact substitution, contradictory final reports,
 valid/failing ordinary and strict package routes, replay hash disagreement, open
-replay observations, missing task scheduling fields, and contradictory concurrent
-counts. Runtime
+replay observations, missing task scheduling fields, contradictory concurrent
+counts, exact property seeds, full passing case execution, first-case failure, and
+seed-plan tampering. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 10 obligation kinds remain host-authoritative or only partially routed.
+The other 9 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

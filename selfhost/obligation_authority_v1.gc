@@ -41,7 +41,9 @@
                           (((selfhost/obligation::replay-authority operation) package) inputs)
                           (if ((core/sym::eq? operation) (quote :concurrency-replay))
                             (((selfhost/obligation::replay-authority operation) package) inputs)
-                            (selfhost/obligation::error "unknown obligation authority operation")))))))))))))))
+                            (if ((core/sym::eq? operation) (quote :property-tests))
+                              ((selfhost/obligation::property-authority package) inputs)
+                              (selfhost/obligation::error "unknown obligation authority operation"))))))))))))))))
 
 (def core/cli::obligation-authority
   (fn (request)

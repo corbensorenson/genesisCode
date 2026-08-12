@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `8f0cd0fb1b66dd8cefbd7d2324847110550bdfc4a5a5f3ae7ba55423df6b63ca`
-- Freshness artifact hash: `8f0cd0fb1b66dd8cefbd7d2324847110550bdfc4a5a5f3ae7ba55423df6b63ca`
-- Freshness source hash: `1e4c5618405de46da2c1d509fdc43f75c0e6070c3c0b98e2a7d8a8a886108d5b`
-- Source aggregate hash (module path + module sha256): `9906f4b82ff714a44456aea450abaad1030f578edb91da53f822be4b6b773f1f`
+- Artifact sha256: `09509829ab483745f472b1fbd88bc8de10176b4efb3a4ceef3f31c699d16c8f6`
+- Freshness artifact hash: `09509829ab483745f472b1fbd88bc8de10176b4efb3a4ceef3f31c699d16c8f6`
+- Freshness source hash: `87357952019a4d6188358ed133fe5bc390394c8f605e96611058601dbde79e4a`
+- Source aggregate hash (module path + module sha256): `6a15688fb56e7b7aff6372919c7a5a21a5a16e7be31d2b4f8d506ff794668499`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `63`
+- Module count: `64`
 
 ## Module Summary
 
@@ -77,7 +77,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/obligation_authority_lint_v1.gc` | 340 | 14378 | 18 | `141e6f21525f3e85` |
 | `selfhost/obligation_authority_ai_style_v1.gc` | 220 | 10449 | 9 | `2f1769614f19e319` |
 | `selfhost/obligation_authority_replay_v1.gc` | 354 | 16695 | 17 | `d8a929727e4a40ea` |
-| `selfhost/obligation_authority_v1.gc` | 71 | 4155 | 3 | `5ac309c2e85badc3` |
+| `selfhost/obligation_authority_property_v1.gc` | 606 | 32356 | 30 | `05c601549992b546` |
+| `selfhost/obligation_authority_v1.gc` | 73 | 4331 | 3 | `c71cb36de093f16f` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -143,5 +144,6 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/obligation_authority_lint_v1.gc`: `selfhost/obligation::artifact-hash-term`, `selfhost/obligation::map-has-key-loop?`, `selfhost/obligation::map-has-key?`, `selfhost/obligation::lint-find-meta-loop`, `selfhost/obligation::lint-symbol-exports-loop`, `selfhost/obligation::lint-fill-types-loop`, `selfhost/obligation::lint-autofix-patch`, `selfhost/obligation::lint-autofix-types`
 - `selfhost/obligation_authority_ai_style_v1.gc`: `selfhost/obligation::style-strict-code?`, `selfhost/obligation::style-level`, `selfhost/obligation::style-autofix-loop`, `selfhost/obligation::style-fixes`, `selfhost/obligation::style-diagnostic-step`, `selfhost/obligation::style-diagnostics-loop`, `selfhost/obligation::style-modules-loop`, `selfhost/obligation::style-patch-intents-loop`
 - `selfhost/obligation_authority_replay_v1.gc`: `selfhost/obligation::replay-map-has-key?`, `selfhost/obligation::replay-map-has-key-loop?`, `selfhost/obligation::replay-entry-valid?`, `selfhost/obligation::replay-entries-valid-loop?`, `selfhost/obligation::replay-observation-valid?`, `selfhost/obligation::replay-starts-with?`, `selfhost/obligation::replay-task-op?`, `selfhost/obligation::replay-task-id-required?`
+- `selfhost/obligation_authority_property_v1.gc`: `selfhost/obligation::property-map-has-key-loop?`, `selfhost/obligation::property-map-has-key?`, `selfhost/obligation::property-exact-map?`, `selfhost/obligation::property-keys-loop`, `selfhost/obligation::property-optional-str?`, `selfhost/obligation::property-str4`, `selfhost/obligation::property-str5`, `selfhost/obligation::property-str6`
 - `selfhost/obligation_authority_v1.gc`: `selfhost/obligation::bind-result`, `selfhost/obligation::dispatch`, `core/cli::obligation-authority`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

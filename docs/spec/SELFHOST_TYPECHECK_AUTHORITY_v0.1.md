@@ -102,7 +102,7 @@ PB-6 pass, reset its baseline, or block the H2 semantic-authority transition.
 
 The focused shell harness separately invokes the compile-time parity binary
 over every package selected by `tests/spec/pkg_*/package.toml`, from one copied,
-lexically ordered 25-fixture corpus. It requires exact exit and output equality
+lexically ordered 26-fixture corpus. It requires exact exit and output equality
 between the Rust oracle and production self-host authority and publishes one
 content identity over all copied fixture bytes. The independent Python verifier
 remains oracle-free. Package, module/meta, dependency, capability-policy,

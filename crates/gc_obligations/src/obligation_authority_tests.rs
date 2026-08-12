@@ -489,6 +489,63 @@ fn obligation_authority_rejects_result_bound_to_another_request() {
     assert!(error.to_string().contains("result identity mismatch"));
 }
 
+#[test]
+fn property_authority_plans_exact_seeds_and_rejects_seed_tampering() {
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec/pkg_fail_property_tests/package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let modules = load_modules(
+        &package_dir,
+        &manifest.modules,
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("fixture modules");
+    let context = property_authority_context(&package_dir, &manifest, &modules, limits())
+        .expect("property observations");
+    let request = authority_request_term(
+        ObligationAuthorityOperation::PropertyTests,
+        &manifest.name,
+        property_request_inputs(&context, ":plan", None),
+    );
+    let request_hash = hash_term(&request);
+    let result = invoke_authority(request, &fixture_frontend(), limits()).expect("property plan");
+    let plan = decode_property_plan_result(&manifest, &context, request_hash, result.clone())
+        .expect("closed property plan");
+    assert_eq!(plan.len(), 1);
+    assert_eq!(
+        plan[0].seeds,
+        vec![
+            16_683_527_519_985_115_011,
+            16_484_361_299_643_496_824,
+            10_195_190_632_922_736_109,
+            9_306_649_646_461_805_599,
+        ]
+    );
+
+    let mut tampered = result;
+    let Term::Map(outer) = &mut tampered else {
+        panic!("authority result must be map");
+    };
+    let Some(Term::Map(report)) = outer.get_mut(&TermOrdKey(Term::symbol(":report"))) else {
+        panic!("plan report must be map");
+    };
+    let Some(Term::Vector(tests)) = report.get_mut(&TermOrdKey(Term::symbol(":tests"))) else {
+        panic!("plan tests must be vector");
+    };
+    let Term::Map(test) = &mut tests[0] else {
+        panic!("plan test must be map");
+    };
+    let Some(Term::Vector(seeds)) = test.get_mut(&TermOrdKey(Term::symbol(":seeds"))) else {
+        panic!("plan seeds must be vector");
+    };
+    seeds[0] = Term::Int(BigInt::from(0));
+    let error = decode_property_plan_result(&manifest, &context, request_hash, tampered)
+        .expect_err("tampered property seed must fail closed");
+    assert!(error.to_string().contains("property plan contradiction"));
+}
+
 fn authority_fixture(
     fixture: &str,
 ) -> (

@@ -1,0 +1,13 @@
+schema = 1
+dependencies = []
+name = "pkg_property_tests"
+obligations = ["core/obligation::property-tests"]
+property_tests = ["pkg/property::properties"]
+version = "0.0.1"
+
+[[modules]]
+hash = "df0ee25dcd52d7b3123b39c486a873ae316472adc517a5d848dcfa0ac3e1022c"
+path = "property.gc"
+
+[property]
+cases_per_test = 3

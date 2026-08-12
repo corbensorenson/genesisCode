@@ -21,9 +21,12 @@ pub(super) fn obligation_property_tests(
     pkg_dir: &Path,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
+    frontend: &CoreformFrontend,
     limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
-    obligation_exec_tests::obligation_property_tests(store, pkg_dir, manifest, modules, limits)
+    obligation_exec_tests::obligation_property_tests(
+        store, pkg_dir, manifest, modules, frontend, limits,
+    )
 }
 
 pub(super) fn is_callable_value(v: &Value) -> bool {
@@ -32,6 +35,17 @@ pub(super) fn is_callable_value(v: &Value) -> bool {
 
 pub(super) fn parse_test_entry(v: &Value) -> Result<(Value, Option<Term>), ObligationError> {
     obligation_exec_tests::parse_test_entry(v)
+}
+
+pub(super) fn parse_property_entry(
+    value: &Value,
+    default_cases: u64,
+) -> Result<(Value, u64), ObligationError> {
+    obligation_exec_tests::parse_property_entry(value, default_cases)
+}
+
+pub(super) fn property_seed_for_case(pkg: &str, suite: &str, name: &str, index: u64) -> u64 {
+    obligation_exec_tests::seed_for_case(pkg, suite, name, index)
 }
 
 pub(super) fn obligation_budgets(

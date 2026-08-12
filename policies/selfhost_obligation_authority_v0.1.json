@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "07791dc1073115147dae98e9a1bcb3795bd99ed218067ac339305e646ab709da",
+  "contentIdentitySha256": "45227de32562442f938d59ef28ab1407ca056e2264c370a4f5055d1790164816",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -18,6 +18,11 @@
     "expected-value-hash",
     "module-path",
     "observed-effect-operation",
+    "property-body-callable-status",
+    "property-cases-value",
+    "property-entry-shape",
+    "property-execution-result",
+    "property-suite-state",
     "replay-value-hash",
     "sealed-error-status",
     "step-count",
@@ -32,6 +37,7 @@
     "core/obligation::concurrency-replay",
     "core/obligation::determinism",
     "core/obligation::lint",
+    "core/obligation::property-tests",
     "core/obligation::replayable-tests",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
@@ -58,7 +64,6 @@
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
-    "core/obligation::property-tests",
     "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
     "core/obligation::preflight"
@@ -77,9 +82,10 @@
     "selfhost/obligation_authority_lint_v1.gc",
     "selfhost/obligation_authority_ai_style_v1.gc",
     "selfhost/obligation_authority_replay_v1.gc",
+    "selfhost/obligation_authority_property_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "b609d21aa8907432f036b2d3b50c6b111381ce306bc1562ab2548ba190813bf3",
+  "sourceSetSha256": "4459b248282a440aefef1280437d5255b238d875f4077597fec3bce7561c10a7",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

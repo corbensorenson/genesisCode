@@ -1,0 +1,606 @@
+(def selfhost/obligation::property-map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/obligation::property-map-has-key-loop? entries) key)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/obligation::property-map-has-key?
+  (fn (map)
+    (fn (key)
+      (((selfhost/obligation::property-map-has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/obligation::property-exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/obligation::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/obligation::property-keys-loop value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/obligation::property-keys-loop
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if ((selfhost/obligation::property-map-has-key? map) ((core/vec::get keys) index))
+            (((selfhost/obligation::property-keys-loop map) keys) ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/obligation::property-optional-str?
+  (fn (value)
+    (if (selfhost/obligation::nil? value) true (selfhost/obligation::str? value))))
+
+(def selfhost/obligation::property-str4
+  (fn (a)
+    (fn (b)
+      (fn (c)
+        (fn (d) ((core/str::concat ((core/str::concat ((core/str::concat a) b)) c)) d))))))
+
+(def selfhost/obligation::property-str5
+  (fn (a)
+    (fn (b)
+      (fn (c)
+        (fn (d)
+          (fn (e)
+            ((core/str::concat
+               ((core/str::concat ((core/str::concat ((core/str::concat a) b)) c)) d)) e)))))))
+
+(def selfhost/obligation::property-str6
+  (fn (a)
+    (fn (b)
+      (fn (c)
+        (fn (d)
+          (fn (e)
+            (fn (f)
+              ((core/str::concat
+                 ((core/str::concat
+                    ((core/str::concat ((core/str::concat ((core/str::concat a) b)) c)) d)) e)) f))))))))
+
+(def selfhost/obligation::property-nibble
+  (fn (value)
+    (if ((core/int::eq? value) 0) "0"
+      (if ((core/int::eq? value) 1) "1"
+        (if ((core/int::eq? value) 2) "2"
+          (if ((core/int::eq? value) 3) "3"
+            (if ((core/int::eq? value) 4) "4"
+              (if ((core/int::eq? value) 5) "5"
+                (if ((core/int::eq? value) 6) "6"
+                  (if ((core/int::eq? value) 7) "7"
+                    (if ((core/int::eq? value) 8) "8"
+                      (if ((core/int::eq? value) 9) "9"
+                        (if ((core/int::eq? value) 10) "a"
+                          (if ((core/int::eq? value) 11) "b"
+                            (if ((core/int::eq? value) 12) "c"
+                              (if ((core/int::eq? value) 13) "d"
+                                (if ((core/int::eq? value) 14) "e" "f")))))))))))))))))
+
+(def selfhost/obligation::property-u64-le-hex-loop
+  (fn (value)
+    (fn (remaining)
+      (fn (out)
+        (if ((core/int::eq? remaining) 0)
+          out
+          (let ((byte ((core/int::mod value) 256)))
+            (let ((pair
+                   ((core/str::concat
+                      (selfhost/obligation::property-nibble ((core/int::div byte) 16)))
+                    (selfhost/obligation::property-nibble ((core/int::mod byte) 16)))))
+              (((selfhost/obligation::property-u64-le-hex-loop
+                   ((core/int::div value) 256))
+                 ((core/int::sub remaining) 1))
+                ((core/str::concat out) pair)))))))))
+
+(def selfhost/obligation::property-u64-le-bytes
+  (fn (value)
+    (core/bytes::from-hex
+      (((selfhost/obligation::property-u64-le-hex-loop value) 8) ""))))
+
+(def selfhost/obligation::property-seed-decode-loop
+  (fn (digest)
+    (fn (index)
+      (fn (multiplier)
+        (fn (out)
+          (if ((core/int::eq? index) 8)
+            out
+            ((((selfhost/obligation::property-seed-decode-loop digest)
+                  ((core/int::add index) 1))
+                ((core/int::mul multiplier) 256))
+              ((core/int::add out)
+                ((core/int::mul ((core/bytes::get digest) index)) multiplier)))))))))
+
+(def selfhost/obligation::property-seed
+  (fn (package)
+    (fn (suite)
+      (fn (name)
+        (fn (index)
+          (let ((prefix b"\x47\x43\x76\x30\x2e\x32\x00\x70\x72\x6f\x70\x65\x72\x74\x79\x00\x73\x65\x65\x64\x00"))
+            (let ((p ((core/bytes::concat prefix) (core/str::to-utf8 package))))
+              (let ((s ((core/bytes::concat ((core/bytes::concat p) b"\x00"))
+                         (core/str::to-utf8 (core/sym::to-str suite)))))
+                (let ((n ((core/bytes::concat ((core/bytes::concat s) b"\x00"))
+                           (core/str::to-utf8 name))))
+                  (let ((message ((core/bytes::concat ((core/bytes::concat n) b"\x00"))
+                                   (selfhost/obligation::property-u64-le-bytes index))))
+                    ((((selfhost/obligation::property-seed-decode-loop
+                         (core/crypto::blake3 message)) 0) 1) 0)))))))))))
+
+(def selfhost/obligation::property-seeds-loop
+  (fn (package)
+    (fn (suite)
+      (fn (name)
+        (fn (cases)
+          (fn (index)
+            (fn (out)
+              (if ((core/int::eq? index) cases)
+                out
+                ((((((selfhost/obligation::property-seeds-loop package) suite) name) cases)
+                    ((core/int::add index) 1))
+                  ((core/vec::push out)
+                    ((((selfhost/obligation::property-seed package) suite) name) index)))))))))))
+
+(def selfhost/obligation::property-entry-valid?
+  (fn (entry)
+    (if ((selfhost/obligation::property-exact-map? entry)
+          [:body-state :cases :cases-display :cases-kind
+           :entry-display :entry-kind :index :key-display
+           :key-kind :name])
+      (if (selfhost/obligation::sym? ((core/map::get entry) (quote :body-state)))
+        (if (selfhost/obligation::int? ((core/map::get entry) (quote :index)))
+          (if (selfhost/obligation::str? ((core/map::get entry) (quote :key-display)))
+            (if (selfhost/obligation::sym? ((core/map::get entry) (quote :key-kind)))
+              (if (selfhost/obligation::property-optional-str? ((core/map::get entry) (quote :name)))
+                (if (selfhost/obligation::sym? ((core/map::get entry) (quote :entry-kind)))
+                  (if (selfhost/obligation::str? ((core/map::get entry) (quote :entry-display)))
+                    (if (selfhost/obligation::sym? ((core/map::get entry) (quote :cases-kind)))
+                      (selfhost/obligation::property-optional-str?
+                        ((core/map::get entry) (quote :cases-display)))
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::property-suite-valid?
+  (fn (suite)
+    (if ((selfhost/obligation::property-exact-map? suite)
+          [:entries :index :state :suite])
+      (if (selfhost/obligation::vec? ((core/map::get suite) (quote :entries)))
+        (if (selfhost/obligation::int? ((core/map::get suite) (quote :index)))
+          (if (selfhost/obligation::sym? ((core/map::get suite) (quote :state)))
+            (selfhost/obligation::sym? ((core/map::get suite) (quote :suite)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::property-cases-decision
+  (fn (entry)
+    (fn (default-cases)
+      (let ((kind ((core/map::get entry) (quote :cases-kind))))
+        (if ((core/sym::eq? kind) (quote :absent))
+          {:cases default-cases :error nil}
+          (if ((core/sym::eq? kind) (quote :int))
+            (let ((cases ((core/map::get entry) (quote :cases))))
+              (if (selfhost/obligation::int? cases)
+                (if ((core/int::lt? cases) 0)
+                  {:cases nil :error "property :cases must fit u64"}
+                  (if ((core/int::lt? 18446744073709551615) cases)
+                    {:cases nil :error "property :cases must fit u64"}
+                    {:cases cases :error nil}))
+                (selfhost/obligation::error "property :cases :int observation must carry an int")))
+            (if ((core/sym::eq? kind) (quote :other))
+              {:cases nil
+               :error ((core/str::concat "property :cases must be int, got ")
+                        ((core/map::get entry) (quote :cases-display)))}
+              (selfhost/obligation::error "unknown property :cases observation kind"))))))))
+
+(def selfhost/obligation::property-entry-decision
+  (fn (package)
+    (fn (suite-index)
+      (fn (suite)
+        (fn (entry)
+          (fn (default-cases)
+            (if (selfhost/obligation::property-entry-valid? entry)
+              (let ((key-kind ((core/map::get entry) (quote :key-kind))))
+                (if (if ((core/sym::eq? key-kind) (quote :string)) true
+                      ((core/sym::eq? key-kind) (quote :symbol)))
+                  (let ((name ((core/map::get entry) (quote :name))))
+                    (let ((entry-kind ((core/map::get entry) (quote :entry-kind))))
+                      (if ((core/sym::eq? entry-kind) (quote :other))
+                        {:error ((((((selfhost/obligation::property-str6 "property suite ")
+                                      (core/sym::to-str suite)) "::") name)
+                                    ": invalid property entry: ")
+                                  ((core/map::get entry) (quote :entry-display)))
+                         :test nil}
+                        (let ((body-state ((core/map::get entry) (quote :body-state))))
+                          (if ((core/sym::eq? body-state) (quote :missing))
+                            {:error (((((selfhost/obligation::property-str5 "property suite ")
+                                       (core/sym::to-str suite)) "::") name)
+                                     ": property map missing :body")
+                             :test nil}
+                            (if ((core/sym::eq? body-state) (quote :other))
+                              {:error (((((selfhost/obligation::property-str5 "property suite ")
+                                         (core/sym::to-str suite)) "::") name)
+                                       ": property :body must be callable")
+                               :test nil}
+                              (let ((case-state ((selfhost/obligation::property-cases-decision entry) default-cases)))
+                                (if (core/error::is? case-state)
+                                  case-state
+                                  (let ((case-error ((core/map::get case-state) (quote :error))))
+                                    (if (selfhost/obligation::nil? case-error)
+                                      (let ((cases ((core/map::get case-state) (quote :cases))))
+                                        {:error nil
+                                         :test
+                                           {:cases cases
+                                            :entry-index ((core/map::get entry) (quote :index))
+                                            :name name
+                                            :seeds ((((((selfhost/obligation::property-seeds-loop package)
+                                                          suite) name) cases) 0) [])
+                                            :suite suite
+                                            :suite-index suite-index}})
+                                      {:error ((((((selfhost/obligation::property-str6 "property suite ")
+                                                  (core/sym::to-str suite)) "::") name)
+                                                ": ") case-error)
+                                       :test nil}))))))))))
+                  {:error ((((selfhost/obligation::property-str4 "property suite ")
+                             (core/sym::to-str suite))
+                            ": key must be string/symbol, got ")
+                           ((core/map::get entry) (quote :key-display)))
+                   :test nil}))
+              (selfhost/obligation::error "invalid property entry observation"))))))))
+
+(def selfhost/obligation::property-entries-loop
+  (fn (package)
+    (fn (suite-index)
+      (fn (suite)
+        (fn (entries)
+          (fn (default-cases)
+            (fn (index)
+              (fn (tests)
+                (fn (errors)
+                  (if ((core/int::eq? index) (core/vec::len entries))
+                    {:errors errors :tests tests}
+                    (let ((entry ((core/vec::get entries) index)))
+                      (let ((decision (((((selfhost/obligation::property-entry-decision package)
+                                            suite-index) suite) entry) default-cases)))
+                        (if (core/error::is? decision)
+                          decision
+                          (let ((test ((core/map::get decision) (quote :test)))
+                                (error ((core/map::get decision) (quote :error))))
+                            ((((((((selfhost/obligation::property-entries-loop package)
+                                    suite-index) suite) entries) default-cases)
+                                ((core/int::add index) 1))
+                              (if (selfhost/obligation::nil? test) tests ((core/vec::push tests) test)))
+                             (if (selfhost/obligation::nil? error) errors ((core/vec::push errors) error)))))))))))))))))
+
+(def selfhost/obligation::property-suite-step
+  (fn (package)
+    (fn (default-cases)
+      (fn (suite-observation)
+        (fn (tests)
+          (fn (errors)
+            (if (selfhost/obligation::property-suite-valid? suite-observation)
+              (let ((suite ((core/map::get suite-observation) (quote :suite)))
+                    (state ((core/map::get suite-observation) (quote :state))))
+                (if ((core/sym::eq? state) (quote :missing))
+                  {:errors
+                     ((core/vec::push errors)
+                       ((core/str::concat "missing property suite symbol ")
+                         (core/sym::to-str suite)))
+                   :tests tests}
+                  (if ((core/sym::eq? state) (quote :not-map))
+                    {:errors
+                       ((core/vec::push errors)
+                         ((core/str::concat
+                            ((core/str::concat "property suite ")
+                              (core/sym::to-str suite)))
+                          " must be a map"))
+                     :tests tests}
+                    (if ((core/sym::eq? state) (quote :map))
+                      ((((((((selfhost/obligation::property-entries-loop package)
+                               ((core/map::get suite-observation) (quote :index)))
+                             suite)
+                            ((core/map::get suite-observation) (quote :entries)))
+                           default-cases) 0) tests) errors)
+                      (selfhost/obligation::error
+                        "unknown property suite observation state")))))
+              (selfhost/obligation::error "invalid property suite observation"))))))))
+
+(def selfhost/obligation::property-suites-loop
+  (fn (package)
+    (fn (suites)
+      (fn (default-cases)
+        (fn (index)
+          (fn (tests)
+            (fn (errors)
+              (if ((core/int::eq? index) (core/vec::len suites))
+                {:errors errors :tests tests}
+                (let ((next
+                        (((((selfhost/obligation::property-suite-step package) default-cases)
+                            ((core/vec::get suites) index)) tests) errors)))
+                  (if (core/error::is? next)
+                    next
+                    ((((((selfhost/obligation::property-suites-loop package) suites)
+                         default-cases) ((core/int::add index) 1))
+                       ((core/map::get next) (quote :tests)))
+                      ((core/map::get next) (quote :errors)))))))))))))
+
+(def selfhost/obligation::property-plan-state
+  (fn (package)
+    (fn (configured)
+      (fn (default-cases)
+        (fn (suites)
+          (if (selfhost/obligation::bool? configured)
+            (if (selfhost/obligation::nonnegative-int? default-cases)
+              (if ((core/int::lt? 18446744073709551615) default-cases)
+                (selfhost/obligation::error ":default-cases must fit u64")
+                (if (selfhost/obligation::vec? suites)
+                  (if configured
+                    ((((((selfhost/obligation::property-suites-loop package) suites) default-cases) 0) []) [])
+                    (if ((core/int::eq? (core/vec::len suites)) 0)
+                      {:errors [] :tests []}
+                      (selfhost/obligation::error "unconfigured property tests require empty :suites")))
+                  (selfhost/obligation::error ":suites must be a vector")))
+              (selfhost/obligation::error ":default-cases must be a nonnegative int"))
+            (selfhost/obligation::error ":configured must be bool")))))))
+
+(def selfhost/obligation::property-plan
+  (fn (package)
+    (fn (inputs)
+      (if ((selfhost/obligation::property-exact-map? inputs)
+            [:configured :default-cases :phase :suites])
+        (if ((core/sym::eq? ((core/map::get inputs) (quote :phase))) (quote :plan))
+          (let ((configured ((core/map::get inputs) (quote :configured)))
+                (default-cases ((core/map::get inputs) (quote :default-cases)))
+                (suites ((core/map::get inputs) (quote :suites))))
+            (let ((state ((((selfhost/obligation::property-plan-state package) configured)
+                            default-cases) suites)))
+              (if (core/error::is? state)
+                state
+                (let ((errors ((core/map::get state) (quote :errors))))
+                  {:errors errors
+                   :kind selfhost/obligation::RESULT_KIND
+                   :name "core/obligation::property-tests"
+                   :ok ((core/int::eq? (core/vec::len errors)) 0)
+                   :operation (quote :property-tests)
+                   :report
+                     {:configured configured
+                      :default-cases default-cases
+                      :errors errors
+                      :kind "genesis/property-test-plan-v0.1"
+                      :package package
+                      :stop-rule (quote :first-non-pass)
+                      :tests ((core/map::get state) (quote :tests))}
+                   :v 2}))))
+          (selfhost/obligation::error "property plan request :phase must be :plan"))
+        (selfhost/obligation::error "property plan inputs must contain exactly :configured, :default-cases, :phase, and :suites")))))
+
+(def selfhost/obligation::property-attempt-valid?
+  (fn (attempt)
+    ((selfhost/obligation::property-exact-map? attempt)
+      [:i :kind :result :seed])))
+
+(def selfhost/obligation::property-test-outcome
+  (fn (test)
+    (fn (outcome)
+      (if ((selfhost/obligation::property-exact-map? outcome)
+            [:attempts :entry-index :suite-index])
+        (if ((core/eq? ((core/map::get outcome) (quote :suite-index)))
+              ((core/map::get test) (quote :suite-index)))
+          (if ((core/eq? ((core/map::get outcome) (quote :entry-index)))
+                ((core/map::get test) (quote :entry-index)))
+            (let ((attempts ((core/map::get outcome) (quote :attempts)))
+                  (cases ((core/map::get test) (quote :cases)))
+                  (seeds ((core/map::get test) (quote :seeds))))
+              (if (selfhost/obligation::vec? attempts)
+                (let ((checked (((((selfhost/obligation::property-attempts-loop attempts)
+                                     seeds) cases) 0) nil)))
+                  (if (core/error::is? checked)
+                    checked
+                    (let ((failure ((core/map::get checked) (quote :failure)))
+                          (errors ((core/map::get checked) (quote :errors))))
+                      {:errors
+                         (if (selfhost/obligation::nil? failure)
+                           []
+                           ((core/vec::push [])
+                             (((selfhost/obligation::property-failure-error
+                                 ((core/map::get test) (quote :suite)))
+                               ((core/map::get test) (quote :name)))
+                              failure)))
+                       :report
+                         (if (selfhost/obligation::nil? failure)
+                           {:cases cases
+                            :name ((core/map::get test) (quote :name))
+                            :ok true
+                            :seeds seeds
+                            :suite ((core/map::get test) (quote :suite))}
+                           {:cases cases
+                            :first-failure ((core/map::get failure) (quote :report))
+                            :name ((core/map::get test) (quote :name))
+                            :ok false
+                            :seeds seeds
+                            :suite ((core/map::get test) (quote :suite))})})))
+                (selfhost/obligation::error "property outcome :attempts must be a vector")))
+            (selfhost/obligation::error "property outcome entry identity mismatch"))
+          (selfhost/obligation::error "property outcome suite identity mismatch"))
+        (selfhost/obligation::error "property outcome must contain exactly :attempts, :entry-index, and :suite-index")))))
+
+(def selfhost/obligation::property-attempts-loop
+  (fn (attempts)
+    (fn (seeds)
+      (fn (cases)
+        (fn (index)
+          (fn (failure)
+            (let ((count (core/vec::len attempts)))
+              (if ((core/int::eq? index) count)
+                (if (selfhost/obligation::nil? failure)
+                  (if ((core/int::eq? count) cases)
+                    {:errors [] :failure nil}
+                    (selfhost/obligation::error "passing property outcome must execute every planned case"))
+                  {:errors [] :failure failure})
+                (if ((core/int::lt? cases) count)
+                  (selfhost/obligation::error "property outcome exceeds planned case count")
+                  (let ((attempt ((core/vec::get attempts) index)))
+                    (if (selfhost/obligation::property-attempt-valid? attempt)
+                      (if ((core/eq? ((core/map::get attempt) (quote :i))) index)
+                        (if ((core/eq? ((core/map::get attempt) (quote :seed)))
+                              ((core/vec::get seeds) index))
+                          (let ((kind ((core/map::get attempt) (quote :kind)))
+                                (result ((core/map::get attempt) (quote :result))))
+                            (if ((core/sym::eq? kind) (quote :value))
+                              (if (if (selfhost/obligation::bool? result) result false)
+                                (if (selfhost/obligation::nil? failure)
+                                  (((((selfhost/obligation::property-attempts-loop attempts) seeds)
+                                       cases) ((core/int::add index) 1)) nil)
+                                  (selfhost/obligation::error "property outcome continued after first failure"))
+                                (if ((core/int::eq? ((core/int::add index) 1)) count)
+                                  {:errors []
+                                   :failure
+                                     {:detail nil
+                                      :kind (quote :value)
+                                      :report {:i index :result result :seed ((core/map::get attempt) (quote :seed))}}}
+                                  (selfhost/obligation::error "property outcome continued after first failure")))
+                              (if ((core/sym::eq? kind) (quote :apply-error))
+                                (if (selfhost/obligation::str? result)
+                                  (if ((core/int::eq? ((core/int::add index) 1)) count)
+                                    {:errors []
+                                     :failure
+                                       {:detail result
+                                        :kind (quote :apply-error)
+                                        :report
+                                          {:i index
+                                           :result ((core/str::concat "apply failed: ") result)
+                                           :seed ((core/map::get attempt) (quote :seed))}}}
+                                    (selfhost/obligation::error "property outcome continued after first failure"))
+                                  (selfhost/obligation::error "property apply error must carry a string"))
+                                (if ((core/sym::eq? kind) (quote :effect-program))
+                                  (if (selfhost/obligation::nil? result)
+                                    (if ((core/int::eq? ((core/int::add index) 1)) count)
+                                      {:errors []
+                                       :failure
+                                         {:detail nil
+                                          :kind (quote :effect-program)
+                                          :report
+                                            {:i index
+                                             :result "effect program returned (property tests must be pure)"
+                                             :seed ((core/map::get attempt) (quote :seed))}}}
+                                      (selfhost/obligation::error "property outcome continued after first failure"))
+                                    (selfhost/obligation::error "property effect-program result must be nil"))
+                                  (selfhost/obligation::error "unknown property attempt kind")))))
+                          (selfhost/obligation::error "property attempt seed mismatch"))
+                        (selfhost/obligation::error "property attempt index mismatch"))
+                      (selfhost/obligation::error "invalid property attempt observation"))))))))))))
+
+(def selfhost/obligation::property-finalize-loop
+  (fn (tests)
+    (fn (outcomes)
+      (fn (index)
+        (fn (reports)
+          (fn (errors)
+            (if ((core/int::eq? index) (core/vec::len tests))
+              (if ((core/int::eq? index) (core/vec::len outcomes))
+                {:errors errors :reports reports}
+                (selfhost/obligation::error "property outcome inventory length mismatch"))
+              (if ((core/int::lt? index) (core/vec::len outcomes))
+                (let ((test ((core/vec::get tests) index)))
+                  (let ((state ((selfhost/obligation::property-test-outcome test)
+                                ((core/vec::get outcomes) index))))
+                    (if (core/error::is? state)
+                      state
+                      (let ((state-errors ((core/map::get state) (quote :errors))))
+                        (((((selfhost/obligation::property-finalize-loop tests) outcomes)
+                            ((core/int::add index) 1))
+                          ((core/vec::push reports) ((core/map::get state) (quote :report))))
+                         ((selfhost/obligation::append-errors errors) state-errors))))))
+                (selfhost/obligation::error "property outcome inventory length mismatch")))))))))
+
+(def selfhost/obligation::property-failure-error
+  (fn (suite)
+    (fn (name)
+      (fn (failure)
+        (let ((kind ((core/map::get failure) (quote :kind)))
+              (report ((core/map::get failure) (quote :report))))
+          (let ((case-index (core/int::to-str ((core/map::get report) (quote :i))))
+                (suite-name (core/sym::to-str suite)))
+            (if ((core/sym::eq? kind) (quote :apply-error))
+              (let ((prefix ((((((selfhost/obligation::property-str6
+                                  "property test apply failed ") suite-name) "::") name)
+                                " at case ") case-index)))
+                ((core/str::concat ((core/str::concat prefix) ": "))
+                  ((core/map::get failure) (quote :detail))))
+              (if ((core/sym::eq? kind) (quote :effect-program))
+                (((((selfhost/obligation::property-str5 "property test ") suite-name)
+                    "::") name) " returned an effect program (must be pure)")
+                (((((selfhost/obligation::property-str5 "property test failed ") suite-name)
+                    "::") name) ((core/str::concat " at case ") case-index))))))))))
+
+(def selfhost/obligation::property-finalize
+  (fn (package)
+    (fn (inputs)
+      (if ((selfhost/obligation::property-exact-map? inputs)
+            [:configured :default-cases :outcomes :phase :suites])
+        (if ((core/sym::eq? ((core/map::get inputs) (quote :phase))) (quote :finalize))
+          (let ((configured ((core/map::get inputs) (quote :configured)))
+                (default-cases ((core/map::get inputs) (quote :default-cases)))
+                (suites ((core/map::get inputs) (quote :suites)))
+                (outcomes ((core/map::get inputs) (quote :outcomes))))
+            (let ((plan ((((selfhost/obligation::property-plan-state package) configured)
+                          default-cases) suites)))
+              (if (core/error::is? plan)
+                plan
+                (if (selfhost/obligation::vec? outcomes)
+                  (let ((tests ((core/map::get plan) (quote :tests)))
+                        (plan-errors ((core/map::get plan) (quote :errors))))
+                    (let ((final-state (((((selfhost/obligation::property-finalize-loop tests)
+                                            outcomes) 0) []) [])))
+                      (if (core/error::is? final-state)
+                        final-state
+                        (let ((reports ((core/map::get final-state) (quote :reports)))
+                              (outcome-errors ((core/map::get final-state) (quote :errors))))
+                          (let ((errors ((selfhost/obligation::append-errors plan-errors)
+                                         outcome-errors)))
+                            (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+                              {:errors errors
+                               :kind selfhost/obligation::RESULT_KIND
+                               :name "core/obligation::property-tests"
+                               :ok ok
+                               :operation (quote :property-tests)
+                               :report
+                                 (if configured
+                                   (let ((base
+                                          {:config {:cases-per-test default-cases}
+                                           :kind "genesis/property-tests-v0.2"
+                                           :ok ok
+                                           :package package
+                                           :tests reports}))
+                                     (if ok base (((core/map::put base) (quote :errors)) errors)))
+                                   {:kind "genesis/property-tests-v0.2"
+                                    :note "no property tests"
+                                    :ok true
+                                    :package package})
+                               :v 2}))))))
+                  (selfhost/obligation::error ":outcomes must be a vector")))))
+          (selfhost/obligation::error "property finalize request :phase must be :finalize"))
+        (selfhost/obligation::error "property finalize inputs must contain exactly :configured, :default-cases, :outcomes, :phase, and :suites")))))
+
+(def selfhost/obligation::property-authority
+  (fn (package)
+    (fn (inputs)
+      (let ((phase ((core/map::get inputs) (quote :phase))))
+        (if (if (selfhost/obligation::sym? phase)
+              ((core/sym::eq? phase) (quote :plan))
+              false)
+          ((selfhost/obligation::property-plan package) inputs)
+          ((selfhost/obligation::property-finalize package) inputs))))))

@@ -86,7 +86,7 @@
         "allocationLimit": {"const": 50000000},
         "classification": {"const": "E0-observation"},
         "coldDefinition": {"const": "first-fresh-process-after-build"},
-        "corpusFixtureCount": {"const": 25},
+        "corpusFixtureCount": {"const": 26},
         "corpusGlob": {"const": "tests/spec/pkg_*/package.toml"},
         "lowAllocationControl": {"const": 1},
         "lowStepControl": {"const": 1},

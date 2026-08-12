@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "195fd346b00c7e6bb746b2152d64a5ab4da3d5aec6ff153899951439016103f4",
+      "inputIdentitySha256": "212cb184d3f028c2ab3bdea24388d377ff337e5116384a3af6f11d41a4639e26",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -364,7 +364,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -569,7 +569,7 @@
       "executionIdentitySha256": "ca60c0c8740ffc38f92b66c4a85bf1c85c764940d9d9014b38fc968ff96a5ab0",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "9bb5c7fbb733bbb3f0ca7ed9bfe32c58792af74e39a0a60b863a585a38942bf8",
+      "inputIdentitySha256": "edd0a032c4e8268639c3cc3636c64620888ac1b9294f440dc1424c1411d96614",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -668,7 +668,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -828,7 +828,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1183,11 +1183,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -1972,6 +1975,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -2290,7 +2294,7 @@
       "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "ef3c26ef6deee1b4255dff61e034193bca50ad5d6ee6893612600e492a74fe0f",
+      "inputIdentitySha256": "4451ee8eace93e56f183de3db6348b824c803ac30d6216e9894b71f521d2e101",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2418,7 +2422,7 @@
       "executionIdentitySha256": "d368d86edc3ac9c640e631f0fafc9012460c8fb68f88949143d1f595760d87c8",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger",
-      "inputIdentitySha256": "9447cc4399c930bfec87c69a2d2b6baf3f49a7f24286122db0c7a159e1f6c8ef",
+      "inputIdentitySha256": "e457ac75e18bc3dd1321a2a08495fafd4b4025043c69ae802020281b1ad72fc8",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -2489,7 +2493,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2684,11 +2688,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -3473,6 +3480,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -3686,7 +3694,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3881,11 +3889,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -4670,6 +4681,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -4758,7 +4770,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4953,11 +4965,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -5742,6 +5757,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -5818,7 +5834,7 @@
       "executionIdentitySha256": "7589ad69e7f64592a89c2415a6c1eeefa7df379887597d5295085be8b3fb5e79",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "2e270956b17c6a3db90242ffb10b9ac0bd55c4c88f85d9b9e33480bc2ba869ab",
+      "inputIdentitySha256": "dfe50f710f2d3ad534affb41a8070050a7bc87eaf05f029b257ac1fd1ea6df1e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5909,7 +5925,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6104,11 +6120,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -6893,6 +6912,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -7269,7 +7289,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "fff98a26fa08daf0bf1d374efb28c29e6da350140ddcbe83c9b6673165e432aa",
+      "inputIdentitySha256": "083ae024e3a752d5bd48e886fc5ed8c16f7dfb09607ec5d2da1d2b8211206e06",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7484,7 +7504,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "2cf72103395eb37f4b9b660ae5c0ffb18fe497a1defdb3af5818a1d593099d74",
+      "inputIdentitySha256": "555d3710952665c022cb09af43a065fa673e62893f87ef6cfc15ad16b2a1aab9",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7552,7 +7572,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7747,11 +7767,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -8536,6 +8559,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -8769,7 +8793,7 @@
       "executionIdentitySha256": "a633534861b74b8d43cdd3226dbcfc79e1b417f9f151828002d3177a7e37eb79",
       "expectedDurationSeconds": 600,
       "id": "gate/feature-matrix-gap-hygiene",
-      "inputIdentitySha256": "83f7a76d16fe3db2089dd9834f06eb0088561cd101d4d29448b1602b1c75e859",
+      "inputIdentitySha256": "f897a897b818d27e30af70b79b54ceb814ac92a4da4381bdee74f695c07ca947",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -8912,7 +8936,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "43de4f70a7044feb9955342abac8c8000d27ba59ed28b6f0272671869a3506ce",
+      "inputIdentitySha256": "95ce2f04fd43bcba7f6c8fd96f56c50e15e9b8fb9379ac6fec302340489abb20",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8986,7 +9010,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "ab5a35450344fc2c96f35a20ed0c5f9b6e77865a4ab9dc9607cc9ede64695c29",
+      "inputIdentitySha256": "07755b26f3d5abf8550ff21c0dc5c80138d2555de7fa382bad20d53232af81c9",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9033,11 +9057,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -9209,6 +9236,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -9330,7 +9358,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "e1187b44ed76ddd609096dc72a8fad34831b8ea4cf49c6bb2a5fc488272cdd66",
+      "inputIdentitySha256": "1702c29390ba8ca6f804ddf63311bd2349577683fec863fd6f35bec638b27986",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9517,7 +9545,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9712,11 +9740,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -10501,6 +10532,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -10573,7 +10605,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "195fd346b00c7e6bb746b2152d64a5ab4da3d5aec6ff153899951439016103f4",
+      "inputIdentitySha256": "212cb184d3f028c2ab3bdea24388d377ff337e5116384a3af6f11d41a4639e26",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10932,7 +10964,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "195fd346b00c7e6bb746b2152d64a5ab4da3d5aec6ff153899951439016103f4",
+      "inputIdentitySha256": "212cb184d3f028c2ab3bdea24388d377ff337e5116384a3af6f11d41a4639e26",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11291,7 +11323,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "195fd346b00c7e6bb746b2152d64a5ab4da3d5aec6ff153899951439016103f4",
+      "inputIdentitySha256": "212cb184d3f028c2ab3bdea24388d377ff337e5116384a3af6f11d41a4639e26",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11650,7 +11682,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "195fd346b00c7e6bb746b2152d64a5ab4da3d5aec6ff153899951439016103f4",
+      "inputIdentitySha256": "212cb184d3f028c2ab3bdea24388d377ff337e5116384a3af6f11d41a4639e26",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12063,7 +12095,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "c0f5ba178031659647d8d0237aa58d49e073711d65d06de934d221a9f3536920",
+      "inputIdentitySha256": "b9cddabc77b7aa257b4ba5b3de68c01685eea9c8e2f1db3982f1e6c2f275e97b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -12206,7 +12238,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12401,11 +12433,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -13190,6 +13225,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -13920,7 +13956,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14115,11 +14151,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -14904,6 +14943,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -14980,7 +15020,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15181,7 +15221,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15376,11 +15416,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -16165,6 +16208,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -16416,7 +16460,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16824,7 +16868,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17019,11 +17063,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -17808,6 +17855,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -18177,7 +18225,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18372,11 +18420,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -19161,6 +19212,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -19429,7 +19481,7 @@
       "executionIdentitySha256": "40e0e760812ac402a0da62d9f43d62652d9bbe79f74df874a1bd7d528bb19c06",
       "expectedDurationSeconds": 600,
       "id": "gate/redteam-report",
-      "inputIdentitySha256": "fd3df752563fbc11f6836910c9dd502b3758d8157ece59a8268c1b508cbe810f",
+      "inputIdentitySha256": "f3ca70825b9b958e0c472a8c35d8a221b0ac10cb8f5c2a2a8ae3df84ca4fe890",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -19565,7 +19617,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "6e5646bdb5337fa654a77f8f5f6996538e7d8f202f189f2b54079369d12a65d5",
+      "inputIdentitySha256": "c89a3e33b7c83fe91a92d950881a610412b96cde173ea36555781af2ac34af17",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19766,7 +19818,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "572f5a31edd1a2484baa840a2a75a588b567e6f48220093f896a59e9520a6d44",
+      "inputIdentitySha256": "2f2abd6b9ba35f0770bb8c45b35fc5dddafe8fe5d5fe75d43f92c52a12d0a54c",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -19981,7 +20033,7 @@
       "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "b51dbec73b5ea419cc318d944ca71bb42070ba631dc8328364c1bd4492bf13d0",
+      "inputIdentitySha256": "966d3c9116f8510879b47b9f07149fd1cdb4e6fec445541ebfdae21de6033fac",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20047,7 +20099,7 @@
       "executionIdentitySha256": "c67d34d8fa0d26cdac159125af00a1d6d4a744670b69c37f95f8354c0305918d",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "73ba82db62b759f9276c901fcea5c2d57ab086749aaede0b2ef35fb6f1f9e96d",
+      "inputIdentitySha256": "75596ebd4ceb646b6e9d5dc63e03709525ab539ddaf65e8736f60a4fd31f5a97",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20135,7 +20187,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "e2382e8584ca1b17a2cc4cd8bd516b2619ffe4d447d843e4f69ccf9f62daa606",
+      "inputIdentitySha256": "c3a1a74b4dea4f0e698ad8dc4e513dd7cc1b617d21a43b19cfbc612715fdb31a",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -20211,7 +20263,7 @@
       "executionIdentitySha256": "60f671e6ef75b6d6e70ff73f92f29946bb7eb9d6ad700778aacacd7da5a3b6a5",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-workloads",
-      "inputIdentitySha256": "7767f9682d69005232e9e535b6441329cd1a5f888529c4b4ce80c8c6b742e0c9",
+      "inputIdentitySha256": "a6d06e6248e3284a36d40028a1964a390cfa465c8dd64084d3a6d6f2f3424372",
       "inputs": {
         "paths": [
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
@@ -20380,7 +20432,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20730,7 +20782,7 @@
       "executionIdentitySha256": "31a709e63915720b5c2578efcd4bd8b0a78b4a6c02f9b2960b7a22eff7d7ac73",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "2b6c50578c3a53a60b96c8f8759fa507e38803b5b5a7a044553e694de56cb2de",
+      "inputIdentitySha256": "e4345c65ca871828aacbf09cb87d8a9831ddd5d32071ded9bb6b576a3a0d2022",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20805,7 +20857,7 @@
       "executionIdentitySha256": "2815a6a81d96dfb7319e654896d67b66e62515fa193f7baeb41062f6d0d37a7c",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "8dc7f458f592160d1b050e7c6831f84f78c28f744fced7374b5ab9908b795bab",
+      "inputIdentitySha256": "80c8e2312257415091c70236feddc630a119412cf06b328ab709254cb548d511",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -20848,11 +20900,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -20921,6 +20976,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -20979,7 +21035,7 @@
       "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "fadc52f374a1eebdc6a1625cc9410d614279e83bfd3a8b29f965cca719cd6599",
+      "inputIdentitySha256": "e214c16729fd53f4d3bdad7f451db96263d244ecd10da772d0c7b6d5ae47d727",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21156,7 +21212,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "c21a03521caeec53b355f2c734866a07e2323a92dbc8b8eabcff64df151d6d9e",
+      "inputIdentitySha256": "0bf20242b9f056db4855fc8f1b169fd953e12ac44e2eceee1fba2f82325e957c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21299,7 +21355,7 @@
       "executionIdentitySha256": "de98a9b2dd03b246bd228fb5aa58e6c216ddd3e98c2db5a2dfe508c302766370",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-refactor-guard",
-      "inputIdentitySha256": "b7aacd24d25332ad846a1eeb6d85d95f7ddea1582d961a2b404224c6a76e044e",
+      "inputIdentitySha256": "d0a00f7d48d06ff598a93d0affdbf560f8d4668fd975bccda3c3901511a5c80f",
       "inputs": {
         "paths": [
           "scripts/check_selfhost_refactor_guard.sh",
@@ -21417,7 +21473,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "0d7ac94a95067e7f480f174ebdcf9ef9d4ad4d8e3149506dbde022def0420bb0",
+      "inputIdentitySha256": "dbfa7d9e751ac2e3e51c6977c4dc6cf328c8679bd1d2e8a04aea6724e78f9f54",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21484,7 +21540,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21957,7 +22013,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22152,11 +22208,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -22941,6 +23000,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -23131,7 +23191,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "98fe5ea8ee663aad66787f2379523ab1c42e51eacf1ba3ee440486731e0af7f8",
+      "inputIdentitySha256": "06612769c5d210532223eb96c291ae8e9bf20ae00a837208d0814a2f1b4df315",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23326,11 +23386,14 @@
           "crates/gc_obligations/src/obligation_authority.rs",
           "crates/gc_obligations/src/obligation_authority_caps.rs",
           "crates/gc_obligations/src/obligation_authority_lint.rs",
+          "crates/gc_obligations/src/obligation_authority_property.rs",
+          "crates/gc_obligations/src/obligation_authority_property_finalize.rs",
           "crates/gc_obligations/src/obligation_authority_replay.rs",
           "crates/gc_obligations/src/obligation_authority_tests.rs",
           "crates/gc_obligations/src/obligation_exec.rs",
           "crates/gc_obligations/src/obligation_exec_budgets.rs",
           "crates/gc_obligations/src/obligation_exec_replay.rs",
+          "crates/gc_obligations/src/obligation_exec_tests.rs",
           "crates/gc_obligations/src/obligation_lint.rs",
           "crates/gc_obligations/src/obligation_stage.rs",
           "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
@@ -24115,6 +24178,7 @@
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_determinism_v1.gc",
           "selfhost/obligation_authority_lint_v1.gc",
+          "selfhost/obligation_authority_property_v1.gc",
           "selfhost/obligation_authority_replay_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
@@ -24312,7 +24376,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "3950cef7bbdb7540cca3133b65adba274b084b85e9cebf3a6408aeab00ed20e5",
+      "inputIdentitySha256": "0700dfc543f4c057b77c46c7a74358dd287c9f957e37f943bd35e24b7102ddce",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -24383,7 +24447,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "a6c4b41c5655cf2a10df0ec34917263ccfa74cb7b0bd23c8d08641201270a678",
+      "inputIdentitySha256": "573d856025f75f2e3a3d583276f9f34424992dfaec12a61f38a4a90f3bc9f96f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24743,7 +24807,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -24900,7 +24964,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "4f4c1b75c691baf7050a6ca131952cbff0b6abc7b9c5a7ecccaf74547c2a7f29",
+      "inputIdentitySha256": "f8a74c3ed93691de300b6cfbb0def96e503bf454e4231563c4a64f13f341856b",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25059,7 +25123,7 @@
       "executionIdentitySha256": "352025cc70b36a3be61f30d540c703e68cd628f85dd842ac902f78dacb6f2a9b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "dd6acea430dfd0df2e498b05aeafe3494a29e3e3aee9b7a2ca5fc87cb6b95641",
+      "inputIdentitySha256": "e5305c8c956c6a03a3122fad1958bb7ada5e0fc7848ed92e2f51c857845eb6b6",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",

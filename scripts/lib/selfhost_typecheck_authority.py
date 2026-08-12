@@ -114,7 +114,7 @@ def validate_profile(profile: dict[str, Any], schema: dict[str, Any]) -> None:
         "allocationLimit": 50_000_000,
         "classification": "E0-observation",
         "coldDefinition": "first-fresh-process-after-build",
-        "corpusFixtureCount": 25,
+        "corpusFixtureCount": 26,
         "corpusGlob": "tests/spec/pkg_*/package.toml",
         "lowAllocationControl": 1,
         "lowStepControl": 1,
