@@ -11,6 +11,7 @@ pub(super) fn obligation_budgets(
         ObligationAuthorityOperation::Budgets,
         store,
         manifest,
+        &[],
         tests,
         frontend,
         limits,

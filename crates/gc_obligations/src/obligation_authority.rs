@@ -1,9 +1,12 @@
 use super::*;
 
+include!("obligation_authority_caps.rs");
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ObligationAuthorityOperation {
     UnitTests,
     Budgets,
+    CapabilitiesDeclared,
 }
 
 impl ObligationAuthorityOperation {
@@ -11,6 +14,7 @@ impl ObligationAuthorityOperation {
         match self {
             Self::UnitTests => ":unit-tests",
             Self::Budgets => ":budgets",
+            Self::CapabilitiesDeclared => ":capabilities-declared",
         }
     }
 
@@ -18,6 +22,7 @@ impl ObligationAuthorityOperation {
         match self {
             Self::UnitTests => "core/obligation::unit-tests",
             Self::Budgets => "core/obligation::budgets",
+            Self::CapabilitiesDeclared => "core/obligation::capabilities-declared",
         }
     }
 }
@@ -192,42 +197,58 @@ fn request_term(
     operation: ObligationAuthorityOperation,
     store: &EvidenceStore,
     manifest: &PackageManifest,
+    modules: &[LoadedModule],
     tests: &[TestRun],
 ) -> Result<Term, ObligationError> {
-    let (limits, observations) = match operation {
-        ObligationAuthorityOperation::UnitTests => (
-            Term::Map(BTreeMap::new()),
-            unit_test_observations(store, tests)?,
+    let inputs = match operation {
+        ObligationAuthorityOperation::UnitTests => Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":tests")),
+                Term::Vector(unit_test_observations(store, tests)?),
+            )]
+            .into_iter()
+            .collect(),
         ),
-        ObligationAuthorityOperation::Budgets => (
-            Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":max-effect-entries-per-test")),
-                        optional_u64_term(manifest.budgets.max_effect_entries_per_test),
+        ObligationAuthorityOperation::Budgets => Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":limits")),
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":max-effect-entries-per-test")),
+                                optional_u64_term(manifest.budgets.max_effect_entries_per_test),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":max-effect-log-bytes-per-test")),
+                                optional_u64_term(manifest.budgets.max_effect_log_bytes_per_test),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":max-steps-per-test")),
+                                optional_u64_term(manifest.budgets.max_steps_per_test),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
                     ),
-                    (
-                        TermOrdKey(Term::symbol(":max-effect-log-bytes-per-test")),
-                        optional_u64_term(manifest.budgets.max_effect_log_bytes_per_test),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":max-steps-per-test")),
-                        optional_u64_term(manifest.budgets.max_steps_per_test),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            ),
-            budget_observations(tests),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":tests")),
+                    Term::Vector(budget_observations(tests)),
+                ),
+            ]
+            .into_iter()
+            .collect(),
         ),
+        ObligationAuthorityOperation::CapabilitiesDeclared => capability_inputs(modules, tests),
     };
     Ok(Term::Map(
         [
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/obligation-authority-request-v0.1".to_string()),
+                Term::Str("genesis/obligation-authority-request-v0.2".to_string()),
             ),
-            (TermOrdKey(Term::symbol(":limits")), limits),
+            (TermOrdKey(Term::symbol(":inputs")), inputs),
             (
                 TermOrdKey(Term::symbol(":operation")),
                 Term::symbol(operation.symbol()),
@@ -236,11 +257,7 @@ fn request_term(
                 TermOrdKey(Term::symbol(":package")),
                 Term::Str(manifest.name.clone()),
             ),
-            (
-                TermOrdKey(Term::symbol(":tests")),
-                Term::Vector(observations),
-            ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(2.into())),
         ]
         .into_iter()
         .collect(),
@@ -416,19 +433,14 @@ fn validate_budget_report(
     Ok(())
 }
 
-pub(super) fn evaluate_obligation_with_authority(
+fn decode_authority_result(
     operation: ObligationAuthorityOperation,
     store: &EvidenceStore,
     manifest: &PackageManifest,
     tests: &[TestRun],
-    frontend: &CoreformFrontend,
-    limits: KernelLimits,
+    request_hash: [u8; 32],
+    term: Term,
 ) -> Result<ObligationResult, ObligationError> {
-    let term = invoke_authority(
-        request_term(operation, store, manifest, tests)?,
-        frontend,
-        limits,
-    )?;
     let map = exact_map(
         &term,
         "obligation authority result",
@@ -439,14 +451,16 @@ pub(super) fn evaluate_obligation_with_authority(
             ":ok",
             ":operation",
             ":report",
+            ":request-h",
             ":v",
         ],
     )?;
     if string_field(map, ":kind", "obligation authority result")?
-        != "genesis/obligation-authority-result-v0.1"
+        != "genesis/obligation-authority-result-v0.2"
         || string_field(map, ":name", "obligation authority result")? != operation.obligation_name()
         || !matches!(map_field(map, ":operation"), Some(Term::Symbol(value)) if value == operation.symbol())
-        || !matches!(map_field(map, ":v"), Some(Term::Int(value)) if value == &1.into())
+        || string_field(map, ":request-h", "obligation authority result")? != hex32(request_hash)
+        || !matches!(map_field(map, ":v"), Some(Term::Int(value)) if value == &2.into())
     {
         return Err(authority_error("result identity mismatch"));
     }
@@ -463,6 +477,9 @@ pub(super) fn evaluate_obligation_with_authority(
         ObligationAuthorityOperation::Budgets => {
             validate_budget_report(report, manifest, tests, ok, &errors)?
         }
+        ObligationAuthorityOperation::CapabilitiesDeclared => {
+            validate_capabilities_report(report, manifest, ok, &errors)?
+        }
     }
     let artifact = store.put_term(report)?;
     Ok(ObligationResult {
@@ -473,209 +490,21 @@ pub(super) fn evaluate_obligation_with_authority(
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use gc_prelude::SelfhostBootstrapMode;
-
-    fn fixture_frontend() -> CoreformFrontend {
-        CoreformFrontend::Selfhost(SelfhostFrontendConfig {
-            bootstrap_mode: SelfhostBootstrapMode::ArtifactOnly,
-            artifact: Some(
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../..")
-                    .join("selfhost/toolchain.gc"),
-            ),
-        })
-    }
-
-    fn limits() -> KernelLimits {
-        KernelLimits {
-            step_limit: StepLimit::Default,
-            mem_limits: MemLimits::default(),
-        }
-    }
-
-    fn test_run(actual: u8, expected: Option<u8>, sealed_error: bool) -> TestRun {
-        TestRun {
-            id: TestId {
-                suite_sym: "fixture/tests".to_string(),
-                test_name: "case".to_string(),
-            },
-            sealed_error,
-            expected_hash: expected.map(|value| [value; 32]),
-            effect_log: None,
-            steps: 11,
-            effect_entries: 2,
-            effect_log_bytes: 17,
-            value_hash: [actual; 32],
-        }
-    }
-
-    #[test]
-    fn unit_test_authority_decides_from_raw_hashes_and_sealed_error() {
-        let temp = tempfile::tempdir().expect("tempdir");
-        let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
-        let (manifest, _) = PackageManifest::load(
-            &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../..")
-                .join("tests/spec/pkg_basic/package.toml"),
-        )
-        .expect("fixture manifest");
-        let frontend = fixture_frontend();
-
-        let passed = evaluate_obligation_with_authority(
-            ObligationAuthorityOperation::UnitTests,
-            &store,
-            &manifest,
-            &[test_run(7, Some(7), false)],
-            &frontend,
-            limits(),
-        )
-        .expect("matching hash authority result");
-        assert!(passed.ok);
-
-        let mismatch = evaluate_obligation_with_authority(
-            ObligationAuthorityOperation::UnitTests,
-            &store,
-            &manifest,
-            &[test_run(7, Some(8), false)],
-            &frontend,
-            limits(),
-        )
-        .expect("mismatched hash authority result");
-        assert!(!mismatch.ok);
-
-        let sealed = evaluate_obligation_with_authority(
-            ObligationAuthorityOperation::UnitTests,
-            &store,
-            &manifest,
-            &[test_run(7, None, true)],
-            &frontend,
-            limits(),
-        )
-        .expect("sealed error authority result");
-        assert!(!sealed.ok);
-    }
-
-    #[test]
-    fn rust_frontend_selection_does_not_replace_selfhost_obligation_authority() {
-        let temp = tempfile::tempdir().expect("tempdir");
-        let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
-        let (manifest, _) = PackageManifest::load(
-            &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../..")
-                .join("tests/spec/pkg_basic/package.toml"),
-        )
-        .expect("fixture manifest");
-
-        let result = evaluate_obligation_with_authority(
-            ObligationAuthorityOperation::UnitTests,
-            &store,
-            &manifest,
-            &[test_run(7, Some(7), false)],
-            &CoreformFrontend::Rust,
-            limits(),
-        )
-        .expect("Rust frontend selection must retain GenesisCode obligation authority");
-        assert!(result.ok);
-    }
-
-    #[test]
-    fn obligation_authority_rejects_open_and_unknown_requests() {
-        let frontend = fixture_frontend();
-        let mut open = match request_term(
-            ObligationAuthorityOperation::UnitTests,
-            &EvidenceStore::open(&tempfile::tempdir().expect("tempdir").path().join("store"))
-                .expect("evidence store"),
-            &PackageManifest::load(
-                &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../..")
-                    .join("tests/spec/pkg_basic/package.toml"),
-            )
-            .expect("fixture manifest")
-            .0,
-            &[],
-        )
-        .expect("request")
-        {
-            Term::Map(map) => map,
-            _ => panic!("request constructor must return a map"),
-        };
-        open.insert(TermOrdKey(Term::symbol(":extra")), Term::Bool(true));
-        let error = invoke_authority(Term::Map(open), &frontend, limits())
-            .expect_err("open request must fail");
-        assert!(error.to_string().contains("sealed error"));
-
-        let unknown = Term::Map(
-            [
-                (
-                    TermOrdKey(Term::symbol(":kind")),
-                    Term::Str("genesis/obligation-authority-request-v0.1".to_string()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":limits")),
-                    Term::Map(BTreeMap::new()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":operation")),
-                    Term::symbol(":unknown"),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":package")),
-                    Term::Str("fixture".to_string()),
-                ),
-                (TermOrdKey(Term::symbol(":tests")), Term::Vector(vec![])),
-                (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-            ]
-            .into_iter()
-            .collect(),
-        );
-        let error = invoke_authority(unknown, &frontend, limits())
-            .expect_err("unknown operation must fail");
-        assert!(error.to_string().contains("sealed error"));
-    }
-
-    #[test]
-    fn budget_authority_applies_manifest_thresholds_to_raw_measurements() {
-        let temp = tempfile::tempdir().expect("tempdir");
-        let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
-        let (manifest, _) = PackageManifest::load(
-            &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../..")
-                .join("tests/spec/pkg_fail_budgets/package.toml"),
-        )
-        .expect("fixture manifest");
-        let frontend = fixture_frontend();
-
-        let mut within = test_run(1, None, false);
-        within.steps = 999;
-        let passed = evaluate_obligation_with_authority(
-            ObligationAuthorityOperation::Budgets,
-            &store,
-            &manifest,
-            &[within],
-            &frontend,
-            limits(),
-        )
-        .expect("within-budget authority result");
-        assert!(passed.ok);
-
-        let mut exceeded = test_run(1, None, false);
-        exceeded.steps = 1001;
-        let failed = evaluate_obligation_with_authority(
-            ObligationAuthorityOperation::Budgets,
-            &store,
-            &manifest,
-            &[exceeded],
-            &frontend,
-            limits(),
-        )
-        .expect("over-budget authority result");
-        assert!(!failed.ok);
-        assert_eq!(
-            failed.errors,
-            vec!["test fixture/tests::case exceeded max_steps_per_test: 1001 > 1000"]
-        );
-    }
+pub(super) fn evaluate_obligation_with_authority(
+    operation: ObligationAuthorityOperation,
+    store: &EvidenceStore,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    tests: &[TestRun],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
+) -> Result<ObligationResult, ObligationError> {
+    let request = request_term(operation, store, manifest, modules, tests)?;
+    let request_hash = hash_term(&request);
+    let term = invoke_authority(request, frontend, limits)?;
+    decode_authority_result(operation, store, manifest, tests, request_hash, term)
 }
+
+#[cfg(test)]
+#[path = "obligation_authority_tests.rs"]
+mod tests;

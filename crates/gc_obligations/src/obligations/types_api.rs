@@ -421,7 +421,9 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_determinism(&store, &manifest, &modules, &test_runs, &frontend, limits)
             }
             "core/obligation::capabilities-declared" => {
-                obligation_caps_declared(&store, &manifest, &modules, &test_runs)
+                obligation_caps_declared(
+                    &store, &manifest, &modules, &test_runs, &frontend, limits,
+                )
             }
             "core/obligation::replayable-tests" => {
                 obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs, limits)

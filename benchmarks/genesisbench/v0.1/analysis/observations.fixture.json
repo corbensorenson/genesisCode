@@ -1,7 +1,7 @@
 {
-  "analysisPlanIdentitySha256": "0dc491b791fe38f916489fd58ebdfcac4176393c63f69d9efe16a321ed66c360",
+  "analysisPlanIdentitySha256": "02fe436daadbedf428c6ffa70de2028161e3638ccaa56383f69d54f44d603bf7",
   "cohortIdentitySha256": "f9fec6a4ecf409f42cb41ff1c640f2df150270548846022772c39dbdc3afe212",
-  "contentIdentitySha256": "06d42861d23f0a561231bc6e404b38794e12c01abef543e7f543991ca1edc7f0",
+  "contentIdentitySha256": "61bf82cd45fc4464aed974c3e413c5e4577f1c9231209d213495fa1e847857a7",
   "epochs": [
     "public-anchor-epoch-001"
   ],
@@ -10,7 +10,7 @@
     {
       "caseId": "completion-large",
       "conditionId": "condition-completion-context-large-001",
-      "conditionIdentitySha256": "b94607cee778e906a220509c1fcc7f8f8b567128f7f3eeb623d696833bbfc33d",
+      "conditionIdentitySha256": "a6aecf5bdf0905678454a927ff0298bb971a5d1a8f2bc4abd81e3e3b36542976",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-completion-001",
       "lineageIdentitySha256": "6e1e39b15000664c02e50c6243e1cffbf6ff368270e914d74d9311501d94fd64",
@@ -22,7 +22,7 @@
     {
       "caseId": "completion-medium",
       "conditionId": "condition-completion-context-medium-001",
-      "conditionIdentitySha256": "3633af81988b30473d86206f19160c05158345905d8bfa3a2304e22d84813364",
+      "conditionIdentitySha256": "b3c54905d497e36088946a82055fc72770bf454452ae7769ca729dd5876dcd63",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-completion-001",
       "lineageIdentitySha256": "6e1e39b15000664c02e50c6243e1cffbf6ff368270e914d74d9311501d94fd64",
@@ -46,7 +46,7 @@
     {
       "caseId": "deployment-large",
       "conditionId": "condition-deployment-context-large-001",
-      "conditionIdentitySha256": "1f74bb1ff32de26cd41283c3e5ad36aba8204edff7d2d48a040b834909ab06c5",
+      "conditionIdentitySha256": "7f4663decf3528ec118ac22b197f9f027a534d535cb39383628f091d46e44dd0",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-deployment-001",
       "lineageIdentitySha256": "42ad1f5ace80cc77926d1c5a96408b7c4e0eb1041a16dbe5d9eaeee56aa75494",
@@ -58,7 +58,7 @@
     {
       "caseId": "deployment-medium",
       "conditionId": "condition-deployment-context-medium-001",
-      "conditionIdentitySha256": "3fcdf51a97666f5a37f444c615dbaea837930a7c79132bf7a969354c507f3209",
+      "conditionIdentitySha256": "f66972b4bbfc54c125a03585b67dabccbf15b632fc37c0576463003002fe713e",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-deployment-001",
       "lineageIdentitySha256": "42ad1f5ace80cc77926d1c5a96408b7c4e0eb1041a16dbe5d9eaeee56aa75494",
@@ -82,7 +82,7 @@
     {
       "caseId": "generation-large",
       "conditionId": "condition-generation-context-large-001",
-      "conditionIdentitySha256": "8666e567fa0311f850848c00425e5d793f79ada5549e5bd2a7fc5220237ebc33",
+      "conditionIdentitySha256": "cccf6f6cbd211acf05fad05e2b119fd6f1c2f184d2d0d50c75ad795966fe8bf8",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-generation-001",
       "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce",
@@ -94,7 +94,7 @@
     {
       "caseId": "generation-medium",
       "conditionId": "condition-generation-context-medium-001",
-      "conditionIdentitySha256": "e468e44b9bbaae79186703c04058ad79d8e95750b2e632ef74080a3c0a83c3c9",
+      "conditionIdentitySha256": "2540d1b246346060394700a6706af9e73ade98f8989a95ba7ddf093d25040bc1",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-generation-001",
       "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce",
@@ -118,7 +118,7 @@
     {
       "caseId": "package-migration-large",
       "conditionId": "condition-package-migration-context-large-001",
-      "conditionIdentitySha256": "9e434074543942f1a3bba862d548d0fdb9ee6026f1783774ccace70b3205fe29",
+      "conditionIdentitySha256": "115b56e892bb66b33ca3133183925e29640e2f8098205f081a4fd13492a03799",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-package-migration-001",
       "lineageIdentitySha256": "8c7188b3871e5d52f83912faafaa8e9bdaf91cd40cecf6c28e966c7759e65259",
@@ -130,7 +130,7 @@
     {
       "caseId": "package-migration-medium",
       "conditionId": "condition-package-migration-context-medium-001",
-      "conditionIdentitySha256": "b14334d5c785c4de4a97e5f090f651b427b3d32fc6e10f0d35f77fd5e7bc7289",
+      "conditionIdentitySha256": "c002fc9a604da51141ed6527c3f62fd3ef4c0c6ed49032493642fcb582fbcb71",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-package-migration-001",
       "lineageIdentitySha256": "8c7188b3871e5d52f83912faafaa8e9bdaf91cd40cecf6c28e966c7759e65259",
@@ -154,7 +154,7 @@
     {
       "caseId": "performance-repair-large",
       "conditionId": "condition-performance-repair-context-large-001",
-      "conditionIdentitySha256": "39f0ecc122503dff77a9c94c8e3bae620c8b1b6d6bc7c37f88f5b5a5480af752",
+      "conditionIdentitySha256": "d3fe9b450d057237be6da3feec2cded916f577485fa268c7a60c4d35a8ea2cbd",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-performance-repair-001",
       "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d",
@@ -166,7 +166,7 @@
     {
       "caseId": "performance-repair-medium",
       "conditionId": "condition-performance-repair-context-medium-001",
-      "conditionIdentitySha256": "e9444c4644ef288eca335d13a6d13cb45aa6ce5151850350dcf3649c84d9663c",
+      "conditionIdentitySha256": "88c2e156a9d7f152789693c14346fac817a48c0ae5fd5d2cd078402e9f0ec32d",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-performance-repair-001",
       "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d",
@@ -190,7 +190,7 @@
     {
       "caseId": "policy-minimization-large",
       "conditionId": "condition-policy-minimization-context-large-001",
-      "conditionIdentitySha256": "eaf8bb210c4efa849901c5bf80f4fa8a1733810056416f7d56d10c7b0390a0fc",
+      "conditionIdentitySha256": "d7b78eefd8eeb88580e816d35d08211a637d8ce44ec131b0daa744a76e25b259",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-policy-minimization-001",
       "lineageIdentitySha256": "ffc97f1cfa14bc67dbbdd4e0ea498be056fdff59bbff53b031f28e65140c3c60",
@@ -202,7 +202,7 @@
     {
       "caseId": "policy-minimization-medium",
       "conditionId": "condition-policy-minimization-context-medium-001",
-      "conditionIdentitySha256": "225f2474d501f685c529b15234fb42dd04d8d001b2c76a53ceb76c3b7faf9d8d",
+      "conditionIdentitySha256": "6629d8913308cebd6bedd961c37ec162891a713b00a10ef05329064938b02f18",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-policy-minimization-001",
       "lineageIdentitySha256": "ffc97f1cfa14bc67dbbdd4e0ea498be056fdff59bbff53b031f28e65140c3c60",
@@ -226,7 +226,7 @@
     {
       "caseId": "refactor-large",
       "conditionId": "condition-refactor-context-large-001",
-      "conditionIdentitySha256": "1fc255fdd67c0a95fcbd815425469159587aa7224a81f6dd9ecb46b972b2c301",
+      "conditionIdentitySha256": "4fdafd34db76e8a5b9fe91dc17f52d5e9e0d9627162effc80cba37b3c9b88f52",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-refactor-001",
       "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4",
@@ -238,7 +238,7 @@
     {
       "caseId": "refactor-medium",
       "conditionId": "condition-refactor-context-medium-001",
-      "conditionIdentitySha256": "56e41a8e4f16ff751071c575c49a1b183b9bda7d8ccd37300904b4aacbeb5cbf",
+      "conditionIdentitySha256": "17e0f03ca510fdb8cb6ea3fe226c7f9704f617bf0eccfd07136fcaa2b4f8145a",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-refactor-001",
       "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4",
@@ -262,7 +262,7 @@
     {
       "caseId": "repair-large",
       "conditionId": "condition-repair-context-large-001",
-      "conditionIdentitySha256": "57fd3ab873236dfdf0ee95601d222f74fad585e79b8a2ca86bc6e14b0f3dc0b4",
+      "conditionIdentitySha256": "4865c697bdbe681a372313bb57e7d98459fe81d67c3455b1ad3541d305062ab7",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-repair-001",
       "lineageIdentitySha256": "1055a6c836a7d6a7919f8fca4b3e3df5f5506a042ab0bef400301dd0526f57d1",
@@ -276,7 +276,7 @@
     {
       "caseId": "repair-medium",
       "conditionId": "condition-repair-context-medium-001",
-      "conditionIdentitySha256": "1147bbeb7c427e4bb945b4cb47cd5c5017cb9b864e8981dcd38b585d69630edc",
+      "conditionIdentitySha256": "079ef5aef332a9aa4e454163f9d43cbd169de308e8cfbc58dadd3ab377992adc",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-repair-001",
       "lineageIdentitySha256": "1055a6c836a7d6a7919f8fca4b3e3df5f5506a042ab0bef400301dd0526f57d1",
@@ -304,7 +304,7 @@
     {
       "caseId": "replay-investigation-large",
       "conditionId": "condition-replay-investigation-context-large-001",
-      "conditionIdentitySha256": "2533b10079b6e5e289af8aaeccb9055b6c682564d29d949b93b91f0d04f9a47e",
+      "conditionIdentitySha256": "30a90df30fe20598bf3fff5f0593487d95422f6e636a57a2e1ee18074a5393aa",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-replay-investigation-001",
       "lineageIdentitySha256": "97a937563e5b7c29f9bf3b696b0209801adf08a1421c1ee5ae4847bd13f71fe4",
@@ -318,7 +318,7 @@
     {
       "caseId": "replay-investigation-medium",
       "conditionId": "condition-replay-investigation-context-medium-001",
-      "conditionIdentitySha256": "95e21e8b21ba4d8066cf664627734db546425c2940f3fca0a7361ded10293357",
+      "conditionIdentitySha256": "60a0bcbd1f77fd59a5c1b8daaaacd0d5bca4eee5de912dd445418b1b5fb838fd",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-replay-investigation-001",
       "lineageIdentitySha256": "97a937563e5b7c29f9bf3b696b0209801adf08a1421c1ee5ae4847bd13f71fe4",
@@ -346,7 +346,7 @@
     {
       "caseId": "completion-large",
       "conditionId": "condition-completion-context-large-001",
-      "conditionIdentitySha256": "b94607cee778e906a220509c1fcc7f8f8b567128f7f3eeb623d696833bbfc33d",
+      "conditionIdentitySha256": "a6aecf5bdf0905678454a927ff0298bb971a5d1a8f2bc4abd81e3e3b36542976",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-completion-001",
       "lineageIdentitySha256": "6e1e39b15000664c02e50c6243e1cffbf6ff368270e914d74d9311501d94fd64",
@@ -358,7 +358,7 @@
     {
       "caseId": "completion-medium",
       "conditionId": "condition-completion-context-medium-001",
-      "conditionIdentitySha256": "3633af81988b30473d86206f19160c05158345905d8bfa3a2304e22d84813364",
+      "conditionIdentitySha256": "b3c54905d497e36088946a82055fc72770bf454452ae7769ca729dd5876dcd63",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-completion-001",
       "lineageIdentitySha256": "6e1e39b15000664c02e50c6243e1cffbf6ff368270e914d74d9311501d94fd64",
@@ -382,7 +382,7 @@
     {
       "caseId": "deployment-large",
       "conditionId": "condition-deployment-context-large-001",
-      "conditionIdentitySha256": "1f74bb1ff32de26cd41283c3e5ad36aba8204edff7d2d48a040b834909ab06c5",
+      "conditionIdentitySha256": "7f4663decf3528ec118ac22b197f9f027a534d535cb39383628f091d46e44dd0",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-deployment-001",
       "lineageIdentitySha256": "42ad1f5ace80cc77926d1c5a96408b7c4e0eb1041a16dbe5d9eaeee56aa75494",
@@ -394,7 +394,7 @@
     {
       "caseId": "deployment-medium",
       "conditionId": "condition-deployment-context-medium-001",
-      "conditionIdentitySha256": "3fcdf51a97666f5a37f444c615dbaea837930a7c79132bf7a969354c507f3209",
+      "conditionIdentitySha256": "f66972b4bbfc54c125a03585b67dabccbf15b632fc37c0576463003002fe713e",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-deployment-001",
       "lineageIdentitySha256": "42ad1f5ace80cc77926d1c5a96408b7c4e0eb1041a16dbe5d9eaeee56aa75494",
@@ -418,7 +418,7 @@
     {
       "caseId": "generation-large",
       "conditionId": "condition-generation-context-large-001",
-      "conditionIdentitySha256": "8666e567fa0311f850848c00425e5d793f79ada5549e5bd2a7fc5220237ebc33",
+      "conditionIdentitySha256": "cccf6f6cbd211acf05fad05e2b119fd6f1c2f184d2d0d50c75ad795966fe8bf8",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-generation-001",
       "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce",
@@ -432,7 +432,7 @@
     {
       "caseId": "generation-medium",
       "conditionId": "condition-generation-context-medium-001",
-      "conditionIdentitySha256": "e468e44b9bbaae79186703c04058ad79d8e95750b2e632ef74080a3c0a83c3c9",
+      "conditionIdentitySha256": "2540d1b246346060394700a6706af9e73ade98f8989a95ba7ddf093d25040bc1",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-generation-001",
       "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce",
@@ -458,7 +458,7 @@
     {
       "caseId": "package-migration-large",
       "conditionId": "condition-package-migration-context-large-001",
-      "conditionIdentitySha256": "9e434074543942f1a3bba862d548d0fdb9ee6026f1783774ccace70b3205fe29",
+      "conditionIdentitySha256": "115b56e892bb66b33ca3133183925e29640e2f8098205f081a4fd13492a03799",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-package-migration-001",
       "lineageIdentitySha256": "8c7188b3871e5d52f83912faafaa8e9bdaf91cd40cecf6c28e966c7759e65259",
@@ -470,7 +470,7 @@
     {
       "caseId": "package-migration-medium",
       "conditionId": "condition-package-migration-context-medium-001",
-      "conditionIdentitySha256": "b14334d5c785c4de4a97e5f090f651b427b3d32fc6e10f0d35f77fd5e7bc7289",
+      "conditionIdentitySha256": "c002fc9a604da51141ed6527c3f62fd3ef4c0c6ed49032493642fcb582fbcb71",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-package-migration-001",
       "lineageIdentitySha256": "8c7188b3871e5d52f83912faafaa8e9bdaf91cd40cecf6c28e966c7759e65259",
@@ -494,7 +494,7 @@
     {
       "caseId": "performance-repair-large",
       "conditionId": "condition-performance-repair-context-large-001",
-      "conditionIdentitySha256": "39f0ecc122503dff77a9c94c8e3bae620c8b1b6d6bc7c37f88f5b5a5480af752",
+      "conditionIdentitySha256": "d3fe9b450d057237be6da3feec2cded916f577485fa268c7a60c4d35a8ea2cbd",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-performance-repair-001",
       "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d",
@@ -508,7 +508,7 @@
     {
       "caseId": "performance-repair-medium",
       "conditionId": "condition-performance-repair-context-medium-001",
-      "conditionIdentitySha256": "e9444c4644ef288eca335d13a6d13cb45aa6ce5151850350dcf3649c84d9663c",
+      "conditionIdentitySha256": "88c2e156a9d7f152789693c14346fac817a48c0ae5fd5d2cd078402e9f0ec32d",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-performance-repair-001",
       "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d",
@@ -534,7 +534,7 @@
     {
       "caseId": "policy-minimization-large",
       "conditionId": "condition-policy-minimization-context-large-001",
-      "conditionIdentitySha256": "eaf8bb210c4efa849901c5bf80f4fa8a1733810056416f7d56d10c7b0390a0fc",
+      "conditionIdentitySha256": "d7b78eefd8eeb88580e816d35d08211a637d8ce44ec131b0daa744a76e25b259",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-policy-minimization-001",
       "lineageIdentitySha256": "ffc97f1cfa14bc67dbbdd4e0ea498be056fdff59bbff53b031f28e65140c3c60",
@@ -546,7 +546,7 @@
     {
       "caseId": "policy-minimization-medium",
       "conditionId": "condition-policy-minimization-context-medium-001",
-      "conditionIdentitySha256": "225f2474d501f685c529b15234fb42dd04d8d001b2c76a53ceb76c3b7faf9d8d",
+      "conditionIdentitySha256": "6629d8913308cebd6bedd961c37ec162891a713b00a10ef05329064938b02f18",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-policy-minimization-001",
       "lineageIdentitySha256": "ffc97f1cfa14bc67dbbdd4e0ea498be056fdff59bbff53b031f28e65140c3c60",
@@ -570,7 +570,7 @@
     {
       "caseId": "refactor-large",
       "conditionId": "condition-refactor-context-large-001",
-      "conditionIdentitySha256": "1fc255fdd67c0a95fcbd815425469159587aa7224a81f6dd9ecb46b972b2c301",
+      "conditionIdentitySha256": "4fdafd34db76e8a5b9fe91dc17f52d5e9e0d9627162effc80cba37b3c9b88f52",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-refactor-001",
       "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4",
@@ -582,7 +582,7 @@
     {
       "caseId": "refactor-medium",
       "conditionId": "condition-refactor-context-medium-001",
-      "conditionIdentitySha256": "56e41a8e4f16ff751071c575c49a1b183b9bda7d8ccd37300904b4aacbeb5cbf",
+      "conditionIdentitySha256": "17e0f03ca510fdb8cb6ea3fe226c7f9704f617bf0eccfd07136fcaa2b4f8145a",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-refactor-001",
       "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4",
@@ -606,7 +606,7 @@
     {
       "caseId": "repair-large",
       "conditionId": "condition-repair-context-large-001",
-      "conditionIdentitySha256": "57fd3ab873236dfdf0ee95601d222f74fad585e79b8a2ca86bc6e14b0f3dc0b4",
+      "conditionIdentitySha256": "4865c697bdbe681a372313bb57e7d98459fe81d67c3455b1ad3541d305062ab7",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-repair-001",
       "lineageIdentitySha256": "1055a6c836a7d6a7919f8fca4b3e3df5f5506a042ab0bef400301dd0526f57d1",
@@ -620,7 +620,7 @@
     {
       "caseId": "repair-medium",
       "conditionId": "condition-repair-context-medium-001",
-      "conditionIdentitySha256": "1147bbeb7c427e4bb945b4cb47cd5c5017cb9b864e8981dcd38b585d69630edc",
+      "conditionIdentitySha256": "079ef5aef332a9aa4e454163f9d43cbd169de308e8cfbc58dadd3ab377992adc",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-repair-001",
       "lineageIdentitySha256": "1055a6c836a7d6a7919f8fca4b3e3df5f5506a042ab0bef400301dd0526f57d1",
@@ -648,7 +648,7 @@
     {
       "caseId": "replay-investigation-large",
       "conditionId": "condition-replay-investigation-context-large-001",
-      "conditionIdentitySha256": "2533b10079b6e5e289af8aaeccb9055b6c682564d29d949b93b91f0d04f9a47e",
+      "conditionIdentitySha256": "30a90df30fe20598bf3fff5f0593487d95422f6e636a57a2e1ee18074a5393aa",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-replay-investigation-001",
       "lineageIdentitySha256": "97a937563e5b7c29f9bf3b696b0209801adf08a1421c1ee5ae4847bd13f71fe4",
@@ -662,7 +662,7 @@
     {
       "caseId": "replay-investigation-medium",
       "conditionId": "condition-replay-investigation-context-medium-001",
-      "conditionIdentitySha256": "95e21e8b21ba4d8066cf664627734db546425c2940f3fca0a7361ded10293357",
+      "conditionIdentitySha256": "60a0bcbd1f77fd59a5c1b8daaaacd0d5bca4eee5de912dd445418b1b5fb838fd",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-replay-investigation-001",
       "lineageIdentitySha256": "97a937563e5b7c29f9bf3b696b0209801adf08a1421c1ee5ae4847bd13f71fe4",
@@ -690,7 +690,7 @@
     {
       "caseId": "completion-large",
       "conditionId": "condition-completion-context-large-001",
-      "conditionIdentitySha256": "b94607cee778e906a220509c1fcc7f8f8b567128f7f3eeb623d696833bbfc33d",
+      "conditionIdentitySha256": "a6aecf5bdf0905678454a927ff0298bb971a5d1a8f2bc4abd81e3e3b36542976",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-completion-001",
       "lineageIdentitySha256": "6e1e39b15000664c02e50c6243e1cffbf6ff368270e914d74d9311501d94fd64",
@@ -702,7 +702,7 @@
     {
       "caseId": "completion-medium",
       "conditionId": "condition-completion-context-medium-001",
-      "conditionIdentitySha256": "3633af81988b30473d86206f19160c05158345905d8bfa3a2304e22d84813364",
+      "conditionIdentitySha256": "b3c54905d497e36088946a82055fc72770bf454452ae7769ca729dd5876dcd63",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-completion-001",
       "lineageIdentitySha256": "6e1e39b15000664c02e50c6243e1cffbf6ff368270e914d74d9311501d94fd64",
@@ -726,7 +726,7 @@
     {
       "caseId": "deployment-large",
       "conditionId": "condition-deployment-context-large-001",
-      "conditionIdentitySha256": "1f74bb1ff32de26cd41283c3e5ad36aba8204edff7d2d48a040b834909ab06c5",
+      "conditionIdentitySha256": "7f4663decf3528ec118ac22b197f9f027a534d535cb39383628f091d46e44dd0",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-deployment-001",
       "lineageIdentitySha256": "42ad1f5ace80cc77926d1c5a96408b7c4e0eb1041a16dbe5d9eaeee56aa75494",
@@ -740,7 +740,7 @@
     {
       "caseId": "deployment-medium",
       "conditionId": "condition-deployment-context-medium-001",
-      "conditionIdentitySha256": "3fcdf51a97666f5a37f444c615dbaea837930a7c79132bf7a969354c507f3209",
+      "conditionIdentitySha256": "f66972b4bbfc54c125a03585b67dabccbf15b632fc37c0576463003002fe713e",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-deployment-001",
       "lineageIdentitySha256": "42ad1f5ace80cc77926d1c5a96408b7c4e0eb1041a16dbe5d9eaeee56aa75494",
@@ -766,7 +766,7 @@
     {
       "caseId": "generation-large",
       "conditionId": "condition-generation-context-large-001",
-      "conditionIdentitySha256": "8666e567fa0311f850848c00425e5d793f79ada5549e5bd2a7fc5220237ebc33",
+      "conditionIdentitySha256": "cccf6f6cbd211acf05fad05e2b119fd6f1c2f184d2d0d50c75ad795966fe8bf8",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-generation-001",
       "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce",
@@ -780,7 +780,7 @@
     {
       "caseId": "generation-medium",
       "conditionId": "condition-generation-context-medium-001",
-      "conditionIdentitySha256": "e468e44b9bbaae79186703c04058ad79d8e95750b2e632ef74080a3c0a83c3c9",
+      "conditionIdentitySha256": "2540d1b246346060394700a6706af9e73ade98f8989a95ba7ddf093d25040bc1",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-generation-001",
       "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce",
@@ -806,7 +806,7 @@
     {
       "caseId": "package-migration-large",
       "conditionId": "condition-package-migration-context-large-001",
-      "conditionIdentitySha256": "9e434074543942f1a3bba862d548d0fdb9ee6026f1783774ccace70b3205fe29",
+      "conditionIdentitySha256": "115b56e892bb66b33ca3133183925e29640e2f8098205f081a4fd13492a03799",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-package-migration-001",
       "lineageIdentitySha256": "8c7188b3871e5d52f83912faafaa8e9bdaf91cd40cecf6c28e966c7759e65259",
@@ -818,7 +818,7 @@
     {
       "caseId": "package-migration-medium",
       "conditionId": "condition-package-migration-context-medium-001",
-      "conditionIdentitySha256": "b14334d5c785c4de4a97e5f090f651b427b3d32fc6e10f0d35f77fd5e7bc7289",
+      "conditionIdentitySha256": "c002fc9a604da51141ed6527c3f62fd3ef4c0c6ed49032493642fcb582fbcb71",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-package-migration-001",
       "lineageIdentitySha256": "8c7188b3871e5d52f83912faafaa8e9bdaf91cd40cecf6c28e966c7759e65259",
@@ -842,7 +842,7 @@
     {
       "caseId": "performance-repair-large",
       "conditionId": "condition-performance-repair-context-large-001",
-      "conditionIdentitySha256": "39f0ecc122503dff77a9c94c8e3bae620c8b1b6d6bc7c37f88f5b5a5480af752",
+      "conditionIdentitySha256": "d3fe9b450d057237be6da3feec2cded916f577485fa268c7a60c4d35a8ea2cbd",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-performance-repair-001",
       "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d",
@@ -856,7 +856,7 @@
     {
       "caseId": "performance-repair-medium",
       "conditionId": "condition-performance-repair-context-medium-001",
-      "conditionIdentitySha256": "e9444c4644ef288eca335d13a6d13cb45aa6ce5151850350dcf3649c84d9663c",
+      "conditionIdentitySha256": "88c2e156a9d7f152789693c14346fac817a48c0ae5fd5d2cd078402e9f0ec32d",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-performance-repair-001",
       "lineageIdentitySha256": "4af76c67ebca87566e6a91b87747d490c276268ce98d8950b5306b62f0ae488d",
@@ -882,7 +882,7 @@
     {
       "caseId": "policy-minimization-large",
       "conditionId": "condition-policy-minimization-context-large-001",
-      "conditionIdentitySha256": "eaf8bb210c4efa849901c5bf80f4fa8a1733810056416f7d56d10c7b0390a0fc",
+      "conditionIdentitySha256": "d7b78eefd8eeb88580e816d35d08211a637d8ce44ec131b0daa744a76e25b259",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-policy-minimization-001",
       "lineageIdentitySha256": "ffc97f1cfa14bc67dbbdd4e0ea498be056fdff59bbff53b031f28e65140c3c60",
@@ -894,7 +894,7 @@
     {
       "caseId": "policy-minimization-medium",
       "conditionId": "condition-policy-minimization-context-medium-001",
-      "conditionIdentitySha256": "225f2474d501f685c529b15234fb42dd04d8d001b2c76a53ceb76c3b7faf9d8d",
+      "conditionIdentitySha256": "6629d8913308cebd6bedd961c37ec162891a713b00a10ef05329064938b02f18",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-policy-minimization-001",
       "lineageIdentitySha256": "ffc97f1cfa14bc67dbbdd4e0ea498be056fdff59bbff53b031f28e65140c3c60",
@@ -918,7 +918,7 @@
     {
       "caseId": "refactor-large",
       "conditionId": "condition-refactor-context-large-001",
-      "conditionIdentitySha256": "1fc255fdd67c0a95fcbd815425469159587aa7224a81f6dd9ecb46b972b2c301",
+      "conditionIdentitySha256": "4fdafd34db76e8a5b9fe91dc17f52d5e9e0d9627162effc80cba37b3c9b88f52",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-refactor-001",
       "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4",
@@ -932,7 +932,7 @@
     {
       "caseId": "refactor-medium",
       "conditionId": "condition-refactor-context-medium-001",
-      "conditionIdentitySha256": "56e41a8e4f16ff751071c575c49a1b183b9bda7d8ccd37300904b4aacbeb5cbf",
+      "conditionIdentitySha256": "17e0f03ca510fdb8cb6ea3fe226c7f9704f617bf0eccfd07136fcaa2b4f8145a",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-refactor-001",
       "lineageIdentitySha256": "703cf17529a636438867d240e44fc2f2fc0504f233f57c8389fadad3fcb56ca4",
@@ -958,7 +958,7 @@
     {
       "caseId": "repair-large",
       "conditionId": "condition-repair-context-large-001",
-      "conditionIdentitySha256": "57fd3ab873236dfdf0ee95601d222f74fad585e79b8a2ca86bc6e14b0f3dc0b4",
+      "conditionIdentitySha256": "4865c697bdbe681a372313bb57e7d98459fe81d67c3455b1ad3541d305062ab7",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-repair-001",
       "lineageIdentitySha256": "1055a6c836a7d6a7919f8fca4b3e3df5f5506a042ab0bef400301dd0526f57d1",
@@ -972,7 +972,7 @@
     {
       "caseId": "repair-medium",
       "conditionId": "condition-repair-context-medium-001",
-      "conditionIdentitySha256": "1147bbeb7c427e4bb945b4cb47cd5c5017cb9b864e8981dcd38b585d69630edc",
+      "conditionIdentitySha256": "079ef5aef332a9aa4e454163f9d43cbd169de308e8cfbc58dadd3ab377992adc",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-repair-001",
       "lineageIdentitySha256": "1055a6c836a7d6a7919f8fca4b3e3df5f5506a042ab0bef400301dd0526f57d1",
@@ -1000,7 +1000,7 @@
     {
       "caseId": "replay-investigation-large",
       "conditionId": "condition-replay-investigation-context-large-001",
-      "conditionIdentitySha256": "2533b10079b6e5e289af8aaeccb9055b6c682564d29d949b93b91f0d04f9a47e",
+      "conditionIdentitySha256": "30a90df30fe20598bf3fff5f0593487d95422f6e636a57a2e1ee18074a5393aa",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-replay-investigation-001",
       "lineageIdentitySha256": "97a937563e5b7c29f9bf3b696b0209801adf08a1421c1ee5ae4847bd13f71fe4",
@@ -1014,7 +1014,7 @@
     {
       "caseId": "replay-investigation-medium",
       "conditionId": "condition-replay-investigation-context-medium-001",
-      "conditionIdentitySha256": "95e21e8b21ba4d8066cf664627734db546425c2940f3fca0a7361ded10293357",
+      "conditionIdentitySha256": "60a0bcbd1f77fd59a5c1b8daaaacd0d5bca4eee5de912dd445418b1b5fb838fd",
       "epochId": "public-anchor-epoch-001",
       "lineageId": "lineage-replay-investigation-001",
       "lineageIdentitySha256": "97a937563e5b7c29f9bf3b696b0209801adf08a1421c1ee5ae4847bd13f71fe4",
@@ -1055,6 +1055,6 @@
       "modelFamilyId": "fixture-family-gamma"
     }
   ],
-  "taskBenchmarkIdentitySha256": "23e4832a79808fd4a3588e540427e958ae52c1b28f77d84f6974ac14581f7439",
+  "taskBenchmarkIdentitySha256": "7ebc9bf5325324ebcd3d8e80f7022923677da331cf77926cfa4acfce38adf885",
   "version": "0.1.0"
 }

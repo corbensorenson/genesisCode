@@ -192,6 +192,7 @@ pub(super) fn obligation_unit_tests(
         ObligationAuthorityOperation::UnitTests,
         store,
         manifest,
+        &[],
         tests,
         frontend,
         limits,
@@ -269,61 +270,18 @@ pub(super) fn obligation_caps_declared(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     tests: &[TestRun],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
-    let mut ok = true;
-    let mut errors = Vec::new();
-    let suite_to_mod = suite_to_module(modules);
-
-    for t in tests {
-        let Some(log) = &t.effect_log else { continue };
-        let used: BTreeSet<String> = log.entries.iter().map(|e| e.op.clone()).collect();
-        let Some(mod_i) = suite_to_mod.get(&t.id.suite_sym) else {
-            ok = false;
-            errors.push(format!(
-                "cannot find defining module for suite {}",
-                t.id.suite_sym
-            ));
-            continue;
-        };
-        let meta = extract_meta_static(&modules[*mod_i].forms).ok_or_else(|| {
-            ObligationError::Test(format!(
-                "module {} missing ::meta for caps check",
-                modules[*mod_i].entry.path
-            ))
-        })?;
-        let declared = meta_caps(&meta).ok_or_else(|| {
-            ObligationError::Test(format!(
-                "module {} ::meta missing :caps",
-                modules[*mod_i].entry.path
-            ))
-        })?;
-        let declared: BTreeSet<String> = declared.into_iter().collect();
-        for op in used {
-            if !declared.contains(&op) {
-                ok = false;
-                errors.push(format!(
-                    "test {} used op {} but module {} did not declare it in :caps",
-                    t.id.test_name, op, modules[*mod_i].entry.path
-                ));
-            }
-        }
-    }
-
-    let report = obligation_report_term(
-        "core/obligation::capabilities-declared-report",
-        &[
-            Term::Str(manifest.name.clone()),
-            Term::Bool(ok),
-            Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-        ],
-    )?;
-    let artifact = store.put_term(&report)?;
-    Ok(ObligationResult {
-        name: "core/obligation::capabilities-declared".to_string(),
-        ok,
-        artifact: Some(artifact),
-        errors,
-    })
+    evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::CapabilitiesDeclared,
+        store,
+        manifest,
+        modules,
+        tests,
+        frontend,
+        limits,
+    )
 }
 
 pub(super) fn obligation_typecheck(

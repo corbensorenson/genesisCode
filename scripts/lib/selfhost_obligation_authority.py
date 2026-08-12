@@ -67,10 +67,13 @@ FIELDS = {
     "version",
 }
 
-MIGRATED = ["core/obligation::budgets", "core/obligation::unit-tests"]
+MIGRATED = [
+    "core/obligation::budgets",
+    "core/obligation::capabilities-declared",
+    "core/obligation::unit-tests",
+]
 RESIDUAL = [
     "core/obligation::ai-style",
-    "core/obligation::capabilities-declared",
     "core/obligation::concurrency-replay",
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
@@ -105,10 +108,13 @@ def validate(profile, schema, check_identity=True):
         "binding": "core/cli::obligation-authority",
         "hostFacts": [
             "actual-value-hash",
+            "canonical-module-forms",
             "effect-entry-count",
             "effect-log-artifact",
             "effect-log-byte-count",
             "expected-value-hash",
+            "module-path",
+            "observed-effect-operation",
             "sealed-error-status",
             "step-count",
             "test-identity",
@@ -118,7 +124,7 @@ def validate(profile, schema, check_identity=True):
         "migratedObligations": MIGRATED,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
         "residualObligations": RESIDUAL,
-        "resultKind": "genesis/obligation-authority-result-v0.1",
+        "resultKind": "genesis/obligation-authority-result-v0.2",
         "runtimeEvidence": {
             "allocationLimit": 5_000_000,
             "stepLimit": 5_000_000,
@@ -169,8 +175,13 @@ def validate_bridge(bridge: str) -> None:
         "evaluate_obligation_with_authority(",
         "unit_test_observations(",
         "budget_observations(",
+        "capability_inputs(",
         "validate_unit_report(",
         "validate_budget_report(",
+        "validate_capabilities_report(",
+        'Term::symbol(":request-h")',
+        "let request_hash = hash_term(&request);",
+        "obligation_authority_rejects_result_bound_to_another_request",
         "if frontend_is_rust(frontend)",
         "resolved_authority_frontend = default_coreform_frontend();",
         "rust_frontend_selection_does_not_replace_selfhost_obligation_authority",
@@ -194,12 +205,16 @@ def static_check(root: Path, profile):
         fail("obligation authority binding manifest custody drift")
 
     bridge = (root / "crates/gc_obligations/src/obligation_authority.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_caps.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
     validate_bridge(bridge)
     types_api = (root / "crates/gc_obligations/src/obligations/types_api.rs").read_text()
     if types_api.count("obligation_unit_tests(&store, &manifest, &test_runs, &frontend, limits)") != 1:
         fail("unit-test production authority call-site drift")
     if types_api.count("obligation_budgets(&store, &manifest, &test_runs, &frontend, limits)") != 1:
         fail("budget production authority call-site drift")
+    if types_api.count("obligation_caps_declared(") != 1:
+        fail("capabilities-declared production authority call-site drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
@@ -220,6 +235,13 @@ def static_check(root: Path, profile):
         fail("unit-test authority dispatch drift")
     if budget_host.count("ObligationAuthorityOperation::Budgets") != 1:
         fail("budget authority dispatch drift")
+    if unit_host.count("ObligationAuthorityOperation::CapabilitiesDeclared") != 1:
+        fail("capabilities-declared authority dispatch drift")
+    if (
+        '"core/obligation::capabilities-declared-report"' in unit_host
+        or "did not declare it in :caps" in unit_host
+    ):
+        fail("reachable host capability-declaration decision restored")
     if stage_host.count("ObligationAuthorityOperation::UnitTests") != 1:
         fail("translation validation unit-test authority dispatch drift")
     for package in ("gc_cli", "gc_wasi_cli"):
@@ -262,12 +284,19 @@ def run_case(binary: Path, artifact: Path, root: Path, fixture: str, profile):
     return result.returncode, envelope.get("ok"), facts
 
 
-def runtime_check(root: Path, profile, binaries):
-    artifact = (root / profile["artifact"]).resolve()
+def runtime_check(root: Path, profile, binaries, artifact_override=None):
+    artifact = (
+        artifact_override.resolve()
+        if artifact_override is not None
+        else (root / profile["artifact"]).resolve()
+    )
+    if not artifact.is_file():
+        fail(f"runtime self-host artifact is not a file: {artifact}")
     fixtures = [
         ("tests/spec/pkg_basic", 0, True),
         ("tests/spec/pkg_fail_unit", 30, False),
         ("tests/spec/pkg_fail_budgets", 30, False),
+        ("tests/spec/pkg_fail_caps_declared", 30, False),
     ]
     all_observations = []
     for binary in binaries:
@@ -308,6 +337,8 @@ def self_test(root: Path, profile, schema):
         else:
             fail(f"mutation was not rejected: {label}")
     bridge = (root / "crates/gc_obligations/src/obligation_authority.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_caps.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
     redirected = "resolved_authority_frontend = default_coreform_frontend();"
     try:
         validate_bridge(bridge.replace(redirected, "", 1))
@@ -315,6 +346,13 @@ def self_test(root: Path, profile, schema):
         mutations.append("rust-frontend-redirection")
     else:
         fail("mutation was not rejected: rust-frontend-redirection")
+    request_binding = "let request_hash = hash_term(&request);"
+    try:
+        validate_bridge(bridge.replace(request_binding, "", 1))
+    except CheckError:
+        mutations.append("request-result-binding")
+    else:
+        fail("mutation was not rejected: request-result-binding")
     return mutations
 
 
@@ -327,6 +365,7 @@ def main(argv=None):
     parser.add_argument("--refresh-identity", action="store_true")
     parser.add_argument("--runtime", action="store_true")
     parser.add_argument("--binary", action="append", type=Path, default=[])
+    parser.add_argument("--artifact", type=Path)
     args = parser.parse_args(argv)
     root = args.root.resolve()
     profile_path = args.profile if args.profile.is_absolute() else root / args.profile
@@ -345,7 +384,7 @@ def main(argv=None):
     if args.runtime:
         if not args.binary:
             fail("--runtime requires at least one --binary")
-        report["runtime"] = runtime_check(root, profile, args.binary)
+        report["runtime"] = runtime_check(root, profile, args.binary, args.artifact)
     print(json.dumps(report, sort_keys=True))
 
 

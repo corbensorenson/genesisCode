@@ -155,8 +155,8 @@
     },
     {
       "byteCount": 787,
-      "cardSha256": "869718504928f36bb82839ba597399faa4d91cdf360aec833519ee54635e1ff6",
-      "content": "## Testing and obligations\n\nCard: testing | Profile: GC-AGENT-v0.3 | Source: sha256:e8d7bfcd70f6602c70e4bae6ea62e7ac9d032f36425f651d4cf91061bcdf1715\n\n- Run focused parser/type/eval/obligation checks before broader deterministic profiles.\n- Checks are read-only; only explicit update commands may refresh retained artifacts.\n- Require unit, property, determinism, replay, capability, and resource coverage applicable to the change.\n- Report exact failures and preserve negative evidence; do not mark work complete from a narrow passing lane.\n\nCommands:\n- `genesis test --pkg package.toml`\n- `bash scripts/test_changed_fast.sh --budget-ms 120000`\n\nAuthorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md, crates/gc_obligations/src/obligations/types_api.rs\n",
+      "cardSha256": "2023e7eea57a73de0e2413e4e02caf2c4e3381acc84634548693413ed701535b",
+      "content": "## Testing and obligations\n\nCard: testing | Profile: GC-AGENT-v0.3 | Source: sha256:ebc64cf10c650960f80a0536bc9da2d2240e7c5d5402fd58ff9d9e9b4b9b81e5\n\n- Run focused parser/type/eval/obligation checks before broader deterministic profiles.\n- Checks are read-only; only explicit update commands may refresh retained artifacts.\n- Require unit, property, determinism, replay, capability, and resource coverage applicable to the change.\n- Report exact failures and preserve negative evidence; do not mark work complete from a narrow passing lane.\n\nCommands:\n- `genesis test --pkg package.toml`\n- `bash scripts/test_changed_fast.sh --budget-ms 120000`\n\nAuthorities: docs/spec/TESTING_BUNDLE_v0.1.md, docs/spec/TEST_EXECUTION_PROFILES_v0.1.md, crates/gc_obligations/src/obligations/types_api.rs\n",
       "id": "testing",
       "maxAsciiBytes": 1400,
       "selectors": {
@@ -182,7 +182,7 @@
           "test"
         ]
       },
-      "sourceHashSha256": "e8d7bfcd70f6602c70e4bae6ea62e7ac9d032f36425f651d4cf91061bcdf1715",
+      "sourceHashSha256": "ebc64cf10c650960f80a0536bc9da2d2240e7c5d5402fd58ff9d9e9b4b9b81e5",
       "title": "Testing and obligations",
       "tokenUpperBound": 787
     },
@@ -260,13 +260,13 @@
       "tokenUpperBound": 834
     }
   ],
-  "compendiumSha256": "966e3f4ffcd6411f612db7cd8eb624db175ba358ad0f7fdb44a11e933b4bfc35",
+  "compendiumSha256": "d338278d3f7fe8f4055fe4f5893cd95d67fc42f41bca8fb97cf5dc102ae36dc9",
   "fallbackCard": "troubleshooting",
   "intentSchema": "genesis/agent-intent-v0.1",
   "kind": "genesis/gc-agent-task-cards-v0.3",
   "profileId": "GC-AGENT-v0.3",
   "profileIdentitySha256": "25c1607535d011c612970df5f368cdab621fbc7035efb33407133ed16892a623",
-  "registryIdentitySha256": "fb174908ba21d8a35df0baff91bb66539bbe13daa995e3cbfdd7c44487190787",
+  "registryIdentitySha256": "2e7877af1aa453e55a97baf60dabc6a96701b228cae3e5c5e4b629288c70908a",
   "sourceIdentities": {
     "docs/spec/GC_AGENT_PROFILE_v0.3.json": "f0fddf55829844ec2852aeb6b2e4560012f8827d68874fa26667627d3a980a63",
     "policies/gc_agent_task_cards_v0.3.json": "527626cb26831825604ab827f774e1abb53e6f3d869bc484c103b05311a25be4"

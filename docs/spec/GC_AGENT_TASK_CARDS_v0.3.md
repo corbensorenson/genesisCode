@@ -70,7 +70,7 @@ Authorities: docs/spec/GCLOG.md, docs/spec/SEALS_DISPATCH_REPLAY.md, crates/gc_e
 
 ## Testing and obligations
 
-Card: testing | Profile: GC-AGENT-v0.3 | Source: sha256:e8d7bfcd70f6602c70e4bae6ea62e7ac9d032f36425f651d4cf91061bcdf1715
+Card: testing | Profile: GC-AGENT-v0.3 | Source: sha256:ebc64cf10c650960f80a0536bc9da2d2240e7c5d5402fd58ff9d9e9b4b9b81e5
 
 - Run focused parser/type/eval/obligation checks before broader deterministic profiles.
 - Checks are read-only; only explicit update commands may refresh retained artifacts.

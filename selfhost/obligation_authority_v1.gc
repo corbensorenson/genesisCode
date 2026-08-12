@@ -1,5 +1,5 @@
-(def selfhost/obligation::REQUEST_KIND "genesis/obligation-authority-request-v0.1")
-(def selfhost/obligation::RESULT_KIND "genesis/obligation-authority-result-v0.1")
+(def selfhost/obligation::REQUEST_KIND "genesis/obligation-authority-request-v0.2")
+(def selfhost/obligation::RESULT_KIND "genesis/obligation-authority-result-v0.2")
 
 (def selfhost/obligation::error
   (fn (message) ((core/error::make2 "core/obligation/authority") message)))
@@ -134,7 +134,7 @@
                     :ok ok
                     :package package
                     :tests reports}
-                 :v 1})))
+                 :v 2})))
           (selfhost/obligation::error ":unit-tests requires an empty :limits map"))))))
 
 (def selfhost/obligation::budget-test-valid?
@@ -328,37 +328,301 @@
                        :ok ok
                        :operation (quote :budgets)
                        :report report
-                       :v 1}))))))
+                       :v 2}))))))
           (selfhost/obligation::error
             ":budgets requires exactly three optional nonnegative integer limits"))))))
+
+(def selfhost/obligation::symbol-vector-valid-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/obligation::sym? ((core/vec::get values) index))
+          ((selfhost/obligation::symbol-vector-valid-loop? values) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/obligation::symbol-vector-valid?
+  (fn (values)
+    (if (selfhost/obligation::vec? values)
+      ((selfhost/obligation::symbol-vector-valid-loop? values) 0)
+      false)))
+
+(def selfhost/obligation::module-valid?
+  (fn (module)
+    (if (selfhost/obligation::map? module)
+      (if ((core/int::eq? (core/map::len module)) 2)
+        (if (selfhost/obligation::str? ((core/map::get module) (quote :path)))
+          (selfhost/obligation::vec? ((core/map::get module) (quote :forms)))
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::validate-modules-loop
+  (fn (modules)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len modules))
+        true
+        (if (selfhost/obligation::module-valid? ((core/vec::get modules) index))
+          ((selfhost/obligation::validate-modules-loop modules) ((core/int::add index) 1))
+          (selfhost/obligation::error
+            "capability module observation must contain exactly valid :path and :forms fields"))))))
+
+(def selfhost/obligation::form-defines?
+  (fn (form)
+    (fn (suite)
+      (if ((selfhost/obligation::tag? form) (quote :pair))
+        (let ((items (core/pair::as-proper-list form)))
+          (if (selfhost/obligation::vec? items)
+            (if ((core/int::eq? (core/vec::len items)) 3)
+              (let
+                ((head ((core/vec::get items) 0))
+                  (name ((core/vec::get items) 1)))
+                (if (selfhost/obligation::sym? head)
+                  (if ((core/sym::eq? head) (quote def))
+                    (if (selfhost/obligation::sym? name)
+                      ((core/sym::eq? name) suite)
+                      false)
+                    false)
+                  false))
+              false)
+            false))
+        false))))
+
+(def selfhost/obligation::forms-define-loop?
+  (fn (forms)
+    (fn (suite)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len forms))
+          false
+          (if ((selfhost/obligation::form-defines? ((core/vec::get forms) index)) suite)
+            true
+            (((selfhost/obligation::forms-define-loop? forms) suite)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/obligation::module-defines?
+  (fn (module)
+    (fn (suite)
+      (((selfhost/obligation::forms-define-loop?
+           ((core/map::get module) (quote :forms))) suite) 0))))
+
+(def selfhost/obligation::find-suite-module-loop
+  (fn (modules)
+    (fn (suite)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len modules))
+          nil
+          (let ((module ((core/vec::get modules) index)))
+            (if (selfhost/obligation::module-valid? module)
+              (if ((selfhost/obligation::module-defines? module) suite)
+                module
+                (((selfhost/obligation::find-suite-module-loop modules) suite)
+                  ((core/int::add index) 1)))
+              (selfhost/obligation::error
+                "capability module observation must contain exactly valid :path and :forms fields"))))))))
+
+(def selfhost/obligation::find-suite-module
+  (fn (modules)
+    (fn (suite)
+      (((selfhost/obligation::find-suite-module-loop modules) suite) 0))))
+
+(def selfhost/obligation::symbol-member-loop?
+  (fn (values)
+    (fn (needle)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          false
+          (if ((core/sym::eq? ((core/vec::get values) index)) needle)
+            true
+            (((selfhost/obligation::symbol-member-loop? values) needle)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/obligation::symbol-member?
+  (fn (values)
+    (fn (needle)
+      (((selfhost/obligation::symbol-member-loop? values) needle) 0))))
+
+(def selfhost/obligation::caps-test-valid?
+  (fn (test)
+    (if (selfhost/obligation::map? test)
+      (if ((core/int::eq? (core/map::len test)) 3)
+        (if (selfhost/obligation::sym? ((core/map::get test) (quote :suite)))
+          (if (selfhost/obligation::str? ((core/map::get test) (quote :name)))
+            (selfhost/obligation::symbol-vector-valid?
+              ((core/map::get test) (quote :used-ops)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::undeclared-capability-error
+  (fn (test)
+    (fn (op)
+      (fn (module)
+        ((core/str::concat "test ")
+          ((core/str::concat ((core/map::get test) (quote :name)))
+            ((core/str::concat " used op ")
+              ((core/str::concat (core/sym::to-str op))
+                ((core/str::concat " but module ")
+                  ((core/str::concat ((core/map::get module) (quote :path)))
+                    " did not declare it in :caps"))))))))))
+
+(def selfhost/obligation::caps-ops-loop
+  (fn (test)
+    (fn (module)
+      (fn (declared)
+        (fn (used)
+          (fn (index)
+            (fn (errors)
+              (if ((core/int::eq? index) (core/vec::len used))
+                errors
+                (let ((op ((core/vec::get used) index)))
+                  ((((((selfhost/obligation::caps-ops-loop test) module) declared) used)
+                       ((core/int::add index) 1))
+                    (if ((selfhost/obligation::symbol-member? declared) op)
+                      errors
+                      ((core/vec::push errors)
+                        (((selfhost/obligation::undeclared-capability-error test) op) module)))))))))))))
+
+(def selfhost/obligation::module-declared-caps
+  (fn (module)
+    (let ((meta (core/cli::module-meta ((core/map::get module) (quote :forms)))))
+      (if (selfhost/obligation::map? meta)
+        (let ((declared ((core/map::get meta) (quote :caps))))
+          (if (selfhost/obligation::symbol-vector-valid? declared)
+            declared
+            (selfhost/obligation::error
+              ((core/str::concat "module ")
+                ((core/str::concat ((core/map::get module) (quote :path)))
+                  " ::meta missing :caps")))))
+        (selfhost/obligation::error
+          ((core/str::concat "module ")
+            ((core/str::concat ((core/map::get module) (quote :path)))
+              " missing ::meta for caps check")))))))
+
+(def selfhost/obligation::caps-test-errors
+  (fn (modules)
+    (fn (test)
+      (let
+        ((suite ((core/map::get test) (quote :suite)))
+          (module ((selfhost/obligation::find-suite-module modules)
+                    ((core/map::get test) (quote :suite)))))
+        (if (core/error::is? module)
+          module
+          (if (selfhost/obligation::nil? module)
+            ((core/vec::push [])
+              ((core/str::concat "cannot find defining module for suite ")
+                (core/sym::to-str suite)))
+            (let ((declared (selfhost/obligation::module-declared-caps module)))
+              (if (core/error::is? declared)
+                declared
+                ((((((selfhost/obligation::caps-ops-loop test) module) declared)
+                     ((core/map::get test) (quote :used-ops))) 0) [])))))))))
+
+(def selfhost/obligation::caps-tests-loop
+  (fn (modules)
+    (fn (tests)
+      (fn (index)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len tests))
+            errors
+            (let ((test ((core/vec::get tests) index)))
+              (if (selfhost/obligation::caps-test-valid? test)
+                (let ((next-errors ((selfhost/obligation::caps-test-errors modules) test)))
+                  (if (core/error::is? next-errors)
+                    next-errors
+                    ((((selfhost/obligation::caps-tests-loop modules) tests)
+                       ((core/int::add index) 1))
+                      ((selfhost/obligation::append-errors errors) next-errors))))
+                (selfhost/obligation::error
+                  "capability test observation must contain exactly valid :suite, :name, and :used-ops fields")))))))))
+
+(def selfhost/obligation::capabilities-declared
+  (fn (package)
+    (fn (inputs)
+      (if (selfhost/obligation::map? inputs)
+        (if ((core/int::eq? (core/map::len inputs)) 2)
+          (let
+            ((modules ((core/map::get inputs) (quote :modules)))
+              (tests ((core/map::get inputs) (quote :tests))))
+            (if (if (selfhost/obligation::vec? modules) (selfhost/obligation::vec? tests) false)
+              (let ((modules-valid ((selfhost/obligation::validate-modules-loop modules) 0)))
+                (if (core/error::is? modules-valid)
+                  modules-valid
+                  (let ((errors ((((selfhost/obligation::caps-tests-loop modules) tests) 0) [])))
+                    (if (core/error::is? errors)
+                      errors
+                      (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+                        {:errors errors
+                         :kind selfhost/obligation::RESULT_KIND
+                         :name "core/obligation::capabilities-declared"
+                         :ok ok
+                         :operation (quote :capabilities-declared)
+                         :report
+                           {:errors errors
+                            :kind "genesis/caps-declared-v0.2"
+                            :ok ok
+                            :package package}
+                         :v 2})))))
+              (selfhost/obligation::error
+                ":capabilities-declared requires vector :modules and :tests inputs")))
+          (selfhost/obligation::error
+            ":capabilities-declared inputs must contain exactly :modules and :tests"))
+        (selfhost/obligation::error ":capabilities-declared inputs must be a map")))))
+
+(def selfhost/obligation::bind-result
+  (fn (request)
+    (fn (result)
+      (if (core/error::is? result)
+        result
+        (((core/map::put result) (quote :request-h))
+          (selfhost/hash::hash-term request))))))
+
+(def selfhost/obligation::dispatch
+  (fn (operation)
+    (fn (package)
+      (fn (inputs)
+        (if ((core/sym::eq? operation) (quote :unit-tests))
+          (if ((core/int::eq? (core/map::len inputs)) 1)
+            (let ((tests ((core/map::get inputs) (quote :tests))))
+              (if (selfhost/obligation::vec? tests)
+                (((selfhost/obligation::unit-tests package) {}) tests)
+                (selfhost/obligation::error ":unit-tests :tests input must be a vector")))
+            (selfhost/obligation::error ":unit-tests inputs must contain exactly :tests"))
+          (if ((core/sym::eq? operation) (quote :budgets))
+            (if ((core/int::eq? (core/map::len inputs)) 2)
+              (let ((tests ((core/map::get inputs) (quote :tests))))
+                (if (selfhost/obligation::vec? tests)
+                  (((selfhost/obligation::budgets package)
+                     ((core/map::get inputs) (quote :limits))) tests)
+                  (selfhost/obligation::error ":budgets :tests input must be a vector")))
+              (selfhost/obligation::error ":budgets inputs must contain exactly :limits and :tests"))
+            (if ((core/sym::eq? operation) (quote :capabilities-declared))
+              ((selfhost/obligation::capabilities-declared package) inputs)
+              (selfhost/obligation::error "unknown obligation authority operation"))))))))
 
 (def core/cli::obligation-authority
   (fn (request)
     (if (selfhost/obligation::map? request)
-      (if ((core/int::eq? (core/map::len request)) 6)
+      (if ((core/int::eq? (core/map::len request)) 5)
         (let
           ((kind ((core/map::get request) (quote :kind)))
             (version ((core/map::get request) (quote :v)))
             (operation ((core/map::get request) (quote :operation)))
             (package ((core/map::get request) (quote :package)))
-            (limits ((core/map::get request) (quote :limits)))
-            (tests ((core/map::get request) (quote :tests))))
+            (inputs ((core/map::get request) (quote :inputs))))
           (if (if (selfhost/obligation::str? kind)
                 ((core/eq? kind) selfhost/obligation::REQUEST_KIND)
                 false)
             (if (if (selfhost/obligation::int? version)
-                  ((core/int::eq? version) 1)
+                  ((core/int::eq? version) 2)
                   false)
               (if (selfhost/obligation::str? package)
-                (if (selfhost/obligation::vec? tests)
-                  (if ((core/sym::eq? operation) (quote :unit-tests))
-                    (((selfhost/obligation::unit-tests package) limits) tests)
-                    (if ((core/sym::eq? operation) (quote :budgets))
-                      (((selfhost/obligation::budgets package) limits) tests)
-                      (selfhost/obligation::error "unknown obligation authority operation")))
-                  (selfhost/obligation::error "request :tests must be a vector"))
+                (if (selfhost/obligation::map? inputs)
+                  (let ((result (((selfhost/obligation::dispatch operation) package) inputs)))
+                    ((selfhost/obligation::bind-result request) result))
+                  (selfhost/obligation::error "request :inputs must be a map"))
                 (selfhost/obligation::error "request :package must be a string"))
-              (selfhost/obligation::error "request :v must equal 1"))
+              (selfhost/obligation::error "request :v must equal 2"))
             (selfhost/obligation::error "request :kind mismatch")))
-        (selfhost/obligation::error "request must contain exactly six fields"))
+        (selfhost/obligation::error "request must contain exactly five fields"))
       (selfhost/obligation::error "request must be a map"))))

@@ -2,13 +2,16 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-11",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "ce7d712b7f1b6c56e6fd89b5bb50402cfffde77390790b4b58c4c6321f102bad",
+  "contentIdentitySha256": "1a3f1ddeb9aaa341d79fd6a64b69f7bafa8ce39d587b368d4818add88e64fd93",
   "hostFacts": [
     "actual-value-hash",
+    "canonical-module-forms",
     "effect-entry-count",
     "effect-log-artifact",
     "effect-log-byte-count",
     "expected-value-hash",
+    "module-path",
+    "observed-effect-operation",
     "sealed-error-status",
     "step-count",
     "test-identity"
@@ -17,6 +20,7 @@
   "kind": "genesis/selfhost-obligation-authority-v0.1",
   "migratedObligations": [
     "core/obligation::budgets",
+    "core/obligation::capabilities-declared",
     "core/obligation::unit-tests"
   ],
   "nonclaims": [
@@ -35,7 +39,6 @@
   ],
   "residualObligations": [
     "core/obligation::ai-style",
-    "core/obligation::capabilities-declared",
     "core/obligation::concurrency-replay",
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
@@ -53,7 +56,7 @@
     "core/obligation::typecheck-strict",
     "core/obligation::preflight"
   ],
-  "resultKind": "genesis/obligation-authority-result-v0.1",
+  "resultKind": "genesis/obligation-authority-result-v0.2",
   "runtimeEvidence": {
     "allocationLimit": 5000000,
     "stepLimit": 5000000,
@@ -61,7 +64,7 @@
   },
   "schema": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
   "sourceModule": "selfhost/obligation_authority_v1.gc",
-  "sourceSha256": "d8aea75ddaa77592aa052b21b7d8f567f7337364e1bd0fba708e1e0c40186201",
+  "sourceSha256": "f65f457e33d677724e80c6dac2b37b33f4a20a543e1ce6daa199144c17d04f8f",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

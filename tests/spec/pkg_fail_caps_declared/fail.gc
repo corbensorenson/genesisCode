@@ -1,7 +1,7 @@
 (def ::meta
   '{
      ; Declares a different capability than the one actually used in tests.
-     :caps ['sys/time::now]
+     :caps [sys/time::now]
      :exports [pkg/fail-caps::tests]
      :types {pkg/fail-caps::tests ?}})
 
@@ -19,4 +19,3 @@
         :expect nil}})
 
 pkg/fail-caps::tests
-

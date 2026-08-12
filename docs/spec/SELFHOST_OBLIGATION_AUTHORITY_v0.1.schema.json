@@ -30,15 +30,15 @@
     "binding": {"const": "core/cli::obligation-authority"},
     "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "hostFacts": {
-      "const": ["actual-value-hash", "effect-entry-count", "effect-log-artifact", "effect-log-byte-count", "expected-value-hash", "sealed-error-status", "step-count", "test-identity"]
+      "const": ["actual-value-hash", "canonical-module-forms", "effect-entry-count", "effect-log-artifact", "effect-log-byte-count", "expected-value-hash", "module-path", "observed-effect-operation", "sealed-error-status", "step-count", "test-identity"]
     },
     "independentVerifier": {"const": "scripts/lib/selfhost_obligation_authority.py"},
     "kind": {"const": "genesis/selfhost-obligation-authority-v0.1"},
-    "migratedObligations": {"const": ["core/obligation::budgets", "core/obligation::unit-tests"]},
+    "migratedObligations": {"const": ["core/obligation::budgets", "core/obligation::capabilities-declared", "core/obligation::unit-tests"]},
     "nonclaims": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
-    "residualObligations": {"type": "array", "minItems": 18, "maxItems": 18, "uniqueItems": true, "items": {"type": "string"}},
-    "resultKind": {"const": "genesis/obligation-authority-result-v0.1"},
+    "residualObligations": {"type": "array", "minItems": 17, "maxItems": 17, "uniqueItems": true, "items": {"type": "string"}},
+    "resultKind": {"const": "genesis/obligation-authority-result-v0.2"},
     "runtimeEvidence": {
       "type": "object",
       "additionalProperties": false,

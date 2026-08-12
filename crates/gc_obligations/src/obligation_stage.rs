@@ -172,6 +172,7 @@ pub(super) fn obligation_translation_validation(
         ObligationAuthorityOperation::UnitTests,
         store,
         manifest,
+        &[],
         test_runs,
         frontend,
         limits,
