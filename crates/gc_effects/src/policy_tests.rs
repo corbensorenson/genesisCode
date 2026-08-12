@@ -1,7 +1,7 @@
 use super::{
-    AuthorizedBindPorts, AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy,
-    AuthorizedDatabasePolicy, AuthorizedFfiSignedPolicy, AuthorizedMaxBytes,
-    AuthorizedNetworkPolicy, AuthorizedOptionalBool, AuthorizedOptionalString,
+    AuthorizedBindPorts, AuthorizedBridgeAllowlist, AuthorizedBridgeDigest,
+    AuthorizedBridgeIdentityPolicy, AuthorizedDatabasePolicy, AuthorizedFfiSignedPolicy,
+    AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool, AuthorizedOptionalString,
     AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy, AuthorizedStringList, CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
@@ -81,6 +81,10 @@ fn optional_value_policy(status: &str, value: Term) -> Term {
 
 fn bridge_identity_policy_term(digest: Term, pin_required: Term) -> Term {
     Term::Map(BTreeMap::from([
+        (
+            TermOrdKey(Term::symbol(":allowlist")),
+            string_list_policy(":absent", Term::Nil),
+        ),
         (TermOrdKey(Term::symbol(":digest")), digest),
         (TermOrdKey(Term::symbol(":pin-required")), pin_required),
     ]))
@@ -1176,6 +1180,7 @@ bridge_cmd_sha256 = " SHA256:{} "
             .unwrap()
             .authorized_bridge_identity,
         Some(AuthorizedBridgeIdentityPolicy {
+            allowlist: AuthorizedBridgeAllowlist::Absent,
             pin_required: true,
             digest: AuthorizedBridgeDigest::Valid("ab".repeat(32)),
         })
@@ -1228,6 +1233,7 @@ fn selfhost_authority_preserves_bridge_digest_states_and_wasi_precedence() {
                 .unwrap()
                 .authorized_bridge_identity,
             Some(AuthorizedBridgeIdentityPolicy {
+                allowlist: AuthorizedBridgeAllowlist::Absent,
                 pin_required,
                 digest,
             }),
@@ -1249,6 +1255,7 @@ fn selfhost_authority_rejects_malformed_bridge_digest_decisions() {
     assert_eq!(
         decode_bridge_identity_policy(&valid(), "host/ffi::call", true).unwrap(),
         AuthorizedBridgeIdentityPolicy {
+            allowlist: AuthorizedBridgeAllowlist::Absent,
             pin_required: true,
             digest: AuthorizedBridgeDigest::Valid("a".repeat(64)),
         }
@@ -1283,6 +1290,107 @@ fn selfhost_authority_rejects_malformed_bridge_digest_decisions() {
     open.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_bridge_identity_policy(&Term::Map(open), "host/ffi::call", true)
         .expect_err("unknown bridge decision fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_normalizes_bridge_allowlist_without_changing_empty_semantics() {
+    let cases = [
+        (
+            "bridge_cmd_allowlist = [\" tool \" , \"tool\", \"/opt/bridge\"]",
+            AuthorizedBridgeAllowlist::Valid(vec![
+                "tool".to_string(),
+                "tool".to_string(),
+                "/opt/bridge".to_string(),
+            ]),
+        ),
+        (
+            "bridge_cmd_allowlist = []",
+            AuthorizedBridgeAllowlist::Valid(Vec::new()),
+        ),
+        (
+            "bridge_cmd_allowlist = \"tool\"",
+            AuthorizedBridgeAllowlist::InvalidType,
+        ),
+        (
+            "bridge_cmd_allowlist = [7]",
+            AuthorizedBridgeAllowlist::InvalidEntry,
+        ),
+        (
+            "bridge_cmd_allowlist = [\"   \"]",
+            AuthorizedBridgeAllowlist::EmptyEntry,
+        ),
+    ];
+    for (setting, expected) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[op.\"host/plugin::command\"]\n{setting}\n")).unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        assert_eq!(
+            policy
+                .op_policy("host/plugin::command")
+                .unwrap()
+                .authorized_bridge_identity
+                .as_ref()
+                .unwrap()
+                .allowlist,
+            expected,
+            "setting: {setting}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_bridge_allowlist_decisions() {
+    use super::policy_authority::decode_bridge_identity_policy;
+
+    let valid = bridge_identity_policy_term(
+        optional_value_policy(":absent", Term::Nil),
+        Term::Bool(false),
+    );
+    let Term::Map(mut padded) = valid.clone() else {
+        return;
+    };
+    padded.insert(
+        TermOrdKey(Term::symbol(":allowlist")),
+        string_list_policy(
+            ":valid",
+            Term::Vector(vec![Term::Str(" tool ".to_string())]),
+        ),
+    );
+    decode_bridge_identity_policy(&Term::Map(padded), "host/plugin::command", true)
+        .expect_err("noncanonical padded allowlist value must fail closed");
+
+    let Term::Map(mut contradiction) = valid.clone() else {
+        return;
+    };
+    contradiction.insert(
+        TermOrdKey(Term::symbol(":allowlist")),
+        string_list_policy(
+            ":invalid-entry",
+            Term::Vector(vec![Term::Str("tool".to_string())]),
+        ),
+    );
+    decode_bridge_identity_policy(&Term::Map(contradiction), "host/plugin::command", true)
+        .expect_err("contradictory allowlist state must fail closed");
+
+    let Term::Map(mut open) = valid else {
+        return;
+    };
+    open.insert(
+        TermOrdKey(Term::symbol(":allowlist")),
+        Term::Map(BTreeMap::from([
+            (TermOrdKey(Term::symbol(":status")), Term::symbol(":absent")),
+            (TermOrdKey(Term::symbol(":unknown")), Term::Nil),
+            (TermOrdKey(Term::symbol(":values")), Term::Nil),
+        ])),
+    );
+    decode_bridge_identity_policy(&Term::Map(open), "host/plugin::command", true)
+        .expect_err("unknown allowlist state fields must fail closed");
 }
 
 #[test]

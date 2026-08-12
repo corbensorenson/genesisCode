@@ -229,7 +229,17 @@ pub(crate) enum AuthorizedBridgeDigest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedBridgeAllowlist {
+    Absent,
+    InvalidType,
+    InvalidEntry,
+    EmptyEntry,
+    Valid(Vec<String>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AuthorizedBridgeIdentityPolicy {
+    pub allowlist: AuthorizedBridgeAllowlist,
     pub pin_required: bool,
     pub digest: AuthorizedBridgeDigest,
 }

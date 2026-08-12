@@ -23,16 +23,43 @@
 
 (def selfhost/effect-bridge::input-valid?
   (fn (value)
-    (if ((selfhost/effect-policy::exact-map? value) [:command :digest :wasi-profile])
-      (if (selfhost/effect-network::optional-string-input?
-            ((core/map::get value) (quote :command)))
+    (if ((selfhost/effect-policy::exact-map? value) [:allowlist :command :digest :wasi-profile])
+      (if (selfhost/effect-network::list-input?
+            ((core/map::get value) (quote :allowlist)))
         (if (selfhost/effect-network::optional-string-input?
-              ((core/map::get value) (quote :digest)))
-          (selfhost/effect-network::optional-bool-input?
-            ((core/map::get value) (quote :wasi-profile)))
+            ((core/map::get value) (quote :command)))
+          (if (selfhost/effect-network::optional-string-input?
+                ((core/map::get value) (quote :digest)))
+            (selfhost/effect-network::optional-bool-input?
+              ((core/map::get value) (quote :wasi-profile)))
+            false)
           false)
         false)
       false)))
+
+(def selfhost/effect-bridge::allowlist-policy-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          {:status (quote :valid) :values out}
+          (let ((value ((core/vec::get values) index)))
+            (if (selfhost/policy::str? value)
+              (let ((trimmed (selfhost/policy::trim value)))
+                (if (selfhost/policy::non-empty-str? trimmed)
+                  (((selfhost/effect-bridge::allowlist-policy-loop values)
+                     ((core/int::add index) 1))
+                    ((core/vec::push out) trimmed))
+                  {:status (quote :empty-entry) :values nil}))
+              {:status (quote :invalid-entry) :values nil})))))))
+
+(def selfhost/effect-bridge::allowlist-policy
+  (fn (raw)
+    (if (selfhost/policy::nil? raw)
+      {:status (quote :absent) :values nil}
+      (if (selfhost/policy::vec? raw)
+        (((selfhost/effect-bridge::allowlist-policy-loop raw) 0) [])
+        {:status (quote :invalid-type) :values nil}))))
 
 (def selfhost/effect-bridge::family-requires-pin?
   (fn (op)
@@ -86,9 +113,12 @@
       (let
         ((bridge
           (if (selfhost/policy::nil? override)
-            {:command nil :digest nil :wasi-profile nil}
+            {:allowlist nil :command nil :digest nil :wasi-profile nil}
             ((core/map::get override) (quote :bridge-identity-policy)))))
         {
+          :allowlist
+            (selfhost/effect-bridge::allowlist-policy
+              ((core/map::get bridge) (quote :allowlist)))
           :digest
             (selfhost/effect-bridge::digest-policy
               ((core/map::get bridge) (quote :digest)))

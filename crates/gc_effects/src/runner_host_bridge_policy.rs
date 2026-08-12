@@ -2,7 +2,7 @@
 use sha2::{Digest, Sha256};
 
 use super::*;
-use crate::policy::AuthorizedBridgeDigest;
+use crate::policy::{AuthorizedBridgeAllowlist, AuthorizedBridgeDigest};
 
 #[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,33 +79,28 @@ fn bridge_cmd_allowlist(
     pol: Option<&OpPolicy>,
     family: &str,
 ) -> Result<Option<Vec<String>>, BridgeError> {
-    let Some(v) = pol.and_then(|p| p.extra.get("bridge_cmd_allowlist")) else {
-        return Ok(None);
-    };
-    let Some(arr) = v.as_array() else {
-        return Err(BridgeError {
+    let authority = pol
+        .and_then(|policy| policy.authorized_bridge_identity.as_ref())
+        .ok_or_else(|| BridgeError {
+            code: format!("{family}/bridge-policy"),
+            message: "bridge identity authority state is unavailable".to_string(),
+        })?;
+    match &authority.allowlist {
+        AuthorizedBridgeAllowlist::Absent => Ok(None),
+        AuthorizedBridgeAllowlist::InvalidType => Err(BridgeError {
             code: format!("{family}/bridge-policy"),
             message: "bridge_cmd_allowlist must be an array of strings".to_string(),
-        });
-    };
-    let mut out = Vec::with_capacity(arr.len());
-    for item in arr {
-        let Some(s) = item.as_str() else {
-            return Err(BridgeError {
-                code: format!("{family}/bridge-policy"),
-                message: "bridge_cmd_allowlist must contain only strings".to_string(),
-            });
-        };
-        let trimmed = s.trim();
-        if trimmed.is_empty() {
-            return Err(BridgeError {
-                code: format!("{family}/bridge-policy"),
-                message: "bridge_cmd_allowlist entries must be non-empty".to_string(),
-            });
-        }
-        out.push(trimmed.to_string());
+        }),
+        AuthorizedBridgeAllowlist::InvalidEntry => Err(BridgeError {
+            code: format!("{family}/bridge-policy"),
+            message: "bridge_cmd_allowlist must contain only strings".to_string(),
+        }),
+        AuthorizedBridgeAllowlist::EmptyEntry => Err(BridgeError {
+            code: format!("{family}/bridge-policy"),
+            message: "bridge_cmd_allowlist entries must be non-empty".to_string(),
+        }),
+        AuthorizedBridgeAllowlist::Valid(values) => Ok(Some(values.clone())),
     }
-    Ok(Some(out))
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -294,7 +289,7 @@ pub(crate) fn enforce_response_limit(
 #[cfg(test)]
 mod authority_tests {
     use super::*;
-    use crate::policy::AuthorizedBridgeIdentityPolicy;
+    use crate::policy::{AuthorizedBridgeAllowlist, AuthorizedBridgeIdentityPolicy};
     use std::collections::BTreeMap;
 
     fn policy(digest: AuthorizedBridgeDigest, raw: &str) -> OpPolicy {
@@ -314,6 +309,7 @@ mod authority_tests {
             authorized_network: None,
             authorized_crypto: None,
             authorized_bridge_identity: Some(AuthorizedBridgeIdentityPolicy {
+                allowlist: AuthorizedBridgeAllowlist::Absent,
                 pin_required: true,
                 digest,
             }),
@@ -337,5 +333,31 @@ mod authority_tests {
 
         let rejected = policy(AuthorizedBridgeDigest::InvalidDigest, &"b".repeat(64));
         assert!(bridge_cmd_sha256(Some(&rejected), "host/ffi").is_err());
+    }
+
+    #[cfg(not(target_os = "wasi"))]
+    #[test]
+    fn bridge_allowlist_enforcement_consumes_authority_before_raw_policy() {
+        let mut authorized = policy(AuthorizedBridgeDigest::Absent, "unused");
+        authorized.extra.insert(
+            "bridge_cmd_allowlist".to_string(),
+            toml::Value::String("raw malformed fallback".to_string()),
+        );
+        authorized
+            .authorized_bridge_identity
+            .as_mut()
+            .expect("test authority")
+            .allowlist = AuthorizedBridgeAllowlist::Valid(vec!["approved".to_string()]);
+        assert_eq!(
+            bridge_cmd_allowlist(Some(&authorized), "host/plugin").unwrap(),
+            Some(vec!["approved".to_string()])
+        );
+
+        authorized
+            .authorized_bridge_identity
+            .as_mut()
+            .expect("test authority")
+            .allowlist = AuthorizedBridgeAllowlist::EmptyEntry;
+        assert!(bridge_cmd_allowlist(Some(&authorized), "host/plugin").is_err());
     }
 }

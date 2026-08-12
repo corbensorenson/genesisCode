@@ -1,9 +1,15 @@
 use super::*;
-use crate::policy::{AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy};
+use crate::policy::{
+    AuthorizedBridgeAllowlist, AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy,
+};
 
 pub(super) fn input(table: &toml::value::Table) -> Term {
     Term::Map(
         [
+            (
+                TermOrdKey(Term::symbol(":allowlist")),
+                database::string_list_input(table.get("bridge_cmd_allowlist")),
+            ),
             (
                 TermOrdKey(Term::symbol(":command")),
                 network::optional_string_input(table.get("bridge_cmd")),
@@ -46,6 +52,29 @@ pub(super) fn legacy(op: &str, policy: Option<&OpPolicy>) -> AuthorizedBridgeIde
     let wasi_profile = get("wasi_bridge_profile")
         .and_then(toml::Value::as_bool)
         .unwrap_or(false);
+    let allowlist = match get("bridge_cmd_allowlist") {
+        None => AuthorizedBridgeAllowlist::Absent,
+        Some(value) => match value.as_array() {
+            None => AuthorizedBridgeAllowlist::InvalidType,
+            Some(values) => {
+                let mut normalized = Vec::with_capacity(values.len());
+                let mut state = None;
+                for value in values {
+                    let Some(value) = value.as_str() else {
+                        state = Some(AuthorizedBridgeAllowlist::InvalidEntry);
+                        break;
+                    };
+                    let value = value.trim();
+                    if value.is_empty() {
+                        state = Some(AuthorizedBridgeAllowlist::EmptyEntry);
+                        break;
+                    }
+                    normalized.push(value.to_string());
+                }
+                state.unwrap_or(AuthorizedBridgeAllowlist::Valid(normalized))
+            }
+        },
+    };
     let digest = match network::legacy_optional_string(get("bridge_cmd_sha256")) {
         crate::policy::AuthorizedOptionalString::Absent => AuthorizedBridgeDigest::Absent,
         crate::policy::AuthorizedOptionalString::InvalidType => AuthorizedBridgeDigest::InvalidType,
@@ -55,8 +84,63 @@ pub(super) fn legacy(op: &str, policy: Option<&OpPolicy>) -> AuthorizedBridgeIde
             .unwrap_or(AuthorizedBridgeDigest::InvalidDigest),
     };
     AuthorizedBridgeIdentityPolicy {
+        allowlist,
         pin_required: bridge_family_requires_pin(op) && command_present && !wasi_profile,
         digest,
+    }
+}
+
+fn decode_allowlist(term: &Term) -> Result<AuthorizedBridgeAllowlist, EffectsError> {
+    let Term::Map(map) = term else {
+        return Err(authority_error(
+            "result :bridge-identity-policy :allowlist must be a data map",
+        ));
+    };
+    let expected: BTreeSet<_> = [":status", ":values"]
+        .into_iter()
+        .map(|key| TermOrdKey(Term::symbol(key)))
+        .collect();
+    if map.keys().cloned().collect::<BTreeSet<_>>() != expected {
+        return Err(authority_error(
+            "result :bridge-identity-policy :allowlist field set mismatch",
+        ));
+    }
+    let status = match map.get(&TermOrdKey(Term::symbol(":status"))) {
+        Some(Term::Symbol(status)) => status.as_str(),
+        _ => {
+            return Err(authority_error(
+                "result :bridge-identity-policy :allowlist :status must be a symbol",
+            ));
+        }
+    };
+    let values = map
+        .get(&TermOrdKey(Term::symbol(":values")))
+        .ok_or_else(|| {
+            authority_error("result :bridge-identity-policy :allowlist is missing :values")
+        })?;
+    match (status, values) {
+        (":absent", Term::Nil) => Ok(AuthorizedBridgeAllowlist::Absent),
+        (":invalid-type", Term::Nil) => Ok(AuthorizedBridgeAllowlist::InvalidType),
+        (":invalid-entry", Term::Nil) => Ok(AuthorizedBridgeAllowlist::InvalidEntry),
+        (":empty-entry", Term::Nil) => Ok(AuthorizedBridgeAllowlist::EmptyEntry),
+        (":valid", Term::Vector(values))
+            if values.iter().all(|value| {
+                matches!(value, Term::Str(value) if !value.is_empty() && value.trim() == value)
+            }) =>
+        {
+            Ok(AuthorizedBridgeAllowlist::Valid(
+                values
+                    .iter()
+                    .filter_map(|value| match value {
+                        Term::Str(value) => Some(value.clone()),
+                        _ => None,
+                    })
+                    .collect(),
+            ))
+        }
+        _ => Err(authority_error(
+            "result :bridge-identity-policy :allowlist status contradicts its values",
+        )),
     }
 }
 
@@ -79,7 +163,7 @@ pub(super) fn decode(
             "admitted result :bridge-identity-policy must be a data map",
         ));
     };
-    let expected: BTreeSet<_> = [":digest", ":pin-required"]
+    let expected: BTreeSet<_> = [":allowlist", ":digest", ":pin-required"]
         .into_iter()
         .map(|key| TermOrdKey(Term::symbol(key)))
         .collect();
@@ -101,6 +185,12 @@ pub(super) fn decode(
             "result :bridge-identity-policy requires a pin for an ineligible operation",
         ));
     }
+    let allowlist = decode_allowlist(
+        map.get(&TermOrdKey(Term::symbol(":allowlist")))
+            .ok_or_else(|| {
+                authority_error("result :bridge-identity-policy is missing :allowlist")
+            })?,
+    )?;
     let digest_term = map
         .get(&TermOrdKey(Term::symbol(":digest")))
         .ok_or_else(|| authority_error("result :bridge-identity-policy is missing :digest"))?;
@@ -150,6 +240,7 @@ pub(super) fn decode(
         }
     };
     Ok(AuthorizedBridgeIdentityPolicy {
+        allowlist,
         pin_required,
         digest,
     })

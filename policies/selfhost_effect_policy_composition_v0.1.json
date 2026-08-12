@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "01dd6a183bfc4509107b988bd8693b0cfb6337ef53e4066a79b9a78ff2913375",
+  "contentIdentitySha256": "7bab3f0d5c130a0d192e6479b02dbcabb4706b5c92a43af83878bce504572d18",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -12,6 +12,7 @@
     "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-bridge-command-allowlist-policy",
     "per-operation-bridge-digest-pin-policy",
     "per-operation-crypto-policy",
     "per-operation-database-policy",
@@ -49,20 +50,20 @@
     "genesis",
     "genesis_wasi"
   ],
-  "requestKind": "genesis/effect-policy-authority-request-v0.12",
+  "requestKind": "genesis/effect-policy-authority-request-v0.13",
   "resourceBinding": "core/effects::resource-policy-authority",
   "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
   "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
   "residualDecisionInventory": [
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
-    "bridge-command-allowlist-transport-and-model-provider-lifecycle",
+    "bridge-command-profile-transport-and-model-provider-lifecycle",
     "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
   ],
-  "resultKind": "genesis/effect-policy-authority-result-v0.12",
+  "resultKind": "genesis/effect-policy-authority-result-v0.13",
   "runtimeEvidence": {
     "allocationLimit": 20000000,
     "stepLimit": 20000000,
@@ -79,7 +80,7 @@
     "selfhost/effect_policy_resource_authority_v1.gc",
     "selfhost/effect_policy_authority_v1.gc"
   ],
-  "sourceSha256": "d5f6b82559cb2ac984992bc22026743698df1f01b08e03d588038ee0ddb0411a",
+  "sourceSha256": "35538cf39a3b31269a110175c08d8e9798ac2f0435882ea44ae1282f4fc4651d",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.17"
+  "version": "0.1.18"
 }

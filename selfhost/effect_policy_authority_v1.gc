@@ -345,8 +345,8 @@
             (override ((core/map::get request) (quote :override)))
             (platform-max ((core/map::get request) (quote :platform-max-bytes))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.12")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 12) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.13")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 13) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -385,7 +385,7 @@
                         (if allowed
                           ((selfhost/effect-ffi::policy override) platform-max)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.12"
+                      :kind "genesis/effect-policy-authority-result-v0.13"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -404,7 +404,7 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 12}))
+                      :v 13}))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly the closed typed policy fields"))
               ((core/error::make2 "core/policy/authority")

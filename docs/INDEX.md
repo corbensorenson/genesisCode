@@ -196,7 +196,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `scripts/selfhost_policy_alias_authority_guard.sh` - focused native/WASI runtime, production-graph, non-mutation, Unicode-trim, and mutation-control guard.
 - `docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md` - normative partial R4.2.d baseline admission, per-operation precedence, canonical log-cap descriptor, live host-oracle, and residual-decision contract; it explicitly makes no H2 claim.
 - `docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json` - closed schema for the partial effect-policy composition profile.
-- `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed three-decision, fourteen-residual, bounded-runtime, host-oracle, and nonclaim profile.
+- `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 22-decision, seven-residual, bounded-runtime, host-oracle, and nonclaim profile.
 - `scripts/selfhost_effect_policy_composition_guard.sh` - focused profile, mutation, admission, cap, and operation-inventory-bound guard.
 - `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md` - normative partial R4.2.d primitive-fact, unit-expectation, resource-budget, strict-decoder, and residual-obligation contract; it does not promote `SD-OBLIGATION`.
 - `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial obligation-authority profile.

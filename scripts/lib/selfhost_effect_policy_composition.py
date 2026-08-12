@@ -83,6 +83,7 @@ DECISIONS = [
     "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-bridge-command-allowlist-policy",
     "per-operation-bridge-digest-pin-policy",
     "per-operation-crypto-policy",
     "per-operation-database-policy",
@@ -101,7 +102,7 @@ DECISIONS = [
 RESIDUALS = {
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
-    "bridge-command-allowlist-transport-and-model-provider-lifecycle",
+    "bridge-command-profile-transport-and-model-provider-lifecycle",
     "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
@@ -131,11 +132,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.12",
+        "requestKind": "genesis/effect-policy-authority-request-v0.13",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
-        "resultKind": "genesis/effect-policy-authority-result-v0.12",
+        "resultKind": "genesis/effect-policy-authority-result-v0.13",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -153,7 +154,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.17",
+        "version": "0.1.18",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -478,6 +479,7 @@ def static_check(root: Path, profile):
         (bridge_production, "host bridge"),
     ):
         for token in (
+            'extra.get("bridge_cmd_allowlist")',
             'extra.get("bridge_cmd_sha256")',
             "plugin_bridge_digest_pin_is_required",
             "ffi_bridge_digest_pin_is_required",
@@ -489,6 +491,8 @@ def static_check(root: Path, profile):
         fail("bridge digest-pin preflight authority consumer inventory drift")
     if bridge_production.count("fn bridge_cmd_sha256(") != 1:
         fail("bridge digest enforcement authority consumer inventory drift")
+    if bridge_production.count("fn bridge_cmd_allowlist(") != 1:
+        fail("bridge command allowlist authority consumer inventory drift")
     if plugin_policy.count("bridge_digest_pin_is_missing(pol)") != 1:
         fail("plugin bridge digest authority consumer inventory drift")
     if ffi_dispatch.count("bridge_digest_pin_is_missing(pol)") != 1:
@@ -502,6 +506,8 @@ def static_check(root: Path, profile):
     ):
         if bridge_source.count(f"(def {binding}") != 1:
             fail(f"bridge policy authority binding inventory drift: {binding}")
+    if bridge_source.count("(def selfhost/effect-bridge::allowlist-policy\n") != 1:
+        fail("bridge command allowlist policy binding inventory drift")
     for token in (
         "policy.store.remote",
         "policy.store.remote_allow",
@@ -630,6 +636,8 @@ def static_check(root: Path, profile):
         "selfhost_authority_installs_bridge_digest_pin_policy",
         "selfhost_authority_preserves_bridge_digest_states_and_wasi_precedence",
         "selfhost_authority_rejects_malformed_bridge_digest_decisions",
+        "selfhost_authority_normalizes_bridge_allowlist_without_changing_empty_semantics",
+        "selfhost_authority_rejects_malformed_bridge_allowlist_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -679,6 +687,10 @@ def static_check(root: Path, profile):
         "fn bridge_identity_enforcement_consumes_authority_before_raw_policy()"
     ) != 1:
         fail("missing focused bridge identity authority precedence control")
+    if bridge_policy.count(
+        "fn bridge_allowlist_enforcement_consumes_authority_before_raw_policy()"
+    ) != 1:
+        fail("missing focused bridge allowlist authority precedence control")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]
