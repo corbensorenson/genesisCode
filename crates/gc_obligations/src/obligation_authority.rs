@@ -7,6 +7,7 @@ pub(super) enum ObligationAuthorityOperation {
     UnitTests,
     Budgets,
     CapabilitiesDeclared,
+    Determinism,
     Typecheck,
     TypecheckStrict,
 }
@@ -17,6 +18,7 @@ impl ObligationAuthorityOperation {
             Self::UnitTests => ":unit-tests",
             Self::Budgets => ":budgets",
             Self::CapabilitiesDeclared => ":capabilities-declared",
+            Self::Determinism => ":determinism",
             Self::Typecheck => ":typecheck",
             Self::TypecheckStrict => ":typecheck-strict",
         }
@@ -27,6 +29,7 @@ impl ObligationAuthorityOperation {
             Self::UnitTests => "core/obligation::unit-tests",
             Self::Budgets => "core/obligation::budgets",
             Self::CapabilitiesDeclared => "core/obligation::capabilities-declared",
+            Self::Determinism => "core/obligation::determinism",
             Self::Typecheck => "core/obligation::typecheck",
             Self::TypecheckStrict => "core/obligation::typecheck-strict",
         }
@@ -247,6 +250,7 @@ fn request_term(
             .collect(),
         ),
         ObligationAuthorityOperation::CapabilitiesDeclared => capability_inputs(modules, tests),
+        ObligationAuthorityOperation::Determinism => capability_inputs(modules, tests),
         ObligationAuthorityOperation::Typecheck | ObligationAuthorityOperation::TypecheckStrict => {
             typecheck_inputs(modules)
         }
@@ -489,6 +493,9 @@ fn decode_authority_result(
         }
         ObligationAuthorityOperation::CapabilitiesDeclared => {
             validate_capabilities_report(report, manifest, ok, &errors)?
+        }
+        ObligationAuthorityOperation::Determinism => {
+            validate_determinism_report(report, manifest, ok, &errors)?
         }
         ObligationAuthorityOperation::Typecheck => {
             validate_typecheck_obligation_report(report, modules, false, ok, &errors)?

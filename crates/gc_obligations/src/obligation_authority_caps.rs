@@ -152,3 +152,31 @@ fn validate_capabilities_report(
     }
     Ok(())
 }
+
+fn validate_determinism_report(
+    report: &Term,
+    manifest: &PackageManifest,
+    outer_ok: bool,
+    outer_errors: &[String],
+) -> Result<(), ObligationError> {
+    let map = exact_map(
+        report,
+        "determinism report",
+        &[":errors", ":kind", ":ok", ":package"],
+    )?;
+    let errors = string_vector(
+        required_field(map, ":errors", "determinism report")?,
+        "determinism report :errors",
+    )?;
+    if string_field(map, ":kind", "determinism report")? != "genesis/determinism-v0.2"
+        || string_field(map, ":package", "determinism report")? != manifest.name
+        || bool_field(map, ":ok", "determinism report")? != outer_ok
+        || errors != outer_errors
+        || outer_ok != outer_errors.is_empty()
+    {
+        return Err(authority_error(
+            "determinism report identity or aggregate mismatch",
+        ));
+    }
+    Ok(())
+}

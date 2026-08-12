@@ -181,33 +181,6 @@ pub(super) fn meta_exports(meta: &Term) -> Option<Vec<String>> {
     Some(out)
 }
 
-pub(super) fn meta_caps(meta: &Term) -> Option<Vec<String>> {
-    let Term::Map(m) = meta else { return None };
-    let v = m.get(&TermOrdKey(Term::Symbol(":caps".to_string())))?;
-    let Term::Vector(xs) = v else { return None };
-    let mut out = Vec::new();
-    for x in xs {
-        if let Term::Symbol(s) = x {
-            out.push(s.clone());
-        }
-    }
-    Some(out)
-}
-
-pub(super) fn suite_to_module(modules: &[LoadedModule]) -> BTreeMap<String, usize> {
-    // Best-effort: scan each module's defs for a name that ends with ::tests OR matches the suite
-    // symbol string; for now we map by exact def name match.
-    let mut out = BTreeMap::new();
-    for (i, m) in modules.iter().enumerate() {
-        for f in &m.forms {
-            if let Some((name, _)) = parse_def(f) {
-                out.entry(name).or_insert(i);
-            }
-        }
-    }
-    out
-}
-
 pub(super) fn value_as_map(v: &Value) -> Option<&gc_kernel::ValueMap> {
     match v {
         Value::Map(m) => Some(m),

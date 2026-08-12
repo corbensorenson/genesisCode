@@ -4,15 +4,16 @@ Status: normative partial H2 migration contract for `SD-OBLIGATION`. This versio
 does not promote the ledger row or close R4.2.d.
 
 `core/cli::obligation-authority` is the sole production semantic producer for the
-`core/obligation::unit-tests`, `core/obligation::budgets`, and
-`core/obligation::capabilities-declared`, `core/obligation::typecheck`, and
-`core/obligation::typecheck-strict` decisions. The host executes test bodies,
+`core/obligation::unit-tests`, `core/obligation::budgets`,
+`core/obligation::capabilities-declared`, `core/obligation::determinism`,
+`core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
+The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
 sealed-error status, measures steps and effect-log sizes, transports canonical
 module forms and ordered effect-operation observations, and persists opaque effect
 logs. It does not decide whether an expectation matches, a budget is exceeded, a
-suite belongs to a module, an observed operation was declared, or a package
-typechecks.
+suite belongs to a module, an observed operation was declared, a pure declaration
+is contradicted by inferred or runtime effects, or a package typechecks.
 
 ## Closed Protocol
 
@@ -57,6 +58,18 @@ metadata. For `:typecheck-strict`, GenesisCode replaces a missing or non-map
 input only while decoding the returned report; it does not produce the obligation
 decision or provide metadata to GenesisCode.
 
+For `:determinism`, `:inputs` contains exactly the same ordered `:modules` and
+`:tests` observation shapes as `:capabilities-declared`. GenesisCode derives each
+module's metadata, invokes the H2 package typechecker, and applies the two existing
+v0.2 rules in order. First, a module with a valid `:caps` vector that filters to the
+empty symbol set fails when its aligned typecheck report has unknown or nonempty
+inferred operations. Second, each observed test with at least one unique effect
+operation fails when its first defining module has that empty capability set.
+Missing or malformed metadata/capability fields and tests whose suite has no
+defining module preserve the legacy no-decision behavior rather than inventing a
+new failure. Ordered static errors precede ordered runtime errors. Open module or
+test observations are sealed protocol errors.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -65,7 +78,7 @@ identity of the complete closed request. GenesisCode computes it through
 profile to the exact request it invoked and rejects a result bound to any other
 request without recomputing the GenesisCode policy decision. The embedded
 report preserves the existing `genesis/unit-tests-v0.2`, `genesis/budgets-v0.2`,
-`genesis/caps-declared-v0.2`, or `genesis/typecheck-v0.2`
+`genesis/caps-declared-v0.2`, `genesis/determinism-v0.2`, or `genesis/typecheck-v0.2`
 artifact shape and ordering. The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -76,9 +89,8 @@ and resource exhaustion return a sealed protocol error and never synthesize a pa
 Production package testing passes the exact selected self-host artifact and resource
 limits into this authority. Rust retains only execution, measurement, artifact-store
 transport, strict decoding, and contradiction rejection. The former Rust unit-test,
-budget, suite-ownership, capability-membership, ordinary typecheck-obligation, and
-strict typecheck-obligation
-decision implementations are
+budget, suite-ownership, capability-membership, determinism-policy, ordinary
+typecheck-obligation, and strict typecheck-obligation decision implementations are
 absent from production source. Neither an
 environment variable nor a feature can silently restore them.
 
@@ -90,16 +102,18 @@ nonclaims. `sourceSetSha256` is SHA-256 over the domain
 declared module by its UTF-8 path length as an unsigned 64-bit big-endian integer,
 path bytes, source byte length in the same encoding, and exact source bytes.
 `scripts/lib/selfhost_obligation_authority.py` independently validates
-that profile, the production call sites and dependency graphs, removal of the four
+that profile, the production call sites and dependency graphs, removal of the
 previous host decision paths, and mutation controls. Focused Rust tests and native/WASI CLI
 runtime observations cover matching, mismatch, sealed error, inclusive/exceeded
 limits, declared/undeclared operations, missing suite ownership, open requests,
-unknown operations, host metadata and strictness injection, and valid/failing
-ordinary and strict package routes.
+unknown operations, host metadata and strictness injection, static/runtime
+determinism failures, and valid/failing ordinary and strict package routes. Runtime
+fixtures execute from isolated temporary copies so effectful tests cannot mutate
+the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 15 obligation kinds remain host-authoritative or only partially routed.
+The other 14 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

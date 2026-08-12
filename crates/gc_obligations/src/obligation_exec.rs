@@ -207,62 +207,15 @@ pub(super) fn obligation_determinism(
     frontend: &CoreformFrontend,
     limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
-    // Rule: if a module declares :caps = [], then its inferred effect ops must be empty,
-    // and any tests defined by that module must not perform effects.
-    let mut errors = Vec::new();
-    let mut ok = true;
-
-    let typecheck = typecheck_report_with_frontend(modules, frontend, limits, false)?;
-    // The bound authority decoder guarantees this report is in exact module order.
-    for (m, inferred) in modules.iter().zip(&typecheck.modules) {
-        let meta = extract_meta_static(&m.forms);
-        if let Some(meta) = meta
-            && let Some(caps) = meta_caps(&meta)
-            && caps.is_empty()
-            && (inferred.unknown_ops || !inferred.inferred_ops.is_empty())
-        {
-            ok = false;
-            errors.push(format!(
-                "{} declares :caps [] but has inferred effects (unknown={}, ops={:?})",
-                m.entry.path, inferred.unknown_ops, inferred.inferred_ops
-            ));
-        }
-    }
-
-    // Runtime check: any effectful test for a module with :caps [] fails.
-    // We approximate by mapping suite symbol -> module (static def scan).
-    let suite_to_mod = suite_to_module(modules);
-    for t in tests {
-        if let Some(mod_i) = suite_to_mod.get(&t.id.suite_sym)
-            && let Some(meta) = extract_meta_static(&modules[*mod_i].forms)
-            && let Some(caps) = meta_caps(&meta)
-        {
-            let observed_effects = t.effect_log.as_ref().is_some_and(|l| !l.entries.is_empty());
-            if caps.is_empty() && observed_effects {
-                ok = false;
-                errors.push(format!(
-                    "test {} in {} performed effects but module declares :caps []",
-                    t.id.test_name, t.id.suite_sym
-                ));
-            }
-        }
-    }
-
-    let report = obligation_report_term(
-        "core/obligation::determinism-report",
-        &[
-            Term::Str(manifest.name.clone()),
-            Term::Bool(ok),
-            Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-        ],
-    )?;
-    let artifact = store.put_term(&report)?;
-    Ok(ObligationResult {
-        name: "core/obligation::determinism".to_string(),
-        ok,
-        artifact: Some(artifact),
-        errors,
-    })
+    evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::Determinism,
+        store,
+        manifest,
+        modules,
+        tests,
+        frontend,
+        limits,
+    )
 }
 
 pub(super) fn obligation_caps_declared(

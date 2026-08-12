@@ -1,0 +1,218 @@
+(def selfhost/obligation::determinism-caps-symbols-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          out
+          (let ((value ((core/vec::get values) index)))
+            (((selfhost/obligation::determinism-caps-symbols-loop values)
+               ((core/int::add index) 1))
+              (if (selfhost/obligation::sym? value)
+                ((core/vec::push out) value)
+                out))))))))
+
+(def selfhost/obligation::determinism-module-caps
+  (fn (module)
+    (let ((meta (core/cli::module-meta ((core/map::get module) (quote :forms)))))
+      (if (selfhost/obligation::map? meta)
+        (let ((caps ((core/map::get meta) (quote :caps))))
+          (if (selfhost/obligation::vec? caps)
+            (((selfhost/obligation::determinism-caps-symbols-loop caps) 0) [])
+            nil))
+        nil))))
+
+(def selfhost/obligation::determinism-pure-module?
+  (fn (module)
+    (let ((caps (selfhost/obligation::determinism-module-caps module)))
+      (if (selfhost/obligation::vec? caps)
+        ((core/int::eq? (core/vec::len caps)) 0)
+        false))))
+
+(def selfhost/obligation::debug-escape-symbol-bytes-loop
+  (fn (bytes)
+    (fn (index)
+      (fn (parts)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          parts
+          (let ((byte ((core/bytes::get bytes) index)))
+            (((selfhost/obligation::debug-escape-symbol-bytes-loop bytes)
+               ((core/int::add index) 1))
+              ((core/vec::push parts)
+                (if ((core/int::eq? byte) 92)
+                  b"\\\\"
+                  (if ((core/int::eq? byte) 34)
+                    b"\\\""
+                    (if ((core/int::eq? byte) 10)
+                      b"\\n"
+                      (if ((core/int::eq? byte) 13)
+                        b"\\r"
+                        (if ((core/int::eq? byte) 9)
+                          b"\\t"
+                          (((core/bytes::slice bytes) index) 1))))))))))))))
+
+(def selfhost/obligation::debug-symbol
+  (fn (symbol)
+    (let
+      ((escaped
+         (core/str::from-utf8
+           (core/bytes::join
+             (((selfhost/obligation::debug-escape-symbol-bytes-loop
+                  (core/str::to-utf8 (core/sym::to-str symbol))) 0) [])))))
+      ((core/str::concat "\"") ((core/str::concat escaped) "\"")))))
+
+(def selfhost/obligation::debug-symbols-loop
+  (fn (symbols)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len symbols))
+          out
+          (((selfhost/obligation::debug-symbols-loop symbols)
+             ((core/int::add index) 1))
+            ((core/vec::push out)
+              (selfhost/obligation::debug-symbol ((core/vec::get symbols) index)))))))))
+
+(def selfhost/obligation::debug-symbol-set
+  (fn (symbols)
+    ((core/str::concat "{")
+      ((core/str::concat
+         ((core/str::join
+            (((selfhost/obligation::debug-symbols-loop symbols) 0) [])) ", "))
+        "}"))))
+
+(def selfhost/obligation::determinism-static-error
+  (fn (module)
+    (fn (report)
+      (let
+        ((unknown ((core/map::get report) (quote :unknown-ops)))
+          (ops ((core/map::get report) (quote :inferred-ops))))
+        ((core/str::concat ((core/map::get module) (quote :path)))
+          ((core/str::concat " declares :caps [] but has inferred effects (unknown=")
+            ((core/str::concat (if unknown "true" "false"))
+              ((core/str::concat ", ops=")
+                ((core/str::concat (selfhost/obligation::debug-symbol-set ops)) ")")))))))))
+
+(def selfhost/obligation::determinism-static-loop
+  (fn (modules)
+    (fn (reports)
+      (fn (index)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len modules))
+            errors
+            (let
+              ((module ((core/vec::get modules) index))
+                (report ((core/vec::get reports) index)))
+              ((((selfhost/obligation::determinism-static-loop modules) reports)
+                 ((core/int::add index) 1))
+                (if
+                  (if (selfhost/obligation::determinism-pure-module? module)
+                    (if ((core/map::get report) (quote :unknown-ops))
+                      true
+                      ((core/int::lt? 0)
+                        (core/vec::len
+                          ((core/map::get report) (quote :inferred-ops)))))
+                    false)
+                  ((core/vec::push errors)
+                    ((selfhost/obligation::determinism-static-error module) report))
+                  errors)))))))))
+
+(def selfhost/obligation::determinism-static-errors
+  (fn (modules)
+    (let
+      ((typecheck
+         (core/cli::typecheck-package
+           {:kind "genesis/typecheck-request-v0.1"
+            :modules
+              ((((selfhost/obligation::typecheck-modules-loop modules) false) 0) [])
+            :v 1})))
+      (if (core/error::is? typecheck)
+        typecheck
+        (let ((reports ((core/map::get typecheck) (quote :modules))))
+          (if
+            (if (selfhost/obligation::vec? reports)
+              ((core/int::eq? (core/vec::len reports)) (core/vec::len modules))
+              false)
+            ((((selfhost/obligation::determinism-static-loop modules) reports) 0) [])
+            (selfhost/obligation::error
+              "typecheck result module inventory mismatch during determinism evaluation")))))))
+
+(def selfhost/obligation::determinism-runtime-error
+  (fn (test)
+    ((core/str::concat "test ")
+      ((core/str::concat ((core/map::get test) (quote :name)))
+        ((core/str::concat " in ")
+          ((core/str::concat
+             (core/sym::to-str ((core/map::get test) (quote :suite))))
+            " performed effects but module declares :caps []"))))))
+
+(def selfhost/obligation::determinism-runtime-loop
+  (fn (modules)
+    (fn (tests)
+      (fn (index)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len tests))
+            errors
+            (let ((test ((core/vec::get tests) index)))
+              (if (selfhost/obligation::caps-test-valid? test)
+                (let
+                  ((module
+                     ((selfhost/obligation::find-suite-module modules)
+                       ((core/map::get test) (quote :suite)))))
+                  (if (core/error::is? module)
+                    module
+                    ((((selfhost/obligation::determinism-runtime-loop modules) tests)
+                       ((core/int::add index) 1))
+                      (if
+                        (if (selfhost/obligation::nil? module)
+                          false
+                          (if (selfhost/obligation::determinism-pure-module? module)
+                            ((core/int::lt? 0)
+                              (core/vec::len
+                                ((core/map::get test) (quote :used-ops))))
+                            false))
+                        ((core/vec::push errors)
+                          (selfhost/obligation::determinism-runtime-error test))
+                        errors))))
+                (selfhost/obligation::error
+                  "determinism test observation must contain exactly valid :suite, :name, and :used-ops fields")))))))))
+
+(def selfhost/obligation::determinism
+  (fn (package)
+    (fn (inputs)
+      (if (selfhost/obligation::map? inputs)
+        (if ((core/int::eq? (core/map::len inputs)) 2)
+          (let
+            ((modules ((core/map::get inputs) (quote :modules)))
+              (tests ((core/map::get inputs) (quote :tests))))
+            (if
+              (if (selfhost/obligation::vec? modules)
+                (selfhost/obligation::vec? tests)
+                false)
+              (let ((modules-valid ((selfhost/obligation::validate-modules-loop modules) 0)))
+                (if (core/error::is? modules-valid)
+                  modules-valid
+                  (let ((static-errors (selfhost/obligation::determinism-static-errors modules)))
+                    (if (core/error::is? static-errors)
+                      static-errors
+                      (let
+                        ((errors
+                           ((((selfhost/obligation::determinism-runtime-loop modules) tests) 0)
+                             static-errors)))
+                        (if (core/error::is? errors)
+                          errors
+                          (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+                            {:errors errors
+                             :kind selfhost/obligation::RESULT_KIND
+                             :name "core/obligation::determinism"
+                             :ok ok
+                             :operation (quote :determinism)
+                             :report
+                               {:errors errors
+                                :kind "genesis/determinism-v0.2"
+                                :ok ok
+                                :package package}
+                             :v 2})))))))
+              (selfhost/obligation::error
+                ":determinism requires vector :modules and :tests inputs")))
+          (selfhost/obligation::error
+            ":determinism inputs must contain exactly :modules and :tests"))
+        (selfhost/obligation::error ":determinism inputs must be a map")))))

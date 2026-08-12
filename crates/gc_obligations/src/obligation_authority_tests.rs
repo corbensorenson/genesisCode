@@ -166,14 +166,14 @@ fn obligation_authority_rejects_open_and_unknown_requests() {
     assert!(error.to_string().contains("sealed error"));
 }
 
-fn capabilities_request(suite: &str, used_ops: &[&str]) -> Term {
+fn module_observation_request(operation: &str, caps: &str, suite: &str, used_ops: &[&str]) -> Term {
     let forms = canonicalize_module(
-            parse_module(
-                "(def ::meta (quote {:caps [sys/time::now] :exports [fixture/tests] :types {fixture/tests ?}}))\n(def fixture/tests {})",
-            )
-            .expect("module parse"),
-        )
-        .expect("module canonicalization");
+        parse_module(&format!(
+            "(def ::meta (quote {{:caps [{caps}] :exports [fixture/tests] :types {{fixture/tests ?}}}}))\n(def fixture/tests {{}})"
+        ))
+        .expect("module parse"),
+    )
+    .expect("module canonicalization");
     Term::Map(
         [
             (
@@ -225,7 +225,7 @@ fn capabilities_request(suite: &str, used_ops: &[&str]) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":operation")),
-                Term::symbol(":capabilities-declared"),
+                Term::symbol(operation),
             ),
             (
                 TermOrdKey(Term::symbol(":package")),
@@ -236,6 +236,14 @@ fn capabilities_request(suite: &str, used_ops: &[&str]) -> Term {
         .into_iter()
         .collect(),
     )
+}
+
+fn capabilities_request(suite: &str, used_ops: &[&str]) -> Term {
+    module_observation_request(":capabilities-declared", "sys/time::now", suite, used_ops)
+}
+
+fn determinism_request(suite: &str, used_ops: &[&str]) -> Term {
+    module_observation_request(":determinism", "", suite, used_ops)
 }
 
 #[test]
@@ -321,6 +329,122 @@ fn capability_authority_validates_all_modules_with_no_effectful_tests() {
     let error = invoke_authority(request, &fixture_frontend(), limits())
         .expect_err("unused open module observation must fail");
     assert!(error.to_string().contains("sealed error"));
+}
+
+#[test]
+fn determinism_authority_decides_static_and_runtime_effect_rules() {
+    let frontend = fixture_frontend();
+    let pure = invoke_authority(
+        determinism_request("fixture/tests", &[]),
+        &frontend,
+        limits(),
+    )
+    .expect("pure determinism result");
+    assert_eq!(term_map_get_bool(&pure, ":ok"), Some(true));
+
+    let effectful = invoke_authority(
+        determinism_request("fixture/tests", &["io/fs::write"]),
+        &frontend,
+        limits(),
+    )
+    .expect("effectful determinism result");
+    assert_eq!(term_map_get_bool(&effectful, ":ok"), Some(false));
+    let Term::Map(effectful_map) = effectful else {
+        panic!("authority result must be a map");
+    };
+    assert_eq!(
+        string_vector(
+            required_field(&effectful_map, ":errors", "result").expect("errors field"),
+            "errors",
+        )
+        .expect("error strings"),
+        vec![
+            "test case in fixture/tests performed effects but module declares :caps []".to_string()
+        ]
+    );
+
+    let unknown_suite = invoke_authority(
+        determinism_request("fixture/missing", &["io/fs::write"]),
+        &frontend,
+        limits(),
+    )
+    .expect("unknown suite retains legacy no-owner semantics");
+    assert_eq!(term_map_get_bool(&unknown_suite, ":ok"), Some(true));
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_fail_determinism");
+    let static_failure = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::Determinism,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &frontend,
+        limits(),
+    )
+    .expect("static determinism result");
+    assert!(!static_failure.ok);
+    assert_eq!(
+        static_failure.errors,
+        vec![
+            "fail.gc declares :caps [] but has inferred effects (unknown=false, ops={\"io/fs::write\"})"
+                .to_string()
+        ]
+    );
+}
+
+#[test]
+fn determinism_authority_rejects_open_observations_and_contradictory_reports() {
+    let mut request = determinism_request("fixture/tests", &[]);
+    let Term::Map(request_map) = &mut request else {
+        panic!("request must be a map");
+    };
+    let Some(Term::Map(inputs)) = request_map.get_mut(&TermOrdKey(Term::symbol(":inputs"))) else {
+        panic!("inputs must be a map");
+    };
+    let Some(Term::Vector(tests)) = inputs.get_mut(&TermOrdKey(Term::symbol(":tests"))) else {
+        panic!("tests must be a vector");
+    };
+    let Term::Map(test) = &mut tests[0] else {
+        panic!("test must be a map");
+    };
+    test.insert(TermOrdKey(Term::symbol(":effectful")), Term::Bool(false));
+    let error = invoke_authority(request, &fixture_frontend(), limits())
+        .expect_err("open determinism observation must fail");
+    assert!(error.to_string().contains("sealed error"));
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_basic");
+    let request = request_term(
+        ObligationAuthorityOperation::Determinism,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+    )
+    .expect("determinism request");
+    let mut result = invoke_authority(request.clone(), &fixture_frontend(), limits())
+        .expect("determinism result");
+    let Term::Map(result_map) = &mut result else {
+        panic!("result must be a map");
+    };
+    let Some(Term::Map(report)) = result_map.get_mut(&TermOrdKey(Term::symbol(":report"))) else {
+        panic!("report must be a map");
+    };
+    report.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+    let error = decode_authority_result(
+        ObligationAuthorityOperation::Determinism,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        hash_term(&request),
+        result,
+    )
+    .expect_err("contradictory determinism report must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("determinism report identity or aggregate mismatch")
+    );
 }
 
 #[test]

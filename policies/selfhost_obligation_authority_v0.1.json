@@ -1,8 +1,8 @@
 {
   "artifact": "selfhost/toolchain.gc",
-  "auditDate": "2026-08-11",
+  "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "bfb7440db95740e0758dc24cb7e498d63d858ab3461a389e2ecf088aab529d93",
+  "contentIdentitySha256": "e7c6189368e1d061cf801daafb75bec79c42e94b05340a8e53f5bb7017229ae0",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -21,6 +21,7 @@
   "migratedObligations": [
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
+    "core/obligation::determinism",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests"
@@ -45,7 +46,6 @@
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
     "core/obligation::coverage-mcdc",
-    "core/obligation::determinism",
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
@@ -66,9 +66,10 @@
   "sourceModules": [
     "selfhost/obligation_authority_core_v1.gc",
     "selfhost/obligation_authority_typecheck_v1.gc",
+    "selfhost/obligation_authority_determinism_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "be808f682327f4a79a4a0f24622a4cf3c3d118352c86acb74ab7afcbf095c8b3",
+  "sourceSetSha256": "b247022a1bce0d20bc7014c40ac69c66048ba9a7f85d4c76ca5a19f80639a3aa",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

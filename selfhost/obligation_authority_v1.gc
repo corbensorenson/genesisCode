@@ -31,7 +31,9 @@
                 ((selfhost/obligation::typecheck operation) inputs)
                 (if ((core/sym::eq? operation) (quote :typecheck-strict))
                   ((selfhost/obligation::typecheck operation) inputs)
-                  (selfhost/obligation::error "unknown obligation authority operation"))))))))))
+                  (if ((core/sym::eq? operation) (quote :determinism))
+                    ((selfhost/obligation::determinism package) inputs)
+                    (selfhost/obligation::error "unknown obligation authority operation")))))))))))
 
 (def core/cli::obligation-authority
   (fn (request)

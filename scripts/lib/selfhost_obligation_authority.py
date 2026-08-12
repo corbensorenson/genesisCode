@@ -7,8 +7,10 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -70,6 +72,7 @@ FIELDS = {
 MIGRATED = [
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
+    "core/obligation::determinism",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests",
@@ -80,7 +83,6 @@ RESIDUAL = [
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
     "core/obligation::coverage-mcdc",
-    "core/obligation::determinism",
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
@@ -95,6 +97,7 @@ RESIDUAL = [
 SOURCE_MODULES = [
     "selfhost/obligation_authority_core_v1.gc",
     "selfhost/obligation_authority_typecheck_v1.gc",
+    "selfhost/obligation_authority_determinism_v1.gc",
     "selfhost/obligation_authority_v1.gc",
 ]
 
@@ -199,8 +202,10 @@ def validate_bridge(bridge: str) -> None:
         "validate_unit_report(",
         "validate_budget_report(",
         "validate_capabilities_report(",
+        "validate_determinism_report(",
         "validate_typecheck_obligation_report(",
         "strict_typecheck_meta_for_validation(",
+        "ObligationAuthorityOperation::Determinism",
         "ObligationAuthorityOperation::TypecheckStrict",
         'Term::symbol(":request-h")',
         "let request_hash = hash_term(&request);",
@@ -226,8 +231,11 @@ def static_check(root: Path, profile):
     source_hash = source_set_identity(root, profile["sourceModules"])
     if source_hash != profile["sourceSetSha256"]:
         fail("obligation authority source-set identity mismatch")
-    if "core/cli::typecheck-package" not in "\n".join(sources):
+    combined_sources = "\n".join(sources)
+    if "core/cli::typecheck-package" not in combined_sources:
         fail("self-host typecheck obligation route is absent")
+    if "selfhost/obligation::determinism" not in combined_sources:
+        fail("self-host determinism obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -258,6 +266,10 @@ def static_check(root: Path, profile):
         "obligation_typecheck(&store, &manifest, &modules, &frontend, limits, true)"
     ) != 1:
         fail("strict typecheck production authority call-site drift")
+    if types_api.count(
+        "obligation_determinism(&store, &manifest, &modules, &test_runs, &frontend, limits)"
+    ) != 1:
+        fail("determinism production authority call-site drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
@@ -269,6 +281,8 @@ def static_check(root: Path, profile):
         '" exceeded max_steps_per_test: "',
         "fv_hash == expected_hash",
         "tr.ok",
+        "declares :caps [] but has inferred effects",
+        "performed effects but module declares :caps []",
     ]
     combined = unit_host + budget_host + test_host + stage_host
     for token in forbidden:
@@ -284,11 +298,22 @@ def static_check(root: Path, profile):
         fail("typecheck authority dispatch drift")
     if unit_host.count("ObligationAuthorityOperation::TypecheckStrict") != 1:
         fail("strict typecheck authority dispatch drift")
+    if unit_host.count("ObligationAuthorityOperation::Determinism") != 1:
+        fail("determinism authority dispatch drift")
     obligation_typecheck = unit_host.split("pub(super) fn obligation_typecheck(", 1)[1].split(
         "pub(super) fn typecheck_report_with_frontend(", 1
     )[0]
     if "typecheck_report_with_frontend(" in obligation_typecheck:
         fail("reachable host strict typecheck obligation decision restored")
+    obligation_determinism = unit_host.split("pub(super) fn obligation_determinism(", 1)[1].split(
+        "pub(super) fn obligation_caps_declared(", 1
+    )[0]
+    if (
+        "typecheck_report_with_frontend(" in obligation_determinism
+        or "meta_caps(" in obligation_determinism
+        or "suite_to_module(" in obligation_determinism
+    ):
+        fail("reachable host determinism obligation decision restored")
     if (
         '"core/obligation::capabilities-declared-report"' in unit_host
         or "did not declare it in :caps" in unit_host
@@ -305,26 +330,29 @@ def static_check(root: Path, profile):
 
 def run_case(binary: Path, artifact: Path, root: Path, fixture: str, profile):
     limits = profile["runtimeEvidence"]
-    result = subprocess.run(
-        [
-            str(binary),
-            "test",
-            "--pkg",
-            str(root / fixture / "package.toml"),
-            "--selfhost-artifact",
-            str(artifact),
-            "--step-limit",
-            str(limits["stepLimit"]),
-            "--max-alloc-units",
-            str(limits["allocationLimit"]),
-            "--json",
-        ],
-        cwd=root,
-        text=True,
-        capture_output=True,
-        timeout=limits["timeoutSeconds"],
-        env={**os.environ, "GENESIS_OBLIGATION_CACHE_DISABLE": "1"},
-    )
+    with tempfile.TemporaryDirectory(prefix="genesis-obligation-runtime-") as temp:
+        fixture_copy = Path(temp) / Path(fixture).name
+        shutil.copytree(root / fixture, fixture_copy)
+        result = subprocess.run(
+            [
+                str(binary),
+                "test",
+                "--pkg",
+                str(fixture_copy / "package.toml"),
+                "--selfhost-artifact",
+                str(artifact),
+                "--step-limit",
+                str(limits["stepLimit"]),
+                "--max-alloc-units",
+                str(limits["allocationLimit"]),
+                "--json",
+            ],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            timeout=limits["timeoutSeconds"],
+            env={**os.environ, "GENESIS_OBLIGATION_CACHE_DISABLE": "1"},
+        )
     try:
         envelope = json.loads(result.stdout)
     except json.JSONDecodeError as error:
@@ -351,6 +379,7 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
             True,
             [
                 "core/obligation::unit-tests",
+                "core/obligation::determinism",
                 "core/obligation::capabilities-declared",
                 "core/obligation::typecheck",
             ],
@@ -370,6 +399,12 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
                 "core/obligation::unit-tests",
                 "core/obligation::capabilities-declared",
             ],
+        ),
+        (
+            "tests/spec/pkg_fail_determinism",
+            30,
+            False,
+            ["core/obligation::unit-tests", "core/obligation::determinism"],
         ),
         (
             "tests/spec/pkg_fail_typecheck",
@@ -455,6 +490,13 @@ def self_test(root: Path, profile, schema):
         mutations.append("typecheck-route")
     else:
         fail("mutation was not rejected: typecheck-route")
+    determinism_route = "validate_determinism_report("
+    try:
+        validate_bridge(bridge.replace(determinism_route, ""))
+    except CheckError:
+        mutations.append("determinism-route")
+    else:
+        fail("mutation was not rejected: determinism-route")
     return mutations
 
 

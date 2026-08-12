@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `7b2472badb713aa48b299a1e1bbbf2a506aa76756e30db16b9438d98c6c206bd`
-- Freshness artifact hash: `7b2472badb713aa48b299a1e1bbbf2a506aa76756e30db16b9438d98c6c206bd`
-- Freshness source hash: `b5ce1b74fd6b65a785979883b792ed79d58303380e921695b581b085c7b2b7fd`
-- Source aggregate hash (module path + module sha256): `763c0f7705722a81c47d37692c743620c713312e3e71bffe607ea2c7c1e708e5`
+- Artifact sha256: `0825decc640c8b236b27ae3407bd31a1872d3fe0be92ce6cb37db25fe1346e5d`
+- Freshness artifact hash: `0825decc640c8b236b27ae3407bd31a1872d3fe0be92ce6cb37db25fe1346e5d`
+- Freshness source hash: `3b6b135d49a1bc21f07c390d86391babe6521d0dbf342670dea4c16c9c4fa0b3`
+- Source aggregate hash (module path + module sha256): `9178ecf3b13815f1b828c001feecb6afd45477ba7f9096fd825bb762ca3c5168`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `59`
+- Module count: `60`
 
 ## Module Summary
 
@@ -73,7 +73,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/policy_authority_v1.gc` | 342 | 15417 | 29 | `8fc36b35f45b1e7e` |
 | `selfhost/obligation_authority_core_v1.gc` | 570 | 24059 | 50 | `ff66607b4137d59a` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
-| `selfhost/obligation_authority_v1.gc` | 61 | 3359 | 3 | `4bd4727ac2fed6df` |
+| `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
+| `selfhost/obligation_authority_v1.gc` | 63 | 3505 | 3 | `e1e6e1be9f8dd350` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -135,5 +136,6 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/policy_authority_v1.gc`: `selfhost/policy::error`, `selfhost/policy::failure`, `selfhost/policy::map?`, `selfhost/policy::vec?`, `selfhost/policy::str?`, `selfhost/policy::int?`, `selfhost/policy::nil?`, `selfhost/policy::operation?`
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
 - `selfhost/obligation_authority_typecheck_v1.gc`: `selfhost/obligation::strict-typecheck-meta`, `selfhost/obligation::typecheck-modules-loop`, `selfhost/obligation::typecheck`
+- `selfhost/obligation_authority_determinism_v1.gc`: `selfhost/obligation::determinism-caps-symbols-loop`, `selfhost/obligation::determinism-module-caps`, `selfhost/obligation::determinism-pure-module?`, `selfhost/obligation::debug-escape-symbol-bytes-loop`, `selfhost/obligation::debug-symbol`, `selfhost/obligation::debug-symbols-loop`, `selfhost/obligation::debug-symbol-set`, `selfhost/obligation::determinism-static-error`
 - `selfhost/obligation_authority_v1.gc`: `selfhost/obligation::bind-result`, `selfhost/obligation::dispatch`, `core/cli::obligation-authority`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`
