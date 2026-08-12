@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscodelang.dev/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+  "title": "GenesisCode self-host patch authority profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "bindings",
+    "compatibilityOracle",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "independentVerifier",
+    "kind",
+    "nonclaims",
+    "productionEntrypoints",
+    "releaseGraphDisposition",
+    "reportKinds",
+    "runtimeEvidence",
+    "schema",
+    "sourceModules",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "bindings": {
+      "type": "array",
+      "minItems": 7,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^core/cli::(patch-[a-z0-9-]+|refactor-plan)$"}
+    },
+    "compatibilityOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["crate", "feature", "package", "sunsetReviewDate"],
+      "properties": {
+        "crate": {"const": "gc_patches"},
+        "feature": {"const": "parity-oracle"},
+        "package": {"const": "gc_cli_driver_parity"},
+        "sunsetReviewDate": {"type": "string", "format": "date"}
+      }
+    },
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {
+      "type": "array",
+      "minItems": 10,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9-]+$"}
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_patch_authority.py"},
+    "kind": {"const": "genesis/selfhost-patch-authority-v0.1"},
+    "nonclaims": {"type": "array", "minItems": 5, "uniqueItems": true, "items": {"type": "string"}},
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "releaseGraphDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["h2Eligible", "reason", "requiredOwnerPaths"],
+      "properties": {
+        "h2Eligible": {"const": false},
+        "reason": {"const": "parity-feature-unified-in-outer-cli-packages"},
+        "requiredOwnerPaths": {"const": ["crates/gc_cli/Cargo.toml", "crates/gc_wasi_cli/Cargo.toml"]}
+      }
+    },
+    "reportKinds": {"const": ["genesis/patch-diff-v0.1", "genesis/patch-merge-v0.1", "genesis/patch-apply-v0.3"]},
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allocationLimit", "fixture", "lowStepControl", "stepLimit", "timeoutSeconds"],
+      "properties": {
+        "allocationLimit": {"const": 50000000},
+        "fixture": {"const": "tests/spec/pkg_basic"},
+        "lowStepControl": {"const": 1},
+        "stepLimit": {"const": 50000000},
+        "timeoutSeconds": {"const": 60}
+      }
+    },
+    "schema": {"const": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json"},
+    "sourceModules": {
+      "type": "array",
+      "minItems": 10,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^selfhost/patch_[a-z0-9_]+_v1\\.gc$"}
+    },
+    "spec": {"const": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

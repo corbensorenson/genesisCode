@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 322,
+    "canonicalSources": 324,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 116,
+    "schemas": 117,
     "symbols": 176
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "002155a4c478d5d855da0e8e88f6dd44628a349af274f21d478ee0ee23db93c3"
+      "sha256": "92267220a2be5aaa7b8e7743b9650d1f9783aae00e5a7f8a09a9df79c0f378de"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -1081,6 +1081,14 @@
     {
       "path": "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
       "sha256": "be3240d099f73493cca39bd15913a0ec592513b55ff93cfcff710e8ce6ad6b4d"
+    },
+    {
+      "path": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
+      "sha256": "a6bfcbe2d0262db083d3fcd8f7ba5510718d5837220e7c4090f0a0c3c0472760"
+    },
+    {
+      "path": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+      "sha256": "5cdddfc13fcc41b5d4bf370472cd95c3a6bd3b50dd783d77db78a679e539d816"
     },
     {
       "path": "docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.md",

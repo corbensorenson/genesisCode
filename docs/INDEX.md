@@ -188,6 +188,8 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md` - closed artifact-only semantic workspace diff protocol, top-form minimization rule, canonical identities, and fail-closed independent decoder boundary.
 - `docs/spec/SEMANTIC_PATCH_MERGE_v0.1.md` - closed artifact-only semantic three-way workspace merge protocol, typed conflict identities, embedded canonical diff, and fail-closed independent verifier boundary.
 - `docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md` - closed artifact-only final patch outcome/report protocol binding normalized patch, package, acceptance, semantic-edit, and request identities.
+- `docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md` - independent R4.2.c patch-authority inventory, native/WASI evidence contract, mutation controls, and explicit non-promotion blocker.
+- `docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked patch-authority profile.
 - `scripts/lib/semantic_ownership_ledger.py --refresh-identities` - explicit identity refresh for reviewed ledger edits; validation remains read-only in `scripts/check_selfhost_boundary.sh`.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
 - `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.

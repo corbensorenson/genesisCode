@@ -1,0 +1,84 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-11",
+  "bindings": [
+    "core/cli::patch-apply-report",
+    "core/cli::patch-diff",
+    "core/cli::patch-merge",
+    "core/cli::patch-normalize",
+    "core/cli::patch-preflight",
+    "core/cli::patch-semantic-node-index",
+    "core/cli::refactor-plan"
+  ],
+  "compatibilityOracle": {
+    "crate": "gc_patches",
+    "feature": "parity-oracle",
+    "package": "gc_cli_driver_parity",
+    "sunsetReviewDate": "2026-11-11"
+  },
+  "contentIdentitySha256": "95998b5df04bc635397733c03f94c2d160e3f4be0b1a972c7c9eaf64fc540150",
+  "decisionInventory": [
+    "apply-outcome-and-report",
+    "conflict-classification-and-explanation",
+    "operation-canonical-identity",
+    "patch-canonical-identity",
+    "patch-minimization",
+    "patch-normalization",
+    "patch-preconditions",
+    "semantic-apply-transformations",
+    "semantic-node-identity",
+    "three-way-semantic-merge",
+    "workspace-refactor-planning",
+    "workspace-semantic-diff"
+  ],
+  "independentVerifier": "scripts/lib/selfhost_patch_authority.py",
+  "kind": "genesis/selfhost-patch-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "h2-ledger-promotion",
+    "independent-patch-reimplementation",
+    "release-qualification",
+    "r4-2-c-closure"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "releaseGraphDisposition": {
+    "h2Eligible": false,
+    "reason": "parity-feature-unified-in-outer-cli-packages",
+    "requiredOwnerPaths": [
+      "crates/gc_cli/Cargo.toml",
+      "crates/gc_wasi_cli/Cargo.toml"
+    ]
+  },
+  "reportKinds": [
+    "genesis/patch-diff-v0.1",
+    "genesis/patch-merge-v0.1",
+    "genesis/patch-apply-v0.3"
+  ],
+  "runtimeEvidence": {
+    "allocationLimit": 50000000,
+    "fixture": "tests/spec/pkg_basic",
+    "lowStepControl": 1,
+    "stepLimit": 50000000,
+    "timeoutSeconds": 60
+  },
+  "schema": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/patch_schema_v1.gc",
+    "selfhost/patch_schema_apply_v1.gc",
+    "selfhost/patch_schema_manifest_v1.gc",
+    "selfhost/patch_schema_refactor_v1.gc",
+    "selfhost/patch_schema_refactor_meta_migrate_v1.gc",
+    "selfhost/patch_authority_identity_v1.gc",
+    "selfhost/patch_authority_normalize_v1.gc",
+    "selfhost/patch_authority_preflight_v1.gc",
+    "selfhost/patch_authority_refactor_plan_v1.gc",
+    "selfhost/patch_authority_diff_v1.gc",
+    "selfhost/patch_authority_merge_v1.gc",
+    "selfhost/patch_authority_apply_report_v1.gc"
+  ],
+  "spec": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}
