@@ -20,6 +20,9 @@
     "nonclaims",
     "productionEntrypoints",
     "requestKind",
+    "resourceBinding",
+    "resourceRequestKind",
+    "resourceResultKind",
     "residualDecisionInventory",
     "resultKind",
     "runtimeEvidence",
@@ -35,7 +38,7 @@
     "binding": {"const": "core/effects::policy-authority"},
     "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "decisionInventory": {
-      "const": ["baseline-operation-admission", "candidate-operation-inventory", "canonical-log-cap-descriptor", "per-operation-allow-precedence"]
+      "const": ["baseline-operation-admission", "candidate-operation-inventory", "canonical-log-cap-descriptor", "per-operation-allow-precedence", "runtime-resource-limits", "task-resource-limits-and-default-workers"]
     },
     "hostOracle": {
       "type": "object",
@@ -55,6 +58,9 @@
     "nonclaims": {"type": "array", "minItems": 7, "uniqueItems": true, "items": {"type": "string"}},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
     "requestKind": {"const": "genesis/effect-policy-authority-request-v0.1"},
+    "resourceBinding": {"const": "core/effects::resource-policy-authority"},
+    "resourceRequestKind": {"const": "genesis/effect-resource-policy-request-v0.1"},
+    "resourceResultKind": {"const": "genesis/effect-resource-policy-result-v0.1"},
     "residualDecisionInventory": {"type": "array", "minItems": 10, "uniqueItems": true, "items": {"type": "string"}},
     "resultKind": {"const": "genesis/effect-policy-authority-result-v0.1"},
     "runtimeEvidence": {
@@ -71,6 +77,6 @@
     "sourceModule": {"const": "selfhost/effect_policy_authority_v1.gc"},
     "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md"},
-    "version": {"const": "0.1.1"}
+    "version": {"const": "0.1.2"}
   }
 }

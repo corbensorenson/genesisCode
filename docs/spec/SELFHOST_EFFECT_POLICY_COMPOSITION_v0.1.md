@@ -8,9 +8,13 @@ effect-policy composition slice: baseline operation admission, per-operation
 `:create-dirs`, `:timeout-ms`, and `:log-inline-max-bytes`.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
+`core/effects::resource-policy-authority` owns the runtime and task resource
+limits and selects an explicit task worker default from the configured value or
+the host's bounded available-worker observation.
 
 The Rust host still parses TOML, independently reconstructs the legacy candidate
-inventory and per-operation results, and rejects every contradiction.
+inventory, per-operation results, and runtime/task resource policy, and rejects
+every contradiction.
 That live oracle is a required safety mechanism for this partial checkpoint and
 prevents `SD-EFFECT-POLICY` from reaching H2. Removing it before all residual
 decisions are GenesisCode-owned and independently verified is forbidden.
@@ -42,6 +46,19 @@ return sealed errors. The host rejects unknown fields, identity drift, request-h
 substitution, denied non-nil capabilities, admitted non-map capabilities, and any
 result that contradicts its retained compatibility oracle.
 
+The resource authority receives a closed five-field
+`genesis/effect-resource-policy-request-v0.1` map. It contains version `1`, the
+positive host observation `:available-workers`, and exact `:runtime` and `:task`
+maps. Missing optional TOML fields are represented by `nil`; configured values
+must be nonnegative integers, while a configured `:default-workers` must be
+positive. The closed `genesis/effect-resource-policy-result-v0.1` result is bound
+to the complete request hash, preserves all validated limits, and replaces a
+missing task default with `:available-workers`. The host strictly decodes every
+field into `u64` or platform `usize`, rejects negative values and overflow,
+compares the complete result with its independently parsed compatibility oracle,
+and installs the validated GenesisCode task and runtime policies into the state
+consumed by effect and task enforcement.
+
 Per-operation `allow` has legacy precedence: an override with `allow = false`
 denies the operation; an override with true or no explicit `allow` admits it;
 without an override, baseline membership decides admission. Capability timeouts
@@ -59,8 +76,10 @@ selected. Obligation preflight uses the same self-host route while preserving it
 already-normative missing-policy observation behavior.
 
 The effect runner uses the validated GenesisCode capability descriptor in log
-entries. Host code retains payload enforcement, filesystem path resolution,
-resource accounting, cancellation, effect execution, and replay mechanisms.
+entries and the validated runtime/task limits for host resource enforcement.
+Host code retains payload measurement and enforcement mechanisms, filesystem
+path resolution, accounting mechanisms, cancellation, effect execution, and
+replay mechanisms.
 `CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy
 composition oracle remain reachable for tests, host mechanisms, and this partial
 transition, and therefore are not evidence of H2.
@@ -68,11 +87,12 @@ transition, and therefore are not evidence of H2.
 ## Residual Decisions And Nonclaims
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
-and type decoding; global runtime, task, log, store, and refs policy;
-operation-specific filesystem, network, process, database,
+and type decoding; global log, store, and refs policy; operation-specific
+filesystem, network, process, database,
 crypto, FFI, plugin, model, graphics, and device constraints; secret and path
-resolution; effect execution and cancellation; strict replay; policy aliasing;
-and removal of the compatibility oracle.
+resolution; effect execution and cancellation; strict replay; and removal of the
+compatibility oracle. Policy aliases are governed separately by the policy-alias
+authority and are not part of this profile's residual inventory.
 
 This contract does not promote `SD-EFFECT-POLICY`, close R4.2.d or SH-C, establish
 H2/H3/H4, authorize release, or authorize GenesisBench, Genesis Foundry,

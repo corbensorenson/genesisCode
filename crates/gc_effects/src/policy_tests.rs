@@ -107,6 +107,73 @@ allow = false
 }
 
 #[test]
+fn selfhost_authority_owns_runtime_and_task_resource_composition() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[runtime]
+max_effect_ops = 11
+max_payload_bytes_per_op = 12
+max_payload_bytes_per_run = 13
+max_response_bytes_per_op = 14
+max_response_bytes_per_run = 15
+
+[task]
+default_workers = 2
+max_tasks = 21
+max_workers = 22
+max_queue = 23
+max_steps_per_task = 24
+max_time_ms_per_task = 25
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert_eq!(policy.runtime.max_effect_ops, Some(11));
+    assert_eq!(policy.runtime.max_payload_bytes_per_op, Some(12));
+    assert_eq!(policy.runtime.max_payload_bytes_per_run, Some(13));
+    assert_eq!(policy.runtime.max_response_bytes_per_op, Some(14));
+    assert_eq!(policy.runtime.max_response_bytes_per_run, Some(15));
+    assert_eq!(policy.task.default_workers, 2);
+    assert_eq!(policy.task.max_tasks, Some(21));
+    assert_eq!(policy.task.max_workers, Some(22));
+    assert_eq!(policy.task.max_queue, Some(23));
+    assert_eq!(policy.task.max_steps_per_task, Some(24));
+    assert_eq!(policy.task.max_time_ms_per_task, Some(25));
+}
+
+#[test]
+fn selfhost_authority_owns_adaptive_task_worker_default() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(&caps, "").unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+    let expected = std::thread::available_parallelism()
+        .map(|workers| workers.get() as u64)
+        .unwrap_or(1)
+        .max(1);
+
+    assert_eq!(policy.task.default_workers, expected);
+}
+
+#[test]
 fn selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation() {
     let td = tempfile::tempdir().unwrap();
     let caps = td.path().join("caps.toml");

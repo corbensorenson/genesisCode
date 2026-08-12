@@ -2,12 +2,14 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "14fd8fd9d2b334e07db44e834cc49a80679f0830b54f40e6708560d652546ab1",
+  "contentIdentitySha256": "5e1b2f8feb250b26f3159459c92501995e5c8fc0bc040c2819596a481a02b835",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
-    "per-operation-allow-precedence"
+    "per-operation-allow-precedence",
+    "runtime-resource-limits",
+    "task-resource-limits-and-default-workers"
   ],
   "hostOracle": {
     "required": true,
@@ -33,6 +35,9 @@
     "genesis_wasi"
   ],
   "requestKind": "genesis/effect-policy-authority-request-v0.1",
+  "resourceBinding": "core/effects::resource-policy-authority",
+  "resourceRequestKind": "genesis/effect-resource-policy-request-v0.1",
+  "resourceResultKind": "genesis/effect-resource-policy-result-v0.1",
   "residualDecisionInventory": [
     "crypto-and-signing-policy",
     "database-policy",
@@ -45,7 +50,6 @@
     "path-and-secret-resolution",
     "process-policy",
     "replay-execution-and-validation",
-    "runtime-and-task-resource-policy",
     "toml-syntax-and-type-decoding"
   ],
   "resultKind": "genesis/effect-policy-authority-result-v0.1",
@@ -56,7 +60,7 @@
   },
   "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
   "sourceModule": "selfhost/effect_policy_authority_v1.gc",
-  "sourceSha256": "5a570ef5778caa4408dc13fb679d164077511a6dea70d27d70027808012c3aca",
+  "sourceSha256": "f5aca6fbc2bced7bd56600003762ba1419f6dda03fc1674f82d2e730dea6d774",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.1"
+  "version": "0.1.2"
 }

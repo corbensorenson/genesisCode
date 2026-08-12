@@ -60,6 +60,9 @@ FIELDS = {
     "nonclaims",
     "productionEntrypoints",
     "requestKind",
+    "resourceBinding",
+    "resourceRequestKind",
+    "resourceResultKind",
     "residualDecisionInventory",
     "resultKind",
     "runtimeEvidence",
@@ -75,6 +78,8 @@ DECISIONS = [
     "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
     "per-operation-allow-precedence",
+    "runtime-resource-limits",
+    "task-resource-limits-and-default-workers",
 ]
 
 RESIDUALS = {
@@ -89,7 +94,6 @@ RESIDUALS = {
     "path-and-secret-resolution",
     "process-policy",
     "replay-execution-and-validation",
-    "runtime-and-task-resource-policy",
     "toml-syntax-and-type-decoding",
 }
 
@@ -117,6 +121,9 @@ def validate(profile, schema, check_identity=True):
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
         "requestKind": "genesis/effect-policy-authority-request-v0.1",
+        "resourceBinding": "core/effects::resource-policy-authority",
+        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.1",
+        "resourceResultKind": "genesis/effect-resource-policy-result-v0.1",
         "resultKind": "genesis/effect-policy-authority-result-v0.1",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
@@ -126,7 +133,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.1",
+        "version": "0.1.2",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -170,6 +177,8 @@ def static_check(root: Path, profile):
         fail("effect-policy binding manifest custody drift")
     if manifest.count(profile["inventoryBinding"]) != 1:
         fail("effect-policy inventory binding manifest custody drift")
+    if manifest.count(profile["resourceBinding"]) != 1:
+        fail("effect-policy resource binding manifest custody drift")
 
     authority = (root / "crates/gc_effects/src/policy_authority.rs").read_text()
     required_authority = [
@@ -180,12 +189,18 @@ def static_check(root: Path, profile):
         profile["resultKind"],
         profile["inventoryRequestKind"],
         profile["inventoryResultKind"],
+        profile["resourceRequestKind"],
+        profile["resourceResultKind"],
         'get("core/effects::policy-authority")',
         'get("core/effects::policy-inventory-authority")',
+        'get("core/effects::resource-policy-authority")',
         "inventory result contradicts independently reconstructed candidate operations",
         "let request_hash = hash_term(&request);",
         "contradicts independently reconstructed policy composition",
+        "resource result contradicts independently reconstructed runtime/task policy",
         "op_policy.authorized_cap = Some(cap);",
+        "policy.task = authorized_task;",
+        "policy.runtime = authorized_runtime;",
     ]
     for token in required_authority:
         if token not in authority:
@@ -226,12 +241,39 @@ def static_check(root: Path, profile):
         fail("preflight effect-policy authority routing drift")
     task_profile = (root / "crates/gc_cli_driver/src/pkg_runtime_profile.rs").read_text()
     if 'CapsPolicy::from_toml_str("allow = [\\"core/task::spawn\\", \\"core/task::await\\"]")' not in task_profile:
-        fail("declared internal task-policy residual disappeared without migration")
+        fail("declared internal compatibility policy disappeared without migration")
+
+    runtime_budget = (root / "crates/gc_effects/src/runner_runtime_budget.rs").read_text()
+    for field in (
+        "max_effect_ops",
+        "max_payload_bytes_per_op",
+        "max_payload_bytes_per_run",
+        "max_response_bytes_per_op",
+        "max_response_bytes_per_run",
+    ):
+        if f"policy.runtime.{field}" not in runtime_budget:
+            fail(f"runtime enforcement no longer consumes authorized field: {field}")
+    task_enforcement = (
+        (root / "crates/gc_effects/src/runner_task_policy.rs").read_text()
+        + (root / "crates/gc_effects/src/runner_task.rs").read_text()
+    )
+    for field in (
+        "default_workers",
+        "max_tasks",
+        "max_workers",
+        "max_queue",
+        "max_steps_per_task",
+        "max_time_ms_per_task",
+    ):
+        if f"policy.task.{field}" not in task_enforcement:
+            fail(f"task enforcement no longer consumes authorized field: {field}")
 
     tests = (root / "crates/gc_effects/src/policy_tests.rs").read_text()
     for name in (
         "selfhost_authority_composes_admission_and_canonical_caps",
         "selfhost_authority_owns_sorted_unique_candidate_inventory",
+        "selfhost_authority_owns_runtime_and_task_resource_composition",
+        "selfhost_authority_owns_adaptive_task_worker_default",
         "selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation",
     ):
         if tests.count(f"fn {name}()") != 1:
@@ -253,6 +295,7 @@ def mutation_controls(profile, schema):
     edits = [
         ("binding", lambda item: item.__setitem__("binding", "core/cli::policy-authority")),
         ("inventory-binding", lambda item: item.__setitem__("inventoryBinding", "core/cli::policy-authority")),
+        ("resource-binding", lambda item: item.__setitem__("resourceBinding", "core/cli::policy-authority")),
         ("decision", lambda item: item["decisionInventory"].pop()),
         ("oracle", lambda item: item["hostOracle"].__setitem__("required", False)),
         ("limit", lambda item: item.__setitem__("maxPolicyOperations", 0)),
