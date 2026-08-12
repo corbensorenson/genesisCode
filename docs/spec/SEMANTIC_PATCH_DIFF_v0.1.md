@@ -107,5 +107,6 @@ WASI consumers. Host paths, timestamps, file metadata, and workspace-vector orde
 not enter semantic patch identity.
 
 This protocol establishes neither aggregate SD-PATCH H2 nor R4.2.c closure. Those claims
-still require complete apply/report outcomes, strict legacy-producer absence,
-native/WASI observations, and independent durable evidence.
+still require strict whole-route legacy-producer absence, native/WASI observations,
+and independent durable evidence. Final apply/report authority is separately governed
+by `SEMANTIC_PATCH_APPLY_REPORT_v0.1.md`.

@@ -5,7 +5,7 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 321,
+    "canonicalSources": 322,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "381a0d6a216a875eea483479968af144be193d553c7810ca4b79a4712e67cc18"
+      "sha256": "002155a4c478d5d855da0e8e88f6dd44628a349af274f21d478ee0ee23db93c3"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -940,7 +940,7 @@
     },
     {
       "path": "docs/spec/PATCH_SCHEMA.md",
-      "sha256": "043ca0fe7375394a76272133f4bd9dce273d71a54189b991ef3ff7b04d93ddab"
+      "sha256": "1e81dbe5a58dfdbe251327a466bc7d711e4b8e01f4447a38f7f0c6fdbe61a8bd"
     },
     {
       "path": "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md",
@@ -1112,7 +1112,7 @@
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
-      "sha256": "21267b663ec57be1700a0e2700cfbbe1c5ed8ec4b53b6c99e19dd2de0a9cb863"
+      "sha256": "e6565c9e9e63838ae587f49b0e7b87603923e91aaddd0270efa90b1c6bc322b9"
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
@@ -1123,12 +1123,16 @@
       "sha256": "c3bc52735a9d992a88857fc807de0dd9a605ab67d931ca24445596a0a57cfe74"
     },
     {
+      "path": "docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md",
+      "sha256": "fafb159d4bc3cd00dc679a6501273f926fc30ce3e3af89a1fd90e6b27864063b"
+    },
+    {
       "path": "docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md",
-      "sha256": "13a6d41adaa21be48ea347812236da793718574168b3fc01011184b6916a94ad"
+      "sha256": "0fdc26984fb0ab0b936763825fe8ee0ee5c9edaa818b9d42d6fcc14a53ab3fef"
     },
     {
       "path": "docs/spec/SEMANTIC_PATCH_MERGE_v0.1.md",
-      "sha256": "e6279d40a04de3e15b3665cd268e8536b5ac924bb0fb8e027286282618986d47"
+      "sha256": "fd30c12483a909eaf09ed532472964a0a90594fbd8a2ba8413fce1eb32153245"
     },
     {
       "path": "docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md",
@@ -1276,7 +1280,7 @@
     },
     {
       "path": "docs/status/SELFHOST_AUTHORITY_v0.1.md",
-      "sha256": "035716acb5ec36af2803c420f087842cb3b1ec24896f2fcb89a159a6946f687d"
+      "sha256": "4d5fe717b76f4b47c14fb5f52f4a6bf3d37887624f3c464dd7c1363052744629"
     },
     {
       "path": "docs/status/SELFHOST_CUTOVER.md",

@@ -2,6 +2,8 @@ use super::*;
 
 #[path = "patch_apply_report.rs"]
 mod patch_apply_report;
+#[path = "patch_apply_runtime.rs"]
+mod patch_apply_runtime;
 pub fn apply_patch_with_step_limit_and_frontend(
     patch_path: &Path,
     pkg_toml: &Path,
@@ -13,20 +15,7 @@ pub fn apply_patch_with_step_limit_and_frontend(
     let patch_src = std::fs::read_to_string(patch_path)?;
     let patch_term = parse_term(&patch_src).map_err(|e| PatchError::Parse(e.to_string()))?;
 
-    let selfhost_config = if coreform_frontend_is_rust(&frontend) {
-        None
-    } else {
-        let CoreformFrontend::Selfhost(cfg) = &frontend else {
-            return Err(PatchError::Validate(
-                "invalid frontend dispatch while initializing patch toolchain".to_string(),
-            ));
-        };
-        Some(cfg.clone())
-    };
-    let mut selfhost = selfhost_config
-        .as_ref()
-        .map(|config| SelfhostPatchToolchain::init(config, mem_limits))
-        .transpose()?;
+    let mut selfhost = patch_apply_runtime::initialize_patch_toolchain(&frontend, mem_limits)?;
 
     if let Some(sh) = selfhost.as_mut() {
         sh.validate_patch_term(&patch_term, step_limit)?;
@@ -74,23 +63,24 @@ pub fn apply_patch_with_step_limit_and_frontend(
             }
         }
 
-        let package_artifact = Some(pack(pkg_toml)?);
-        let acceptance = Some(test_package_with_step_limit_and_frontend(
+        let package_artifact = pack(pkg_toml)?;
+        let acceptance = test_package_with_step_limit_and_frontend(
             pkg_toml,
             caps_override,
             step_limit,
             mem_limits,
             frontend,
-        )?);
-
-        let ok = acceptance.as_ref().is_some_and(|r| r.ok);
-        let report = patch_apply_report::report_term(
+        )?;
+        let (ok, report) = patch_apply_report::stored_selfhost_report_term(
             &patch,
-            ok,
             &package_artifact,
-            acceptance.as_ref(),
+            &acceptance,
             &semantic_edits,
-        );
+            &store,
+            selfhost.as_mut(),
+            step_limit,
+            mem_limits,
+        )?;
         let report_artifact = store.put_term(&report)?;
 
         Ok(PatchApplyResult {
@@ -98,8 +88,8 @@ pub fn apply_patch_with_step_limit_and_frontend(
             semantic_patch_hash: patch.semantic_hash,
             patch_artifact,
             report_artifact,
-            acceptance_artifact: acceptance.as_ref().map(|r| r.acceptance_artifact.clone()),
-            package_artifact,
+            acceptance_artifact: Some(acceptance.acceptance_artifact),
+            package_artifact: Some(package_artifact),
         })
     })();
 

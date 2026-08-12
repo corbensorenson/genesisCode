@@ -87,4 +87,17 @@ impl SelfhostPatchToolchain {
             "patch-merge: authority",
         )
     }
+
+    pub(super) fn patch_apply_report_term(
+        &mut self,
+        request: Term,
+        step_limit: StepLimit,
+    ) -> Result<Term, PatchError> {
+        self.apply_authority_binding(
+            self.patch_apply_report.clone(),
+            request,
+            step_limit,
+            "patch-apply-report: authority",
+        )
+    }
 }

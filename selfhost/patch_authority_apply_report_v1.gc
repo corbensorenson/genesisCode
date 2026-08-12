@@ -1,0 +1,136 @@
+(def selfhost/patch_apply_report::REQUEST_KIND
+  "genesis/patch-apply-report-request-v0.1")
+(def selfhost/patch_apply_report::REPORT_KIND "genesis/patch-apply-v0.3")
+(def selfhost/patch_apply_report::PROFILE "genesis/patch-authority-v0.1")
+
+(def selfhost/patch_apply_report::err
+  (fn (message) ((core/error::make2 "core/patch-apply-report") message)))
+
+(def selfhost/patch_apply_report::bool?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :bool))))
+
+(def selfhost/patch_apply_report::hash?
+  (fn (value)
+    (if (selfhost/patch_schema::is-str? value)
+      (if ((core/int::eq? (core/str::len value)) 64)
+        (let ((bytes (core/bytes::from-hex value)))
+          (if (core/error::is? bytes)
+            false
+            ((core/int::eq? (core/bytes::len bytes)) 32)))
+        false)
+      false)))
+
+(def selfhost/patch_apply_report::edits-valid-loop
+  (fn (edits i)
+    (if ((core/int::eq? i) (core/vec::len edits))
+      true
+      (let ((edit ((core/vec::get edits) i)))
+        (if (selfhost/patch_schema::is-map? edit)
+          (let
+            ((op ((core/map::get edit) (quote :op)))
+              (module-path ((core/map::get edit) (quote :module-path))))
+            (if (selfhost/patch_schema::is-sym? op)
+              (if (selfhost/patch_normalize::portable-module-path? module-path)
+                (selfhost/patch_apply_report::edits-valid-loop
+                  edits ((core/int::add i) 1))
+                false)
+              false))
+          false)))))
+
+(def selfhost/patch_apply_report::edits-valid?
+  (fn (edits)
+    (if (selfhost/patch_schema::is-vec? edits)
+      (selfhost/patch_apply_report::edits-valid-loop edits 0)
+      false)))
+
+(def selfhost/patch_apply_report::request-identity-valid?
+  (fn (request)
+    (if ((core/eq? ((core/map::get request) (quote :kind)))
+          selfhost/patch_apply_report::REQUEST_KIND)
+      (if ((core/eq? ((core/map::get request) (quote :profile)))
+            selfhost/patch_apply_report::PROFILE)
+        ((core/eq? ((core/map::get request) (quote :v))) 1)
+        false)
+      false)))
+
+(def selfhost/patch_apply_report::acceptance-valid?
+  (fn (acceptance)
+    (if (selfhost/patch_schema::is-map? acceptance)
+      (if ((core/eq? ((core/map::get acceptance) (quote :kind)))
+            "genesis/acceptance-v0.2")
+        (selfhost/patch_apply_report::bool?
+          ((core/map::get acceptance) (quote :ok)))
+        false)
+      false)))
+
+(def selfhost/patch_apply_report::report
+  (fn (request normalized package-h acceptance-h acceptance semantic-edits source-h)
+    (let ((patch ((core/map::get normalized) (quote :normalized-patch))))
+      (let
+        ((intent ((core/map::get patch) (quote :intent)))
+          (ops ((core/map::get patch) (quote :ops)))
+          (provenance ((core/map::get patch) (quote :provenance))))
+        {:acceptance-artifact acceptance-h
+          :intent intent
+          :kind selfhost/patch_apply_report::REPORT_KIND
+          :ok ((core/map::get acceptance) (quote :ok))
+          :op-identities ((core/map::get normalized) (quote :op-identities))
+          :ops-count (core/vec::len ops)
+          :package-artifact package-h
+          :patch-h ((core/map::get normalized) (quote :patch-h))
+          :profile selfhost/patch_apply_report::PROFILE
+          :provenance provenance
+          :request-h (selfhost/hash::hash-term request)
+          :semantic-edits semantic-edits
+          :source-patch-h source-h
+          :v 1}))))
+
+(def core/cli::patch-apply-report
+  (fn (request)
+    (let
+      ((shape
+         (((selfhost/patch_normalize::shape request)
+            [:acceptance :acceptance-artifact :kind :package-artifact :patch :profile
+              :semantic-edits :source-patch-h :v])
+           [:acceptance :acceptance-artifact :kind :package-artifact :patch :profile
+             :semantic-edits :source-patch-h :v])))
+      (if (core/error::is? shape)
+        shape
+        (if (selfhost/patch_apply_report::request-identity-valid? request)
+          (let
+            ((acceptance ((core/map::get request) (quote :acceptance)))
+              (acceptance-h
+                ((core/map::get request) (quote :acceptance-artifact)))
+              (package-h ((core/map::get request) (quote :package-artifact)))
+              (patch ((core/map::get request) (quote :patch)))
+              (semantic-edits ((core/map::get request) (quote :semantic-edits)))
+              (source-h ((core/map::get request) (quote :source-patch-h))))
+            (if (selfhost/patch_apply_report::hash? acceptance-h)
+              (if (selfhost/patch_apply_report::hash? package-h)
+                (if (selfhost/patch_apply_report::hash? source-h)
+                  (if (selfhost/patch_apply_report::acceptance-valid? acceptance)
+                    (if (selfhost/patch_apply_report::edits-valid? semantic-edits)
+                      (let
+                        ((normalized
+                           (core/cli::patch-normalize
+                             {:kind "genesis/patch-normalize-request-v0.1"
+                               :patch patch
+                               :profile "genesis/patch-authority-v0.1"
+                               :v 1})))
+                        (if (core/error::is? normalized)
+                          normalized
+                          (selfhost/patch_apply_report::report
+                            request normalized package-h acceptance-h acceptance
+                            semantic-edits source-h)))
+                      (selfhost/patch_apply_report::err
+                        ":semantic-edits must contain valid edit observations"))
+                    (selfhost/patch_apply_report::err
+                      ":acceptance must be a genesis/acceptance-v0.2 map with bool :ok"))
+                  (selfhost/patch_apply_report::err
+                    ":source-patch-h must be lowercase hex64"))
+                (selfhost/patch_apply_report::err
+                  ":package-artifact must be lowercase hex64"))
+              (selfhost/patch_apply_report::err
+                ":acceptance-artifact must be lowercase hex64")))
+          (selfhost/patch_apply_report::err
+            "request kind/profile/version mismatch"))))))

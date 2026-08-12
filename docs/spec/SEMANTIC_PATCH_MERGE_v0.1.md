@@ -104,5 +104,6 @@ resource limits, the report is deterministic and independent of input module-vec
 order, host paths, timestamps, and file metadata.
 
 This protocol does not establish aggregate SD-PATCH H2 or close R4.2.c. Remaining work
-includes GenesisCode-authoritative final apply/report outcomes, strict legacy-producer
-absence, native/WASI observations, and durable independent review evidence.
+includes strict whole-route legacy-producer absence, native/WASI observations, and
+durable independent review evidence. Final apply/report authority is separately
+governed by `SEMANTIC_PATCH_APPLY_REPORT_v0.1.md`.

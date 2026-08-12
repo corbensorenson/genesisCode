@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "cb8f6e02769a39b1a3f5155b38f45d9c95118544a5b256cc92377174fd848c4c",
+  "contentIdentitySha256": "8104d1c89d7fef816e6c5c9227c6b767ef516c5acbf421505b285e1921f55f9f",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1340,12 +1340,12 @@
         "session/*"
       ],
       "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
+      "fallbackReachability": "reachable-parity-harness",
       "hostBindingPaths": [],
       "id": "SD-PATCH",
       "internalOnly": false,
       "limitations": [
-        "Workspace refactor planning, canonical top-form semantic workspace diff, and semantic three-way workspace merge are GenesisCode-authoritative and artifact-only, but remaining patch apply/report outcomes are still Rust-authoritative"
+        "Workspace refactor planning, canonical top-form semantic workspace diff and merge, operation transformations, and final v0.3 apply outcome/report production are GenesisCode-authoritative and artifact-only; aggregate H2 remains unproven pending whole-route fallback absence, native/WASI parity, mutation controls, and durable independent evidence"
       ],
       "migrationTasks": [
         "R4.2.c"
@@ -1355,12 +1355,14 @@
         "selfhost/patch_authority_refactor_plan_v1.gc",
         "selfhost/patch_authority_diff_v1.gc",
         "selfhost/patch_authority_merge_v1.gc",
+        "selfhost/patch_authority_apply_report_v1.gc",
         "crates/gc_patches/src"
       ],
       "productionAuthorityPaths": [
         "selfhost/patch_authority_refactor_plan_v1.gc",
         "selfhost/patch_authority_diff_v1.gc",
         "selfhost/patch_authority_merge_v1.gc",
+        "selfhost/patch_authority_apply_report_v1.gc",
         "crates/gc_patches/src"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
@@ -1369,7 +1371,8 @@
         "docs/spec/SELFHOST_REFACTOR_PIPELINE_v0.1.md",
         "docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md",
         "docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md",
-        "docs/spec/SEMANTIC_PATCH_MERGE_v0.1.md"
+        "docs/spec/SEMANTIC_PATCH_MERGE_v0.1.md",
+        "docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md"
       ],
       "stage0Domains": [
         "S0-R"
@@ -1383,7 +1386,8 @@
         "scripts/check_selfhost_refactor_guard.sh",
         "crates/gc_patches/src/patch_refactor_plan.rs",
         "crates/gc_patches/src/patch_semantic_diff.rs",
-        "crates/gc_patches/src/patch_semantic_merge.rs"
+        "crates/gc_patches/src/patch_semantic_merge.rs",
+        "crates/gc_patches/src/patch_apply_report.rs"
       ]
     },
     {

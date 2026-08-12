@@ -132,6 +132,49 @@ fn copy_repo_toolchain_artifact(dir: &Path) -> PathBuf {
     dst
 }
 
+fn poison_artifact_binding(artifact: &Path, module_path: &str, binding_source: &str) {
+    let source = fs::read_to_string(artifact).expect("read toolchain artifact");
+    let mut root = parse_term(&source).expect("parse toolchain artifact");
+    let Term::Map(root_map) = &mut root else {
+        panic!("artifact root must be a map");
+    };
+    let Some(Term::Vector(modules)) = root_map.get_mut(&TermOrdKey(Term::symbol(":modules")))
+    else {
+        panic!("artifact :modules must be a vector");
+    };
+    let module = modules
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(map)
+                if matches!(
+                    map.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path)) if path == module_path
+                ) =>
+            {
+                Some(map)
+            }
+            _ => None,
+        })
+        .expect("artifact module");
+    let source = match module.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(source)) => source.clone(),
+        _ => panic!("artifact module source"),
+    };
+    let poisoned = format!("{source}\n{binding_source}\n");
+    let forms = canonicalize_module(parse_module(&poisoned).expect("parse poisoned module"))
+        .expect("canonicalize poisoned module");
+    module.insert(TermOrdKey(Term::symbol(":source")), Term::Str(poisoned));
+    module.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(forms.clone()),
+    );
+    module.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(hash_module(&forms).to_vec().into()),
+    );
+    fs::write(artifact, print_term(&root)).expect("write poisoned artifact");
+}
+
 fn poison_patch_schema_validate_patch_unknown_op(artifact: &Path) {
     let src = fs::read_to_string(artifact).expect("read toolchain artifact");
     let mut term = parse_term(&src).expect("parse toolchain artifact");
@@ -932,6 +975,43 @@ fn patch_preflight_rejects_tampered_final_state_without_rust_fallback() {
     );
     assert!(!td.path().join("added.gc").exists());
     assert!(!td.path().join(".genesis").exists());
+}
+
+#[test]
+fn patch_apply_report_rejects_poisoned_authority_and_restores_workspace() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        &patch_replace_form0(r#"(def my/pkg::tests { "t1" { :body (fn (_) 2) :expect 2 } })"#),
+    );
+    let module_before = fs::read(td.path().join("mod.gc")).unwrap();
+    let artifact = copy_repo_toolchain_artifact(td.path());
+    poison_artifact_binding(
+        &artifact,
+        "selfhost/patch_authority_apply_report_v1.gc",
+        r#"(def core/cli::patch-apply-report (fn (request) {:kind "poisoned"}))"#,
+    );
+    let frontend =
+        gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
+            bootstrap_mode: gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+            artifact: Some(artifact),
+        });
+
+    let error = gc_patches::apply_patch_with_step_limit_and_frontend(
+        &patch,
+        &pkg,
+        None,
+        StepLimit::Default,
+        MemLimits::default(),
+        frontend,
+    )
+    .unwrap_err();
+    assert!(
+        error.to_string().contains("must contain exactly fields"),
+        "unexpected authority failure: {error}"
+    );
+    assert_eq!(fs::read(td.path().join("mod.gc")).unwrap(), module_before);
 }
 
 #[cfg(unix)]

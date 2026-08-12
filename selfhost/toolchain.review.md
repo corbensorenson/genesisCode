@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `78ed8fa2a58321d0cbfd2ffb3025c14068ac5cc603843e6f7ef43464ab0e655f`
-- Freshness artifact hash: `78ed8fa2a58321d0cbfd2ffb3025c14068ac5cc603843e6f7ef43464ab0e655f`
-- Freshness source hash: `b19c1d799c1d05490eb15cd78310f571a131c3431febb4b7270c90ec9dbd0035`
-- Source aggregate hash (module path + module sha256): `ce5f36a6768e1f63ae1b03d1b3b1db2ad8b2cc7b043ac031ed32a7ca85eab4f3`
+- Artifact sha256: `ddfa8a7c78557d4bb117cafb03797270da6942da03d318609a7fddbd75155a37`
+- Freshness artifact hash: `ddfa8a7c78557d4bb117cafb03797270da6942da03d318609a7fddbd75155a37`
+- Freshness source hash: `012f035da75559293b500e698602359929da7e1d3ab03dd9840f164cda2f4809`
+- Source aggregate hash (module path + module sha256): `2ebf0180c5f1c6cfa9fc668762a89f13774fed30fd5825d77da812d94962e608`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `54`
+- Module count: `55`
 
 ## Module Summary
 
@@ -64,11 +64,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/patch_schema_refactor_v1.gc` | 523 | 23095 | 46 | `a8be5b06db03d9e2` |
 | `selfhost/patch_schema_refactor_meta_migrate_v1.gc` | 411 | 22744 | 15 | `9aa240b249e5a43d` |
 | `selfhost/patch_authority_identity_v1.gc` | 223 | 9534 | 16 | `11e3c072866e00cc` |
-| `selfhost/patch_authority_normalize_v1.gc` | 519 | 24075 | 30 | `08756fa8a988ad6b` |
+| `selfhost/patch_authority_normalize_v1.gc` | 522 | 24197 | 30 | `e5759068bf904679` |
 | `selfhost/patch_authority_preflight_v1.gc` | 353 | 14390 | 23 | `8acdfdfc451f3766` |
 | `selfhost/patch_authority_refactor_plan_v1.gc` | 508 | 23030 | 24 | `bcb27dc8aa6a9c37` |
 | `selfhost/patch_authority_diff_v1.gc` | 247 | 10442 | 23 | `b6614dbc996d6e4d` |
 | `selfhost/patch_authority_merge_v1.gc` | 275 | 11984 | 21 | `a73aa5b6e94e9048` |
+| `selfhost/patch_authority_apply_report_v1.gc` | 136 | 6196 | 12 | `12f15a3a4ab781ff` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -126,4 +127,5 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/patch_authority_refactor_plan_v1.gc`: `selfhost/refactor_plan::REQUEST_KIND`, `selfhost/refactor_plan::REPORT_KIND`, `selfhost/refactor_plan::PROFILE`, `selfhost/refactor_plan::err`, `selfhost/refactor_plan::conflict`, `selfhost/refactor_plan::push-conflict`, `selfhost/refactor_plan::kind-valid?`, `selfhost/refactor_plan::move-kind?`
 - `selfhost/patch_authority_diff_v1.gc`: `selfhost/patch_diff::REQUEST_KIND`, `selfhost/patch_diff::REPORT_KIND`, `selfhost/patch_diff::PROFILE`, `selfhost/patch_diff::err`, `selfhost/patch_diff::has-key-loop`, `selfhost/patch_diff::has-key`, `selfhost/patch_diff::workspace-map-loop`, `selfhost/patch_diff::workspace-map`
 - `selfhost/patch_authority_merge_v1.gc`: `selfhost/patch_merge::REQUEST_KIND`, `selfhost/patch_merge::REPORT_KIND`, `selfhost/patch_merge::PROFILE`, `selfhost/patch_merge::err`, `selfhost/patch_merge::optional-eq?`, `selfhost/patch_merge::optional-term`, `selfhost/patch_merge::conflict-core`, `selfhost/patch_merge::conflict`
+- `selfhost/patch_authority_apply_report_v1.gc`: `selfhost/patch_apply_report::REQUEST_KIND`, `selfhost/patch_apply_report::REPORT_KIND`, `selfhost/patch_apply_report::PROFILE`, `selfhost/patch_apply_report::err`, `selfhost/patch_apply_report::bool?`, `selfhost/patch_apply_report::hash?`, `selfhost/patch_apply_report::edits-valid-loop`, `selfhost/patch_apply_report::edits-valid?`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

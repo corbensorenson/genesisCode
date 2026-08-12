@@ -15,6 +15,11 @@ Production three-way workspace merge is governed by
 `SEMANTIC_PATCH_MERGE_v0.1.md`. Every successful merge embeds the canonical diff report
 whose patch uses this schema; conflicts never produce a partial patch.
 
+Final patch outcome/report authority is governed by
+`SEMANTIC_PATCH_APPLY_REPORT_v0.1.md`. Its v0.3 report binds this schema's normalized
+patch and operation identities to package and acceptance artifacts without a host
+report producer.
+
 ## Top-level
 
 Top-level term is a map with keys:

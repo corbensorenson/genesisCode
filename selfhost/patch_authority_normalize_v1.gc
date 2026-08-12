@@ -332,7 +332,10 @@
               (remove ((selfhost/patch_normalize::optional-strings op) (quote :remove)))
               (replace
                 (if ((selfhost/patch_normalize::has-key op) (quote :replace))
-                  (selfhost/patch_normalize::strings ((core/map::get op) (quote :replace)))
+                  (let ((value ((core/map::get op) (quote :replace))))
+                    (if (core/list::is-nil? value)
+                      nil
+                      (selfhost/patch_normalize::strings value)))
                   nil)))
             (if (selfhost/patch_normalize::portable-module-path? module-path)
               (if (core/error::is? add)
