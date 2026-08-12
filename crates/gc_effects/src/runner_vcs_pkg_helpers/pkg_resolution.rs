@@ -460,19 +460,18 @@ fn registry_remote_for_requirement(
     registries: &BTreeMap<String, String>,
     registry_alias: Option<&str>,
     policy: &CapsPolicy,
-) -> Option<String> {
+) -> Result<Option<String>, String> {
+    let store_remote = || store_remote_from_policy(policy).map(|remote| remote.map(str::to_string));
     match registry_alias {
-        Some(alias) => registries.get(alias).cloned().or_else(|| {
-            if alias == "default" {
-                policy.store.remote.clone()
-            } else {
-                None
-            }
-        }),
-        None => registries
-            .get("default")
-            .cloned()
-            .or_else(|| policy.store.remote.clone()),
+        Some(alias) => match registries.get(alias) {
+            Some(remote) => Ok(Some(remote.clone())),
+            None if alias == "default" => store_remote(),
+            None => Ok(None),
+        },
+        None => match registries.get("default") {
+            Some(remote) => Ok(Some(remote.clone())),
+            None => store_remote(),
+        },
     }
 }
 
@@ -485,7 +484,9 @@ fn registry_client_for_requirement(
     error_tok: SealId,
     op: &str,
 ) -> Result<Option<(gc_registry::RegistryClient, String)>, Value> {
-    let Some(remote) = registry_remote_for_requirement(registries, registry_alias, policy) else {
+    let Some(remote) = registry_remote_for_requirement(registries, registry_alias, policy)
+        .map_err(|error| mk_error(error_tok, "core/caps/policy-error", error, Some(op)))?
+    else {
         return Ok(None);
     };
     let base = store_normalize_and_check_remote(policy, op_pol, &remote)

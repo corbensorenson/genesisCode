@@ -113,6 +113,7 @@ pub(super) fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy
             basic_password_env: None,
             mtls_ca_pem: None,
             mtls_identity_pem: None,
+            authorized_remote: Some(super::policy_authority::legacy_store_remote_policy(None)),
         });
     };
     let store_tbl = v
@@ -177,21 +178,13 @@ pub(super) fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy
     };
     let remote_allow = match store_tbl.get("remote_allow") {
         None => Vec::new(),
-        Some(v) => {
-            let arr = v.as_array().ok_or_else(|| {
-                EffectsError::Log("caps.toml: store.remote_allow must be an array".to_string())
-            })?;
-            let mut out = Vec::new();
-            for x in arr {
-                let s = x.as_str().ok_or_else(|| {
-                    EffectsError::Log(
-                        "caps.toml: store.remote_allow entries must be strings".to_string(),
-                    )
-                })?;
-                out.push(s.to_string());
-            }
-            out
-        }
+        Some(v) => v
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(toml::Value::as_str)
+            .map(str::to_string)
+            .collect(),
     };
     Ok(StorePolicy {
         dir,
@@ -206,6 +199,9 @@ pub(super) fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy
         basic_password_env,
         mtls_ca_pem,
         mtls_identity_pem,
+        authorized_remote: Some(super::policy_authority::legacy_store_remote_policy(Some(
+            store_tbl,
+        ))),
     })
 }
 

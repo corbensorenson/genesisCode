@@ -261,14 +261,32 @@ pub(super) fn store_normalize_and_check_remote(
     let wasi_profile = parse_wasi_network_profile(op_pol)?;
     validate_wasi_remote_profile(wasi_profile.as_deref(), base.scheme(), "store")?;
     let base_s = base.as_str().to_string();
-    if base.scheme() == "http" && !policy.store.allow_http {
+    let authorized = policy
+        .authorized_store_remote()
+        .ok_or_else(|| "global store remote policy authority is missing".to_string())?;
+    let allow_http = match &authorized.allow_http {
+        AuthorizedOptionalBool::Absent => false,
+        AuthorizedOptionalBool::InvalidType => {
+            return Err("store.allow_http must be a boolean".to_string());
+        }
+        AuthorizedOptionalBool::Valid(value) => *value,
+    };
+    if base.scheme() == "http" && !allow_http {
         return Err("http remotes are disabled by policy (set store.allow_http=true)".to_string());
     }
-    if policy.store.remote_allow.is_empty() {
-        return Err("store remote requires store.remote_allow allowlist in caps.toml".to_string());
-    }
-    for p in &policy.store.remote_allow {
-        let t = p.trim();
+    let remote_allow = match &authorized.remote_allow {
+        AuthorizedStringList::Valid(values) => values,
+        AuthorizedStringList::InvalidType => {
+            return Err("store.remote_allow must be an array".to_string());
+        }
+        AuthorizedStringList::InvalidEntry => {
+            return Err("store.remote_allow entries must be strings".to_string());
+        }
+        AuthorizedStringList::Absent | AuthorizedStringList::Empty => {
+            return Err("store remote requires store.remote_allow allowlist in caps.toml".to_string());
+        }
+    };
+    for t in remote_allow {
         if t.ends_with("://") {
             if base.scheme() == t.trim_end_matches("://") {
                 return Ok(base_s.clone());
@@ -280,6 +298,18 @@ pub(super) fn store_normalize_and_check_remote(
         }
     }
     Err("store remote is not in policy store.remote_allow allowlist".to_string())
+}
+
+pub(super) fn store_remote_from_policy(policy: &CapsPolicy) -> Result<Option<&str>, String> {
+    let authorized = policy
+        .authorized_store_remote()
+        .ok_or_else(|| "global store remote policy authority is missing".to_string())?;
+    match &authorized.remote {
+        AuthorizedOptionalString::Absent => Ok(None),
+        AuthorizedOptionalString::InvalidType => Err("store.remote must be a string".to_string()),
+        AuthorizedOptionalString::Empty => Err("store.remote must not be empty".to_string()),
+        AuthorizedOptionalString::Valid(value) => Ok(Some(value)),
+    }
 }
 
 pub(super) fn remote_allow_matches(
@@ -451,8 +481,17 @@ pub(super) fn store_remote_client(
     error_tok: SealId,
     op: &str,
 ) -> Result<Option<(gc_registry::RegistryClient, String)>, Value> {
-    let Some(remote) = &policy.store.remote else {
-        return Ok(None);
+    let remote = match store_remote_from_policy(policy) {
+        Ok(Some(remote)) => remote,
+        Ok(None) => return Ok(None),
+        Err(error) => {
+            return Err(mk_error(
+                error_tok,
+                "core/caps/policy-error",
+                error,
+                Some(op),
+            ));
+        }
     };
     let base = match store_normalize_and_check_remote(policy, op_pol, remote) {
         Ok(b) => b,
@@ -565,6 +604,62 @@ mod network_authority_tests {
         assert_eq!(
             parse_wasi_network_profile(Some(&policy)).unwrap_err(),
             "wasi_network_profile must be a string"
+        );
+    }
+
+    #[test]
+    fn store_remote_dispatch_consumes_authority_before_raw_fields() {
+        let mut policy = CapsPolicy::from_toml_str(
+            r#"
+[store]
+remote = "https://safe.example/v1/"
+remote_allow = ["https://safe.example/v1/"]
+allow_http = false
+"#,
+        )
+        .unwrap();
+        policy.store.remote = Some("http://raw-unsafe.example/".to_string());
+        policy.store.remote_allow = vec!["http://raw-unsafe.example/".to_string()];
+        policy.store.allow_http = true;
+
+        assert_eq!(
+            store_remote_from_policy(&policy).unwrap(),
+            Some("https://safe.example/v1/")
+        );
+        assert_eq!(
+            store_normalize_and_check_remote(
+                &policy,
+                None,
+                "https://safe.example/v1/objects"
+            )
+            .unwrap(),
+            "https://safe.example/v1/objects/v1/"
+        );
+        assert!(
+            store_normalize_and_check_remote(&policy, None, "http://raw-unsafe.example/")
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn store_remote_dispatch_preserves_authorized_type_errors() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+[store]
+remote = 7
+remote_allow = "https://safe.example/v1/"
+allow_http = "yes"
+"#,
+        )
+        .unwrap();
+        assert_eq!(
+            store_remote_from_policy(&policy).unwrap_err(),
+            "store.remote must be a string"
+        );
+        assert_eq!(
+            store_normalize_and_check_remote(&policy, None, "https://safe.example/v1/")
+                .unwrap_err(),
+            "store.allow_http must be a boolean"
         );
     }
 }

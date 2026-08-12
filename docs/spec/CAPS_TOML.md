@@ -55,6 +55,14 @@ Remote normalization and matching:
 - Remotes are normalized to a `.../v1/` base (e.g. `https://example.com/registry/v1/`).
 - `remote_allow` is matched by prefix against the normalized base.
 
+Artifact-only production loads transport `store.remote`, `store.remote_allow`,
+and `store.allow_http` through `core/effects::resource-policy-authority`.
+GenesisCode trims and classifies the remote target and allowlist, preserves list
+order and duplicates, removes empty list entries, and emits a closed HTTP
+permission state. Store and package-registry consumers have no raw fallback for
+these fields. URL parsing/normalization and matching, credential/environment
+resolution, PEM loading, TLS, and HTTP transport remain bounded host mechanisms.
+
 ## Refs Policy (`[refs]`)
 
 Supported keys:

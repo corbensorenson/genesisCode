@@ -12,8 +12,8 @@ use crate::error::EffectsError;
 
 use super::{
     AuthorizedCryptoPolicy, AuthorizedDatabasePolicy, AuthorizedFfiPolicy, AuthorizedMaxBytes,
-    AuthorizedNetworkPolicy, AuthorizedPluginPolicy, AuthorizedProcessPrograms, CapsPolicy,
-    OpPolicy,
+    AuthorizedNetworkPolicy, AuthorizedPluginPolicy, AuthorizedProcessPrograms,
+    AuthorizedStoreRemotePolicy, CapsPolicy, OpPolicy,
 };
 
 #[path = "policy_authority_cap.rs"]
@@ -32,8 +32,21 @@ mod plugin;
 mod process;
 #[path = "policy_authority_resource.rs"]
 mod resource;
+#[path = "policy_authority_store_remote.rs"]
+mod store_remote;
 pub(super) fn legacy_ffi_policy(policy: Option<&OpPolicy>) -> AuthorizedFfiPolicy {
     ffi::legacy(policy)
+}
+pub(super) fn legacy_store_remote_policy(
+    store: Option<&toml::value::Table>,
+) -> AuthorizedStoreRemotePolicy {
+    store_remote::legacy(store)
+}
+#[cfg(test)]
+pub(super) fn decode_store_remote_policy(
+    term: &Term,
+) -> Result<AuthorizedStoreRemotePolicy, EffectsError> {
+    store_remote::decode(term)
 }
 #[cfg(test)]
 pub(super) fn decode_process_program_policy(
@@ -670,5 +683,6 @@ pub(super) fn authorize_policy(
     policy.refs.path = authorized_resources.refs_path;
     policy.store.dir = authorized_resources.store_dir;
     policy.store.max_run_bytes = authorized_resources.store_max_run_bytes;
+    policy.store.authorized_remote = Some(authorized_resources.store_remote);
     Ok(())
 }

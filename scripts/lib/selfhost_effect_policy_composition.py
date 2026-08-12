@@ -80,6 +80,7 @@ DECISIONS = [
     "canonical-log-cap-descriptor",
     "global-log-and-store-resource-limits",
     "global-log-store-refs-location-defaults",
+    "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
     "per-operation-crypto-policy",
@@ -100,7 +101,7 @@ RESIDUALS = {
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "ffi-bridge-identity-and-model-provider-lifecycle",
-    "global-store-remote-transport-tls-and-auth-policy",
+    "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding",
@@ -131,8 +132,8 @@ def validate(profile, schema, check_identity=True):
         "productionEntrypoints": ["genesis", "genesis_wasi"],
         "requestKind": "genesis/effect-policy-authority-request-v0.11",
         "resourceBinding": "core/effects::resource-policy-authority",
-        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
-        "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
+        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
+        "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
         "resultKind": "genesis/effect-policy-authority-result-v0.11",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
@@ -146,15 +147,24 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_network_v1.gc",
             "selfhost/effect_policy_plugin_v1.gc",
             "selfhost/effect_policy_ffi_v1.gc",
+            "selfhost/effect_policy_resource_authority_v1.gc",
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.15",
+        "version": "0.1.16",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
             fail(f"profile {key} drift")
-    for key in ("decisionInventory", "requestKind", "resultKind", "version"):
+    for key in (
+        "decisionInventory",
+        "requestKind",
+        "resourceRequestKind",
+        "resourceResultKind",
+        "resultKind",
+        "sourceModules",
+        "version",
+    ):
         if schema["properties"].get(key, {}).get("const") != constants[key]:
             fail(f"schema {key} drift")
     if set(profile.get("residualDecisionInventory", [])) != RESIDUALS:
@@ -391,6 +401,7 @@ def static_check(root: Path, profile):
     remote_policy = (
         root / "crates/gc_effects/src/runner_remote_ops/policy_auth.rs"
     ).read_text()
+    remote_production = remote_policy.split("#[cfg(test)]", 1)[0]
     for start, end in (
         ("fn parse_wasi_network_profile", "fn validate_wasi_remote_profile"),
         ("pub(super) fn sync_policy_from_op", "pub(super) fn sync_normalize_and_check_remote"),
@@ -455,6 +466,25 @@ def static_check(root: Path, profile):
     ):
         if token in ffi_dispatch:
             fail(f"ffi dispatch bypasses signed-policy authority state: {token}")
+    for token in (
+        "policy.store.remote",
+        "policy.store.remote_allow",
+        "policy.store.allow_http",
+    ):
+        if token in remote_production:
+            fail(f"store remote dispatch bypasses authority state: {token}")
+    if remote_production.count("fn store_remote_from_policy(") != 1:
+        fail("store remote target authority consumer inventory drift")
+    store_resource = (
+        root / "selfhost/effect_policy_resource_authority_v1.gc"
+    ).read_text()
+    for binding in (
+        "selfhost/effect-store-remote::input-valid?",
+        "selfhost/effect-store-remote::policy",
+        "core/effects::resource-policy-authority",
+    ):
+        if store_resource.count(f"(def {binding}") != 1:
+            fail(f"store remote authority binding inventory drift: {binding}")
     effect_source = (root / profile["sourceModule"]).read_text()
     cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
         "(def core/effects::policy-authority", 1
@@ -638,6 +668,7 @@ def mutation_controls(profile, schema):
         ("crypto-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_crypto_v1.gc")),
         ("plugin-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_plugin_v1.gc")),
         ("ffi-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_ffi_v1.gc")),
+        ("resource-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_resource_authority_v1.gc")),
         ("source-order", lambda item: item["sourceModules"].reverse()),
         ("unknown", lambda item: item.__setitem__("unexpected", True)),
     ]

@@ -23,7 +23,7 @@ fn string_list_input(value: Option<&toml::Value>) -> Term {
     }
 }
 
-fn optional_bool_input(value: Option<&toml::Value>) -> Term {
+pub(super) fn optional_bool_input(value: Option<&toml::Value>) -> Term {
     match value {
         None => Term::Nil,
         Some(value) => value
@@ -101,7 +101,7 @@ pub(super) fn input(table: &toml::value::Table) -> Term {
     )
 }
 
-fn legacy_optional_bool(value: Option<&toml::Value>) -> AuthorizedOptionalBool {
+pub(super) fn legacy_optional_bool(value: Option<&toml::Value>) -> AuthorizedOptionalBool {
     match value {
         None => AuthorizedOptionalBool::Absent,
         Some(value) => value
@@ -170,7 +170,7 @@ pub(super) fn legacy(policy: Option<&OpPolicy>) -> AuthorizedNetworkPolicy {
     }
 }
 
-fn decode_optional_bool(term: &Term) -> Result<AuthorizedOptionalBool, EffectsError> {
+pub(super) fn decode_optional_bool(term: &Term) -> Result<AuthorizedOptionalBool, EffectsError> {
     let Term::Map(map) = term else {
         return Err(authority_error("result :allow-http must be a data map"));
     };

@@ -78,6 +78,9 @@ pub struct StorePolicy {
 
     /// Optional PEM path for client identity used by mTLS.
     pub mtls_identity_pem: Option<PathBuf>,
+
+    /// Closed GenesisCode decision for global store remote selection and admission.
+    pub(crate) authorized_remote: Option<AuthorizedStoreRemotePolicy>,
 }
 
 #[derive(Debug, Clone)]
@@ -185,6 +188,13 @@ pub(crate) struct AuthorizedNetworkPolicy {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedStoreRemotePolicy {
+    pub remote: AuthorizedOptionalString,
+    pub remote_allow: AuthorizedStringList,
+    pub allow_http: AuthorizedOptionalBool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AuthorizedCryptoPolicy {
     pub algorithms: AuthorizedStringList,
     pub key_ids: AuthorizedStringList,
@@ -282,6 +292,11 @@ impl CapsPolicy {
                 basic_password_env: None,
                 mtls_ca_pem: None,
                 mtls_identity_pem: None,
+                authorized_remote: Some(AuthorizedStoreRemotePolicy {
+                    remote: AuthorizedOptionalString::Absent,
+                    remote_allow: AuthorizedStringList::Absent,
+                    allow_http: AuthorizedOptionalBool::Absent,
+                }),
             },
             refs: RefsPolicy { path: None },
             task: TaskPolicy {
@@ -325,6 +340,10 @@ impl CapsPolicy {
 
     pub fn artifact_store_dir(&self) -> Option<&Path> {
         self.store.dir.as_deref().or(self.log.store_dir.as_deref())
+    }
+
+    pub(crate) fn authorized_store_remote(&self) -> Option<&AuthorizedStoreRemotePolicy> {
+        self.store.authorized_remote.as_ref()
     }
 
     pub fn refs_db_path(&self) -> Option<&Path> {

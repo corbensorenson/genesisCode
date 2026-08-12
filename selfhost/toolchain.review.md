@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `b0ce6ee3f176f5790ee443d9b14747ffc68bc4765c7e7e768dd4a381523be2fa`
-- Freshness artifact hash: `b0ce6ee3f176f5790ee443d9b14747ffc68bc4765c7e7e768dd4a381523be2fa`
-- Freshness source hash: `b495b61cb1ee4d04b2df0c60790987b9c2aa32a9b6efec34b734243b923902ba`
-- Source aggregate hash (module path + module sha256): `b9b88b7720cbcb4c63202dc4cd1dec648e11c1b4f31f8e3690c2ddb0b7589753`
+- Artifact sha256: `82f6ad4f3e6c4834ef19a0b93a3efd12488085613cdc78a1b7e9f9063fecc007`
+- Freshness artifact hash: `82f6ad4f3e6c4834ef19a0b93a3efd12488085613cdc78a1b7e9f9063fecc007`
+- Freshness source hash: `226632a84f81f86224fa7e581e8c374172b722ec3cc581e7d5e361a3de7622cc`
+- Source aggregate hash (module path + module sha256): `4d29f1edb9b5abfbe2bca91a8e0c13b8d02acd570aa26d6d3be03b4fc244d1cf`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `76`
+- Module count: `77`
 
 ## Module Summary
 
@@ -75,7 +75,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/effect_policy_network_v1.gc` | 267 | 10410 | 21 | `778de86429de628f` |
 | `selfhost/effect_policy_plugin_v1.gc` | 122 | 4427 | 12 | `312264630f9f4219` |
 | `selfhost/effect_policy_ffi_v1.gc` | 213 | 9887 | 9 | `76475d2cfeaf1771` |
-| `selfhost/effect_policy_authority_v1.gc` | 659 | 28989 | 38 | `04e6ca7d360ce7e6` |
+| `selfhost/effect_policy_resource_authority_v1.gc` | 281 | 12711 | 18 | `cb269d02aaf7ba5b` |
+| `selfhost/effect_policy_authority_v1.gc` | 409 | 17579 | 22 | `bd3b630e4a8ab350` |
 | `selfhost/obligation_authority_core_v1.gc` | 570 | 24016 | 50 | `859184a3ee1f4dba` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
 | `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
@@ -154,7 +155,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/effect_policy_network_v1.gc`: `selfhost/effect-network::map-has-key-loop?`, `selfhost/effect-network::map-has-keys-loop?`, `selfhost/effect-network::exact-map?`, `selfhost/effect-network::invalid-type?`, `selfhost/effect-network::invalid-entry?`, `selfhost/effect-network::list-input-loop?`, `selfhost/effect-network::list-input?`, `selfhost/effect-network::optional-bool-input?`
 - `selfhost/effect_policy_plugin_v1.gc`: `selfhost/effect-plugin::map-has-key-loop?`, `selfhost/effect-plugin::map-has-keys-loop?`, `selfhost/effect-plugin::exact-map?`, `selfhost/effect-plugin::invalid-type?`, `selfhost/effect-plugin::invalid-entry?`, `selfhost/effect-plugin::list-input-loop?`, `selfhost/effect-plugin::list-input?`, `selfhost/effect-plugin::input-valid?`
 - `selfhost/effect_policy_ffi_v1.gc`: `selfhost/effect-ffi::fields`, `selfhost/effect-ffi::input-valid?`, `selfhost/effect-ffi::empty-input`, `selfhost/effect-ffi::signed-error`, `selfhost/effect-ffi::signed-valid`, `selfhost/effect-ffi::state-status?`, `selfhost/effect-ffi::hex64?`, `selfhost/effect-ffi::signed-policy`
-- `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::optional-str?`, `selfhost/effect-policy::map-has-key-loop?`, `selfhost/effect-policy::map-has-key?`, `selfhost/effect-policy::map-has-keys-loop?`, `selfhost/effect-policy::exact-map?`, `selfhost/effect-policy::optional-nonnegative-int?`
+- `selfhost/effect_policy_resource_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::optional-str?`, `selfhost/effect-policy::map-has-key-loop?`, `selfhost/effect-policy::map-has-key?`, `selfhost/effect-policy::map-has-keys-loop?`, `selfhost/effect-policy::exact-map?`, `selfhost/effect-policy::optional-nonnegative-int?`
+- `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::baseline-contains-loop?`, `selfhost/effect-policy::baseline-contains?`, `selfhost/effect-policy::inventory-add-loop`, `selfhost/effect-policy::inventory-add`, `selfhost/effect-policy::inventory-keys-loop`, `selfhost/effect-policy::inventory-keys`, `core/effects::policy-inventory-authority`, `selfhost/effect-policy::all-true-loop?`
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
 - `selfhost/obligation_authority_typecheck_v1.gc`: `selfhost/obligation::strict-typecheck-meta`, `selfhost/obligation::typecheck-modules-loop`, `selfhost/obligation::typecheck`
 - `selfhost/obligation_authority_determinism_v1.gc`: `selfhost/obligation::determinism-caps-symbols-loop`, `selfhost/obligation::determinism-module-caps`, `selfhost/obligation::determinism-pure-module?`, `selfhost/obligation::debug-escape-symbol-bytes-loop`, `selfhost/obligation::debug-symbol`, `selfhost/obligation::debug-symbols-loop`, `selfhost/obligation::debug-symbol-set`, `selfhost/obligation::determinism-static-error`

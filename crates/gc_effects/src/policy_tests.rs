@@ -1,7 +1,7 @@
 use super::{
     AuthorizedBindPorts, AuthorizedDatabasePolicy, AuthorizedFfiSignedPolicy, AuthorizedMaxBytes,
     AuthorizedNetworkPolicy, AuthorizedOptionalBool, AuthorizedOptionalString,
-    AuthorizedProcessPrograms, AuthorizedStringList, CapsPolicy,
+    AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy, AuthorizedStringList, CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
@@ -75,6 +75,14 @@ fn optional_value_policy(status: &str, value: Term) -> Term {
     Term::Map(BTreeMap::from([
         (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
         (TermOrdKey(Term::symbol(":value")), value),
+    ]))
+}
+
+fn store_remote_policy_term(remote: Term, remote_allow: Term, allow_http: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":allow-http")), allow_http),
+        (TermOrdKey(Term::symbol(":remote")), remote),
+        (TermOrdKey(Term::symbol(":remote-allow")), remote_allow),
     ]))
 }
 
@@ -1623,6 +1631,122 @@ max_run_bytes = 2048
     assert_eq!(policy.log.inline_max_bytes, Some(123));
     assert_eq!(policy.log.max_artifact_bytes_per_run, Some(456));
     assert_eq!(policy.store.max_run_bytes, Some(2048));
+}
+
+#[test]
+fn selfhost_authority_owns_global_store_remote_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[store]
+remote = "  https://registry.example.com/root  "
+remote_allow = ["  https://registry.example.com/root/v1/  ", ""]
+allow_http = false
+"#,
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+
+    assert_eq!(
+        policy.authorized_store_remote(),
+        Some(&AuthorizedStoreRemotePolicy {
+            remote: AuthorizedOptionalString::Valid(
+                "https://registry.example.com/root".to_string(),
+            ),
+            remote_allow: AuthorizedStringList::Valid(vec![
+                "https://registry.example.com/root/v1/".to_string(),
+            ]),
+            allow_http: AuthorizedOptionalBool::Valid(false),
+        })
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_malformed_global_store_remote_states() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[store]
+remote = 7
+remote_allow = "https://registry.example.com/v1/"
+allow_http = "yes"
+"#,
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    assert_eq!(
+        policy.authorized_store_remote(),
+        Some(&AuthorizedStoreRemotePolicy {
+            remote: AuthorizedOptionalString::InvalidType,
+            remote_allow: AuthorizedStringList::InvalidType,
+            allow_http: AuthorizedOptionalBool::InvalidType,
+        })
+    );
+}
+
+#[test]
+fn selfhost_authority_rejects_contradictory_store_remote_decisions() {
+    use super::policy_authority::decode_store_remote_policy;
+
+    let valid = store_remote_policy_term(
+        optional_value_policy(":valid", Term::Str("https://safe.example/v1/".to_string())),
+        string_list_policy(
+            ":valid",
+            Term::Vector(vec![Term::Str("https://safe.example/v1/".to_string())]),
+        ),
+        optional_value_policy(":valid", Term::Bool(false)),
+    );
+    decode_store_remote_policy(&valid).unwrap();
+
+    let cases = [
+        store_remote_policy_term(
+            optional_value_policy(":absent", Term::Str("https://unsafe.example/".to_string())),
+            string_list_policy(":absent", Term::Nil),
+            optional_value_policy(":absent", Term::Nil),
+        ),
+        store_remote_policy_term(
+            optional_value_policy(":valid", Term::Str(" padded ".to_string())),
+            string_list_policy(":absent", Term::Nil),
+            optional_value_policy(":absent", Term::Nil),
+        ),
+        store_remote_policy_term(
+            optional_value_policy(":absent", Term::Nil),
+            string_list_policy(":valid", Term::Vector(Vec::new())),
+            optional_value_policy(":absent", Term::Nil),
+        ),
+        store_remote_policy_term(
+            optional_value_policy(":absent", Term::Nil),
+            string_list_policy(":absent", Term::Nil),
+            optional_value_policy(":valid", Term::Nil),
+        ),
+    ];
+    for decision in cases {
+        decode_store_remote_policy(&decision)
+            .expect_err("contradictory store remote decision must fail closed");
+    }
+
+    let Term::Map(mut open) = valid else {
+        return;
+    };
+    open.insert(TermOrdKey(Term::symbol(":extra")), Term::Nil);
+    decode_store_remote_policy(&Term::Map(open))
+        .expect_err("open store remote decision must fail closed");
 }
 
 #[test]

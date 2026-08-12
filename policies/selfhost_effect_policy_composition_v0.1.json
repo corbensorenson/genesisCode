@@ -2,13 +2,14 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "cc8fccc72810caf0369c719504d6fd2f09c5d68ec2bc1629bcc0f267ad114dc8",
+  "contentIdentitySha256": "f9e78cede7aa6a7edd85cdff646151ab3e9ac4dc47690febc5ae0b7a26fb75d3",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
     "global-log-and-store-resource-limits",
     "global-log-store-refs-location-defaults",
+    "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
     "per-operation-crypto-policy",
@@ -49,13 +50,13 @@
   ],
   "requestKind": "genesis/effect-policy-authority-request-v0.11",
   "resourceBinding": "core/effects::resource-policy-authority",
-  "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
-  "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
+  "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
+  "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
   "residualDecisionInventory": [
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "ffi-bridge-identity-and-model-provider-lifecycle",
-    "global-store-remote-transport-tls-and-auth-policy",
+    "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
@@ -73,9 +74,10 @@
     "selfhost/effect_policy_network_v1.gc",
     "selfhost/effect_policy_plugin_v1.gc",
     "selfhost/effect_policy_ffi_v1.gc",
+    "selfhost/effect_policy_resource_authority_v1.gc",
     "selfhost/effect_policy_authority_v1.gc"
   ],
-  "sourceSha256": "38296bba21dca17ab64a6e76fec5d3aeb6dca6c0a150c41d0992a6add9155010",
+  "sourceSha256": "f76c43eb2e9e4fd7abf5927e4650de021f0de930a76a714e456fa41552f6e755",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.15"
+  "version": "0.1.16"
 }

@@ -43,9 +43,10 @@ cancellation, and replay remain bounded host mechanisms.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
-log/store/refs configured-or-default location selection, runtime and task
-resource limits, and selection of an explicit task worker default from the
-configured value or the host's bounded available-worker observation.
+log/store/refs configured-or-default location selection, global store remote
+target/allowlist/HTTP states, runtime and task resource limits, and selection of
+an explicit task worker default from the configured value or the host's bounded
+available-worker observation.
 
 The Rust host still parses TOML, independently reconstructs the legacy candidate
 inventory, per-operation results, and log/refs/runtime/store/task resource
@@ -168,24 +169,32 @@ closed plugin and FFI allowlist/bound/signed-metadata states into enforcement;
 its separately parsed values are used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
-`genesis/effect-resource-policy-request-v0.3` map. It contains version `3`, the
+`genesis/effect-resource-policy-request-v0.4` map. It contains version `4`, the
 positive host observation `:available-workers`, and exact `:log`, `:refs`,
 `:runtime`, `:store`, and `:task` maps. Missing optional TOML fields are
 represented by `nil`. Runtime and task limits must be nonnegative integers, and
 a configured `:default-workers` must be positive. Global `:inline-max-bytes`,
 `:max-artifact-bytes-per-run`, and `:max-run-bytes` accept the legacy integer
 domain and are normalized by GenesisCode so only positive limits survive; zero
-and negative values become `nil`. Location inputs are `nil` or strings.
+and negative values become `nil`. Location inputs are `nil` or strings. The
+store map additionally contains an exact `:remote-policy` input with
+`:remote`, `:remote-allow`, and `:allow-http`; present wrong types and non-string
+list entries are transported as closed invalid observations rather than silently
+coerced by Rust.
 
-The closed `genesis/effect-resource-policy-result-v0.3` result is bound to the
+The closed `genesis/effect-resource-policy-result-v0.4` result is bound to the
 complete request hash, preserves the validated limits, replaces a missing task
 default with `:available-workers`, defaults store and refs locations to
 `.genesis/store` and `.genesis/refs.gc`, and defaults the log store only when the
-normalized inline spill threshold is present. Explicit locations always win. The
+normalized inline spill threshold is present. Explicit locations always win. Its
+closed store remote decision classifies the target as
+`absent|invalid-type|empty|valid`, the allowlist as
+`absent|invalid-type|invalid-entry|empty|valid`, and HTTP permission as
+`absent|invalid-type|valid`; only valid states carry trimmed values. The
 host strictly decodes every field into `u64`, platform `usize`, or a UTF-8 path;
 rejects invalid result domains and overflow; compares the complete result with
 its independently parsed compatibility oracle; installs the validated
-GenesisCode log, refs, runtime, store, and task values; and only then resolves
+GenesisCode log, refs, runtime, store remote, and task values; and only then resolves
 relative paths against the capability file's parent directory. Filesystem path
 resolution and use remain host mechanisms rather than policy-selection authority.
 
@@ -252,6 +261,10 @@ Network and remote dispatch consume installed GenesisCode URL/remote allowlists,
 HTTP permission, WASI profile, bind rules, and request bound before raw
 compatibility fields. Rust parses targets, performs matching, checks actual WASI
 backend availability, enforces the selected limits, and executes transport.
+Global store and package-registry consumers obtain the configured store remote,
+its allowlist, and HTTP permission only from the installed GenesisCode resource
+decision. No production store consumer reads those three raw `[store]` fields;
+Rust retains URL parsing/normalization and allowlist matching as enforcement.
 Crypto dispatch consumes installed GenesisCode algorithm/key-ID allowlists and
 all twelve byte-limit states before raw compatibility fields. Rust performs
 allowlist matching, key lookup/custody, payload measurement, limit enforcement,
@@ -276,7 +289,7 @@ transition, and therefore are not evidence of H2.
 ## Residual Decisions And Nonclaims
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
-and type decoding; global store remote transport, TLS, and authentication policy;
+and remaining type decoding; global store credential, TLS, and transport policy;
 FFI signed-policy provenance, bridge identity, model,
 graphics, and device constraints; secret and path resolution; effect execution
 and cancellation; strict replay; and removal of the compatibility oracle.
@@ -299,9 +312,11 @@ measurement remain host enforcement/execution mechanisms.
 Network policy configuration is no longer residual: GenesisCode owns both
 per-operation target allowlists, HTTP permission, WASI profile normalization,
 bind host/port states, and inbound request-size state across network, sync,
-publication, and store-remote operation policies. Global store remote selection,
-TLS, credentials, retry/worker settings, URL parsing and normalization, matching,
-WASI backend discovery, DNS/socket/HTTP/WebSocket execution, cancellation, and
+publication, and store-remote operation policies. GenesisCode also owns global
+store remote target selection, allowlist normalization, malformed-state
+classification, and HTTP permission. TLS credentials, secret/environment
+resolution, retry/worker settings, URL parsing and normalization, matching, WASI
+backend discovery, DNS/socket/HTTP/WebSocket execution, cancellation, and
 measurement remain in the named host residuals.
 Crypto policy configuration is no longer residual: GenesisCode owns algorithm
 and key-ID list normalization and all twelve positive-limit states across hash,
