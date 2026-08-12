@@ -86,31 +86,6 @@ fn ffi_call_payload_len(payload: &Term) -> usize {
     }
 }
 
-fn ffi_bridge_digest_pin_is_required(pol: Option<&OpPolicy>) -> bool {
-    let Some(pol) = pol else {
-        return false;
-    };
-    let has_bridge_cmd = pol
-        .extra
-        .get("bridge_cmd")
-        .and_then(|v| v.as_str())
-        .is_some_and(|s| !s.trim().is_empty());
-    let has_wasi_bridge_profile = pol
-        .extra
-        .get("wasi_bridge_profile")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-    has_bridge_cmd && !has_wasi_bridge_profile
-}
-
-fn ffi_bridge_digest_pin_from_policy(pol: Option<&OpPolicy>) -> Option<String> {
-    pol.and_then(|p| p.extra.get("bridge_cmd_sha256"))
-        .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(ToString::to_string)
-}
-
 fn term_bytes_or_string_len(value: &Term) -> Result<usize, String> {
     match value {
         Term::Bytes(bytes) => Ok(bytes.len()),
@@ -301,7 +276,9 @@ fn ffi_common_preflight(
     error_tok: SealId,
 ) -> Result<FfiPreflight, Value> {
     let signed_policy = ffi_signed_policy_metadata(op, pol, error_tok)?;
-    if ffi_bridge_digest_pin_is_required(pol) && ffi_bridge_digest_pin_from_policy(pol).is_none() {
+    let digest_pin_missing = bridge_digest_pin_is_missing(pol)
+        .map_err(|message| mk_error(error_tok, "core/caps/policy-error", message, Some(op)))?;
+    if digest_pin_missing {
         return Err(mk_error(
             error_tok,
             "core/caps/policy-error",

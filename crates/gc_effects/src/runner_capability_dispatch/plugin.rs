@@ -95,6 +95,7 @@ mod authority_tests {
             authorized_database: None,
             authorized_network: None,
             authorized_crypto: None,
+            authorized_bridge_identity: None,
             authorized_plugin: Some(plugin),
             authorized_ffi: None,
         }
@@ -142,31 +143,6 @@ mod authority_tests {
             None
         );
     }
-}
-
-fn plugin_bridge_digest_pin_is_required(pol: Option<&OpPolicy>) -> bool {
-    let Some(pol) = pol else {
-        return false;
-    };
-    let has_bridge_cmd = pol
-        .extra
-        .get("bridge_cmd")
-        .and_then(|v| v.as_str())
-        .is_some_and(|s| !s.trim().is_empty());
-    let has_wasi_bridge_profile = pol
-        .extra
-        .get("wasi_bridge_profile")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-    has_bridge_cmd && !has_wasi_bridge_profile
-}
-
-fn plugin_bridge_digest_pin_from_policy(pol: Option<&OpPolicy>) -> Option<String> {
-    pol.and_then(|p| p.extra.get("bridge_cmd_sha256"))
-        .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(ToString::to_string)
 }
 
 pub(super) fn capability_host_plugin_command(
@@ -222,9 +198,18 @@ pub(super) fn capability_host_plugin_command(
             Some(op),
         ));
     }
-    if plugin_bridge_digest_pin_is_required(pol)
-        && plugin_bridge_digest_pin_from_policy(pol).is_none()
-    {
+    let digest_pin_missing = match bridge_digest_pin_is_missing(pol) {
+        Ok(missing) => missing,
+        Err(message) => {
+            return Ok(mk_error(
+                error_tok,
+                "core/caps/policy-error",
+                message,
+                Some(op),
+            ));
+        }
+    };
+    if digest_pin_missing {
         return Ok(mk_error(
             error_tok,
             "core/caps/policy-error",

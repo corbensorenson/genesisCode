@@ -2,6 +2,7 @@
 use sha2::{Digest, Sha256};
 
 use super::*;
+use crate::policy::AuthorizedBridgeDigest;
 
 #[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,17 +61,17 @@ pub(crate) fn bridge_transport(
     }
 }
 
-#[cfg(not(target_os = "wasi"))]
-pub(super) fn normalize_sha256_hex(raw: &str) -> Option<String> {
-    let trimmed = raw.trim();
-    let hex = trimmed
-        .strip_prefix("sha256:")
-        .or_else(|| trimmed.strip_prefix("SHA256:"))
-        .unwrap_or(trimmed);
-    if hex.len() != 64 || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
-        return None;
-    }
-    Some(hex.to_ascii_lowercase())
+pub(crate) fn bridge_digest_pin_is_missing(pol: Option<&OpPolicy>) -> Result<bool, String> {
+    let authority = pol
+        .and_then(|policy| policy.authorized_bridge_identity.as_ref())
+        .ok_or_else(|| "bridge identity authority state is unavailable".to_string())?;
+    Ok(authority.pin_required
+        && matches!(
+            authority.digest,
+            AuthorizedBridgeDigest::Absent
+                | AuthorizedBridgeDigest::InvalidType
+                | AuthorizedBridgeDigest::Empty
+        ))
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -109,21 +110,22 @@ fn bridge_cmd_allowlist(
 
 #[cfg(not(target_os = "wasi"))]
 fn bridge_cmd_sha256(pol: Option<&OpPolicy>, family: &str) -> Result<Option<String>, BridgeError> {
-    let Some(raw) = pol
-        .and_then(|p| p.extra.get("bridge_cmd_sha256"))
-        .and_then(|v| v.as_str())
-    else {
-        return Ok(None);
-    };
-    let Some(hex) = normalize_sha256_hex(raw) else {
-        return Err(BridgeError {
+    let authority = pol
+        .and_then(|policy| policy.authorized_bridge_identity.as_ref())
+        .ok_or_else(|| BridgeError {
+            code: format!("{family}/bridge-policy"),
+            message: "bridge identity authority state is unavailable".to_string(),
+        })?;
+    match &authority.digest {
+        AuthorizedBridgeDigest::Absent | AuthorizedBridgeDigest::InvalidType => Ok(None),
+        AuthorizedBridgeDigest::Empty | AuthorizedBridgeDigest::InvalidDigest => Err(BridgeError {
             code: format!("{family}/bridge-policy"),
             message:
                 "bridge_cmd_sha256 must be a 64-hex digest (optionally prefixed with `sha256:`)"
                     .to_string(),
-        });
-    };
-    Ok(Some(hex))
+        }),
+        AuthorizedBridgeDigest::Valid(hex) => Ok(Some(hex.clone())),
+    }
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -287,4 +289,53 @@ pub(crate) fn enforce_response_limit(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod authority_tests {
+    use super::*;
+    use crate::policy::AuthorizedBridgeIdentityPolicy;
+    use std::collections::BTreeMap;
+
+    fn policy(digest: AuthorizedBridgeDigest, raw: &str) -> OpPolicy {
+        OpPolicy {
+            base_dir: None,
+            create_dirs: false,
+            timeout_ms: None,
+            log_inline_max_bytes: None,
+            extra: BTreeMap::from([(
+                "bridge_cmd_sha256".to_string(),
+                toml::Value::String(raw.to_string()),
+            )]),
+            authorized_cap: None,
+            authorized_max_bytes: None,
+            authorized_process_programs: None,
+            authorized_database: None,
+            authorized_network: None,
+            authorized_crypto: None,
+            authorized_bridge_identity: Some(AuthorizedBridgeIdentityPolicy {
+                pin_required: true,
+                digest,
+            }),
+            authorized_plugin: None,
+            authorized_ffi: None,
+        }
+    }
+
+    #[cfg(not(target_os = "wasi"))]
+    #[test]
+    fn bridge_identity_enforcement_consumes_authority_before_raw_policy() {
+        let canonical = "a".repeat(64);
+        let authorized = policy(
+            AuthorizedBridgeDigest::Valid(canonical.clone()),
+            "raw fallback must not be used",
+        );
+        assert_eq!(
+            bridge_cmd_sha256(Some(&authorized), "host/ffi").unwrap(),
+            Some(canonical)
+        );
+
+        let rejected = policy(AuthorizedBridgeDigest::InvalidDigest, &"b".repeat(64));
+        assert!(bridge_cmd_sha256(Some(&rejected), "host/ffi").is_err());
+    }
 }

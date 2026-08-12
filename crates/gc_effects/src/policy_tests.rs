@@ -1,5 +1,6 @@
 use super::{
-    AuthorizedBindPorts, AuthorizedDatabasePolicy, AuthorizedFfiSignedPolicy, AuthorizedMaxBytes,
+    AuthorizedBindPorts, AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy,
+    AuthorizedDatabasePolicy, AuthorizedFfiSignedPolicy, AuthorizedMaxBytes,
     AuthorizedNetworkPolicy, AuthorizedOptionalBool, AuthorizedOptionalString,
     AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy, AuthorizedStringList, CapsPolicy,
 };
@@ -75,6 +76,13 @@ fn optional_value_policy(status: &str, value: Term) -> Term {
     Term::Map(BTreeMap::from([
         (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
         (TermOrdKey(Term::symbol(":value")), value),
+    ]))
+}
+
+fn bridge_identity_policy_term(digest: Term, pin_required: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":digest")), digest),
+        (TermOrdKey(Term::symbol(":pin-required")), pin_required),
     ]))
 }
 
@@ -1137,6 +1145,144 @@ fn selfhost_authority_rejects_malformed_plugin_decisions() {
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_plugin_policy(&Term::Map(extra), true)
         .expect_err("unknown plugin authority fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_bridge_digest_pin_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        format!(
+            r#"
+[op."host/plugin::command"]
+bridge_cmd = "/opt/genesis/plugin-bridge"
+bridge_cmd_sha256 = " SHA256:{} "
+"#,
+            "AB".repeat(32)
+        ),
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    assert_eq!(
+        policy
+            .op_policy("host/plugin::command")
+            .unwrap()
+            .authorized_bridge_identity,
+        Some(AuthorizedBridgeIdentityPolicy {
+            pin_required: true,
+            digest: AuthorizedBridgeDigest::Valid("ab".repeat(32)),
+        })
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_bridge_digest_states_and_wasi_precedence() {
+    let cases = [
+        (
+            "bridge_cmd_sha256 = 7",
+            AuthorizedBridgeDigest::InvalidType,
+            true,
+        ),
+        (
+            "bridge_cmd_sha256 = \"   \"",
+            AuthorizedBridgeDigest::Empty,
+            true,
+        ),
+        (
+            "bridge_cmd_sha256 = \"not-a-digest\"",
+            AuthorizedBridgeDigest::InvalidDigest,
+            true,
+        ),
+        (
+            "wasi_bridge_profile = true",
+            AuthorizedBridgeDigest::Absent,
+            false,
+        ),
+    ];
+    for (setting, digest, pin_required) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(
+            &caps,
+            format!(
+                "[op.\"host/ffi::call\"]\nbridge_cmd = \"/opt/genesis/ffi-bridge\"\n{setting}\n"
+            ),
+        )
+        .unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        assert_eq!(
+            policy
+                .op_policy("host/ffi::call")
+                .unwrap()
+                .authorized_bridge_identity,
+            Some(AuthorizedBridgeIdentityPolicy {
+                pin_required,
+                digest,
+            }),
+            "setting: {setting}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_bridge_digest_decisions() {
+    use super::policy_authority::decode_bridge_identity_policy;
+
+    let valid = || {
+        bridge_identity_policy_term(
+            optional_value_policy(":valid", Term::Str("a".repeat(64))),
+            Term::Bool(true),
+        )
+    };
+    assert_eq!(
+        decode_bridge_identity_policy(&valid(), "host/ffi::call", true).unwrap(),
+        AuthorizedBridgeIdentityPolicy {
+            pin_required: true,
+            digest: AuthorizedBridgeDigest::Valid("a".repeat(64)),
+        }
+    );
+
+    let cases = [
+        bridge_identity_policy_term(
+            optional_value_policy(":valid", Term::Str("A".repeat(64))),
+            Term::Bool(true),
+        ),
+        bridge_identity_policy_term(
+            optional_value_policy(":invalid-digest", Term::Str("a".repeat(64))),
+            Term::Bool(true),
+        ),
+        bridge_identity_policy_term(
+            optional_value_policy(":valid", Term::Str("a".repeat(64))),
+            Term::Bool(true),
+        ),
+    ];
+    decode_bridge_identity_policy(&cases[0], "host/ffi::call", true)
+        .expect_err("uppercase canonical digest must fail closed");
+    decode_bridge_identity_policy(&cases[1], "host/ffi::call", true)
+        .expect_err("contradictory digest state must fail closed");
+    decode_bridge_identity_policy(&cases[2], "io/fs::read", true)
+        .expect_err("ineligible operation pin requirement must fail closed");
+    decode_bridge_identity_policy(&valid(), "host/ffi::call", false)
+        .expect_err("denied operation must not carry a bridge decision");
+
+    let Term::Map(mut open) = valid() else {
+        return;
+    };
+    open.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_bridge_identity_policy(&Term::Map(open), "host/ffi::call", true)
+        .expect_err("unknown bridge decision fields must fail closed");
 }
 
 #[test]

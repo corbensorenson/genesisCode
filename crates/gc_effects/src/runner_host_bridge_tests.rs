@@ -1,5 +1,5 @@
-use super::{BridgeError, HostBridgeRuntime, decode_bridge_stdout, runner_host_bridge_policy};
-use crate::policy::{CapsPolicy, OpPolicy};
+use super::{BridgeError, HostBridgeRuntime, decode_bridge_stdout};
+use crate::policy::{AuthorizedBridgeDigest, CapsPolicy, OpPolicy};
 use gc_coreform::{Term, TermOrdKey};
 #[cfg(not(target_os = "wasi"))]
 use std::time::Instant;
@@ -107,18 +107,25 @@ wasi_bridge_profile = true
 }
 
 #[test]
-fn normalize_sha256_hex_accepts_prefixed_and_plain_hex() {
-    let raw = "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd";
+fn compatibility_policy_materializes_canonical_bridge_digest_state() {
+    let policy = CapsPolicy::from_toml_str(&format!(
+        r#"
+[op."host/ffi::call"]
+bridge_cmd = "/opt/genesis/ffi-bridge"
+bridge_cmd_sha256 = "sha256:{}"
+"#,
+        "AB".repeat(32)
+    ))
+    .expect("caps");
+    let authority = policy
+        .op_policy("host/ffi::call")
+        .and_then(|op| op.authorized_bridge_identity.as_ref())
+        .expect("materialized bridge identity policy");
+    assert!(authority.pin_required);
     assert_eq!(
-        runner_host_bridge_policy::normalize_sha256_hex(raw),
-        Some(raw.to_string())
+        authority.digest,
+        AuthorizedBridgeDigest::Valid("ab".repeat(32))
     );
-    assert_eq!(
-        runner_host_bridge_policy::normalize_sha256_hex(&format!("sha256:{raw}")),
-        Some(raw.to_string())
-    );
-    assert!(runner_host_bridge_policy::normalize_sha256_hex("sha256:not-a-hex").is_none());
-    assert!(runner_host_bridge_policy::normalize_sha256_hex("abc").is_none());
 }
 
 #[cfg(all(not(target_os = "wasi"), unix))]

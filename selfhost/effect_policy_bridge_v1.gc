@@ -1,0 +1,95 @@
+(def selfhost/effect-bridge::starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((value-bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let ((value-len (core/bytes::len value-bytes)))
+            (let ((prefix-len (core/bytes::len prefix-bytes)))
+              (if ((core/int::lt? value-len) prefix-len)
+                false
+                ((core/eq? (((core/bytes::slice value-bytes) 0) prefix-len))
+                  prefix-bytes)))))))))
+
+(def selfhost/effect-bridge::strip-digest-prefix
+  (fn (value)
+    (if
+      (if ((selfhost/effect-bridge::starts-with? value) "sha256:")
+        true
+        ((selfhost/effect-bridge::starts-with? value) "SHA256:"))
+      (let ((bytes (core/str::to-utf8 value)))
+        (core/str::from-utf8
+          (((core/bytes::slice bytes) 7) ((core/int::sub (core/bytes::len bytes)) 7))))
+      value)))
+
+(def selfhost/effect-bridge::input-valid?
+  (fn (value)
+    (if ((selfhost/effect-policy::exact-map? value) [:command :digest :wasi-profile])
+      (if (selfhost/effect-network::optional-string-input?
+            ((core/map::get value) (quote :command)))
+        (if (selfhost/effect-network::optional-string-input?
+              ((core/map::get value) (quote :digest)))
+          (selfhost/effect-network::optional-bool-input?
+            ((core/map::get value) (quote :wasi-profile)))
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-bridge::family-requires-pin?
+  (fn (op)
+    (if ((selfhost/effect-bridge::starts-with? op) "host/plugin::")
+      true
+      (if ((selfhost/effect-bridge::starts-with? op) "host/ffi::")
+        true
+        ((selfhost/effect-bridge::starts-with? op) "editor/")))))
+
+(def selfhost/effect-bridge::state-status?
+  (fn (state)
+    (fn (status)
+      ((core/sym::eq? ((core/map::get state) (quote :status))) status))))
+
+(def selfhost/effect-bridge::digest-policy
+  (fn (raw)
+    (let ((state (selfhost/effect-network::string-policy raw)))
+      (if ((selfhost/effect-bridge::state-status? state) (quote :valid))
+        (let
+          ((digest
+            (selfhost/effect-bridge::strip-digest-prefix
+              ((core/map::get state) (quote :value)))))
+          (if (selfhost/effect-ffi::hex64? digest)
+            {
+              :status (quote :valid)
+              :value (selfhost/effect-crypto::ascii-lower digest)}
+            {:status (quote :invalid-digest) :value nil}))
+        state))))
+
+(def selfhost/effect-bridge::pin-required?
+  (fn (op)
+    (fn (bridge)
+      (if (selfhost/effect-bridge::family-requires-pin? op)
+        (let
+          ((command
+              (selfhost/effect-network::string-policy
+                ((core/map::get bridge) (quote :command))))
+            (wasi
+              (selfhost/effect-network::bool-policy
+                ((core/map::get bridge) (quote :wasi-profile)))))
+          (if ((selfhost/effect-bridge::state-status? command) (quote :valid))
+            (if ((selfhost/effect-bridge::state-status? wasi) (quote :valid))
+              (if ((core/map::get wasi) (quote :value)) false true)
+              true)
+            false))
+        false))))
+
+(def selfhost/effect-bridge::policy
+  (fn (op)
+    (fn (override)
+      (let
+        ((bridge
+          (if (selfhost/policy::nil? override)
+            {:command nil :digest nil :wasi-profile nil}
+            ((core/map::get override) (quote :bridge-identity-policy)))))
+        {
+          :digest
+            (selfhost/effect-bridge::digest-policy
+              ((core/map::get bridge) (quote :digest)))
+          :pin-required ((selfhost/effect-bridge::pin-required? op) bridge)}))))

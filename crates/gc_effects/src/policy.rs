@@ -220,6 +220,21 @@ pub(crate) struct AuthorizedPluginPolicy {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedBridgeDigest {
+    Absent,
+    InvalidType,
+    Empty,
+    InvalidDigest,
+    Valid(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedBridgeIdentityPolicy {
+    pub pin_required: bool,
+    pub digest: AuthorizedBridgeDigest,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum AuthorizedFfiSignedPolicy {
     Disabled,
     InvalidRequiredType,
@@ -266,6 +281,7 @@ pub struct OpPolicy {
     pub(crate) authorized_database: Option<AuthorizedDatabasePolicy>,
     pub(crate) authorized_network: Option<AuthorizedNetworkPolicy>,
     pub(crate) authorized_crypto: Option<AuthorizedCryptoPolicy>,
+    pub(crate) authorized_bridge_identity: Option<AuthorizedBridgeIdentityPolicy>,
     pub(crate) authorized_plugin: Option<AuthorizedPluginPolicy>,
     pub(crate) authorized_ffi: Option<AuthorizedFfiPolicy>,
 }
@@ -390,6 +406,7 @@ impl CapsPolicy {
                         authorized_database: None,
                         authorized_network: None,
                         authorized_crypto: None,
+                        authorized_bridge_identity: None,
                         authorized_plugin: None,
                         authorized_ffi: None,
                     },
@@ -406,7 +423,10 @@ impl CapsPolicy {
 
         // Compatibility parsing materializes an explicit state; production file
         // loads replace and verify it through the self-host authority.
-        for op_policy in ops.values_mut() {
+        for (op, op_policy) in &mut ops {
+            op_policy.authorized_bridge_identity = Some(
+                policy_authority::legacy_bridge_identity_policy(op, Some(op_policy)),
+            );
             op_policy.authorized_ffi = Some(policy_authority::legacy_ffi_policy(Some(op_policy)));
         }
 

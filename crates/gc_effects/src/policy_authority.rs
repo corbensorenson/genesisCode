@@ -11,11 +11,13 @@ use num_traits::ToPrimitive;
 use crate::error::EffectsError;
 
 use super::{
-    AuthorizedCryptoPolicy, AuthorizedDatabasePolicy, AuthorizedFfiPolicy, AuthorizedMaxBytes,
-    AuthorizedNetworkPolicy, AuthorizedPluginPolicy, AuthorizedProcessPrograms,
-    AuthorizedStoreRemotePolicy, CapsPolicy, OpPolicy,
+    AuthorizedBridgeIdentityPolicy, AuthorizedCryptoPolicy, AuthorizedDatabasePolicy,
+    AuthorizedFfiPolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedPluginPolicy,
+    AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy, CapsPolicy, OpPolicy,
 };
 
+#[path = "policy_authority_bridge.rs"]
+mod bridge;
 #[path = "policy_authority_cap.rs"]
 mod cap;
 #[path = "policy_authority_crypto.rs"]
@@ -24,6 +26,8 @@ mod crypto;
 mod database;
 #[path = "policy_authority_ffi.rs"]
 mod ffi;
+#[path = "policy_authority_limit.rs"]
+mod limit;
 #[path = "policy_authority_network.rs"]
 mod network;
 #[path = "policy_authority_plugin.rs"]
@@ -36,6 +40,20 @@ mod resource;
 mod store_remote;
 pub(super) fn legacy_ffi_policy(policy: Option<&OpPolicy>) -> AuthorizedFfiPolicy {
     ffi::legacy(policy)
+}
+pub(super) fn legacy_bridge_identity_policy(
+    op: &str,
+    policy: Option<&OpPolicy>,
+) -> AuthorizedBridgeIdentityPolicy {
+    bridge::legacy(op, policy)
+}
+#[cfg(test)]
+pub(super) fn decode_bridge_identity_policy(
+    term: &Term,
+    op: &str,
+    allowed: bool,
+) -> Result<AuthorizedBridgeIdentityPolicy, EffectsError> {
+    bridge::decode(term, op, allowed)
 }
 pub(super) fn legacy_store_remote_policy(
     store: Option<&toml::value::Table>,
@@ -150,6 +168,13 @@ fn max_bytes_input(value: Option<&toml::Value>) -> Term {
     }
 }
 
+pub(super) fn decode_max_bytes_policy(
+    term: &Term,
+    allowed: bool,
+) -> Result<AuthorizedMaxBytes, EffectsError> {
+    limit::decode(term, allowed)
+}
+
 fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
     let Some(value) = value else {
         return Ok(Term::Nil);
@@ -170,6 +195,10 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
             (
                 TermOrdKey(Term::symbol(":create-dirs")),
                 optional_bool(table.get("create_dirs")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":bridge-identity-policy")),
+                bridge::input(table),
             ),
             (
                 TermOrdKey(Term::symbol(":crypto-policy")),
@@ -219,7 +248,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.11".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.12".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
@@ -227,7 +256,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(11.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(12.into())),
         ]
         .into_iter()
         .collect(),
@@ -327,22 +356,6 @@ fn plain_authority_result(
     }
 }
 
-fn legacy_max_bytes(policy: Option<&OpPolicy>) -> AuthorizedMaxBytes {
-    let Some(value) = policy.and_then(|policy| policy.extra.get("max_bytes")) else {
-        return AuthorizedMaxBytes::Absent;
-    };
-    let Some(raw) = value.as_integer() else {
-        return AuthorizedMaxBytes::InvalidType;
-    };
-    if raw <= 0 {
-        return AuthorizedMaxBytes::NonPositive;
-    }
-    match usize::try_from(raw) {
-        Ok(limit) => AuthorizedMaxBytes::Valid(limit),
-        Err(_) => AuthorizedMaxBytes::PlatformOverflow,
-    }
-}
-
 struct AuthorizedOperation {
     allowed: bool,
     base_dir: Option<PathBuf>,
@@ -350,6 +363,7 @@ struct AuthorizedOperation {
     timeout_ms: Option<u64>,
     log_inline_max_bytes: Option<usize>,
     max_bytes: AuthorizedMaxBytes,
+    bridge_identity: AuthorizedBridgeIdentityPolicy,
     process_programs: AuthorizedProcessPrograms,
     database: AuthorizedDatabasePolicy,
     network: AuthorizedNetworkPolicy,
@@ -357,64 +371,6 @@ struct AuthorizedOperation {
     ffi: AuthorizedFfiPolicy,
     plugin: AuthorizedPluginPolicy,
     cap: Term,
-}
-
-pub(super) fn decode_max_bytes_policy(
-    term: &Term,
-    allowed: bool,
-) -> Result<AuthorizedMaxBytes, EffectsError> {
-    if !allowed {
-        return if term == &Term::Nil {
-            Ok(AuthorizedMaxBytes::Absent)
-        } else {
-            Err(authority_error(
-                "denied result :max-bytes-policy must be nil",
-            ))
-        };
-    }
-    let Term::Map(map) = term else {
-        return Err(authority_error(
-            "admitted result :max-bytes-policy must be a data map",
-        ));
-    };
-    let expected: BTreeSet<_> = [":limit", ":status"]
-        .into_iter()
-        .map(|key| TermOrdKey(Term::symbol(key)))
-        .collect();
-    if map.keys().cloned().collect::<BTreeSet<_>>() != expected {
-        return Err(authority_error(
-            "result :max-bytes-policy field set mismatch",
-        ));
-    }
-    let status = match map.get(&TermOrdKey(Term::symbol(":status"))) {
-        Some(Term::Symbol(status)) => status.as_str(),
-        _ => {
-            return Err(authority_error(
-                "result :max-bytes-policy :status must be a symbol",
-            ));
-        }
-    };
-    let limit = map
-        .get(&TermOrdKey(Term::symbol(":limit")))
-        .ok_or_else(|| authority_error("result :max-bytes-policy is missing :limit"))?;
-    match (status, limit) {
-        (":absent", Term::Nil) => Ok(AuthorizedMaxBytes::Absent),
-        (":invalid-type", Term::Nil) => Ok(AuthorizedMaxBytes::InvalidType),
-        (":nonpositive", Term::Nil) => Ok(AuthorizedMaxBytes::NonPositive),
-        (":platform-overflow", Term::Nil) => Ok(AuthorizedMaxBytes::PlatformOverflow),
-        (":valid", Term::Int(value)) => value
-            .to_usize()
-            .filter(|limit| *limit > 0)
-            .map(AuthorizedMaxBytes::Valid)
-            .ok_or_else(|| {
-                authority_error(
-                    "result :max-bytes-policy valid limit must fit a positive platform usize",
-                )
-            }),
-        _ => Err(authority_error(
-            "result :max-bytes-policy status contradicts its limit",
-        )),
-    }
 }
 
 fn decode_result(
@@ -428,6 +384,7 @@ fn decode_result(
     let expected_keys: BTreeSet<_> = [
         ":allowed",
         ":base-dir",
+        ":bridge-identity-policy",
         ":cap",
         ":crypto-policy",
         ":database-policy",
@@ -447,8 +404,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.11")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &11.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.12")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &12.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -478,9 +435,15 @@ fn decode_result(
     } else {
         (false, None, None)
     };
-    let max_bytes = decode_max_bytes_policy(
+    let max_bytes = limit::decode(
         map.get(&TermOrdKey(Term::symbol(":max-bytes-policy")))
             .ok_or_else(|| authority_error("result is missing :max-bytes-policy"))?,
+        allowed,
+    )?;
+    let bridge_identity = bridge::decode(
+        map.get(&TermOrdKey(Term::symbol(":bridge-identity-policy")))
+            .ok_or_else(|| authority_error("result is missing :bridge-identity-policy"))?,
+        op,
         allowed,
     )?;
     let process_programs = process::decode(
@@ -520,6 +483,7 @@ fn decode_result(
         timeout_ms,
         log_inline_max_bytes,
         max_bytes,
+        bridge_identity,
         process_programs,
         database,
         network,
@@ -642,7 +606,8 @@ pub(super) fn authorize_policy(
         if authorized.allowed != expected.is_some()
             || expected.is_some_and(|policy| authorized.cap != cap::legacy(&op, policy))
             || authorized.base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
-            || authorized.max_bytes != legacy_max_bytes(expected)
+            || authorized.max_bytes != limit::legacy(expected)
+            || authorized.bridge_identity != bridge::legacy(&op, expected)
             || authorized.process_programs != process::legacy(expected)
             || authorized.database != database::legacy(expected)
             || authorized.network != network::legacy(expected)
@@ -664,6 +629,7 @@ pub(super) fn authorize_policy(
             op_policy.timeout_ms = authorized.timeout_ms;
             op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;
             op_policy.authorized_max_bytes = Some(authorized.max_bytes);
+            op_policy.authorized_bridge_identity = Some(authorized.bridge_identity);
             op_policy.authorized_process_programs = Some(authorized.process_programs);
             op_policy.authorized_database = Some(authorized.database);
             op_policy.authorized_network = Some(authorized.network);

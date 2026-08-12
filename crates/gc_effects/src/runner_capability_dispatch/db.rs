@@ -104,6 +104,7 @@ mod tests {
             authorized_database: Some(authorized),
             authorized_network: None,
             authorized_crypto: None,
+            authorized_bridge_identity: None,
             authorized_plugin: None,
             authorized_ffi: None,
         }

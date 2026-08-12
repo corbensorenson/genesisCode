@@ -205,6 +205,12 @@ Supported keys:
   - required for `host/plugin::command` and `editor/plugin::command` when `bridge_cmd` transport is configured.
   - required for `host/ffi::call`, `host/ffi::buffer-pin`, and `host/ffi::buffer-unpin` when `bridge_cmd` transport is configured.
   - mismatches are denied with deterministic sealed error `<family>/bridge-identity-denied`.
+  - artifact-backed production loads use GenesisCode authority protocol v0.12 to
+    decide whether the pin is required and to trim, validate, and lowercase the
+    configured digest before any plugin or FFI bridge preflight or execution.
+    Rust retains command resolution, executable hashing, digest comparison,
+    transport, cancellation, and provider lifecycle, and has no raw digest
+    fallback in those consumers.
 - `wasi_bridge_profile` (bool): when true, enables deterministic WASI bridge response mode for this op (also always enabled on actual WASI targets).
 - `wasi_bridge_response` (string): optional CoreForm term used as deterministic host response for bridge-backed ops under WASI bridge profile.
 - `wasi_bridge_response_file` (string): optional path (under `base_dir`) to a CoreForm term or op->response map used under WASI bridge profile.
@@ -221,7 +227,7 @@ Supported keys:
 - `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
 
-For artifact-only production policy loads, GenesisCode authority protocol v0.11
+For artifact-only production policy loads, GenesisCode authority protocol v0.12
 normalizes `url_allow`, `remote_allow`, `allow_http`, `wasi_network_profile`,
 `allow_bind_hosts`, `allow_bind_ports`, and `max_request_bytes` into closed typed
 states before any network, sync, publication, or store-remote consumer runs.

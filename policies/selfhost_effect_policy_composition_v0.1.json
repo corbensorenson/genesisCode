@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "f9e78cede7aa6a7edd85cdff646151ab3e9ac4dc47690febc5ae0b7a26fb75d3",
+  "contentIdentitySha256": "01dd6a183bfc4509107b988bd8693b0cfb6337ef53e4066a79b9a78ff2913375",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -12,6 +12,7 @@
     "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-bridge-digest-pin-policy",
     "per-operation-crypto-policy",
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
@@ -48,20 +49,20 @@
     "genesis",
     "genesis_wasi"
   ],
-  "requestKind": "genesis/effect-policy-authority-request-v0.11",
+  "requestKind": "genesis/effect-policy-authority-request-v0.12",
   "resourceBinding": "core/effects::resource-policy-authority",
   "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
   "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
   "residualDecisionInventory": [
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
-    "ffi-bridge-identity-and-model-provider-lifecycle",
+    "bridge-command-allowlist-transport-and-model-provider-lifecycle",
     "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
   ],
-  "resultKind": "genesis/effect-policy-authority-result-v0.11",
+  "resultKind": "genesis/effect-policy-authority-result-v0.12",
   "runtimeEvidence": {
     "allocationLimit": 20000000,
     "stepLimit": 20000000,
@@ -74,10 +75,11 @@
     "selfhost/effect_policy_network_v1.gc",
     "selfhost/effect_policy_plugin_v1.gc",
     "selfhost/effect_policy_ffi_v1.gc",
+    "selfhost/effect_policy_bridge_v1.gc",
     "selfhost/effect_policy_resource_authority_v1.gc",
     "selfhost/effect_policy_authority_v1.gc"
   ],
-  "sourceSha256": "f76c43eb2e9e4fd7abf5927e4650de021f0de930a76a714e456fa41552f6e755",
+  "sourceSha256": "d5f6b82559cb2ac984992bc22026743698df1f01b08e03d588038ee0ddb0411a",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.16"
+  "version": "0.1.17"
 }
