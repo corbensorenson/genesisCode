@@ -174,6 +174,66 @@ fn selfhost_authority_owns_adaptive_task_worker_default() {
 }
 
 #[test]
+fn selfhost_authority_owns_global_log_and_store_resource_limits() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[log]
+inline_max_bytes = 123
+max_artifact_bytes_per_run = 456
+
+[store]
+max_run_bytes = 2048
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert_eq!(policy.log.inline_max_bytes, Some(123));
+    assert_eq!(policy.log.max_artifact_bytes_per_run, Some(456));
+    assert_eq!(policy.store.max_run_bytes, Some(2048));
+}
+
+#[test]
+fn selfhost_authority_normalizes_nonpositive_global_resource_limits() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[log]
+inline_max_bytes = 0
+max_artifact_bytes_per_run = -1
+
+[store]
+max_run_bytes = 0
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert_eq!(policy.log.inline_max_bytes, None);
+    assert_eq!(policy.log.max_artifact_bytes_per_run, None);
+    assert_eq!(policy.store.max_run_bytes, None);
+}
+
+#[test]
 fn selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation() {
     let td = tempfile::tempdir().unwrap();
     let caps = td.path().join("caps.toml");

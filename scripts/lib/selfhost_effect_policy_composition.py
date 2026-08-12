@@ -77,6 +77,7 @@ DECISIONS = [
     "baseline-operation-admission",
     "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
+    "global-log-and-store-resource-limits",
     "per-operation-allow-precedence",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
@@ -89,7 +90,7 @@ RESIDUALS = {
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
     "filesystem-policy",
-    "global-log-store-refs-policy",
+    "global-log-store-refs-location-transport-and-auth-policy",
     "network-policy",
     "path-and-secret-resolution",
     "process-policy",
@@ -122,8 +123,8 @@ def validate(profile, schema, check_identity=True):
         "productionEntrypoints": ["genesis", "genesis_wasi"],
         "requestKind": "genesis/effect-policy-authority-request-v0.1",
         "resourceBinding": "core/effects::resource-policy-authority",
-        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.1",
-        "resourceResultKind": "genesis/effect-resource-policy-result-v0.1",
+        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.2",
+        "resourceResultKind": "genesis/effect-resource-policy-result-v0.2",
         "resultKind": "genesis/effect-policy-authority-result-v0.1",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
@@ -133,7 +134,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.2",
+        "version": "0.1.3",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -180,7 +181,13 @@ def static_check(root: Path, profile):
     if manifest.count(profile["resourceBinding"]) != 1:
         fail("effect-policy resource binding manifest custody drift")
 
-    authority = (root / "crates/gc_effects/src/policy_authority.rs").read_text()
+    authority_root = (root / "crates/gc_effects/src/policy_authority.rs").read_text()
+    if authority_root.count('#[path = "policy_authority_resource.rs"]') != 1:
+        fail("effect-policy resource boundary decomposition drift")
+    resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
+    if resource_boundary_path.is_symlink() or not resource_boundary_path.is_file():
+        fail("effect-policy resource host boundary is missing or symlinked")
+    authority = authority_root + resource_boundary_path.read_text()
     required_authority = [
         "const MAX_POLICY_OPS: usize = 4_096;",
         "const POLICY_AUTHORITY_STEP_LIMIT: u64 = 20_000_000;",
@@ -197,10 +204,13 @@ def static_check(root: Path, profile):
         "inventory result contradicts independently reconstructed candidate operations",
         "let request_hash = hash_term(&request);",
         "contradicts independently reconstructed policy composition",
-        "resource result contradicts independently reconstructed runtime/task policy",
+        "resource result contradicts independently reconstructed log/runtime/store/task policy",
         "op_policy.authorized_cap = Some(cap);",
-        "policy.task = authorized_task;",
-        "policy.runtime = authorized_runtime;",
+        "policy.task = authorized_resources.task;",
+        "policy.runtime = authorized_resources.runtime;",
+        "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
+        "policy.log.max_artifact_bytes_per_run =",
+        "policy.store.max_run_bytes = authorized_resources.store_max_run_bytes;",
     ]
     for token in required_authority:
         if token not in authority:
@@ -267,6 +277,14 @@ def static_check(root: Path, profile):
     ):
         if f"policy.task.{field}" not in task_enforcement:
             fail(f"task enforcement no longer consumes authorized field: {field}")
+    response_budget = (root / "crates/gc_effects/src/runner_response_budget.rs").read_text()
+    for token in (
+        "policy.inline_max_bytes_for(op)",
+        "policy.log.max_artifact_bytes_per_run",
+        "policy.store.max_run_bytes",
+    ):
+        if token not in response_budget:
+            fail(f"global resource enforcement no longer consumes authorized field: {token}")
 
     tests = (root / "crates/gc_effects/src/policy_tests.rs").read_text()
     for name in (
@@ -274,6 +292,8 @@ def static_check(root: Path, profile):
         "selfhost_authority_owns_sorted_unique_candidate_inventory",
         "selfhost_authority_owns_runtime_and_task_resource_composition",
         "selfhost_authority_owns_adaptive_task_worker_default",
+        "selfhost_authority_owns_global_log_and_store_resource_limits",
+        "selfhost_authority_normalizes_nonpositive_global_resource_limits",
         "selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation",
     ):
         if tests.count(f"fn {name}()") != 1:
@@ -296,6 +316,7 @@ def mutation_controls(profile, schema):
         ("binding", lambda item: item.__setitem__("binding", "core/cli::policy-authority")),
         ("inventory-binding", lambda item: item.__setitem__("inventoryBinding", "core/cli::policy-authority")),
         ("resource-binding", lambda item: item.__setitem__("resourceBinding", "core/cli::policy-authority")),
+        ("resource-request", lambda item: item.__setitem__("resourceRequestKind", "unknown")),
         ("decision", lambda item: item["decisionInventory"].pop()),
         ("oracle", lambda item: item["hostOracle"].__setitem__("required", False)),
         ("limit", lambda item: item.__setitem__("maxPolicyOperations", 0)),

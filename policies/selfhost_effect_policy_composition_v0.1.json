@@ -2,11 +2,12 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "5e1b2f8feb250b26f3159459c92501995e5c8fc0bc040c2819596a481a02b835",
+  "contentIdentitySha256": "809d55e12ee6781c431fe4f3dadfc7b5dc43dcac39876602744b6dfecfda4005",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
+    "global-log-and-store-resource-limits",
     "per-operation-allow-precedence",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers"
@@ -36,8 +37,8 @@
   ],
   "requestKind": "genesis/effect-policy-authority-request-v0.1",
   "resourceBinding": "core/effects::resource-policy-authority",
-  "resourceRequestKind": "genesis/effect-resource-policy-request-v0.1",
-  "resourceResultKind": "genesis/effect-resource-policy-result-v0.1",
+  "resourceRequestKind": "genesis/effect-resource-policy-request-v0.2",
+  "resourceResultKind": "genesis/effect-resource-policy-result-v0.2",
   "residualDecisionInventory": [
     "crypto-and-signing-policy",
     "database-policy",
@@ -45,7 +46,7 @@
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
     "filesystem-policy",
-    "global-log-store-refs-policy",
+    "global-log-store-refs-location-transport-and-auth-policy",
     "network-policy",
     "path-and-secret-resolution",
     "process-policy",
@@ -60,7 +61,7 @@
   },
   "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
   "sourceModule": "selfhost/effect_policy_authority_v1.gc",
-  "sourceSha256": "f5aca6fbc2bced7bd56600003762ba1419f6dda03fc1674f82d2e730dea6d774",
+  "sourceSha256": "b48317c63ca0c3c6bf2fcc20c0f7333553c044f9d5c323e5870d7caad937ab9d",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.2"
+  "version": "0.1.3"
 }

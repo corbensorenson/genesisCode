@@ -54,6 +54,30 @@
   (fn (value)
     (if (selfhost/policy::int? value) ((core/int::lt? 0) value) false)))
 
+(def selfhost/effect-policy::normalize-positive-optional
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      nil
+      (if ((core/int::lt? 0) value) value nil))))
+
+(def selfhost/effect-policy::log-resource-policy-valid?
+  (fn (log)
+    (if ((selfhost/effect-policy::exact-map? log)
+          [:inline-max-bytes :max-artifact-bytes-per-run])
+      (if (selfhost/effect-policy::optional-int?
+            ((core/map::get log) (quote :inline-max-bytes)))
+        (selfhost/effect-policy::optional-int?
+          ((core/map::get log) (quote :max-artifact-bytes-per-run)))
+        false)
+      false)))
+
+(def selfhost/effect-policy::store-resource-policy-valid?
+  (fn (store)
+    (if ((selfhost/effect-policy::exact-map? store) [:max-run-bytes])
+      (selfhost/effect-policy::optional-int?
+        ((core/map::get store) (quote :max-run-bytes)))
+      false)))
+
 (def selfhost/effect-policy::runtime-resource-policy-valid?
   (fn (runtime)
     (if ((selfhost/effect-policy::exact-map? runtime)
@@ -120,44 +144,65 @@
 (def core/effects::resource-policy-authority
   (fn (request)
     (if ((selfhost/effect-policy::exact-map? request)
-          [:available-workers :kind :runtime :task :v])
+          [:available-workers :kind :log :runtime :store :task :v])
       (let
         ((available-workers ((core/map::get request) (quote :available-workers)))
           (kind ((core/map::get request) (quote :kind)))
+          (log ((core/map::get request) (quote :log)))
           (runtime ((core/map::get request) (quote :runtime)))
+          (store ((core/map::get request) (quote :store)))
           (task ((core/map::get request) (quote :task)))
           (version ((core/map::get request) (quote :v))))
         (if
-          (if ((core/eq? kind) "genesis/effect-resource-policy-request-v0.1")
-            (if (selfhost/policy::int? version) ((core/int::eq? version) 1) false)
+          (if ((core/eq? kind) "genesis/effect-resource-policy-request-v0.2")
+            (if (selfhost/policy::int? version) ((core/int::eq? version) 2) false)
             false)
           (if (selfhost/effect-policy::positive-int? available-workers)
-            (if (selfhost/effect-policy::runtime-resource-policy-valid? runtime)
-              (if (selfhost/effect-policy::task-resource-policy-valid? task)
-                (let
-                  ((configured-default ((core/map::get task) (quote :default-workers))))
-                  {
-                    :kind "genesis/effect-resource-policy-result-v0.1"
-                    :request-h (selfhost/hash::hash-term request)
-                    :runtime runtime
-                    :task
+            (if (selfhost/effect-policy::log-resource-policy-valid? log)
+              (if (selfhost/effect-policy::runtime-resource-policy-valid? runtime)
+                (if (selfhost/effect-policy::store-resource-policy-valid? store)
+                  (if (selfhost/effect-policy::task-resource-policy-valid? task)
+                    (let
+                      ((configured-default ((core/map::get task) (quote :default-workers))))
                       {
-                        :default-workers
-                          (if (selfhost/policy::nil? configured-default)
-                            available-workers
-                            configured-default)
-                        :max-queue ((core/map::get task) (quote :max-queue))
-                        :max-steps-per-task
-                          ((core/map::get task) (quote :max-steps-per-task))
-                        :max-tasks ((core/map::get task) (quote :max-tasks))
-                        :max-time-ms-per-task
-                          ((core/map::get task) (quote :max-time-ms-per-task))
-                        :max-workers ((core/map::get task) (quote :max-workers))}
-                    :v 1})
+                        :kind "genesis/effect-resource-policy-result-v0.2"
+                        :log
+                          {
+                            :inline-max-bytes
+                              (selfhost/effect-policy::normalize-positive-optional
+                                ((core/map::get log) (quote :inline-max-bytes)))
+                            :max-artifact-bytes-per-run
+                              (selfhost/effect-policy::normalize-positive-optional
+                                ((core/map::get log) (quote :max-artifact-bytes-per-run)))}
+                        :request-h (selfhost/hash::hash-term request)
+                        :runtime runtime
+                        :store
+                          {
+                            :max-run-bytes
+                              (selfhost/effect-policy::normalize-positive-optional
+                                ((core/map::get store) (quote :max-run-bytes)))}
+                        :task
+                          {
+                            :default-workers
+                              (if (selfhost/policy::nil? configured-default)
+                                available-workers
+                                configured-default)
+                            :max-queue ((core/map::get task) (quote :max-queue))
+                            :max-steps-per-task
+                              ((core/map::get task) (quote :max-steps-per-task))
+                            :max-tasks ((core/map::get task) (quote :max-tasks))
+                            :max-time-ms-per-task
+                              ((core/map::get task) (quote :max-time-ms-per-task))
+                            :max-workers ((core/map::get task) (quote :max-workers))}
+                        :v 2})
+                    ((core/error::make2 "core/policy/authority")
+                      "effect task resource policy must contain exact nonnegative limits"))
+                  ((core/error::make2 "core/policy/authority")
+                    "effect store resource policy must contain exact optional integer limits"))
                 ((core/error::make2 "core/policy/authority")
-                  "effect task resource policy must contain exact nonnegative limits"))
+                  "effect runtime resource policy must contain exact nonnegative limits"))
               ((core/error::make2 "core/policy/authority")
-                "effect runtime resource policy must contain exact nonnegative limits"))
+                "effect log resource policy must contain exact optional integer limits"))
             ((core/error::make2 "core/policy/authority")
               "effect resource policy available-workers must be a positive integer"))
           ((core/error::make2 "core/policy/authority")

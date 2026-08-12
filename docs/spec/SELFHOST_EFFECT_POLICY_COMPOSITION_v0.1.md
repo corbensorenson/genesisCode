@@ -8,13 +8,14 @@ effect-policy composition slice: baseline operation admission, per-operation
 `:create-dirs`, `:timeout-ms`, and `:log-inline-max-bytes`.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
-`core/effects::resource-policy-authority` owns the runtime and task resource
-limits and selects an explicit task worker default from the configured value or
-the host's bounded available-worker observation.
+`core/effects::resource-policy-authority` owns global log/store byte budgets,
+runtime and task resource limits, and selection of an explicit task worker
+default from the configured value or the host's bounded available-worker
+observation.
 
 The Rust host still parses TOML, independently reconstructs the legacy candidate
-inventory, per-operation results, and runtime/task resource policy, and rejects
-every contradiction.
+inventory, per-operation results, and log/runtime/store/task resource policy, and
+rejects every contradiction.
 That live oracle is a required safety mechanism for this partial checkpoint and
 prevents `SD-EFFECT-POLICY` from reaching H2. Removing it before all residual
 decisions are GenesisCode-owned and independently verified is forbidden.
@@ -46,18 +47,24 @@ return sealed errors. The host rejects unknown fields, identity drift, request-h
 substitution, denied non-nil capabilities, admitted non-map capabilities, and any
 result that contradicts its retained compatibility oracle.
 
-The resource authority receives a closed five-field
-`genesis/effect-resource-policy-request-v0.1` map. It contains version `1`, the
-positive host observation `:available-workers`, and exact `:runtime` and `:task`
-maps. Missing optional TOML fields are represented by `nil`; configured values
-must be nonnegative integers, while a configured `:default-workers` must be
-positive. The closed `genesis/effect-resource-policy-result-v0.1` result is bound
-to the complete request hash, preserves all validated limits, and replaces a
-missing task default with `:available-workers`. The host strictly decodes every
-field into `u64` or platform `usize`, rejects negative values and overflow,
-compares the complete result with its independently parsed compatibility oracle,
-and installs the validated GenesisCode task and runtime policies into the state
-consumed by effect and task enforcement.
+The resource authority receives a closed seven-field
+`genesis/effect-resource-policy-request-v0.2` map. It contains version `2`, the
+positive host observation `:available-workers`, and exact `:log`, `:runtime`,
+`:store`, and `:task` maps. Missing optional TOML fields are represented by
+`nil`. Runtime and task limits must be nonnegative integers, and a configured
+`:default-workers` must be positive. Global `:inline-max-bytes`,
+`:max-artifact-bytes-per-run`, and `:max-run-bytes` accept the legacy integer
+domain and are normalized by GenesisCode so only positive limits survive; zero
+and negative values become `nil`.
+
+The closed `genesis/effect-resource-policy-result-v0.2` result is bound to the
+complete request hash, preserves the validated limits, and replaces a missing
+task default with `:available-workers`. The host strictly decodes every field into
+`u64` or platform `usize`, rejects invalid result domains and overflow, compares
+the complete result with its independently parsed compatibility oracle, and
+installs the validated GenesisCode log, runtime, store, and task resource values
+into the state consumed by effect, log, store, synchronization, and task
+enforcement.
 
 Per-operation `allow` has legacy precedence: an override with `allow = false`
 denies the operation; an override with true or no explicit `allow` admits it;
@@ -76,10 +83,9 @@ selected. Obligation preflight uses the same self-host route while preserving it
 already-normative missing-policy observation behavior.
 
 The effect runner uses the validated GenesisCode capability descriptor in log
-entries and the validated runtime/task limits for host resource enforcement.
-Host code retains payload measurement and enforcement mechanisms, filesystem
-path resolution, accounting mechanisms, cancellation, effect execution, and
-replay mechanisms.
+entries and all validated resource limits for host enforcement. Host code retains
+payload measurement and enforcement mechanisms, filesystem path resolution,
+accounting mechanisms, cancellation, effect execution, and replay mechanisms.
 `CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy
 composition oracle remain reachable for tests, host mechanisms, and this partial
 transition, and therefore are not evidence of H2.
@@ -87,8 +93,8 @@ transition, and therefore are not evidence of H2.
 ## Residual Decisions And Nonclaims
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
-and type decoding; global log, store, and refs policy; operation-specific
-filesystem, network, process, database,
+and type decoding; global log/store/refs location, remote transport, TLS, and
+authentication policy; operation-specific filesystem, network, process, database,
 crypto, FFI, plugin, model, graphics, and device constraints; secret and path
 resolution; effect execution and cancellation; strict replay; and removal of the
 compatibility oracle. Policy aliases are governed separately by the policy-alias
