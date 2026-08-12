@@ -1,0 +1,263 @@
+(def selfhost/effect-crypto::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/effect-crypto::map-has-key-loop? entries) key)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/effect-crypto::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            (((selfhost/effect-crypto::map-has-key-loop? (core/map::entries map))
+               ((core/vec::get keys) index)) 0)
+            (((selfhost/effect-crypto::map-has-keys-loop? map) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/effect-crypto::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/policy::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/effect-crypto::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/effect-crypto::invalid-type?
+  (fn (value)
+    (if (selfhost/policy::sym? value)
+      ((core/sym::eq? value) (quote :invalid-type))
+      false)))
+
+(def selfhost/effect-crypto::invalid-entry?
+  (fn (value)
+    (if (selfhost/policy::sym? value)
+      ((core/sym::eq? value) (quote :invalid-entry))
+      false)))
+
+(def selfhost/effect-crypto::list-input-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (let ((value ((core/vec::get values) index)))
+          (if (selfhost/policy::str? value)
+            ((selfhost/effect-crypto::list-input-loop? values) ((core/int::add index) 1))
+            (selfhost/effect-crypto::invalid-entry? value)))))))
+
+(def selfhost/effect-crypto::list-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::vec? value)
+        ((selfhost/effect-crypto::list-input-loop? value) 0)
+        (selfhost/effect-crypto::invalid-type? value)))))
+
+(def selfhost/effect-crypto::limit-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::int? value)
+        true
+        (selfhost/effect-crypto::invalid-type? value)))))
+
+(def selfhost/effect-crypto::limit-input-fields-valid?
+  (fn (value)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            (selfhost/effect-crypto::limit-input?
+              ((core/map::get value) ((core/vec::get keys) index)))
+            (((selfhost/effect-crypto::limit-input-fields-valid? value) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/effect-crypto::fields
+  [
+    :algorithms
+    :key-ids
+    :max-aad-bytes
+    :max-ciphertext-bytes
+    :max-context-bytes
+    :max-info-bytes
+    :max-input-bytes
+    :max-message-bytes
+    :max-nonce-bytes
+    :max-output-bytes
+    :max-plaintext-bytes
+    :max-salt-bytes
+    :max-signature-bytes
+    :max-tag-bytes])
+
+(def selfhost/effect-crypto::limit-fields
+  [
+    :max-aad-bytes
+    :max-ciphertext-bytes
+    :max-context-bytes
+    :max-info-bytes
+    :max-input-bytes
+    :max-message-bytes
+    :max-nonce-bytes
+    :max-output-bytes
+    :max-plaintext-bytes
+    :max-salt-bytes
+    :max-signature-bytes
+    :max-tag-bytes])
+
+(def selfhost/effect-crypto::input-valid?
+  (fn (value)
+    (if ((selfhost/effect-crypto::exact-map? value) selfhost/effect-crypto::fields)
+      (if (selfhost/effect-crypto::list-input?
+            ((core/map::get value) (quote :algorithms)))
+        (if (selfhost/effect-crypto::list-input?
+              ((core/map::get value) (quote :key-ids)))
+          (((selfhost/effect-crypto::limit-input-fields-valid? value)
+             selfhost/effect-crypto::limit-fields) 0)
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-crypto::ascii-upper-byte?
+  (fn (byte)
+    (if ((core/int::lt? 64) byte) ((core/int::lt? byte) 91) false)))
+
+(def selfhost/effect-crypto::ascii-lower-loop
+  (fn (bytes)
+    (fn (index)
+      (fn (parts)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          (core/str::from-utf8 (core/bytes::join parts))
+          (let ((byte ((core/bytes::get bytes) index)))
+            (((selfhost/effect-crypto::ascii-lower-loop bytes)
+               ((core/int::add index) 1))
+              ((core/vec::push parts)
+                (if (selfhost/effect-crypto::ascii-upper-byte? byte)
+                  (core/utf8::encode-codepoint ((core/int::add byte) 32))
+                  (((core/bytes::slice bytes) index) 1))))))))))
+
+(def selfhost/effect-crypto::ascii-lower
+  (fn (value)
+    (((selfhost/effect-crypto::ascii-lower-loop (core/str::to-utf8 value)) 0) [])))
+
+(def selfhost/effect-crypto::list-policy-loop
+  (fn (values)
+    (fn (index)
+      (fn (lowercase)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len values))
+            (if ((core/int::eq? (core/vec::len out)) 0)
+              {:status (quote :empty) :values nil}
+              {:status (quote :valid) :values out})
+            (let ((value ((core/vec::get values) index)))
+              (if (selfhost/policy::str? value)
+                (let ((trimmed (selfhost/policy::trim value)))
+                  (((((selfhost/effect-crypto::list-policy-loop values)
+                       ((core/int::add index) 1)) lowercase)
+                    (if (selfhost/policy::non-empty-str? trimmed)
+                      ((core/vec::push out)
+                        (if lowercase
+                          (selfhost/effect-crypto::ascii-lower trimmed)
+                          trimmed))
+                      out))))
+                {:status (quote :invalid-entry) :values nil}))))))))
+
+(def selfhost/effect-crypto::list-policy
+  (fn (raw)
+    (fn (lowercase)
+      (if (selfhost/policy::nil? raw)
+        {:status (quote :absent) :values nil}
+        (if (selfhost/policy::vec? raw)
+          ((((selfhost/effect-crypto::list-policy-loop raw) 0) lowercase) [])
+          {:status (quote :invalid-type) :values nil})))))
+
+(def selfhost/effect-crypto::positive-limit-policy
+  (fn (raw)
+    (fn (platform-max)
+      (if (selfhost/policy::nil? raw)
+        {:limit nil :status (quote :absent)}
+        (if (selfhost/effect-crypto::invalid-type? raw)
+          {:limit nil :status (quote :invalid-type)}
+          (if ((core/int::lt? raw) 1)
+            {:limit nil :status (quote :nonpositive)}
+            (if ((core/int::lt? platform-max) raw)
+              {:limit nil :status (quote :platform-overflow)}
+              {:limit raw :status (quote :valid)})))))))
+
+(def selfhost/effect-crypto::empty-input
+  {
+    :algorithms nil
+    :key-ids nil
+    :max-aad-bytes nil
+    :max-ciphertext-bytes nil
+    :max-context-bytes nil
+    :max-info-bytes nil
+    :max-input-bytes nil
+    :max-message-bytes nil
+    :max-nonce-bytes nil
+    :max-output-bytes nil
+    :max-plaintext-bytes nil
+    :max-salt-bytes nil
+    :max-signature-bytes nil
+    :max-tag-bytes nil})
+
+(def selfhost/effect-crypto::policy
+  (fn (override)
+    (fn (platform-max)
+      (let ((crypto
+        (if (selfhost/policy::nil? override)
+          selfhost/effect-crypto::empty-input
+          ((core/map::get override) (quote :crypto-policy)))))
+        {
+          :algorithms
+            ((selfhost/effect-crypto::list-policy
+               ((core/map::get crypto) (quote :algorithms))) true)
+          :key-ids
+            ((selfhost/effect-crypto::list-policy
+               ((core/map::get crypto) (quote :key-ids))) false)
+          :max-aad-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-aad-bytes))) platform-max)
+          :max-ciphertext-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-ciphertext-bytes))) platform-max)
+          :max-context-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-context-bytes))) platform-max)
+          :max-info-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-info-bytes))) platform-max)
+          :max-input-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-input-bytes))) platform-max)
+          :max-message-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-message-bytes))) platform-max)
+          :max-nonce-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-nonce-bytes))) platform-max)
+          :max-output-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-output-bytes))) platform-max)
+          :max-plaintext-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-plaintext-bytes))) platform-max)
+          :max-salt-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-salt-bytes))) platform-max)
+          :max-signature-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-signature-bytes))) platform-max)
+          :max-tag-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get crypto) (quote :max-tag-bytes))) platform-max)}))))

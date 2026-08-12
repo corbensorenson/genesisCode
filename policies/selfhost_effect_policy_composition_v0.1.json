@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "2fa8b3f39504a5c2d8631b146ff2eda7ad9274958fe1ecd42cc22379c4b8224f",
+  "contentIdentitySha256": "3636dee67829735dfbd012f97d3bb5c41503682b40e1857d3bd9ec16a0641edf",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -11,6 +11,7 @@
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-crypto-policy",
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
     "per-operation-max-bytes-policy",
@@ -42,12 +43,11 @@
     "genesis",
     "genesis_wasi"
   ],
-  "requestKind": "genesis/effect-policy-authority-request-v0.6",
+  "requestKind": "genesis/effect-policy-authority-request-v0.7",
   "resourceBinding": "core/effects::resource-policy-authority",
   "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
   "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
   "residualDecisionInventory": [
-    "crypto-and-signing-policy",
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
@@ -56,7 +56,7 @@
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
   ],
-  "resultKind": "genesis/effect-policy-authority-result-v0.6",
+  "resultKind": "genesis/effect-policy-authority-result-v0.7",
   "runtimeEvidence": {
     "allocationLimit": 20000000,
     "stepLimit": 20000000,
@@ -65,10 +65,11 @@
   "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
   "sourceModule": "selfhost/effect_policy_authority_v1.gc",
   "sourceModules": [
+    "selfhost/effect_policy_crypto_v1.gc",
     "selfhost/effect_policy_network_v1.gc",
     "selfhost/effect_policy_authority_v1.gc"
   ],
-  "sourceSha256": "5630e032351a611d327be2d4118b0f7a9e358c5e72428d8026322ac723993898",
+  "sourceSha256": "d7d8ad8f94c245cc83171b4c4b802aa0458257c765b1eb817aaed3f8d3ee82c9",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.10"
+  "version": "0.1.11"
 }

@@ -112,6 +112,38 @@ fn network_policy_term(
     ]))
 }
 
+fn crypto_policy_term(
+    algorithms: Term,
+    key_ids: Term,
+    limits: impl IntoIterator<Item = (&'static str, Term)>,
+) -> Term {
+    let absent = max_bytes_policy(":absent", Term::Nil);
+    let mut fields = BTreeMap::from([
+        (TermOrdKey(Term::symbol(":algorithms")), algorithms),
+        (TermOrdKey(Term::symbol(":key-ids")), key_ids),
+    ]);
+    for key in [
+        ":max-aad-bytes",
+        ":max-ciphertext-bytes",
+        ":max-context-bytes",
+        ":max-info-bytes",
+        ":max-input-bytes",
+        ":max-message-bytes",
+        ":max-nonce-bytes",
+        ":max-output-bytes",
+        ":max-plaintext-bytes",
+        ":max-salt-bytes",
+        ":max-signature-bytes",
+        ":max-tag-bytes",
+    ] {
+        fields.insert(TermOrdKey(Term::symbol(key)), absent.clone());
+    }
+    for (key, value) in limits {
+        fields.insert(TermOrdKey(Term::symbol(key)), value);
+    }
+    Term::Map(fields)
+}
+
 #[test]
 fn selfhost_authority_composes_admission_and_canonical_caps() {
     let td = tempfile::tempdir().unwrap();
@@ -783,6 +815,146 @@ fn selfhost_authority_rejects_malformed_network_decisions() {
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_network_policy(&Term::Map(extra), true)
         .expect_err("unknown network authority fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_crypto_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."core/crypto::sign"]
+allow_algorithms = ["  Ed25519  ", ""]
+allow_key_ids = [" key-main "]
+max_message_bytes = 4096
+max_context_bytes = 128
+"#,
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let crypto = policy
+        .op_policy("core/crypto::sign")
+        .unwrap()
+        .authorized_crypto
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        crypto.algorithms,
+        AuthorizedStringList::Valid(vec!["ed25519".to_string()])
+    );
+    assert_eq!(
+        crypto.key_ids,
+        AuthorizedStringList::Valid(vec!["key-main".to_string()])
+    );
+    assert_eq!(crypto.max_message_bytes, AuthorizedMaxBytes::Valid(4096));
+    assert_eq!(crypto.max_context_bytes, AuthorizedMaxBytes::Valid(128));
+    assert_eq!(crypto.max_signature_bytes, AuthorizedMaxBytes::Absent);
+}
+
+#[test]
+fn selfhost_authority_preserves_invalid_crypto_policy_states() {
+    let cases = [
+        (
+            "allow_algorithms = \"ed25519\"",
+            AuthorizedStringList::InvalidType,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "allow_algorithms = [\"ed25519\", 7]",
+            AuthorizedStringList::InvalidEntry,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "allow_algorithms = [\"\", \"   \"]",
+            AuthorizedStringList::Empty,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "max_message_bytes = \"large\"",
+            AuthorizedStringList::Absent,
+            AuthorizedMaxBytes::InvalidType,
+        ),
+        (
+            "max_message_bytes = 0",
+            AuthorizedStringList::Absent,
+            AuthorizedMaxBytes::NonPositive,
+        ),
+    ];
+    for (setting, algorithms, max_message_bytes) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[op.\"core/crypto::sign\"]\n{setting}\n")).unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        let crypto = policy
+            .op_policy("core/crypto::sign")
+            .unwrap()
+            .authorized_crypto
+            .as_ref()
+            .unwrap();
+        assert_eq!(crypto.algorithms, algorithms, "setting: {setting}");
+        assert_eq!(
+            crypto.max_message_bytes, max_message_bytes,
+            "setting: {setting}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_crypto_decisions() {
+    use super::policy_authority::decode_crypto_policy;
+
+    let absent_list = string_list_policy(":absent", Term::Nil);
+    let valid = || crypto_policy_term(absent_list.clone(), absent_list.clone(), []);
+    decode_crypto_policy(&valid(), true).unwrap();
+
+    let cases = [
+        crypto_policy_term(
+            string_list_policy(
+                ":valid",
+                Term::Vector(vec![Term::Str("ED25519".to_string())]),
+            ),
+            absent_list.clone(),
+            [],
+        ),
+        crypto_policy_term(
+            absent_list.clone(),
+            string_list_policy(":valid", Term::Nil),
+            [],
+        ),
+        crypto_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            [(
+                ":max-message-bytes",
+                max_bytes_policy(":valid", Term::Int(0.into())),
+            )],
+        ),
+    ];
+    for decision in cases {
+        decode_crypto_policy(&decision, true)
+            .expect_err("contradictory crypto authority decision must fail closed");
+    }
+    decode_crypto_policy(&valid(), false)
+        .expect_err("denied operation must not carry a crypto decision");
+
+    let Term::Map(mut extra) = valid() else {
+        return;
+    };
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_crypto_policy(&Term::Map(extra), true)
+        .expect_err("unknown crypto authority fields must fail closed");
 }
 
 #[test]

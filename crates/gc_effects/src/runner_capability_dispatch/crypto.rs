@@ -1,4 +1,7 @@
 use super::*;
+#[cfg(test)]
+use crate::policy::AuthorizedCryptoPolicy;
+use crate::policy::{AuthorizedMaxBytes, AuthorizedStringList};
 
 fn payload_required_bytes_field(
     payload: &Term,
@@ -65,6 +68,35 @@ fn crypto_positive_usize_from_policy(
     op: &str,
     key: &str,
 ) -> Result<usize, String> {
+    if let Some(crypto) = pol.and_then(|policy| policy.authorized_crypto.as_ref()) {
+        let state = match key {
+            "max_aad_bytes" => &crypto.max_aad_bytes,
+            "max_ciphertext_bytes" => &crypto.max_ciphertext_bytes,
+            "max_context_bytes" => &crypto.max_context_bytes,
+            "max_info_bytes" => &crypto.max_info_bytes,
+            "max_input_bytes" => &crypto.max_input_bytes,
+            "max_message_bytes" => &crypto.max_message_bytes,
+            "max_nonce_bytes" => &crypto.max_nonce_bytes,
+            "max_output_bytes" => &crypto.max_output_bytes,
+            "max_plaintext_bytes" => &crypto.max_plaintext_bytes,
+            "max_salt_bytes" => &crypto.max_salt_bytes,
+            "max_signature_bytes" => &crypto.max_signature_bytes,
+            "max_tag_bytes" => &crypto.max_tag_bytes,
+            _ => return Err(format!("unknown crypto policy bound `{key}`")),
+        };
+        return match state {
+            AuthorizedMaxBytes::Absent => {
+                Err(format!("{op} requires per-op `{key}` bound in caps.toml"))
+            }
+            AuthorizedMaxBytes::InvalidType => Err(format!("{key} must be a positive integer")),
+            AuthorizedMaxBytes::NonPositive => Err(format!("{key} must be > 0")),
+            AuthorizedMaxBytes::PlatformOverflow => Err(format!(
+                "{key} is too large for this platform (max {})",
+                usize::MAX
+            )),
+            AuthorizedMaxBytes::Valid(limit) => Ok(*limit),
+        };
+    }
     match op_extra_positive_usize(pol, key)? {
         Some(value) => Ok(value),
         None => Err(format!("{op} requires per-op `{key}` bound in caps.toml")),
@@ -75,6 +107,13 @@ fn crypto_allow_algorithms_from_policy(
     pol: Option<&OpPolicy>,
     op: &str,
 ) -> Result<Vec<String>, String> {
+    if let Some(crypto) = pol.and_then(|policy| policy.authorized_crypto.as_ref()) {
+        return authorized_crypto_allowlist(
+            &crypto.algorithms,
+            "allow_algorithms",
+            &format!("{op} requires per-op allow_algorithms allowlist in caps.toml"),
+        );
+    }
     parse_nonempty_string_array(
         pol,
         "allow_algorithms",
@@ -87,11 +126,32 @@ fn crypto_allow_key_ids_from_policy(
     pol: Option<&OpPolicy>,
     op: &str,
 ) -> Result<Vec<String>, String> {
+    if let Some(crypto) = pol.and_then(|policy| policy.authorized_crypto.as_ref()) {
+        return authorized_crypto_allowlist(
+            &crypto.key_ids,
+            "allow_key_ids",
+            &format!("{op} requires per-op allow_key_ids allowlist in caps.toml"),
+        );
+    }
     parse_nonempty_string_array(
         pol,
         "allow_key_ids",
         &format!("{op} requires per-op allow_key_ids allowlist in caps.toml"),
     )
+}
+
+fn authorized_crypto_allowlist(
+    state: &AuthorizedStringList,
+    key: &str,
+    missing: &str,
+) -> Result<Vec<String>, String> {
+    match state {
+        AuthorizedStringList::Absent => Err(missing.to_string()),
+        AuthorizedStringList::InvalidType => Err(format!("{key} must be an array of strings")),
+        AuthorizedStringList::InvalidEntry => Err(format!("{key} entries must be strings")),
+        AuthorizedStringList::Empty => Err(format!("{key} must contain at least one entry")),
+        AuthorizedStringList::Valid(values) => Ok(values.clone()),
+    }
 }
 
 fn validate_crypto_algorithm_policy(
@@ -488,4 +548,108 @@ pub(super) fn capability_core_crypto_aead_open(
         }
     }
     crypto_bridge_call(bridge_runtime, op, payload, pol, error_tok)
+}
+
+#[cfg(test)]
+mod authority_tests {
+    use std::collections::BTreeMap;
+
+    use toml::Value as TomlValue;
+
+    use super::*;
+
+    fn absent_crypto() -> AuthorizedCryptoPolicy {
+        AuthorizedCryptoPolicy {
+            algorithms: AuthorizedStringList::Absent,
+            key_ids: AuthorizedStringList::Absent,
+            max_aad_bytes: AuthorizedMaxBytes::Absent,
+            max_ciphertext_bytes: AuthorizedMaxBytes::Absent,
+            max_context_bytes: AuthorizedMaxBytes::Absent,
+            max_info_bytes: AuthorizedMaxBytes::Absent,
+            max_input_bytes: AuthorizedMaxBytes::Absent,
+            max_message_bytes: AuthorizedMaxBytes::Absent,
+            max_nonce_bytes: AuthorizedMaxBytes::Absent,
+            max_output_bytes: AuthorizedMaxBytes::Absent,
+            max_plaintext_bytes: AuthorizedMaxBytes::Absent,
+            max_salt_bytes: AuthorizedMaxBytes::Absent,
+            max_signature_bytes: AuthorizedMaxBytes::Absent,
+            max_tag_bytes: AuthorizedMaxBytes::Absent,
+        }
+    }
+
+    fn policy(crypto: AuthorizedCryptoPolicy) -> OpPolicy {
+        OpPolicy {
+            base_dir: None,
+            create_dirs: false,
+            timeout_ms: None,
+            log_inline_max_bytes: None,
+            extra: BTreeMap::from([
+                (
+                    "allow_algorithms".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+                (
+                    "allow_key_ids".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+                (
+                    "max_message_bytes".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+            ]),
+            authorized_cap: None,
+            authorized_max_bytes: None,
+            authorized_process_programs: None,
+            authorized_database: None,
+            authorized_network: None,
+            authorized_crypto: Some(crypto),
+        }
+    }
+
+    #[test]
+    fn crypto_dispatch_consumes_authorized_policy_before_raw_policy() {
+        let mut crypto = absent_crypto();
+        crypto.algorithms = AuthorizedStringList::Valid(vec!["ed25519".to_string()]);
+        crypto.key_ids = AuthorizedStringList::Valid(vec!["key-main".to_string()]);
+        crypto.max_message_bytes = AuthorizedMaxBytes::Valid(4096);
+        let policy = policy(crypto);
+        assert_eq!(
+            crypto_allow_algorithms_from_policy(Some(&policy), "core/crypto::sign").unwrap(),
+            vec!["ed25519"]
+        );
+        assert_eq!(
+            crypto_allow_key_ids_from_policy(Some(&policy), "core/crypto::sign").unwrap(),
+            vec!["key-main"]
+        );
+        assert_eq!(
+            crypto_positive_usize_from_policy(
+                Some(&policy),
+                "core/crypto::sign",
+                "max_message_bytes"
+            )
+            .unwrap(),
+            4096
+        );
+    }
+
+    #[test]
+    fn crypto_dispatch_preserves_authorized_policy_errors() {
+        let mut crypto = absent_crypto();
+        crypto.algorithms = AuthorizedStringList::InvalidEntry;
+        crypto.max_message_bytes = AuthorizedMaxBytes::NonPositive;
+        let policy = policy(crypto);
+        assert_eq!(
+            crypto_allow_algorithms_from_policy(Some(&policy), "core/crypto::sign").unwrap_err(),
+            "allow_algorithms entries must be strings"
+        );
+        assert_eq!(
+            crypto_positive_usize_from_policy(
+                Some(&policy),
+                "core/crypto::sign",
+                "max_message_bytes"
+            )
+            .unwrap_err(),
+            "max_message_bytes must be > 0"
+        );
+    }
 }

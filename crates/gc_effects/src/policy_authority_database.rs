@@ -1,7 +1,7 @@
 use super::*;
 use crate::policy::AuthorizedStringList;
 
-fn string_list_input(value: Option<&toml::Value>) -> Term {
+pub(super) fn string_list_input(value: Option<&toml::Value>) -> Term {
     match value {
         None => Term::Nil,
         Some(value) => match value.as_array() {

@@ -184,6 +184,24 @@ pub(crate) struct AuthorizedNetworkPolicy {
     pub max_request_bytes: AuthorizedMaxBytes,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedCryptoPolicy {
+    pub algorithms: AuthorizedStringList,
+    pub key_ids: AuthorizedStringList,
+    pub max_aad_bytes: AuthorizedMaxBytes,
+    pub max_ciphertext_bytes: AuthorizedMaxBytes,
+    pub max_context_bytes: AuthorizedMaxBytes,
+    pub max_info_bytes: AuthorizedMaxBytes,
+    pub max_input_bytes: AuthorizedMaxBytes,
+    pub max_message_bytes: AuthorizedMaxBytes,
+    pub max_nonce_bytes: AuthorizedMaxBytes,
+    pub max_output_bytes: AuthorizedMaxBytes,
+    pub max_plaintext_bytes: AuthorizedMaxBytes,
+    pub max_salt_bytes: AuthorizedMaxBytes,
+    pub max_signature_bytes: AuthorizedMaxBytes,
+    pub max_tag_bytes: AuthorizedMaxBytes,
+}
+
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
@@ -196,6 +214,7 @@ pub struct OpPolicy {
     pub(crate) authorized_process_programs: Option<AuthorizedProcessPrograms>,
     pub(crate) authorized_database: Option<AuthorizedDatabasePolicy>,
     pub(crate) authorized_network: Option<AuthorizedNetworkPolicy>,
+    pub(crate) authorized_crypto: Option<AuthorizedCryptoPolicy>,
 }
 
 impl CapsPolicy {
@@ -308,6 +327,7 @@ impl CapsPolicy {
                         authorized_process_programs: None,
                         authorized_database: None,
                         authorized_network: None,
+                        authorized_crypto: None,
                     },
                 );
             }

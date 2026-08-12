@@ -103,6 +103,7 @@ mod tests {
             authorized_process_programs: None,
             authorized_database: Some(authorized),
             authorized_network: None,
+            authorized_crypto: None,
         }
     }
 

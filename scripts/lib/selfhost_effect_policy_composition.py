@@ -82,6 +82,7 @@ DECISIONS = [
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-crypto-policy",
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
     "per-operation-max-bytes-policy",
@@ -92,7 +93,6 @@ DECISIONS = [
 ]
 
 RESIDUALS = {
-    "crypto-and-signing-policy",
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
@@ -125,11 +125,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.6",
+        "requestKind": "genesis/effect-policy-authority-request-v0.7",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.6",
+        "resultKind": "genesis/effect-policy-authority-result-v0.7",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -138,11 +138,12 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "sourceModules": [
+            "selfhost/effect_policy_crypto_v1.gc",
             "selfhost/effect_policy_network_v1.gc",
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.10",
+        "version": "0.1.11",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -214,6 +215,10 @@ def static_check(root: Path, profile):
         fail("effect-policy database boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_network.rs"]') != 1:
         fail("effect-policy network boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_cap.rs"]') != 1:
+        fail("effect-policy capability boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_crypto.rs"]') != 1:
+        fail("effect-policy crypto boundary decomposition drift")
     resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
     if resource_boundary_path.is_symlink() or not resource_boundary_path.is_file():
         fail("effect-policy resource host boundary is missing or symlinked")
@@ -226,12 +231,20 @@ def static_check(root: Path, profile):
     network_boundary_path = root / "crates/gc_effects/src/policy_authority_network.rs"
     if network_boundary_path.is_symlink() or not network_boundary_path.is_file():
         fail("effect-policy network host boundary is missing or symlinked")
+    cap_boundary_path = root / "crates/gc_effects/src/policy_authority_cap.rs"
+    if cap_boundary_path.is_symlink() or not cap_boundary_path.is_file():
+        fail("effect-policy capability host boundary is missing or symlinked")
+    crypto_boundary_path = root / "crates/gc_effects/src/policy_authority_crypto.rs"
+    if crypto_boundary_path.is_symlink() or not crypto_boundary_path.is_file():
+        fail("effect-policy crypto host boundary is missing or symlinked")
     authority = (
         authority_root
         + resource_boundary_path.read_text()
         + process_boundary_path.read_text()
         + database_boundary_path.read_text()
         + network_boundary_path.read_text()
+        + cap_boundary_path.read_text()
+        + crypto_boundary_path.read_text()
     )
     required_authority = [
         "const MAX_POLICY_OPS: usize = 4_096;",
@@ -259,6 +272,7 @@ def static_check(root: Path, profile):
         "op_policy.authorized_process_programs = Some(authorized.process_programs);",
         "op_policy.authorized_database = Some(authorized.database);",
         "op_policy.authorized_network = Some(authorized.network);",
+        "op_policy.authorized_crypto = Some(authorized.crypto);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -364,6 +378,20 @@ def static_check(root: Path, profile):
         body = remote_policy.split(start, 1)[1].split(end, 1)[0]
         if "authorized_network" not in body or body.find("authorized_network") >= body.find("pol.extra"):
             fail(f"remote enforcement consults raw policy before authority state: {start}")
+    crypto_policy = (
+        root / "crates/gc_effects/src/runner_capability_dispatch/crypto.rs"
+    ).read_text()
+    for start, end, fallback in (
+        ("fn crypto_positive_usize_from_policy", "fn crypto_allow_algorithms_from_policy", "op_extra_positive_usize"),
+        ("fn crypto_allow_algorithms_from_policy", "fn crypto_allow_key_ids_from_policy", "parse_nonempty_string_array"),
+        ("fn crypto_allow_key_ids_from_policy", "fn authorized_crypto_allowlist", "parse_nonempty_string_array"),
+    ):
+        body = crypto_policy.split(start, 1)[1].split(end, 1)[0]
+        if "authorized_crypto" not in body or body.find("authorized_crypto") >= body.find(fallback):
+            fail(f"crypto enforcement consults raw policy before authority state: {start}")
+    for operation in ("hash", "sign", "verify", "kdf", "aead_seal", "aead_open"):
+        if crypto_policy.count(f"fn capability_core_crypto_{operation}(") != 1:
+            fail(f"crypto operation policy inventory drift: {operation}")
     effect_source = (root / profile["sourceModule"]).read_text()
     cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
         "(def core/effects::policy-authority", 1
@@ -461,6 +489,9 @@ def static_check(root: Path, profile):
         "selfhost_authority_installs_network_policy",
         "selfhost_authority_preserves_invalid_network_policy_states",
         "selfhost_authority_rejects_malformed_network_decisions",
+        "selfhost_authority_installs_crypto_policy",
+        "selfhost_authority_preserves_invalid_crypto_policy_states",
+        "selfhost_authority_rejects_malformed_crypto_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -488,6 +519,12 @@ def static_check(root: Path, profile):
     ):
         if remote_policy.count(f"fn {name}()") != 1:
             fail(f"missing focused remote network authority control: {name}")
+    for name in (
+        "crypto_dispatch_consumes_authorized_policy_before_raw_policy",
+        "crypto_dispatch_preserves_authorized_policy_errors",
+    ):
+        if crypto_policy.count(f"fn {name}()") != 1:
+            fail(f"missing focused crypto authority control: {name}")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]
@@ -517,7 +554,8 @@ def mutation_controls(profile, schema):
         ("result", lambda item: item.__setitem__("resultKind", "unknown")),
         ("runtime", lambda item: item["runtimeEvidence"].__setitem__("stepLimit", 0)),
         ("source", lambda item: item.__setitem__("sourceModule", "selfhost/unknown.gc")),
-        ("source-set", lambda item: item["sourceModules"].pop()),
+        ("crypto-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_crypto_v1.gc")),
+        ("source-order", lambda item: item["sourceModules"].reverse()),
         ("unknown", lambda item: item.__setitem__("unexpected", True)),
     ]
     rejected = 0

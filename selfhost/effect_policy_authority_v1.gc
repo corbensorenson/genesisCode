@@ -337,43 +337,54 @@
       ((core/error::make2 "core/policy/authority")
         "effect-policy inventory request must be a map"))))
 
+(def selfhost/effect-policy::all-true-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if ((core/vec::get values) index)
+          ((selfhost/effect-policy::all-true-loop? values) ((core/int::add index) 1))
+          false)))))
+
 (def selfhost/effect-policy::override-valid?
   (fn (override)
     (if (selfhost/policy::nil? override)
       true
-      (if (selfhost/policy::map? override)
-        (if ((core/int::eq? (core/map::len override)) 9)
-          (if (selfhost/effect-policy::optional-bool? ((core/map::get override) (quote :allow)))
-            (if (selfhost/effect-policy::optional-str?
-                  ((core/map::get override) (quote :base-dir)))
-              (if
-                (selfhost/effect-policy::optional-bool?
-                  ((core/map::get override) (quote :create-dirs)))
-                (if (selfhost/effect-policy::database-input-valid?
-                      ((core/map::get override) (quote :database-policy)))
-                    (if
-                      (selfhost/effect-policy::optional-int?
-                        ((core/map::get override) (quote :log-inline-max-bytes)))
-                      (if
-                        (selfhost/effect-policy::limit-input-valid?
-                          ((core/map::get override) (quote :max-bytes)))
-                        (if
-                          (selfhost/effect-network::input-valid?
-                            ((core/map::get override) (quote :network-policy)))
-                          (if
-                            (selfhost/effect-policy::process-program-input-valid?
-                              ((core/map::get override) (quote :process-programs)))
-                            (selfhost/effect-policy::optional-int?
-                              ((core/map::get override) (quote :timeout-ms)))
-                            false)
-                        false)
-                      false)
-                    false)
-                  false)
-                false)
-              false)
-            false)
-          false)
+      (if
+        ((selfhost/effect-policy::exact-map? override)
+          [
+            :allow
+            :base-dir
+            :create-dirs
+            :crypto-policy
+            :database-policy
+            :log-inline-max-bytes
+            :max-bytes
+            :network-policy
+            :process-programs
+            :timeout-ms])
+        ((selfhost/effect-policy::all-true-loop?
+           [
+             (selfhost/effect-policy::optional-bool?
+               ((core/map::get override) (quote :allow)))
+             (selfhost/effect-policy::optional-str?
+               ((core/map::get override) (quote :base-dir)))
+             (selfhost/effect-policy::optional-bool?
+               ((core/map::get override) (quote :create-dirs)))
+             (selfhost/effect-crypto::input-valid?
+               ((core/map::get override) (quote :crypto-policy)))
+             (selfhost/effect-policy::database-input-valid?
+               ((core/map::get override) (quote :database-policy)))
+             (selfhost/effect-policy::optional-int?
+               ((core/map::get override) (quote :log-inline-max-bytes)))
+             (selfhost/effect-policy::limit-input-valid?
+               ((core/map::get override) (quote :max-bytes)))
+             (selfhost/effect-network::input-valid?
+               ((core/map::get override) (quote :network-policy)))
+             (selfhost/effect-policy::process-program-input-valid?
+               ((core/map::get override) (quote :process-programs)))
+             (selfhost/effect-policy::optional-int?
+               ((core/map::get override) (quote :timeout-ms)))]) 0)
         false))))
 
 (def selfhost/effect-policy::process-program-input-valid-loop?
@@ -575,8 +586,8 @@
             (override ((core/map::get request) (quote :override)))
             (platform-max ((core/map::get request) (quote :platform-max-bytes))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.6")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 6) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.7")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 7) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -599,11 +610,15 @@
                             ((core/map::get override) (quote :base-dir)))
                           nil)
                       :cap (if allowed ((selfhost/effect-policy::cap op) override) nil)
+                      :crypto-policy
+                        (if allowed
+                          ((selfhost/effect-crypto::policy override) platform-max)
+                          nil)
                       :database-policy
                         (if allowed
                           ((selfhost/effect-policy::database-policy override) platform-max)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.6"
+                      :kind "genesis/effect-policy-authority-result-v0.7"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -618,7 +633,7 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 6}))
+                      :v 7}))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly optional typed admission and base fields"))
               ((core/error::make2 "core/policy/authority")

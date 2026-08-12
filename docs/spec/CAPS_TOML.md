@@ -213,7 +213,7 @@ Supported keys:
 - `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
 
-For artifact-only production policy loads, GenesisCode authority protocol v0.6
+For artifact-only production policy loads, GenesisCode authority protocol v0.7
 normalizes `url_allow`, `remote_allow`, `allow_http`, `wasi_network_profile`,
 `allow_bind_hosts`, `allow_bind_ports`, and `max_request_bytes` into closed typed
 states before any network, sync, publication, or store-remote consumer runs.
@@ -228,6 +228,22 @@ reachable only through the explicit compatibility/oracle path during R4.2.d.
   - File-backed production policy loads transport all five database fields through
     `core/effects::policy-authority`; GenesisCode normalizes their closed state,
     and host dispatch enforces only the validated installed result.
+- `allow_algorithms` (array<string>): required algorithm allowlist for
+  `core/crypto::{hash,sign,verify,kdf,aead-seal,aead-open}`. Entries are trimmed
+  and ASCII-lowercased by the GenesisCode policy authority before matching.
+- `allow_key_ids` (array<string>): required signing, verification, KDF, or AEAD
+  key-ID allowlist. Entries are trimmed and remain case-sensitive.
+- `max_input_bytes`, `max_message_bytes`, `max_context_bytes`,
+  `max_signature_bytes`, `max_info_bytes`, `max_output_bytes`,
+  `max_salt_bytes`, `max_plaintext_bytes`, `max_aad_bytes`,
+  `max_nonce_bytes`, `max_ciphertext_bytes`, and `max_tag_bytes` (int): required
+  positive, platform-sized limits consumed by their corresponding crypto
+  operation inputs or outputs.
+  - File-backed production policy loads transport all fourteen crypto fields
+    through `core/effects::policy-authority`; GenesisCode normalizes their closed
+    states, and host dispatch enforces only the validated installed result.
+    Matching, key custody, cryptographic execution, measurement, and output
+    enforcement remain host mechanisms.
 - `allow_programs` (array<string>): required allowlist for process launch ops (`sys/process::exec`, `sys/process::spawn`) program names.
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
 - `allow_commands` (array<string>): required command allowlist for `host/plugin::command` and `editor/plugin::command`.

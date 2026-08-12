@@ -517,6 +517,7 @@ mod network_authority_tests {
             authorized_process_programs: None,
             authorized_database: None,
             authorized_network: Some(network),
+            authorized_crypto: None,
         }
     }
 

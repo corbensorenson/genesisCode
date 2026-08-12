@@ -39,7 +39,7 @@
     "binding": {"const": "core/effects::policy-authority"},
     "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "decisionInventory": {
-      "const": ["baseline-operation-admission", "candidate-operation-inventory", "canonical-log-cap-descriptor", "global-log-and-store-resource-limits", "global-log-store-refs-location-defaults", "per-operation-allow-precedence", "per-operation-base-directory-selection", "per-operation-database-policy", "per-operation-enforcement-control-selection", "per-operation-max-bytes-policy", "per-operation-network-policy", "per-operation-process-program-policy", "runtime-resource-limits", "task-resource-limits-and-default-workers"]
+      "const": ["baseline-operation-admission", "candidate-operation-inventory", "canonical-log-cap-descriptor", "global-log-and-store-resource-limits", "global-log-store-refs-location-defaults", "per-operation-allow-precedence", "per-operation-base-directory-selection", "per-operation-crypto-policy", "per-operation-database-policy", "per-operation-enforcement-control-selection", "per-operation-max-bytes-policy", "per-operation-network-policy", "per-operation-process-program-policy", "runtime-resource-limits", "task-resource-limits-and-default-workers"]
     },
     "hostOracle": {
       "type": "object",
@@ -58,12 +58,12 @@
     "maxPolicyOperations": {"const": 4096},
     "nonclaims": {"type": "array", "minItems": 7, "uniqueItems": true, "items": {"type": "string"}},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
-    "requestKind": {"const": "genesis/effect-policy-authority-request-v0.6"},
+    "requestKind": {"const": "genesis/effect-policy-authority-request-v0.7"},
     "resourceBinding": {"const": "core/effects::resource-policy-authority"},
     "resourceRequestKind": {"const": "genesis/effect-resource-policy-request-v0.3"},
     "resourceResultKind": {"const": "genesis/effect-resource-policy-result-v0.3"},
-    "residualDecisionInventory": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
-    "resultKind": {"const": "genesis/effect-policy-authority-result-v0.6"},
+    "residualDecisionInventory": {"type": "array", "minItems": 7, "uniqueItems": true, "items": {"type": "string"}},
+    "resultKind": {"const": "genesis/effect-policy-authority-result-v0.7"},
     "runtimeEvidence": {
       "type": "object",
       "additionalProperties": false,
@@ -76,9 +76,9 @@
     },
     "schema": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json"},
     "sourceModule": {"const": "selfhost/effect_policy_authority_v1.gc"},
-    "sourceModules": {"const": ["selfhost/effect_policy_network_v1.gc", "selfhost/effect_policy_authority_v1.gc"]},
+    "sourceModules": {"const": ["selfhost/effect_policy_crypto_v1.gc", "selfhost/effect_policy_network_v1.gc", "selfhost/effect_policy_authority_v1.gc"]},
     "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md"},
-    "version": {"const": "0.1.10"}
+    "version": {"const": "0.1.11"}
   }
 }

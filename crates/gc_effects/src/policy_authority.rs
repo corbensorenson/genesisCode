@@ -11,10 +11,14 @@ use num_traits::ToPrimitive;
 use crate::error::EffectsError;
 
 use super::{
-    AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
+    AuthorizedCryptoPolicy, AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
     AuthorizedProcessPrograms, CapsPolicy, OpPolicy,
 };
 
+#[path = "policy_authority_cap.rs"]
+mod cap;
+#[path = "policy_authority_crypto.rs"]
+mod crypto;
 #[path = "policy_authority_database.rs"]
 mod database;
 #[path = "policy_authority_network.rs"]
@@ -43,6 +47,20 @@ pub(super) fn decode_network_policy(
     allowed: bool,
 ) -> Result<AuthorizedNetworkPolicy, EffectsError> {
     network::decode(term, allowed)
+}
+#[cfg(test)]
+pub(super) fn decode_crypto_policy(
+    term: &Term,
+    allowed: bool,
+) -> Result<AuthorizedCryptoPolicy, EffectsError> {
+    crypto::decode(term, allowed)
+}
+#[cfg(test)]
+pub(super) fn decode_cap(
+    term: &Term,
+    op: &str,
+) -> Result<(bool, Option<u64>, Option<usize>), EffectsError> {
+    cap::decode(term, op)
 }
 
 const MAX_POLICY_OPS: usize = 4_096;
@@ -119,6 +137,10 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
                 optional_bool(table.get("create_dirs")),
             ),
             (
+                TermOrdKey(Term::symbol(":crypto-policy")),
+                crypto::input(table),
+            ),
+            (
                 TermOrdKey(Term::symbol(":database-policy")),
                 database::input(table),
             ),
@@ -157,7 +179,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.6".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.7".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
@@ -165,7 +187,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(6.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(7.into())),
         ]
         .into_iter()
         .collect(),
@@ -265,27 +287,6 @@ fn plain_authority_result(
     }
 }
 
-fn legacy_cap(op: &str, policy: &OpPolicy) -> Term {
-    let mut cap = BTreeMap::new();
-    cap.insert(TermOrdKey(Term::symbol(":op")), Term::symbol(op));
-    if policy.create_dirs {
-        cap.insert(TermOrdKey(Term::symbol(":create-dirs")), Term::Bool(true));
-    }
-    if let Some(timeout_ms) = policy.timeout_ms {
-        cap.insert(
-            TermOrdKey(Term::symbol(":timeout-ms")),
-            Term::Int(timeout_ms.into()),
-        );
-    }
-    if let Some(limit) = policy.log_inline_max_bytes {
-        cap.insert(
-            TermOrdKey(Term::symbol(":log-inline-max-bytes")),
-            Term::Int(limit.into()),
-        );
-    }
-    Term::Map(cap)
-}
-
 fn legacy_max_bytes(policy: Option<&OpPolicy>) -> AuthorizedMaxBytes {
     let Some(value) = policy.and_then(|policy| policy.extra.get("max_bytes")) else {
         return AuthorizedMaxBytes::Absent;
@@ -312,6 +313,7 @@ struct AuthorizedOperation {
     process_programs: AuthorizedProcessPrograms,
     database: AuthorizedDatabasePolicy,
     network: AuthorizedNetworkPolicy,
+    crypto: AuthorizedCryptoPolicy,
     cap: Term,
 }
 
@@ -373,74 +375,6 @@ pub(super) fn decode_max_bytes_policy(
     }
 }
 
-pub(super) fn decode_cap(
-    cap: &Term,
-    op: &str,
-) -> Result<(bool, Option<u64>, Option<usize>), EffectsError> {
-    let Term::Map(map) = cap else {
-        return Err(authority_error("result :cap must be a data map"));
-    };
-    let allowed_keys: BTreeSet<_> = [
-        ":create-dirs",
-        ":log-inline-max-bytes",
-        ":op",
-        ":timeout-ms",
-    ]
-    .into_iter()
-    .map(|key| TermOrdKey(Term::symbol(key)))
-    .collect();
-    if map.keys().any(|key| !allowed_keys.contains(key)) {
-        return Err(authority_error("result :cap field set mismatch"));
-    }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Symbol(actual)) if actual == op)
-    {
-        return Err(authority_error("result :cap operation mismatch"));
-    }
-    let create_dirs = match map.get(&TermOrdKey(Term::symbol(":create-dirs"))) {
-        None => false,
-        Some(Term::Bool(true)) => true,
-        _ => {
-            return Err(authority_error(
-                "result :cap :create-dirs must be omitted or true",
-            ));
-        }
-    };
-    let timeout_ms = match map.get(&TermOrdKey(Term::symbol(":timeout-ms"))) {
-        None => None,
-        Some(Term::Int(value)) => value
-            .to_u64()
-            .map(Some)
-            .ok_or_else(|| authority_error("result :cap :timeout-ms must fit a nonnegative u64"))?,
-        _ => {
-            return Err(authority_error(
-                "result :cap :timeout-ms must be an integer",
-            ));
-        }
-    };
-    let log_inline_max_bytes = match map.get(&TermOrdKey(Term::symbol(":log-inline-max-bytes"))) {
-        None => None,
-        Some(Term::Int(value)) => {
-            let limit = value.to_usize().ok_or_else(|| {
-                authority_error(
-                    "result :cap :log-inline-max-bytes must fit a positive platform usize",
-                )
-            })?;
-            if limit == 0 {
-                return Err(authority_error(
-                    "result :cap :log-inline-max-bytes must be positive",
-                ));
-            }
-            Some(limit)
-        }
-        _ => {
-            return Err(authority_error(
-                "result :cap :log-inline-max-bytes must be an integer",
-            ));
-        }
-    };
-    Ok((create_dirs, timeout_ms, log_inline_max_bytes))
-}
-
 fn decode_result(
     term: Term,
     op: &str,
@@ -453,6 +387,7 @@ fn decode_result(
         ":allowed",
         ":base-dir",
         ":cap",
+        ":crypto-policy",
         ":database-policy",
         ":kind",
         ":max-bytes-policy",
@@ -468,8 +403,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.6")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &6.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.7")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &7.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -495,7 +430,7 @@ fn decode_result(
         return Err(authority_error("result :base-dir contradicts :allowed"));
     }
     let (create_dirs, timeout_ms, log_inline_max_bytes) = if allowed {
-        decode_cap(&cap, op)?
+        cap::decode(&cap, op)?
     } else {
         (false, None, None)
     };
@@ -519,6 +454,11 @@ fn decode_result(
             .ok_or_else(|| authority_error("result is missing :network-policy"))?,
         allowed,
     )?;
+    let crypto = crypto::decode(
+        map.get(&TermOrdKey(Term::symbol(":crypto-policy")))
+            .ok_or_else(|| authority_error("result is missing :crypto-policy"))?,
+        allowed,
+    )?;
     Ok(AuthorizedOperation {
         allowed,
         base_dir,
@@ -529,6 +469,7 @@ fn decode_result(
         process_programs,
         database,
         network,
+        crypto,
         cap,
     })
 }
@@ -643,12 +584,13 @@ pub(super) fn authorize_policy(
         let authorized = decode_result(term, &op, request_hash)?;
         let expected = legacy_ops.get(&op);
         if authorized.allowed != expected.is_some()
-            || expected.is_some_and(|policy| authorized.cap != legacy_cap(&op, policy))
+            || expected.is_some_and(|policy| authorized.cap != cap::legacy(&op, policy))
             || authorized.base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
             || authorized.max_bytes != legacy_max_bytes(expected)
             || authorized.process_programs != process::legacy(expected)
             || authorized.database != database::legacy(expected)
             || authorized.network != network::legacy(expected)
+            || authorized.crypto != crypto::legacy(expected)
         {
             return Err(authority_error(format!(
                 "result for `{op}` contradicts independently reconstructed policy composition"
@@ -667,6 +609,7 @@ pub(super) fn authorize_policy(
             op_policy.authorized_process_programs = Some(authorized.process_programs);
             op_policy.authorized_database = Some(authorized.database);
             op_policy.authorized_network = Some(authorized.network);
+            op_policy.authorized_crypto = Some(authorized.crypto);
             op_policy.authorized_cap = Some(authorized.cap);
             authorized_ops.insert(op, op_policy);
         }

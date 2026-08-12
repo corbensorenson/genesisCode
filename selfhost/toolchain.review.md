@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `c4f89fb2dcf335fdd9b7c85794990aa5b22f59c5a61a3a41ba0fe82bb369252d`
-- Freshness artifact hash: `c4f89fb2dcf335fdd9b7c85794990aa5b22f59c5a61a3a41ba0fe82bb369252d`
-- Freshness source hash: `90209467e85281ae97c46d1c3d047039fe6a471bf4bc712c8f793d96394efaf6`
-- Source aggregate hash (module path + module sha256): `882c61f439faa607697969065bb2a7004a0b38fb0d9b7439dc4a2e532cc41a5f`
+- Artifact sha256: `e9c00e09410574f26f17636eb26e76d8f62948b40bdb1aa5a523ef54e254792a`
+- Freshness artifact hash: `e9c00e09410574f26f17636eb26e76d8f62948b40bdb1aa5a523ef54e254792a`
+- Freshness source hash: `84f8b43f8c7c7a4ca47d903cc9ecdccfc9d45f56725e239a8efba9f76164ad6e`
+- Source aggregate hash (module path + module sha256): `d6a003fdb3316cfe111400f30bcc2cd36496e8df8f91222458bd68dca1444cd9`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `73`
+- Module count: `74`
 
 ## Module Summary
 
@@ -71,8 +71,9 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/patch_authority_merge_v1.gc` | 275 | 11984 | 21 | `a73aa5b6e94e9048` |
 | `selfhost/patch_authority_apply_report_v1.gc` | 136 | 6196 | 12 | `12f15a3a4ab781ff` |
 | `selfhost/policy_authority_v1.gc` | 345 | 15515 | 30 | `e7f1616be08a7385` |
+| `selfhost/effect_policy_crypto_v1.gc` | 263 | 9717 | 20 | `8c6321d883078c80` |
 | `selfhost/effect_policy_network_v1.gc` | 267 | 10410 | 21 | `778de86429de628f` |
-| `selfhost/effect_policy_authority_v1.gc` | 630 | 27937 | 37 | `e58332ec05bf4461` |
+| `selfhost/effect_policy_authority_v1.gc` | 645 | 28353 | 38 | `bfea7edf2e81121e` |
 | `selfhost/obligation_authority_core_v1.gc` | 570 | 24016 | 50 | `859184a3ee1f4dba` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
 | `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
@@ -147,6 +148,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/patch_authority_merge_v1.gc`: `selfhost/patch_merge::REQUEST_KIND`, `selfhost/patch_merge::REPORT_KIND`, `selfhost/patch_merge::PROFILE`, `selfhost/patch_merge::err`, `selfhost/patch_merge::optional-eq?`, `selfhost/patch_merge::optional-term`, `selfhost/patch_merge::conflict-core`, `selfhost/patch_merge::conflict`
 - `selfhost/patch_authority_apply_report_v1.gc`: `selfhost/patch_apply_report::REQUEST_KIND`, `selfhost/patch_apply_report::REPORT_KIND`, `selfhost/patch_apply_report::PROFILE`, `selfhost/patch_apply_report::err`, `selfhost/patch_apply_report::bool?`, `selfhost/patch_apply_report::hash?`, `selfhost/patch_apply_report::edits-valid-loop`, `selfhost/patch_apply_report::edits-valid?`
 - `selfhost/policy_authority_v1.gc`: `selfhost/policy::error`, `selfhost/policy::failure`, `selfhost/policy::map?`, `selfhost/policy::vec?`, `selfhost/policy::str?`, `selfhost/policy::sym?`, `selfhost/policy::int?`, `selfhost/policy::nil?`
+- `selfhost/effect_policy_crypto_v1.gc`: `selfhost/effect-crypto::map-has-key-loop?`, `selfhost/effect-crypto::map-has-keys-loop?`, `selfhost/effect-crypto::exact-map?`, `selfhost/effect-crypto::invalid-type?`, `selfhost/effect-crypto::invalid-entry?`, `selfhost/effect-crypto::list-input-loop?`, `selfhost/effect-crypto::list-input?`, `selfhost/effect-crypto::limit-input?`
 - `selfhost/effect_policy_network_v1.gc`: `selfhost/effect-network::map-has-key-loop?`, `selfhost/effect-network::map-has-keys-loop?`, `selfhost/effect-network::exact-map?`, `selfhost/effect-network::invalid-type?`, `selfhost/effect-network::invalid-entry?`, `selfhost/effect-network::list-input-loop?`, `selfhost/effect-network::list-input?`, `selfhost/effect-network::optional-bool-input?`
 - `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::optional-str?`, `selfhost/effect-policy::map-has-key-loop?`, `selfhost/effect-policy::map-has-key?`, `selfhost/effect-policy::map-has-keys-loop?`, `selfhost/effect-policy::exact-map?`, `selfhost/effect-policy::optional-nonnegative-int?`
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
