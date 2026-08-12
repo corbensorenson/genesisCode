@@ -342,7 +342,7 @@
     (if (selfhost/policy::nil? override)
       true
       (if (selfhost/policy::map? override)
-        (if ((core/int::eq? (core/map::len override)) 6)
+        (if ((core/int::eq? (core/map::len override)) 7)
           (if (selfhost/effect-policy::optional-bool? ((core/map::get override) (quote :allow)))
             (if (selfhost/effect-policy::optional-str?
                   ((core/map::get override) (quote :base-dir)))
@@ -361,8 +361,12 @@
                           (if (selfhost/policy::sym? max-bytes)
                             ((core/sym::eq? max-bytes) (quote :invalid-type))
                             false))))
-                    (selfhost/effect-policy::optional-int?
-                      ((core/map::get override) (quote :timeout-ms)))
+                    (if
+                      (selfhost/effect-policy::process-program-input-valid?
+                        ((core/map::get override) (quote :process-programs)))
+                      (selfhost/effect-policy::optional-int?
+                        ((core/map::get override) (quote :timeout-ms)))
+                      false)
                     false)
                   false)
                 false)
@@ -370,6 +374,60 @@
             false)
           false)
         false))))
+
+(def selfhost/effect-policy::process-program-input-valid-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (let ((value ((core/vec::get values) index)))
+          (if (selfhost/policy::str? value)
+            ((selfhost/effect-policy::process-program-input-valid-loop? values)
+              ((core/int::add index) 1))
+            (if (selfhost/policy::sym? value)
+              ((core/sym::eq? value) (quote :invalid-entry))
+              false)))))))
+
+(def selfhost/effect-policy::process-program-input-valid?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::vec? value)
+        ((selfhost/effect-policy::process-program-input-valid-loop? value) 0)
+        (if (selfhost/policy::sym? value)
+          ((core/sym::eq? value) (quote :invalid-type))
+          false)))))
+
+(def selfhost/effect-policy::process-program-policy-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (if ((core/int::eq? (core/vec::len out)) 0)
+            {:programs nil :status (quote :empty)}
+            {:programs out :status (quote :valid)})
+          (let ((value ((core/vec::get values) index)))
+            (if (selfhost/policy::str? value)
+              (let ((trimmed (selfhost/policy::trim value)))
+                (((selfhost/effect-policy::process-program-policy-loop values)
+                   ((core/int::add index) 1))
+                  (if (selfhost/policy::non-empty-str? trimmed)
+                    ((core/vec::push out) trimmed)
+                    out)))
+              {:programs nil :status (quote :invalid-entry)})))))))
+
+(def selfhost/effect-policy::process-program-policy
+  (fn (override)
+    (let
+      ((raw
+        (if (selfhost/policy::nil? override)
+          nil
+          ((core/map::get override) (quote :process-programs)))))
+      (if (selfhost/policy::nil? raw)
+        {:programs nil :status (quote :absent)}
+        (if (selfhost/policy::vec? raw)
+          (((selfhost/effect-policy::process-program-policy-loop raw) 0) [])
+          {:programs nil :status (quote :invalid-type)})))))
 
 (def selfhost/effect-policy::max-bytes-policy
   (fn (override)
@@ -441,8 +499,8 @@
             (override ((core/map::get request) (quote :override)))
             (platform-max ((core/map::get request) (quote :platform-max-bytes))))
           (if
-            (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.3")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 3) false)
+            (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.4")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 4) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -465,14 +523,18 @@
                             ((core/map::get override) (quote :base-dir)))
                           nil)
                       :cap (if allowed ((selfhost/effect-policy::cap op) override) nil)
-                      :kind "genesis/effect-policy-authority-result-v0.3"
+                      :kind "genesis/effect-policy-authority-result-v0.4"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
                           nil)
                       :op op
+                      :process-program-policy
+                        (if allowed
+                          (selfhost/effect-policy::process-program-policy override)
+                          nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 3}))
+                      :v 4}))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly optional typed admission and base fields"))
               ((core/error::make2 "core/policy/authority")

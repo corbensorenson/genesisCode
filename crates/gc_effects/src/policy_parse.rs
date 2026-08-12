@@ -416,6 +416,7 @@ pub(super) fn apply_op_cfg(
             extra,
             authorized_cap: None,
             authorized_max_bytes: None,
+            authorized_process_programs: None,
         },
     );
     Ok(())

@@ -83,6 +83,7 @@ DECISIONS = [
     "per-operation-base-directory-selection",
     "per-operation-enforcement-control-selection",
     "per-operation-max-bytes-policy",
+    "per-operation-process-program-policy",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
 ]
@@ -96,7 +97,6 @@ RESIDUALS = {
     "global-store-remote-transport-tls-and-auth-policy",
     "network-policy",
     "path-and-secret-resolution",
-    "process-policy",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding",
 }
@@ -124,11 +124,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.3",
+        "requestKind": "genesis/effect-policy-authority-request-v0.4",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.3",
+        "resultKind": "genesis/effect-policy-authority-result-v0.4",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -137,11 +137,14 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.7",
+        "version": "0.1.8",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
             fail(f"profile {key} drift")
+    for key in ("decisionInventory", "requestKind", "resultKind", "version"):
+        if schema["properties"].get(key, {}).get("const") != constants[key]:
+            fail(f"schema {key} drift")
     if set(profile.get("residualDecisionInventory", [])) != RESIDUALS:
         fail("residual decision inventory drift")
     if set(profile.get("nonclaims", [])) != {
@@ -187,10 +190,15 @@ def static_check(root: Path, profile):
     authority_root = (root / "crates/gc_effects/src/policy_authority.rs").read_text()
     if authority_root.count('#[path = "policy_authority_resource.rs"]') != 1:
         fail("effect-policy resource boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_process.rs"]') != 1:
+        fail("effect-policy process boundary decomposition drift")
     resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
     if resource_boundary_path.is_symlink() or not resource_boundary_path.is_file():
         fail("effect-policy resource host boundary is missing or symlinked")
-    authority = authority_root + resource_boundary_path.read_text()
+    process_boundary_path = root / "crates/gc_effects/src/policy_authority_process.rs"
+    if process_boundary_path.is_symlink() or not process_boundary_path.is_file():
+        fail("effect-policy process host boundary is missing or symlinked")
+    authority = authority_root + resource_boundary_path.read_text() + process_boundary_path.read_text()
     required_authority = [
         "const MAX_POLICY_OPS: usize = 4_096;",
         "const POLICY_AUTHORITY_STEP_LIMIT: u64 = 20_000_000;",
@@ -214,6 +222,7 @@ def static_check(root: Path, profile):
         "op_policy.timeout_ms = authorized.timeout_ms;",
         "op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;",
         "op_policy.authorized_max_bytes = Some(authorized.max_bytes);",
+        "op_policy.authorized_process_programs = Some(authorized.process_programs);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -268,6 +277,15 @@ def static_check(root: Path, profile):
         fail("bridge max-byte enforcement authority inventory drift")
     if bridge_policy.find(bridge_authority_lookup) >= bridge_policy.find(bridge_legacy_lookup):
         fail("bridge max-byte enforcement consults raw policy before authority state")
+    process_policy = (
+        root / "crates/gc_effects/src/runner_capability_dispatch/process.rs"
+    ).read_text()
+    process_authority_lookup = "if let Some(authorized) = &pol.authorized_process_programs"
+    process_legacy_lookup = 'pol.extra.get("allow_programs")'
+    if process_policy.count(process_authority_lookup) != 1 or process_policy.count(process_legacy_lookup) != 1:
+        fail("process-program enforcement authority inventory drift")
+    if process_policy.find(process_authority_lookup) >= process_policy.find(process_legacy_lookup):
+        fail("process-program enforcement consults raw policy before authority state")
     effect_source = source_path.read_text()
     cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
         "(def core/effects::policy-authority", 1
@@ -356,9 +374,18 @@ def static_check(root: Path, profile):
         "selfhost_authority_installs_valid_and_absent_max_byte_controls",
         "selfhost_authority_preserves_invalid_max_byte_effect_errors",
         "selfhost_authority_rejects_malformed_max_byte_decisions",
+        "selfhost_authority_installs_process_program_policy",
+        "selfhost_authority_preserves_invalid_process_program_states",
+        "selfhost_authority_rejects_malformed_process_program_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
+    for name in (
+        "process_dispatch_consumes_authorized_programs_before_raw_policy",
+        "process_dispatch_preserves_authorized_policy_errors",
+    ):
+        if process_policy.count(f"fn {name}()") != 1:
+            fail(f"missing focused process authority control: {name}")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]

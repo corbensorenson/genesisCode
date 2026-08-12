@@ -121,6 +121,15 @@ pub(crate) enum AuthorizedMaxBytes {
     Valid(usize),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedProcessPrograms {
+    Absent,
+    InvalidType,
+    InvalidEntry,
+    Empty,
+    Valid(Vec<String>),
+}
+
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
@@ -130,6 +139,7 @@ pub struct OpPolicy {
     pub extra: BTreeMap<String, toml::Value>,
     pub(crate) authorized_cap: Option<gc_coreform::Term>,
     pub(crate) authorized_max_bytes: Option<AuthorizedMaxBytes>,
+    pub(crate) authorized_process_programs: Option<AuthorizedProcessPrograms>,
 }
 
 impl CapsPolicy {
@@ -239,6 +249,7 @@ impl CapsPolicy {
                         extra: BTreeMap::new(),
                         authorized_cap: None,
                         authorized_max_bytes: None,
+                        authorized_process_programs: None,
                     },
                 );
             }

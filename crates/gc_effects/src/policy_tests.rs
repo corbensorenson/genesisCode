@@ -1,4 +1,4 @@
-use super::{AuthorizedMaxBytes, CapsPolicy};
+use super::{AuthorizedMaxBytes, AuthorizedProcessPrograms, CapsPolicy};
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
 use std::collections::BTreeMap;
@@ -27,6 +27,13 @@ fn expected_cap(op: &str, fields: impl IntoIterator<Item = (&'static str, Term)>
 fn max_bytes_policy(status: &str, limit: Term) -> Term {
     Term::Map(BTreeMap::from([
         (TermOrdKey(Term::symbol(":limit")), limit),
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
+    ]))
+}
+
+fn process_program_policy(status: &str, programs: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":programs")), programs),
         (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
     ]))
 }
@@ -261,6 +268,122 @@ fn selfhost_authority_rejects_malformed_max_byte_decisions() {
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_max_bytes_policy(&Term::Map(extra), true)
         .expect_err("unknown max-byte authority fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_process_program_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."sys/process::exec"]
+allow_programs = ["  gcpm  ", "", "tool-*"]
+
+[op."sys/process::spawn"]
+allow = true
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert_eq!(
+        policy
+            .op_policy("sys/process::exec")
+            .unwrap()
+            .authorized_process_programs,
+        Some(AuthorizedProcessPrograms::Valid(vec![
+            "gcpm".to_string(),
+            "tool-*".to_string(),
+        ]))
+    );
+    assert_eq!(
+        policy
+            .op_policy("sys/process::spawn")
+            .unwrap()
+            .authorized_process_programs,
+        Some(AuthorizedProcessPrograms::Absent)
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_invalid_process_program_states() {
+    let cases = [
+        (
+            "allow_programs = \"gcpm\"",
+            AuthorizedProcessPrograms::InvalidType,
+        ),
+        (
+            "allow_programs = [\"gcpm\", 7]",
+            AuthorizedProcessPrograms::InvalidEntry,
+        ),
+        (
+            "allow_programs = [\"\", \"   \"]",
+            AuthorizedProcessPrograms::Empty,
+        ),
+    ];
+    for (setting, expected) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[op.\"sys/process::exec\"]\n{setting}\n")).unwrap();
+        let artifact = selfhost_artifact();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .unwrap();
+        assert_eq!(
+            policy
+                .op_policy("sys/process::exec")
+                .unwrap()
+                .authorized_process_programs,
+            Some(expected),
+            "setting: {setting}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_process_program_decisions() {
+    use super::policy_authority::decode_process_program_policy;
+
+    let cases = [
+        (process_program_policy(":unknown", Term::Nil), true),
+        (process_program_policy(":valid", Term::Nil), true),
+        (process_program_policy(":valid", Term::Vector(vec![])), true),
+        (
+            process_program_policy(
+                ":valid",
+                Term::Vector(vec![Term::Str(" padded ".to_string())]),
+            ),
+            true,
+        ),
+        (
+            process_program_policy(":valid", Term::Vector(vec![Term::Str("gcpm".to_string())])),
+            false,
+        ),
+        (process_program_policy(":empty", Term::Vector(vec![])), true),
+    ];
+    for (decision, allowed) in cases {
+        decode_process_program_policy(&decision, allowed)
+            .expect_err("contradictory process-program authority decision must fail closed");
+    }
+
+    let mut extra = BTreeMap::from([
+        (TermOrdKey(Term::symbol(":programs")), Term::Nil),
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(":absent")),
+    ]);
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_process_program_policy(&Term::Map(extra), true)
+        .expect_err("unknown process-program authority fields must fail closed");
 }
 
 #[test]

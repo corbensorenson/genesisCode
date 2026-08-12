@@ -10,10 +10,19 @@ use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
 
-use super::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
+use super::{AuthorizedMaxBytes, AuthorizedProcessPrograms, CapsPolicy, OpPolicy};
 
+#[path = "policy_authority_process.rs"]
+mod process;
 #[path = "policy_authority_resource.rs"]
 mod resource;
+#[cfg(test)]
+pub(super) fn decode_process_program_policy(
+    term: &Term,
+    allowed: bool,
+) -> Result<AuthorizedProcessPrograms, EffectsError> {
+    process::decode(term, allowed)
+}
 
 const MAX_POLICY_OPS: usize = 4_096;
 const POLICY_AUTHORITY_STEP_LIMIT: u64 = 20_000_000;
@@ -97,6 +106,10 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
                 max_bytes_input(table.get("max_bytes")),
             ),
             (
+                TermOrdKey(Term::symbol(":process-programs")),
+                process::input(table.get("allow_programs")),
+            ),
+            (
                 TermOrdKey(Term::symbol(":timeout-ms")),
                 optional_int(table.get("timeout_ms")),
             ),
@@ -115,7 +128,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.3".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.4".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
@@ -123,7 +136,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(3.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(4.into())),
         ]
         .into_iter()
         .collect(),
@@ -267,6 +280,7 @@ struct AuthorizedOperation {
     timeout_ms: Option<u64>,
     log_inline_max_bytes: Option<usize>,
     max_bytes: AuthorizedMaxBytes,
+    process_programs: AuthorizedProcessPrograms,
     cap: Term,
 }
 
@@ -411,6 +425,7 @@ fn decode_result(
         ":kind",
         ":max-bytes-policy",
         ":op",
+        ":process-program-policy",
         ":request-h",
         ":v",
     ]
@@ -420,8 +435,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.3")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &3.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.4")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &4.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -456,6 +471,11 @@ fn decode_result(
             .ok_or_else(|| authority_error("result is missing :max-bytes-policy"))?,
         allowed,
     )?;
+    let process_programs = process::decode(
+        map.get(&TermOrdKey(Term::symbol(":process-program-policy")))
+            .ok_or_else(|| authority_error("result is missing :process-program-policy"))?,
+        allowed,
+    )?;
     Ok(AuthorizedOperation {
         allowed,
         base_dir,
@@ -463,6 +483,7 @@ fn decode_result(
         timeout_ms,
         log_inline_max_bytes,
         max_bytes,
+        process_programs,
         cap,
     })
 }
@@ -580,6 +601,7 @@ pub(super) fn authorize_policy(
             || expected.is_some_and(|policy| authorized.cap != legacy_cap(&op, policy))
             || authorized.base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
             || authorized.max_bytes != legacy_max_bytes(expected)
+            || authorized.process_programs != process::legacy(expected)
         {
             return Err(authority_error(format!(
                 "result for `{op}` contradicts independently reconstructed policy composition"
@@ -595,6 +617,7 @@ pub(super) fn authorize_policy(
             op_policy.timeout_ms = authorized.timeout_ms;
             op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;
             op_policy.authorized_max_bytes = Some(authorized.max_bytes);
+            op_policy.authorized_process_programs = Some(authorized.process_programs);
             op_policy.authorized_cap = Some(authorized.cap);
             authorized_ops.insert(op, op_policy);
         }

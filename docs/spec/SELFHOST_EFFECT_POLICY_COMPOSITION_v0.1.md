@@ -11,7 +11,9 @@ capability descriptor recorded in the effect log. The authority also owns the
 private per-operation `max_bytes` decision consumed by filesystem, store, media,
 FFI, and bridge enforcement. That decision is deliberately separate from the
 capability descriptor and therefore never adds the configured byte limit to an
-effect log.
+effect log. The authority also owns normalization and typed error state for the
+private per-operation `allow_programs` rule consumed by process launch
+enforcement; program matching remains a bounded host enforcement mechanism.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
@@ -29,15 +31,18 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed six-field map with kind
-`genesis/effect-policy-authority-request-v0.3`, version `3`, the operation string,
+`genesis/effect-policy-authority-request-v0.4`, version `4`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
-`:timeout-ms`, `:log-inline-max-bytes`, and `:max-bytes`. The base directory is
+`:timeout-ms`, `:log-inline-max-bytes`, `:max-bytes`, and `:process-programs`.
+The base directory is
 `nil` or the exact configured string. Missing optional fields use `nil`. A TOML
 integer is transported exactly for `:max-bytes`; a present non-integer is
 transported as the closed `:invalid-type` observation so GenesisCode, rather than
-Rust, decides its effect-use error state. No omitted or additional field is
+Rust, decides its effect-use error state. Missing `allow_programs` is transported
+as `nil`, a non-array as `:invalid-type`, and array entries as their exact strings
+or the closed `:invalid-entry` observation. No omitted or additional field is
 accepted. A policy may expose at most 4,096 unique candidate operations.
 
 Before those per-operation requests, the inventory authority receives a closed
@@ -50,23 +55,31 @@ host rejects malformed, oversized, duplicate, unsorted, substituted, or
 oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
-The authority returns a closed eight-field
-`genesis/effect-policy-authority-result-v0.3` map containing the exact operation,
+The authority returns a closed nine-field
+`genesis/effect-policy-authority-result-v0.4` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
-admitted or `nil` when denied, private `:max-bytes-policy`, lowercase canonical
-request hash, and version `3`. For an admitted operation, the private policy is
+admitted or `nil` when denied, private `:max-bytes-policy` and
+`:process-program-policy`, lowercase canonical request hash, and version `4`.
+For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
 carries a positive integer limit that fits `:platform-max-bytes`, and every other
-status carries `nil`. Denied operations must carry no base directory, capability,
-or max-byte policy. Malformed requests return sealed errors. The host rejects
+status carries `nil`. The process-program policy is an exact
+`{:programs ... :status ...}` map whose status is `:absent`, `:invalid-type`,
+`:invalid-entry`, `:empty`, or `:valid`; only `:valid` carries a nonempty vector
+of whitespace-trimmed, nonempty strings. Order and duplicates remain observable
+and are preserved. Denied operations must carry no base directory, capability,
+byte policy, or process-program policy. Malformed requests return sealed errors.
+The host rejects
 unknown fields, identity drift, request-hash substitution, invalid path types,
-denied non-nil state, admitted non-map capabilities or byte policies,
+denied non-nil state, admitted non-map capabilities or private policies,
 noncanonical false/zero/negative/overflowing controls, contradictory status/limit
-pairs, operation substitution inside the capability, and any result that
+pairs, noncanonical or contradictory process-program states, operation
+substitution inside the capability, and any result that
 contradicts its retained compatibility oracle. After validation, the host
 installs the GenesisCode-selected base directory, create-directories flag,
-timeout, per-operation log limit, and closed max-byte state into enforcement;
+timeout, per-operation log limit, closed max-byte state, and closed normalized
+process-program state into enforcement;
 its separately parsed values are used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
@@ -100,6 +113,9 @@ timing: the capability file loads, then an invalid type, nonpositive integer, or
 platform overflow produces the exact prior error when an affected effect is
 used. The existing strict TOML parser remains responsible for syntax and integer
 representation; it does not choose the max-byte policy state.
+`allow_programs` likewise retains effect-use timing and exact errors: missing,
+non-array, non-string-entry, and empty-after-trimming configurations are installed
+as typed states and rejected only when `sys/process::exec` or `spawn` is used.
 
 ## Production Boundary
 
@@ -114,11 +130,14 @@ The effect runner uses the validated GenesisCode capability descriptor in log
 entries and installs all decoded generic operation and resource controls for host
 enforcement. The selected base directory remains separate from that descriptor so
 logs do not gain path material; Rust installs it before resolving relative paths
-against the capability-file base. The private max-byte state likewise remains out
-of the descriptor. Every production generic or bridge byte-limit consumer checks
+against the capability-file base. The private max-byte and process-program states
+likewise remain out of the descriptor. Every production generic or bridge byte-limit consumer checks
 the installed authority state before the raw compatibility field; raw fallback is
 reachable only for policies constructed without the self-host authority by
 explicit compatibility and test routes.
+Process launch dispatch follows the same rule: it consumes the installed
+GenesisCode process-program state before the raw compatibility field, then the
+host enforces exact, `*`, or suffix-`*` matching without selecting the rule.
 Host code retains payload measurement and enforcement mechanisms, filesystem path resolution,
 accounting mechanisms, cancellation, effect execution, and replay mechanisms.
 `CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy
@@ -129,7 +148,7 @@ transition, and therefore are not evidence of H2.
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
 and type decoding; global store remote transport, TLS, and authentication policy;
-operation-specific network, process, database, crypto, FFI, plugin, model,
+operation-specific network, database, crypto, FFI, plugin, model,
 graphics, and device constraints; secret and path resolution; effect execution
 and cancellation; strict replay; and removal of the compatibility oracle.
 Filesystem policy configuration is no longer a residual decision: admission,
@@ -140,6 +159,10 @@ remain bounded host mechanisms under `path-and-secret-resolution` and
 `effect-execution-and-hard-cancellation`; this is not a claim that filesystem
 execution moved into the pure kernel. Policy aliases are governed separately by
 the policy-alias authority and are not part of this profile's residual inventory.
+Process policy configuration is no longer residual: GenesisCode owns the complete
+`allow_programs` domain, normalization, and error state for both launch operations;
+payload decoding, wildcard matching, process creation, lifecycle control, and
+hard cancellation remain host enforcement/execution mechanisms.
 
 This contract does not promote `SD-EFFECT-POLICY`, close R4.2.d or SH-C, establish
 H2/H3/H4, authorize release, or authorize GenesisBench, Genesis Foundry,
