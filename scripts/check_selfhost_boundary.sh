@@ -122,6 +122,14 @@ python3 scripts/lib/selfhost_patch_authority.py \
   --schema docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.d policy aliases are independently checked without promoting the other
+# obligation, effect-policy, replay, signing, or evidence decisions in this task.
+python3 scripts/lib/selfhost_policy_alias_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_policy_alias_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 python3 scripts/lib/semantic_ownership_ledger.py \
   --root "$ROOT_DIR" \
   --ledger docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json \

@@ -1,0 +1,342 @@
+(def selfhost/policy::error
+  (fn (message) ((core/error::make2 "core/policy/authority") message)))
+
+(def selfhost/policy::failure
+  (fn (operation)
+    (fn (code)
+      (fn (error)
+        (let ((payload (core/error::payload error)))
+          {
+            :error-code code
+            :error-message ((core/map::get payload) (quote :error/message))
+            :kind "genesis/policy-authority-result-v0.1"
+            :ok false
+            :operation operation
+            :v 1})))))
+
+(def selfhost/policy::map?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :map))))
+
+(def selfhost/policy::vec?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :vec))))
+
+(def selfhost/policy::str?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :str))))
+
+(def selfhost/policy::int?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :int))))
+
+(def selfhost/policy::nil?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :nil))))
+
+(def selfhost/policy::operation?
+  (fn (value)
+    (if ((core/sym::eq? value) (quote :list))
+      true
+      (if ((core/sym::eq? value) (quote :resolve))
+        true
+        ((core/sym::eq? value) (quote :set-default))))))
+
+(def selfhost/policy::non-empty-str?
+  (fn (value)
+    (if (selfhost/policy::str? value)
+      ((core/int::lt? 0) (core/bytes::len (core/str::to-utf8 value)))
+      false)))
+
+; Unicode White_Space under the frozen text profile, encoded as UTF-8 widths.
+(def selfhost/policy::ascii-whitespace?
+  (fn (byte)
+    (if ((core/int::eq? byte) 32)
+      true
+      (if ((core/int::eq? byte) 9)
+        true
+        (if ((core/int::eq? byte) 10)
+          true
+          (if ((core/int::eq? byte) 11)
+            true
+            (if ((core/int::eq? byte) 12) true ((core/int::eq? byte) 13))))))))
+
+(def selfhost/policy::three-byte-whitespace?
+  (fn (b0)
+    (fn (b1)
+      (fn (b2)
+        (if ((core/int::eq? b0) 225)
+          (if ((core/int::eq? b1) 154) ((core/int::eq? b2) 128) false)
+          (if ((core/int::eq? b0) 226)
+            (if ((core/int::eq? b1) 128)
+              (if (if ((core/int::lt? 127) b2) ((core/int::lt? b2) 139) false)
+                true
+                (if ((core/int::eq? b2) 168)
+                  true
+                  (if ((core/int::eq? b2) 169) true ((core/int::eq? b2) 175))))
+              (if ((core/int::eq? b1) 129) ((core/int::eq? b2) 159) false))
+            (if ((core/int::eq? b0) 227)
+              (if ((core/int::eq? b1) 128) ((core/int::eq? b2) 128) false)
+              false)))))))
+
+(def selfhost/policy::whitespace-width-at
+  (fn (bytes)
+    (fn (index)
+      (let ((b0 ((core/bytes::get bytes) index)))
+        (if (selfhost/policy::ascii-whitespace? b0)
+          1
+          (let ((remaining ((core/int::sub (core/bytes::len bytes)) index)))
+            (if ((core/int::lt? remaining) 2)
+              0
+              (let ((b1 ((core/bytes::get bytes) ((core/int::add index) 1))))
+                (if ((core/int::eq? b0) 194)
+                  (if (if ((core/int::eq? b1) 133) true ((core/int::eq? b1) 160)) 2 0)
+                  (if ((core/int::lt? remaining) 3)
+                    0
+                    (let ((b2 ((core/bytes::get bytes) ((core/int::add index) 2))))
+                      (if (((selfhost/policy::three-byte-whitespace? b0) b1) b2) 3 0))))))))))))
+
+(def selfhost/policy::trim-start
+  (fn (bytes)
+    (fn (index)
+      (if ((core/int::eq? index) (core/bytes::len bytes))
+        index
+        (let ((width ((selfhost/policy::whitespace-width-at bytes) index)))
+          (if ((core/int::eq? width) 0)
+            index
+            ((selfhost/policy::trim-start bytes) ((core/int::add index) width))))))))
+
+(def selfhost/policy::trim-end
+  (fn (bytes)
+    (fn (index)
+      (fn (content-end)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          content-end
+          (let ((width ((selfhost/policy::whitespace-width-at bytes) index)))
+            (if ((core/int::eq? width) 0)
+              (((selfhost/policy::trim-end bytes) ((core/int::add index) 1))
+                ((core/int::add index) 1))
+              (((selfhost/policy::trim-end bytes) ((core/int::add index) width)) content-end))))))))
+
+(def selfhost/policy::trim
+  (fn (value)
+    (let ((bytes (core/str::to-utf8 value)))
+      (let ((start ((selfhost/policy::trim-start bytes) 0)))
+        (let ((end (((selfhost/policy::trim-end bytes) start) start)))
+          (core/str::from-utf8
+            (((core/bytes::slice bytes) start) ((core/int::sub end) start))))))))
+
+; Decode any case-insensitive 64-hex selector and emit its canonical lowercase form.
+(def selfhost/policy::normalize-hash
+  (fn (value)
+    (if (selfhost/policy::str? value)
+      (let ((decoded (core/bytes::from-hex value)))
+        (if (core/error::is? decoded)
+          nil
+          (if ((core/int::eq? (core/bytes::len decoded)) 32)
+            (core/bytes::to-hex decoded)
+            nil)))
+      nil)))
+
+(def selfhost/policy::alias-name-at
+  (fn (aliases)
+    (fn (index)
+      ((core/map::get ((core/vec::get aliases) index)) (quote :name)))))
+
+(def selfhost/policy::alias-hash-at
+  (fn (aliases)
+    (fn (index)
+      ((core/map::get ((core/vec::get aliases) index)) (quote :hash)))))
+
+(def selfhost/policy::find-alias
+  (fn (aliases)
+    (fn (name)
+      ((((selfhost/policy::find-alias-loop aliases) name) (core/vec::len aliases)) 0))))
+
+(def selfhost/policy::find-alias-loop
+  (fn (aliases)
+    (fn (name)
+      (fn (count)
+        (fn (index)
+          (if ((core/int::eq? index) count)
+            nil
+            (if ((core/eq? ((selfhost/policy::alias-name-at aliases) index)) name)
+              ((selfhost/policy::alias-hash-at aliases) index)
+              ((((selfhost/policy::find-alias-loop aliases) name) count)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/policy::normalize-aliases
+  (fn (aliases)
+    (if (selfhost/policy::vec? aliases)
+      ((((selfhost/policy::normalize-aliases-loop aliases) (core/vec::len aliases)) 0) [])
+      (selfhost/policy::error ":aliases must be a vector"))))
+
+(def selfhost/policy::normalize-aliases-loop
+  (fn (aliases)
+    (fn (count)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) count)
+            out
+            (let ((entry ((core/vec::get aliases) index)))
+              (if (selfhost/policy::map? entry)
+                (if ((core/int::eq? (core/map::len entry)) 2)
+                  (let
+                    ((name0 ((core/map::get entry) (quote :name)))
+                      (hash0 ((core/map::get entry) (quote :hash))))
+                    (if (if (selfhost/policy::str? name0) (selfhost/policy::str? hash0) false)
+                      (let ((name (selfhost/policy::trim name0)))
+                        (let ((hash (selfhost/policy::normalize-hash (selfhost/policy::trim hash0))))
+                        (if (selfhost/policy::nil? hash)
+                          (selfhost/policy::error "policy alias hash must be 64-hex")
+                          (if (selfhost/policy::non-empty-str? name)
+                            (if (selfhost/policy::nil? ((selfhost/policy::find-alias out) name))
+                              ((((selfhost/policy::normalize-aliases-loop aliases) count)
+                                 ((core/int::add index) 1))
+                                ((core/vec::push out) {:hash hash :name name}))
+                              (selfhost/policy::error "duplicate policy alias"))
+                            (selfhost/policy::error "policy alias name must be non-empty")))))
+                      (selfhost/policy::error "policy alias name and hash must be strings")))
+                  (selfhost/policy::error "policy alias entry must contain exactly :name and :hash"))
+                (selfhost/policy::error "policy alias entry must be a map")))))))))
+
+(def selfhost/policy::normalize-default
+  (fn (selector)
+    (if (selfhost/policy::nil? selector)
+      nil
+      (if (selfhost/policy::str? selector)
+        (let ((trimmed (selfhost/policy::trim selector)))
+          (if (selfhost/policy::non-empty-str? trimmed)
+            (let ((hash (selfhost/policy::normalize-hash trimmed)))
+              (if (selfhost/policy::nil? hash) trimmed hash))
+            (selfhost/policy::error "default policy selector must be a non-empty string or nil")))
+        (selfhost/policy::error "default policy selector must be a non-empty string or nil")))))
+
+(def selfhost/policy::normalize-config
+  (fn (config)
+    (if (selfhost/policy::map? config)
+      (if ((core/int::eq? (core/map::len config)) 3)
+        (let
+          ((version ((core/map::get config) (quote :version)))
+            (default0 ((core/map::get config) (quote :default)))
+            (aliases0 ((core/map::get config) (quote :aliases))))
+          (if (if (selfhost/policy::int? version) ((core/int::eq? version) 1) false)
+            (let ((default (selfhost/policy::normalize-default default0)))
+              (if (core/error::is? default)
+                default
+                (let ((aliases (selfhost/policy::normalize-aliases aliases0)))
+                  (if (core/error::is? aliases)
+                    aliases
+                    {:aliases aliases :default default :version 1}))))
+            (selfhost/policy::error "unsupported policies config version")))
+        (selfhost/policy::error "policy config must contain exactly :version, :default, and :aliases"))
+      (selfhost/policy::error "policy config must be a map"))))
+
+(def selfhost/policy::resolve
+  (fn (config)
+    (fn (selector0)
+      (if (selfhost/policy::str? selector0)
+        (let ((selector1 (selfhost/policy::trim selector0)))
+          (if (selfhost/policy::non-empty-str? selector1)
+          (let
+          ((aliases ((core/map::get config) (quote :aliases)))
+            (default ((core/map::get config) (quote :default))))
+          (let ((selector (if ((core/eq? selector1) "default") default selector1)))
+            (if (selfhost/policy::non-empty-str? selector)
+              (if ((core/eq? selector) "default")
+                (selfhost/policy::error "default policy selector cannot resolve to itself")
+                (let ((hash (selfhost/policy::normalize-hash selector)))
+                  (if (selfhost/policy::nil? hash)
+                    (let ((alias-hash ((selfhost/policy::find-alias aliases) selector)))
+                      (if (selfhost/policy::nil? alias-hash)
+                        (selfhost/policy::error "unknown policy alias")
+                        {:hash alias-hash :resolved selector}))
+                    {:hash hash :resolved hash})))
+              (selfhost/policy::error "no default policy configured"))))
+          (selfhost/policy::error "policy selector must be non-empty")))
+        (selfhost/policy::error "policy selector must be non-empty")))))
+
+(def selfhost/policy::list-result
+  (fn (config)
+    (let ((default ((core/map::get config) (quote :default))))
+      (let
+        ((resolved
+           (if (selfhost/policy::nil? default)
+             nil
+             (let ((result ((selfhost/policy::resolve config) "default")))
+               (if (core/error::is? result) nil ((core/map::get result) (quote :hash)))))))
+        {
+          :aliases ((core/map::get config) (quote :aliases))
+          :default default
+          :default-resolved resolved
+          :kind "genesis/policy-authority-result-v0.1"
+          :ok true
+          :operation (quote :list)
+          :v 1}))))
+
+(def selfhost/policy::resolve-result
+  (fn (config)
+    (fn (selector)
+      (let ((resolved ((selfhost/policy::resolve config) selector)))
+        (if (core/error::is? resolved)
+          (((selfhost/policy::failure (quote :resolve)) "policy/resolve") resolved)
+          {
+            :aliases ((core/map::get config) (quote :aliases))
+            :default ((core/map::get config) (quote :default))
+            :hash ((core/map::get resolved) (quote :hash))
+            :kind "genesis/policy-authority-result-v0.1"
+            :ok true
+            :operation (quote :resolve)
+            :resolved ((core/map::get resolved) (quote :resolved))
+            :v 1})))))
+
+(def selfhost/policy::set-default-result
+  (fn (config)
+    (fn (selector0)
+      (if (selfhost/policy::str? selector0)
+        (let ((selector1 (selfhost/policy::trim selector0)))
+          (if (selfhost/policy::non-empty-str? selector1)
+            (if ((core/eq? selector1) "default")
+              (((selfhost/policy::failure (quote :set-default)) "policy/set-default")
+                (selfhost/policy::error "default policy selector cannot resolve to itself"))
+              (let ((hash (selfhost/policy::normalize-hash selector1)))
+                (let ((selector (if (selfhost/policy::nil? hash) selector1 hash)))
+                  (let ((resolved ((selfhost/policy::resolve config) selector)))
+                    (if (core/error::is? resolved)
+                      (((selfhost/policy::failure (quote :set-default)) "policy/set-default") resolved)
+                      {
+                        :aliases ((core/map::get config) (quote :aliases))
+                        :default selector
+                        :default-resolved ((core/map::get resolved) (quote :hash))
+                        :kind "genesis/policy-authority-result-v0.1"
+                        :ok true
+                        :operation (quote :set-default)
+                        :v 1})))))
+          (((selfhost/policy::failure (quote :set-default)) "policy/parse")
+            (selfhost/policy::error "policy selector must be non-empty"))))
+        (((selfhost/policy::failure (quote :set-default)) "policy/parse")
+          (selfhost/policy::error "policy selector must be non-empty"))))))
+
+(def core/cli::policy-authority
+  (fn (request)
+    (if (selfhost/policy::map? request)
+      (if ((core/int::eq? (core/map::len request)) 5)
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (version ((core/map::get request) (quote :v)))
+            (operation ((core/map::get request) (quote :operation)))
+            (config0 ((core/map::get request) (quote :config)))
+            (selector ((core/map::get request) (quote :selector))))
+          (if (if ((core/eq? kind) "genesis/policy-authority-request-v0.1")
+                (if (selfhost/policy::int? version) ((core/int::eq? version) 1) false)
+                false)
+            (if (selfhost/policy::operation? operation)
+              (let ((config (selfhost/policy::normalize-config config0)))
+                (if (core/error::is? config)
+                  (((selfhost/policy::failure operation) "policy/parse") config)
+                  (if ((core/sym::eq? operation) (quote :list))
+                    (if (selfhost/policy::nil? selector)
+                      (selfhost/policy::list-result config)
+                      (selfhost/policy::error ":list requires nil :selector"))
+                    (if ((core/sym::eq? operation) (quote :resolve))
+                      ((selfhost/policy::resolve-result config) selector)
+                      ((selfhost/policy::set-default-result config) selector)))))
+              (selfhost/policy::error "unknown policy authority operation"))
+            (selfhost/policy::error "policy authority request identity mismatch")))
+        (selfhost/policy::error "policy authority request must contain exactly five fields"))
+      (selfhost/policy::error "policy authority request must be a map"))))

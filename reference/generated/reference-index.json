@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 324,
+    "canonicalSources": 326,
     "diagnostics": 198,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 117,
+    "schemas": 118,
     "symbols": 176
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "0b503c8976eeb3c3bc834ae1193ffda175e97dd300d6eb2e31c63fb3b4447908"
+      "sha256": "d9aa0e2b5fa4dfa3c37efa6fd8a9c9054eba522c6d7ea7763fdaba7c54fa95d4"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "92267220a2be5aaa7b8e7743b9650d1f9783aae00e5a7f8a09a9df79c0f378de"
+      "sha256": "728281da64e5fc004d5ec1643927cc1c46c8fa1976c24ac0e393c40fd4fd3b6c"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "cd873f490b23ba48d9dc3cb79a4ee5d5fdcbbb2da728ccc8e01f0248f8bc72b6"
+      "sha256": "636d0a5de97aa6f8dd6a1f1dc90ede647eef0485d08fae98abbef6614c1d6a45"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -1084,11 +1084,19 @@
     },
     {
       "path": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
-      "sha256": "a6bfcbe2d0262db083d3fcd8f7ba5510718d5837220e7c4090f0a0c3c0472760"
+      "sha256": "745a48a6a8fd673cf493d390db2c7858ee501eb56963cf2798f2c8ef8a8bb546"
     },
     {
       "path": "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
-      "sha256": "5cdddfc13fcc41b5d4bf370472cd95c3a6bd3b50dd783d77db78a679e539d816"
+      "sha256": "3e5c5268aea0fa716e593a8af479702e6d32a0b83a406079a2c66a0d23db4a6a"
+    },
+    {
+      "path": "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.md",
+      "sha256": "a97e45891b0f7ad3ffe7ea0908fbdbee04ba76297f7754ceeda931c482464a0a"
+    },
+    {
+      "path": "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json",
+      "sha256": "14ef5e7ef1b8706b05c96799b416076fc47f1f8bcca5465eae9beec5d6318edd"
     },
     {
       "path": "docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.md",
@@ -1120,7 +1128,7 @@
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
-      "sha256": "e6565c9e9e63838ae587f49b0e7b87603923e91aaddd0270efa90b1c6bc322b9"
+      "sha256": "59e021d3f20613db41bef8ed9f024d51046d0fb6974dd8a066adb5a93120cb04"
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
@@ -1288,7 +1296,7 @@
     },
     {
       "path": "docs/status/SELFHOST_AUTHORITY_v0.1.md",
-      "sha256": "4d5fe717b76f4b47c14fb5f52f4a6bf3d37887624f3c464dd7c1363052744629"
+      "sha256": "094ebc0480401de9e7090aefc8ec39710b370f9acab80d3b8d104c1996a44f93"
     },
     {
       "path": "docs/status/SELFHOST_CUTOVER.md",

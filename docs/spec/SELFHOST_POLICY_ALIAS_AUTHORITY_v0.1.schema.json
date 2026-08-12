@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscodelang.dev/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json",
+  "title": "GenesisCode self-host policy alias authority profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "binding",
+    "compatibilityOracle",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "errorCodes",
+    "independentVerifier",
+    "kind",
+    "nonclaims",
+    "productionEntrypoints",
+    "resultKind",
+    "runtimeEvidence",
+    "schema",
+    "sourceModule",
+    "sourceSha256",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/cli::policy-authority"},
+    "compatibilityOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature", "sunsetReviewDate"],
+      "properties": {
+        "feature": {"const": "parity-harness"},
+        "sunsetReviewDate": {"type": "string", "format": "date"}
+      }
+    },
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {
+      "const": ["alias-normalization", "default-mutation", "default-resolution", "direct-hash-normalization", "selector-resolution"]
+    },
+    "errorCodes": {"const": ["policy/parse", "policy/resolve", "policy/set-default"]},
+    "independentVerifier": {"const": "scripts/lib/selfhost_policy_alias_authority.py"},
+    "kind": {"const": "genesis/selfhost-policy-alias-authority-v0.1"},
+    "nonclaims": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string"}},
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "resultKind": {"const": "genesis/policy-authority-result-v0.1"},
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allocationLimit", "stepLimit", "timeoutSeconds"],
+      "properties": {
+        "allocationLimit": {"const": 5000000},
+        "stepLimit": {"const": 5000000},
+        "timeoutSeconds": {"const": 30}
+      }
+    },
+    "schema": {"const": "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/policy_authority_v1.gc"},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

@@ -190,6 +190,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md` - closed artifact-only final patch outcome/report protocol binding normalized patch, package, acceptance, semantic-edit, and request identities.
 - `docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md` - independent R4.2.c H2 patch-authority inventory, production-graph isolation contract, native/WASI evidence, and mutation controls.
 - `docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked patch-authority profile.
+- `docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.md` - normative R4.2.d policy-alias/default normalization, selection, mutation, denial, and no-fallback authority contract; it explicitly does not promote the task's other semantic decisions.
+- `docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked policy-alias authority profile.
+- `policies/selfhost_policy_alias_authority_v0.1.json` - content-addressed policy-alias decision inventory, source identity, production entrypoints, error taxonomy, limits, and nonclaims.
+- `scripts/selfhost_policy_alias_authority_guard.sh` - focused native/WASI runtime, production-graph, non-mutation, Unicode-trim, and mutation-control guard.
 - `scripts/lib/semantic_ownership_ledger.py --refresh-identities` - explicit identity refresh for reviewed ledger edits; validation remains read-only in `scripts/check_selfhost_boundary.sh`.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
 - `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.

@@ -1,0 +1,49 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-11",
+  "binding": "core/cli::policy-authority",
+  "compatibilityOracle": {
+    "feature": "parity-harness",
+    "sunsetReviewDate": "2026-11-11"
+  },
+  "contentIdentitySha256": "96dc2efbd316f5a3e05f8e2d81c32427ed0058f2e7a9dce54a163fb4b473e339",
+  "decisionInventory": [
+    "alias-normalization",
+    "default-mutation",
+    "default-resolution",
+    "direct-hash-normalization",
+    "selector-resolution"
+  ],
+  "errorCodes": [
+    "policy/parse",
+    "policy/resolve",
+    "policy/set-default"
+  ],
+  "independentVerifier": "scripts/lib/selfhost_policy_alias_authority.py",
+  "kind": "genesis/selfhost-policy-alias-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "effect-policy-authority",
+    "evidence-verification-authority",
+    "obligation-authority",
+    "r4-2-d-closure",
+    "release-qualification",
+    "replay-authority",
+    "signing-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "resultKind": "genesis/policy-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 5000000,
+    "stepLimit": 5000000,
+    "timeoutSeconds": 30
+  },
+  "schema": "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/policy_authority_v1.gc",
+  "sourceSha256": "8fc36b35f45b1e7e2e4486e63580d02663b14d1dd246714d71c36ba4fc712435",
+  "spec": "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

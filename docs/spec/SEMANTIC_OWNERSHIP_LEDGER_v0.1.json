@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "68602c1a786d8df9b218e3550b88c8421d7ba469d4a65bf044f4f7b0869beead",
+  "contentIdentitySha256": "bf71a98ec111c96d8481c5dd74b1b34903c1774fb861d008825117906eb1b1ef",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2051,36 +2051,44 @@
       "commandSelectors": [
         "policy/*"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
-      "hostBindingPaths": [],
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
+      "hostBindingPaths": [
+        "crates/gc_cli_driver/src/cmd_policy.rs",
+        "crates/gc_cli_driver/src/policy_config.rs"
+      ],
       "id": "SD-POLICY-ALIAS",
       "internalOnly": false,
       "limitations": [
-        "Alias persistence and selection remain Rust"
+        "H2 is scoped to genesis/selfhost-policy-alias-authority-v0.1; Rust retains TOML and filesystem transport, while the compile-time parity-only compatibility oracle remains independently invocable until its 2026-11-11 sunset review; the other R4.2.d decisions and H3/H4 remain open"
       ],
       "migrationTasks": [
         "R4.2.d"
       ],
       "producingImplementationPaths": [
-        "crates/gc_cli_driver/src/cmd_policy.rs"
+        "selfhost/policy_authority_v1.gc"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_cli_driver/src/cmd_policy.rs"
+        "selfhost/toolchain.gc",
+        "selfhost/policy_authority_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/CAPS_TOML.md"
+        "docs/spec/CAPS_TOML.md",
+        "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.md"
       ],
       "stage0Domains": [
         "S0-A"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/cli_policy.rs"
+        "crates/gc_cli/tests/cli_policy.rs",
+        "crates/gc_cli_driver/src/tests_policy_config.rs"
       ],
       "title": "Local policy alias and default selection",
       "verifierPaths": [
-        "crates/gc_cli/tests/cli_policy.rs"
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/lib/selfhost_policy_alias_authority.py",
+        "scripts/selfhost_policy_alias_authority_guard.sh"
       ]
     },
     {

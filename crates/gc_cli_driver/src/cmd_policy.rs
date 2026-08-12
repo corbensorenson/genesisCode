@@ -110,11 +110,14 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
         PolicyCmd::List { policies } => {
             let policies_buf = planned_policy_list_args(cli, policies)?;
             let policies = policies_buf.as_path();
-            let cfg = load_policies_config(policies)?;
-            let default_resolved = cfg
-                .default
-                .as_deref()
-                .and_then(|d| resolve_policy_selector(d, &cfg).ok().map(|(_, h)| h));
+            let decision = authoritative_policy_decision(
+                cli,
+                PolicyAuthorityOperation::List,
+                load_policies_config(policies)?,
+                None,
+            )?;
+            let cfg = decision.config;
+            let default_resolved = decision.default_resolved;
             let stdout = if cli.json {
                 String::new()
             } else {
@@ -164,9 +167,22 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
                 planned_policy_show_args(cli, name_or_hash, policies, store)?;
             let policies = policies_buf.as_path();
             let store = store_buf.as_path();
-            let cfg = load_policies_config(policies)?;
-            let (resolved, hash) = resolve_policy_selector(&name_or_hash, &cfg)
-                .map_err(|e| cli_err(EX_VERIFY, "policy/resolve", e))?;
+            let decision = authoritative_policy_decision(
+                cli,
+                PolicyAuthorityOperation::Resolve,
+                load_policies_config(policies)?,
+                Some(&name_or_hash),
+            )?;
+            let resolved = decision.resolved.ok_or_else(|| {
+                cli_err(
+                    EX_INTERNAL,
+                    "policy/authority",
+                    "authority omitted :resolved",
+                )
+            })?;
+            let hash = decision.hash.ok_or_else(|| {
+                cli_err(EX_INTERNAL, "policy/authority", "authority omitted :hash")
+            })?;
             let p = store.join(&hash);
             let bytes = std::fs::read(&p)
                 .with_context(|| format!("read {}", p.display()))
@@ -220,31 +236,21 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
             let (name_or_hash, policies_buf) =
                 planned_policy_set_default_args(cli, name_or_hash, policies)?;
             let policies = policies_buf.as_path();
-            let mut cfg = load_policies_config(policies)?;
-            if is_hex64(&name_or_hash) {
-                cfg.default = Some(name_or_hash.to_ascii_lowercase());
-            } else {
-                let alias = name_or_hash.trim();
-                if alias.is_empty() {
-                    return Err(cli_err(
-                        EX_PARSE,
-                        "policy/set-default",
-                        "policy selector must be non-empty",
-                    ));
-                }
-                if !cfg.aliases.contains_key(alias) {
-                    return Err(cli_err(
-                        EX_VERIFY,
-                        "policy/set-default",
-                        format!("unknown policy alias `{alias}`"),
-                    ));
-                }
-                cfg.default = Some(alias.to_string());
-            }
+            let decision = authoritative_policy_decision(
+                cli,
+                PolicyAuthorityOperation::SetDefault,
+                load_policies_config(policies)?,
+                Some(&name_or_hash),
+            )?;
+            let cfg = decision.config;
             save_policies_config(policies, &cfg)?;
-            let (_, resolved_hash) =
-                resolve_policy_selector(cfg.default.as_deref().unwrap_or(""), &cfg)
-                    .map_err(|e| cli_err(EX_VERIFY, "policy/set-default", e))?;
+            let resolved_hash = decision.default_resolved.ok_or_else(|| {
+                cli_err(
+                    EX_INTERNAL,
+                    "policy/authority",
+                    "authority omitted :default-resolved",
+                )
+            })?;
             let stdout = if cli.json {
                 String::new()
             } else {
