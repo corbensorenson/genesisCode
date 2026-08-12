@@ -1,0 +1,66 @@
+(def selfhost/effect-ffi::fields
+  [
+    :abi-ids
+    :libraries
+    :max-buffer-bytes
+    :max-call-payload-bytes
+    :schema-ids
+    :symbols])
+
+(def selfhost/effect-ffi::input-valid?
+  (fn (value)
+    (if ((selfhost/effect-plugin::exact-map? value) selfhost/effect-ffi::fields)
+      (if (selfhost/effect-plugin::list-input?
+            ((core/map::get value) (quote :abi-ids)))
+        (if (selfhost/effect-plugin::list-input?
+              ((core/map::get value) (quote :libraries)))
+          (if (selfhost/effect-plugin::list-input?
+                ((core/map::get value) (quote :schema-ids)))
+            (if (selfhost/effect-plugin::list-input?
+                  ((core/map::get value) (quote :symbols)))
+              (if (selfhost/effect-crypto::limit-input?
+                    ((core/map::get value) (quote :max-buffer-bytes)))
+                (selfhost/effect-crypto::limit-input?
+                  ((core/map::get value) (quote :max-call-payload-bytes)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-ffi::empty-input
+  {
+    :abi-ids nil
+    :libraries nil
+    :max-buffer-bytes nil
+    :max-call-payload-bytes nil
+    :schema-ids nil
+    :symbols nil})
+
+(def selfhost/effect-ffi::policy
+  (fn (override)
+    (fn (platform-max)
+      (let ((ffi
+        (if (selfhost/policy::nil? override)
+          selfhost/effect-ffi::empty-input
+          ((core/map::get override) (quote :ffi-policy)))))
+        {
+          :abi-ids
+            (selfhost/effect-plugin::list-policy
+              ((core/map::get ffi) (quote :abi-ids)))
+          :libraries
+            (selfhost/effect-plugin::list-policy
+              ((core/map::get ffi) (quote :libraries)))
+          :max-buffer-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get ffi) (quote :max-buffer-bytes))) platform-max)
+          :max-call-payload-bytes
+            ((selfhost/effect-crypto::positive-limit-policy
+               ((core/map::get ffi) (quote :max-call-payload-bytes))) platform-max)
+          :schema-ids
+            (selfhost/effect-plugin::list-policy
+              ((core/map::get ffi) (quote :schema-ids)))
+          :symbols
+            (selfhost/effect-plugin::list-policy
+              ((core/map::get ffi) (quote :symbols)))}))))

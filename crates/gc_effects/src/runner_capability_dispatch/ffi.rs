@@ -1,4 +1,6 @@
 use super::*;
+#[path = "ffi_policy.rs"]
+mod policy;
 
 fn ffi_signed_policy_required(pol: Option<&OpPolicy>) -> bool {
     pol.and_then(|p| p.extra.get("signed_policy_required"))
@@ -82,33 +84,6 @@ fn ffi_call_payload_len(payload: &Term) -> usize {
         Ok(term) => print_term(&term).len(),
         Err(_) => 0,
     }
-}
-
-fn ffi_allowlist_from_policy(
-    pol: Option<&OpPolicy>,
-    key: &str,
-    op: &str,
-) -> Result<Vec<String>, String> {
-    parse_nonempty_string_array(
-        pol,
-        key,
-        &format!("{op} requires per-op {key} allowlist in caps.toml"),
-    )
-}
-
-fn ffi_schema_allowlist_from_policy(pol: Option<&OpPolicy>) -> Result<Option<Vec<String>>, String> {
-    let Some(pol) = pol else {
-        return Ok(None);
-    };
-    if !pol.extra.contains_key("allow_schema_ids") {
-        return Ok(None);
-    }
-    parse_nonempty_string_array(
-        Some(pol),
-        "allow_schema_ids",
-        "allow_schema_ids must be configured with at least one entry",
-    )
-    .map(Some)
 }
 
 fn ffi_bridge_digest_pin_is_required(pol: Option<&OpPolicy>) -> bool {
@@ -249,7 +224,7 @@ fn ffi_check_schema_ids(
     if !schema_ids.has_any() {
         return Ok(None);
     }
-    let allow_schema_ids = match ffi_schema_allowlist_from_policy(pol) {
+    let allow_schema_ids = match policy::schema_allowlist_from_policy(pol) {
         Ok(Some(v)) => v,
         Ok(None) => {
             return Err(mk_error(
@@ -449,7 +424,7 @@ fn capability_host_ffi_call(
         }
     };
 
-    let allow_abi_ids = match ffi_allowlist_from_policy(pol, "allow_abi_ids", op) {
+    let allow_abi_ids = match policy::allowlist_from_policy(pol, "allow_abi_ids", op) {
         Ok(v) => v,
         Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
     };
@@ -458,7 +433,7 @@ fn capability_host_ffi_call(
     {
         return err;
     }
-    let allow_libraries = match ffi_allowlist_from_policy(pol, "allow_libraries", op) {
+    let allow_libraries = match policy::allowlist_from_policy(pol, "allow_libraries", op) {
         Ok(v) => v,
         Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
     };
@@ -467,7 +442,7 @@ fn capability_host_ffi_call(
     {
         return err;
     }
-    let allow_symbols = match ffi_allowlist_from_policy(pol, "allow_symbols", op) {
+    let allow_symbols = match policy::allowlist_from_policy(pol, "allow_symbols", op) {
         Ok(v) => v,
         Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
     };
@@ -477,20 +452,21 @@ fn capability_host_ffi_call(
         return err;
     }
     if ffi_signed_policy_required(pol) {
-        let max_call_payload_bytes = match op_extra_positive_usize(pol, "max_call_payload_bytes") {
-            Ok(Some(v)) => v,
-            Ok(None) => {
-                return mk_error(
-                    error_tok,
-                    "core/caps/policy-error",
-                    format!(
-                        "{op} requires max_call_payload_bytes when signed_policy_required=true"
-                    ),
-                    Some(op),
-                );
-            }
-            Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
-        };
+        let max_call_payload_bytes =
+            match policy::positive_usize_from_policy(pol, "max_call_payload_bytes") {
+                Ok(Some(v)) => v,
+                Ok(None) => {
+                    return mk_error(
+                        error_tok,
+                        "core/caps/policy-error",
+                        format!(
+                            "{op} requires max_call_payload_bytes when signed_policy_required=true"
+                        ),
+                        Some(op),
+                    );
+                }
+                Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
+            };
         let observed = ffi_call_payload_len(payload);
         if observed > max_call_payload_bytes {
             return mk_error(
@@ -529,7 +505,7 @@ fn capability_host_ffi_buffer_pin(
             );
         }
     };
-    let allow_abi_ids = match ffi_allowlist_from_policy(pol, "allow_abi_ids", op) {
+    let allow_abi_ids = match policy::allowlist_from_policy(pol, "allow_abi_ids", op) {
         Ok(v) => v,
         Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
     };
@@ -561,7 +537,7 @@ fn capability_host_ffi_buffer_pin(
             );
         }
     };
-    let max_buffer_bytes = match op_extra_positive_usize(pol, "max_buffer_bytes") {
+    let max_buffer_bytes = match policy::positive_usize_from_policy(pol, "max_buffer_bytes") {
         Ok(Some(v)) => v,
         Ok(None) => {
             return mk_error(
@@ -618,7 +594,7 @@ fn capability_host_ffi_buffer_unpin(
             );
         }
     };
-    let allow_abi_ids = match ffi_allowlist_from_policy(pol, "allow_abi_ids", op) {
+    let allow_abi_ids = match policy::allowlist_from_policy(pol, "allow_abi_ids", op) {
         Ok(v) => v,
         Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
     };

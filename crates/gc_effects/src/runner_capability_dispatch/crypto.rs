@@ -604,6 +604,7 @@ mod authority_tests {
             authorized_network: None,
             authorized_crypto: Some(crypto),
             authorized_plugin: None,
+            authorized_ffi: None,
         }
     }
 

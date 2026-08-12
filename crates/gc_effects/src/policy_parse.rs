@@ -421,6 +421,7 @@ pub(super) fn apply_op_cfg(
             authorized_network: None,
             authorized_crypto: None,
             authorized_plugin: None,
+            authorized_ffi: None,
         },
     );
     Ok(())

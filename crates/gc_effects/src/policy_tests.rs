@@ -152,6 +152,30 @@ fn plugin_policy_term(plugins: Term, commands: Term, schema_ids: Term) -> Term {
     ]))
 }
 
+fn ffi_policy_term(
+    abi_ids: Term,
+    libraries: Term,
+    symbols: Term,
+    schema_ids: Term,
+    max_buffer_bytes: Term,
+    max_call_payload_bytes: Term,
+) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":abi-ids")), abi_ids),
+        (TermOrdKey(Term::symbol(":libraries")), libraries),
+        (
+            TermOrdKey(Term::symbol(":max-buffer-bytes")),
+            max_buffer_bytes,
+        ),
+        (
+            TermOrdKey(Term::symbol(":max-call-payload-bytes")),
+            max_call_payload_bytes,
+        ),
+        (TermOrdKey(Term::symbol(":schema-ids")), schema_ids),
+        (TermOrdKey(Term::symbol(":symbols")), symbols),
+    ]))
+}
+
 #[test]
 fn selfhost_authority_composes_admission_and_canonical_caps() {
     let td = tempfile::tempdir().unwrap();
@@ -1085,6 +1109,154 @@ fn selfhost_authority_rejects_malformed_plugin_decisions() {
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_plugin_policy(&Term::Map(extra), true)
         .expect_err("unknown plugin authority fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_ffi_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."host/ffi::call"]
+allow_abi_ids = [" abi.math.v1 ", ""]
+allow_libraries = [" libmath.so "]
+allow_symbols = [" sum_f64 "]
+allow_schema_ids = [" genesis/ffi.request.call.v1 "]
+max_buffer_bytes = 64
+max_call_payload_bytes = 128
+"#,
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let ffi = policy
+        .op_policy("host/ffi::call")
+        .unwrap()
+        .authorized_ffi
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        ffi.abi_ids,
+        AuthorizedStringList::Valid(vec!["abi.math.v1".to_string()])
+    );
+    assert_eq!(
+        ffi.libraries,
+        AuthorizedStringList::Valid(vec!["libmath.so".to_string()])
+    );
+    assert_eq!(
+        ffi.symbols,
+        AuthorizedStringList::Valid(vec!["sum_f64".to_string()])
+    );
+    assert_eq!(
+        ffi.schema_ids,
+        AuthorizedStringList::Valid(vec!["genesis/ffi.request.call.v1".to_string()])
+    );
+    assert_eq!(ffi.max_buffer_bytes, AuthorizedMaxBytes::Valid(64));
+    assert_eq!(ffi.max_call_payload_bytes, AuthorizedMaxBytes::Valid(128));
+}
+
+#[test]
+fn selfhost_authority_preserves_invalid_ffi_policy_states() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."host/ffi::call"]
+allow_abi_ids = "abi.math.v1"
+allow_libraries = [7]
+allow_symbols = ["", "   "]
+max_buffer_bytes = "large"
+max_call_payload_bytes = 0
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let ffi = policy
+        .op_policy("host/ffi::call")
+        .unwrap()
+        .authorized_ffi
+        .as_ref()
+        .unwrap();
+    assert_eq!(ffi.abi_ids, AuthorizedStringList::InvalidType);
+    assert_eq!(ffi.libraries, AuthorizedStringList::InvalidEntry);
+    assert_eq!(ffi.symbols, AuthorizedStringList::Empty);
+    assert_eq!(ffi.schema_ids, AuthorizedStringList::Absent);
+    assert_eq!(ffi.max_buffer_bytes, AuthorizedMaxBytes::InvalidType);
+    assert_eq!(ffi.max_call_payload_bytes, AuthorizedMaxBytes::NonPositive);
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_ffi_decisions() {
+    use super::policy_authority::decode_ffi_policy;
+
+    let absent_list = string_list_policy(":absent", Term::Nil);
+    let absent_limit = max_bytes_policy(":absent", Term::Nil);
+    let valid = || {
+        ffi_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_limit.clone(),
+            absent_limit.clone(),
+        )
+    };
+    decode_ffi_policy(&valid(), true).unwrap();
+
+    let cases = [
+        ffi_policy_term(
+            string_list_policy(":valid", Term::Vector(vec![])),
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_limit.clone(),
+            absent_limit.clone(),
+        ),
+        ffi_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_list.clone(),
+            max_bytes_policy(":valid", Term::Int(0.into())),
+            absent_limit.clone(),
+        ),
+        ffi_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_list.clone(),
+            string_list_policy(
+                ":valid",
+                Term::Vector(vec![Term::Str(" padded ".to_string())]),
+            ),
+            absent_limit.clone(),
+            absent_limit.clone(),
+        ),
+    ];
+    for decision in cases {
+        decode_ffi_policy(&decision, true)
+            .expect_err("contradictory ffi authority decision must fail closed");
+    }
+    decode_ffi_policy(&valid(), false)
+        .expect_err("denied operation must not carry an ffi decision");
+
+    let Term::Map(mut extra) = valid() else {
+        return;
+    };
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_ffi_policy(&Term::Map(extra), true)
+        .expect_err("unknown ffi authority fields must fail closed");
 }
 
 #[test]

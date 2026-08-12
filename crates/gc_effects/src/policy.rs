@@ -209,6 +209,16 @@ pub(crate) struct AuthorizedPluginPolicy {
     pub schema_ids: AuthorizedStringList,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedFfiPolicy {
+    pub abi_ids: AuthorizedStringList,
+    pub libraries: AuthorizedStringList,
+    pub symbols: AuthorizedStringList,
+    pub schema_ids: AuthorizedStringList,
+    pub max_buffer_bytes: AuthorizedMaxBytes,
+    pub max_call_payload_bytes: AuthorizedMaxBytes,
+}
+
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
@@ -223,6 +233,7 @@ pub struct OpPolicy {
     pub(crate) authorized_network: Option<AuthorizedNetworkPolicy>,
     pub(crate) authorized_crypto: Option<AuthorizedCryptoPolicy>,
     pub(crate) authorized_plugin: Option<AuthorizedPluginPolicy>,
+    pub(crate) authorized_ffi: Option<AuthorizedFfiPolicy>,
 }
 
 impl CapsPolicy {
@@ -337,6 +348,7 @@ impl CapsPolicy {
                         authorized_network: None,
                         authorized_crypto: None,
                         authorized_plugin: None,
+                        authorized_ffi: None,
                     },
                 );
             }

@@ -425,6 +425,7 @@ mod tests {
             authorized_network: Some(network),
             authorized_crypto: None,
             authorized_plugin: None,
+            authorized_ffi: None,
         }
     }
 

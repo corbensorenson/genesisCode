@@ -85,6 +85,7 @@ DECISIONS = [
     "per-operation-crypto-policy",
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
+    "per-operation-ffi-allowlist-and-bound-policy",
     "per-operation-max-bytes-policy",
     "per-operation-network-policy",
     "per-operation-plugin-allowlist-policy",
@@ -126,11 +127,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.8",
+        "requestKind": "genesis/effect-policy-authority-request-v0.9",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.8",
+        "resultKind": "genesis/effect-policy-authority-result-v0.9",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -142,10 +143,11 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_crypto_v1.gc",
             "selfhost/effect_policy_network_v1.gc",
             "selfhost/effect_policy_plugin_v1.gc",
+            "selfhost/effect_policy_ffi_v1.gc",
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.12",
+        "version": "0.1.13",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -221,6 +223,8 @@ def static_check(root: Path, profile):
         fail("effect-policy capability boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_crypto.rs"]') != 1:
         fail("effect-policy crypto boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_ffi.rs"]') != 1:
+        fail("effect-policy ffi boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_plugin.rs"]') != 1:
         fail("effect-policy plugin boundary decomposition drift")
     resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
@@ -241,6 +245,9 @@ def static_check(root: Path, profile):
     crypto_boundary_path = root / "crates/gc_effects/src/policy_authority_crypto.rs"
     if crypto_boundary_path.is_symlink() or not crypto_boundary_path.is_file():
         fail("effect-policy crypto host boundary is missing or symlinked")
+    ffi_boundary_path = root / "crates/gc_effects/src/policy_authority_ffi.rs"
+    if ffi_boundary_path.is_symlink() or not ffi_boundary_path.is_file():
+        fail("effect-policy ffi host boundary is missing or symlinked")
     plugin_boundary_path = root / "crates/gc_effects/src/policy_authority_plugin.rs"
     if plugin_boundary_path.is_symlink() or not plugin_boundary_path.is_file():
         fail("effect-policy plugin host boundary is missing or symlinked")
@@ -252,6 +259,7 @@ def static_check(root: Path, profile):
         + network_boundary_path.read_text()
         + cap_boundary_path.read_text()
         + crypto_boundary_path.read_text()
+        + ffi_boundary_path.read_text()
         + plugin_boundary_path.read_text()
     )
     required_authority = [
@@ -281,6 +289,7 @@ def static_check(root: Path, profile):
         "op_policy.authorized_database = Some(authorized.database);",
         "op_policy.authorized_network = Some(authorized.network);",
         "op_policy.authorized_crypto = Some(authorized.crypto);",
+        "op_policy.authorized_ffi = Some(authorized.ffi);",
         "op_policy.authorized_plugin = Some(authorized.plugin);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
@@ -414,6 +423,23 @@ def static_check(root: Path, profile):
             fail(f"plugin enforcement consults raw policy before authority state: {start}")
     if plugin_policy.count("fn capability_host_plugin_command(") != 1:
         fail("plugin operation policy inventory drift")
+    ffi_policy = (
+        root / "crates/gc_effects/src/runner_capability_dispatch/ffi_policy.rs"
+    ).read_text()
+    for start in (
+        "pub(super) fn allowlist_from_policy",
+        "pub(super) fn schema_allowlist_from_policy",
+        "pub(super) fn positive_usize_from_policy",
+    ):
+        body = ffi_policy.split(start, 1)[1].split("\n}\n", 1)[0]
+        if "authorized_ffi" not in body:
+            fail(f"ffi enforcement does not consume authority state: {start}")
+    ffi_dispatch = (
+        root / "crates/gc_effects/src/runner_capability_dispatch/ffi.rs"
+    ).read_text()
+    for operation in ("call", "buffer_pin", "buffer_unpin"):
+        if ffi_dispatch.count(f"fn capability_host_ffi_{operation}(") != 1:
+            fail(f"ffi operation policy inventory drift: {operation}")
     effect_source = (root / profile["sourceModule"]).read_text()
     cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
         "(def core/effects::policy-authority", 1
@@ -517,6 +543,9 @@ def static_check(root: Path, profile):
         "selfhost_authority_installs_plugin_policy",
         "selfhost_authority_preserves_invalid_plugin_policy_states",
         "selfhost_authority_rejects_malformed_plugin_decisions",
+        "selfhost_authority_installs_ffi_policy",
+        "selfhost_authority_preserves_invalid_ffi_policy_states",
+        "selfhost_authority_rejects_malformed_ffi_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -556,6 +585,12 @@ def static_check(root: Path, profile):
     ):
         if plugin_policy.count(f"fn {name}()") != 1:
             fail(f"missing focused plugin authority control: {name}")
+    for name in (
+        "ffi_dispatch_consumes_authorized_policy_before_raw_policy",
+        "ffi_dispatch_preserves_authorized_policy_errors_and_optional_schema",
+    ):
+        if ffi_policy.count(f"fn {name}()") != 1:
+            fail(f"missing focused ffi authority control: {name}")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]
@@ -587,6 +622,7 @@ def mutation_controls(profile, schema):
         ("source", lambda item: item.__setitem__("sourceModule", "selfhost/unknown.gc")),
         ("crypto-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_crypto_v1.gc")),
         ("plugin-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_plugin_v1.gc")),
+        ("ffi-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_ffi_v1.gc")),
         ("source-order", lambda item: item["sourceModules"].reverse()),
         ("unknown", lambda item: item.__setitem__("unexpected", True)),
     ]
