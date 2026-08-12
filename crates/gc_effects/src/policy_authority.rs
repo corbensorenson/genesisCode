@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_kernel::{Apply, EvalCtx, MemLimits, Value};
@@ -49,6 +49,13 @@ fn optional_int(value: Option<&toml::Value>) -> Term {
         .unwrap_or(Term::Nil)
 }
 
+fn optional_str(value: Option<&toml::Value>) -> Term {
+    value
+        .and_then(toml::Value::as_str)
+        .map(|text| Term::Str(text.to_string()))
+        .unwrap_or(Term::Nil)
+}
+
 fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
     let Some(value) = value else {
         return Ok(Term::Nil);
@@ -61,6 +68,10 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
             (
                 TermOrdKey(Term::symbol(":allow")),
                 optional_bool(table.get("allow")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":base-dir")),
+                optional_str(table.get("base_dir")),
             ),
             (
                 TermOrdKey(Term::symbol(":create-dirs")),
@@ -89,11 +100,11 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.1".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.2".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(2.into())),
         ]
         .into_iter()
         .collect(),
@@ -218,19 +229,27 @@ fn decode_result(
     term: Term,
     op: &str,
     request_hash: [u8; 32],
-) -> Result<(bool, Term), EffectsError> {
+) -> Result<(bool, Term, Option<PathBuf>), EffectsError> {
     let Term::Map(map) = term else {
         return Err(authority_error("result must be a data map"));
     };
-    let expected_keys: BTreeSet<_> = [":allowed", ":cap", ":kind", ":op", ":request-h", ":v"]
-        .into_iter()
-        .map(|key| TermOrdKey(Term::symbol(key)))
-        .collect();
+    let expected_keys: BTreeSet<_> = [
+        ":allowed",
+        ":base-dir",
+        ":cap",
+        ":kind",
+        ":op",
+        ":request-h",
+        ":v",
+    ]
+    .into_iter()
+    .map(|key| TermOrdKey(Term::symbol(key)))
+    .collect();
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.1")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &1.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.2")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &2.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -247,7 +266,15 @@ fn decode_result(
     if (allowed && !matches!(cap, Term::Map(_))) || (!allowed && cap != Term::Nil) {
         return Err(authority_error("result :cap contradicts :allowed"));
     }
-    Ok((allowed, cap))
+    let base_dir = match map.get(&TermOrdKey(Term::symbol(":base-dir"))) {
+        Some(Term::Nil) => None,
+        Some(Term::Str(path)) => Some(PathBuf::from(path)),
+        _ => return Err(authority_error("result :base-dir must be nil or string")),
+    };
+    if !allowed && base_dir.is_some() {
+        return Err(authority_error("result :base-dir contradicts :allowed"));
+    }
+    Ok((allowed, cap, base_dir))
 }
 
 pub(super) fn authorize_policy(
@@ -357,10 +384,11 @@ pub(super) fn authorize_policy(
             .apply(&mut context, Value::data(request))
             .map_err(|error| authority_error(format!("authority apply failed: {error}")))?;
         let term = plain_authority_result(value, &context, "operation")?;
-        let (allowed, cap) = decode_result(term, &op, request_hash)?;
+        let (allowed, cap, base_dir) = decode_result(term, &op, request_hash)?;
         let expected = legacy_ops.get(&op);
         if allowed != expected.is_some()
             || expected.is_some_and(|policy| cap != legacy_cap(&op, policy))
+            || base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
         {
             return Err(authority_error(format!(
                 "result for `{op}` contradicts independently reconstructed policy composition"
@@ -371,6 +399,7 @@ pub(super) fn authorize_policy(
                 .get(&op)
                 .cloned()
                 .ok_or_else(|| authority_error("authorized op has no host enforcement state"))?;
+            op_policy.base_dir = base_dir;
             op_policy.authorized_cap = Some(cap);
             authorized_ops.insert(op, op_policy);
         }

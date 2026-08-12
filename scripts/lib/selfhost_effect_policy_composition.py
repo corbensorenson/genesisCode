@@ -80,6 +80,7 @@ DECISIONS = [
     "global-log-and-store-resource-limits",
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
+    "per-operation-base-directory-selection",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
 ]
@@ -122,11 +123,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.1",
+        "requestKind": "genesis/effect-policy-authority-request-v0.2",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.1",
+        "resultKind": "genesis/effect-policy-authority-result-v0.2",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -135,7 +136,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.4",
+        "version": "0.1.5",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -207,6 +208,7 @@ def static_check(root: Path, profile):
         "contradicts independently reconstructed policy composition",
         "resource result contradicts independently reconstructed log/runtime/store/task policy",
         "op_policy.authorized_cap = Some(cap);",
+        "op_policy.base_dir = base_dir;",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -223,6 +225,13 @@ def static_check(root: Path, profile):
     policy = (root / "crates/gc_effects/src/policy.rs").read_text()
     if "pub fn load_with_selfhost_authority(" not in policy:
         fail("self-host policy loader is missing")
+    selfhost_loader = policy.split("pub fn load_with_selfhost_authority(", 1)[1].split(
+        "pub(crate) fn authorized_cap", 1
+    )[0]
+    if selfhost_loader.find("policy_authority::authorize_policy") >= selfhost_loader.find(
+        "policy.resolve_relative_paths"
+    ):
+        fail("self-host policy loader must authorize base directories before host path resolution")
     legacy_defaults = (
         'pol.log.store_dir = Some(base.join(".genesis").join("store"));',
         'pol.store.dir = Some(base.join(".genesis").join("store"));',
@@ -308,6 +317,8 @@ def static_check(root: Path, profile):
     tests = (root / "crates/gc_effects/src/policy_tests.rs").read_text()
     for name in (
         "selfhost_authority_composes_admission_and_canonical_caps",
+        "selfhost_authority_owns_per_operation_base_directory",
+        "selfhost_authority_discards_denied_operation_base_directory",
         "selfhost_authority_owns_sorted_unique_candidate_inventory",
         "selfhost_authority_owns_runtime_and_task_resource_composition",
         "selfhost_authority_owns_adaptive_task_worker_default",
@@ -345,6 +356,7 @@ def mutation_controls(profile, schema):
         ("nonclaim", lambda item: item["nonclaims"].pop()),
         ("residual", lambda item: item["residualDecisionInventory"].pop()),
         ("request", lambda item: item.__setitem__("requestKind", "unknown")),
+        ("result", lambda item: item.__setitem__("resultKind", "unknown")),
         ("runtime", lambda item: item["runtimeEvidence"].__setitem__("stepLimit", 0)),
         ("source", lambda item: item.__setitem__("sourceModule", "selfhost/unknown.gc")),
         ("unknown", lambda item: item.__setitem__("unexpected", True)),

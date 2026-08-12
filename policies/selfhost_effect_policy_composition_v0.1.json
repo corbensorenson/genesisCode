@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "7e08ab7aa09c007d4d101319d98d7684fc8b81d03e298923444fbb28c7942b2b",
+  "contentIdentitySha256": "e3fe7e13ccb345716dfea25a44357b0ee3011ebfdcde28c07516301c18c08f24",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -10,6 +10,7 @@
     "global-log-and-store-resource-limits",
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
+    "per-operation-base-directory-selection",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers"
   ],
@@ -36,7 +37,7 @@
     "genesis",
     "genesis_wasi"
   ],
-  "requestKind": "genesis/effect-policy-authority-request-v0.1",
+  "requestKind": "genesis/effect-policy-authority-request-v0.2",
   "resourceBinding": "core/effects::resource-policy-authority",
   "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
   "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
@@ -54,7 +55,7 @@
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
   ],
-  "resultKind": "genesis/effect-policy-authority-result-v0.1",
+  "resultKind": "genesis/effect-policy-authority-result-v0.2",
   "runtimeEvidence": {
     "allocationLimit": 20000000,
     "stepLimit": 20000000,
@@ -62,7 +63,7 @@
   },
   "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
   "sourceModule": "selfhost/effect_policy_authority_v1.gc",
-  "sourceSha256": "7899ca95778fc3dddd5a3dfef45d04bb0236ae14bb91001d87d29f1c6647945e",
+  "sourceSha256": "9d44a7fd1ba6d888c4c1e4af5ddf75c8db13fd84a6e9c32021c11823abf1de58",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.4"
+  "version": "0.1.5"
 }

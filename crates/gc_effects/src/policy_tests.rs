@@ -76,6 +76,66 @@ log_inline_max_bytes = 64
 }
 
 #[test]
+fn selfhost_authority_owns_per_operation_base_directory() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."io/fs::read"]
+base_dir = "./sandbox"
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert_eq!(
+        policy.op_policy("io/fs::read").unwrap().base_dir,
+        Some(td.path().join("./sandbox"))
+    );
+    assert_eq!(
+        policy.authorized_cap("io/fs::read"),
+        Some(&expected_cap("io/fs::read", []))
+    );
+}
+
+#[test]
+fn selfhost_authority_discards_denied_operation_base_directory() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["io/fs::read"]
+
+[op."io/fs::read"]
+allow = false
+base_dir = "./must-not-survive"
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert!(!policy.is_allowed("io/fs::read"));
+    assert!(policy.op_policy("io/fs::read").is_none());
+    assert!(policy.authorized_cap("io/fs::read").is_none());
+}
+
+#[test]
 fn selfhost_authority_owns_sorted_unique_candidate_inventory() {
     let td = tempfile::tempdir().unwrap();
     let caps = td.path().join("caps.toml");

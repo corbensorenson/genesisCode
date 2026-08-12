@@ -342,16 +342,19 @@
     (if (selfhost/policy::nil? override)
       true
       (if (selfhost/policy::map? override)
-        (if ((core/int::eq? (core/map::len override)) 4)
+        (if ((core/int::eq? (core/map::len override)) 5)
           (if (selfhost/effect-policy::optional-bool? ((core/map::get override) (quote :allow)))
-            (if
-              (selfhost/effect-policy::optional-bool?
-                ((core/map::get override) (quote :create-dirs)))
+            (if (selfhost/effect-policy::optional-str?
+                  ((core/map::get override) (quote :base-dir)))
               (if
-                (selfhost/effect-policy::optional-int?
-                  ((core/map::get override) (quote :log-inline-max-bytes)))
-                (selfhost/effect-policy::optional-int?
-                  ((core/map::get override) (quote :timeout-ms)))
+                (selfhost/effect-policy::optional-bool?
+                  ((core/map::get override) (quote :create-dirs)))
+                (if
+                  (selfhost/effect-policy::optional-int?
+                    ((core/map::get override) (quote :log-inline-max-bytes)))
+                  (selfhost/effect-policy::optional-int?
+                    ((core/map::get override) (quote :timeout-ms)))
+                  false)
                 false)
               false)
             false)
@@ -409,8 +412,8 @@
             (op ((core/map::get request) (quote :op)))
             (override ((core/map::get request) (quote :override))))
           (if
-            (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.1")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 1) false)
+            (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.2")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 2) false)
               false)
             (if (if (selfhost/policy::vec? baseline) (selfhost/policy::str? op) false)
               (if (selfhost/effect-policy::override-valid? override)
@@ -419,13 +422,19 @@
                     allowed
                     {
                       :allowed allowed
+                      :base-dir
+                        (if allowed
+                          (if (selfhost/policy::nil? override)
+                            nil
+                            ((core/map::get override) (quote :base-dir)))
+                          nil)
                       :cap (if allowed ((selfhost/effect-policy::cap op) override) nil)
-                      :kind "genesis/effect-policy-authority-result-v0.1"
+                      :kind "genesis/effect-policy-authority-result-v0.2"
                       :op op
                       :request-h (selfhost/hash::hash-term request)
-                      :v 1}))
+                      :v 2}))
                 ((core/error::make2 "core/policy/authority")
-                  "effect-policy override must contain exactly optional typed admission fields"))
+                  "effect-policy override must contain exactly optional typed admission and base fields"))
               ((core/error::make2 "core/policy/authority")
                 "effect-policy baseline must be a vector and op must be a string"))
             ((core/error::make2 "core/policy/authority")

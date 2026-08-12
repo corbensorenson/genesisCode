@@ -4,8 +4,9 @@ Status: normative partial R4.2.d contract; no H2 claim.
 
 `core/effects::policy-authority` is the GenesisCode producer for the first closed
 effect-policy composition slice: baseline operation admission, per-operation
-`allow` precedence, and the canonical log capability descriptor fields `:op`,
-`:create-dirs`, `:timeout-ms`, and `:log-inline-max-bytes`.
+`allow` precedence, per-operation base-directory selection, and the canonical
+log capability descriptor fields `:op`, `:create-dirs`, `:timeout-ms`, and
+`:log-inline-max-bytes`.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
@@ -23,11 +24,12 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed five-field map with kind
-`genesis/effect-policy-authority-request-v0.1`, version `1`, the operation string,
+`genesis/effect-policy-authority-request-v0.2`, version `2`, the operation string,
 the complete ordered baseline allow vector, and either `nil` or an exact override
-map containing `:allow`, `:create-dirs`, `:timeout-ms`, and
-`:log-inline-max-bytes`. Optional fields use `nil`; no omitted or additional field
-is accepted. A policy may expose at most 4,096 unique candidate operations.
+map containing `:allow`, `:base-dir`, `:create-dirs`, `:timeout-ms`, and
+`:log-inline-max-bytes`. The base directory is `nil` or the exact configured
+string. Optional fields use `nil`; no omitted or additional field is accepted. A
+policy may expose at most 4,096 unique candidate operations.
 
 Before those per-operation requests, the inventory authority receives a closed
 four-field `genesis/effect-policy-inventory-request-v0.1` map containing version
@@ -39,13 +41,15 @@ host rejects malformed, oversized, duplicate, unsorted, substituted, or
 oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
-The authority returns a closed six-field
-`genesis/effect-policy-authority-result-v0.1` map containing the exact operation,
-boolean admission decision, canonical capability map when admitted or `nil` when
-denied, lowercase canonical request hash, and version `1`. Malformed requests
-return sealed errors. The host rejects unknown fields, identity drift, request-hash
-substitution, denied non-nil capabilities, admitted non-map capabilities, and any
-result that contradicts its retained compatibility oracle.
+The authority returns a closed seven-field
+`genesis/effect-policy-authority-result-v0.2` map containing the exact operation,
+boolean admission decision, selected `:base-dir`, canonical capability map when
+admitted or `nil` when denied, lowercase canonical request hash, and version `2`.
+Denied operations must carry neither a base directory nor a capability. Malformed
+requests return sealed errors. The host rejects unknown fields, identity drift,
+request-hash substitution, invalid path types, denied non-nil state, admitted
+non-map capabilities, and any result that contradicts its retained compatibility
+oracle.
 
 The resource authority receives a closed eight-field
 `genesis/effect-resource-policy-request-v0.3` map. It contains version `3`, the
@@ -86,8 +90,10 @@ selected. Obligation preflight uses the same self-host route while preserving it
 already-normative missing-policy observation behavior.
 
 The effect runner uses the validated GenesisCode capability descriptor in log
-entries and all validated resource limits for host enforcement. Host code retains
-payload measurement and enforcement mechanisms, filesystem path resolution,
+entries and all validated resource limits for host enforcement. The selected base
+directory remains separate from that descriptor so logs do not gain path material;
+Rust installs it before resolving relative paths against the capability-file base.
+Host code retains payload measurement and enforcement mechanisms, filesystem path resolution,
 accounting mechanisms, cancellation, effect execution, and replay mechanisms.
 `CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy
 composition oracle remain reachable for tests, host mechanisms, and this partial
