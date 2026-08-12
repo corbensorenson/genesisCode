@@ -6,9 +6,11 @@ Status: normative partial R4.2.d contract; no H2 claim.
 effect-policy composition slice: baseline operation admission, per-operation
 `allow` precedence, and the canonical log capability descriptor fields `:op`,
 `:create-dirs`, `:timeout-ms`, and `:log-inline-max-bytes`.
+`core/effects::policy-inventory-authority` owns deterministic union,
+deduplication, and ordering of baseline and per-operation candidate names.
 
-The Rust host still parses TOML, constructs the candidate operation inventory,
-independently reconstructs the legacy result, and rejects every contradiction.
+The Rust host still parses TOML, independently reconstructs the legacy candidate
+inventory and per-operation results, and rejects every contradiction.
 That live oracle is a required safety mechanism for this partial checkpoint and
 prevents `SD-EFFECT-POLICY` from reaching H2. Removing it before all residual
 decisions are GenesisCode-owned and independently verified is forbidden.
@@ -21,6 +23,16 @@ the complete ordered baseline allow vector, and either `nil` or an exact overrid
 map containing `:allow`, `:create-dirs`, `:timeout-ms`, and
 `:log-inline-max-bytes`. Optional fields use `nil`; no omitted or additional field
 is accepted. A policy may expose at most 4,096 unique candidate operations.
+
+Before those per-operation requests, the inventory authority receives a closed
+four-field `genesis/effect-policy-inventory-request-v0.1` map containing version
+`1`, the complete baseline vector, and the complete ordered vector of override
+operation names. It validates string membership and returns the strictly ordered,
+duplicate-free union in a closed
+`genesis/effect-policy-inventory-result-v0.1` map bound to the request hash. The
+host rejects malformed, oversized, duplicate, unsorted, substituted, or
+oracle-contradicting inventory results and uses only the validated GenesisCode
+inventory to drive per-operation composition.
 
 The authority returns a closed six-field
 `genesis/effect-policy-authority-result-v0.1` map containing the exact operation,
@@ -56,8 +68,8 @@ transition, and therefore are not evidence of H2.
 ## Residual Decisions And Nonclaims
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
-and type decoding; candidate-inventory construction; global runtime, task, log,
-store, and refs policy; operation-specific filesystem, network, process, database,
+and type decoding; global runtime, task, log, store, and refs policy;
+operation-specific filesystem, network, process, database,
 crypto, FFI, plugin, model, graphics, and device constraints; secret and path
 resolution; effect execution and cancellation; strict replay; policy aliasing;
 and removal of the compatibility oracle.

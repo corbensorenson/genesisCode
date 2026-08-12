@@ -12,6 +12,9 @@
     "decisionInventory",
     "hostOracle",
     "independentVerifier",
+    "inventoryBinding",
+    "inventoryRequestKind",
+    "inventoryResultKind",
     "kind",
     "maxPolicyOperations",
     "nonclaims",
@@ -32,7 +35,7 @@
     "binding": {"const": "core/effects::policy-authority"},
     "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "decisionInventory": {
-      "const": ["baseline-operation-admission", "canonical-log-cap-descriptor", "per-operation-allow-precedence"]
+      "const": ["baseline-operation-admission", "candidate-operation-inventory", "canonical-log-cap-descriptor", "per-operation-allow-precedence"]
     },
     "hostOracle": {
       "type": "object",
@@ -44,6 +47,9 @@
       }
     },
     "independentVerifier": {"const": "scripts/lib/selfhost_effect_policy_composition.py"},
+    "inventoryBinding": {"const": "core/effects::policy-inventory-authority"},
+    "inventoryRequestKind": {"const": "genesis/effect-policy-inventory-request-v0.1"},
+    "inventoryResultKind": {"const": "genesis/effect-policy-inventory-result-v0.1"},
     "kind": {"const": "genesis/selfhost-effect-policy-composition-v0.1"},
     "maxPolicyOperations": {"const": 4096},
     "nonclaims": {"type": "array", "minItems": 7, "uniqueItems": true, "items": {"type": "string"}},
@@ -65,6 +71,6 @@
     "sourceModule": {"const": "selfhost/effect_policy_authority_v1.gc"},
     "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md"},
-    "version": {"const": "0.1.0"}
+    "version": {"const": "0.1.1"}
   }
 }

@@ -76,6 +76,37 @@ log_inline_max_bytes = 64
 }
 
 #[test]
+fn selfhost_authority_owns_sorted_unique_candidate_inventory() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["sys/time::now", "sys/time::now", "io/fs::read"]
+
+[op."core/task::await"]
+allow = true
+
+[op."io/fs::read"]
+allow = false
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert!(policy.is_allowed("sys/time::now"));
+    assert!(policy.is_allowed("core/task::await"));
+    assert!(!policy.is_allowed("io/fs::read"));
+}
+
+#[test]
 fn selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation() {
     let td = tempfile::tempdir().unwrap();
     let caps = td.path().join("caps.toml");

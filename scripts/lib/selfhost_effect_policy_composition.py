@@ -52,6 +52,9 @@ FIELDS = {
     "decisionInventory",
     "hostOracle",
     "independentVerifier",
+    "inventoryBinding",
+    "inventoryRequestKind",
+    "inventoryResultKind",
     "kind",
     "maxPolicyOperations",
     "nonclaims",
@@ -69,12 +72,12 @@ FIELDS = {
 
 DECISIONS = [
     "baseline-operation-admission",
+    "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
     "per-operation-allow-precedence",
 ]
 
 RESIDUALS = {
-    "candidate-operation-inventory",
     "crypto-and-signing-policy",
     "database-policy",
     "device-and-graphics-policy",
@@ -107,6 +110,9 @@ def validate(profile, schema, check_identity=True):
         "decisionInventory": DECISIONS,
         "hostOracle": {"required": True, "removalTask": "R4.2.d"},
         "independentVerifier": "scripts/lib/selfhost_effect_policy_composition.py",
+        "inventoryBinding": "core/effects::policy-inventory-authority",
+        "inventoryRequestKind": "genesis/effect-policy-inventory-request-v0.1",
+        "inventoryResultKind": "genesis/effect-policy-inventory-result-v0.1",
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
@@ -120,7 +126,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.0",
+        "version": "0.1.1",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -162,6 +168,8 @@ def static_check(root: Path, profile):
         fail("effect-policy source manifest custody drift")
     if manifest.count(profile["binding"]) != 1:
         fail("effect-policy binding manifest custody drift")
+    if manifest.count(profile["inventoryBinding"]) != 1:
+        fail("effect-policy inventory binding manifest custody drift")
 
     authority = (root / "crates/gc_effects/src/policy_authority.rs").read_text()
     required_authority = [
@@ -170,7 +178,11 @@ def static_check(root: Path, profile):
         "const POLICY_AUTHORITY_ALLOC_LIMIT: u64 = 20_000_000;",
         profile["requestKind"],
         profile["resultKind"],
+        profile["inventoryRequestKind"],
+        profile["inventoryResultKind"],
         'get("core/effects::policy-authority")',
+        'get("core/effects::policy-inventory-authority")',
+        "inventory result contradicts independently reconstructed candidate operations",
         "let request_hash = hash_term(&request);",
         "contradicts independently reconstructed policy composition",
         "op_policy.authorized_cap = Some(cap);",
@@ -219,6 +231,7 @@ def static_check(root: Path, profile):
     tests = (root / "crates/gc_effects/src/policy_tests.rs").read_text()
     for name in (
         "selfhost_authority_composes_admission_and_canonical_caps",
+        "selfhost_authority_owns_sorted_unique_candidate_inventory",
         "selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation",
     ):
         if tests.count(f"fn {name}()") != 1:
@@ -239,6 +252,7 @@ def static_check(root: Path, profile):
 def mutation_controls(profile, schema):
     edits = [
         ("binding", lambda item: item.__setitem__("binding", "core/cli::policy-authority")),
+        ("inventory-binding", lambda item: item.__setitem__("inventoryBinding", "core/cli::policy-authority")),
         ("decision", lambda item: item["decisionInventory"].pop()),
         ("oracle", lambda item: item["hostOracle"].__setitem__("required", False)),
         ("limit", lambda item: item.__setitem__("maxPolicyOperations", 0)),

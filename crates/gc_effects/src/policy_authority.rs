@@ -97,6 +97,99 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
     )
 }
 
+fn inventory_request_term(baseline: &[String], override_ops: &[String]) -> Term {
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":baseline")),
+                Term::Vector(baseline.iter().cloned().map(Term::Str).collect()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/effect-policy-inventory-request-v0.1".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":override-ops")),
+                Term::Vector(override_ops.iter().cloned().map(Term::Str).collect()),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn decode_inventory_result(
+    term: Term,
+    request_hash: [u8; 32],
+) -> Result<Vec<String>, EffectsError> {
+    let Term::Map(map) = term else {
+        return Err(authority_error("inventory result must be a data map"));
+    };
+    let expected_keys: BTreeSet<_> = [":candidate-ops", ":kind", ":request-h", ":v"]
+        .into_iter()
+        .map(|key| TermOrdKey(Term::symbol(key)))
+        .collect();
+    if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
+        return Err(authority_error("inventory result field set mismatch"));
+    }
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-inventory-result-v0.1")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &1.into())
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
+    {
+        return Err(authority_error("inventory result identity mismatch"));
+    }
+    let Some(Term::Vector(candidate_terms)) = map.get(&TermOrdKey(Term::symbol(":candidate-ops")))
+    else {
+        return Err(authority_error("inventory :candidate-ops must be a vector"));
+    };
+    if candidate_terms.len() > MAX_POLICY_OPS {
+        return Err(authority_error(format!(
+            "operation inventory exceeds fixed limit {MAX_POLICY_OPS}"
+        )));
+    }
+    let candidates = candidate_terms
+        .iter()
+        .map(|candidate| match candidate {
+            Term::Str(op) => Ok(op.clone()),
+            _ => Err(authority_error(
+                "inventory :candidate-ops entries must be strings",
+            )),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if candidates.windows(2).any(|pair| pair[0] >= pair[1]) {
+        return Err(authority_error(
+            "inventory :candidate-ops must be strictly ordered and unique",
+        ));
+    }
+    Ok(candidates)
+}
+
+fn plain_authority_result(
+    value: Value,
+    context: &EvalCtx,
+    scope: &str,
+) -> Result<Term, EffectsError> {
+    match &value {
+        Value::Sealed { token, payload }
+            if context
+                .protocol
+                .is_some_and(|protocol| *token == protocol.error) =>
+        {
+            let detail = payload
+                .to_plain_term()
+                .map(|term| print_term(&term))
+                .unwrap_or_else(|| "<opaque-error-payload>".to_string());
+            Err(authority_error(format!(
+                "{scope} authority returned sealed ERROR {detail}"
+            )))
+        }
+        _ => value
+            .to_plain_term()
+            .ok_or_else(|| authority_error(format!("{scope} authority returned an opaque value"))),
+    }
+}
+
 fn legacy_cap(op: &str, policy: &OpPolicy) -> Term {
     let mut cap = BTreeMap::new();
     cap.insert(TermOrdKey(Term::symbol(":op")), Term::symbol(op));
@@ -182,9 +275,8 @@ pub(super) fn authorize_policy(
         .and_then(toml::Value::as_table)
         .cloned()
         .unwrap_or_default();
-    let mut candidates: BTreeSet<String> = baseline.iter().cloned().collect();
-    candidates.extend(overrides.keys().cloned());
-    if baseline.len() > MAX_POLICY_OPS || candidates.len() > MAX_POLICY_OPS {
+    let override_ops: Vec<String> = overrides.keys().cloned().collect();
+    if baseline.len() > MAX_POLICY_OPS || override_ops.len() > MAX_POLICY_OPS {
         return Err(authority_error(format!(
             "operation inventory exceeds fixed limit {MAX_POLICY_OPS}"
         )));
@@ -209,6 +301,28 @@ pub(super) fn authorize_policy(
     let authority = environment
         .get("core/effects::policy-authority")
         .ok_or_else(|| authority_error("missing binding core/effects::policy-authority"))?;
+    let inventory_authority = environment
+        .get("core/effects::policy-inventory-authority")
+        .ok_or_else(|| {
+            authority_error("missing binding core/effects::policy-inventory-authority")
+        })?;
+
+    let inventory_request = inventory_request_term(&baseline, &override_ops);
+    let inventory_request_hash = hash_term(&inventory_request);
+    let inventory_value = inventory_authority
+        .apply(&mut context, Value::data(inventory_request))
+        .map_err(|error| authority_error(format!("inventory authority apply failed: {error}")))?;
+    let candidates = decode_inventory_result(
+        plain_authority_result(inventory_value, &context, "inventory")?,
+        inventory_request_hash,
+    )?;
+    let mut legacy_candidates: BTreeSet<String> = baseline.iter().cloned().collect();
+    legacy_candidates.extend(override_ops);
+    if candidates != legacy_candidates.iter().cloned().collect::<Vec<_>>() {
+        return Err(authority_error(
+            "inventory result contradicts independently reconstructed candidate operations",
+        ));
+    }
 
     let legacy_ops = std::mem::take(&mut policy.ops);
     let mut authorized_ops = BTreeMap::new();
@@ -219,24 +333,7 @@ pub(super) fn authorize_policy(
             .clone()
             .apply(&mut context, Value::data(request))
             .map_err(|error| authority_error(format!("authority apply failed: {error}")))?;
-        let term = match &value {
-            Value::Sealed { token, payload }
-                if context
-                    .protocol
-                    .is_some_and(|protocol| *token == protocol.error) =>
-            {
-                let detail = payload
-                    .to_plain_term()
-                    .map(|term| print_term(&term))
-                    .unwrap_or_else(|| "<opaque-error-payload>".to_string());
-                return Err(authority_error(format!(
-                    "authority returned sealed ERROR {detail}"
-                )));
-            }
-            _ => value
-                .to_plain_term()
-                .ok_or_else(|| authority_error("authority returned an opaque value"))?,
-        };
+        let term = plain_authority_result(value, &context, "operation")?;
         let (allowed, cap) = decode_result(term, &op, request_hash)?;
         let expected = legacy_ops.get(&op);
         if allowed != expected.is_some()

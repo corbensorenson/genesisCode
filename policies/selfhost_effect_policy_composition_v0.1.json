@@ -2,9 +2,10 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "9cde5141ab094cc7388cfd764996b68cd20274d827b0bd7650acad37f13d0775",
+  "contentIdentitySha256": "14fd8fd9d2b334e07db44e834cc49a80679f0830b54f40e6708560d652546ab1",
   "decisionInventory": [
     "baseline-operation-admission",
+    "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
     "per-operation-allow-precedence"
   ],
@@ -13,6 +14,9 @@
     "removalTask": "R4.2.d"
   },
   "independentVerifier": "scripts/lib/selfhost_effect_policy_composition.py",
+  "inventoryBinding": "core/effects::policy-inventory-authority",
+  "inventoryRequestKind": "genesis/effect-policy-inventory-request-v0.1",
+  "inventoryResultKind": "genesis/effect-policy-inventory-result-v0.1",
   "kind": "genesis/selfhost-effect-policy-composition-v0.1",
   "maxPolicyOperations": 4096,
   "nonclaims": [
@@ -30,7 +34,6 @@
   ],
   "requestKind": "genesis/effect-policy-authority-request-v0.1",
   "residualDecisionInventory": [
-    "candidate-operation-inventory",
     "crypto-and-signing-policy",
     "database-policy",
     "device-and-graphics-policy",
@@ -53,7 +56,7 @@
   },
   "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
   "sourceModule": "selfhost/effect_policy_authority_v1.gc",
-  "sourceSha256": "3aea0f073ad65780a5a45dcc21bfee6a15685c5384624d3ed43eb1ced3b97db8",
+  "sourceSha256": "5a570ef5778caa4408dc13fb679d164077511a6dea70d27d70027808012c3aca",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }

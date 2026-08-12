@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `da07ecef1153797d4dda296fcb63fce3432600b5dd78ab77e6422fdde545179c`
-- Freshness artifact hash: `da07ecef1153797d4dda296fcb63fce3432600b5dd78ab77e6422fdde545179c`
-- Freshness source hash: `ddacd82148670ca1ea6694a74fd6438a44716de551255590e4b8128051511a66`
-- Source aggregate hash (module path + module sha256): `021e19f958239c35f2299f9a1f528356e4dc312390aaaa2ed3c162b357422dda`
+- Artifact sha256: `5704265ef19ae532b081ca806c0c0496e456729c55e3618a65d339d725c54d4f`
+- Freshness artifact hash: `5704265ef19ae532b081ca806c0c0496e456729c55e3618a65d339d725c54d4f`
+- Freshness source hash: `effb0d5da436ad8297d8c866d7c7c31af10e0978ac177640c343e3054db94b27`
+- Source aggregate hash (module path + module sha256): `abd8b23146c14c58fc903b7586f3874662ddaf225ff33124ae37ff391e64f907`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `72`
 
@@ -71,7 +71,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/patch_authority_merge_v1.gc` | 275 | 11984 | 21 | `a73aa5b6e94e9048` |
 | `selfhost/patch_authority_apply_report_v1.gc` | 136 | 6196 | 12 | `12f15a3a4ab781ff` |
 | `selfhost/policy_authority_v1.gc` | 342 | 15417 | 29 | `8fc36b35f45b1e7e` |
-| `selfhost/effect_policy_authority_v1.gc` | 124 | 5496 | 8 | `3aea0f073ad65780` |
+| `selfhost/effect_policy_authority_v1.gc` | 192 | 8608 | 13 | `5a570ef5778caa44` |
 | `selfhost/obligation_authority_core_v1.gc` | 570 | 24016 | 50 | `859184a3ee1f4dba` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
 | `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
@@ -146,7 +146,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/patch_authority_merge_v1.gc`: `selfhost/patch_merge::REQUEST_KIND`, `selfhost/patch_merge::REPORT_KIND`, `selfhost/patch_merge::PROFILE`, `selfhost/patch_merge::err`, `selfhost/patch_merge::optional-eq?`, `selfhost/patch_merge::optional-term`, `selfhost/patch_merge::conflict-core`, `selfhost/patch_merge::conflict`
 - `selfhost/patch_authority_apply_report_v1.gc`: `selfhost/patch_apply_report::REQUEST_KIND`, `selfhost/patch_apply_report::REPORT_KIND`, `selfhost/patch_apply_report::PROFILE`, `selfhost/patch_apply_report::err`, `selfhost/patch_apply_report::bool?`, `selfhost/patch_apply_report::hash?`, `selfhost/patch_apply_report::edits-valid-loop`, `selfhost/patch_apply_report::edits-valid?`
 - `selfhost/policy_authority_v1.gc`: `selfhost/policy::error`, `selfhost/policy::failure`, `selfhost/policy::map?`, `selfhost/policy::vec?`, `selfhost/policy::str?`, `selfhost/policy::int?`, `selfhost/policy::nil?`, `selfhost/policy::operation?`
-- `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::baseline-contains-loop?`, `selfhost/effect-policy::baseline-contains?`, `selfhost/effect-policy::override-valid?`, `selfhost/effect-policy::allowed?`, `selfhost/effect-policy::cap`, `core/effects::policy-authority`
+- `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::baseline-contains-loop?`, `selfhost/effect-policy::baseline-contains?`, `selfhost/effect-policy::inventory-add-loop`, `selfhost/effect-policy::inventory-add`, `selfhost/effect-policy::inventory-keys-loop`, `selfhost/effect-policy::inventory-keys`
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
 - `selfhost/obligation_authority_typecheck_v1.gc`: `selfhost/obligation::strict-typecheck-meta`, `selfhost/obligation::typecheck-modules-loop`, `selfhost/obligation::typecheck`
 - `selfhost/obligation_authority_determinism_v1.gc`: `selfhost/obligation::determinism-caps-symbols-loop`, `selfhost/obligation::determinism-module-caps`, `selfhost/obligation::determinism-pure-module?`, `selfhost/obligation::debug-escape-symbol-bytes-loop`, `selfhost/obligation::debug-symbol`, `selfhost/obligation::debug-symbols-loop`, `selfhost/obligation::debug-symbol-set`, `selfhost/obligation::determinism-static-error`

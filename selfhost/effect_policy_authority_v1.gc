@@ -26,6 +26,74 @@
     (fn (op)
       ((((selfhost/effect-policy::baseline-contains-loop? baseline) op) (core/vec::len baseline)) 0))))
 
+(def selfhost/effect-policy::inventory-add-loop
+  (fn (ops)
+    (fn (index)
+      (fn (set)
+        (if ((core/int::eq? index) (core/vec::len ops))
+          set
+          (let ((op ((core/vec::get ops) index)))
+            (if (selfhost/policy::str? op)
+              (((selfhost/effect-policy::inventory-add-loop ops) ((core/int::add index) 1))
+                (((core/map::put set) op) true))
+              ((core/error::make2 "core/policy/authority")
+                "effect-policy inventory entries must be strings"))))))))
+
+(def selfhost/effect-policy::inventory-add
+  (fn (set)
+    (fn (ops) (((selfhost/effect-policy::inventory-add-loop ops) 0) set))))
+
+(def selfhost/effect-policy::inventory-keys-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          out
+          (let ((entry ((core/vec::get entries) index)))
+            (((selfhost/effect-policy::inventory-keys-loop entries) ((core/int::add index) 1))
+              ((core/vec::push out) ((core/vec::get entry) 0)))))))))
+
+(def selfhost/effect-policy::inventory-keys
+  (fn (set)
+    (((selfhost/effect-policy::inventory-keys-loop (core/map::entries set)) 0) [])))
+
+(def core/effects::policy-inventory-authority
+  (fn (request)
+    (if (selfhost/policy::map? request)
+      (if ((core/int::eq? (core/map::len request)) 4)
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (version ((core/map::get request) (quote :v)))
+            (baseline ((core/map::get request) (quote :baseline)))
+            (override-ops ((core/map::get request) (quote :override-ops))))
+          (if
+            (if ((core/eq? kind) "genesis/effect-policy-inventory-request-v0.1")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 1) false)
+              false)
+            (if
+              (if (selfhost/policy::vec? baseline)
+                (selfhost/policy::vec? override-ops)
+                false)
+              (let ((baseline-set ((selfhost/effect-policy::inventory-add {}) baseline)))
+                (if (core/error::is? baseline-set)
+                  baseline-set
+                  (let ((all-set ((selfhost/effect-policy::inventory-add baseline-set) override-ops)))
+                    (if (core/error::is? all-set)
+                      all-set
+                      {
+                        :candidate-ops (selfhost/effect-policy::inventory-keys all-set)
+                        :kind "genesis/effect-policy-inventory-result-v0.1"
+                        :request-h (selfhost/hash::hash-term request)
+                        :v 1}))))
+              ((core/error::make2 "core/policy/authority")
+                "effect-policy inventory vectors are required"))
+            ((core/error::make2 "core/policy/authority")
+              "effect-policy inventory request identity mismatch")))
+        ((core/error::make2 "core/policy/authority")
+          "effect-policy inventory request must contain exactly four fields"))
+      ((core/error::make2 "core/policy/authority")
+        "effect-policy inventory request must be a map"))))
+
 (def selfhost/effect-policy::override-valid?
   (fn (override)
     (if (selfhost/policy::nil? override)
