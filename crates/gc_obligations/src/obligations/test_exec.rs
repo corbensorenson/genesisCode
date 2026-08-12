@@ -241,27 +241,16 @@ fn run_test_from_package(
         .is_some_and(|p| matches!(final_value, Value::Sealed { token, .. } if token == p.error));
 
     let fv_hash = value_hash(&final_value);
-    let ok = if is_error {
-        false
-    } else if let Some(exp) = expect {
-        fv_hash == value_hash(&Value::data(exp))
-    } else {
-        true
-    };
-
+    let expected_hash = expect.map(|expected| value_hash(&Value::data(expected)));
     Ok(TestRun {
         id,
-        ok,
+        sealed_error: is_error,
+        expected_hash,
         effect_log,
         steps,
         effect_entries,
         effect_log_bytes,
         value_hash: fv_hash,
-        error: if ok {
-            None
-        } else {
-            Some("test failed".to_string())
-        },
     })
 }
 

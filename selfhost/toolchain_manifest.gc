@@ -57,6 +57,7 @@
     "selfhost/patch_authority_merge_v1.gc"
     "selfhost/patch_authority_apply_report_v1.gc"
     "selfhost/policy_authority_v1.gc"
+    "selfhost/obligation_authority_v1.gc"
     "selfhost/stage1_v1.gc"
   ]
   :required-symbols [
@@ -118,5 +119,6 @@
     core/cli::patch-merge
     core/cli::patch-apply-report
     core/cli::policy-authority
+    core/cli::obligation-authority
   ]
 }

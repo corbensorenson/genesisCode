@@ -1,0 +1,364 @@
+(def selfhost/obligation::REQUEST_KIND "genesis/obligation-authority-request-v0.1")
+(def selfhost/obligation::RESULT_KIND "genesis/obligation-authority-result-v0.1")
+
+(def selfhost/obligation::error
+  (fn (message) ((core/error::make2 "core/obligation/authority") message)))
+
+(def selfhost/obligation::tag?
+  (fn (value) (fn (tag) ((core/sym::eq? (core/data::tag value)) tag))))
+(def selfhost/obligation::map? (fn (value) ((selfhost/obligation::tag? value) (quote :map))))
+(def selfhost/obligation::vec? (fn (value) ((selfhost/obligation::tag? value) (quote :vec))))
+(def selfhost/obligation::str? (fn (value) ((selfhost/obligation::tag? value) (quote :str))))
+(def selfhost/obligation::sym? (fn (value) ((selfhost/obligation::tag? value) (quote :sym))))
+(def selfhost/obligation::int? (fn (value) ((selfhost/obligation::tag? value) (quote :int))))
+(def selfhost/obligation::bool? (fn (value) ((selfhost/obligation::tag? value) (quote :bool))))
+(def selfhost/obligation::bytes? (fn (value) ((selfhost/obligation::tag? value) (quote :bytes))))
+(def selfhost/obligation::nil? (fn (value) ((selfhost/obligation::tag? value) (quote :nil))))
+
+(def selfhost/obligation::hash?
+  (fn (value)
+    (if (selfhost/obligation::bytes? value)
+      ((core/int::eq? (core/bytes::len value)) 32)
+      false)))
+
+(def selfhost/obligation::optional-hash?
+  (fn (value)
+    (if (selfhost/obligation::nil? value) true (selfhost/obligation::hash? value))))
+
+(def selfhost/obligation::optional-str?
+  (fn (value)
+    (if (selfhost/obligation::nil? value) true (selfhost/obligation::str? value))))
+
+(def selfhost/obligation::nonnegative-int?
+  (fn (value)
+    (if (selfhost/obligation::int? value)
+      (if ((core/int::lt? value) 0) false true)
+      false)))
+
+(def selfhost/obligation::optional-nonnegative-int?
+  (fn (value)
+    (if (selfhost/obligation::nil? value)
+      true
+      (selfhost/obligation::nonnegative-int? value))))
+
+(def selfhost/obligation::test-ok?
+  (fn (test)
+    (let
+      ((sealed-error ((core/map::get test) (quote :sealed-error)))
+        (actual-h ((core/map::get test) (quote :actual-h)))
+        (expected-h ((core/map::get test) (quote :expected-h))))
+      (if sealed-error
+        false
+        (if (selfhost/obligation::nil? expected-h)
+          true
+          ((core/eq? actual-h) expected-h))))))
+
+(def selfhost/obligation::unit-test-valid?
+  (fn (test)
+    (if (selfhost/obligation::map? test)
+      (if ((core/int::eq? (core/map::len test)) 6)
+        (if (selfhost/obligation::sym? ((core/map::get test) (quote :suite)))
+          (if (selfhost/obligation::str? ((core/map::get test) (quote :name)))
+            (if (selfhost/obligation::hash? ((core/map::get test) (quote :actual-h)))
+              (if (selfhost/obligation::optional-hash? ((core/map::get test) (quote :expected-h)))
+                (if (selfhost/obligation::bool? ((core/map::get test) (quote :sealed-error)))
+                  (selfhost/obligation::optional-str?
+                    ((core/map::get test) (quote :log-artifact)))
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::unit-test-report
+  (fn (test)
+    (let
+      ((ok (selfhost/obligation::test-ok? test))
+        (log-artifact ((core/map::get test) (quote :log-artifact))))
+      (let
+        ((base
+           {:name ((core/map::get test) (quote :name))
+            :ok ok
+            :suite ((core/map::get test) (quote :suite))
+            :value-h ((core/map::get test) (quote :actual-h))}))
+        (let
+          ((with-error
+             (if ok
+               base
+               (((core/map::put base) (quote :error)) "test failed"))))
+          (if (selfhost/obligation::nil? log-artifact)
+            with-error
+            (((core/map::put with-error) (quote :log-artifact)) log-artifact)))))))
+
+(def selfhost/obligation::unit-tests-loop
+  (fn (tests)
+    (fn (count)
+      (fn (index)
+        (fn (out)
+          (fn (ok)
+            (if ((core/int::eq? index) count)
+              {:ok ok :tests out}
+              (let ((test ((core/vec::get tests) index)))
+                (if (selfhost/obligation::unit-test-valid? test)
+                  (let ((report (selfhost/obligation::unit-test-report test)))
+                    (((((selfhost/obligation::unit-tests-loop tests) count)
+                         ((core/int::add index) 1))
+                       ((core/vec::push out) report))
+                      (if ok ((core/map::get report) (quote :ok)) false)))
+                  (selfhost/obligation::error
+                    "unit-test observation must contain exactly valid :suite, :name, :actual-h, :expected-h, :sealed-error, and :log-artifact fields"))))))))))
+
+(def selfhost/obligation::unit-tests
+  (fn (package)
+    (fn (limits)
+      (fn (tests)
+        (if (if (selfhost/obligation::map? limits)
+              ((core/int::eq? (core/map::len limits)) 0)
+              false)
+          (let ((state (((((selfhost/obligation::unit-tests-loop tests)
+                              (core/vec::len tests)) 0) []) true)))
+            (if (core/error::is? state)
+              state
+              (let
+                ((ok ((core/map::get state) (quote :ok)))
+                  (reports ((core/map::get state) (quote :tests))))
+                {:errors []
+                 :kind selfhost/obligation::RESULT_KIND
+                 :name "core/obligation::unit-tests"
+                 :ok ok
+                 :operation (quote :unit-tests)
+                 :report
+                   {:kind "genesis/unit-tests-v0.2"
+                    :ok ok
+                    :package package
+                    :tests reports}
+                 :v 1})))
+          (selfhost/obligation::error ":unit-tests requires an empty :limits map"))))))
+
+(def selfhost/obligation::budget-test-valid?
+  (fn (test)
+    (if (selfhost/obligation::map? test)
+      (if ((core/int::eq? (core/map::len test)) 5)
+        (if (selfhost/obligation::sym? ((core/map::get test) (quote :suite)))
+          (if (selfhost/obligation::str? ((core/map::get test) (quote :name)))
+            (if (selfhost/obligation::nonnegative-int? ((core/map::get test) (quote :steps)))
+              (if (selfhost/obligation::nonnegative-int?
+                    ((core/map::get test) (quote :effect-entries)))
+                (selfhost/obligation::nonnegative-int?
+                  ((core/map::get test) (quote :effect-log-bytes)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::limit-exceeded?
+  (fn (observed)
+    (fn (limit)
+      (if (selfhost/obligation::nil? limit)
+        false
+        ((core/int::lt? limit) observed)))))
+
+(def selfhost/obligation::budget-error
+  (fn (suite)
+    (fn (name)
+      (fn (label)
+        (fn (observed)
+          (fn (limit)
+            ((core/str::concat "test ")
+              ((core/str::concat (core/sym::to-str suite))
+                ((core/str::concat "::")
+                  ((core/str::concat name)
+                    ((core/str::concat " exceeded ")
+                      ((core/str::concat label)
+                        ((core/str::concat ": ")
+                          ((core/str::concat (core/int::to-str observed))
+                            ((core/str::concat " > ") (core/int::to-str limit))))))))))))))))
+
+(def selfhost/obligation::budget-test
+  (fn (test)
+    (fn (limits)
+      (let
+        ((suite ((core/map::get test) (quote :suite)))
+          (name ((core/map::get test) (quote :name)))
+          (steps ((core/map::get test) (quote :steps)))
+          (entries ((core/map::get test) (quote :effect-entries)))
+          (log-bytes ((core/map::get test) (quote :effect-log-bytes)))
+          (max-steps ((core/map::get limits) (quote :max-steps-per-test)))
+          (max-entries ((core/map::get limits) (quote :max-effect-entries-per-test)))
+          (max-log-bytes ((core/map::get limits) (quote :max-effect-log-bytes-per-test))))
+        (let
+          ((step-bad ((selfhost/obligation::limit-exceeded? steps) max-steps))
+            (entry-bad ((selfhost/obligation::limit-exceeded? entries) max-entries))
+            (log-bad ((selfhost/obligation::limit-exceeded? log-bytes) max-log-bytes)))
+          (let
+            ((errors0
+               (if step-bad
+                 ((core/vec::push [])
+                   (((((selfhost/obligation::budget-error suite) name)
+                        "max_steps_per_test") steps) max-steps))
+                 [])))
+            (let
+              ((errors1
+                 (if entry-bad
+                   ((core/vec::push errors0)
+                     (((((selfhost/obligation::budget-error suite) name)
+                          "max_effect_entries_per_test") entries) max-entries))
+                   errors0)))
+              (let
+                ((errors2
+                   (if log-bad
+                     ((core/vec::push errors1)
+                       (((((selfhost/obligation::budget-error suite) name)
+                            "max_effect_log_bytes_per_test") log-bytes) max-log-bytes))
+                     errors1)))
+                {:errors errors2
+                 :ok (if step-bad false (if entry-bad false (if log-bad false true)))
+                 :report
+                   {:effect-entries entries
+                    :effect-log-bytes log-bytes
+                    :name name
+                    :ok (if step-bad false (if entry-bad false (if log-bad false true)))
+                    :steps steps
+                    :suite suite}}))))))))
+
+(def selfhost/obligation::append-errors-loop
+  (fn (source)
+    (fn (count)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) count)
+            out
+            ((((selfhost/obligation::append-errors-loop source) count)
+                ((core/int::add index) 1))
+              ((core/vec::push out) ((core/vec::get source) index)))))))))
+
+(def selfhost/obligation::append-errors
+  (fn (out)
+    (fn (source)
+      ((((selfhost/obligation::append-errors-loop source) (core/vec::len source)) 0) out))))
+
+(def selfhost/obligation::budget-tests-loop
+  (fn (tests)
+    (fn (limits)
+      (fn (count)
+        (fn (index)
+          (fn (reports)
+            (fn (errors)
+              (if ((core/int::eq? index) count)
+                {:errors errors :reports reports}
+                (let ((test ((core/vec::get tests) index)))
+                  (if (selfhost/obligation::budget-test-valid? test)
+                    (let ((decision ((selfhost/obligation::budget-test test) limits)))
+                      ((((((selfhost/obligation::budget-tests-loop tests) limits) count)
+                           ((core/int::add index) 1))
+                         ((core/vec::push reports)
+                           ((core/map::get decision) (quote :report))))
+                        ((selfhost/obligation::append-errors errors)
+                          ((core/map::get decision) (quote :errors)))))
+                    (selfhost/obligation::error
+                      "budget observation must contain exactly valid :suite, :name, :steps, :effect-entries, and :effect-log-bytes fields")))))))))))
+
+(def selfhost/obligation::limits-valid?
+  (fn (limits)
+    (if (selfhost/obligation::map? limits)
+      (if ((core/int::eq? (core/map::len limits)) 3)
+        (if (selfhost/obligation::optional-nonnegative-int?
+              ((core/map::get limits) (quote :max-steps-per-test)))
+          (if (selfhost/obligation::optional-nonnegative-int?
+                ((core/map::get limits) (quote :max-effect-entries-per-test)))
+            (selfhost/obligation::optional-nonnegative-int?
+              ((core/map::get limits) (quote :max-effect-log-bytes-per-test)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::compact-limits
+  (fn (limits)
+    (let
+      ((max-steps ((core/map::get limits) (quote :max-steps-per-test)))
+        (max-entries ((core/map::get limits) (quote :max-effect-entries-per-test)))
+        (max-log-bytes ((core/map::get limits) (quote :max-effect-log-bytes-per-test))))
+      (let
+        ((out0
+           (if (selfhost/obligation::nil? max-steps)
+             {}
+             (((core/map::put {}) (quote :max-steps-per-test)) max-steps))))
+        (let
+          ((out1
+             (if (selfhost/obligation::nil? max-entries)
+               out0
+               (((core/map::put out0) (quote :max-effect-entries-per-test)) max-entries))))
+          (if (selfhost/obligation::nil? max-log-bytes)
+            out1
+            (((core/map::put out1) (quote :max-effect-log-bytes-per-test)) max-log-bytes)))))))
+
+(def selfhost/obligation::budgets
+  (fn (package)
+    (fn (limits)
+      (fn (tests)
+        (if (selfhost/obligation::limits-valid? limits)
+          (let ((state ((((((selfhost/obligation::budget-tests-loop tests) limits)
+                              (core/vec::len tests)) 0) []) [])))
+            (if (core/error::is? state)
+              state
+              (let
+                ((errors ((core/map::get state) (quote :errors)))
+                  (reports ((core/map::get state) (quote :reports))))
+                (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+                  (let
+                    ((report0
+                       {:kind "genesis/budgets-v0.2"
+                        :limits (selfhost/obligation::compact-limits limits)
+                        :ok ok
+                        :package package
+                        :tests reports}))
+                    (let
+                      ((report
+                         (if ok
+                           report0
+                           (((core/map::put report0) (quote :errors)) errors))))
+                      {:errors errors
+                       :kind selfhost/obligation::RESULT_KIND
+                       :name "core/obligation::budgets"
+                       :ok ok
+                       :operation (quote :budgets)
+                       :report report
+                       :v 1}))))))
+          (selfhost/obligation::error
+            ":budgets requires exactly three optional nonnegative integer limits"))))))
+
+(def core/cli::obligation-authority
+  (fn (request)
+    (if (selfhost/obligation::map? request)
+      (if ((core/int::eq? (core/map::len request)) 6)
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (version ((core/map::get request) (quote :v)))
+            (operation ((core/map::get request) (quote :operation)))
+            (package ((core/map::get request) (quote :package)))
+            (limits ((core/map::get request) (quote :limits)))
+            (tests ((core/map::get request) (quote :tests))))
+          (if (if (selfhost/obligation::str? kind)
+                ((core/eq? kind) selfhost/obligation::REQUEST_KIND)
+                false)
+            (if (if (selfhost/obligation::int? version)
+                  ((core/int::eq? version) 1)
+                  false)
+              (if (selfhost/obligation::str? package)
+                (if (selfhost/obligation::vec? tests)
+                  (if ((core/sym::eq? operation) (quote :unit-tests))
+                    (((selfhost/obligation::unit-tests package) limits) tests)
+                    (if ((core/sym::eq? operation) (quote :budgets))
+                      (((selfhost/obligation::budgets package) limits) tests)
+                      (selfhost/obligation::error "unknown obligation authority operation")))
+                  (selfhost/obligation::error "request :tests must be a vector"))
+                (selfhost/obligation::error "request :package must be a string"))
+              (selfhost/obligation::error "request :v must equal 1"))
+            (selfhost/obligation::error "request :kind mismatch")))
+        (selfhost/obligation::error "request must contain exactly six fields"))
+      (selfhost/obligation::error "request must be a map"))))

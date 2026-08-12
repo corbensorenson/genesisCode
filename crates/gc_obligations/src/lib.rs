@@ -1,5 +1,6 @@
 mod error;
 mod frontend;
+mod obligation_authority;
 mod obligation_cache;
 mod obligation_eval_helpers;
 mod obligation_exec;
@@ -37,6 +38,9 @@ pub use crate::frontend::{
     rust_coreform_frontend, set_frontend_runtime_profile_parity_harness,
 };
 use crate::frontend::{enforce_frontend_allowed, env_truthy, frontend_is_rust};
+use crate::obligation_authority::{
+    ObligationAuthorityOperation, evaluate_obligation_with_authority,
+};
 use crate::obligation_cache::*;
 pub(crate) use crate::obligation_eval_helpers::*;
 use crate::obligation_exec::*;

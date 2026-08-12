@@ -46,13 +46,13 @@ struct TestId {
 #[derive(Debug, Clone)]
 struct TestRun {
     id: TestId,
-    ok: bool,
+    sealed_error: bool,
+    expected_hash: Option<[u8; 32]>,
     effect_log: Option<EffectLog>,
     steps: u64,
     effect_entries: u64,
     effect_log_bytes: u64,
     value_hash: [u8; 32],
-    error: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -378,8 +378,12 @@ pub fn test_package_with_step_limit_and_frontend(
     let mut obligation_results = Vec::new();
     for ob in &obligation_plan {
         let r = match ob.as_str() {
-            "core/obligation::unit-tests" => obligation_unit_tests(&store, &manifest, &test_runs),
-            "core/obligation::budgets" => obligation_budgets(&store, &manifest, &test_runs),
+            "core/obligation::unit-tests" => {
+                obligation_unit_tests(&store, &manifest, &test_runs, &frontend, limits)
+            }
+            "core/obligation::budgets" => {
+                obligation_budgets(&store, &manifest, &test_runs, &frontend, limits)
+            }
             "core/obligation::property-tests" => {
                 obligation_property_tests(&store, &pkg_dir, &manifest, &modules, limits)
             }

@@ -168,6 +168,23 @@ pub(super) fn obligation_translation_validation(
     let mut errors = Vec::new();
     let mut per_test = Vec::new();
     let mut stage2_entries = Vec::new();
+    let original_unit_tests = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::UnitTests,
+        store,
+        manifest,
+        test_runs,
+        frontend,
+        limits,
+    )?;
+    if !original_unit_tests.ok {
+        ok = false;
+        errors.extend(
+            original_unit_tests
+                .errors
+                .into_iter()
+                .map(|error| format!("original {error}")),
+        );
+    }
     let mut stage2_supported: u64 = 0;
     let mut stage2_validated: u64 = 0;
     let mut selfhost_ctx = None;
@@ -354,14 +371,6 @@ pub(super) fn obligation_translation_validation(
     }
 
     for tr in test_runs {
-        if !tr.ok {
-            ok = false;
-            errors.push(format!(
-                "original test failed for {}::{}",
-                tr.id.suite_sym, tr.id.test_name
-            ));
-        }
-
         let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, tr.id.clone(), limits)?;
 
         if tr.value_hash != opt.value_hash {

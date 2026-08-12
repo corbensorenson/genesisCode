@@ -45,7 +45,7 @@ REQUIRED_AMBIENT_DENYLIST = {
     "rand", "rand_core", "reqwest", "rusqlite", "socket2", "tiny_http", "tokio",
     "wasm-bindgen", "wgpu",
 }
-EXPECTED_STAGE0_IDENTITY = "a44f3030762c4fe6cc10404ed737bf3c2a9d459e12012c375b4e968adab2c8b8"
+EXPECTED_STAGE0_IDENTITY = "ff007a97578796e2c66fb41accf9e61dd61b7f0264d44ce5f832ce5af2e44649"
 SPEC_MARKERS = (
     "permitted workspace graph is exact and acyclic",
     "Dev dependencies are separately enumerated",

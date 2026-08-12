@@ -8,14 +8,18 @@ pub(super) fn eval_metered_app_n(
     mut value: Value,
     args: &[Arc<CExpr>],
 ) -> Result<ApplyControl, KernelError> {
-    for arg_expr in args {
+    for (index, arg_expr) in args.iter().enumerate() {
         let arg = eval_cexpr_runtime(ctx, caller_env.clone(), arg_expr)?;
-        value = match apply_value_to_arg(ctx, caller_env, value, arg, false)? {
+        let final_argument = index + 1 == args.len();
+        value = match apply_value_to_arg(ctx, caller_env, value, arg, final_argument)? {
             ApplyControl::Value(value) => value,
+            ApplyControl::Tail { runtime, body } if final_argument => {
+                return Ok(ApplyControl::Tail { runtime, body });
+            }
             ApplyControl::Tail { .. } => {
                 return Err(KernelError::new(
                     KernelErrorKind::Internal,
-                    "metered curried application unexpectedly returned tail control",
+                    "metered non-final curried application unexpectedly returned tail control",
                 ));
             }
         };

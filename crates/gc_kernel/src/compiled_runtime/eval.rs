@@ -2,7 +2,6 @@ use super::super::*;
 use super::PrimitiveForwardPlan;
 use super::apply::{ApplyControl, apply_value_to_arg, eval_app_n_runtime};
 use super::primitive_forward::eval_primitive_forward_inline;
-
 pub(in super::super) fn eval_cexpr_runtime(
     ctx: &mut EvalCtx,
     runtime: RuntimeEnv,
@@ -10,10 +9,16 @@ pub(in super::super) fn eval_cexpr_runtime(
 ) -> Result<Value, KernelError> {
     #[cfg(test)]
     let _depth_guard = crate::eval::EvaluatorDepthGuard::enter();
-    // Like eval_term, implement tail-call optimization for:
-    // - (if ...) branches
-    // - (begin ...) last form
-    // - application where the callee is a closure
+    // Fixpoint calls can bypass the tail loop, so retain the tree-walk stack boundary.
+    stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+        eval_cexpr_runtime_inner(ctx, runtime, expr)
+    })
+}
+fn eval_cexpr_runtime_inner(
+    ctx: &mut EvalCtx,
+    runtime: RuntimeEnv,
+    expr: &Arc<CExpr>,
+) -> Result<Value, KernelError> {
     let mut cur_env = runtime;
     let mut cur = expr.clone();
     loop {
@@ -30,11 +35,10 @@ pub(in super::super) fn eval_cexpr_runtime(
             }
             CExpr::Var {
                 name,
-                sym,
+                sym: _,
                 resolution,
                 statement_site,
             } => {
-                let _sym = *sym;
                 let value = match *resolution {
                     VarResolution::Local { depth, slot } => {
                         cur_env.local_get(depth, slot).ok_or_else(|| {

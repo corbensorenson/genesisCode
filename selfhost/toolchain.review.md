@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `dfed730747b9d032288e01ef05c9cc583e6a6e7c4f775651314d8b64539bb243`
-- Freshness artifact hash: `dfed730747b9d032288e01ef05c9cc583e6a6e7c4f775651314d8b64539bb243`
-- Freshness source hash: `25e5477de540e9087b6d12dd7cf05f6c79b09c2454ed7b89642ba595fddd8605`
-- Source aggregate hash (module path + module sha256): `2d331cf40bb295e8fa075aa619512cc58cd66173dcd1a0e2ef91faf3b94693ba`
+- Artifact sha256: `c9e51af54a9f15b3d8a4cf31cd3aff914b6452d2fa6aaeccfa40b6a6fd050bb6`
+- Freshness artifact hash: `c9e51af54a9f15b3d8a4cf31cd3aff914b6452d2fa6aaeccfa40b6a6fd050bb6`
+- Freshness source hash: `f9022a49c3d8fb833fd30fef2b06b53b7b71106a29d4f39776c9fad775bc4dea`
+- Source aggregate hash (module path + module sha256): `37fda6904052fc3b7f492fcdfeb8fbd2d94764122ee3a54a7043b1f97e3b8ace`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `56`
+- Module count: `57`
 
 ## Module Summary
 
@@ -71,6 +71,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/patch_authority_merge_v1.gc` | 275 | 11984 | 21 | `a73aa5b6e94e9048` |
 | `selfhost/patch_authority_apply_report_v1.gc` | 136 | 6196 | 12 | `12f15a3a4ab781ff` |
 | `selfhost/policy_authority_v1.gc` | 342 | 15417 | 29 | `8fc36b35f45b1e7e` |
+| `selfhost/obligation_authority_v1.gc` | 364 | 15938 | 33 | `d8aea75ddaa77592` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -130,4 +131,5 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/patch_authority_merge_v1.gc`: `selfhost/patch_merge::REQUEST_KIND`, `selfhost/patch_merge::REPORT_KIND`, `selfhost/patch_merge::PROFILE`, `selfhost/patch_merge::err`, `selfhost/patch_merge::optional-eq?`, `selfhost/patch_merge::optional-term`, `selfhost/patch_merge::conflict-core`, `selfhost/patch_merge::conflict`
 - `selfhost/patch_authority_apply_report_v1.gc`: `selfhost/patch_apply_report::REQUEST_KIND`, `selfhost/patch_apply_report::REPORT_KIND`, `selfhost/patch_apply_report::PROFILE`, `selfhost/patch_apply_report::err`, `selfhost/patch_apply_report::bool?`, `selfhost/patch_apply_report::hash?`, `selfhost/patch_apply_report::edits-valid-loop`, `selfhost/patch_apply_report::edits-valid?`
 - `selfhost/policy_authority_v1.gc`: `selfhost/policy::error`, `selfhost/policy::failure`, `selfhost/policy::map?`, `selfhost/policy::vec?`, `selfhost/policy::str?`, `selfhost/policy::int?`, `selfhost/policy::nil?`, `selfhost/policy::operation?`
+- `selfhost/obligation_authority_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

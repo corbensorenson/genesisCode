@@ -419,7 +419,13 @@ This subset must avoid:
 
 ## Phased Cutover Plan
 
-### Phase 0: Rust-Defined Norms (today)
+This section records the historical migration sequence, not current authority status.
+`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json` is authoritative for each exact
+decision. Partial obligation migration is constrained by
+`docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md`; it does not promote the umbrella
+`SD-OBLIGATION` row.
+
+### Phase 0: Rust-Defined Norms (historical baseline)
 
 Rust is the source of truth for:
 - CoreForm canonical printer + hash

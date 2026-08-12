@@ -130,6 +130,14 @@ python3 scripts/lib/selfhost_policy_alias_authority.py \
   --schema docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.d obligation authority is partial: unit expectations and budgets are checked
+# without promoting SD-OBLIGATION while the profile retains 18 residual decisions.
+python3 scripts/lib/selfhost_obligation_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_obligation_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 python3 scripts/lib/semantic_ownership_ledger.py \
   --root "$ROOT_DIR" \
   --ledger docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json \

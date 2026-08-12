@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Structured failures
 
-**198 diagnostics** · catalog identity `de2627482331366c6a4eb9fe81757016c819ddaee8997e0c749a8483cdc4a2b5`
+**197 diagnostics** · catalog identity `eb197d62a1081a79f855a0da347a2d2472f5f3e440a3ff9bed3eea9bf64d6f7d`
 
 Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
 
@@ -1636,6 +1636,7 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 | [`caps/denied`](#caps-denied-aa658bb1) | error | `review-policy-denial` |
 | [`caps/missing`](#caps-missing-ddc72762) | error | `review-policy-denial` |
 | [`caps/parse`](#caps-parse-13627f19) | error | `review-policy-denial` |
+| [`policy/authority`](#policy-authority-6cd42833) | error | `review-policy-denial` |
 | [`policy/parse`](#policy-parse-ff2cc7ca) | error | `review-policy-denial` |
 | [`policy/resolve`](#policy-resolve-1a0d5ed4) | error | `review-policy-denial` |
 | [`policy/schema`](#policy-schema-0f564da3) | error | `review-policy-denial` |
@@ -1674,6 +1675,21 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `caps/parse` {#caps-parse-13627f19}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/caps/parse`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `policy/authority` {#policy-authority-6cd42833}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/policy/authority`
 
 **Likely causes**
 
@@ -2337,10 +2353,8 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 |---|---|---|
 | [`patch/invalid`](#patch-invalid-bdb4bd5e) | error | `replan-semantic-edit` |
 | [`patch/obligation`](#patch-obligation-e59cdf27) | error | `replan-semantic-edit` |
-| [`refactor/duplicate-edit-target`](#refactor-duplicate-edit-target-ea93ecfb) | error | `replan-semantic-edit` |
 | [`semantic-edit/invalid`](#semantic-edit-invalid-632a21a6) | error | `replan-semantic-edit` |
 | [`semantic-edit/path`](#semantic-edit-path-619d239c) | error | `replan-semantic-edit` |
-| [`semantic-edit/refactor`](#semantic-edit-refactor-872bce32) | error | `replan-semantic-edit` |
 | [`semantic-edit/workspace-graph`](#semantic-edit-workspace-graph-76f6a4dd) | error | `replan-semantic-edit` |
 | [`session/already-exists`](#session-already-exists-e343226e) | error | `replan-semantic-edit` |
 | [`session/apply-busy`](#session-apply-busy-e8030f0d) | error | `replan-semantic-edit` |
@@ -2410,21 +2424,6 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 
 **Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 
-### `refactor/duplicate-edit-target` {#refactor-duplicate-edit-target-ea93ecfb}
-
-**Severity:** error · **ID:** `genesis/diagnostic/v1/refactor/duplicate-edit-target`
-
-**Likely causes**
-
-- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
-- The source graph no longer matches the plan preconditions.
-
-**Safe repairs**
-
-- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
-
-**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
-
 ### `semantic-edit/invalid` {#semantic-edit-invalid-632a21a6}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/semantic-edit/invalid`
@@ -2443,21 +2442,6 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `semantic-edit/path` {#semantic-edit-path-619d239c}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/semantic-edit/path`
-
-**Likely causes**
-
-- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
-- The source graph no longer matches the plan preconditions.
-
-**Safe repairs**
-
-- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
-
-**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
-
-### `semantic-edit/refactor` {#semantic-edit-refactor-872bce32}
-
-**Severity:** error · **ID:** `genesis/diagnostic/v1/semantic-edit/refactor`
 
 **Likely causes**
 

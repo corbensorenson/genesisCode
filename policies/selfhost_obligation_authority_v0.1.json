@@ -1,0 +1,67 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-11",
+  "binding": "core/cli::obligation-authority",
+  "contentIdentitySha256": "ce7d712b7f1b6c56e6fd89b5bb50402cfffde77390790b4b58c4c6321f102bad",
+  "hostFacts": [
+    "actual-value-hash",
+    "effect-entry-count",
+    "effect-log-artifact",
+    "effect-log-byte-count",
+    "expected-value-hash",
+    "sealed-error-status",
+    "step-count",
+    "test-identity"
+  ],
+  "independentVerifier": "scripts/lib/selfhost_obligation_authority.py",
+  "kind": "genesis/selfhost-obligation-authority-v0.1",
+  "migratedObligations": [
+    "core/obligation::budgets",
+    "core/obligation::unit-tests"
+  ],
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "effect-policy-authority",
+    "evidence-verification-authority",
+    "r4-2-d-closure",
+    "release-qualification",
+    "replay-authority",
+    "sd-obligation-h2",
+    "signing-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "residualObligations": [
+    "core/obligation::ai-style",
+    "core/obligation::capabilities-declared",
+    "core/obligation::concurrency-replay",
+    "core/obligation::coverage",
+    "core/obligation::coverage-decision",
+    "core/obligation::coverage-mcdc",
+    "core/obligation::determinism",
+    "core/obligation::gfx-api-stability",
+    "core/obligation::gfx-frame-budgets",
+    "core/obligation::gfx-golden-images",
+    "core/obligation::lint",
+    "core/obligation::property-tests",
+    "core/obligation::replayable-tests",
+    "core/obligation::stage1-validation",
+    "core/obligation::translation-validation",
+    "core/obligation::typecheck",
+    "core/obligation::typecheck-strict",
+    "core/obligation::preflight"
+  ],
+  "resultKind": "genesis/obligation-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 5000000,
+    "stepLimit": 5000000,
+    "timeoutSeconds": 60
+  },
+  "schema": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/obligation_authority_v1.gc",
+  "sourceSha256": "d8aea75ddaa77592aa052b21b7d8f567f7337364e1bd0fba708e1e0c40186201",
+  "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

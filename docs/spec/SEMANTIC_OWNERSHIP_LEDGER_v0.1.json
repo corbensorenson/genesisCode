@@ -3,7 +3,7 @@
   "canonicalSpec": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
   "canonicalSpecSha256": "b9a7a8e55acba113d6af38a5dcfc6333575462f6fe6a2ee1224ed263cd9441d0",
   "closureContract": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
-  "closureContractIdentitySha256": "18be84e1619f5efc9e0094efbb9d76a93a7707910109917afdb650b3cd3c0868",
+  "closureContractIdentitySha256": "279ba0abaa32d5aa4cf303b825216608e60e07d5ffc17059f709d8ff7f004d3e",
   "commandBindings": [
     {
       "expectedLeafCount": 1,
@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "bf71a98ec111c96d8481c5dd74b1b34903c1774fb861d008825117906eb1b1ef",
+  "contentIdentitySha256": "e21f3066bbd30047d62c4fc3dc3651b0552d3ac0fc944327a827fda5911cdde7",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",

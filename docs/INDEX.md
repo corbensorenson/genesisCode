@@ -194,6 +194,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked policy-alias authority profile.
 - `policies/selfhost_policy_alias_authority_v0.1.json` - content-addressed policy-alias decision inventory, source identity, production entrypoints, error taxonomy, limits, and nonclaims.
 - `scripts/selfhost_policy_alias_authority_guard.sh` - focused native/WASI runtime, production-graph, non-mutation, Unicode-trim, and mutation-control guard.
+- `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md` - normative partial R4.2.d primitive-fact, unit-expectation, resource-budget, strict-decoder, and residual-obligation contract; it does not promote `SD-OBLIGATION`.
+- `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial obligation-authority profile.
+- `policies/selfhost_obligation_authority_v0.1.json` - content-addressed migrated/residual obligation inventory, host-fact boundary, runtime limits, and nonclaims.
+- `scripts/lib/selfhost_obligation_authority.py` - independent profile, source, call-site, production-graph, removed-host-decision, and mutation verifier; optional runtime mode checks native/WASI package routes.
 - `scripts/lib/semantic_ownership_ledger.py --refresh-identities` - explicit identity refresh for reviewed ledger edits; validation remains read-only in `scripts/check_selfhost_boundary.sh`.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.
 - `.genesis/perf/bootstrap_retirement_gate_report.json` - optional local bootstrap-retirement observation, produced only by `scripts/update_bootstrap_retirement_gate_report.sh`.

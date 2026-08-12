@@ -1556,6 +1556,41 @@ fn tail_loop_rejects_a_one_step_short_budget_identically() {
 }
 
 #[test]
+fn compiled_fixpoint_recursion_uses_segmented_stack() {
+    let source = r#"
+      (def fix
+        (fn (f)
+          ((fn (x) (f (fn (v) ((x x) v))))
+           (fn (x) (f (fn (v) ((x x) v)))))))
+      (def countdown
+        (fix
+          (fn (rec)
+            (fn (n)
+              (if (prim int/eq? n 0)
+                0
+                (rec (prim int/sub n 1)))))))
+      (fn (_) (countdown 5000))
+    "#;
+    let forms = parse_module(source).unwrap();
+    let mut ctx = EvalCtx::with_step_limit(Some(1_000_000));
+    ctx.set_mem_limits(MemLimits {
+        max_alloc_units: Some(5_000_000),
+        ..MemLimits::default()
+    });
+    let mut env = Env::empty();
+    let body = eval_module_compiled(&mut ctx, &mut env, &forms).unwrap();
+    reset_evaluator_max_call_depth();
+    let value = body
+        .apply(&mut ctx, Value::data(Term::Nil))
+        .expect("compiled fixpoint closure application");
+    assert_value_int(&value, 0);
+    assert!(
+        evaluator_max_call_depth() <= 8,
+        "metered tail recursion must keep evaluator depth bounded"
+    );
+}
+
+#[test]
 #[ignore = "stress-gate"]
 fn tail_loop_ten_million_iterations_has_constant_evaluator_depth() {
     const ITERATIONS: u64 = 10_000_000;

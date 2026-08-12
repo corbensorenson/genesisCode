@@ -61,8 +61,10 @@ pub(super) fn obligation_budgets(
     store: &EvidenceStore,
     manifest: &PackageManifest,
     tests: &[TestRun],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
-    obligation_exec_budgets::obligation_budgets(store, manifest, tests)
+    obligation_exec_budgets::obligation_budgets(store, manifest, tests, frontend, limits)
 }
 
 fn obligation_report_term(contract: &str, args: &[Term]) -> Result<Term, ObligationError> {
@@ -183,48 +185,17 @@ pub(super) fn obligation_unit_tests(
     store: &EvidenceStore,
     manifest: &PackageManifest,
     tests: &[TestRun],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
-    let mut test_terms = Vec::new();
-    for t in tests {
-        let mut m = BTreeMap::new();
-        m.insert(
-            TermOrdKey(Term::symbol(":suite")),
-            Term::Symbol(t.id.suite_sym.clone()),
-        );
-        m.insert(
-            TermOrdKey(Term::symbol(":name")),
-            Term::Str(t.id.test_name.clone()),
-        );
-        m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(t.ok));
-        m.insert(
-            TermOrdKey(Term::symbol(":value-h")),
-            Term::Bytes(t.value_hash.to_vec().into()),
-        );
-        if let Some(e) = &t.error {
-            m.insert(TermOrdKey(Term::symbol(":error")), Term::Str(e.clone()));
-        }
-        if let Some(log) = &t.effect_log {
-            let log_h = store.put_term(&log.to_term())?;
-            m.insert(TermOrdKey(Term::symbol(":log-artifact")), Term::Str(log_h));
-        }
-        test_terms.push(Term::Map(m));
-    }
-    let report = obligation_report_term(
-        "core/obligation::unit-tests-report",
-        &[Term::Str(manifest.name.clone()), Term::Vector(test_terms)],
-    )?;
-    let ok = term_map_get_bool(&report, ":ok").ok_or_else(|| {
-        ObligationError::Test(
-            "core/obligation::unit-tests-report returned report missing :ok bool".to_string(),
-        )
-    })?;
-    let artifact = store.put_term(&report)?;
-    Ok(ObligationResult {
-        name: "core/obligation::unit-tests".to_string(),
-        ok,
-        artifact: Some(artifact),
-        errors: Vec::new(),
-    })
+    evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::UnitTests,
+        store,
+        manifest,
+        tests,
+        frontend,
+        limits,
+    )
 }
 
 pub(super) fn obligation_determinism(
