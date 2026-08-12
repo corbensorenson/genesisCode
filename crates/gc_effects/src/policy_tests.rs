@@ -1,4 +1,7 @@
-use super::{AuthorizedMaxBytes, AuthorizedProcessPrograms, CapsPolicy};
+use super::{
+    AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedProcessPrograms, AuthorizedStringList,
+    CapsPolicy,
+};
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
 use std::collections::BTreeMap;
@@ -35,6 +38,35 @@ fn process_program_policy(status: &str, programs: Term) -> Term {
     Term::Map(BTreeMap::from([
         (TermOrdKey(Term::symbol(":programs")), programs),
         (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
+    ]))
+}
+
+fn string_list_policy(status: &str, values: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
+        (TermOrdKey(Term::symbol(":values")), values),
+    ]))
+}
+
+fn database_policy_term(
+    target_allow: Term,
+    query_classes: Term,
+    max_result_bytes: Term,
+    max_row_count: Term,
+    max_value_bytes: Term,
+) -> Term {
+    Term::Map(BTreeMap::from([
+        (
+            TermOrdKey(Term::symbol(":max-result-bytes")),
+            max_result_bytes,
+        ),
+        (TermOrdKey(Term::symbol(":max-row-count")), max_row_count),
+        (
+            TermOrdKey(Term::symbol(":max-value-bytes")),
+            max_value_bytes,
+        ),
+        (TermOrdKey(Term::symbol(":query-classes")), query_classes),
+        (TermOrdKey(Term::symbol(":target-allow")), target_allow),
     ]))
 }
 
@@ -384,6 +416,167 @@ fn selfhost_authority_rejects_malformed_process_program_decisions() {
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_process_program_policy(&Term::Map(extra), true)
         .expect_err("unknown process-program authority fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_database_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."io/db::query"]
+allow_query_classes = ["  read-only  ", "", "analytics"]
+max_result_bytes = 8192
+max_row_count = 500
+
+[op."io/db::connect"]
+db_target_allow = ["  sqlite://data/app.db  "]
+"#,
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+
+    assert_eq!(
+        policy
+            .op_policy("io/db::query")
+            .unwrap()
+            .authorized_database,
+        Some(AuthorizedDatabasePolicy {
+            target_allow: AuthorizedStringList::Absent,
+            query_classes: AuthorizedStringList::Valid(vec![
+                "read-only".to_string(),
+                "analytics".to_string(),
+            ]),
+            max_result_bytes: AuthorizedMaxBytes::Valid(8192),
+            max_row_count: AuthorizedMaxBytes::Valid(500),
+            max_value_bytes: AuthorizedMaxBytes::Absent,
+        })
+    );
+    assert_eq!(
+        policy
+            .op_policy("io/db::connect")
+            .unwrap()
+            .authorized_database
+            .as_ref()
+            .unwrap()
+            .target_allow,
+        AuthorizedStringList::Valid(vec!["sqlite://data/app.db".to_string()])
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_invalid_database_policy_states() {
+    let cases = [
+        (
+            "allow_query_classes = \"read-only\"",
+            AuthorizedStringList::InvalidType,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "allow_query_classes = [\"read-only\", 7]",
+            AuthorizedStringList::InvalidEntry,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "allow_query_classes = [\"\", \"   \"]",
+            AuthorizedStringList::Empty,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "max_result_bytes = \"large\"",
+            AuthorizedStringList::Absent,
+            AuthorizedMaxBytes::InvalidType,
+        ),
+        (
+            "max_result_bytes = 0",
+            AuthorizedStringList::Absent,
+            AuthorizedMaxBytes::NonPositive,
+        ),
+    ];
+    for (setting, query_classes, max_result_bytes) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[op.\"io/db::query\"]\n{setting}\n")).unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        let database = policy
+            .op_policy("io/db::query")
+            .unwrap()
+            .authorized_database
+            .as_ref()
+            .unwrap();
+        assert_eq!(database.query_classes, query_classes, "setting: {setting}");
+        assert_eq!(
+            database.max_result_bytes, max_result_bytes,
+            "setting: {setting}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_database_decisions() {
+    use super::policy_authority::decode_database_policy;
+
+    let absent_list = string_list_policy(":absent", Term::Nil);
+    let absent_limit = max_bytes_policy(":absent", Term::Nil);
+    let valid = || {
+        database_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_limit.clone(),
+            absent_limit.clone(),
+            absent_limit.clone(),
+        )
+    };
+    decode_database_policy(&valid(), true).unwrap();
+
+    let cases = [
+        database_policy_term(
+            string_list_policy(":valid", Term::Nil),
+            absent_list.clone(),
+            absent_limit.clone(),
+            absent_limit.clone(),
+            absent_limit.clone(),
+        ),
+        database_policy_term(
+            absent_list.clone(),
+            string_list_policy(":valid", Term::Vector(vec![])),
+            absent_limit.clone(),
+            absent_limit.clone(),
+            absent_limit.clone(),
+        ),
+        database_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            max_bytes_policy(":valid", Term::Int(0.into())),
+            absent_limit.clone(),
+            absent_limit.clone(),
+        ),
+    ];
+    for decision in cases {
+        decode_database_policy(&decision, true)
+            .expect_err("contradictory database authority decision must fail closed");
+    }
+    decode_database_policy(&valid(), false)
+        .expect_err("denied operation must not carry a database decision");
+
+    let Term::Map(mut extra) = valid() else {
+        return;
+    };
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_database_policy(&Term::Map(extra), true)
+        .expect_err("unknown database authority fields must fail closed");
 }
 
 #[test]

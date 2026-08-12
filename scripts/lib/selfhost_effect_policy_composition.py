@@ -81,6 +81,7 @@ DECISIONS = [
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
     "per-operation-max-bytes-policy",
     "per-operation-process-program-policy",
@@ -90,7 +91,6 @@ DECISIONS = [
 
 RESIDUALS = {
     "crypto-and-signing-policy",
-    "database-policy",
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
@@ -124,11 +124,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.4",
+        "requestKind": "genesis/effect-policy-authority-request-v0.5",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.4",
+        "resultKind": "genesis/effect-policy-authority-result-v0.5",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -137,7 +137,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.8",
+        "version": "0.1.9",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -192,13 +192,23 @@ def static_check(root: Path, profile):
         fail("effect-policy resource boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_process.rs"]') != 1:
         fail("effect-policy process boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_database.rs"]') != 1:
+        fail("effect-policy database boundary decomposition drift")
     resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
     if resource_boundary_path.is_symlink() or not resource_boundary_path.is_file():
         fail("effect-policy resource host boundary is missing or symlinked")
     process_boundary_path = root / "crates/gc_effects/src/policy_authority_process.rs"
     if process_boundary_path.is_symlink() or not process_boundary_path.is_file():
         fail("effect-policy process host boundary is missing or symlinked")
-    authority = authority_root + resource_boundary_path.read_text() + process_boundary_path.read_text()
+    database_boundary_path = root / "crates/gc_effects/src/policy_authority_database.rs"
+    if database_boundary_path.is_symlink() or not database_boundary_path.is_file():
+        fail("effect-policy database host boundary is missing or symlinked")
+    authority = (
+        authority_root
+        + resource_boundary_path.read_text()
+        + process_boundary_path.read_text()
+        + database_boundary_path.read_text()
+    )
     required_authority = [
         "const MAX_POLICY_OPS: usize = 4_096;",
         "const POLICY_AUTHORITY_STEP_LIMIT: u64 = 20_000_000;",
@@ -223,6 +233,7 @@ def static_check(root: Path, profile):
         "op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;",
         "op_policy.authorized_max_bytes = Some(authorized.max_bytes);",
         "op_policy.authorized_process_programs = Some(authorized.process_programs);",
+        "op_policy.authorized_database = Some(authorized.database);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -286,6 +297,24 @@ def static_check(root: Path, profile):
         fail("process-program enforcement authority inventory drift")
     if process_policy.find(process_authority_lookup) >= process_policy.find(process_legacy_lookup):
         fail("process-program enforcement consults raw policy before authority state")
+    database_policy = (
+        root / "crates/gc_effects/src/runner_capability_dispatch/db.rs"
+    ).read_text()
+    database_bound_authority_lookup = "if let Some(authorized) = &pol.authorized_database"
+    database_list_authority_lookup = (
+        "if let Some(authorized) = pol.and_then(|policy| policy.authorized_database.as_ref())"
+    )
+    if database_policy.count(database_bound_authority_lookup) != 1 or database_policy.count(database_list_authority_lookup) != 2:
+        fail("database-bound enforcement authority inventory drift")
+    if (
+        database_policy.count("parse_nonempty_string_array(") != 2
+        or database_policy.find(database_list_authority_lookup)
+        >= database_policy.find("parse_nonempty_string_array(")
+        or database_policy.count("pol.extra.get(key)") != 1
+        or database_policy.find(database_bound_authority_lookup)
+        >= database_policy.find("pol.extra.get(key)")
+    ):
+        fail("database enforcement consults raw policy before authority state")
     effect_source = source_path.read_text()
     cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
         "(def core/effects::policy-authority", 1
@@ -377,6 +406,9 @@ def static_check(root: Path, profile):
         "selfhost_authority_installs_process_program_policy",
         "selfhost_authority_preserves_invalid_process_program_states",
         "selfhost_authority_rejects_malformed_process_program_decisions",
+        "selfhost_authority_installs_database_policy",
+        "selfhost_authority_preserves_invalid_database_policy_states",
+        "selfhost_authority_rejects_malformed_database_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -386,6 +418,12 @@ def static_check(root: Path, profile):
     ):
         if process_policy.count(f"fn {name}()") != 1:
             fail(f"missing focused process authority control: {name}")
+    for name in (
+        "database_dispatch_consumes_authorized_policy_before_raw_policy",
+        "database_dispatch_preserves_authorized_policy_errors",
+    ):
+        if database_policy.count(f"fn {name}()") != 1:
+            fail(f"missing focused database authority control: {name}")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]

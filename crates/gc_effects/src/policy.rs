@@ -130,6 +130,24 @@ pub(crate) enum AuthorizedProcessPrograms {
     Valid(Vec<String>),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedStringList {
+    Absent,
+    InvalidType,
+    InvalidEntry,
+    Empty,
+    Valid(Vec<String>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedDatabasePolicy {
+    pub target_allow: AuthorizedStringList,
+    pub query_classes: AuthorizedStringList,
+    pub max_result_bytes: AuthorizedMaxBytes,
+    pub max_row_count: AuthorizedMaxBytes,
+    pub max_value_bytes: AuthorizedMaxBytes,
+}
+
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
@@ -140,6 +158,7 @@ pub struct OpPolicy {
     pub(crate) authorized_cap: Option<gc_coreform::Term>,
     pub(crate) authorized_max_bytes: Option<AuthorizedMaxBytes>,
     pub(crate) authorized_process_programs: Option<AuthorizedProcessPrograms>,
+    pub(crate) authorized_database: Option<AuthorizedDatabasePolicy>,
 }
 
 impl CapsPolicy {
@@ -250,6 +269,7 @@ impl CapsPolicy {
                         authorized_cap: None,
                         authorized_max_bytes: None,
                         authorized_process_programs: None,
+                        authorized_database: None,
                     },
                 );
             }

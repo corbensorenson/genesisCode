@@ -217,6 +217,9 @@ Supported keys:
 - `max_row_count` (int): required positive row-count bound for `io/db::query`.
 - `max_result_bytes` (int): required positive result envelope byte bound for `io/db::query`, `io/db::exec`, and `io/db::kv-get`.
 - `max_value_bytes` (int): required positive value-size bound for `io/db::kv-put`.
+  - File-backed production policy loads transport all five database fields through
+    `core/effects::policy-authority`; GenesisCode normalizes their closed state,
+    and host dispatch enforces only the validated installed result.
 - `allow_programs` (array<string>): required allowlist for process launch ops (`sys/process::exec`, `sys/process::spawn`) program names.
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
 - `allow_commands` (array<string>): required command allowlist for `host/plugin::command` and `editor/plugin::command`.

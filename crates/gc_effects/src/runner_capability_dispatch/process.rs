@@ -159,6 +159,7 @@ mod tests {
             authorized_cap: None,
             authorized_max_bytes: None,
             authorized_process_programs: authorized,
+            authorized_database: None,
         }
     }
 

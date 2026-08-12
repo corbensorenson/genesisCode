@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "46eafa3cc83decb79239cc954f799af6f66d07b86c4f4bb146b7e664a36839db",
+  "contentIdentitySha256": "cbdbc91b10c8d288d255d75e0195692f798626a971cb0418ac8c2724126cd111",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -11,6 +11,7 @@
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
     "per-operation-max-bytes-policy",
     "per-operation-process-program-policy",
@@ -40,13 +41,12 @@
     "genesis",
     "genesis_wasi"
   ],
-  "requestKind": "genesis/effect-policy-authority-request-v0.4",
+  "requestKind": "genesis/effect-policy-authority-request-v0.5",
   "resourceBinding": "core/effects::resource-policy-authority",
   "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
   "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
   "residualDecisionInventory": [
     "crypto-and-signing-policy",
-    "database-policy",
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
@@ -56,7 +56,7 @@
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
   ],
-  "resultKind": "genesis/effect-policy-authority-result-v0.4",
+  "resultKind": "genesis/effect-policy-authority-result-v0.5",
   "runtimeEvidence": {
     "allocationLimit": 20000000,
     "stepLimit": 20000000,
@@ -64,7 +64,7 @@
   },
   "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
   "sourceModule": "selfhost/effect_policy_authority_v1.gc",
-  "sourceSha256": "8432b8c46fe7343472cdae618c2a1671f1cc5449d7369add2aa192e0db00e6cb",
+  "sourceSha256": "758c85dd833acf79021c8c53dda204c19e704a883c4e539040c7d0def1e7d13f",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.8"
+  "version": "0.1.9"
 }
