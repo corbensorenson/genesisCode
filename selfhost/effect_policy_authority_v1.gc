@@ -592,8 +592,8 @@
             (override ((core/map::get request) (quote :override)))
             (platform-max ((core/map::get request) (quote :platform-max-bytes))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.10")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 10) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.11")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 11) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -628,7 +628,7 @@
                         (if allowed
                           ((selfhost/effect-ffi::policy override) platform-max)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.10"
+                      :kind "genesis/effect-policy-authority-result-v0.11"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -647,7 +647,7 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 10}))
+                      :v 11}))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly optional typed admission and base fields"))
               ((core/error::make2 "core/policy/authority")

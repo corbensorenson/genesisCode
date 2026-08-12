@@ -210,6 +210,29 @@ pub(crate) struct AuthorizedPluginPolicy {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedFfiSignedPolicy {
+    Disabled,
+    InvalidRequiredType,
+    MissingArtifactHash,
+    EmptyArtifactHash,
+    InvalidArtifactHash,
+    MissingSignatureHash,
+    EmptySignatureHash,
+    InvalidSignatureHash,
+    MissingKeyId,
+    EmptyKeyId,
+    MissingEvidenceMode,
+    EmptyEvidenceMode,
+    InvalidEvidenceMode,
+    Valid {
+        policy_artifact_h: String,
+        policy_signature_h: String,
+        policy_key_id: String,
+        evidence_mode: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AuthorizedFfiPolicy {
     pub abi_ids: AuthorizedStringList,
     pub libraries: AuthorizedStringList,
@@ -217,11 +240,7 @@ pub(crate) struct AuthorizedFfiPolicy {
     pub schema_ids: AuthorizedStringList,
     pub max_buffer_bytes: AuthorizedMaxBytes,
     pub max_call_payload_bytes: AuthorizedMaxBytes,
-    pub signed_policy_required: bool,
-    pub policy_artifact_h: AuthorizedOptionalString,
-    pub policy_signature_h: AuthorizedOptionalString,
-    pub policy_key_id: AuthorizedOptionalString,
-    pub evidence_mode: AuthorizedOptionalString,
+    pub signed_policy: AuthorizedFfiSignedPolicy,
 }
 
 #[derive(Debug, Clone)]
@@ -364,6 +383,12 @@ impl CapsPolicy {
             for (op, cfg) in op_tbl {
                 apply_op_cfg(&mut ops, op, cfg)?;
             }
+        }
+
+        // Compatibility parsing materializes an explicit state; production file
+        // loads replace and verify it through the self-host authority.
+        for op_policy in ops.values_mut() {
+            op_policy.authorized_ffi = Some(policy_authority::legacy_ffi_policy(Some(op_policy)));
         }
 
         for (k, v) in tbl {

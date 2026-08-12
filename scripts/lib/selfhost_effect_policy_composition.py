@@ -86,6 +86,7 @@ DECISIONS = [
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
     "per-operation-ffi-allowlist-and-bound-policy",
+    "per-operation-ffi-signed-policy-admission",
     "per-operation-ffi-signed-policy-metadata",
     "per-operation-max-bytes-policy",
     "per-operation-network-policy",
@@ -128,11 +129,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.10",
+        "requestKind": "genesis/effect-policy-authority-request-v0.11",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.10",
+        "resultKind": "genesis/effect-policy-authority-result-v0.11",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -148,7 +149,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.14",
+        "version": "0.1.15",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -428,8 +429,7 @@ def static_check(root: Path, profile):
         root / "crates/gc_effects/src/runner_capability_dispatch/ffi_policy.rs"
     ).read_text()
     for start in (
-        "pub(super) fn signed_policy_required",
-        "pub(super) fn required_signed_string",
+        "pub(super) fn signed_policy_from_authority",
         "pub(super) fn allowlist_from_policy",
         "pub(super) fn schema_allowlist_from_policy",
         "pub(super) fn positive_usize_from_policy",
@@ -444,6 +444,9 @@ def static_check(root: Path, profile):
         if ffi_dispatch.count(f"fn capability_host_ffi_{operation}(") != 1:
             fail(f"ffi operation policy inventory drift: {operation}")
     for token in (
+        "fn is_hex64",
+        "policy::required_signed_string",
+        "policy::signed_policy_required",
         'extra.get("signed_policy_required")',
         'extra.get("policy_artifact_h")',
         'extra.get("policy_signature_h")',

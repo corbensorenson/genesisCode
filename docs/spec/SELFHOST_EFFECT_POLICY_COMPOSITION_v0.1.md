@@ -57,7 +57,7 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed six-field map with kind
-`genesis/effect-policy-authority-request-v0.10`, version `10`, the operation string,
+`genesis/effect-policy-authority-request-v0.11`, version `11`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
@@ -95,9 +95,10 @@ The nested FFI map has exactly `:abi-ids`, `:libraries`, `:symbols`,
 `:policy-key-id`, and `:evidence-mode`. Its four allowlists use exact string or
 closed invalid observation transport; both bounds use an exact integer or
 `:invalid-type`; each optional metadata string uses the exact string, `nil`, or
-`:invalid-type`. Rust transports a boolean `:signed-policy-required`, mapping a
-missing or non-boolean legacy input to `false`, and GenesisCode owns that
-normalized decision.
+`:invalid-type`. Rust transports `:signed-policy-required` as its exact boolean,
+uses `false` only when the key is absent, and transports a present non-boolean as
+`:invalid-type`. GenesisCode owns the resulting fail-closed admission decision;
+malformed opt-in cannot silently disable signed-policy enforcement.
 
 Before those per-operation requests, the inventory authority receives a closed
 four-field `genesis/effect-policy-inventory-request-v0.1` map containing version
@@ -110,12 +111,12 @@ oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
 The authority returns a closed fourteen-field
-`genesis/effect-policy-authority-result-v0.10` map containing the exact operation,
+`genesis/effect-policy-authority-result-v0.11` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
 `:process-program-policy`, private `:database-policy`, private `:network-policy`,
 private `:crypto-policy`, private `:plugin-policy`, private `:ffi-policy`,
-lowercase canonical request hash, and version `10`.
+lowercase canonical request hash, and version `11`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -140,11 +141,18 @@ vector. The crypto result is an exact fourteen-field map. Its two allowlists use
 the same closed list state; only algorithm values are ASCII-lowercased. Its
 twelve bounds use the closed positive-limit state above. The plugin result is an
 exact three-field map whose values use the closed list state above. Malformed
-requests return sealed errors. The FFI result is an exact eleven-field map whose
-four allowlists use the closed list state above, whose two bounds use the closed
-positive-limit state above, whose four optional metadata values use exact
-`absent|invalid-type|empty|valid` string states, and whose signed-policy decision
-is boolean. Only a `valid` string state carries a nonempty, trimmed string.
+requests return sealed errors. The FFI result is an exact seven-field map whose
+four allowlists use the closed list state above and whose two bounds use the
+closed positive-limit state above. Its `:signed-policy` field is an exact
+five-field map containing `:status`, `:policy-artifact-h`,
+`:policy-signature-h`, `:policy-key-id`, and `:evidence-mode`. Status is exactly
+`:disabled`, `:invalid-required-type`, `:missing-artifact-h`,
+`:empty-artifact-h`, `:invalid-artifact-h`, `:missing-signature-h`,
+`:empty-signature-h`, `:invalid-signature-h`, `:missing-key-id`, `:empty-key-id`,
+`:missing-evidence-mode`, `:empty-evidence-mode`, `:invalid-evidence-mode`, or
+`:valid`. Only `:valid` carries two 64-hex strings, a nonempty trimmed key ID, and
+the exact evidence mode `deterministic`; every other status carries four `nil`
+metadata values. The host independently rejects contradictory status/value pairs.
 The host rejects
 unknown fields, identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
@@ -253,10 +261,11 @@ schema-ID allowlist states before raw compatibility fields. Rust performs
 matching, bridge digest enforcement, schema validation, and bridge execution
 without selecting those allowlist states.
 FFI dispatch consumes installed GenesisCode ABI-ID, library, symbol, optional
-schema-ID, buffer-bound, and call-payload-bound states before raw compatibility
-fields. Rust performs matching, signed-policy and bridge-identity validation,
-schema validation, payload measurement, bound enforcement, and bridge execution
-without selecting those policy states.
+schema-ID, buffer-bound, call-payload-bound, and closed signed-policy states
+without a raw metadata fallback. Rust maps rejected authority states to sealed
+policy errors and performs provenance/signature verification, matching,
+bridge-identity validation, schema validation, payload measurement, bound
+enforcement, and bridge execution without selecting those policy states.
 Host code retains payload measurement and enforcement mechanisms, filesystem path
 resolution, accounting mechanisms, cancellation, effect execution, and replay
 mechanisms.
@@ -305,14 +314,14 @@ complete plugin, command, and optional schema-ID list states shared by host and
 editor plugin commands. Bridge command/profile selection, executable path and
 digest verification, schema implementation, matching, transport, model-provider
 lifecycle, cancellation, and replay remain in the named host residuals.
-FFI allowlist, byte-bound, and signed-metadata selection is no longer residual: GenesisCode
+FFI allowlist, byte-bound, and signed-policy admission is no longer residual: GenesisCode
 owns ABI-ID, library, symbol, optional schema-ID, buffer-size, and call-payload
-states across all three FFI operations. It also owns the normalized
-`signed_policy_required` decision and the closed optional-string states for the
-policy artifact hash, signature hash, key ID, and evidence mode. The retained
-`ffi-bridge-identity-and-model-provider-lifecycle` residual covers hexadecimal
-format and deterministic-mode checks, signed-policy provenance and signature
-validation, bridge command/profile selection, executable path and
+states across all three FFI operations. It also owns malformed opt-in rejection,
+required-field precedence, hash-form admission, key-ID admission, deterministic
+evidence-mode admission, and the closed accepted metadata tuple. The retained
+`ffi-bridge-identity-and-model-provider-lifecycle` residual covers signed-policy
+artifact provenance and cryptographic signature validation, bridge
+command/profile selection, executable path and
 digest verification, schema implementation, matching, transport, model-provider
 lifecycle, cancellation, and replay; it does not cover the migrated FFI or
 plugin policy-selection decisions.

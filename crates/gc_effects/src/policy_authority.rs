@@ -32,6 +32,9 @@ mod plugin;
 mod process;
 #[path = "policy_authority_resource.rs"]
 mod resource;
+pub(super) fn legacy_ffi_policy(policy: Option<&OpPolicy>) -> AuthorizedFfiPolicy {
+    ffi::legacy(policy)
+}
 #[cfg(test)]
 pub(super) fn decode_process_program_policy(
     term: &Term,
@@ -203,7 +206,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.10".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.11".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
@@ -211,7 +214,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(10.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(11.into())),
         ]
         .into_iter()
         .collect(),
@@ -431,8 +434,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.10")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &10.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.11")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &11.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {

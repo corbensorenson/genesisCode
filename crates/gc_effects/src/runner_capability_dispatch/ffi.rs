@@ -2,10 +2,6 @@ use super::*;
 #[path = "ffi_policy.rs"]
 mod policy;
 
-fn is_hex64(s: &str) -> bool {
-    s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit())
-}
-
 #[derive(Debug, Clone)]
 struct FfiSignedPolicyMetadata {
     policy_artifact_h: String,
@@ -19,47 +15,68 @@ fn ffi_signed_policy_metadata(
     pol: Option<&OpPolicy>,
     error_tok: SealId,
 ) -> Result<Option<FfiSignedPolicyMetadata>, Value> {
-    if !policy::signed_policy_required(pol) {
-        return Ok(None);
-    }
-    let policy_artifact_h = policy::required_signed_string(pol, "policy_artifact_h", op)
+    use crate::policy::AuthorizedFfiSignedPolicy;
+
+    let decision = policy::signed_policy_from_authority(pol)
         .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
-    if !is_hex64(&policy_artifact_h) {
-        return Err(mk_error(
+    let error = |message: String| {
+        Err(mk_error(
             error_tok,
             "core/caps/policy-error",
-            format!("{op} policy_artifact_h must be 64-hex"),
+            message,
             Some(op),
-        ));
+        ))
+    };
+    match decision {
+        AuthorizedFfiSignedPolicy::Disabled => Ok(None),
+        AuthorizedFfiSignedPolicy::InvalidRequiredType => {
+            error(format!("{op} signed_policy_required must be boolean"))
+        }
+        AuthorizedFfiSignedPolicy::MissingArtifactHash => error(format!(
+            "{op} requires per-op policy_artifact_h when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::EmptyArtifactHash => error(format!(
+            "{op} requires non-empty policy_artifact_h when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::InvalidArtifactHash => {
+            error(format!("{op} policy_artifact_h must be 64-hex"))
+        }
+        AuthorizedFfiSignedPolicy::MissingSignatureHash => error(format!(
+            "{op} requires per-op policy_signature_h when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::EmptySignatureHash => error(format!(
+            "{op} requires non-empty policy_signature_h when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::InvalidSignatureHash => {
+            error(format!("{op} policy_signature_h must be 64-hex"))
+        }
+        AuthorizedFfiSignedPolicy::MissingKeyId => error(format!(
+            "{op} requires per-op policy_key_id when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::EmptyKeyId => error(format!(
+            "{op} requires non-empty policy_key_id when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::MissingEvidenceMode => error(format!(
+            "{op} requires per-op evidence_mode when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::EmptyEvidenceMode => error(format!(
+            "{op} requires non-empty evidence_mode when signed_policy_required=true"
+        )),
+        AuthorizedFfiSignedPolicy::InvalidEvidenceMode => {
+            error(format!("{op} evidence_mode must be `deterministic`"))
+        }
+        AuthorizedFfiSignedPolicy::Valid {
+            policy_artifact_h,
+            policy_signature_h,
+            policy_key_id,
+            evidence_mode,
+        } => Ok(Some(FfiSignedPolicyMetadata {
+            policy_artifact_h: policy_artifact_h.clone(),
+            policy_signature_h: policy_signature_h.clone(),
+            policy_key_id: policy_key_id.clone(),
+            evidence_mode: evidence_mode.clone(),
+        })),
     }
-    let policy_signature_h = policy::required_signed_string(pol, "policy_signature_h", op)
-        .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
-    if !is_hex64(&policy_signature_h) {
-        return Err(mk_error(
-            error_tok,
-            "core/caps/policy-error",
-            format!("{op} policy_signature_h must be 64-hex"),
-            Some(op),
-        ));
-    }
-    let policy_key_id = policy::required_signed_string(pol, "policy_key_id", op)
-        .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
-    let evidence_mode = policy::required_signed_string(pol, "evidence_mode", op)
-        .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
-    if evidence_mode != "deterministic" {
-        return Err(mk_error(
-            error_tok,
-            "core/caps/policy-error",
-            format!("{op} evidence_mode must be `deterministic`"),
-            Some(op),
-        ));
-    }
-    Ok(Some(FfiSignedPolicyMetadata {
-        policy_artifact_h,
-        policy_signature_h,
-        policy_key_id,
-        evidence_mode,
-    }))
 }
 
 fn ffi_call_payload_len(payload: &Term) -> usize {

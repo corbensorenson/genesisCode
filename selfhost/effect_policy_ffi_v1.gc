@@ -66,6 +66,124 @@
     :signed-policy-required false
     :symbols nil})
 
+(def selfhost/effect-ffi::signed-error
+  (fn (status)
+    {
+      :evidence-mode nil
+      :policy-artifact-h nil
+      :policy-key-id nil
+      :policy-signature-h nil
+      :status status}))
+
+(def selfhost/effect-ffi::signed-valid
+  (fn (artifact)
+    (fn (signature)
+      (fn (key-id)
+        (fn (evidence-mode)
+          {
+            :evidence-mode evidence-mode
+            :policy-artifact-h artifact
+            :policy-key-id key-id
+            :policy-signature-h signature
+            :status (quote :valid)})))))
+
+(def selfhost/effect-ffi::state-status?
+  (fn (state)
+    (fn (status)
+      ((core/sym::eq? ((core/map::get state) (quote :status))) status))))
+
+(def selfhost/effect-ffi::hex64?
+  (fn (value)
+    (if (selfhost/policy::str? value)
+      (let ((decoded (core/bytes::from-hex value)))
+        (if (core/error::is? decoded)
+          false
+          ((core/int::eq? (core/bytes::len decoded)) 32)))
+      false)))
+
+(def selfhost/effect-ffi::signed-policy
+  (fn (ffi)
+    (let ((required ((core/map::get ffi) (quote :signed-policy-required))))
+      (if (selfhost/effect-network::invalid-type? required)
+        (selfhost/effect-ffi::signed-error (quote :invalid-required-type))
+        (if required
+          (let ((artifact-state
+                  (selfhost/effect-network::string-policy
+                    ((core/map::get ffi) (quote :policy-artifact-h)))))
+            (if
+              (if
+                ((selfhost/effect-ffi::state-status? artifact-state) (quote :absent))
+                true
+                ((selfhost/effect-ffi::state-status? artifact-state)
+                  (quote :invalid-type)))
+              (selfhost/effect-ffi::signed-error (quote :missing-artifact-h))
+              (if
+                ((selfhost/effect-ffi::state-status? artifact-state) (quote :empty))
+                (selfhost/effect-ffi::signed-error (quote :empty-artifact-h))
+                (let ((artifact ((core/map::get artifact-state) (quote :value))))
+                  (if (selfhost/effect-ffi::hex64? artifact)
+                    (let ((signature-state
+                            (selfhost/effect-network::string-policy
+                              ((core/map::get ffi) (quote :policy-signature-h)))))
+                      (if
+                        (if
+                          ((selfhost/effect-ffi::state-status? signature-state)
+                            (quote :absent))
+                          true
+                          ((selfhost/effect-ffi::state-status? signature-state)
+                            (quote :invalid-type)))
+                        (selfhost/effect-ffi::signed-error (quote :missing-signature-h))
+                        (if
+                          ((selfhost/effect-ffi::state-status? signature-state) (quote :empty))
+                          (selfhost/effect-ffi::signed-error (quote :empty-signature-h))
+                          (let ((signature
+                                  ((core/map::get signature-state) (quote :value))))
+                            (if (selfhost/effect-ffi::hex64? signature)
+                              (let ((key-state
+                                      (selfhost/effect-network::string-policy
+                                        ((core/map::get ffi) (quote :policy-key-id)))))
+                                (if
+                                  (if
+                                    ((selfhost/effect-ffi::state-status? key-state)
+                                      (quote :absent))
+                                    true
+                                    ((selfhost/effect-ffi::state-status? key-state)
+                                      (quote :invalid-type)))
+                                  (selfhost/effect-ffi::signed-error (quote :missing-key-id))
+                                  (if
+                                    ((selfhost/effect-ffi::state-status? key-state) (quote :empty))
+                                    (selfhost/effect-ffi::signed-error (quote :empty-key-id))
+                                    (let ((evidence-state
+                                            (selfhost/effect-network::string-policy
+                                              ((core/map::get ffi) (quote :evidence-mode)))))
+                                      (if
+                                        (if
+                                          ((selfhost/effect-ffi::state-status? evidence-state)
+                                            (quote :absent))
+                                          true
+                                          ((selfhost/effect-ffi::state-status? evidence-state)
+                                            (quote :invalid-type)))
+                                        (selfhost/effect-ffi::signed-error
+                                          (quote :missing-evidence-mode))
+                                        (if
+                                          ((selfhost/effect-ffi::state-status? evidence-state)
+                                            (quote :empty))
+                                          (selfhost/effect-ffi::signed-error
+                                            (quote :empty-evidence-mode))
+                                          (let ((evidence
+                                                  ((core/map::get evidence-state) (quote :value))))
+                                            (if ((core/eq? evidence) "deterministic")
+                                              ((((selfhost/effect-ffi::signed-valid artifact)
+                                                  signature)
+                                                ((core/map::get key-state) (quote :value)))
+                                              evidence)
+                                              (selfhost/effect-ffi::signed-error
+                                                (quote :invalid-evidence-mode))))))))))
+                              (selfhost/effect-ffi::signed-error
+                                (quote :invalid-signature-h)))))))
+                    (selfhost/effect-ffi::signed-error (quote :invalid-artifact-h)))))))
+          (selfhost/effect-ffi::signed-error (quote :disabled)))))))
+
 (def selfhost/effect-ffi::policy
   (fn (override)
     (fn (platform-max)
@@ -77,9 +195,6 @@
           :abi-ids
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :abi-ids)))
-          :evidence-mode
-            (selfhost/effect-network::string-policy
-              ((core/map::get ffi) (quote :evidence-mode)))
           :libraries
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :libraries)))
@@ -89,20 +204,10 @@
           :max-call-payload-bytes
             ((selfhost/effect-crypto::positive-limit-policy
                ((core/map::get ffi) (quote :max-call-payload-bytes))) platform-max)
-          :policy-artifact-h
-            (selfhost/effect-network::string-policy
-              ((core/map::get ffi) (quote :policy-artifact-h)))
-          :policy-key-id
-            (selfhost/effect-network::string-policy
-              ((core/map::get ffi) (quote :policy-key-id)))
-          :policy-signature-h
-            (selfhost/effect-network::string-policy
-              ((core/map::get ffi) (quote :policy-signature-h)))
           :schema-ids
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :schema-ids)))
-          :signed-policy-required
-            ((core/map::get ffi) (quote :signed-policy-required))
+          :signed-policy (selfhost/effect-ffi::signed-policy ffi)
           :symbols
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :symbols)))}))))

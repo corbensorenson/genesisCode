@@ -1,7 +1,7 @@
 use super::{
-    AuthorizedBindPorts, AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
-    AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedProcessPrograms,
-    AuthorizedStringList, CapsPolicy,
+    AuthorizedBindPorts, AuthorizedDatabasePolicy, AuthorizedFfiSignedPolicy, AuthorizedMaxBytes,
+    AuthorizedNetworkPolicy, AuthorizedOptionalBool, AuthorizedOptionalString,
+    AuthorizedProcessPrograms, AuthorizedStringList, CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
@@ -160,13 +160,8 @@ fn ffi_policy_term(
     max_buffer_bytes: Term,
     max_call_payload_bytes: Term,
 ) -> Term {
-    let absent_string = optional_value_policy(":absent", Term::Nil);
     Term::Map(BTreeMap::from([
         (TermOrdKey(Term::symbol(":abi-ids")), abi_ids),
-        (
-            TermOrdKey(Term::symbol(":evidence-mode")),
-            absent_string.clone(),
-        ),
         (TermOrdKey(Term::symbol(":libraries")), libraries),
         (
             TermOrdKey(Term::symbol(":max-buffer-bytes")),
@@ -176,24 +171,28 @@ fn ffi_policy_term(
             TermOrdKey(Term::symbol(":max-call-payload-bytes")),
             max_call_payload_bytes,
         ),
-        (
-            TermOrdKey(Term::symbol(":policy-artifact-h")),
-            absent_string.clone(),
-        ),
-        (
-            TermOrdKey(Term::symbol(":policy-key-id")),
-            absent_string.clone(),
-        ),
-        (
-            TermOrdKey(Term::symbol(":policy-signature-h")),
-            absent_string,
-        ),
         (TermOrdKey(Term::symbol(":schema-ids")), schema_ids),
         (
-            TermOrdKey(Term::symbol(":signed-policy-required")),
-            Term::Bool(false),
+            TermOrdKey(Term::symbol(":signed-policy")),
+            ffi_signed_policy_term(":disabled", Term::Nil, Term::Nil, Term::Nil, Term::Nil),
         ),
         (TermOrdKey(Term::symbol(":symbols")), symbols),
+    ]))
+}
+
+fn ffi_signed_policy_term(
+    status: &str,
+    artifact: Term,
+    signature: Term,
+    key_id: Term,
+    evidence_mode: Term,
+) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":evidence-mode")), evidence_mode),
+        (TermOrdKey(Term::symbol(":policy-artifact-h")), artifact),
+        (TermOrdKey(Term::symbol(":policy-key-id")), key_id),
+        (TermOrdKey(Term::symbol(":policy-signature-h")), signature),
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
     ]))
 }
 
@@ -1185,22 +1184,14 @@ evidence_mode = " deterministic "
     );
     assert_eq!(ffi.max_buffer_bytes, AuthorizedMaxBytes::Valid(64));
     assert_eq!(ffi.max_call_payload_bytes, AuthorizedMaxBytes::Valid(128));
-    assert!(ffi.signed_policy_required);
     assert_eq!(
-        ffi.policy_artifact_h,
-        AuthorizedOptionalString::Valid("a".repeat(64))
-    );
-    assert_eq!(
-        ffi.policy_signature_h,
-        AuthorizedOptionalString::Valid("b".repeat(64))
-    );
-    assert_eq!(
-        ffi.policy_key_id,
-        AuthorizedOptionalString::Valid("root-key".to_string())
-    );
-    assert_eq!(
-        ffi.evidence_mode,
-        AuthorizedOptionalString::Valid("deterministic".to_string())
+        ffi.signed_policy,
+        AuthorizedFfiSignedPolicy::Valid {
+            policy_artifact_h: "a".repeat(64),
+            policy_signature_h: "b".repeat(64),
+            policy_key_id: "root-key".to_string(),
+            evidence_mode: "deterministic".to_string(),
+        }
     );
 }
 
@@ -1241,11 +1232,84 @@ policy_signature_h = "   "
     assert_eq!(ffi.schema_ids, AuthorizedStringList::Absent);
     assert_eq!(ffi.max_buffer_bytes, AuthorizedMaxBytes::InvalidType);
     assert_eq!(ffi.max_call_payload_bytes, AuthorizedMaxBytes::NonPositive);
-    assert!(!ffi.signed_policy_required);
-    assert_eq!(ffi.policy_artifact_h, AuthorizedOptionalString::InvalidType);
-    assert_eq!(ffi.policy_signature_h, AuthorizedOptionalString::Empty);
-    assert_eq!(ffi.policy_key_id, AuthorizedOptionalString::Absent);
-    assert_eq!(ffi.evidence_mode, AuthorizedOptionalString::Absent);
+    assert_eq!(
+        ffi.signed_policy,
+        AuthorizedFfiSignedPolicy::InvalidRequiredType
+    );
+}
+
+#[test]
+fn selfhost_authority_decides_ffi_signed_policy_precedence() {
+    let cases = [
+        (
+            "signed_policy_required = true".to_string(),
+            AuthorizedFfiSignedPolicy::MissingArtifactHash,
+        ),
+        (
+            format!(
+                "signed_policy_required = true\npolicy_artifact_h = \"{}\"",
+                "z".repeat(64)
+            ),
+            AuthorizedFfiSignedPolicy::InvalidArtifactHash,
+        ),
+        (
+            format!(
+                "signed_policy_required = true\npolicy_artifact_h = \"{}\"",
+                "a".repeat(64)
+            ),
+            AuthorizedFfiSignedPolicy::MissingSignatureHash,
+        ),
+        (
+            format!(
+                "signed_policy_required = true\npolicy_artifact_h = \"{}\"\npolicy_signature_h = \"{}\"",
+                "a".repeat(64),
+                "b".repeat(64)
+            ),
+            AuthorizedFfiSignedPolicy::MissingKeyId,
+        ),
+        (
+            format!(
+                "signed_policy_required = true\npolicy_artifact_h = \"{}\"\npolicy_signature_h = \"{}\"\npolicy_key_id = \"root\"",
+                "a".repeat(64),
+                "b".repeat(64)
+            ),
+            AuthorizedFfiSignedPolicy::MissingEvidenceMode,
+        ),
+        (
+            format!(
+                "signed_policy_required = true\npolicy_artifact_h = \"{}\"\npolicy_signature_h = \"{}\"\npolicy_key_id = \"root\"\nevidence_mode = \"random\"",
+                "a".repeat(64),
+                "b".repeat(64)
+            ),
+            AuthorizedFfiSignedPolicy::InvalidEvidenceMode,
+        ),
+    ];
+
+    for (body, expected) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(
+            &caps,
+            format!("allow = [\"host/ffi::call\"]\n\n[op.\"host/ffi::call\"]\n{body}\n"),
+        )
+        .unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        assert_eq!(
+            policy
+                .op_policy("host/ffi::call")
+                .unwrap()
+                .authorized_ffi
+                .as_ref()
+                .unwrap()
+                .signed_policy,
+            expected
+        );
+    }
 }
 
 #[test]
@@ -1266,19 +1330,31 @@ fn selfhost_authority_rejects_malformed_ffi_decisions() {
     };
     decode_ffi_policy(&valid(), true).unwrap();
 
-    let Term::Map(mut invalid_signed_required) = valid() else {
+    let Term::Map(mut contradictory_signed_policy) = valid() else {
         return;
     };
-    invalid_signed_required.insert(
-        TermOrdKey(Term::symbol(":signed-policy-required")),
-        Term::symbol(":yes"),
+    contradictory_signed_policy.insert(
+        TermOrdKey(Term::symbol(":signed-policy")),
+        ffi_signed_policy_term(
+            ":disabled",
+            Term::Str("a".repeat(64)),
+            Term::Nil,
+            Term::Nil,
+            Term::Nil,
+        ),
     );
-    let Term::Map(mut contradictory_key_id) = valid() else {
+    let Term::Map(mut invalid_valid_signed_policy) = valid() else {
         return;
     };
-    contradictory_key_id.insert(
-        TermOrdKey(Term::symbol(":policy-key-id")),
-        optional_value_policy(":valid", Term::Nil),
+    invalid_valid_signed_policy.insert(
+        TermOrdKey(Term::symbol(":signed-policy")),
+        ffi_signed_policy_term(
+            ":valid",
+            Term::Str("not-a-hash".to_string()),
+            Term::Str("b".repeat(64)),
+            Term::Str("root-key".to_string()),
+            Term::Str("deterministic".to_string()),
+        ),
     );
 
     let cases = [
@@ -1309,8 +1385,8 @@ fn selfhost_authority_rejects_malformed_ffi_decisions() {
             absent_limit.clone(),
             absent_limit.clone(),
         ),
-        Term::Map(invalid_signed_required),
-        Term::Map(contradictory_key_id),
+        Term::Map(contradictory_signed_policy),
+        Term::Map(invalid_valid_signed_policy),
     ];
     for decision in cases {
         decode_ffi_policy(&decision, true)
