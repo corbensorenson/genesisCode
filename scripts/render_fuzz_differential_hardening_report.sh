@@ -36,7 +36,7 @@ echo "fuzz-differential-hardening: optimizer rewrite fuzz invariants"
 cargo test -p gc_opt --test fuzz_optimizer --quiet
 
 echo "fuzz-differential-hardening: malformed/adversarial differential corpus"
-cargo test -p gc_cli --test cli_differential_adversarial --quiet
+cargo test -p gc_cli --features parity-harness --test cli_differential_adversarial --quiet
 
 BASELINE_HISTORY=""
 if [[ "$HISTORY_INPUT_PATH" != "$HISTORY_PATH" && -f "$HISTORY_INPUT_PATH" ]]; then

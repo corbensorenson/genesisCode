@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -8,6 +10,7 @@ use gc_coreform::{
 use predicates::prelude::*;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -86,6 +89,7 @@ fn poison_cli_binding(artifact: &Path, binding: &str) {
     fs::write(artifact, print_term(&term)).unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn sync_and_gc_selfhost_frontend_fail_when_contracts_are_poisoned() {
     let td = tempfile::tempdir().unwrap();

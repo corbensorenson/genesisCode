@@ -13,5 +13,5 @@ genesis_configure_cargo_target_dir "$ROOT_DIR" "gc-agent-symbol-index" root-host
 python3 scripts/lib/gc_agent_profile.py --check
 python3 scripts/lib/gc_agent_symbol_index.py --check
 python3 scripts/lib/gc_agent_symbol_index.py --self-test
-cargo test -p gc_cli --test cli_agent_index agent_symbol --locked
+cargo test -p gc_cli --features parity-harness --test cli_agent_index agent_symbol --locked
 echo "gc-agent-symbol-index-contract: ok (lookup=exact case_sensitive=true max_results=1 check_mode=read_only)"

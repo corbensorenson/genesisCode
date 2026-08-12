@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -42,6 +44,7 @@ fn run_hash_stdout(cmd: &mut assert_cmd::Command) -> String {
     String::from_utf8(out).unwrap().trim().to_string()
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pack_is_deterministic_across_reruns_under_selfhost_frontend() {
     let td = tempfile::tempdir().unwrap();
@@ -76,6 +79,7 @@ fn pack_is_deterministic_across_reruns_under_selfhost_frontend() {
     assert_eq!(h1, h2, "pack output hash must be deterministic");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn test_acceptance_is_deterministic_across_reruns_under_selfhost_frontend() {
     let td = tempfile::tempdir().unwrap();

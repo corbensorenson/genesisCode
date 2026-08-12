@@ -1,9 +1,12 @@
+#![cfg(feature = "parity-harness")]
+
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     cargo_bin_cmd!("genesis_parity")
@@ -31,6 +34,7 @@ fn copy_pkg_basic_fixture(dst: &Path) -> PathBuf {
     }
     dst.join("package.toml")
 }
+#[cfg(feature = "parity-harness")]
 
 fn run_case(frontend: &str, artifact: Option<&Path>, argv: &[String], cwd: &Path) -> (i32, Value) {
     let mut full_argv = vec![
@@ -101,6 +105,7 @@ fn assert_parity_failure_shape(case_name: &str, rust_json: &Value, self_json: &V
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn malformed_and_adversarial_corpus_matches_between_rust_and_selfhost_frontends() {
     let td = tempfile::tempdir().expect("tempdir");

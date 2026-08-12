@@ -14,8 +14,11 @@ genesis_configure_cargo_target_dir \
 TARGET_DIR="$CARGO_TARGET_DIR"
 
 cargo build --locked --offline \
-  -p gc_cli --bin genesis --bin genesis_parity \
+  -p gc_cli --bin genesis \
   -p gc_wasi_cli --bin genesis_wasi \
+  >/dev/null
+cargo build --locked --offline \
+  -p gc_cli --features parity-harness --bin genesis_parity \
   >/dev/null
 
 python3 scripts/lib/selfhost_typecheck_authority.py \

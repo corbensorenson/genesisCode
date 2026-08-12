@@ -2,6 +2,7 @@ use std::fs;
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{canonicalize_module, hash_module, hash_term, parse_module, parse_term};
+#[cfg(feature = "parity-harness")]
 use serde_json::Value as JsonValue;
 
 mod support;
@@ -69,6 +70,7 @@ fn vcs_hash_hashes_terms_and_modules_deterministically() {
     assert_eq!(got, expected_mod);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn vcs_hash_json_schema_v02_matches_between_rust_and_selfhost_engines() {
     let td = tempfile::tempdir().unwrap();

@@ -2,13 +2,16 @@ use std::fs;
 use std::path::Path;
 
 use assert_cmd::cargo::cargo_bin_cmd;
+#[cfg(feature = "parity-harness")]
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
 };
+#[cfg(feature = "parity-harness")]
 use predicates::prelude::*;
 
 mod support;
 
+#[cfg(feature = "parity-harness")]
 fn write_pkg(dir: &Path) {
     fs::write(
         dir.join("package.toml"),
@@ -71,6 +74,7 @@ tests = ["my/pkg::tests"]
     .unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 fn write_workspace_pkg_with_duplicate_symbol(dir: &Path) {
     fs::write(
         dir.join("package.toml"),
@@ -108,6 +112,7 @@ tests = ["my/pkg::tests"]
     .unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 fn write_workspace_pkg_with_late_dependency(dir: &Path) {
     write_workspace_pkg(dir);
     fs::write(
@@ -124,6 +129,7 @@ fn write_workspace_pkg_with_late_dependency(dir: &Path) {
     .unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 fn poison_refactor_plan_report(artifact: &Path) {
     let src = fs::read_to_string(artifact).expect("read toolchain artifact");
     let mut term = parse_term(&src).expect("parse toolchain artifact");
@@ -172,6 +178,7 @@ fn poison_refactor_plan_report(artifact: &Path) {
     fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_index_emits_stable_node_inventory() {
     let td = tempfile::tempdir().unwrap();
@@ -230,6 +237,7 @@ fn semantic_edit_index_emits_stable_node_inventory() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_workspace_graph_is_deterministic_with_dependency_edges() {
     let td = tempfile::tempdir().unwrap();
@@ -274,6 +282,7 @@ fn semantic_edit_workspace_graph_is_deterministic_with_dependency_edges() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_rename_emits_multifile_patch() {
     let td = tempfile::tempdir().unwrap();
@@ -404,6 +413,7 @@ fn semantic_edit_apply_plan_move_is_selfhosted_minimized_and_ordered() {
     assert!(source.contains("my/pkg::moved"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_rejects_move_with_late_dependency() {
     let td = tempfile::tempdir().unwrap();
@@ -450,6 +460,7 @@ fn semantic_edit_refactor_plan_rejects_move_with_late_dependency() {
     assert!(!dir.join("moved.gc").exists());
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_reports_noop_conflict() {
     let td = tempfile::tempdir().unwrap();
@@ -503,6 +514,7 @@ fn semantic_edit_refactor_plan_reports_noop_conflict() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_reports_destination_exists_conflict() {
     let td = tempfile::tempdir().unwrap();
@@ -556,6 +568,7 @@ fn semantic_edit_refactor_plan_reports_destination_exists_conflict() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_move_requires_target_module_path_conflict() {
     let td = tempfile::tempdir().unwrap();
@@ -610,6 +623,7 @@ fn semantic_edit_refactor_plan_move_requires_target_module_path_conflict() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_move_reports_target_module_exists_conflict() {
     let td = tempfile::tempdir().unwrap();
@@ -665,6 +679,7 @@ fn semantic_edit_refactor_plan_move_reports_target_module_exists_conflict() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_move_reports_target_module_invalid_conflict() {
     let td = tempfile::tempdir().unwrap();
@@ -720,6 +735,7 @@ fn semantic_edit_refactor_plan_move_reports_target_module_invalid_conflict() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_refactor_plan_rejects_incomplete_selfhost_report() {
     let td = tempfile::tempdir().unwrap();
@@ -752,6 +768,7 @@ fn semantic_edit_refactor_plan_rejects_incomplete_selfhost_report() {
         .stderr(predicate::str::contains("must contain exactly fields"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_apply_plan_rename_is_deterministic_on_reapply_conflict() {
     let td = tempfile::tempdir().unwrap();
@@ -861,6 +878,7 @@ fn semantic_edit_apply_plan_rename_is_deterministic_on_reapply_conflict() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn semantic_edit_apply_plan_reports_workspace_ambiguous_definition_conflict() {
     let td = tempfile::tempdir().unwrap();

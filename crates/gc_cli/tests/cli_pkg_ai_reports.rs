@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -48,6 +50,7 @@ base_dir = "."
     caps
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_lock_and_update_emit_ai_report_artifacts() {
     let td = tempfile::tempdir().unwrap();
@@ -195,6 +198,7 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_publish_failure_still_emits_publish_report_artifact() {
     let td = tempfile::tempdir().unwrap();

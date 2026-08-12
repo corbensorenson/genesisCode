@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -6,6 +8,7 @@ use gc_coreform::{Term, TermOrdKey, hash_module, parse_term, print_module, print
 use predicates::prelude::*;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -79,6 +82,7 @@ fn poison_cli_vcs_log_program(artifact: &Path) {
     assert!(poisoned_count > 0, "artifact had no module forms to poison");
     fs::write(artifact, print_term(&term)).unwrap();
 }
+#[cfg(feature = "parity-harness")]
 
 fn store_put(dir: &Path, caps: &Path, src: &str, filename: &str) -> String {
     let p = dir.join(filename);
@@ -116,6 +120,7 @@ fn json_frontend_name(stdout: &[u8]) -> String {
         .to_string()
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn vcs_log_value_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -200,6 +205,7 @@ fn vcs_log_value_matches_between_frontends() {
     assert_eq!(rust_v, self_v);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn vcs_log_selfhost_frontend_fails_when_contract_is_poisoned() {
     let td = tempfile::tempdir().unwrap();
@@ -264,6 +270,7 @@ fn vcs_log_selfhost_frontend_fails_when_contract_is_poisoned() {
         .stderr(predicate::str::contains("vcs-log-program"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn vcs_blame_and_why_values_match_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -462,6 +469,7 @@ fn vcs_blame_and_why_values_match_between_frontends() {
     assert_eq!(json_value(&rust_why), json_value(&self_why));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn vcs_diff_and_apply_values_match_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -585,6 +593,7 @@ fn vcs_diff_and_apply_values_match_between_frontends() {
     }
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn vcs_diff_and_apply_selfhost_work_with_low_level_caps_only() {
     let td = tempfile::tempdir().unwrap();
@@ -675,6 +684,7 @@ fn vcs_diff_and_apply_selfhost_work_with_low_level_caps_only() {
     }
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn vcs_merge3_and_resolve_conflict_values_match_between_frontends() {
     let td = tempfile::tempdir().unwrap();

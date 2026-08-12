@@ -57,6 +57,7 @@ allow_http = true
     .unwrap();
     caps
 }
+#[cfg(feature = "parity-harness")]
 
 fn cli_store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
     let p = dir.join(filename);
@@ -75,12 +76,14 @@ fn cli_store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> Str
     String::from_utf8(out).unwrap().trim().to_string()
 }
 
+#[cfg(feature = "parity-harness")]
 fn set_local_ref(dir: &Path, commit_hex: &str) {
     let refs_path = dir.join(".genesis").join("refs.gc");
     let rdb = gc_effects::RefsDb::open(&refs_path).unwrap();
     let _ = rdb.set("refs/heads/main", Some(commit_hex), None).unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 fn get_remote_ref(remote_dir: &Path, name: &str) -> Option<String> {
     let refs_path = remote_dir.join("v1").join("refs.gc");
     if !refs_path.exists() {
@@ -145,6 +148,7 @@ fn spawn_http_registry(remote_dir: &Path) -> (gc_registry::HttpRegistryServerHan
     panic!("registry server failed to become ready");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_publish_roundtrip_over_http_registry_server() {
     let td = tempfile::tempdir().unwrap();

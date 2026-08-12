@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -8,6 +10,7 @@ use gc_coreform::{
 use predicates::prelude::*;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -135,6 +138,7 @@ fn json_value(stdout: &[u8]) -> String {
         .unwrap()
         .to_string()
 }
+#[cfg(feature = "parity-harness")]
 
 fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
     let p = dir.join(filename);
@@ -192,6 +196,7 @@ fn normalize_pkg_value(s: &str) -> Term {
     walk(&parse_term(s).unwrap())
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_init_value_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -243,6 +248,7 @@ fn pkg_init_value_matches_between_frontends() {
     assert_eq!(rust_v, self_v);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_init_selfhost_frontend_fails_when_contract_is_poisoned() {
     let td = tempfile::tempdir().unwrap();
@@ -273,6 +279,7 @@ fn pkg_init_selfhost_frontend_fails_when_contract_is_poisoned() {
         .stderr(predicate::str::contains("pkg-init-program"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_add_list_info_values_match_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -429,6 +436,7 @@ fn pkg_add_list_info_values_match_between_frontends() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_lock_value_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -551,6 +559,7 @@ fn pkg_lock_value_matches_between_frontends() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_update_value_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -633,6 +642,7 @@ fn pkg_update_value_matches_between_frontends() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_lock_semver_failure_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -746,6 +756,7 @@ fn pkg_lock_semver_failure_matches_between_frontends() {
     assert!(self_lock_s.contains("core/pkg/semver-no-match"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_install_verify_values_match_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -862,6 +873,7 @@ fn pkg_install_verify_values_match_between_frontends() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_snapshot_value_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();

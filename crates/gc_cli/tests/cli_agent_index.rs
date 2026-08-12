@@ -556,6 +556,7 @@ fn agent_diagnostic_lookup_rejects_case_drift_unknown_and_padding() {
     }
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn agent_index_parity_profile_reports_runtime_profile() {
     let out = cargo_bin_cmd!("genesis_parity")

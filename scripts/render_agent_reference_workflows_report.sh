@@ -35,8 +35,14 @@ DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
 GENESIS_BIN="${GENESIS_BIN:-$DEFAULT_DEBUG_DIR/genesis}"
 if [[ ! -x "$GENESIS_BIN" ]]; then
   case "$(basename "$GENESIS_BIN")" in
-    genesis_wasi|genesis_wasi_parity)
+    genesis_wasi_parity)
+      cargo build -p gc_wasi_cli --features parity-harness --bin genesis_wasi_parity >/dev/null
+      ;;
+    genesis_wasi)
       cargo build -p gc_wasi_cli >/dev/null
+      ;;
+    genesis_parity)
+      cargo build -p gc_cli --features parity-harness --bin genesis_parity >/dev/null
       ;;
     *)
       cargo build -p gc_cli >/dev/null

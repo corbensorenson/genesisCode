@@ -1,8 +1,11 @@
+#![cfg(feature = "parity-harness")]
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -24,6 +27,7 @@ fn copy_pkg_basic_fixture(dst: &std::path::Path) -> std::path::PathBuf {
     }
     dst.join("package.toml")
 }
+#[cfg(feature = "parity-harness")]
 
 fn run_stdout(args: &[&str]) -> String {
     let out = cmd()
@@ -35,6 +39,7 @@ fn run_stdout(args: &[&str]) -> String {
         .clone();
     String::from_utf8(out).unwrap().trim().to_string()
 }
+#[cfg(feature = "parity-harness")]
 
 fn run_json(args: &[&str]) -> JsonValue {
     let out = cmd()
@@ -47,6 +52,7 @@ fn run_json(args: &[&str]) -> JsonValue {
     serde_json::from_slice(&out).unwrap()
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pack_selfhost_frontend_matches_rust_frontend_artifact() {
     let td = tempdir().unwrap();
@@ -74,6 +80,7 @@ fn pack_selfhost_frontend_matches_rust_frontend_artifact() {
     assert_eq!(rust_h, self_h);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn test_selfhost_frontend_matches_rust_frontend_acceptance_artifact() {
     let td = tempdir().unwrap();
@@ -101,6 +108,7 @@ fn test_selfhost_frontend_matches_rust_frontend_acceptance_artifact() {
     assert_eq!(rust_h, self_h);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pack_and_test_json_report_explicit_coreform_frontend_for_ai_drivers() {
     let td = tempdir().unwrap();

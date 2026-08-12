@@ -59,8 +59,8 @@
       "additionalProperties": false,
       "required": ["h2Eligible", "reason", "requiredOwnerPaths"],
       "properties": {
-        "h2Eligible": {"const": false},
-        "reason": {"const": "parity-feature-unified-in-outer-cli-packages"},
+        "h2Eligible": {"const": true},
+        "reason": {"const": "parity-feature-isolated-from-production-cli-packages"},
         "requiredOwnerPaths": {"const": ["crates/gc_cli/Cargo.toml", "crates/gc_wasi_cli/Cargo.toml"]}
       }
     },

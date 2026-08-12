@@ -1,8 +1,11 @@
+#![cfg(feature = "parity-harness")]
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use tempfile::tempdir;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -13,6 +16,7 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     support::copy_repo_toolchain_artifact(dir)
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn run_selfhost_engine_matches_rust_engine_output_for_pure_effect_program() {
     let dir = tempdir().unwrap();
@@ -77,6 +81,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_pure_effect_program() {
     assert_eq!(rust_log_s, selfhost_log_s);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn run_selfhost_engine_matches_rust_engine_output_for_denied_effect_program() {
     let dir = tempdir().unwrap();
@@ -183,6 +188,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_denied_effect_program() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn replay_selfhost_engine_matches_rust_engine_output() {
     let dir = tempdir().unwrap();
@@ -253,6 +259,7 @@ fn replay_selfhost_engine_matches_rust_engine_output() {
     assert_eq!(rust_s.trim(), selfhost_s.trim());
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn run_selfhost_engine_surfaces_parse_errors() {
     let dir = tempdir().unwrap();
@@ -280,6 +287,7 @@ fn run_selfhost_engine_surfaces_parse_errors() {
         .stderr(predicate::str::contains("core/parse/"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn run_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
     let dir = tempdir().unwrap();
@@ -314,6 +322,7 @@ fn run_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
         ));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn replay_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
     let dir = tempdir().unwrap();

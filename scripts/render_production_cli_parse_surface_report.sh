@@ -84,8 +84,10 @@ assert_accepts_rust_parity() {
 
 GENESIS_BIN="$(genesis_build_release_bin gc_cli genesis)"
 GENESIS_WASI_BIN="$(genesis_build_release_bin gc_wasi_cli genesis_wasi)"
-GENESIS_PARITY_BIN="$(genesis_build_release_bin gc_cli genesis_parity)"
-GENESIS_WASI_PARITY_BIN="$(genesis_build_release_bin gc_wasi_cli genesis_wasi_parity)"
+genesis_build_release_bins -p gc_cli --features parity-harness --bin genesis_parity
+genesis_build_release_bins -p gc_wasi_cli --features parity-harness --bin genesis_wasi_parity
+GENESIS_PARITY_BIN="$(genesis_assert_release_bin genesis_parity)"
+GENESIS_WASI_PARITY_BIN="$(genesis_assert_release_bin genesis_wasi_parity)"
 
 assert_rejects_rust "$GENESIS_BIN" "genesis"
 assert_rejects_rust "$GENESIS_WASI_BIN" "genesis_wasi"

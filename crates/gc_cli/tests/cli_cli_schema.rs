@@ -112,6 +112,7 @@ fn cli_schema_production_profile_emits_selfhost_only_values() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn cli_schema_parity_profile_emits_rust_compat_values() {
     let out = cargo_bin_cmd!("genesis_parity")

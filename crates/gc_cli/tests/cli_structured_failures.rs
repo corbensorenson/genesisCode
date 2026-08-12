@@ -1,9 +1,12 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{canonicalize_module, hash_module, parse_module};
 use serde_json::Value;
+#[cfg(feature = "parity-harness")]
 
 fn run_failure(args: &[String]) -> Value {
     let output = cargo_bin_cmd!("genesis_parity")
@@ -71,6 +74,7 @@ hash = "{hash}"
     root.join("package.toml")
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn failures_expose_closed_structured_contexts_for_all_authority_domains() {
     let td = tempfile::tempdir().expect("tempdir");
@@ -239,6 +243,7 @@ fn failures_expose_closed_structured_contexts_for_all_authority_domains() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn human_failure_rendering_remains_concise() {
     let td = tempfile::tempdir().expect("tempdir");

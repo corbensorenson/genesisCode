@@ -1,14 +1,26 @@
+#[cfg(feature = "parity-harness")]
 use std::collections::BTreeSet;
+#[cfg(feature = "parity-harness")]
 use std::fs;
+#[cfg(feature = "parity-harness")]
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "parity-harness")]
 use assert_cmd::cargo::cargo_bin_cmd;
-use gc_coreform::{canonicalize_module, hash_module, parse_module, parse_term};
+#[cfg(feature = "parity-harness")]
+use gc_coreform::parse_term;
+#[cfg(feature = "parity-harness")]
+use gc_coreform::{canonicalize_module, hash_module, parse_module};
+#[cfg(feature = "parity-harness")]
 use gc_effects::{Decision, EffectLog};
+#[cfg(feature = "parity-harness")]
 use serde_json::{Value, json};
 
+#[cfg(feature = "parity-harness")]
 const GOLDEN_SCHEMA: &str = "genesis/diagnostic-goldens-v0.1";
+#[cfg(feature = "parity-harness")]
 const GOLDEN_PATH: &str = "../../tests/diagnostics/goldens/v0.1/diagnostics.json";
+#[cfg(feature = "parity-harness")]
 const REQUIRED_CLASSES: [&str; 10] = [
     "exhausted-budgets",
     "incompatible-profiles",
@@ -22,10 +34,12 @@ const REQUIRED_CLASSES: [&str; 10] = [
     "unhandled-effects",
 ];
 
+#[cfg(feature = "parity-harness")]
 fn hex32(hash: [u8; 32]) -> String {
     hash.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+#[cfg(feature = "parity-harness")]
 fn write_module_package(root: &Path, name: &str, module_name: &str, source: &str) -> PathBuf {
     fs::create_dir_all(root).expect("create package root");
     let forms = canonicalize_module(parse_module(source).expect("parse fixture module"))
@@ -41,6 +55,7 @@ fn write_module_package(root: &Path, name: &str, module_name: &str, source: &str
     .expect("write fixture manifest");
     root.join("package.toml")
 }
+#[cfg(feature = "parity-harness")]
 
 fn run_json(root: &Path, args: &[String], expect_success: bool) -> Value {
     let mut command = cargo_bin_cmd!("genesis_parity");
@@ -59,6 +74,7 @@ fn run_json(root: &Path, args: &[String], expect_success: bool) -> Value {
 fn strings(args: &[&str]) -> Vec<String> {
     args.iter().map(|arg| (*arg).to_string()).collect()
 }
+#[cfg(feature = "parity-harness")]
 
 fn failure_case(id: &str, class: &str, root: &Path, args: Vec<String>) -> Value {
     let envelope = run_json(root, &args, false);
@@ -112,6 +128,7 @@ fn failure_case(id: &str, class: &str, root: &Path, args: Vec<String>) -> Value 
     );
     json!({"id": id, "class": class, "envelope": projection})
 }
+#[cfg(feature = "parity-harness")]
 
 fn build_cases(root: &Path) -> Vec<Value> {
     let malformed = root.join("malformed.gc");
@@ -389,6 +406,7 @@ file = "module.gc"
     cases
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn diagnostic_failure_envelopes_match_versioned_goldens() {
     let temp = tempfile::tempdir().expect("create diagnostic golden fixture root");

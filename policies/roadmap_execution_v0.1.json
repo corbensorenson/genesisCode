@@ -1224,6 +1224,7 @@
       "profile": "selfhost-authority",
       "owner_paths": [
         "crates/gc_cli/Cargo.toml",
+        "crates/gc_cli/tests",
         "crates/gc_wasi_cli/Cargo.toml"
       ],
       "start_after": ["R4.1", "R5.1", "R5.3"],

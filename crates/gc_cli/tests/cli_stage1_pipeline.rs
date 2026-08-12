@@ -3,6 +3,7 @@ use tempfile::tempdir;
 
 mod support;
 
+#[cfg(feature = "parity-harness")]
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     support::copy_repo_toolchain_artifact(dir)
 }
@@ -98,6 +99,7 @@ fn optimize_stage1_gate_fails_for_effect_program() {
         .code(30);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn optimize_selfhost_engine_matches_rust_stage1_output() {
     let dir = tempdir().unwrap();
@@ -139,6 +141,7 @@ fn optimize_selfhost_engine_matches_rust_stage1_output() {
     assert_eq!(rust_s, selfhost_s);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn eval_selfhost_engine_stage1_gate_matches_rust() {
     let dir = tempdir().unwrap();

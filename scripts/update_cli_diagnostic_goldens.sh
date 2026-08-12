@@ -11,7 +11,7 @@ genesis_configure_cargo_target_dir \
   "root-host"
 
 GENESIS_UPDATE_DIAGNOSTIC_GOLDENS=1 \
-  cargo test -p gc_cli --test cli_diagnostic_goldens \
+  cargo test -p gc_cli --features parity-harness --test cli_diagnostic_goldens \
     diagnostic_failure_envelopes_match_versioned_goldens -- --exact
 
 python3 scripts/lib/gc_diagnostic_goldens.py --check

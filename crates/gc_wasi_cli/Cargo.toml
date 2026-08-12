@@ -13,14 +13,16 @@ path = "src/main.rs"
 [[bin]]
 name = "genesis_wasi_parity"
 path = "src/main_parity.rs"
+required-features = ["parity-harness"]
 
 [features]
 default = []
 embedded-bootstrap = ["gc_cli_driver/embedded-bootstrap"]
+parity-harness = ["dep:gc_cli_driver_parity"]
 
 [dependencies]
 gc_cli_driver = { path = "../gc_cli_driver" }
-gc_cli_driver_parity = { path = "../gc_cli_driver_parity" }
+gc_cli_driver_parity = { path = "../gc_cli_driver_parity", optional = true }
 
 [dev-dependencies]
 assert_cmd = "2"

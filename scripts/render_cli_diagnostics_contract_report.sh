@@ -26,7 +26,7 @@ BUDGET_MS="${GENESIS_CLI_DIAGNOSTICS_CONTRACT_BUDGET_MS:-300000}"
 cargo test -p gc_cli --test cli_diagnostics_matrix --quiet
 cargo test -p gc_cli --test cli_human_diagnostics --quiet
 cargo test -p gc_cli --test cli_structured_failures --quiet
-cargo test -p gc_cli --test cli_diagnostic_goldens --quiet
+cargo test -p gc_cli --features parity-harness --test cli_diagnostic_goldens --quiet
 cargo test -p gc_cli_driver diagnostics::tests --quiet
 
 BASELINE_HISTORY=""

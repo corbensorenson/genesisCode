@@ -1,8 +1,11 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use tempfile::tempdir;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -34,6 +37,7 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn eval_defaults_to_compiled_backend() {
     let td = tempdir().unwrap();
@@ -56,6 +60,7 @@ fn eval_defaults_to_compiled_backend() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn eval_ignores_legacy_disable_compiled_eval_env() {
     let td = tempdir().unwrap();
@@ -79,6 +84,7 @@ fn eval_ignores_legacy_disable_compiled_eval_env() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn run_replay_and_test_include_compiled_backend_metadata() {
     let td = tempdir().unwrap();

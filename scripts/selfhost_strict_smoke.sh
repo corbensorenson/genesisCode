@@ -13,6 +13,8 @@ genesis_configure_cargo_target_dir \
 source "$ROOT_DIR/scripts/lib/selfhost_artifact_cache.sh"
 
 cargo build -p gc_cli -p gc_wasi_cli >/dev/null
+cargo build -p gc_cli --features parity-harness --bin genesis_parity >/dev/null
+cargo build -p gc_wasi_cli --features parity-harness --bin genesis_wasi_parity >/dev/null
 
 DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
 GEN="$DEFAULT_DEBUG_DIR/genesis"

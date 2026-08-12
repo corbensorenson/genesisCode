@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -8,6 +10,7 @@ use gc_coreform::{
 use predicates::prelude::*;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -126,6 +129,7 @@ fn poison_cli_refs_get_program(artifact: &Path) {
     fs::write(artifact, print_term(&term)).unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn refs_get_list_set_delete_match_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -366,6 +370,7 @@ fn refs_get_list_set_delete_match_between_frontends() {
     assert_eq!(rust_del, "ok\n");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn refs_set_tag_signature_policy_rejects_unsigned_commit_in_both_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -505,6 +510,7 @@ fn refs_set_tag_signature_policy_rejects_unsigned_commit_in_both_frontends() {
     assert_eq!(String::from_utf8(got).unwrap().trim(), "nil");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn refs_set_enforces_required_attestation_roles_in_both_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -644,6 +650,7 @@ fn refs_set_enforces_required_attestation_roles_in_both_frontends() {
     assert_eq!(String::from_utf8(got).unwrap().trim(), "nil");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn refs_get_selfhost_frontend_fails_when_contract_is_poisoned() {
     let td = tempfile::tempdir().unwrap();

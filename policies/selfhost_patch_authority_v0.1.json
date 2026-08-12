@@ -16,7 +16,7 @@
     "package": "gc_cli_driver_parity",
     "sunsetReviewDate": "2026-11-11"
   },
-  "contentIdentitySha256": "95998b5df04bc635397733c03f94c2d160e3f4be0b1a972c7c9eaf64fc540150",
+  "contentIdentitySha256": "de3f539333313b3019c2bbea6a73fdd57612241751d537e4380d5b783365861d",
   "decisionInventory": [
     "apply-outcome-and-report",
     "conflict-classification-and-explanation",
@@ -45,8 +45,8 @@
     "genesis_wasi"
   ],
   "releaseGraphDisposition": {
-    "h2Eligible": false,
-    "reason": "parity-feature-unified-in-outer-cli-packages",
+    "h2Eligible": true,
+    "reason": "parity-feature-isolated-from-production-cli-packages",
     "requiredOwnerPaths": [
       "crates/gc_cli/Cargo.toml",
       "crates/gc_wasi_cli/Cargo.toml"

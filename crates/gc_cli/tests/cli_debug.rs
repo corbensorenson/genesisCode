@@ -1,7 +1,10 @@
+#![cfg(feature = "parity-harness")]
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use serde_json::Value;
 use tempfile::tempdir;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     cargo_bin_cmd!("genesis_parity")
@@ -20,6 +23,7 @@ fn write_contract_module(dir: &std::path::Path) -> std::path::PathBuf {
     file
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn debug_frames_and_step_emit_deterministic_trace_payloads() {
     let td = tempdir().unwrap();
@@ -102,6 +106,7 @@ fn debug_frames_and_step_emit_deterministic_trace_payloads() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn debug_break_and_continue_support_key_value_matching() {
     let td = tempdir().unwrap();
@@ -225,6 +230,7 @@ fn debug_break_and_continue_support_key_value_matching() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn debug_timeline_and_bisect_detect_first_mismatch() {
     let td = tempdir().unwrap();

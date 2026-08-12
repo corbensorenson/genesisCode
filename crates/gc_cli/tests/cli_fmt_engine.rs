@@ -1,7 +1,10 @@
+#![cfg(feature = "parity-harness")]
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use tempfile::tempdir;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn run_ok(args: &[&str]) {
     cargo_bin_cmd!("genesis_parity")
@@ -14,6 +17,7 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     support::copy_repo_toolchain_artifact(dir)
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn fmt_selfhost_engine_matches_rust_engine_output() {
     let dir = tempdir().unwrap();
@@ -46,6 +50,7 @@ fn fmt_selfhost_engine_matches_rust_engine_output() {
     assert_eq!(rust_out, selfhost_out);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn fmt_selfhost_check_agrees_with_rust_check() {
     let dir = tempdir().unwrap();

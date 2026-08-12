@@ -75,7 +75,13 @@ def resolve_hash_bin(repo_root: Path, genesis_bin: Path) -> Path:
     parity_bin = genesis_bin.with_name("genesis_parity")
     if parity_bin.is_file() and os.access(parity_bin, os.X_OK):
         return parity_bin
-    run(["cargo", "build", "-p", "gc_cli", "--bin", "genesis_parity"], cwd=repo_root)
+    run(
+        [
+            "cargo", "build", "-p", "gc_cli", "--features", "parity-harness",
+            "--bin", "genesis_parity",
+        ],
+        cwd=repo_root,
+    )
     if parity_bin.is_file() and os.access(parity_bin, os.X_OK):
         return parity_bin
     return genesis_bin

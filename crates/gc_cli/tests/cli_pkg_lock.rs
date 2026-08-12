@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -189,6 +191,7 @@ fn write_remote_ref(remote_dir: &Path, name: &str, hash: &str) {
     )
     .unwrap();
 }
+#[cfg(feature = "parity-harness")]
 
 fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
     fs::write(dir.join(filename), term_src).unwrap();
@@ -209,6 +212,7 @@ fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String 
     .trim()
     .to_string()
 }
+#[cfg(feature = "parity-harness")]
 
 fn setup_locked_commit_with_missing_patch(dir: &Path, caps: &Path, dep_name: &str) -> String {
     let snap_h = store_put(
@@ -277,6 +281,7 @@ fn json_value_term(stdout: &[u8]) -> Term {
     parse_term(s).expect("parse value term")
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_lock_install_verify_roundtrip_local_snapshot_selector() {
     let td = tempfile::tempdir().unwrap();
@@ -439,6 +444,7 @@ mini::x
         .code(50);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_lock_and_install_emit_workspace_and_dependency_provenance() {
     let td = tempfile::tempdir().unwrap();
@@ -596,6 +602,7 @@ fn gcpm_lock_and_install_emit_workspace_and_dependency_provenance() {
     assert_eq!(install_deps.len(), 1);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_lock_strict_rejects_commit_without_evidence() {
     let td = tempfile::tempdir().unwrap();
@@ -668,6 +675,7 @@ fn pkg_lock_strict_rejects_commit_without_evidence() {
         .code(20);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_lock_strict_rejects_commit_with_missing_patch_closure() {
     let td = tempfile::tempdir().unwrap();
@@ -686,6 +694,7 @@ fn pkg_lock_strict_rejects_commit_with_missing_patch_closure() {
         .code(20);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_install_strict_rejects_commit_with_missing_patch_closure() {
     let td = tempfile::tempdir().unwrap();
@@ -713,6 +722,7 @@ fn pkg_install_strict_rejects_commit_with_missing_patch_closure() {
         .code(20);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_verify_rejects_commit_with_missing_patch_closure() {
     let td = tempfile::tempdir().unwrap();
@@ -730,6 +740,7 @@ fn pkg_verify_rejects_commit_with_missing_patch_closure() {
         .code(20);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_lock_fetches_missing_ref_commit_and_snapshot_from_registry() {
     let td = tempfile::tempdir().unwrap();
@@ -808,6 +819,7 @@ fn pkg_lock_fetches_missing_ref_commit_and_snapshot_from_registry() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_install_hydrates_locked_closure_from_registry_after_store_wipe() {
     let td = tempfile::tempdir().unwrap();

@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
@@ -7,6 +9,7 @@ use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -28,6 +31,7 @@ fn copy_pkg_basic_fixture(dst: &std::path::Path) -> std::path::PathBuf {
     }
     dst.join("package.toml")
 }
+#[cfg(feature = "parity-harness")]
 
 fn run_json(args: &[&str]) -> JsonValue {
     let out = cmd()
@@ -194,6 +198,7 @@ fn poison_patch_schema_apply_replace_node_contract(artifact: &std::path::Path) {
     std::fs::write(artifact, print_term(&term)).unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn typecheck_selfhost_frontend_matches_rust_frontend_report() {
     let td = tempdir().unwrap();
@@ -241,6 +246,7 @@ fn typecheck_selfhost_frontend_matches_rust_frontend_report() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn apply_patch_selfhost_frontend_matches_rust_frontend_artifacts() {
     let td = tempdir().unwrap();
@@ -297,6 +303,7 @@ fn apply_patch_selfhost_frontend_matches_rust_frontend_artifacts() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn typecheck_selfhost_frontend_fails_when_module_meta_contract_is_poisoned() {
     let td = tempdir().unwrap();
@@ -320,6 +327,7 @@ fn typecheck_selfhost_frontend_fails_when_module_meta_contract_is_poisoned() {
         .stderr(predicate::str::contains("module-meta"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn apply_patch_selfhost_frontend_fails_when_apply_replace_node_contract_is_poisoned() {
     let td = tempdir().unwrap();
@@ -347,6 +355,7 @@ fn apply_patch_selfhost_frontend_fails_when_apply_replace_node_contract_is_poiso
         .stderr(predicate::str::contains("apply-replace-node"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn typecheck_selfhost_frontend_fails_when_hash_module_forms_contract_is_poisoned() {
     let td = tempdir().unwrap();

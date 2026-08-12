@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -92,6 +94,7 @@ fn parse_value_term(stdout: &[u8]) -> Term {
     .expect("parse value term")
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_abi_exports_contract_ops_caps_effects_and_obligations() {
     let td = tempfile::tempdir().unwrap();
@@ -163,6 +166,7 @@ fn gcpm_abi_exports_contract_ops_caps_effects_and_obligations() {
     assert!(ops.iter().any(|op| op == "game/core::render"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_abi_output_is_deterministic_for_identical_inputs() {
     let td = tempfile::tempdir().unwrap();

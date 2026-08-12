@@ -62,7 +62,7 @@ else
   )
   CLI_TEST_LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/genesis-fast-cli.XXXXXX")"
   trap 'rm -rf "$CLI_TEST_LOG_DIR"' EXIT
-  cargo test -p gc_cli --no-run --message-format=json-render-diagnostics \
+  cargo test -p gc_cli --features parity-harness --no-run --message-format=json-render-diagnostics \
     --test cli_smoke \
     --test cli_selfhost_only \
     --test cli_apply_patch_determinism \

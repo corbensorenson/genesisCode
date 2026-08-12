@@ -213,6 +213,34 @@ def cargo_feature_members(manifest: str, feature: str) -> list[str]:
     return re.findall(r'"([^"\n]+)"', match.group(1))
 
 
+def cargo_metadata(root: Path) -> dict[str, Any]:
+    result = subprocess.run(
+        [
+            "cargo",
+            "metadata",
+            "--no-deps",
+            "--format-version",
+            "1",
+            "--locked",
+            "--offline",
+        ],
+        cwd=root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise VerificationError(f"cargo metadata failed: {result.stderr.strip()}")
+    try:
+        value = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise VerificationError(f"cargo metadata emitted invalid JSON: {error}") from error
+    if not isinstance(value, dict):
+        raise VerificationError("cargo metadata root is not an object")
+    return value
+
+
 def verify_oracle_isolation(root: Path) -> None:
     obligations = (root / "crates/gc_obligations/Cargo.toml").read_text()
     driver = (root / "crates/gc_cli_driver/Cargo.toml").read_text()
@@ -240,6 +268,44 @@ def verify_oracle_isolation(root: Path) -> None:
             raise VerificationError(f"normal {package} dependency graph reaches gc_types")
     if "gc_types v" not in cargo_tree(root, "gc_cli_driver_parity"):
         raise VerificationError("dedicated parity graph does not contain gc_types")
+    packages = {
+        item["name"]: item for item in cargo_metadata(root).get("packages", [])
+    }
+    for package, production, parity_bin in (
+        ("gc_cli", "genesis", "genesis_parity"),
+        ("gc_wasi_cli", "genesis_wasi", "genesis_wasi_parity"),
+    ):
+        outer = packages.get(package, {})
+        if outer.get("features", {}).get("parity-harness") != [
+            "dep:gc_cli_driver_parity"
+        ]:
+            raise VerificationError(f"{package} parity feature custody drift")
+        parity_dependency = next(
+            (
+                item
+                for item in outer.get("dependencies", [])
+                if item.get("name") == "gc_cli_driver_parity"
+            ),
+            {},
+        )
+        if not parity_dependency.get("optional"):
+            raise VerificationError(f"{package} parity driver is not optional")
+        bins = {
+            item.get("name"): item
+            for item in outer.get("targets", [])
+            if "bin" in item.get("kind", [])
+        }
+        if bins.get(parity_bin, {}).get("required-features") != ["parity-harness"]:
+            raise VerificationError(f"{package} parity binary is not feature-gated")
+        if bins.get(production, {}).get("required-features"):
+            raise VerificationError(
+                f"{package} production binary unexpectedly requires a feature"
+            )
+        outer_tree = cargo_tree(root, package)
+        if "gc_cli_driver_parity v" in outer_tree or "gc_types v" in outer_tree:
+            raise VerificationError(
+                f"production {package} dependency graph reaches the parity oracle"
+            )
 
 
 def verify_report_custody(root: Path) -> None:

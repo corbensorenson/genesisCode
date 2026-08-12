@@ -13,6 +13,7 @@ path = "src/main.rs"
 [[bin]]
 name = "genesis_parity"
 path = "src/main_parity.rs"
+required-features = ["parity-harness"]
 
 [features]
 default = ["profile-headless"]
@@ -23,10 +24,11 @@ profile-headless = ["gc_cli_driver/profile-headless"]
 profile-gpu = ["gc_cli_driver/profile-gpu"]
 profile-gfx = ["gc_cli_driver/profile-gfx"]
 profile-backend = ["gc_cli_driver/profile-backend"]
+parity-harness = ["dep:gc_cli_driver_parity"]
 
 [dependencies]
 gc_cli_driver = { path = "../gc_cli_driver", default-features = false }
-gc_cli_driver_parity = { path = "../gc_cli_driver_parity" }
+gc_cli_driver_parity = { path = "../gc_cli_driver_parity", optional = true }
 
 [dev-dependencies]
 assert_cmd = "2"

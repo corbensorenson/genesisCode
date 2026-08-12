@@ -114,8 +114,8 @@ python3 scripts/lib/selfhost_typecheck_authority.py \
   --schema docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json \
   --self-test
 
-# R4.2.c patch authority remains non-promoting while its exact release-graph
-# blocker is independently checked alongside source and route custody.
+# R4.2.c patch authority is H2 only while source, route, and final production
+# graph custody remain independently checked and the parity oracle stays opt-in.
 python3 scripts/lib/selfhost_patch_authority.py \
   --root "$ROOT_DIR" \
   --profile policies/selfhost_patch_authority_v0.1.json \

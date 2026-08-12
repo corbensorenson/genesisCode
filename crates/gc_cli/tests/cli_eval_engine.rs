@@ -8,6 +8,7 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     support::copy_repo_toolchain_artifact(dir)
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn eval_selfhost_engine_matches_rust_engine_output() {
     let dir = tempdir().unwrap();

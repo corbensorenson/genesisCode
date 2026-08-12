@@ -86,6 +86,7 @@ fn default_profile_rejects_rust_coreform_frontend_for_semantic_groups() {
     }
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn compat_opt_in_allows_rust_coreform_frontend_for_refs_group() {
     let td = tempdir().unwrap();

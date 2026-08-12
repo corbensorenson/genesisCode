@@ -1,6 +1,6 @@
 # Self-host Patch Authority v0.1
 
-Status: normative audit contract; not yet H2-promoting.
+Status: normative H2 evidence contract.
 
 This contract inventories the exact GenesisCode modules and `core/cli` bindings that
 produce semantic patch identities, normalization, preconditions, refactor plans,
@@ -17,16 +17,17 @@ same immutable fixture through the native and WASI production entrypoints in sep
 workspaces, compares content-addressed output identities, and requires matching
 malformed-input and resource-exhaustion behavior.
 
-The current profile deliberately sets `releaseGraphDisposition.h2Eligible` to false.
-The outer `gc_cli` and `gc_wasi_cli` packages unconditionally depend on the parity
-driver, so Cargo feature unification compiles `gc_patches/parity-oracle` while building
-those packages even though the production runtime profile rejects Rust frontend
-selection. The generated R4.2.c owner set does not authorize those two manifests.
-This verifier preserves that blocker rather than laundering route denial into H2.
+The profile sets `releaseGraphDisposition.h2Eligible` only while `gc_cli` and
+`gc_wasi_cli` keep the parity driver optional, production binaries have no parity
+feature requirement, and the dedicated parity binaries require the explicit
+`parity-harness` feature. Parity-dependent integration tests are gated individually,
+never as whole test targets, so ordinary production assertions remain in the default
+suite. The verifier follows direct and helper-mediated parity calls, rejects ungated
+parity tests and over-gated production tests, binds the reviewed 104-test/33-file
+inventory, inspects both final production package feature graphs, and rejects either
+`gc_cli_driver_parity` or `gc_patches/parity-oracle`.
 
-R4.2.c and `SD-PATCH` may reach H2 only after an authorized transaction isolates the
-parity binaries from both production package feature graphs, the verifier changes the
-disposition to eligible, native/WASI and mutation controls pass, and independently
-custodied durable evidence reviews the exact artifact and source identities. This
-contract claims no bootstrap fixpoint, independent second patch implementation,
+`SD-PATCH` may reach H2 only when native/WASI and mutation controls pass and durable
+evidence binds the exact artifact, profile, source, and production graph identities.
+This contract claims no bootstrap fixpoint, independent second patch implementation,
 release qualification, or downstream-product authorization.

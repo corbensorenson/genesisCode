@@ -1,9 +1,12 @@
+#![cfg(feature = "parity-harness")]
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey, parse_term};
 use predicates::prelude::*;
 use tempfile::tempdir;
 
 mod support;
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -14,6 +17,7 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     support::copy_repo_toolchain_artifact(dir)
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn explain_selfhost_engine_matches_rust_engine_output() {
     let dir = tempdir().unwrap();
@@ -114,6 +118,7 @@ fn explain_selfhost_engine_matches_rust_engine_output() {
     assert!(rid.chars().all(|c| c.is_ascii_hexdigit()));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn explain_selfhost_engine_surfaces_parse_errors() {
     let dir = tempdir().unwrap();

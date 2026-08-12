@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -39,6 +41,7 @@ base_dir = "."
     caps
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_lock_emits_prompt_safe_telemetry() {
     let td = tempfile::tempdir().unwrap();

@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "8104d1c89d7fef816e6c5c9227c6b767ef516c5acbf421505b285e1921f55f9f",
+  "contentIdentitySha256": "68602c1a786d8df9b218e3550b88c8421d7ba469d4a65bf044f4f7b0869beead",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1339,13 +1339,18 @@
         "semantic-edit/*",
         "session/*"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "reachable-parity-harness",
-      "hostBindingPaths": [],
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
+      "hostBindingPaths": [
+        "crates/gc_patches/src/patch_apply_report.rs",
+        "crates/gc_patches/src/patch_apply_runtime.rs",
+        "crates/gc_patches/src/patch_selfhost_authority.rs",
+        "crates/gc_patches/src/patch_selfhost_toolchain.rs"
+      ],
       "id": "SD-PATCH",
       "internalOnly": false,
       "limitations": [
-        "Workspace refactor planning, canonical top-form semantic workspace diff and merge, operation transformations, and final v0.3 apply outcome/report production are GenesisCode-authoritative and artifact-only; aggregate H2 remains unproven pending whole-route fallback absence, native/WASI parity, mutation controls, and durable independent evidence"
+        "H2 is scoped to genesis/selfhost-patch-authority-v0.1; the compile-time parity-only Rust compatibility oracle remains independently invocable until its 2026-11-11 sunset review, and H3/H4 bootstrap or independent-reimplementation closure is not claimed"
       ],
       "migrationTasks": [
         "R4.2.c"
@@ -1355,19 +1360,19 @@
         "selfhost/patch_authority_refactor_plan_v1.gc",
         "selfhost/patch_authority_diff_v1.gc",
         "selfhost/patch_authority_merge_v1.gc",
-        "selfhost/patch_authority_apply_report_v1.gc",
-        "crates/gc_patches/src"
+        "selfhost/patch_authority_apply_report_v1.gc"
       ],
       "productionAuthorityPaths": [
+        "selfhost/toolchain.gc",
         "selfhost/patch_authority_refactor_plan_v1.gc",
         "selfhost/patch_authority_diff_v1.gc",
         "selfhost/patch_authority_merge_v1.gc",
-        "selfhost/patch_authority_apply_report_v1.gc",
-        "crates/gc_patches/src"
+        "selfhost/patch_authority_apply_report_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
         "docs/spec/PATCH_SCHEMA.md",
+        "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_REFACTOR_PIPELINE_v0.1.md",
         "docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md",
         "docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md",
@@ -1379,15 +1384,15 @@
       ],
       "testPaths": [
         "crates/gc_patches/tests",
-        "crates/gc_cli/tests/cli_semantic_edit.rs"
+        "crates/gc_cli/tests/cli_semantic_edit.rs",
+        "crates/gc_cli/tests/cli_typecheck_apply_patch_engine.rs"
       ],
       "title": "Semantic diff, patch, merge, and refactor decisions",
       "verifierPaths": [
+        "scripts/check_selfhost_boundary.sh",
         "scripts/check_selfhost_refactor_guard.sh",
-        "crates/gc_patches/src/patch_refactor_plan.rs",
-        "crates/gc_patches/src/patch_semantic_diff.rs",
-        "crates/gc_patches/src/patch_semantic_merge.rs",
-        "crates/gc_patches/src/patch_apply_report.rs"
+        "scripts/lib/selfhost_patch_authority.py",
+        "scripts/selfhost_patch_authority_guard.sh"
       ]
     },
     {

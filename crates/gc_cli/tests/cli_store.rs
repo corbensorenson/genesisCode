@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::PathBuf;
 
@@ -25,6 +27,7 @@ fn write_caps(dir: &std::path::Path, allow: &[&str]) -> PathBuf {
     fs::write(&caps, s).unwrap();
     caps
 }
+#[cfg(feature = "parity-harness")]
 
 fn cmd() -> assert_cmd::Command {
     let c = cargo_bin_cmd!("genesis_parity");
@@ -84,6 +87,7 @@ fn poison_cli_store_put_program(artifact: &std::path::Path) {
     fs::write(artifact, print_term(&term)).unwrap();
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_put_has_get_roundtrip() {
     let td = tempfile::tempdir().unwrap();
@@ -181,6 +185,7 @@ fn store_put_has_get_roundtrip() {
         .stdout("false\n");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_deny_by_default_is_caps_denied_exit_41() {
     let td = tempfile::tempdir().unwrap();
@@ -200,6 +205,7 @@ fn store_deny_by_default_is_caps_denied_exit_41() {
         .code(41);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_get_missing_is_exit_20_and_does_not_write_out() {
     let td = tempfile::tempdir().unwrap();
@@ -223,6 +229,7 @@ fn store_get_missing_is_exit_20_and_does_not_write_out() {
     assert!(!out.exists());
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_verify_hash_and_scan_succeed() {
     let td = tempfile::tempdir().unwrap();
@@ -265,6 +272,7 @@ fn store_verify_hash_and_scan_succeed() {
         .stdout(predicate::str::contains("ok "));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_verify_corruption_is_exit_50() {
     let td = tempfile::tempdir().unwrap();
@@ -300,6 +308,7 @@ fn store_verify_corruption_is_exit_50() {
         .stdout(predicate::str::contains("core/store/corruption"));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_verify_selfhost_frontend_works_without_selfhost_store_contract_binding() {
     let td = tempfile::tempdir().unwrap();
@@ -341,6 +350,7 @@ fn store_verify_selfhost_frontend_works_without_selfhost_store_contract_binding(
         .stdout("ok 1\n");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_put_hash_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -395,6 +405,7 @@ fn store_put_hash_matches_between_frontends() {
     assert_eq!(rust_h, self_h);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn store_put_selfhost_frontend_fails_when_contract_is_poisoned() {
     let td = tempfile::tempdir().unwrap();

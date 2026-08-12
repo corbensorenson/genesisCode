@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -32,6 +34,7 @@ base_dir = "."
     caps
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_doctor_json_success_has_stable_kind_and_report_schema() {
     let td = tempfile::tempdir().unwrap();
@@ -80,6 +83,7 @@ policy = "policy:default-v0.1"
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_doctor_reports_missing_artifacts_with_fix_hints() {
     let td = tempfile::tempdir().unwrap();
@@ -139,6 +143,7 @@ policy = "policy:default-v0.1"
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_doctor_detects_lock_drift_with_actionable_fix_metadata() {
     let td = tempfile::tempdir().unwrap();

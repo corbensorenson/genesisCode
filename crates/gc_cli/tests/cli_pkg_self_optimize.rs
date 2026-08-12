@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -51,6 +53,7 @@ fn map_bool(m: &std::collections::BTreeMap<TermOrdKey, Term>, k: &str) -> Option
     })
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_self_optimize_promotes_only_after_obligation_gate() {
     let td = tempfile::tempdir().unwrap();
@@ -96,6 +99,7 @@ fn gcpm_self_optimize_promotes_only_after_obligation_gate() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn gcpm_self_optimize_dry_run_restores_original_sources() {
     let td = tempfile::tempdir().unwrap();

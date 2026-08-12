@@ -111,16 +111,13 @@ GENESIS_WASI_PARITY_HELP="$TMP/genesis_wasi_parity.help"
 GENESIS_PARITY_FMT_HELP="$TMP/genesis_parity_fmt.help"
 GENESIS_WASI_PARITY_FMT_HELP="$TMP/genesis_wasi_parity_fmt.help"
 
+# Production binaries are always built in an oracle-free feature graph.
+genesis_build_release_bins \
+  -p gc_cli --bin genesis \
+  -p gc_wasi_cli --bin genesis_wasi
 if [[ "$INCLUDE_PARITY" == "1" ]]; then
-  # Build production + parity bins in one release invocation when parity validation is explicitly requested.
-  genesis_build_release_bins \
-    -p gc_cli --bin genesis --bin genesis_parity \
-    -p gc_wasi_cli --bin genesis_wasi --bin genesis_wasi_parity
-else
-  # Default/common lanes validate production bins only to avoid parity-only compile overhead.
-  genesis_build_release_bins \
-    -p gc_cli --bin genesis \
-    -p gc_wasi_cli --bin genesis_wasi
+  genesis_build_release_bins -p gc_cli --features parity-harness --bin genesis_parity
+  genesis_build_release_bins -p gc_wasi_cli --features parity-harness --bin genesis_wasi_parity
 fi
 
 GENESIS_BIN="$(genesis_assert_release_bin genesis)"

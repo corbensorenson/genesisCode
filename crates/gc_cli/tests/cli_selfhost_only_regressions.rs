@@ -351,6 +351,7 @@ fn optimize_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
         ));
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
     let dir = tempdir().unwrap();
@@ -389,6 +390,7 @@ fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
         .success();
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn default_profile_rejects_rust_coreform_frontend_without_compat_opt_in() {
     let dir = tempdir().unwrap();

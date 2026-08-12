@@ -238,6 +238,7 @@ fn selfhost_artifact_corrupt_seed_recovery_rebuilds_from_manifest_sources() {
     assert!(out.is_file(), "recovery must materialize output artifact");
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn selfhost_artifact_can_be_built_and_used_for_selfhost_fmt() {
     let td = tempdir().unwrap();

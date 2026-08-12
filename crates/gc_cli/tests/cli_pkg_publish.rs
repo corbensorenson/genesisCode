@@ -1,3 +1,5 @@
+#![cfg(feature = "parity-harness")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -50,6 +52,7 @@ remote_allow = ["{remote_allow}"]
     .unwrap();
     caps
 }
+#[cfg(feature = "parity-harness")]
 
 fn cli_store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
     let p = dir.join(filename);
@@ -147,6 +150,7 @@ fn normalize_publish_value(s: &str) -> Term {
     walk(&parse_term(s).unwrap())
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     let td = tempfile::tempdir().unwrap();
@@ -280,6 +284,7 @@ fn pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_publish_enforces_required_attestation_roles_on_protected_refs() {
     let td = tempfile::tempdir().unwrap();
@@ -373,6 +378,7 @@ fn pkg_publish_enforces_required_attestation_roles_on_protected_refs() {
 
     assert_eq!(get_remote_ref(&remote_dir, "refs/heads/main"), None);
 }
+#[cfg(feature = "parity-harness")]
 
 fn setup_publish_ok_fixture(dir: &Path) -> (PathBuf, String, String, PathBuf) {
     let remote_dir = dir.join("remote-registry");
@@ -436,6 +442,7 @@ fn setup_publish_ok_fixture(dir: &Path) -> (PathBuf, String, String, PathBuf) {
     (caps, remote, policy_hex, remote_dir)
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn selfhost_publish_works_without_core_pkg_publish_capability() {
     let td = tempfile::tempdir().unwrap();
@@ -524,6 +531,7 @@ fn selfhost_publish_works_without_core_pkg_publish_capability() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_publish_value_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
@@ -636,6 +644,7 @@ fn pkg_publish_value_matches_between_frontends() {
     );
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_publish_rejects_invalid_requirements_trace_when_policy_requires_it() {
     let td = tempfile::tempdir().unwrap();
@@ -730,6 +739,7 @@ fn pkg_publish_rejects_invalid_requirements_trace_when_policy_requires_it() {
     assert_eq!(get_remote_ref(&remote_dir, "refs/heads/main"), None);
 }
 
+#[cfg(feature = "parity-harness")]
 #[test]
 fn pkg_publish_rejects_invalid_tool_qualification_when_policy_requires_it() {
     let td = tempfile::tempdir().unwrap();
