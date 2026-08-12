@@ -82,6 +82,7 @@ DECISIONS = [
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
     "per-operation-enforcement-control-selection",
+    "per-operation-max-bytes-policy",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
 ]
@@ -92,7 +93,6 @@ RESIDUALS = {
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
-    "filesystem-policy",
     "global-store-remote-transport-tls-and-auth-policy",
     "network-policy",
     "path-and-secret-resolution",
@@ -124,11 +124,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.2",
+        "requestKind": "genesis/effect-policy-authority-request-v0.3",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.2",
+        "resultKind": "genesis/effect-policy-authority-result-v0.3",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -137,7 +137,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.6",
+        "version": "0.1.7",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -213,6 +213,7 @@ def static_check(root: Path, profile):
         "op_policy.create_dirs = authorized.create_dirs;",
         "op_policy.timeout_ms = authorized.timeout_ms;",
         "op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;",
+        "op_policy.authorized_max_bytes = Some(authorized.max_bytes);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -254,6 +255,25 @@ def static_check(root: Path, profile):
     runner = (root / "crates/gc_effects/src/runner_response_budget.rs").read_text()
     if "policy.authorized_cap(op)" not in runner:
         fail("effect log does not consume the authorized capability descriptor")
+    authority_lookup = "let Some(authorized) = &pol.authorized_max_bytes"
+    legacy_lookup = 'pol.extra.get(key)'
+    if runner.count(authority_lookup) != 1 or runner.count(legacy_lookup) != 1:
+        fail("generic max-byte enforcement authority inventory drift")
+    if runner.find(authority_lookup) >= runner.find(legacy_lookup):
+        fail("generic max-byte enforcement consults raw policy before authority state")
+    bridge_policy = (root / "crates/gc_effects/src/runner_host_bridge_policy.rs").read_text()
+    bridge_authority_lookup = "if let Some(authorized) = &pol.authorized_max_bytes"
+    bridge_legacy_lookup = 'pol.extra.get("max_bytes")'
+    if bridge_policy.count(bridge_authority_lookup) != 1 or bridge_policy.count(bridge_legacy_lookup) != 1:
+        fail("bridge max-byte enforcement authority inventory drift")
+    if bridge_policy.find(bridge_authority_lookup) >= bridge_policy.find(bridge_legacy_lookup):
+        fail("bridge max-byte enforcement consults raw policy before authority state")
+    effect_source = source_path.read_text()
+    cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
+        "(def core/effects::policy-authority", 1
+    )[0]
+    if ":max-bytes" in cap_body:
+        fail("private max-byte policy leaked into the logged capability descriptor")
 
     driver = (root / "crates/gc_cli_driver/src/lib.rs").read_text()
     if driver.count("CapsPolicy::load(path)") != 1 or driver.count("load_with_selfhost_authority(") != 1:
@@ -333,6 +353,9 @@ def static_check(root: Path, profile):
         "selfhost_authority_owns_default_global_storage_locations",
         "selfhost_authority_preserves_explicit_global_storage_locations",
         "selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation",
+        "selfhost_authority_installs_valid_and_absent_max_byte_controls",
+        "selfhost_authority_preserves_invalid_max_byte_effect_errors",
+        "selfhost_authority_rejects_malformed_max_byte_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")

@@ -11,7 +11,7 @@ use num_traits::ToPrimitive;
 use crate::error::EffectsError;
 use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
-use crate::policy::{CapsPolicy, OpPolicy};
+use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
 use crate::runner_browser_host::{BrowserHostRuntime, browser_host_call};
 use crate::runner_editor_host::{EditorHostRuntime, editor_host_call};
@@ -87,7 +87,7 @@ mod runner_gc_ops;
 #[path = "runner_remote_ops.rs"]
 mod runner_remote_ops;
 #[path = "runner_response_budget.rs"]
-mod runner_response_budget;
+pub(crate) mod runner_response_budget;
 #[path = "runner_runtime_budget.rs"]
 mod runner_runtime_budget;
 #[path = "runner_vcs_pkg_helpers.rs"]

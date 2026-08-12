@@ -112,6 +112,15 @@ fn adaptive_default_task_workers() -> u64 {
         .max(1)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedMaxBytes {
+    Absent,
+    InvalidType,
+    NonPositive,
+    PlatformOverflow,
+    Valid(usize),
+}
+
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
@@ -120,6 +129,7 @@ pub struct OpPolicy {
     pub log_inline_max_bytes: Option<usize>,
     pub extra: BTreeMap<String, toml::Value>,
     pub(crate) authorized_cap: Option<gc_coreform::Term>,
+    pub(crate) authorized_max_bytes: Option<AuthorizedMaxBytes>,
 }
 
 impl CapsPolicy {
@@ -228,6 +238,7 @@ impl CapsPolicy {
                         log_inline_max_bytes: None,
                         extra: BTreeMap::new(),
                         authorized_cap: None,
+                        authorized_max_bytes: None,
                     },
                 );
             }

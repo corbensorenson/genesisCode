@@ -10,7 +10,7 @@ use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
 
-use super::{CapsPolicy, OpPolicy};
+use super::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 
 #[path = "policy_authority_resource.rs"]
 mod resource;
@@ -57,6 +57,16 @@ fn optional_str(value: Option<&toml::Value>) -> Term {
         .unwrap_or(Term::Nil)
 }
 
+fn max_bytes_input(value: Option<&toml::Value>) -> Term {
+    match value {
+        None => Term::Nil,
+        Some(value) => value
+            .as_integer()
+            .map(|number| Term::Int(number.into()))
+            .unwrap_or_else(|| Term::symbol(":invalid-type")),
+    }
+}
+
 fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
     let Some(value) = value else {
         return Ok(Term::Nil);
@@ -83,6 +93,10 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
                 optional_int(table.get("log_inline_max_bytes")),
             ),
             (
+                TermOrdKey(Term::symbol(":max-bytes")),
+                max_bytes_input(table.get("max_bytes")),
+            ),
+            (
                 TermOrdKey(Term::symbol(":timeout-ms")),
                 optional_int(table.get("timeout_ms")),
             ),
@@ -101,11 +115,15 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.2".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.3".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(2.into())),
+            (
+                TermOrdKey(Term::symbol(":platform-max-bytes")),
+                Term::Int(usize::MAX.into()),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(3.into())),
         ]
         .into_iter()
         .collect(),
@@ -226,13 +244,88 @@ fn legacy_cap(op: &str, policy: &OpPolicy) -> Term {
     Term::Map(cap)
 }
 
+fn legacy_max_bytes(policy: Option<&OpPolicy>) -> AuthorizedMaxBytes {
+    let Some(value) = policy.and_then(|policy| policy.extra.get("max_bytes")) else {
+        return AuthorizedMaxBytes::Absent;
+    };
+    let Some(raw) = value.as_integer() else {
+        return AuthorizedMaxBytes::InvalidType;
+    };
+    if raw <= 0 {
+        return AuthorizedMaxBytes::NonPositive;
+    }
+    match usize::try_from(raw) {
+        Ok(limit) => AuthorizedMaxBytes::Valid(limit),
+        Err(_) => AuthorizedMaxBytes::PlatformOverflow,
+    }
+}
+
 struct AuthorizedOperation {
     allowed: bool,
     base_dir: Option<PathBuf>,
     create_dirs: bool,
     timeout_ms: Option<u64>,
     log_inline_max_bytes: Option<usize>,
+    max_bytes: AuthorizedMaxBytes,
     cap: Term,
+}
+
+pub(super) fn decode_max_bytes_policy(
+    term: &Term,
+    allowed: bool,
+) -> Result<AuthorizedMaxBytes, EffectsError> {
+    if !allowed {
+        return if term == &Term::Nil {
+            Ok(AuthorizedMaxBytes::Absent)
+        } else {
+            Err(authority_error(
+                "denied result :max-bytes-policy must be nil",
+            ))
+        };
+    }
+    let Term::Map(map) = term else {
+        return Err(authority_error(
+            "admitted result :max-bytes-policy must be a data map",
+        ));
+    };
+    let expected: BTreeSet<_> = [":limit", ":status"]
+        .into_iter()
+        .map(|key| TermOrdKey(Term::symbol(key)))
+        .collect();
+    if map.keys().cloned().collect::<BTreeSet<_>>() != expected {
+        return Err(authority_error(
+            "result :max-bytes-policy field set mismatch",
+        ));
+    }
+    let status = match map.get(&TermOrdKey(Term::symbol(":status"))) {
+        Some(Term::Symbol(status)) => status.as_str(),
+        _ => {
+            return Err(authority_error(
+                "result :max-bytes-policy :status must be a symbol",
+            ));
+        }
+    };
+    let limit = map
+        .get(&TermOrdKey(Term::symbol(":limit")))
+        .ok_or_else(|| authority_error("result :max-bytes-policy is missing :limit"))?;
+    match (status, limit) {
+        (":absent", Term::Nil) => Ok(AuthorizedMaxBytes::Absent),
+        (":invalid-type", Term::Nil) => Ok(AuthorizedMaxBytes::InvalidType),
+        (":nonpositive", Term::Nil) => Ok(AuthorizedMaxBytes::NonPositive),
+        (":platform-overflow", Term::Nil) => Ok(AuthorizedMaxBytes::PlatformOverflow),
+        (":valid", Term::Int(value)) => value
+            .to_usize()
+            .filter(|limit| *limit > 0)
+            .map(AuthorizedMaxBytes::Valid)
+            .ok_or_else(|| {
+                authority_error(
+                    "result :max-bytes-policy valid limit must fit a positive platform usize",
+                )
+            }),
+        _ => Err(authority_error(
+            "result :max-bytes-policy status contradicts its limit",
+        )),
+    }
 }
 
 pub(super) fn decode_cap(
@@ -316,6 +409,7 @@ fn decode_result(
         ":base-dir",
         ":cap",
         ":kind",
+        ":max-bytes-policy",
         ":op",
         ":request-h",
         ":v",
@@ -326,8 +420,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.2")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &2.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.3")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &3.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -357,12 +451,18 @@ fn decode_result(
     } else {
         (false, None, None)
     };
+    let max_bytes = decode_max_bytes_policy(
+        map.get(&TermOrdKey(Term::symbol(":max-bytes-policy")))
+            .ok_or_else(|| authority_error("result is missing :max-bytes-policy"))?,
+        allowed,
+    )?;
     Ok(AuthorizedOperation {
         allowed,
         base_dir,
         create_dirs,
         timeout_ms,
         log_inline_max_bytes,
+        max_bytes,
         cap,
     })
 }
@@ -479,6 +579,7 @@ pub(super) fn authorize_policy(
         if authorized.allowed != expected.is_some()
             || expected.is_some_and(|policy| authorized.cap != legacy_cap(&op, policy))
             || authorized.base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
+            || authorized.max_bytes != legacy_max_bytes(expected)
         {
             return Err(authority_error(format!(
                 "result for `{op}` contradicts independently reconstructed policy composition"
@@ -493,6 +594,7 @@ pub(super) fn authorize_policy(
             op_policy.create_dirs = authorized.create_dirs;
             op_policy.timeout_ms = authorized.timeout_ms;
             op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;
+            op_policy.authorized_max_bytes = Some(authorized.max_bytes);
             op_policy.authorized_cap = Some(authorized.cap);
             authorized_ops.insert(op, op_policy);
         }

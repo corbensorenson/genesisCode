@@ -1,4 +1,4 @@
-use super::CapsPolicy;
+use super::{AuthorizedMaxBytes, CapsPolicy};
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
 use std::collections::BTreeMap;
@@ -22,6 +22,13 @@ fn expected_cap(op: &str, fields: impl IntoIterator<Item = (&'static str, Term)>
             .map(|(key, value)| (TermOrdKey(Term::symbol(key)), value)),
     );
     Term::Map(cap)
+}
+
+fn max_bytes_policy(status: &str, limit: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":limit")), limit),
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
+    ]))
 }
 
 #[test]
@@ -116,6 +123,147 @@ log_inline_max_bytes = 0
 }
 
 #[test]
+fn selfhost_authority_installs_valid_and_absent_max_byte_controls() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."io/fs::read"]
+max_bytes = 7
+
+[op."io/fs::write"]
+allow = true
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+    let read = policy.op_policy("io/fs::read").unwrap();
+    let write = policy.op_policy("io/fs::write").unwrap();
+
+    assert_eq!(
+        read.authorized_max_bytes,
+        Some(AuthorizedMaxBytes::Valid(7))
+    );
+    assert_eq!(write.authorized_max_bytes, Some(AuthorizedMaxBytes::Absent));
+    assert_eq!(
+        crate::runner::runner_response_budget::op_extra_positive_usize(Some(read), "max_bytes"),
+        Ok(Some(7))
+    );
+    assert_eq!(
+        crate::runner::runner_response_budget::op_extra_positive_usize(Some(write), "max_bytes"),
+        Ok(None)
+    );
+    assert_eq!(
+        crate::runner_host_bridge::runner_host_bridge_policy::bridge_max_bytes(Some(read), "test")
+            .unwrap(),
+        Some(7)
+    );
+    assert_eq!(
+        crate::runner_host_bridge::runner_host_bridge_policy::bridge_max_bytes(Some(write), "test")
+            .unwrap(),
+        None
+    );
+    assert_eq!(
+        policy.authorized_cap("io/fs::read"),
+        Some(&expected_cap("io/fs::read", []))
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_invalid_max_byte_effect_errors() {
+    let cases = [
+        (
+            "max_bytes = \"bad\"",
+            AuthorizedMaxBytes::InvalidType,
+            "max_bytes must be a positive integer".to_string(),
+        ),
+        (
+            "max_bytes = 0",
+            AuthorizedMaxBytes::NonPositive,
+            "max_bytes must be > 0".to_string(),
+        ),
+    ];
+
+    for (setting, expected_state, expected_error) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[op.\"io/fs::read\"]\n{setting}\n")).unwrap();
+
+        let artifact = selfhost_artifact();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .unwrap();
+        let op_policy = policy.op_policy("io/fs::read").unwrap();
+
+        assert_eq!(
+            op_policy.authorized_max_bytes,
+            Some(expected_state),
+            "setting: {setting}"
+        );
+        assert_eq!(
+            crate::runner::runner_response_budget::op_extra_positive_usize(
+                Some(op_policy),
+                "max_bytes"
+            ),
+            Err(expected_error.clone()),
+            "setting: {setting}"
+        );
+        let bridge_error = crate::runner_host_bridge::runner_host_bridge_policy::bridge_max_bytes(
+            Some(op_policy),
+            "test",
+        )
+        .expect_err("bridge enforcement must consume the authorized invalid state");
+        assert_eq!(
+            bridge_error.code, "test/bridge-policy",
+            "setting: {setting}"
+        );
+        assert_eq!(bridge_error.message, expected_error, "setting: {setting}");
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_max_byte_decisions() {
+    use super::policy_authority::decode_max_bytes_policy;
+
+    assert_eq!(
+        decode_max_bytes_policy(&max_bytes_policy(":platform-overflow", Term::Nil), true).unwrap(),
+        AuthorizedMaxBytes::PlatformOverflow
+    );
+    let platform_overflow = Term::Int(((usize::MAX as u128) + 1).to_string().parse().unwrap());
+    let cases = [
+        (max_bytes_policy(":unknown", Term::Nil), true),
+        (max_bytes_policy(":valid", Term::Nil), true),
+        (max_bytes_policy(":valid", Term::Int(0.into())), true),
+        (max_bytes_policy(":valid", platform_overflow), true),
+        (max_bytes_policy(":nonpositive", Term::Int(1.into())), true),
+        (max_bytes_policy(":valid", Term::Int(1.into())), false),
+    ];
+    for (decision, allowed) in cases {
+        decode_max_bytes_policy(&decision, allowed)
+            .expect_err("contradictory max-byte authority decision must fail closed");
+    }
+
+    let mut extra = BTreeMap::from([
+        (TermOrdKey(Term::symbol(":limit")), Term::Nil),
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(":absent")),
+    ]);
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_max_bytes_policy(&Term::Map(extra), true)
+        .expect_err("unknown max-byte authority fields must fail closed");
+}
+
+#[test]
 fn selfhost_authority_rejects_noncanonical_operation_controls() {
     let op = "io/fs::write";
     let cases = [
@@ -182,6 +330,7 @@ allow = ["io/fs::read"]
 [op."io/fs::read"]
 allow = false
 base_dir = "./must-not-survive"
+max_bytes = 7
 "#,
     )
     .unwrap();

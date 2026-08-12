@@ -323,13 +323,29 @@ pub(super) fn cap_term(
     Ok(Term::Map(m))
 }
 
-pub(super) fn op_extra_positive_usize(
+pub(crate) fn op_extra_positive_usize(
     pol: Option<&OpPolicy>,
     key: &str,
 ) -> Result<Option<usize>, String> {
     let Some(pol) = pol else {
         return Ok(None);
     };
+    if key == "max_bytes"
+        && let Some(authorized) = &pol.authorized_max_bytes
+    {
+        return match authorized {
+            AuthorizedMaxBytes::Absent => Ok(None),
+            AuthorizedMaxBytes::InvalidType => {
+                Err("max_bytes must be a positive integer".to_string())
+            }
+            AuthorizedMaxBytes::NonPositive => Err("max_bytes must be > 0".to_string()),
+            AuthorizedMaxBytes::PlatformOverflow => Err(format!(
+                "max_bytes is too large for this platform (max {})",
+                usize::MAX
+            )),
+            AuthorizedMaxBytes::Valid(limit) => Ok(Some(*limit)),
+        };
+    }
     let Some(v) = pol.extra.get(key) else {
         return Ok(None);
     };

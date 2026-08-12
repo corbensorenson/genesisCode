@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `3e965f850e3242171d080230f5aee5a856b0642ebbc33db78f57b4c0e067707b`
-- Freshness artifact hash: `3e965f850e3242171d080230f5aee5a856b0642ebbc33db78f57b4c0e067707b`
-- Freshness source hash: `1115c0aed61664660911170204ba5728ad3c57ef52ed674fb83cf0a2a9d1d353`
-- Source aggregate hash (module path + module sha256): `91452de534b6b53a780c53f2bb3d2342f35fdf4992daf098d74cc49c9777a998`
+- Artifact sha256: `6d08b4da38d933c20dd0fdf1a6eabb5d353248e5beea6011b78e5c5d6b0f1c31`
+- Freshness artifact hash: `6d08b4da38d933c20dd0fdf1a6eabb5d353248e5beea6011b78e5c5d6b0f1c31`
+- Freshness source hash: `3a006353d417d5981ab284af95101e8a3abe78d84963e49531920700c8414c86`
+- Source aggregate hash (module path + module sha256): `db3d10bf01c38fb3449209f8d8f70ba2d69f40af82f1cbf9c702c127d4402cb1`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `72`
 
@@ -70,8 +70,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/patch_authority_diff_v1.gc` | 247 | 10442 | 23 | `b6614dbc996d6e4d` |
 | `selfhost/patch_authority_merge_v1.gc` | 275 | 11984 | 21 | `a73aa5b6e94e9048` |
 | `selfhost/patch_authority_apply_report_v1.gc` | 136 | 6196 | 12 | `12f15a3a4ab781ff` |
-| `selfhost/policy_authority_v1.gc` | 342 | 15417 | 29 | `8fc36b35f45b1e7e` |
-| `selfhost/effect_policy_authority_v1.gc` | 444 | 20165 | 27 | `9d44a7fd1ba6d888` |
+| `selfhost/policy_authority_v1.gc` | 345 | 15515 | 30 | `e7f1616be08a7385` |
+| `selfhost/effect_policy_authority_v1.gc` | 484 | 21842 | 28 | `376f104dbcb9421b` |
 | `selfhost/obligation_authority_core_v1.gc` | 570 | 24016 | 50 | `859184a3ee1f4dba` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
 | `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
@@ -145,7 +145,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/patch_authority_diff_v1.gc`: `selfhost/patch_diff::REQUEST_KIND`, `selfhost/patch_diff::REPORT_KIND`, `selfhost/patch_diff::PROFILE`, `selfhost/patch_diff::err`, `selfhost/patch_diff::has-key-loop`, `selfhost/patch_diff::has-key`, `selfhost/patch_diff::workspace-map-loop`, `selfhost/patch_diff::workspace-map`
 - `selfhost/patch_authority_merge_v1.gc`: `selfhost/patch_merge::REQUEST_KIND`, `selfhost/patch_merge::REPORT_KIND`, `selfhost/patch_merge::PROFILE`, `selfhost/patch_merge::err`, `selfhost/patch_merge::optional-eq?`, `selfhost/patch_merge::optional-term`, `selfhost/patch_merge::conflict-core`, `selfhost/patch_merge::conflict`
 - `selfhost/patch_authority_apply_report_v1.gc`: `selfhost/patch_apply_report::REQUEST_KIND`, `selfhost/patch_apply_report::REPORT_KIND`, `selfhost/patch_apply_report::PROFILE`, `selfhost/patch_apply_report::err`, `selfhost/patch_apply_report::bool?`, `selfhost/patch_apply_report::hash?`, `selfhost/patch_apply_report::edits-valid-loop`, `selfhost/patch_apply_report::edits-valid?`
-- `selfhost/policy_authority_v1.gc`: `selfhost/policy::error`, `selfhost/policy::failure`, `selfhost/policy::map?`, `selfhost/policy::vec?`, `selfhost/policy::str?`, `selfhost/policy::int?`, `selfhost/policy::nil?`, `selfhost/policy::operation?`
+- `selfhost/policy_authority_v1.gc`: `selfhost/policy::error`, `selfhost/policy::failure`, `selfhost/policy::map?`, `selfhost/policy::vec?`, `selfhost/policy::str?`, `selfhost/policy::sym?`, `selfhost/policy::int?`, `selfhost/policy::nil?`
 - `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::optional-str?`, `selfhost/effect-policy::map-has-key-loop?`, `selfhost/effect-policy::map-has-key?`, `selfhost/effect-policy::map-has-keys-loop?`, `selfhost/effect-policy::exact-map?`, `selfhost/effect-policy::optional-nonnegative-int?`
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
 - `selfhost/obligation_authority_typecheck_v1.gc`: `selfhost/obligation::strict-typecheck-meta`, `selfhost/obligation::typecheck-modules-loop`, `selfhost/obligation::typecheck`

@@ -170,6 +170,7 @@ mod tests {
             log_inline_max_bytes: None,
             extra,
             authorized_cap: None,
+            authorized_max_bytes: None,
         }
     }
 

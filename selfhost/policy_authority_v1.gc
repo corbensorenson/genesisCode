@@ -23,6 +23,9 @@
 (def selfhost/policy::str?
   (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :str))))
 
+(def selfhost/policy::sym?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :sym))))
+
 (def selfhost/policy::int?
   (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :int))))
 

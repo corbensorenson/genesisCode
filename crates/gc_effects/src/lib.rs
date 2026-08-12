@@ -13,7 +13,7 @@ mod runner_gpk_payload;
 mod runner_gpu_backend_policy;
 mod runner_gpu_device_backend;
 mod runner_gpu_host;
-mod runner_host_bridge;
+pub(crate) mod runner_host_bridge;
 mod runner_io_ops;
 mod runner_pkg_payload;
 mod runner_plugin_schema;

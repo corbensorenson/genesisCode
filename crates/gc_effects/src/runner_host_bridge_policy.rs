@@ -203,7 +203,28 @@ pub(crate) fn bridge_max_bytes(
     pol: Option<&OpPolicy>,
     family: &str,
 ) -> Result<Option<usize>, BridgeError> {
-    let Some(v) = pol.and_then(|p| p.extra.get("max_bytes")) else {
+    let Some(pol) = pol else {
+        return Ok(None);
+    };
+    if let Some(authorized) = &pol.authorized_max_bytes {
+        return match authorized {
+            AuthorizedMaxBytes::Absent => Ok(None),
+            AuthorizedMaxBytes::InvalidType => Err(BridgeError {
+                code: format!("{family}/bridge-policy"),
+                message: "max_bytes must be a positive integer".to_string(),
+            }),
+            AuthorizedMaxBytes::NonPositive => Err(BridgeError {
+                code: format!("{family}/bridge-policy"),
+                message: "max_bytes must be > 0".to_string(),
+            }),
+            AuthorizedMaxBytes::PlatformOverflow => Err(BridgeError {
+                code: format!("{family}/bridge-policy"),
+                message: "max_bytes is too large".to_string(),
+            }),
+            AuthorizedMaxBytes::Valid(limit) => Ok(Some(*limit)),
+        };
+    }
+    let Some(v) = pol.extra.get("max_bytes") else {
         return Ok(None);
     };
     let Some(raw) = v.as_integer() else {

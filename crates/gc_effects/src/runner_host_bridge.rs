@@ -1,4 +1,4 @@
-use crate::policy::OpPolicy;
+use crate::policy::{AuthorizedMaxBytes, OpPolicy};
 use crate::runner_io_ops::{effective_base_dir, sandbox_path_read};
 #[cfg(not(target_os = "wasi"))]
 use crate::runner_process_control::{
@@ -17,7 +17,7 @@ use runner_host_bridge_spawn::*;
 #[path = "runner_host_bridge_persistent.rs"]
 mod runner_host_bridge_persistent;
 #[path = "runner_host_bridge_policy.rs"]
-mod runner_host_bridge_policy;
+pub(crate) mod runner_host_bridge_policy;
 #[path = "runner_host_bridge_wasi.rs"]
 mod runner_host_bridge_wasi;
 

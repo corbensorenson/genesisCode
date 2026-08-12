@@ -415,6 +415,7 @@ pub(super) fn apply_op_cfg(
             log_inline_max_bytes,
             extra,
             authorized_cap: None,
+            authorized_max_bytes: None,
         },
     );
     Ok(())
