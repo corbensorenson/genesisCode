@@ -82,6 +82,7 @@ MIGRATED = [
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
     "core/obligation::lint",
+    "core/obligation::preflight",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
@@ -90,9 +91,7 @@ MIGRATED = [
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests",
 ]
-RESIDUAL = [
-    "core/obligation::preflight",
-]
+RESIDUAL = []
 
 SOURCE_MODULES = [
     "selfhost/obligation_authority_core_v1.gc",
@@ -100,6 +99,7 @@ SOURCE_MODULES = [
     "selfhost/obligation_authority_determinism_v1.gc",
     "selfhost/obligation_authority_lint_v1.gc",
     "selfhost/obligation_authority_ai_style_v1.gc",
+    "selfhost/obligation_authority_preflight_v1.gc",
     "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_property_v1.gc",
     "selfhost/obligation_authority_stage_v1.gc",
@@ -186,6 +186,12 @@ def validate(profile, schema, check_identity=True):
             "property-entry-shape",
             "property-execution-result",
             "property-suite-state",
+            "preflight-caps-policy-load-error",
+            "preflight-dependency-hash-error",
+            "preflight-module-computed-hash",
+            "preflight-module-load-error",
+            "preflight-module-path",
+            "preflight-module-pinned-hash",
             "replay-value-hash",
             "sealed-error-status",
             "stage2-mechanism-error",
@@ -226,7 +232,6 @@ def validate(profile, schema, check_identity=True):
         "r4-2-d-closure",
         "release-qualification",
         "effect-replay-execution-authority",
-        "sd-obligation-h2",
         "signing-authority",
     }
     if set(profile.get("nonclaims", [])) != expected_nonclaims:
@@ -317,6 +322,10 @@ def validate_bridge(bridge: str) -> None:
         "decode_gfx_api_result(",
         "gfx_runtime_authorities_plan_execute_and_finalize_existing_fixtures",
         "gfx_runtime_authority_rejects_open_plan_inputs_and_renderer_contradictions",
+        "preflight_authority_orders_package_loading_failures_and_rejects_tampering",
+        "preflight_failure_artifact_is_base_relative_across_workspace_roots",
+        "evaluate_preflight_with_authority(",
+        "decode_preflight_result(",
         "evaluate_gfx_golden_with_authority(",
         "evaluate_gfx_frame_budgets_with_authority(",
         "gfx_golden_authority_context(",
@@ -364,6 +373,8 @@ def static_check(root: Path, profile):
         fail("self-host gfx API obligation route is absent")
     if "selfhost/obligation::gfx-runtime-authority" not in combined_sources:
         fail("self-host gfx runtime obligation route is absent")
+    if "selfhost/obligation::preflight" not in combined_sources:
+        fail("self-host preflight obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -376,8 +387,10 @@ def static_check(root: Path, profile):
         fail("obligation authority binding manifest custody drift")
 
     bridge = (root / "crates/gc_obligations/src/obligation_authority.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_evaluate.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_caps.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_lint.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_preflight.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_replay.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
@@ -449,6 +462,11 @@ def static_check(root: Path, profile):
         "obligation_gfx::obligation_gfx_frame_budgets("
     ) != 1:
         fail("gfx frame-budget authority production dispatch drift")
+    if types_api.count("evaluate_preflight_with_authority(") != 1:
+        fail("preflight authority production dispatch drift")
+    for token in ("preflight_errors", "pkg_toml.display()"):
+        if token in types_api:
+            fail(f"reachable host preflight policy restored: {token}")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
@@ -813,6 +831,13 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
             False,
             ["core/obligation::gfx-api-stability"],
         ),
+        ("tests/spec/pkg_fail_hash", 30, False, ["core/obligation::preflight"]),
+        (
+            "tests/spec/pkg_fail_mem_limits",
+            30,
+            False,
+            ["core/obligation::preflight"],
+        ),
     ]
     all_observations = []
     for binary in binaries:
@@ -838,7 +863,7 @@ def self_test(root: Path, profile, schema):
     for label, mutate in [
         ("binding", lambda p: p.__setitem__("binding", "core/cli::wrong")),
         ("migrated", lambda p: p.__setitem__("migratedObligations", MIGRATED[:1])),
-        ("residual", lambda p: p.__setitem__("residualObligations", RESIDUAL[:-1])),
+        ("residual", lambda p: p.__setitem__("residualObligations", ["core/obligation::fake"])),
         ("host-facts", lambda p: p.__setitem__("hostFacts", p["hostFacts"][:-1])),
         ("source", lambda p: p.__setitem__("sourceSetSha256", "0" * 64)),
         ("source-inventory", lambda p: p.__setitem__("sourceModules", p["sourceModules"][:-1])),
@@ -856,8 +881,10 @@ def self_test(root: Path, profile, schema):
         else:
             fail(f"mutation was not rejected: {label}")
     bridge = (root / "crates/gc_obligations/src/obligation_authority.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_evaluate.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_caps.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_lint.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_preflight.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_stage.rs").read_text()
@@ -924,6 +951,8 @@ def self_test(root: Path, profile, schema):
         ("gfx-golden-host-facts", "gfx_golden_authority_context("),
         ("gfx-frame-route", "evaluate_gfx_frame_budgets_with_authority("),
         ("gfx-frame-host-facts", "gfx_frame_budget_authority_context("),
+        ("preflight-route", "decode_preflight_result("),
+        ("preflight-host-facts", "evaluate_preflight_with_authority("),
     ]:
         try:
             validate_bridge(bridge.replace(route, ""))

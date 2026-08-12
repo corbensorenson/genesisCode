@@ -263,100 +263,33 @@ pub fn test_package_with_step_limit_and_frontend(
     };
     let store = EvidenceStore::open(&pkg_dir)?;
 
-    let mut preflight_errors: Vec<String> = Vec::new();
-
-    // Load & hash modules (also validates pinned module hashes if present).
-    let modules = match load_modules(&pkg_dir, &manifest.modules, &frontend, limits) {
-        Ok(ms) => ms,
-        Err(e) => {
-            preflight_errors.push(format!("{e}"));
-            Vec::new()
-        }
-    };
-    if preflight_errors.is_empty() {
-        for m in &modules {
-            let want = m.entry.hash.as_deref().unwrap_or("");
-            if want.is_empty() {
-                preflight_errors.push(format!(
-                    "module {} is missing pinned hash; run `genesis pack --pkg {}`",
-                    m.entry.path,
-                    pkg_toml.display()
-                ));
-                continue;
-            }
-            let got_hex = hex32(m.hash);
-            if want != got_hex {
-                preflight_errors.push(format!(
-                    "module hash mismatch for {}: manifest has {}, computed {}",
-                    m.entry.path, want, got_hex
-                ));
-            }
-        }
-    }
-
-    // Validate dependency hashes too.
-    if preflight_errors.is_empty()
-        && let Err(e) = check_dep_hashes(&pkg_dir, &manifest.dependencies, &frontend, limits)
-    {
-        preflight_errors.push(format!("{e}"));
-    }
-
-    // Load capability policy for effect runs.
     let policy_path = caps_override
         .map(PathBuf::from)
         .or_else(|| manifest.caps_policy.as_ref().map(|p| pkg_dir.join(p)));
-    let caps = if preflight_errors.is_empty() {
-        if let Some(p) = policy_path.as_ref() {
-            match CapsPolicy::load(p) {
-                Ok(c) => c,
-                Err(e) => {
-                    preflight_errors.push(format!("{e}"));
-                    CapsPolicy::empty()
-                }
-            }
-        } else {
-            CapsPolicy::empty()
+    let (modules, caps, caps_policy_hash) = match evaluate_preflight_with_authority(
+        &store,
+        &pkg_dir,
+        &manifest,
+        policy_path.as_deref(),
+        &frontend,
+        limits,
+    )? {
+        PreflightAuthorityOutcome::Passed {
+            modules,
+            caps,
+            caps_policy_hash,
+        } => (modules, caps, caps_policy_hash),
+        PreflightAuthorityOutcome::Failed(ob) => {
+            let acceptance = acceptance_term(&manifest, false, std::slice::from_ref(&ob));
+            let acceptance_artifact = store.put_term(&acceptance)?;
+            write_last_acceptance(&pkg_dir, &acceptance_artifact)?;
+            return Ok(PackageTestResult {
+                ok: false,
+                acceptance_artifact,
+                obligation_results: vec![ob],
+            });
         }
-    } else {
-        CapsPolicy::empty()
     };
-    let caps_policy_hash = hash_optional_file(policy_path.as_deref())?;
-
-    if !preflight_errors.is_empty() {
-        let report = Term::Map(
-            [
-                (
-                    TermOrdKey(Term::symbol(":kind")),
-                    Term::Str("genesis/preflight-v0.2".to_string()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":package")),
-                    Term::Str(manifest.name.clone()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":errors")),
-                    Term::Vector(preflight_errors.iter().cloned().map(Term::Str).collect()),
-                ),
-            ]
-            .into_iter()
-            .collect(),
-        );
-        let artifact = store.put_term(&report)?;
-        let ob = ObligationResult {
-            name: "core/obligation::preflight".to_string(),
-            ok: false,
-            artifact: Some(artifact),
-            errors: preflight_errors,
-        };
-        let acceptance = acceptance_term(&manifest, false, std::slice::from_ref(&ob));
-        let acceptance_artifact = store.put_term(&acceptance)?;
-        write_last_acceptance(&pkg_dir, &acceptance_artifact)?;
-        return Ok(PackageTestResult {
-            ok: false,
-            acceptance_artifact,
-            obligation_results: vec![ob],
-        });
-    }
 
     let cache_key = obligation_cache_key(
         pkg_toml,

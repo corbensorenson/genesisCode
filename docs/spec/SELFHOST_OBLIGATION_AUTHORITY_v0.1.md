@@ -282,6 +282,28 @@ Gfx runtime reports preserve `genesis/gfx-golden-images-v0.2` and
 `genesis/gfx-frame-budgets-v0.2`; their intermediate plan reports are
 `genesis/gfx-golden-plan-v0.1` and `genesis/gfx-frame-budget-plan-v0.1` and cannot
 serve as acceptance evidence.
+
+For `:preflight`, `:inputs` contains exactly nullable `:module-load-error`,
+ordered `:modules`, nullable `:dependency-error`, and nullable `:caps-error`.
+Each successfully loaded module contains exactly its base-relative `:path`, raw
+optional pinned hash, and 32-byte computed canonical module hash. Rust performs
+only bounded module loading/canonical hashing, dependency artifact hashing, and
+capability-policy loading and hashing. Mechanism errors are normalized against
+the package and policy roots before transport; no absolute host path is admitted
+to the request or persisted artifact.
+
+GenesisCode validates the closed inventory and owns fail-fast precedence:
+module-load failure; otherwise every missing or mismatched module pin in manifest
+order; otherwise dependency failure; otherwise capability-policy failure. It
+constructs the stable missing-pin repair command using `package.toml`, derives the
+exact ordered errors and disposition, and emits `genesis/preflight-v0.2`. The
+authority executes under the profile's fixed five-million-step and ten-million
+allocation-unit control-plane budget rather than the package's possibly invalid
+limits. A successful preflight returns the observed modules, policy, and policy
+hash to later mechanisms without persisting a synthetic passing obligation. On
+failure the validated report is persisted as the sole acceptance obligation. Rust
+independently reconstructs only the expected precedence and report to reject
+malformed, substituted, or contradictory authority output.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -355,6 +377,13 @@ alone selects valid cases, validates configuration, extracts results, computes
 metrics, applies all golden and frame-budget decisions, orders errors, and produces
 the persisted reports.
 
+The former reachable Rust preflight error ordering, module-pin decision,
+diagnostic construction, report construction, and failure disposition are absent
+from production package testing. Rust retains bounded package-loading mechanisms,
+base-relative error normalization, and an independent contradiction decoder. A
+missing or unreadable capability policy is captured as deterministic preflight
+acceptance evidence rather than escaping through an unsealed host error.
+
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
 set, artifact,
 entrypoint, migrated and residual obligation inventories, primitive host facts, and
@@ -389,16 +418,20 @@ mismatches, frame-budget failure, open plan observations, and renderer frame-has
 substitution. Native/WASI fixtures exercise the complete graphics package and all
 three failing golden, pixel-golden, and frame-budget packages. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
-the normative source corpus.
+the normative source corpus. Preflight controls cover fail-fast stage precedence,
+open observations, request/result tampering, rejected package memory limits,
+missing capability policies, and exact artifact identity under distinct absolute
+workspace roots. Native/WASI fixtures include authentic module-hash and
+package-memory-limit failures.
 
-## Residual Work And Promotion Rule
+## Completion And Nonclaims
 
-The remaining `core/obligation::preflight` kind is host-authoritative or only
-partially routed.
-This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
-promoted only after every residual kind has a closed primitive-fact contract, strict
-production decoder, independent native/WASI evidence, no reachable host decision
-fallback, and one reviewed profile identity. Aggregate planning and acceptance must
-remain GenesisCode-authored throughout. This contract claims no effect-policy,
-effect-replay execution, signing, evidence-verification, bootstrap-fixpoint,
-release, or downstream product authority.
+All twenty governed obligation kinds now have a closed primitive-fact contract,
+strict production decoder, no reachable host decision fallback, and native/WASI
+runtime coverage under one reviewed profile identity. This profile can support
+`SD-OBLIGATION` at H2 after the semantic-ownership ledger and its generated views
+independently validate the same source and evidence identities. Aggregate planning
+and acceptance remain GenesisCode-authored throughout. This contract does not
+close R4.2.d by itself and claims no effect-policy, effect-replay execution,
+signing, evidence-verification, bootstrap-fixpoint, release, or downstream product
+authority.

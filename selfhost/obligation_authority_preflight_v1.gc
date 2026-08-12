@@ -1,0 +1,113 @@
+(def selfhost/obligation::preflight-module-valid?
+  (fn (module)
+    (if (selfhost/obligation::map? module)
+      (if ((core/int::eq? (core/map::len module)) 3)
+        (if (selfhost/obligation::str? ((core/map::get module) (quote :path)))
+          (if (selfhost/obligation::optional-str? ((core/map::get module) (quote :pinned-h)))
+            (selfhost/obligation::hash? ((core/map::get module) (quote :computed-h)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::preflight-missing-pin-error
+  (fn (path)
+    ((core/str::concat "module ")
+      ((core/str::concat path) " is missing pinned hash; run `genesis pack --pkg package.toml`"))))
+
+(def selfhost/obligation::preflight-mismatch-error
+  (fn (path)
+    (fn (pinned)
+      (fn (computed)
+        ((core/str::concat "module hash mismatch for ")
+          ((core/str::concat path)
+            ((core/str::concat ": manifest has ")
+              ((core/str::concat pinned)
+                ((core/str::concat ", computed ") (core/bytes::to-hex computed))))))))))
+
+(def selfhost/obligation::preflight-module-errors
+  (fn (module)
+    (if (selfhost/obligation::preflight-module-valid? module)
+      (let
+        ((path ((core/map::get module) (quote :path)))
+          (pinned ((core/map::get module) (quote :pinned-h)))
+          (computed ((core/map::get module) (quote :computed-h))))
+        (if (selfhost/obligation::nil? pinned)
+          ((core/vec::push []) (selfhost/obligation::preflight-missing-pin-error path))
+          (if ((core/eq? pinned) "")
+            ((core/vec::push []) (selfhost/obligation::preflight-missing-pin-error path))
+            (if ((core/eq? pinned) (core/bytes::to-hex computed))
+              []
+              ((core/vec::push [])
+                (((selfhost/obligation::preflight-mismatch-error path) pinned) computed))))))
+      (selfhost/obligation::error
+        "preflight module observation must contain exactly valid :path, :pinned-h, and :computed-h fields"))))
+
+(def selfhost/obligation::preflight-modules-loop
+  (fn (modules)
+    (fn (count)
+      (fn (index)
+        (fn (errors)
+          (if ((core/int::eq? index) count)
+            errors
+            (let
+              ((next (selfhost/obligation::preflight-module-errors ((core/vec::get modules) index))))
+              (if (core/error::is? next)
+                next
+                ((((selfhost/obligation::preflight-modules-loop modules) count) ((core/int::add index) 1))
+                  ((selfhost/obligation::append-errors errors) next))))))))))
+
+(def selfhost/obligation::preflight-errors
+  (fn (inputs)
+    (let
+      ((module-load-error ((core/map::get inputs) (quote :module-load-error)))
+        (modules ((core/map::get inputs) (quote :modules)))
+        (dependency-error ((core/map::get inputs) (quote :dependency-error)))
+        (caps-error ((core/map::get inputs) (quote :caps-error))))
+      (if (selfhost/obligation::optional-str? module-load-error)
+        (if (selfhost/obligation::vec? modules)
+          (if (selfhost/obligation::optional-str? dependency-error)
+            (if (selfhost/obligation::optional-str? caps-error)
+              (if (selfhost/obligation::nil? module-load-error)
+                (let
+                  (
+                    (module-errors
+                      ((((selfhost/obligation::preflight-modules-loop modules) (core/vec::len modules)) 0)
+                        [])))
+                  (if (core/error::is? module-errors)
+                    module-errors
+                    (if ((core/int::eq? (core/vec::len module-errors)) 0)
+                      (if (selfhost/obligation::nil? dependency-error)
+                        (if (selfhost/obligation::nil? caps-error)
+                          []
+                          ((core/vec::push []) caps-error))
+                        ((core/vec::push []) dependency-error))
+                      module-errors)))
+                ((core/vec::push []) module-load-error))
+              (selfhost/obligation::error "preflight :caps-error must be nil or string"))
+            (selfhost/obligation::error "preflight :dependency-error must be nil or string"))
+          (selfhost/obligation::error "preflight :modules must be a vector"))
+        (selfhost/obligation::error "preflight :module-load-error must be nil or string")))))
+
+(def selfhost/obligation::preflight
+  (fn (package)
+    (fn (inputs)
+      (if ((core/int::eq? (core/map::len inputs)) 4)
+        (let ((errors (selfhost/obligation::preflight-errors inputs)))
+          (if (core/error::is? errors)
+            errors
+            (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+              {
+                :errors errors
+                :kind selfhost/obligation::RESULT_KIND
+                :name "core/obligation::preflight"
+                :ok ok
+                :operation (quote :preflight)
+                :report
+                  {
+                    :errors errors
+                    :kind "genesis/preflight-v0.2"
+                    :package package}
+                :v 2})))
+        (selfhost/obligation::error
+          "preflight inputs must contain exactly :caps-error, :dependency-error, :module-load-error, and :modules")))))

@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "ebb9a7e3143469a83e667811502421753d3fcf517a1cfd02d57b63467e6f6d6b",
+  "contentIdentitySha256": "7c8b06b363621bfd6985d17194988eb214f912fcfab9e7f4dd0a8b97a53a6b47",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -51,6 +51,12 @@
     "property-entry-shape",
     "property-execution-result",
     "property-suite-state",
+    "preflight-caps-policy-load-error",
+    "preflight-dependency-hash-error",
+    "preflight-module-computed-hash",
+    "preflight-module-load-error",
+    "preflight-module-path",
+    "preflight-module-pinned-hash",
     "replay-value-hash",
     "sealed-error-status",
     "stage2-mechanism-error",
@@ -80,6 +86,7 @@
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
     "core/obligation::lint",
+    "core/obligation::preflight",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
@@ -95,16 +102,13 @@
     "r4-2-d-closure",
     "release-qualification",
     "effect-replay-execution-authority",
-    "sd-obligation-h2",
     "signing-authority"
   ],
   "productionEntrypoints": [
     "genesis",
     "genesis_wasi"
   ],
-  "residualObligations": [
-    "core/obligation::preflight"
-  ],
+  "residualObligations": [],
   "resultKind": "genesis/obligation-authority-result-v0.2",
   "runtimeEvidence": {
     "allocationLimit": 10000000,
@@ -118,6 +122,7 @@
     "selfhost/obligation_authority_determinism_v1.gc",
     "selfhost/obligation_authority_lint_v1.gc",
     "selfhost/obligation_authority_ai_style_v1.gc",
+    "selfhost/obligation_authority_preflight_v1.gc",
     "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_property_v1.gc",
     "selfhost/obligation_authority_stage_v1.gc",
@@ -128,7 +133,7 @@
     "selfhost/obligation_authority_gfx_runtime_finalize_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "05474338436ebaaf0fda6eb0805637d349873caaa70aec285648bcc3f1db17a3",
+  "sourceSetSha256": "b6fae1ce5744e276f951369370045b13af91e10eee1c804e6c3275fcc4b57fd5",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

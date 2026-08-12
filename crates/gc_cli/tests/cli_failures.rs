@@ -225,6 +225,41 @@ fn hash_mismatch_is_captured_as_preflight_acceptance() {
 }
 
 #[test]
+fn missing_caps_policy_is_captured_as_preflight_acceptance() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_basic");
+    let dst = td.path().join("pkg_missing_caps");
+    copy_dir_all(&src, &dst).unwrap();
+    let pkg = dst.join("package.toml");
+    let manifest = fs::read_to_string(&pkg).unwrap();
+    fs::write(
+        &pkg,
+        manifest.replace(
+            "caps_policy = \"caps.toml\"",
+            "caps_policy = \"missing.toml\"",
+        ),
+    )
+    .unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+    let hex = parse_acceptance_hash(&out);
+    let acceptance = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acceptance));
+    assert!(acceptance_has_obligation(
+        &acceptance,
+        "core/obligation::preflight"
+    ));
+}
+
+#[test]
 fn package_policy_rejects_no_step_limit_by_default() {
     let td = tempfile::tempdir().unwrap();
     let src = fixture("pkg_limits_policy");

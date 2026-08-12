@@ -5,7 +5,9 @@ include!("obligation_authority_coverage.rs");
 include!("obligation_authority_gfx_api.rs");
 include!("obligation_authority_gfx_runtime.rs");
 include!("obligation_authority_gfx_runtime_finalize.rs");
+include!("obligation_authority_evaluate.rs");
 include!("obligation_authority_lint.rs");
+include!("obligation_authority_preflight.rs");
 include!("obligation_authority_property.rs");
 include!("obligation_authority_property_finalize.rs");
 include!("obligation_authority_replay.rs");
@@ -28,6 +30,7 @@ pub(super) enum ObligationAuthorityOperation {
     GfxFrameBudgets,
     GfxGoldenImages,
     Lint,
+    Preflight,
     PropertyTests,
     ReplayableTests,
     Stage1Validation,
@@ -52,6 +55,7 @@ impl ObligationAuthorityOperation {
             Self::GfxFrameBudgets => ":gfx-frame-budgets",
             Self::GfxGoldenImages => ":gfx-golden-images",
             Self::Lint => ":lint",
+            Self::Preflight => ":preflight",
             Self::PropertyTests => ":property-tests",
             Self::ReplayableTests => ":replayable-tests",
             Self::Stage1Validation => ":stage1-validation",
@@ -76,6 +80,7 @@ impl ObligationAuthorityOperation {
             Self::GfxFrameBudgets => "core/obligation::gfx-frame-budgets",
             Self::GfxGoldenImages => "core/obligation::gfx-golden-images",
             Self::Lint => "core/obligation::lint",
+            Self::Preflight => "core/obligation::preflight",
             Self::PropertyTests => "core/obligation::property-tests",
             Self::ReplayableTests => "core/obligation::replayable-tests",
             Self::Stage1Validation => "core/obligation::stage1-validation",
@@ -323,6 +328,11 @@ fn request_term(
         }
         ObligationAuthorityOperation::AiStyle | ObligationAuthorityOperation::Lint => {
             typecheck_inputs(modules)
+        }
+        ObligationAuthorityOperation::Preflight => {
+            return Err(authority_error(
+                "preflight requires closed package-loading observations",
+            ));
         }
         ObligationAuthorityOperation::PropertyTests => {
             return Err(authority_error(
@@ -625,6 +635,11 @@ fn decode_authority_result(
         ObligationAuthorityOperation::Lint => {
             validate_lint_report(report, manifest, modules, ok, &errors, &side_artifacts)?
         }
+        ObligationAuthorityOperation::Preflight => {
+            return Err(authority_error(
+                "preflight requires the package-loading observation decoder",
+            ));
+        }
         ObligationAuthorityOperation::ReplayableTests => validate_replay_report(
             operation,
             report,
@@ -668,30 +683,6 @@ fn decode_authority_result(
         artifact: Some(artifact),
         errors,
     })
-}
-
-pub(super) fn evaluate_obligation_with_authority(
-    operation: ObligationAuthorityOperation,
-    store: &EvidenceStore,
-    manifest: &PackageManifest,
-    modules: &[LoadedModule],
-    tests: &[TestRun],
-    frontend: &CoreformFrontend,
-    limits: KernelLimits,
-) -> Result<ObligationResult, ObligationError> {
-    let request = request_term(operation, store, manifest, modules, tests)?;
-    let request_hash = hash_term(&request);
-    let term = invoke_authority(request, frontend, limits)?;
-    decode_authority_result(
-        operation,
-        store,
-        manifest,
-        modules,
-        tests,
-        &[],
-        request_hash,
-        term,
-    )
 }
 
 #[cfg(test)]

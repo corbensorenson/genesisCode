@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "e21f3066bbd30047d62c4fc3dc3651b0552d3ac0fc944327a827fda5911cdde7",
+  "contentIdentitySha256": "eba7d2260e55449452de59bf2479fbd61a0b535a704c5a73b9c559df725f493a",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1404,38 +1404,60 @@
         "pkg/*",
         "session/*"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
       "hostBindingPaths": [
-        "crates/gc_effects/src"
+        "crates/gc_obligations/src/obligation_authority.rs",
+        "crates/gc_obligations/src/obligation_authority_preflight.rs",
+        "crates/gc_obligations/src/obligations/types_api.rs"
       ],
       "id": "SD-OBLIGATION",
       "internalOnly": false,
       "limitations": [
-        "Rust remains production obligation authority"
+        "H2 is scoped to genesis/selfhost-obligation-authority-v0.1; Rust retains bounded execution, measurement, package-loading, rendering, replay, and strict contradiction mechanisms, while effect-policy authority and H3/H4 bootstrap closure are not claimed"
       ],
       "migrationTasks": [
         "R4.2.d"
       ],
       "producingImplementationPaths": [
-        "crates/gc_obligations/src"
+        "selfhost/obligation_authority_core_v1.gc",
+        "selfhost/obligation_authority_typecheck_v1.gc",
+        "selfhost/obligation_authority_determinism_v1.gc",
+        "selfhost/obligation_authority_lint_v1.gc",
+        "selfhost/obligation_authority_ai_style_v1.gc",
+        "selfhost/obligation_authority_preflight_v1.gc",
+        "selfhost/obligation_authority_replay_v1.gc",
+        "selfhost/obligation_authority_property_v1.gc",
+        "selfhost/obligation_authority_stage_v1.gc",
+        "selfhost/obligation_authority_coverage_v1.gc",
+        "selfhost/obligation_authority_translation_v1.gc",
+        "selfhost/obligation_authority_gfx_api_v1.gc",
+        "selfhost/obligation_authority_gfx_runtime_v1.gc",
+        "selfhost/obligation_authority_gfx_runtime_finalize_v1.gc",
+        "selfhost/obligation_authority_v1.gc"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_obligations/src"
+        "selfhost/toolchain.gc",
+        "selfhost/obligation_authority_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md"
+        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
+        "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
+        "policies/selfhost_obligation_authority_v0.1.json"
       ],
       "stage0Domains": [
         "S0-R"
       ],
       "testPaths": [
-        "crates/gc_obligations/src/obligation_exec_tests.rs"
+        "crates/gc_obligations/src/obligation_authority_tests.rs",
+        "crates/gc_cli/tests/cli_failures.rs",
+        "crates/gc_cli/tests/cli_json_and_exit.rs"
       ],
       "title": "Obligation generation, evaluation, and promotion decisions",
       "verifierPaths": [
-        "scripts/check_assurance_profile_packs.sh"
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/lib/selfhost_obligation_authority.py"
       ]
     },
     {

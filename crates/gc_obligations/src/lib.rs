@@ -41,7 +41,8 @@ pub use crate::frontend::{
 };
 use crate::frontend::{enforce_frontend_allowed, env_truthy, frontend_is_rust};
 use crate::obligation_authority::{
-    ObligationAuthorityOperation, evaluate_obligation_with_authority,
+    ObligationAuthorityOperation, PreflightAuthorityOutcome, evaluate_obligation_with_authority,
+    evaluate_preflight_with_authority,
 };
 use crate::obligation_cache::*;
 pub(crate) use crate::obligation_eval_helpers::*;

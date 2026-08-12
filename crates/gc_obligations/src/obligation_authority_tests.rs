@@ -166,6 +166,195 @@ fn obligation_authority_rejects_open_and_unknown_requests() {
     assert!(error.to_string().contains("sealed error"));
 }
 
+fn preflight_observation() -> PreflightObservation {
+    PreflightObservation {
+        module_load_error: None,
+        modules: vec![PreflightModuleObservation {
+            path: "fixture.gc".to_string(),
+            pinned_hash: Some(hex32([7; 32])),
+            computed_hash: [7; 32],
+        }],
+        dependency_error: None,
+        caps_error: None,
+    }
+}
+
+#[test]
+fn preflight_authority_orders_package_loading_failures_and_rejects_tampering() {
+    let frontend = fixture_frontend();
+    let (manifest, _) = PackageManifest::load(
+        &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("tests/spec/pkg_basic/package.toml"),
+    )
+    .expect("fixture manifest");
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = EvidenceStore::open(&temp.path().join("store")).expect("fixture evidence store");
+
+    let mut observation = preflight_observation();
+    observation.modules[0].pinned_hash = None;
+    observation.dependency_error = Some("later dependency failure".to_string());
+    observation.caps_error = Some("later caps failure".to_string());
+    let request = authority_request_term(
+        ObligationAuthorityOperation::Preflight,
+        &manifest.name,
+        preflight_inputs(&observation),
+    );
+    let request_hash = hash_term(&request);
+    let result = invoke_authority(request, &frontend, preflight_authority_limits())
+        .expect("preflight authority result");
+    let decoded = decode_preflight_result(
+        &store,
+        &manifest,
+        &observation,
+        request_hash,
+        result.clone(),
+    )
+    .expect("closed preflight result")
+    .expect("missing pin must fail preflight");
+    assert_eq!(
+        decoded.errors,
+        vec![
+            "module fixture.gc is missing pinned hash; run `genesis pack --pkg package.toml`"
+                .to_string()
+        ]
+    );
+
+    let mut mismatch_observation = preflight_observation();
+    mismatch_observation.modules[0].pinned_hash = Some("0".repeat(64));
+    let mismatch_request = authority_request_term(
+        ObligationAuthorityOperation::Preflight,
+        &manifest.name,
+        preflight_inputs(&mismatch_observation),
+    );
+    let mismatch_hash = hash_term(&mismatch_request);
+    let mismatch_result =
+        invoke_authority(mismatch_request, &frontend, preflight_authority_limits())
+            .expect("mismatch preflight authority result");
+    let mismatch = decode_preflight_result(
+        &store,
+        &manifest,
+        &mismatch_observation,
+        mismatch_hash,
+        mismatch_result,
+    )
+    .expect("closed mismatch result")
+    .expect("hash mismatch must fail preflight");
+    assert_eq!(
+        mismatch.errors,
+        vec![format!(
+            "module hash mismatch for fixture.gc: manifest has {}, computed {}",
+            "0".repeat(64),
+            hex32([7; 32])
+        )]
+    );
+
+    let mut tampered = result;
+    let Term::Map(outer) = &mut tampered else {
+        panic!("preflight result must be a map");
+    };
+    outer.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+    let error = decode_preflight_result(&store, &manifest, &observation, request_hash, tampered)
+        .expect_err("tampered preflight result must fail closed");
+    assert!(error.to_string().contains("contradicts package-loading"));
+
+    let mut open = preflight_inputs(&observation);
+    let Term::Map(inputs) = &mut open else {
+        panic!("preflight inputs must be a map");
+    };
+    inputs.insert(TermOrdKey(Term::symbol(":verdict")), Term::Bool(false));
+    let error = invoke_authority(
+        authority_request_term(
+            ObligationAuthorityOperation::Preflight,
+            &manifest.name,
+            open,
+        ),
+        &frontend,
+        preflight_authority_limits(),
+    )
+    .expect_err("open preflight inputs must fail closed");
+    assert!(error.to_string().contains("sealed error"));
+}
+
+#[test]
+fn preflight_authority_is_independent_of_rejected_package_memory_limits() {
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec/pkg_fail_mem_limits/package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
+    let outcome = evaluate_preflight_with_authority(
+        &store,
+        &package_dir,
+        &manifest,
+        None,
+        &fixture_frontend(),
+        KernelLimits {
+            step_limit: StepLimit::Default,
+            mem_limits: MemLimits {
+                max_pair_cells: Some(0),
+                ..MemLimits::default()
+            },
+        },
+    )
+    .expect("bounded authority must report rejected package limits");
+    let PreflightAuthorityOutcome::Failed(failure) = outcome else {
+        panic!("zero pair-cell package must fail preflight");
+    };
+    assert!(!failure.ok);
+    assert!(!failure.errors.is_empty());
+}
+
+fn missing_pin_preflight(root: &Path) -> ObligationResult {
+    std::fs::create_dir_all(root).expect("package directory");
+    std::fs::write(
+        root.join("package.toml"),
+        "schema = 1\nname = \"portable\"\nversion = \"0.0.1\"\ndependencies = []\nobligations = []\ntests = []\n\n[[modules]]\npath = \"portable.gc\"\n",
+    )
+    .expect("package manifest");
+    std::fs::write(root.join("portable.gc"), "(def portable::value 1)\n").expect("package module");
+    let (manifest, package_dir) =
+        PackageManifest::load(&root.join("package.toml")).expect("load package");
+    let store = EvidenceStore::open(&root.join("evidence")).expect("evidence store");
+    let outcome = evaluate_preflight_with_authority(
+        &store,
+        &package_dir,
+        &manifest,
+        None,
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("preflight result");
+    let PreflightAuthorityOutcome::Failed(failure) = outcome else {
+        panic!("missing pin must fail preflight");
+    };
+    failure
+}
+
+#[test]
+fn preflight_failure_artifact_is_base_relative_across_workspace_roots() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let first_root = temp.path().join("host-a/workspace");
+    let second_root = temp.path().join("host-b/different/workspace");
+    let first = missing_pin_preflight(&first_root);
+    let second = missing_pin_preflight(&second_root);
+    assert_eq!(first.artifact, second.artifact);
+    assert_eq!(first.errors, second.errors);
+    assert!(
+        !first
+            .errors
+            .join("\n")
+            .contains(&first_root.display().to_string())
+    );
+    assert!(
+        !second
+            .errors
+            .join("\n")
+            .contains(&second_root.display().to_string())
+    );
+}
+
 fn module_observation_request(operation: &str, caps: &str, suite: &str, used_ops: &[&str]) -> Term {
     let forms = canonicalize_module(
         parse_module(&format!(
