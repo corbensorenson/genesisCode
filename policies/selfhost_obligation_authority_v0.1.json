@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "7a773b994ba80e0b10fdec306e5f426ca5098cf13e4b43a67a9d7ba23c5d8767",
+  "contentIdentitySha256": "07a550161ea7857f0e7b22da58f1e75206bfbc2bdd97e759489bcac96e55d50f",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -32,6 +32,7 @@
     "optimizer-transformed-evaluation-error",
     "optimizer-transformed-module-hash",
     "optimizer-transformed-value-hash",
+    "optimized-test-value-hash",
     "property-body-callable-status",
     "property-cases-value",
     "property-entry-shape",
@@ -39,6 +40,15 @@
     "property-suite-state",
     "replay-value-hash",
     "sealed-error-status",
+    "stage2-mechanism-error",
+    "stage2-module-hash",
+    "stage2-original-value-hash",
+    "stage2-result-equality",
+    "stage2-status",
+    "stage2-value-kind",
+    "stage2-wasm-byte-count",
+    "stage2-wasm-hash",
+    "stage2-wasm-value-hash",
     "step-count",
     "test-identity"
   ],
@@ -57,6 +67,7 @@
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
+    "core/obligation::translation-validation",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests"
@@ -79,7 +90,6 @@
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
-    "core/obligation::translation-validation",
     "core/obligation::preflight"
   ],
   "resultKind": "genesis/obligation-authority-result-v0.2",
@@ -99,9 +109,10 @@
     "selfhost/obligation_authority_property_v1.gc",
     "selfhost/obligation_authority_stage_v1.gc",
     "selfhost/obligation_authority_coverage_v1.gc",
+    "selfhost/obligation_authority_translation_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "20d7659f9a62af887d22f7671b3ad58482003e495db46b4abfe37772efc01c7a",
+  "sourceSetSha256": "9208da5af07953692940300f6cbe1b0a386995fca8765ffae66cacb9ccdc0822",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

@@ -82,6 +82,7 @@ MIGRATED = [
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
+    "core/obligation::translation-validation",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests",
@@ -90,7 +91,6 @@ RESIDUAL = [
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
-    "core/obligation::translation-validation",
     "core/obligation::preflight",
 ]
 
@@ -104,6 +104,7 @@ SOURCE_MODULES = [
     "selfhost/obligation_authority_property_v1.gc",
     "selfhost/obligation_authority_stage_v1.gc",
     "selfhost/obligation_authority_coverage_v1.gc",
+    "selfhost/obligation_authority_translation_v1.gc",
     "selfhost/obligation_authority_v1.gc",
 ]
 
@@ -163,6 +164,7 @@ def validate(profile, schema, check_identity=True):
             "optimizer-transformed-evaluation-error",
             "optimizer-transformed-module-hash",
             "optimizer-transformed-value-hash",
+            "optimized-test-value-hash",
             "property-body-callable-status",
             "property-cases-value",
             "property-entry-shape",
@@ -170,6 +172,15 @@ def validate(profile, schema, check_identity=True):
             "property-suite-state",
             "replay-value-hash",
             "sealed-error-status",
+            "stage2-mechanism-error",
+            "stage2-module-hash",
+            "stage2-original-value-hash",
+            "stage2-result-equality",
+            "stage2-status",
+            "stage2-value-kind",
+            "stage2-wasm-byte-count",
+            "stage2-wasm-hash",
+            "stage2-wasm-value-hash",
             "step-count",
             "test-identity",
         ],
@@ -247,6 +258,9 @@ def validate_bridge(bridge: str) -> None:
         "stage1_inputs(",
         "evaluate_coverage_obligation_with_authority(",
         "decode_coverage_result(",
+        "evaluate_translation_obligation_with_authority(",
+        "decode_translation_result(",
+        "translation_inputs(",
         "replay_observations(",
         "run_replay_authority(",
         "decode_artifact_transport(",
@@ -259,6 +273,7 @@ def validate_bridge(bridge: str) -> None:
         "ObligationAuthorityOperation::ReplayableTests",
         "ObligationAuthorityOperation::ConcurrencyReplay",
         "ObligationAuthorityOperation::PropertyTests",
+        "ObligationAuthorityOperation::TranslationValidation",
         "ObligationAuthorityOperation::TypecheckStrict",
         'Term::symbol(":request-h")',
         "let request_hash = hash_term(&request);",
@@ -275,6 +290,8 @@ def validate_bridge(bridge: str) -> None:
         "stage1_eval_observation_obeys_caller_step_limit",
         "coverage_authority_decides_profiles_and_rejects_open_observations",
         "coverage_decoder_rejects_request_and_report_tampering",
+        "translation_authority_decides_complete_divergent_and_no_test_observations",
+        "translation_authority_rejects_open_substituted_and_tampered_results",
     ]
     for token in required:
         if token not in bridge:
@@ -310,6 +327,8 @@ def static_check(root: Path, profile):
         fail("self-host stage1 obligation route is absent")
     if "selfhost/obligation::coverage" not in combined_sources:
         fail("self-host coverage obligation route is absent")
+    if "selfhost/obligation::translation-validation" not in combined_sources:
+        fail("self-host translation-validation obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -329,6 +348,9 @@ def static_check(root: Path, profile):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_stage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_coverage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_translation.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_translation_finalize.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_translation.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_replay.rs").read_text()
@@ -372,10 +394,13 @@ def static_check(root: Path, profile):
         fail("stage1 authority production dispatch drift")
     if types_api.count("obligation_coverage(CoverageRunArgs {") != 3:
         fail("coverage authority production dispatch drift")
+    if types_api.count("obligation_translation_validation(") != 1:
+        fail("translation authority production dispatch drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
     stage_host = (root / "crates/gc_obligations/src/obligation_stage.rs").read_text()
+    translation_host = (root / "crates/gc_obligations/src/obligation_translation.rs").read_text()
     coverage_execution = (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
     coverage_host = coverage_execution + (
         root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs"
@@ -401,7 +426,7 @@ def static_check(root: Path, profile):
         "concurrency log missing",
         "replay mismatch for",
     ]
-    combined = unit_host + budget_host + test_host + stage_host + lint_host + replay_host
+    combined = unit_host + budget_host + test_host + stage_host + translation_host + lint_host + replay_host
     for token in forbidden:
         if token in combined:
             fail(f"reachable host obligation decision restored: {token}")
@@ -432,7 +457,7 @@ def static_check(root: Path, profile):
         if token in property_execution:
             fail(f"reachable host property policy restored: {token}")
     stage1_execution = stage_host.split("pub(super) fn obligation_stage1_validation(", 1)[1].split(
-        "pub(super) fn obligation_translation_validation(", 1
+        "pub(super) struct PackageEval", 1
     )[0]
     for token in (
         "gc_opt::stage1_pipeline(",
@@ -447,6 +472,18 @@ def static_check(root: Path, profile):
         fail("stage1 authority invocation drift")
     if coverage_host.count("evaluate_coverage_obligation_with_authority(") != 1:
         fail("coverage authority invocation drift")
+    if translation_host.count("evaluate_translation_obligation_with_authority(") != 2:
+        fail("translation authority invocation drift")
+    if "store.put_term(" in translation_host:
+        fail("reachable host translation report persistence restored")
+    for token in (
+        '"genesis/translation-validation-v0.2"',
+        '"hash mismatch for ',
+        '"stage2 wasm result differs from kernel result"',
+        '"stage2 wasm value hash mismatch"',
+    ):
+        if token in translation_host:
+            fail(f"reachable host translation policy restored: {token}")
     if "store.put_term(&report)" in coverage_host:
         fail("reachable host coverage report persistence restored")
     for token in (
@@ -476,8 +513,8 @@ def static_check(root: Path, profile):
         or "did not declare it in :caps" in unit_host
     ):
         fail("reachable host capability-declaration decision restored")
-    if stage_host.count("ObligationAuthorityOperation::UnitTests") != 1:
-        fail("translation validation unit-test authority dispatch drift")
+    if "ObligationAuthorityOperation::UnitTests" in translation_host:
+        fail("translation execution restored a host-selected unit-test verdict")
     for package in ("gc_cli", "gc_wasi_cli"):
         tree = cargo_tree(root, package)
         if 'gc_obligations feature "parity-oracle"' in tree:
@@ -563,6 +600,7 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
                 "core/obligation::replayable-tests",
                 "core/obligation::typecheck",
                 "core/obligation::stage1-validation",
+                "core/obligation::translation-validation",
             ],
         ),
         ("tests/spec/pkg_fail_unit", 30, False, ["core/obligation::unit-tests"]),
@@ -704,6 +742,9 @@ def self_test(root: Path, profile, schema):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_stage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_coverage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_translation.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_translation_finalize.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_translation.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_tests.rs").read_text()
@@ -749,6 +790,8 @@ def self_test(root: Path, profile, schema):
         ("stage1-host-facts", "stage1_inputs("),
         ("coverage-route", "decode_coverage_result("),
         ("coverage-host-facts", "evaluate_coverage_obligation_with_authority("),
+        ("translation-route", "decode_translation_result("),
+        ("translation-host-facts", "translation_inputs("),
     ]:
         try:
             validate_bridge(bridge.replace(route, ""))

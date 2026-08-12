@@ -3,8 +3,7 @@
     (fn (result)
       (if (core/error::is? result)
         result
-        (((core/map::put result) (quote :request-h))
-          (selfhost/hash::hash-term request))))))
+        (((core/map::put result) (quote :request-h)) (selfhost/hash::hash-term request))))))
 
 (def selfhost/obligation::dispatch
   (fn (operation)
@@ -21,8 +20,8 @@
             (if ((core/int::eq? (core/map::len inputs)) 2)
               (let ((tests ((core/map::get inputs) (quote :tests))))
                 (if (selfhost/obligation::vec? tests)
-                  (((selfhost/obligation::budgets package)
-                     ((core/map::get inputs) (quote :limits))) tests)
+                  (((selfhost/obligation::budgets package) ((core/map::get inputs) (quote :limits)))
+                    tests)
                   (selfhost/obligation::error ":budgets :tests input must be a vector")))
               (selfhost/obligation::error ":budgets inputs must contain exactly :limits and :tests"))
             (if ((core/sym::eq? operation) (quote :capabilities-declared))
@@ -45,11 +44,17 @@
                               ((selfhost/obligation::property-authority package) inputs)
                               (if ((core/sym::eq? operation) (quote :stage1-validation))
                                 ((selfhost/obligation::stage1-validation package) inputs)
-                                (if (if ((core/sym::eq? operation) (quote :coverage)) true
-                                      (if ((core/sym::eq? operation) (quote :coverage-decision)) true
-                                        ((core/sym::eq? operation) (quote :coverage-mcdc))))
+                                (if
+                                  (if ((core/sym::eq? operation) (quote :coverage))
+                                    true
+                                    (if ((core/sym::eq? operation) (quote :coverage-decision))
+                                      true
+                                      ((core/sym::eq? operation) (quote :coverage-mcdc))))
                                   ((selfhost/obligation::coverage package) inputs)
-                                  (selfhost/obligation::error "unknown obligation authority operation"))))))))))))))))))
+                                  (if ((core/sym::eq? operation) (quote :translation-validation))
+                                    ((selfhost/obligation::translation-validation package) inputs)
+                                    (selfhost/obligation::error
+                                      "unknown obligation authority operation")))))))))))))))))))
 
 (def core/cli::obligation-authority
   (fn (request)
@@ -61,12 +66,11 @@
             (operation ((core/map::get request) (quote :operation)))
             (package ((core/map::get request) (quote :package)))
             (inputs ((core/map::get request) (quote :inputs))))
-          (if (if (selfhost/obligation::str? kind)
-                ((core/eq? kind) selfhost/obligation::REQUEST_KIND)
-                false)
-            (if (if (selfhost/obligation::int? version)
-                  ((core/int::eq? version) 2)
-                  false)
+          (if
+            (if (selfhost/obligation::str? kind)
+              ((core/eq? kind) selfhost/obligation::REQUEST_KIND)
+              false)
+            (if (if (selfhost/obligation::int? version) ((core/int::eq? version) 2) false)
               (if (selfhost/obligation::str? package)
                 (if (selfhost/obligation::map? inputs)
                   (let ((result (((selfhost/obligation::dispatch operation) package) inputs)))

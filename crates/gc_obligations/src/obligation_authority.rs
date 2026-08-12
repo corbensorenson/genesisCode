@@ -7,6 +7,8 @@ include!("obligation_authority_property.rs");
 include!("obligation_authority_property_finalize.rs");
 include!("obligation_authority_replay.rs");
 include!("obligation_authority_stage.rs");
+include!("obligation_authority_translation.rs");
+include!("obligation_authority_translation_finalize.rs");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ObligationAuthorityOperation {
@@ -23,6 +25,7 @@ pub(super) enum ObligationAuthorityOperation {
     PropertyTests,
     ReplayableTests,
     Stage1Validation,
+    TranslationValidation,
     Typecheck,
     TypecheckStrict,
 }
@@ -43,6 +46,7 @@ impl ObligationAuthorityOperation {
             Self::PropertyTests => ":property-tests",
             Self::ReplayableTests => ":replayable-tests",
             Self::Stage1Validation => ":stage1-validation",
+            Self::TranslationValidation => ":translation-validation",
             Self::Typecheck => ":typecheck",
             Self::TypecheckStrict => ":typecheck-strict",
         }
@@ -63,6 +67,7 @@ impl ObligationAuthorityOperation {
             Self::PropertyTests => "core/obligation::property-tests",
             Self::ReplayableTests => "core/obligation::replayable-tests",
             Self::Stage1Validation => "core/obligation::stage1-validation",
+            Self::TranslationValidation => "core/obligation::translation-validation",
             Self::Typecheck => "core/obligation::typecheck",
             Self::TypecheckStrict => "core/obligation::typecheck-strict",
         }
@@ -305,9 +310,10 @@ fn request_term(
                 "property tests require closed two-phase observations",
             ));
         }
-        ObligationAuthorityOperation::Stage1Validation => {
+        ObligationAuthorityOperation::Stage1Validation
+        | ObligationAuthorityOperation::TranslationValidation => {
             return Err(authority_error(
-                "stage1 validation requires closed optimizer observations",
+                "stage validation requires closed optimizer observations",
             ));
         }
         ObligationAuthorityOperation::Typecheck | ObligationAuthorityOperation::TypecheckStrict => {
@@ -609,6 +615,11 @@ fn decode_authority_result(
         ObligationAuthorityOperation::Stage1Validation => {
             return Err(authority_error(
                 "stage1 validation requires the optimizer-observation decoder",
+            ));
+        }
+        ObligationAuthorityOperation::TranslationValidation => {
+            return Err(authority_error(
+                "translation validation requires the execution-observation decoder",
             ));
         }
         ObligationAuthorityOperation::Typecheck => {

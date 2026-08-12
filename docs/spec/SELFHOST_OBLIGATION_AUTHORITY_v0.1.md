@@ -180,6 +180,32 @@ emits the exact `genesis/coverage-v0.2` report. The host independently reconstru
 the same decision only to reject malformed, substituted, or contradictory output,
 then persists the validated GenesisCode report.
 
+For `:translation-validation`, `:inputs` contains exactly ordered `:modules`,
+`:original-tests`, and `:optimized-tests`. Each module carries its base-relative
+path, original and optimized canonical hashes, raw optimizer counters and rewrite
+counts, and one closed stage-2 mechanism observation. The stage-2 observation
+contains its raw completion class (`:complete`, `:failed`, or `:unsupported`),
+optimized module hash, optional WASM/hash/value-kind/byte-count outputs, optional
+kernel and WASM value hashes, raw result-equality fact, and mechanism errors. A
+complete observation requires every output, a boolean equality fact, and no
+mechanism error; incomplete observations require nil equality. Its module hash must
+equal the enclosing optimized hash. Original-test rows contain only identity,
+sealed-error state, and actual/optional expected hashes. Optimized-test rows align
+one-for-one by identity and bind their original hash to the corresponding
+original-test actual hash. A no-test request contains no module or optimized-test
+facts, preserving the legacy short-circuit exactly.
+
+Rust performs conservative optimization, canonicalization, optional self-host/Rust
+transform parity, stage-2 compile and execution, and optimized-package test reruns
+under caller limits. It converts a completed stage-2 mechanism result into the
+primitive equality fact and does not transport the prior report verdict or mismatch
+messages. GenesisCode validates the complete inventory, derives original-test
+acceptance, stage-2 support/validation counts and exact mismatch errors, optimizer
+aggregates, module-change rows, optimized-test hash mismatches, overall disposition,
+and the canonical `genesis/translation-validation-v0.2` report. The host independently
+reconstructs that report only to reject malformed, substituted, or contradictory
+output, then persists the validated GenesisCode report.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -200,6 +226,9 @@ per-module optimizer observations and aggregate path-prefixed errors.
 Coverage reports preserve `genesis/coverage-v0.2`, including the exact profile,
 per-test instrumentation, aggregate structural counts, ordered site decisions,
 MC/DC status, missing inventories, and errors.
+Translation reports preserve `genesis/translation-validation-v0.2`, including the
+legacy no-test shape, optimizer aggregates, module changes, stage-2 entries and
+counts, optimized-test hashes, and ordered errors.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -249,6 +278,13 @@ collection, deterministic aggregation, and an independently checked contradictio
 implementation. GenesisCode alone applies symbol, statement, decision, and MC/DC
 policy and produces the persisted report.
 
+The former reachable Rust translation-validation decision/report path is absent
+from production obligation execution. Rust retains bounded optimizer and stage-2
+mechanisms, transform parity enforcement, optimized-package test execution, raw
+observation construction, and an independently checked contradiction
+implementation. GenesisCode alone derives translation support, equivalence,
+errors, pass/fail, aggregates, and the persisted report.
+
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
 set, artifact,
 entrypoint, migrated and residual obligation inventories, primitive host facts, and
@@ -271,13 +307,16 @@ seed-plan tampering. Stage1 controls cover pure equivalence, raw evaluation
 failure, pure-value mismatch, open observation rejection, exact request binding,
 and report tampering. Coverage controls exercise all three profiles, missing
 branches, missing MC/DC independence, open observations, exact request binding,
-report tampering, and a real uncovered-export package. Runtime
+report tampering, and a real uncovered-export package. Translation controls cover
+complete, divergent, and no-test observations, stage-2 and optimized-test
+mismatches, open and misaligned facts, exact request binding, report tampering, and
+the authentic optimized `pkg_basic` package. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 5 obligation kinds remain host-authoritative or only partially routed.
+The other 4 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

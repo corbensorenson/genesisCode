@@ -7,6 +7,7 @@ mod obligation_exec;
 mod obligation_gfx;
 mod obligation_lint;
 mod obligation_stage;
+mod obligation_translation;
 mod registry_policy;
 mod signing;
 mod store;
@@ -45,9 +46,8 @@ use crate::obligation_cache::*;
 pub(crate) use crate::obligation_eval_helpers::*;
 use crate::obligation_exec::*;
 use crate::obligation_lint::{obligation_ai_style, obligation_lint};
-use crate::obligation_stage::{
-    PackageEval, obligation_stage1_validation, obligation_translation_validation,
-};
+use crate::obligation_stage::{PackageEval, obligation_stage1_validation};
+use crate::obligation_translation::obligation_translation_validation;
 pub use crate::registry_policy::{RegistryPolicy, RegistryPolicyError};
 pub use crate::signing::{
     AcceptanceSignature, KeyFile, SigningError, load_signature_set, read_acceptance_hash_from_last,

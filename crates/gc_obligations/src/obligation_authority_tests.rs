@@ -933,6 +933,176 @@ fn stage1_eval_observation_obeys_caller_step_limit() {
     );
 }
 
+fn translation_observation() -> TranslationObservation {
+    TranslationObservation {
+        modules: vec![TranslationModuleObservation {
+            path: "module.gc".to_string(),
+            original_hash: [1; 32],
+            optimized_hash: [2; 32],
+            egg_runs: 1,
+            egg_iterations: 2,
+            egg_eclasses: 3,
+            egg_enodes: 4,
+            rewrites: BTreeMap::from([("fixture-rewrite".to_string(), 5)]),
+            stage2: TranslationStage2Observation {
+                status: TranslationStage2Status::Complete,
+                module_hash: [2; 32],
+                wasm_hash: Some([3; 32]),
+                value_kind: Some(":int".to_string()),
+                original_value_hash: Some([4; 32]),
+                result_equal: Some(true),
+                wasm_value_hash: Some([4; 32]),
+                wasm_bytes_len: Some(17),
+                mechanism_errors: Vec::new(),
+            },
+        }],
+        original_tests: vec![TranslationOriginalTestObservation {
+            suite: "fixture/tests".to_string(),
+            name: "case".to_string(),
+            sealed_error: false,
+            expected_hash: Some([5; 32]),
+            actual_hash: [5; 32],
+        }],
+        optimized_tests: vec![TranslationTestObservation {
+            suite: "fixture/tests".to_string(),
+            name: "case".to_string(),
+            original_hash: [5; 32],
+            optimized_hash: [5; 32],
+        }],
+    }
+}
+
+fn invoke_translation(
+    manifest: &PackageManifest,
+    observation: &TranslationObservation,
+) -> (Term, [u8; 32]) {
+    let request = authority_request_term(
+        ObligationAuthorityOperation::TranslationValidation,
+        &manifest.name,
+        translation_inputs(observation),
+    );
+    let request_hash = hash_term(&request);
+    let result = invoke_authority(request, &fixture_frontend(), limits())
+        .expect("translation authority result");
+    (result, request_hash)
+}
+
+#[test]
+fn translation_authority_decides_complete_divergent_and_no_test_observations() {
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec/pkg_basic/package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let store = EvidenceStore::open(&package_dir).expect("fixture evidence store");
+    let complete = translation_observation();
+    let (result, request_hash) = invoke_translation(&manifest, &complete);
+    let decoded = decode_translation_result(&store, &manifest, &complete, request_hash, result)
+        .expect("complete translation result");
+    assert!(decoded.ok);
+
+    let mut divergent = complete.clone();
+    divergent.modules[0].stage2.result_equal = Some(false);
+    divergent.modules[0].stage2.wasm_value_hash = Some([6; 32]);
+    divergent.optimized_tests[0].optimized_hash = [7; 32];
+    let (result, request_hash) = invoke_translation(&manifest, &divergent);
+    let decoded = decode_translation_result(&store, &manifest, &divergent, request_hash, result)
+        .expect("divergent translation result");
+    assert!(!decoded.ok);
+    assert_eq!(
+        decoded.errors,
+        vec![
+            "stage2 module.gc: stage2 wasm result differs from kernel result",
+            "stage2 module.gc: stage2 wasm value hash mismatch",
+            "hash mismatch for fixture/tests::case",
+        ]
+    );
+
+    let no_tests = TranslationObservation {
+        modules: Vec::new(),
+        original_tests: Vec::new(),
+        optimized_tests: Vec::new(),
+    };
+    let (result, request_hash) = invoke_translation(&manifest, &no_tests);
+    let decoded = decode_translation_result(&store, &manifest, &no_tests, request_hash, result)
+        .expect("no-test translation result");
+    assert!(decoded.ok);
+}
+
+#[test]
+fn translation_authority_rejects_open_substituted_and_tampered_results() {
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec/pkg_basic/package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let store = EvidenceStore::open(&package_dir).expect("fixture evidence store");
+    let observation = translation_observation();
+    let (result, request_hash) = invoke_translation(&manifest, &observation);
+
+    let mut substituted = observation.clone();
+    substituted.modules[0].path = "substituted.gc".to_string();
+    let substituted_request = authority_request_term(
+        ObligationAuthorityOperation::TranslationValidation,
+        &manifest.name,
+        translation_inputs(&substituted),
+    );
+    let error = decode_translation_result(
+        &store,
+        &manifest,
+        &substituted,
+        hash_term(&substituted_request),
+        result.clone(),
+    )
+    .expect_err("substituted translation request must fail closed");
+    assert!(error.to_string().contains("identity mismatch"));
+
+    let mut open_inputs = translation_inputs(&observation);
+    let Term::Map(inputs) = &mut open_inputs else {
+        panic!("translation inputs must be a map");
+    };
+    let Some(Term::Vector(modules)) = inputs.get_mut(&TermOrdKey(Term::symbol(":modules"))) else {
+        panic!("translation modules must be a vector");
+    };
+    let Term::Map(module) = &mut modules[0] else {
+        panic!("translation module must be a map");
+    };
+    module.insert(TermOrdKey(Term::symbol(":verdict")), Term::Bool(true));
+    let open_request = authority_request_term(
+        ObligationAuthorityOperation::TranslationValidation,
+        &manifest.name,
+        open_inputs,
+    );
+    let error = invoke_authority(open_request, &fixture_frontend(), limits())
+        .expect_err("open translation observation must fail closed");
+    assert!(error.to_string().contains("exactly valid modules"));
+
+    let mut misaligned = observation.clone();
+    misaligned.optimized_tests[0].name = "different".to_string();
+    let request = authority_request_term(
+        ObligationAuthorityOperation::TranslationValidation,
+        &manifest.name,
+        translation_inputs(&misaligned),
+    );
+    let error = invoke_authority(request, &fixture_frontend(), limits())
+        .expect_err("misaligned translation test inventory must fail closed");
+    assert!(error.to_string().contains("exactly valid modules"));
+
+    let mut tampered = result;
+    let Term::Map(outer) = &mut tampered else {
+        panic!("translation result must be a map");
+    };
+    let Some(Term::Map(report)) = outer.get_mut(&TermOrdKey(Term::symbol(":report"))) else {
+        panic!("translation report must be a map");
+    };
+    report.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+    let error = decode_translation_result(&store, &manifest, &observation, request_hash, tampered)
+        .expect_err("tampered translation report must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("contradicts execution observations")
+    );
+}
+
 fn authority_fixture(
     fixture: &str,
 ) -> (

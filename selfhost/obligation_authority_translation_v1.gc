@@ -1,0 +1,547 @@
+(def selfhost/obligation::translation-vector-valid-loop?
+  (fn (values)
+    (fn (predicate)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          true
+          (if (predicate ((core/vec::get values) index))
+            (((selfhost/obligation::translation-vector-valid-loop? values) predicate)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/obligation::translation-vector-valid?
+  (fn (value)
+    (fn (predicate)
+      (if (selfhost/obligation::vec? value)
+        (((selfhost/obligation::translation-vector-valid-loop? value) predicate) 0)
+        false))))
+
+(def selfhost/obligation::translation-string-vector-valid?
+  (fn (value) ((selfhost/obligation::translation-vector-valid? value) selfhost/obligation::str?)))
+
+(def selfhost/obligation::translation-status-valid?
+  (fn (status)
+    (if ((core/sym::eq? status) (quote :complete))
+      true
+      (if ((core/sym::eq? status) (quote :failed))
+        true
+        ((core/sym::eq? status) (quote :unsupported))))))
+
+(def selfhost/obligation::translation-value-kind-valid?
+  (fn (value)
+    (if (selfhost/obligation::nil? value)
+      true
+      (if (selfhost/obligation::sym? value)
+        (if ((core/sym::eq? value) (quote :int))
+          true
+          (if ((core/sym::eq? value) (quote :bool))
+            true
+            (if ((core/sym::eq? value) (quote :nil))
+              true
+              (if ((core/sym::eq? value) (quote :sym))
+                true
+                (if ((core/sym::eq? value) (quote :str))
+                  true
+                  (if ((core/sym::eq? value) (quote :bytes))
+                    true
+                    ((core/sym::eq? value) (quote :term))))))))
+        false))))
+
+(def selfhost/obligation::translation-optional-bool?
+  (fn (value) (if (selfhost/obligation::nil? value) true (selfhost/obligation::bool? value))))
+
+(def selfhost/obligation::translation-rewrite-valid?
+  (fn (rewrite)
+    (if (selfhost/obligation::map? rewrite)
+      (if ((core/int::eq? (core/map::len rewrite)) 2)
+        (if (selfhost/obligation::str? ((core/map::get rewrite) (quote :name)))
+          (selfhost/obligation::nonnegative-int? ((core/map::get rewrite) (quote :n)))
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::translation-stage2-valid?
+  (fn (expected-module-h)
+    (fn (stage2)
+      (if (selfhost/obligation::map? stage2)
+        (if ((core/int::eq? (core/map::len stage2)) 9)
+          (if
+            (selfhost/obligation::translation-status-valid? ((core/map::get stage2) (quote :status)))
+            (if ((core/eq? expected-module-h) ((core/map::get stage2) (quote :module-h)))
+              (if (selfhost/obligation::optional-hash? ((core/map::get stage2) (quote :wasm-h)))
+                (if
+                  (selfhost/obligation::translation-value-kind-valid?
+                    ((core/map::get stage2) (quote :value-kind)))
+                  (if
+                    (selfhost/obligation::optional-hash?
+                      ((core/map::get stage2) (quote :orig-value-h)))
+                    (if
+                      (selfhost/obligation::optional-hash?
+                        ((core/map::get stage2) (quote :wasm-value-h)))
+                      (if
+                        (selfhost/obligation::optional-nonnegative-int?
+                          ((core/map::get stage2) (quote :wasm-bytes)))
+                        (if
+                          (selfhost/obligation::translation-optional-bool?
+                            ((core/map::get stage2) (quote :result-equal)))
+                          (if
+                            (selfhost/obligation::translation-string-vector-valid?
+                              ((core/map::get stage2) (quote :mechanism-errors)))
+                            (if
+                              ((core/sym::eq? ((core/map::get stage2) (quote :status)))
+                                (quote :complete))
+                              (if
+                                (selfhost/obligation::hash? ((core/map::get stage2) (quote :wasm-h)))
+                                (if
+                                  (selfhost/obligation::sym?
+                                    ((core/map::get stage2) (quote :value-kind)))
+                                  (if
+                                    (selfhost/obligation::hash?
+                                      ((core/map::get stage2) (quote :orig-value-h)))
+                                    (if
+                                      (selfhost/obligation::hash?
+                                        ((core/map::get stage2) (quote :wasm-value-h)))
+                                      (if
+                                        (selfhost/obligation::nonnegative-int?
+                                          ((core/map::get stage2) (quote :wasm-bytes)))
+                                        (if
+                                          (selfhost/obligation::bool?
+                                            ((core/map::get stage2) (quote :result-equal)))
+                                          ((core/int::eq? (core/vec::len ((core/map::get stage2) (quote :mechanism-errors))))
+                                            0)
+                                          false)
+                                        false)
+                                      false)
+                                    false)
+                                  false)
+                                false)
+                              (selfhost/obligation::nil?
+                                ((core/map::get stage2) (quote :result-equal))))
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false))))
+
+(def selfhost/obligation::translation-module-valid?
+  (fn (module)
+    (if (selfhost/obligation::map? module)
+      (if ((core/int::eq? (core/map::len module)) 9)
+        (if (selfhost/obligation::str? ((core/map::get module) (quote :path)))
+          (if (selfhost/obligation::hash? ((core/map::get module) (quote :original-h)))
+            (if (selfhost/obligation::hash? ((core/map::get module) (quote :optimized-h)))
+              (if (selfhost/obligation::nonnegative-int? ((core/map::get module) (quote :egg-runs)))
+                (if
+                  (selfhost/obligation::nonnegative-int?
+                    ((core/map::get module) (quote :egg-iterations)))
+                  (if
+                    (selfhost/obligation::nonnegative-int?
+                      ((core/map::get module) (quote :egg-eclasses)))
+                    (if
+                      (selfhost/obligation::nonnegative-int?
+                        ((core/map::get module) (quote :egg-enodes)))
+                      (if
+                        ((selfhost/obligation::translation-vector-valid? ((core/map::get module) (quote :egg-rewrites)))
+                          selfhost/obligation::translation-rewrite-valid?)
+                        ((selfhost/obligation::translation-stage2-valid? ((core/map::get module) (quote :optimized-h)))
+                          ((core/map::get module) (quote :stage2)))
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::translation-original-test-valid?
+  (fn (test)
+    (if (selfhost/obligation::map? test)
+      (if ((core/int::eq? (core/map::len test)) 5)
+        (if (selfhost/obligation::sym? ((core/map::get test) (quote :suite)))
+          (if (selfhost/obligation::str? ((core/map::get test) (quote :name)))
+            (if (selfhost/obligation::hash? ((core/map::get test) (quote :actual-h)))
+              (if (selfhost/obligation::optional-hash? ((core/map::get test) (quote :expected-h)))
+                (selfhost/obligation::bool? ((core/map::get test) (quote :sealed-error)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::translation-test-valid?
+  (fn (test)
+    (if (selfhost/obligation::map? test)
+      (if ((core/int::eq? (core/map::len test)) 4)
+        (if (selfhost/obligation::sym? ((core/map::get test) (quote :suite)))
+          (if (selfhost/obligation::str? ((core/map::get test) (quote :name)))
+            (if (selfhost/obligation::hash? ((core/map::get test) (quote :original-h)))
+              (selfhost/obligation::hash? ((core/map::get test) (quote :optimized-h)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::translation-tests-aligned-loop?
+  (fn (original)
+    (fn (optimized)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len original))
+          true
+          (let ((left ((core/vec::get original) index)) (right ((core/vec::get optimized) index)))
+            (if
+              ((core/sym::eq? ((core/map::get left) (quote :suite)))
+                ((core/map::get right) (quote :suite)))
+              (if
+                ((core/eq? ((core/map::get left) (quote :name)))
+                  ((core/map::get right) (quote :name)))
+                (if
+                  ((core/eq? ((core/map::get left) (quote :actual-h)))
+                    ((core/map::get right) (quote :original-h)))
+                  (((selfhost/obligation::translation-tests-aligned-loop? original) optimized)
+                    ((core/int::add index) 1))
+                  false)
+                false)
+              false)))))))
+
+(def selfhost/obligation::translation-inputs-valid?
+  (fn (inputs)
+    (if (selfhost/obligation::map? inputs)
+      (if ((core/int::eq? (core/map::len inputs)) 3)
+        (if
+          ((selfhost/obligation::translation-vector-valid? ((core/map::get inputs) (quote :modules)))
+            selfhost/obligation::translation-module-valid?)
+          (if
+            ((selfhost/obligation::translation-vector-valid? ((core/map::get inputs) (quote :original-tests)))
+              selfhost/obligation::translation-original-test-valid?)
+            (if
+              ((selfhost/obligation::translation-vector-valid? ((core/map::get inputs) (quote :optimized-tests)))
+                selfhost/obligation::translation-test-valid?)
+              (if
+                ((core/int::eq? (core/vec::len ((core/map::get inputs) (quote :original-tests))))
+                  (core/vec::len ((core/map::get inputs) (quote :optimized-tests))))
+                (
+                  (
+                    (selfhost/obligation::translation-tests-aligned-loop?
+                      ((core/map::get inputs) (quote :original-tests)))
+                    ((core/map::get inputs) (quote :optimized-tests)))
+                  0)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::translation-original-tests-ok-loop?
+  (fn (tests)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len tests))
+        true
+        (let ((test ((core/vec::get tests) index)))
+          (if (selfhost/obligation::test-ok? test)
+            ((selfhost/obligation::translation-original-tests-ok-loop? tests)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/obligation::translation-rewrites-add-loop
+  (fn (rewrites)
+    (fn (index)
+      (fn (totals)
+        (if ((core/int::eq? index) (core/vec::len rewrites))
+          totals
+          (let ((rewrite ((core/vec::get rewrites) index)))
+            (let
+              ((name ((core/map::get rewrite) (quote :name)))
+                (count ((core/map::get rewrite) (quote :n))))
+              (let ((prior ((core/map::get totals) name)))
+                (((selfhost/obligation::translation-rewrites-add-loop rewrites) ((core/int::add index) 1))
+                  (((core/map::put totals) name)
+                    (if (selfhost/obligation::nil? prior) count ((core/int::add prior) count))))))))))))
+
+(def selfhost/obligation::translation-rewrites-add
+  (fn (totals)
+    (fn (rewrites) (((selfhost/obligation::translation-rewrites-add-loop rewrites) 0) totals))))
+
+(def selfhost/obligation::translation-rewrite-reports-loop
+  (fn (entries)
+    (fn (index)
+      (fn (reports)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          reports
+          (let ((entry ((core/vec::get entries) index)))
+            (((selfhost/obligation::translation-rewrite-reports-loop entries) ((core/int::add index) 1))
+              ((core/vec::push reports)
+                {
+                  :n ((core/vec::get entry) 1)
+                  :name ((core/vec::get entry) 0)}))))))))
+
+(def selfhost/obligation::translation-rewrite-reports
+  (fn (totals)
+    (((selfhost/obligation::translation-rewrite-reports-loop (core/map::entries totals)) 0) [])))
+
+(def selfhost/obligation::translation-stage2
+  (fn (path)
+    (fn (raw)
+      (let
+        ((status ((core/map::get raw) (quote :status)))
+          (result-equal ((core/map::get raw) (quote :result-equal)))
+          (original-h ((core/map::get raw) (quote :orig-value-h)))
+          (wasm-h ((core/map::get raw) (quote :wasm-value-h))))
+        (let
+          ((supported (if ((core/sym::eq? status) (quote :unsupported)) false true))
+            (errors0 ((core/map::get raw) (quote :mechanism-errors))))
+          (let
+            (
+              (errors1
+                (if
+                  (if ((core/sym::eq? status) (quote :complete)) (if result-equal false true) false)
+                  ((core/vec::push errors0) "stage2 wasm result differs from kernel result")
+                  errors0)))
+            (let
+              (
+                (errors2
+                  (if
+                    (if ((core/sym::eq? status) (quote :complete))
+                      (if ((core/eq? original-h) wasm-h) false true)
+                      false)
+                    ((core/vec::push errors1) "stage2 wasm value hash mismatch")
+                    errors1)))
+              (let
+                (
+                  (ok
+                    (if ((core/sym::eq? status) (quote :complete))
+                      ((core/int::eq? (core/vec::len errors2)) 0)
+                      false)))
+                {
+                  :errors errors2
+                  :ok ok
+                  :report
+                    {
+                      :errors errors2
+                      :module-h ((core/map::get raw) (quote :module-h))
+                      :ok ok
+                      :orig-value-h original-h
+                      :path path
+                      :supported supported
+                      :value-kind ((core/map::get raw) (quote :value-kind))
+                      :wasm-bytes ((core/map::get raw) (quote :wasm-bytes))
+                      :wasm-h ((core/map::get raw) (quote :wasm-h))
+                      :wasm-value-h wasm-h}
+                  :supported supported}))))))))
+
+(def selfhost/obligation::translation-prefix-stage-errors-loop
+  (fn (path)
+    (fn (errors)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len errors))
+            out
+            (
+              (((selfhost/obligation::translation-prefix-stage-errors-loop path) errors)
+                ((core/int::add index) 1))
+              ((core/vec::push out)
+                ((core/str::concat "stage2 ")
+                  ((core/str::concat path) ((core/str::concat ": ") ((core/vec::get errors) index))))))))))))
+
+(def selfhost/obligation::translation-prefix-stage-errors
+  (fn (path)
+    (fn (errors) ((((selfhost/obligation::translation-prefix-stage-errors-loop path) errors) 0) []))))
+
+(def selfhost/obligation::translation-modules-loop
+  (fn (modules)
+    (fn (index)
+      (fn (state)
+        (if ((core/int::eq? index) (core/vec::len modules))
+          state
+          (let ((module ((core/vec::get modules) index)))
+            (let
+              ((path ((core/map::get module) (quote :path)))
+                (stage2
+                  ((selfhost/obligation::translation-stage2 ((core/map::get module) (quote :path)))
+                    ((core/map::get module) (quote :stage2)))))
+              (let
+                ((supported ((core/map::get stage2) (quote :supported)))
+                  (stage-ok ((core/map::get stage2) (quote :ok))))
+                (((selfhost/obligation::translation-modules-loop modules) ((core/int::add index) 1))
+                  {
+                    :eclasses
+                      ((core/int::add ((core/map::get state) (quote :eclasses)))
+                        ((core/map::get module) (quote :egg-eclasses)))
+                    :enodes
+                      ((core/int::add ((core/map::get state) (quote :enodes)))
+                        ((core/map::get module) (quote :egg-enodes)))
+                    :errors
+                      (if (if supported (if stage-ok false true) false)
+                        ((selfhost/obligation::append-errors ((core/map::get state) (quote :errors)))
+                          ((selfhost/obligation::translation-prefix-stage-errors path)
+                            ((core/map::get stage2) (quote :errors))))
+                        ((core/map::get state) (quote :errors)))
+                    :iterations
+                      ((core/int::add ((core/map::get state) (quote :iterations)))
+                        ((core/map::get module) (quote :egg-iterations)))
+                    :modules
+                      ((core/vec::push ((core/map::get state) (quote :modules)))
+                        {
+                          :changed
+                            (if
+                              ((core/eq? ((core/map::get module) (quote :original-h)))
+                                ((core/map::get module) (quote :optimized-h)))
+                              false
+                              true)
+                          :opt-h ((core/map::get module) (quote :optimized-h))
+                          :orig-h ((core/map::get module) (quote :original-h))
+                          :path path})
+                    :ok
+                      (if ((core/map::get state) (quote :ok))
+                        (if (if supported (if stage-ok false true) false) false true)
+                        false)
+                    :rewrites
+                      ((selfhost/obligation::translation-rewrites-add ((core/map::get state) (quote :rewrites)))
+                        ((core/map::get module) (quote :egg-rewrites)))
+                    :runs
+                      ((core/int::add ((core/map::get state) (quote :runs)))
+                        ((core/map::get module) (quote :egg-runs)))
+                    :stage2
+                      ((core/vec::push ((core/map::get state) (quote :stage2)))
+                        ((core/map::get stage2) (quote :report)))
+                    :supported
+                      (if supported
+                        ((core/int::add ((core/map::get state) (quote :supported))) 1)
+                        ((core/map::get state) (quote :supported)))
+                    :validated
+                      (if (if supported stage-ok false)
+                        ((core/int::add ((core/map::get state) (quote :validated))) 1)
+                        ((core/map::get state) (quote :validated)))})))))))))
+
+(def selfhost/obligation::translation-tests-loop
+  (fn (tests)
+    (fn (index)
+      (fn (reports)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len tests))
+            {:errors errors :reports reports}
+            (let ((test ((core/vec::get tests) index)))
+              (let
+                (
+                  (mismatch
+                    (if
+                      ((core/eq? ((core/map::get test) (quote :original-h)))
+                        ((core/map::get test) (quote :optimized-h)))
+                      false
+                      true)))
+                (
+                  (((selfhost/obligation::translation-tests-loop tests) ((core/int::add index) 1))
+                    ((core/vec::push reports)
+                      {
+                        :name ((core/map::get test) (quote :name))
+                        :opt-h ((core/map::get test) (quote :optimized-h))
+                        :orig-h ((core/map::get test) (quote :original-h))
+                        :suite ((core/map::get test) (quote :suite))}))
+                  (if mismatch
+                    ((core/vec::push errors)
+                      ((core/str::concat "hash mismatch for ")
+                        ((core/str::concat (core/sym::to-str ((core/map::get test) (quote :suite))))
+                          ((core/str::concat "::") ((core/map::get test) (quote :name))))))
+                    errors))))))))))
+
+(def selfhost/obligation::translation-validation
+  (fn (package)
+    (fn (inputs)
+      (if (selfhost/obligation::translation-inputs-valid? inputs)
+        (let
+          ((modules ((core/map::get inputs) (quote :modules)))
+            (original-tests ((core/map::get inputs) (quote :original-tests)))
+            (optimized-tests ((core/map::get inputs) (quote :optimized-tests))))
+          (if ((core/int::eq? (core/vec::len original-tests)) 0)
+            (if
+              (if ((core/int::eq? (core/vec::len modules)) 0)
+                ((core/int::eq? (core/vec::len optimized-tests)) 0)
+                false)
+              {
+                :errors []
+                :kind selfhost/obligation::RESULT_KIND
+                :name "core/obligation::translation-validation"
+                :ok true
+                :operation (quote :translation-validation)
+                :report
+                  {
+                    :kind "genesis/translation-validation-v0.2"
+                    :note "no tests"
+                    :ok true}
+                :v 2}
+              (selfhost/obligation::error
+                "translation no-test observation must not contain module or optimized-test facts"))
+            (let
+              (
+                (module-state
+                  (((selfhost/obligation::translation-modules-loop modules) 0)
+                    {
+                      :eclasses 0
+                      :enodes 0
+                      :errors []
+                      :iterations 0
+                      :modules []
+                      :ok true
+                      :rewrites {}
+                      :runs 0
+                      :stage2 []
+                      :supported 0
+                      :validated 0})))
+              (let
+                (
+                  (test-state
+                    ((((selfhost/obligation::translation-tests-loop optimized-tests) 0) [])
+                      ((core/map::get module-state) (quote :errors)))))
+                (let
+                  ((original-ok ((selfhost/obligation::translation-original-tests-ok-loop? original-tests) 0))
+                    (errors ((core/map::get test-state) (quote :errors))))
+                  (let
+                    (
+                      (ok
+                        (if original-ok
+                          (if ((core/map::get module-state) (quote :ok))
+                            ((core/int::eq? (core/vec::len errors)) 0)
+                            false)
+                          false)))
+                    {
+                      :errors errors
+                      :kind selfhost/obligation::RESULT_KIND
+                      :name "core/obligation::translation-validation"
+                      :ok ok
+                      :operation (quote :translation-validation)
+                      :report
+                        {
+                          :errors errors
+                          :kind "genesis/translation-validation-v0.2"
+                          :modules ((core/map::get module-state) (quote :modules))
+                          :ok ok
+                          :optimizer
+                            {
+                              :egg-eclasses ((core/map::get module-state) (quote :eclasses))
+                              :egg-enodes ((core/map::get module-state) (quote :enodes))
+                              :egg-iterations ((core/map::get module-state) (quote :iterations))
+                              :egg-rewrites
+                                (selfhost/obligation::translation-rewrite-reports
+                                  ((core/map::get module-state) (quote :rewrites)))
+                              :egg-runs ((core/map::get module-state) (quote :runs))}
+                          :package package
+                          :stage2
+                            {
+                              :entries ((core/map::get module-state) (quote :stage2))
+                              :supported-modules ((core/map::get module-state) (quote :supported))
+                              :validated-modules ((core/map::get module-state) (quote :validated))}
+                          :tests ((core/map::get test-state) (quote :reports))}
+                      :v 2}))))))
+        (selfhost/obligation::error
+          "translation inputs must contain exactly valid modules, original tests, and optimized tests")))))

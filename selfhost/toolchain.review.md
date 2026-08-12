@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `663550195ef9ca6551969338a35e3b8aee47e168ae6477b382d801f9aa09a8fe`
-- Freshness artifact hash: `663550195ef9ca6551969338a35e3b8aee47e168ae6477b382d801f9aa09a8fe`
-- Freshness source hash: `87f891beef65183c5c911b386676f540de1789da2f7de38ac14fb0a0e7e1fd21`
-- Source aggregate hash (module path + module sha256): `3b666121f56cbe661e59836346a1c99f36e9e913bec94f52dd4f42ddd5b6d117`
+- Artifact sha256: `3f274a5e0cedf811a10ff23fe83d5fc8a9a0cbe52130a1a46fc4da7777b6a04b`
+- Freshness artifact hash: `3f274a5e0cedf811a10ff23fe83d5fc8a9a0cbe52130a1a46fc4da7777b6a04b`
+- Freshness source hash: `1053112621ad8ffe64778ea4bb8242a6117fb2650f92fb5217d6e9cbf5948042`
+- Source aggregate hash (module path + module sha256): `35a86bc9484052e1348a990ef702601518a138e10ac6e86743d042ac6f26c4c9`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `66`
+- Module count: `67`
 
 ## Module Summary
 
@@ -80,7 +80,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/obligation_authority_property_v1.gc` | 606 | 32356 | 30 | `05c601549992b546` |
 | `selfhost/obligation_authority_stage_v1.gc` | 161 | 7200 | 9 | `ca1ff0651febd10d` |
 | `selfhost/obligation_authority_coverage_v1.gc` | 523 | 24182 | 29 | `77e5304e98081ef0` |
-| `selfhost/obligation_authority_v1.gc` | 79 | 4885 | 3 | `dca79c287d27277e` |
+| `selfhost/obligation_authority_translation_v1.gc` | 547 | 25227 | 24 | `d2f924dbde90c365` |
+| `selfhost/obligation_authority_v1.gc` | 83 | 5188 | 3 | `5d6676773f456512` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -149,5 +150,6 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/obligation_authority_property_v1.gc`: `selfhost/obligation::property-map-has-key-loop?`, `selfhost/obligation::property-map-has-key?`, `selfhost/obligation::property-exact-map?`, `selfhost/obligation::property-keys-loop`, `selfhost/obligation::property-optional-str?`, `selfhost/obligation::property-str4`, `selfhost/obligation::property-str5`, `selfhost/obligation::property-str6`
 - `selfhost/obligation_authority_stage_v1.gc`: `selfhost/obligation::stage-eval-valid?`, `selfhost/obligation::stage-optimizer-valid?`, `selfhost/obligation::stage-module-valid?`, `selfhost/obligation::stage-module-errors`, `selfhost/obligation::stage-prefix-errors-loop`, `selfhost/obligation::stage-prefix-errors`, `selfhost/obligation::stage-module-report`, `selfhost/obligation::stage-modules-loop`
 - `selfhost/obligation_authority_coverage_v1.gc`: `selfhost/obligation::coverage-profile-valid?`, `selfhost/obligation::coverage-structural?`, `selfhost/obligation::coverage-mcdc?`, `selfhost/obligation::coverage-name`, `selfhost/obligation::coverage-operation`, `selfhost/obligation::coverage-count-row-valid?`, `selfhost/obligation::coverage-site-row-valid?`, `selfhost/obligation::coverage-decision-counts-valid?`
+- `selfhost/obligation_authority_translation_v1.gc`: `selfhost/obligation::translation-vector-valid-loop?`, `selfhost/obligation::translation-vector-valid?`, `selfhost/obligation::translation-string-vector-valid?`, `selfhost/obligation::translation-status-valid?`, `selfhost/obligation::translation-value-kind-valid?`, `selfhost/obligation::translation-optional-bool?`, `selfhost/obligation::translation-rewrite-valid?`, `selfhost/obligation::translation-stage2-valid?`
 - `selfhost/obligation_authority_v1.gc`: `selfhost/obligation::bind-result`, `selfhost/obligation::dispatch`, `core/cli::obligation-authority`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`
