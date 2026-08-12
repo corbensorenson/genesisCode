@@ -1,6 +1,7 @@
 use super::*;
 
 include!("obligation_authority_caps.rs");
+include!("obligation_authority_coverage.rs");
 include!("obligation_authority_lint.rs");
 include!("obligation_authority_property.rs");
 include!("obligation_authority_property_finalize.rs");
@@ -14,6 +15,9 @@ pub(super) enum ObligationAuthorityOperation {
     Budgets,
     CapabilitiesDeclared,
     ConcurrencyReplay,
+    Coverage,
+    CoverageDecision,
+    CoverageMcdc,
     Determinism,
     Lint,
     PropertyTests,
@@ -31,6 +35,9 @@ impl ObligationAuthorityOperation {
             Self::Budgets => ":budgets",
             Self::CapabilitiesDeclared => ":capabilities-declared",
             Self::ConcurrencyReplay => ":concurrency-replay",
+            Self::Coverage => ":coverage",
+            Self::CoverageDecision => ":coverage-decision",
+            Self::CoverageMcdc => ":coverage-mcdc",
             Self::Determinism => ":determinism",
             Self::Lint => ":lint",
             Self::PropertyTests => ":property-tests",
@@ -48,6 +55,9 @@ impl ObligationAuthorityOperation {
             Self::Budgets => "core/obligation::budgets",
             Self::CapabilitiesDeclared => "core/obligation::capabilities-declared",
             Self::ConcurrencyReplay => "core/obligation::concurrency-replay",
+            Self::Coverage => "core/obligation::coverage",
+            Self::CoverageDecision => "core/obligation::coverage-decision",
+            Self::CoverageMcdc => "core/obligation::coverage-mcdc",
             Self::Determinism => "core/obligation::determinism",
             Self::Lint => "core/obligation::lint",
             Self::PropertyTests => "core/obligation::property-tests",
@@ -280,6 +290,13 @@ fn request_term(
             ));
         }
         ObligationAuthorityOperation::Determinism => capability_inputs(modules, tests),
+        ObligationAuthorityOperation::Coverage
+        | ObligationAuthorityOperation::CoverageDecision
+        | ObligationAuthorityOperation::CoverageMcdc => {
+            return Err(authority_error(
+                "coverage operations require closed instrumentation observations",
+            ));
+        }
         ObligationAuthorityOperation::AiStyle | ObligationAuthorityOperation::Lint => {
             typecheck_inputs(modules)
         }
@@ -563,6 +580,13 @@ fn decode_authority_result(
             ok,
             &errors,
         )?,
+        ObligationAuthorityOperation::Coverage
+        | ObligationAuthorityOperation::CoverageDecision
+        | ObligationAuthorityOperation::CoverageMcdc => {
+            return Err(authority_error(
+                "coverage requires the instrumentation-observation decoder",
+            ));
+        }
         ObligationAuthorityOperation::Determinism => {
             validate_determinism_report(report, manifest, ok, &errors)?
         }

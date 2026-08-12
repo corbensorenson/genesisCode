@@ -30,14 +30,14 @@
     "binding": {"const": "core/cli::obligation-authority"},
     "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "hostFacts": {
-      "const": ["actual-value-hash", "canonical-module-forms", "effect-entry-count", "effect-log-artifact", "effect-log-byte-count", "effect-log-entry-await-edge", "effect-log-entry-operation", "effect-log-entry-position", "effect-log-entry-schedule-step", "effect-log-entry-task-id", "effect-program-status", "expected-value-hash", "module-path", "observed-effect-operation", "optimizer-original-evaluation-error", "optimizer-original-module-hash", "optimizer-original-value-hash", "optimizer-stat-counter", "optimizer-transformed-evaluation-error", "optimizer-transformed-module-hash", "optimizer-transformed-value-hash", "property-body-callable-status", "property-cases-value", "property-entry-shape", "property-execution-result", "property-suite-state", "replay-value-hash", "sealed-error-status", "step-count", "test-identity"]
+      "const": ["actual-value-hash", "canonical-module-forms", "coverage-decision-count", "coverage-decision-sample", "coverage-export-hit-count", "coverage-missing-effect-log-test", "coverage-per-test-instrumentation", "coverage-statement-site-hit-count", "coverage-test-count", "effect-entry-count", "effect-log-artifact", "effect-log-byte-count", "effect-log-entry-await-edge", "effect-log-entry-operation", "effect-log-entry-position", "effect-log-entry-schedule-step", "effect-log-entry-task-id", "effect-program-status", "expected-value-hash", "module-path", "observed-effect-operation", "optimizer-original-evaluation-error", "optimizer-original-module-hash", "optimizer-original-value-hash", "optimizer-stat-counter", "optimizer-transformed-evaluation-error", "optimizer-transformed-module-hash", "optimizer-transformed-value-hash", "property-body-callable-status", "property-cases-value", "property-entry-shape", "property-execution-result", "property-suite-state", "replay-value-hash", "sealed-error-status", "step-count", "test-identity"]
     },
     "independentVerifier": {"const": "scripts/lib/selfhost_obligation_authority.py"},
     "kind": {"const": "genesis/selfhost-obligation-authority-v0.1"},
-    "migratedObligations": {"const": ["core/obligation::ai-style", "core/obligation::budgets", "core/obligation::capabilities-declared", "core/obligation::concurrency-replay", "core/obligation::determinism", "core/obligation::lint", "core/obligation::property-tests", "core/obligation::replayable-tests", "core/obligation::stage1-validation", "core/obligation::typecheck", "core/obligation::typecheck-strict", "core/obligation::unit-tests"]},
+    "migratedObligations": {"const": ["core/obligation::ai-style", "core/obligation::budgets", "core/obligation::capabilities-declared", "core/obligation::concurrency-replay", "core/obligation::coverage", "core/obligation::coverage-decision", "core/obligation::coverage-mcdc", "core/obligation::determinism", "core/obligation::lint", "core/obligation::property-tests", "core/obligation::replayable-tests", "core/obligation::stage1-validation", "core/obligation::typecheck", "core/obligation::typecheck-strict", "core/obligation::unit-tests"]},
     "nonclaims": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
-    "residualObligations": {"type": "array", "minItems": 8, "maxItems": 8, "uniqueItems": true, "items": {"type": "string"}},
+    "residualObligations": {"type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": {"type": "string"}},
     "resultKind": {"const": "genesis/obligation-authority-result-v0.2"},
     "runtimeEvidence": {
       "type": "object",
@@ -50,7 +50,7 @@
       }
     },
     "schema": {"const": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json"},
-    "sourceModules": {"const": ["selfhost/obligation_authority_core_v1.gc", "selfhost/obligation_authority_typecheck_v1.gc", "selfhost/obligation_authority_determinism_v1.gc", "selfhost/obligation_authority_lint_v1.gc", "selfhost/obligation_authority_ai_style_v1.gc", "selfhost/obligation_authority_replay_v1.gc", "selfhost/obligation_authority_property_v1.gc", "selfhost/obligation_authority_stage_v1.gc", "selfhost/obligation_authority_v1.gc"]},
+    "sourceModules": {"const": ["selfhost/obligation_authority_core_v1.gc", "selfhost/obligation_authority_typecheck_v1.gc", "selfhost/obligation_authority_determinism_v1.gc", "selfhost/obligation_authority_lint_v1.gc", "selfhost/obligation_authority_ai_style_v1.gc", "selfhost/obligation_authority_replay_v1.gc", "selfhost/obligation_authority_property_v1.gc", "selfhost/obligation_authority_stage_v1.gc", "selfhost/obligation_authority_coverage_v1.gc", "selfhost/obligation_authority_v1.gc"]},
     "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md"},
     "version": {"const": "0.1.0"}

@@ -1,0 +1,21 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/coverage::choose pkg/coverage::tests]
+      :types {pkg/coverage::choose ? pkg/coverage::tests ?}}))
+
+(def pkg/coverage::choose (fn (condition) (if condition 1 0)))
+
+(def pkg/coverage::tests
+  {
+    "false"
+      {
+        :body (fn (_) (pkg/coverage::choose false))
+        :expect 0}
+    "true"
+      {
+        :body (fn (_) (pkg/coverage::choose true))
+        :expect 1}})
+
+pkg/coverage::tests

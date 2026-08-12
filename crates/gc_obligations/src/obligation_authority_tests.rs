@@ -489,6 +489,246 @@ fn obligation_authority_rejects_result_bound_to_another_request() {
     assert!(error.to_string().contains("result identity mismatch"));
 }
 
+fn coverage_observation(profile: &str, branch_complete: bool, mcdc_complete: bool) -> Term {
+    let samples = if mcdc_complete {
+        vec![
+            Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":conditions")),
+                        Term::Vector(vec![Term::Map(
+                            [
+                                (TermOrdKey(Term::symbol(":sym")), Term::symbol("a")),
+                                (TermOrdKey(Term::symbol(":value")), Term::Bool(true)),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        )]),
+                    ),
+                    (TermOrdKey(Term::symbol(":outcome")), Term::Bool(true)),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+            Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":conditions")),
+                        Term::Vector(vec![Term::Map(
+                            [
+                                (TermOrdKey(Term::symbol(":sym")), Term::symbol("a")),
+                                (TermOrdKey(Term::symbol(":value")), Term::Bool(false)),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        )]),
+                    ),
+                    (TermOrdKey(Term::symbol(":outcome")), Term::Bool(false)),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+        ]
+    } else {
+        Vec::new()
+    };
+    let false_hits = u64::from(branch_complete);
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":decision")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":taken-false")),
+                            Term::Int(false_hits.into()),
+                        ),
+                        (TermOrdKey(Term::symbol(":taken-true")), Term::Int(1.into())),
+                        (
+                            TermOrdKey(Term::symbol(":total")),
+                            Term::Int((1 + false_hits).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":decision-sites")),
+                Term::Vector(vec![Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":conditions")),
+                            Term::Vector(vec![Term::symbol("a")]),
+                        ),
+                        (TermOrdKey(Term::symbol(":samples")), Term::Vector(samples)),
+                        (TermOrdKey(Term::symbol(":site")), Term::Str("s1".into())),
+                        (
+                            TermOrdKey(Term::symbol(":taken-false")),
+                            Term::Int(false_hits.into()),
+                        ),
+                        (TermOrdKey(Term::symbol(":taken-true")), Term::Int(1.into())),
+                        (
+                            TermOrdKey(Term::symbol(":total")),
+                            Term::Int((1 + false_hits).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )]),
+            ),
+            (
+                TermOrdKey(Term::symbol(":exports")),
+                Term::Vector(vec![Term::Map(
+                    [
+                        (TermOrdKey(Term::symbol(":hits")), Term::Int(1.into())),
+                        (
+                            TermOrdKey(Term::symbol(":sym")),
+                            Term::symbol("fixture/run"),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )]),
+            ),
+            (
+                TermOrdKey(Term::symbol(":missing-effect-logs")),
+                Term::Vector(Vec::new()),
+            ),
+            (TermOrdKey(Term::symbol(":profile")), Term::symbol(profile)),
+            (
+                TermOrdKey(Term::symbol(":statement-sites")),
+                Term::Vector(vec![Term::Map(
+                    [
+                        (TermOrdKey(Term::symbol(":hits")), Term::Int(1.into())),
+                        (TermOrdKey(Term::symbol(":site")), Term::Str("st1".into())),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )]),
+            ),
+            (TermOrdKey(Term::symbol(":test-count")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":tests")), Term::Vector(Vec::new())),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+#[test]
+fn coverage_authority_decides_profiles_and_rejects_open_observations() {
+    let frontend = fixture_frontend();
+    for (operation, profile, branch_complete, mcdc_complete, expected) in [
+        (":coverage", ":symbol", false, false, true),
+        (":coverage-decision", ":decision", false, false, false),
+        (":coverage-decision", ":decision", true, false, true),
+        (":coverage-mcdc", ":mcdc", true, false, false),
+        (":coverage-mcdc", ":mcdc", true, true, true),
+    ] {
+        let request = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":inputs")),
+                    coverage_observation(profile, branch_complete, mcdc_complete),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/obligation-authority-request-v0.2".into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":operation")),
+                    Term::symbol(operation),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":package")),
+                    Term::Str("fixture".into()),
+                ),
+                (TermOrdKey(Term::symbol(":v")), Term::Int(2.into())),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let result = invoke_authority(request, &frontend, limits()).expect("coverage result");
+        assert_eq!(term_map_get_bool(&result, ":ok"), Some(expected));
+    }
+
+    let mut inputs = coverage_observation(":symbol", false, false);
+    let Term::Map(map) = &mut inputs else {
+        panic!("coverage inputs must be a map");
+    };
+    map.insert(TermOrdKey(Term::symbol(":extra")), Term::Bool(true));
+    let request = authority_request_term(ObligationAuthorityOperation::Coverage, "fixture", inputs);
+    let error = invoke_authority(request, &frontend, limits())
+        .expect_err("open coverage observations must fail");
+    assert!(error.to_string().contains("sealed error"));
+}
+
+#[test]
+fn coverage_decoder_rejects_request_and_report_tampering() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
+    let (manifest, _) = PackageManifest::load(
+        &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("tests/spec/pkg_basic/package.toml"),
+    )
+    .expect("fixture manifest");
+    let inputs = coverage_observation(":decision", false, false);
+    let request = authority_request_term(
+        ObligationAuthorityOperation::CoverageDecision,
+        &manifest.name,
+        inputs.clone(),
+    );
+    let request_hash = hash_term(&request);
+    let result =
+        invoke_authority(request, &fixture_frontend(), limits()).expect("coverage decision result");
+    let Term::Map(result_map) = &result else {
+        panic!("coverage result must be a map");
+    };
+    let expected_errors = string_vector(
+        required_field(result_map, ":errors", "coverage result").expect("errors"),
+        "coverage errors",
+    )
+    .expect("error vector");
+    let expected_report = required_field(result_map, ":report", "coverage result")
+        .expect("report")
+        .clone();
+    let observation = CoverageAuthorityObservation {
+        inputs,
+        expected_ok: false,
+        expected_errors,
+        expected_report,
+    };
+
+    let mut report_tamper = result.clone();
+    let Term::Map(outer) = &mut report_tamper else {
+        panic!("coverage result must be a map");
+    };
+    let Some(Term::Map(report)) = outer.get_mut(&TermOrdKey(Term::symbol(":report"))) else {
+        panic!("coverage report must be a map");
+    };
+    report.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+    let error = decode_coverage_result(
+        &store,
+        ObligationAuthorityOperation::CoverageDecision,
+        &observation,
+        request_hash,
+        report_tamper,
+    )
+    .expect_err("tampered coverage report must fail closed");
+    assert!(error.to_string().contains("contradicts instrumentation"));
+
+    let error = decode_coverage_result(
+        &store,
+        ObligationAuthorityOperation::CoverageDecision,
+        &observation,
+        [0; 32],
+        result,
+    )
+    .expect_err("coverage result bound to another request must fail closed");
+    assert!(error.to_string().contains("identity mismatch"));
+}
+
 #[test]
 fn property_authority_plans_exact_seeds_and_rejects_seed_tampering() {
     let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))

@@ -2,10 +2,17 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "1cb2e6a6aeec81dec6a382105fe28ac195dd619ede7d54614e18a3b6e7d539dc",
+  "contentIdentitySha256": "7a773b994ba80e0b10fdec306e5f426ca5098cf13e4b43a67a9d7ba23c5d8767",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
+    "coverage-decision-count",
+    "coverage-decision-sample",
+    "coverage-export-hit-count",
+    "coverage-missing-effect-log-test",
+    "coverage-per-test-instrumentation",
+    "coverage-statement-site-hit-count",
+    "coverage-test-count",
     "effect-entry-count",
     "effect-log-artifact",
     "effect-log-byte-count",
@@ -42,6 +49,9 @@
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
     "core/obligation::concurrency-replay",
+    "core/obligation::coverage",
+    "core/obligation::coverage-decision",
+    "core/obligation::coverage-mcdc",
     "core/obligation::determinism",
     "core/obligation::lint",
     "core/obligation::property-tests",
@@ -66,9 +76,6 @@
     "genesis_wasi"
   ],
   "residualObligations": [
-    "core/obligation::coverage",
-    "core/obligation::coverage-decision",
-    "core/obligation::coverage-mcdc",
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
@@ -91,9 +98,10 @@
     "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_property_v1.gc",
     "selfhost/obligation_authority_stage_v1.gc",
+    "selfhost/obligation_authority_coverage_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "ec45d418d70aa227eb60998b3025fc2383a7db4d540a2f25fdd842b37d15ec0b",
+  "sourceSetSha256": "20d7659f9a62af887d22f7671b3ad58482003e495db46b4abfe37772efc01c7a",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

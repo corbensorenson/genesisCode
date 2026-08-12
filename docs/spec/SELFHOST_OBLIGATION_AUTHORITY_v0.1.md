@@ -10,6 +10,8 @@ does not promote the ledger row or close R4.2.d.
 `core/obligation::replayable-tests`, `core/obligation::concurrency-replay`,
 `core/obligation::property-tests`,
 `core/obligation::stage1-validation`,
+`core/obligation::coverage`, `core/obligation::coverage-decision`,
+`core/obligation::coverage-mcdc`,
 `core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
 The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
@@ -154,6 +156,30 @@ the exact `genesis/stage1-validation-v0.2` report. The host independently
 reconstructs that report only to reject request substitution, malformed outcomes,
 or contradictory output before persistence.
 
+For `:coverage`, `:coverage-decision`, and `:coverage-mcdc`, `:inputs` contains
+exactly `:profile`, `:test-count`, ordered tracked `:exports`, ordered expected
+`:statement-sites`, ordered expected `:decision-sites`, aggregate `:decision`
+counts, ordered per-test instrumentation in `:tests`, and ordered test names in
+`:missing-effect-logs`. Export and statement observations contain only identity
+and nonnegative hit count. A decision observation contains only its site identity,
+ordered expected condition identities, nonnegative total/true/false counts, and
+ordered raw samples; each sample contains its raw outcome and ordered
+condition/value pairs. The host discovers static sites, executes and replays tests
+under caller limits, and aggregates instrumentation with saturating counters. It
+does not transport missing-site, branch-complete, MC/DC-independent, error,
+pass/fail, or report facts.
+
+GenesisCode validates the closed observations and owns all three profiles. Symbol
+coverage rejects uncovered non-test exports. Decision coverage additionally
+requires every expected statement site to be hit and every expected decision site
+to have nonzero total, true, and false counts. MC/DC additionally requires, for
+each expected condition, two complete samples where only that condition changes
+and the decision outcome changes. GenesisCode preserves export, statement,
+decision-site, condition, and sample order; derives the legacy ordered errors; and
+emits the exact `genesis/coverage-v0.2` report. The host independently reconstructs
+the same decision only to reject malformed, substituted, or contradictory output,
+then persists the validated GenesisCode report.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -171,6 +197,9 @@ the exact concurrent-test count. Property reports preserve
 `genesis/property-test-plan-v0.1` and is never acceptance evidence by itself.
 Stage1 reports preserve `genesis/stage1-validation-v0.2`, including ordered
 per-module optimizer observations and aggregate path-prefixed errors.
+Coverage reports preserve `genesis/coverage-v0.2`, including the exact profile,
+per-test instrumentation, aggregate structural counts, ordered site decisions,
+MC/DC status, missing inventories, and errors.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -213,6 +242,13 @@ counters, and a
 strict contradiction decoder; GenesisCode alone derives stage1 equivalence policy,
 errors, pass/fail, and the persisted report.
 
+The former reachable Rust coverage report-persistence path is absent from
+production obligation execution. Rust retains static instrumentation discovery,
+caller-bounded test evaluation, strict effect-log replay, raw counter/sample
+collection, deterministic aggregation, and an independently checked contradiction
+implementation. GenesisCode alone applies symbol, statement, decision, and MC/DC
+policy and produces the persisted report.
+
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
 set, artifact,
 entrypoint, migrated and residual obligation inventories, primitive host facts, and
@@ -233,13 +269,15 @@ replay observations, missing task scheduling fields, contradictory concurrent
 counts, exact property seeds, full passing case execution, first-case failure, and
 seed-plan tampering. Stage1 controls cover pure equivalence, raw evaluation
 failure, pure-value mismatch, open observation rejection, exact request binding,
-and report tampering. Runtime
+and report tampering. Coverage controls exercise all three profiles, missing
+branches, missing MC/DC independence, open observations, exact request binding,
+report tampering, and a real uncovered-export package. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 8 obligation kinds remain host-authoritative or only partially routed.
+The other 5 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

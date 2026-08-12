@@ -4,6 +4,8 @@ use super::*;
 mod obligation_exec_budgets;
 #[path = "obligation_exec_coverage.rs"]
 mod obligation_exec_coverage;
+#[path = "obligation_exec_coverage_finalize.rs"]
+mod obligation_exec_coverage_finalize;
 #[cfg(test)]
 #[path = "obligation_exec_coverage_profile_tests.rs"]
 mod obligation_exec_coverage_profile_tests;
@@ -13,7 +15,10 @@ mod obligation_exec_replay;
 mod obligation_exec_tests;
 #[cfg(test)]
 pub(crate) use obligation_exec_coverage::mcdc_independence_for_site;
-pub(crate) use obligation_exec_coverage::{CoverageProfile, CoverageRunArgs, obligation_coverage};
+pub(crate) use obligation_exec_coverage::{
+    CoverageAuthorityObservation, CoverageProfile, CoverageRunArgs, obligation_coverage,
+};
+pub(super) use obligation_exec_coverage_finalize::coverage_authority_observation;
 pub(super) use obligation_exec_replay::{replay_observations, run_replay_authority};
 
 pub(super) fn obligation_property_tests(

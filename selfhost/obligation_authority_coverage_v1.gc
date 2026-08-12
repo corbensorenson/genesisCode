@@ -1,0 +1,523 @@
+(def selfhost/obligation::coverage-profile-valid?
+  (fn (profile)
+    (if (selfhost/obligation::sym? profile)
+      (if ((core/sym::eq? profile) (quote :symbol))
+        true
+        (if ((core/sym::eq? profile) (quote :decision))
+          true
+          ((core/sym::eq? profile) (quote :mcdc))))
+      false)))
+
+(def selfhost/obligation::coverage-structural?
+  (fn (profile) (if ((core/sym::eq? profile) (quote :symbol)) false true)))
+
+(def selfhost/obligation::coverage-mcdc? (fn (profile) ((core/sym::eq? profile) (quote :mcdc))))
+
+(def selfhost/obligation::coverage-name
+  (fn (profile)
+    (if ((core/sym::eq? profile) (quote :symbol))
+      "core/obligation::coverage"
+      (if ((core/sym::eq? profile) (quote :decision))
+        "core/obligation::coverage-decision"
+        "core/obligation::coverage-mcdc"))))
+
+(def selfhost/obligation::coverage-operation
+  (fn (profile)
+    (if ((core/sym::eq? profile) (quote :symbol))
+      (quote :coverage)
+      (if ((core/sym::eq? profile) (quote :decision))
+        (quote :coverage-decision)
+        (quote :coverage-mcdc)))))
+
+(def selfhost/obligation::coverage-count-row-valid?
+  (fn (row)
+    (if (selfhost/obligation::map? row)
+      (if ((core/int::eq? (core/map::len row)) 2)
+        (if (selfhost/obligation::sym? ((core/map::get row) (quote :sym)))
+          (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :hits)))
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::coverage-site-row-valid?
+  (fn (row)
+    (if (selfhost/obligation::map? row)
+      (if ((core/int::eq? (core/map::len row)) 2)
+        (if (selfhost/obligation::str? ((core/map::get row) (quote :site)))
+          (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :hits)))
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::coverage-decision-counts-valid?
+  (fn (row)
+    (if (selfhost/obligation::map? row)
+      (if ((core/int::eq? (core/map::len row)) 3)
+        (if (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :total)))
+          (if (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :taken-true)))
+            (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :taken-false)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::coverage-condition-value-valid?
+  (fn (row)
+    (if (selfhost/obligation::map? row)
+      (if ((core/int::eq? (core/map::len row)) 2)
+        (if (selfhost/obligation::sym? ((core/map::get row) (quote :sym)))
+          (selfhost/obligation::bool? ((core/map::get row) (quote :value)))
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::coverage-vector-valid-loop?
+  (fn (values)
+    (fn (validator)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          true
+          (if (validator ((core/vec::get values) index))
+            (((selfhost/obligation::coverage-vector-valid-loop? values) validator)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/obligation::coverage-vector-valid?
+  (fn (values)
+    (fn (validator)
+      (if (selfhost/obligation::vec? values)
+        (((selfhost/obligation::coverage-vector-valid-loop? values) validator) 0)
+        false))))
+
+(def selfhost/obligation::coverage-sample-valid?
+  (fn (sample)
+    (if (selfhost/obligation::map? sample)
+      (if ((core/int::eq? (core/map::len sample)) 2)
+        (if (selfhost/obligation::bool? ((core/map::get sample) (quote :outcome)))
+          ((selfhost/obligation::coverage-vector-valid? ((core/map::get sample) (quote :conditions)))
+            selfhost/obligation::coverage-condition-value-valid?)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::coverage-decision-row-valid?
+  (fn (row)
+    (if (selfhost/obligation::map? row)
+      (if ((core/int::eq? (core/map::len row)) 6)
+        (if (selfhost/obligation::str? ((core/map::get row) (quote :site)))
+          (if (selfhost/obligation::symbol-vector-valid? ((core/map::get row) (quote :conditions)))
+            (if
+              ((selfhost/obligation::coverage-vector-valid? ((core/map::get row) (quote :samples)))
+                selfhost/obligation::coverage-sample-valid?)
+              (if (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :total)))
+                (if
+                  (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :taken-true)))
+                  (selfhost/obligation::nonnegative-int? ((core/map::get row) (quote :taken-false)))
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::coverage-string-vector-valid-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/obligation::str? ((core/vec::get values) index))
+          ((selfhost/obligation::coverage-string-vector-valid-loop? values)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/obligation::coverage-string-vector-valid?
+  (fn (values)
+    (if (selfhost/obligation::vec? values)
+      ((selfhost/obligation::coverage-string-vector-valid-loop? values) 0)
+      false)))
+
+(def selfhost/obligation::coverage-inputs-valid?
+  (fn (inputs)
+    (if (selfhost/obligation::map? inputs)
+      (if ((core/int::eq? (core/map::len inputs)) 8)
+        (if (selfhost/obligation::coverage-profile-valid? ((core/map::get inputs) (quote :profile)))
+          (if (selfhost/obligation::nonnegative-int? ((core/map::get inputs) (quote :test-count)))
+            (if
+              ((selfhost/obligation::coverage-vector-valid? ((core/map::get inputs) (quote :exports)))
+                selfhost/obligation::coverage-count-row-valid?)
+              (if
+                ((selfhost/obligation::coverage-vector-valid? ((core/map::get inputs) (quote :statement-sites)))
+                  selfhost/obligation::coverage-site-row-valid?)
+                (if
+                  ((selfhost/obligation::coverage-vector-valid? ((core/map::get inputs) (quote :decision-sites)))
+                    selfhost/obligation::coverage-decision-row-valid?)
+                  (if
+                    (selfhost/obligation::coverage-decision-counts-valid?
+                      ((core/map::get inputs) (quote :decision)))
+                    (if
+                      (selfhost/obligation::coverage-string-vector-valid?
+                        ((core/map::get inputs) (quote :missing-effect-logs)))
+                      (selfhost/obligation::vec? ((core/map::get inputs) (quote :tests)))
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::coverage-effect-errors-loop
+  (fn (names)
+    (fn (index)
+      (fn (errors)
+        (if ((core/int::eq? index) (core/vec::len names))
+          errors
+          (((selfhost/obligation::coverage-effect-errors-loop names) ((core/int::add index) 1))
+            ((core/vec::push errors)
+              ((core/str::concat "coverage: test ")
+                ((core/str::concat ((core/vec::get names) index))
+                  " returned effect program but no effect log was recorded")))))))))
+
+(def selfhost/obligation::coverage-exports-loop
+  (fn (rows)
+    (fn (index)
+      (fn (missing)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len rows))
+            {:errors errors :missing missing}
+            (let ((row ((core/vec::get rows) index)))
+              (if ((core/int::eq? ((core/map::get row) (quote :hits))) 0)
+                (
+                  (((selfhost/obligation::coverage-exports-loop rows) ((core/int::add index) 1))
+                    ((core/vec::push missing) ((core/map::get row) (quote :sym))))
+                  ((core/vec::push errors)
+                    ((core/str::concat "export not covered: ")
+                      (core/sym::to-str ((core/map::get row) (quote :sym))))))
+                ((((selfhost/obligation::coverage-exports-loop rows) ((core/int::add index) 1)) missing)
+                  errors)))))))))
+
+(def selfhost/obligation::coverage-statements-loop
+  (fn (rows)
+    (fn (index)
+      (fn (reports)
+        (fn (missing)
+          (if ((core/int::eq? index) (core/vec::len rows))
+            {:missing missing :reports reports}
+            (let ((row ((core/vec::get rows) index)))
+              (let ((ok (if ((core/int::eq? ((core/map::get row) (quote :hits))) 0) false true)))
+                (
+                  (((selfhost/obligation::coverage-statements-loop rows) ((core/int::add index) 1))
+                    ((core/vec::push reports)
+                      {
+                        :hits ((core/map::get row) (quote :hits))
+                        :ok ok
+                        :site ((core/map::get row) (quote :site))}))
+                  (if ok missing ((core/vec::push missing) ((core/map::get row) (quote :site)))))))))))))
+
+(def selfhost/obligation::coverage-find-condition-loop
+  (fn (values)
+    (fn (symbol)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          nil
+          (let ((row ((core/vec::get values) index)))
+            (if ((core/sym::eq? ((core/map::get row) (quote :sym))) symbol)
+              ((core/map::get row) (quote :value))
+              (((selfhost/obligation::coverage-find-condition-loop values) symbol)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/obligation::coverage-find-condition
+  (fn (sample)
+    (fn (symbol)
+      (
+        ((selfhost/obligation::coverage-find-condition-loop ((core/map::get sample) (quote :conditions)))
+          symbol)
+        0))))
+
+(def selfhost/obligation::coverage-others-equal-loop?
+  (fn (conditions)
+    (fn (target)
+      (fn (a)
+        (fn (b)
+          (fn (index)
+            (if ((core/int::eq? index) (core/vec::len conditions))
+              true
+              (let ((condition ((core/vec::get conditions) index)))
+                (if ((core/sym::eq? condition) target)
+                  (((((selfhost/obligation::coverage-others-equal-loop? conditions) target) a) b)
+                    ((core/int::add index) 1))
+                  (if
+                    ((core/eq? ((selfhost/obligation::coverage-find-condition a) condition))
+                      ((selfhost/obligation::coverage-find-condition b) condition))
+                    (((((selfhost/obligation::coverage-others-equal-loop? conditions) target) a) b)
+                      ((core/int::add index) 1))
+                    false))))))))))
+
+(def selfhost/obligation::coverage-independent-pair?
+  (fn (conditions)
+    (fn (target)
+      (fn (a)
+        (fn (b)
+          (let
+            ((av ((selfhost/obligation::coverage-find-condition a) target))
+              (bv ((selfhost/obligation::coverage-find-condition b) target)))
+            (if (selfhost/obligation::nil? av)
+              false
+              (if (selfhost/obligation::nil? bv)
+                false
+                (if ((core/eq? av) bv)
+                  false
+                  (if
+                    ((core/eq? ((core/map::get a) (quote :outcome)))
+                      ((core/map::get b) (quote :outcome)))
+                    false
+                    (((((selfhost/obligation::coverage-others-equal-loop? conditions) target) a) b)
+                      0)))))))))))
+
+(def selfhost/obligation::coverage-independent-inner?
+  (fn (samples)
+    (fn (conditions)
+      (fn (target)
+        (fn (a-index)
+          (fn (b-index)
+            (if ((core/int::eq? b-index) (core/vec::len samples))
+              false
+              (if
+                (
+                  (((selfhost/obligation::coverage-independent-pair? conditions) target)
+                    ((core/vec::get samples) a-index))
+                  ((core/vec::get samples) b-index))
+                true
+                (((((selfhost/obligation::coverage-independent-inner? samples) conditions) target) a-index)
+                  ((core/int::add b-index) 1))))))))))
+
+(def selfhost/obligation::coverage-independent?
+  (fn (samples)
+    (fn (conditions)
+      (fn (target)
+        (fn (index)
+          (if ((core/int::eq? index) (core/vec::len samples))
+            false
+            (if
+              (((((selfhost/obligation::coverage-independent-inner? samples) conditions) target) index)
+                ((core/int::add index) 1))
+              true
+              ((((selfhost/obligation::coverage-independent? samples) conditions) target)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/obligation::coverage-mcdc-conditions-loop
+  (fn (conditions)
+    (fn (samples)
+      (fn (index)
+        (fn (reports)
+          (fn (missing)
+            (if ((core/int::eq? index) (core/vec::len conditions))
+              {:missing missing :reports reports}
+              (let ((condition ((core/vec::get conditions) index)))
+                (let
+                  ((independent ((((selfhost/obligation::coverage-independent? samples) conditions) condition) 0)))
+                  (
+                    (
+                      (((selfhost/obligation::coverage-mcdc-conditions-loop conditions) samples)
+                        ((core/int::add index) 1))
+                      ((core/vec::push reports) {:independent independent :sym condition}))
+                    (if independent missing ((core/vec::push missing) condition))))))))))))
+
+(def selfhost/obligation::coverage-decisions-loop
+  (fn (rows)
+    (fn (index)
+      (fn (reports)
+        (fn (missing-decisions)
+          (fn (mcdc-reports)
+            (fn (missing-mcdc)
+              (if ((core/int::eq? index) (core/vec::len rows))
+                {
+                  :mcdc mcdc-reports
+                  :missing-decisions missing-decisions
+                  :missing-mcdc missing-mcdc
+                  :reports reports}
+                (let ((row ((core/vec::get rows) index)))
+                  (let
+                    (
+                      (branch-ok
+                        (if ((core/int::eq? ((core/map::get row) (quote :total))) 0)
+                          false
+                          (if ((core/int::eq? ((core/map::get row) (quote :taken-true))) 0)
+                            false
+                            (if ((core/int::eq? ((core/map::get row) (quote :taken-false))) 0)
+                              false
+                              true)))))
+                    (let
+                      (
+                        (mcdc
+                          (
+                            (
+                              (
+                                ((selfhost/obligation::coverage-mcdc-conditions-loop ((core/map::get row) (quote :conditions)))
+                                  ((core/map::get row) (quote :samples)))
+                                0)
+                              [])
+                            [])))
+                      (
+                        (
+                          (
+                            (((selfhost/obligation::coverage-decisions-loop rows) ((core/int::add index) 1))
+                              ((core/vec::push reports)
+                                {
+                                  :conditions ((core/map::get row) (quote :conditions))
+                                  :ok branch-ok
+                                  :site ((core/map::get row) (quote :site))
+                                  :taken-false ((core/map::get row) (quote :taken-false))
+                                  :taken-true ((core/map::get row) (quote :taken-true))
+                                  :total ((core/map::get row) (quote :total))}))
+                            (if branch-ok
+                              missing-decisions
+                              ((core/vec::push missing-decisions)
+                                ((core/map::get row) (quote :site)))))
+                          ((core/vec::push mcdc-reports)
+                            {
+                              :conditions ((core/map::get mcdc) (quote :reports))
+                              :site ((core/map::get row) (quote :site))}))
+                        (if
+                          ((core/int::eq? (core/vec::len ((core/map::get mcdc) (quote :missing)))) 0)
+                          missing-mcdc
+                          ((core/vec::push missing-mcdc)
+                            {
+                              :missing-conditions ((core/map::get mcdc) (quote :missing))
+                              :site ((core/map::get row) (quote :site))}))))))))))))))
+
+(def selfhost/obligation::coverage-count-error
+  (fn (prefix)
+    (fn (count)
+      (fn (suffix) ((core/str::concat prefix) ((core/str::concat (core/int::to-str count)) suffix))))))
+
+(def selfhost/obligation::coverage
+  (fn (package)
+    (fn (inputs)
+      (if (selfhost/obligation::coverage-inputs-valid? inputs)
+        (let
+          ((profile ((core/map::get inputs) (quote :profile)))
+            (exports ((core/map::get inputs) (quote :exports)))
+            (statements ((core/map::get inputs) (quote :statement-sites)))
+            (decisions ((core/map::get inputs) (quote :decision-sites))))
+          (let
+            (
+              (errors0
+                (if
+                  (if ((core/int::eq? ((core/map::get inputs) (quote :test-count))) 0)
+                    (if ((core/int::eq? (core/vec::len exports)) 0)
+                      (selfhost/obligation::coverage-structural? profile)
+                      true)
+                    false)
+                  ((core/vec::push [])
+                    "coverage requires unit tests (package.toml `tests` is empty)")
+                  [])))
+            (let
+              (
+                (errors1
+                  (
+                    (
+                      (selfhost/obligation::coverage-effect-errors-loop
+                        ((core/map::get inputs) (quote :missing-effect-logs)))
+                      0)
+                    errors0)))
+              (let
+                ((export-state ((((selfhost/obligation::coverage-exports-loop exports) 0) []) errors1)))
+                (let
+                  ((statement-state ((((selfhost/obligation::coverage-statements-loop statements) 0) []) [])))
+                  (let
+                    ((decision-state ((((((selfhost/obligation::coverage-decisions-loop decisions) 0) []) []) []) [])))
+                    (let ((errors2 ((core/map::get export-state) (quote :errors))))
+                      (let
+                        ((statement-missing ((core/map::get statement-state) (quote :missing)))
+                          (decision-missing
+                            ((core/map::get decision-state) (quote :missing-decisions)))
+                          (mcdc-missing ((core/map::get decision-state) (quote :missing-mcdc))))
+                        (let
+                          (
+                            (errors3
+                              (if
+                                (if (selfhost/obligation::coverage-structural? profile)
+                                  (if ((core/int::eq? (core/vec::len statement-missing)) 0)
+                                    false
+                                    true)
+                                  false)
+                                ((core/vec::push errors2)
+                                  (
+                                    ((selfhost/obligation::coverage-count-error "statement-site coverage missing ")
+                                      (core/vec::len statement-missing))
+                                    " site(s)"))
+                                errors2)))
+                          (let
+                            (
+                              (errors4
+                                (if
+                                  (if (selfhost/obligation::coverage-structural? profile)
+                                    (if ((core/int::eq? (core/vec::len decision-missing)) 0)
+                                      false
+                                      true)
+                                    false)
+                                  ((core/vec::push errors3)
+                                    (
+                                      ((selfhost/obligation::coverage-count-error "decision coverage missing branch outcomes on ")
+                                        (core/vec::len decision-missing))
+                                      " site(s)"))
+                                  errors3)))
+                            (let
+                              (
+                                (errors5
+                                  (if
+                                    (if (selfhost/obligation::coverage-mcdc? profile)
+                                      (if ((core/int::eq? (core/vec::len mcdc-missing)) 0)
+                                        false
+                                        true)
+                                      false)
+                                    ((core/vec::push errors4)
+                                      (
+                                        ((selfhost/obligation::coverage-count-error "mcdc coverage missing condition independence on ")
+                                          (core/vec::len mcdc-missing))
+                                        " decision site(s)"))
+                                    errors4)))
+                              (let ((ok ((core/int::eq? (core/vec::len errors5)) 0)))
+                                (let
+                                  (
+                                    (report0
+                                      {
+                                        :definition "exports minus (tests, property_tests)"
+                                        :exports exports
+                                        :kind "genesis/coverage-v0.2"
+                                        :missing ((core/map::get export-state) (quote :missing))
+                                        :ok ok
+                                        :package package
+                                        :profile profile
+                                        :structural
+                                          {
+                                            :decision ((core/map::get inputs) (quote :decision))
+                                            :decision-sites
+                                              ((core/map::get decision-state) (quote :reports))
+                                            :expected
+                                              {
+                                                :decision-sites (core/vec::len decisions)
+                                                :statement-sites (core/vec::len statements)}
+                                            :mcdc ((core/map::get decision-state) (quote :mcdc))
+                                            :missing-decision-sites decision-missing
+                                            :missing-mcdc-sites mcdc-missing
+                                            :missing-statement-sites statement-missing
+                                            :statement-sites
+                                              ((core/map::get statement-state) (quote :reports))}
+                                        :tests ((core/map::get inputs) (quote :tests))}))
+                                  (let
+                                    ((report (if ok report0 (((core/map::put report0) (quote :errors)) errors5))))
+                                    {
+                                      :errors errors5
+                                      :kind selfhost/obligation::RESULT_KIND
+                                      :name (selfhost/obligation::coverage-name profile)
+                                      :ok ok
+                                      :operation (selfhost/obligation::coverage-operation profile)
+                                      :report report
+                                      :v 2}))))))))))))))
+        (selfhost/obligation::error
+          "coverage inputs must contain exactly valid closed instrumentation observations")))))

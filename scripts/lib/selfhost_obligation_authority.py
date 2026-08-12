@@ -74,6 +74,9 @@ MIGRATED = [
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
     "core/obligation::concurrency-replay",
+    "core/obligation::coverage",
+    "core/obligation::coverage-decision",
+    "core/obligation::coverage-mcdc",
     "core/obligation::determinism",
     "core/obligation::lint",
     "core/obligation::property-tests",
@@ -84,9 +87,6 @@ MIGRATED = [
     "core/obligation::unit-tests",
 ]
 RESIDUAL = [
-    "core/obligation::coverage",
-    "core/obligation::coverage-decision",
-    "core/obligation::coverage-mcdc",
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
@@ -103,6 +103,7 @@ SOURCE_MODULES = [
     "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_property_v1.gc",
     "selfhost/obligation_authority_stage_v1.gc",
+    "selfhost/obligation_authority_coverage_v1.gc",
     "selfhost/obligation_authority_v1.gc",
 ]
 
@@ -136,6 +137,13 @@ def validate(profile, schema, check_identity=True):
         "hostFacts": [
             "actual-value-hash",
             "canonical-module-forms",
+            "coverage-decision-count",
+            "coverage-decision-sample",
+            "coverage-export-hit-count",
+            "coverage-missing-effect-log-test",
+            "coverage-per-test-instrumentation",
+            "coverage-statement-site-hit-count",
+            "coverage-test-count",
             "effect-entry-count",
             "effect-log-artifact",
             "effect-log-byte-count",
@@ -237,6 +245,8 @@ def validate_bridge(bridge: str) -> None:
         "evaluate_stage1_obligation_with_authority(",
         "decode_stage1_result(",
         "stage1_inputs(",
+        "evaluate_coverage_obligation_with_authority(",
+        "decode_coverage_result(",
         "replay_observations(",
         "run_replay_authority(",
         "decode_artifact_transport(",
@@ -263,6 +273,8 @@ def validate_bridge(bridge: str) -> None:
         "property_authority_plans_exact_seeds_and_rejects_seed_tampering",
         "stage1_authority_aggregates_failures_and_rejects_report_tampering",
         "stage1_eval_observation_obeys_caller_step_limit",
+        "coverage_authority_decides_profiles_and_rejects_open_observations",
+        "coverage_decoder_rejects_request_and_report_tampering",
     ]
     for token in required:
         if token not in bridge:
@@ -296,6 +308,8 @@ def static_check(root: Path, profile):
         fail("self-host property obligation route is absent")
     if "selfhost/obligation::stage1-validation" not in combined_sources:
         fail("self-host stage1 obligation route is absent")
+    if "selfhost/obligation::coverage" not in combined_sources:
+        fail("self-host coverage obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -314,6 +328,9 @@ def static_check(root: Path, profile):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_stage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_coverage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_replay.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_tests.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
@@ -353,10 +370,16 @@ def static_check(root: Path, profile):
         "obligation_stage1_validation(&store, &manifest, &modules, &frontend, limits)"
     ) != 1:
         fail("stage1 authority production dispatch drift")
+    if types_api.count("obligation_coverage(CoverageRunArgs {") != 3:
+        fail("coverage authority production dispatch drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
     stage_host = (root / "crates/gc_obligations/src/obligation_stage.rs").read_text()
+    coverage_execution = (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
+    coverage_host = coverage_execution + (
+        root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs"
+    ).read_text()
     lint_host = (root / "crates/gc_obligations/src/obligation_lint.rs").read_text()
     replay_host = (root / "crates/gc_obligations/src/obligation_exec_replay.rs").read_text()
     property_host = (root / "crates/gc_obligations/src/obligation_exec_tests.rs").read_text()
@@ -422,6 +445,18 @@ def static_check(root: Path, profile):
             fail(f"reachable host stage1 policy restored: {token}")
     if stage1_execution.count("evaluate_stage1_obligation_with_authority(") != 1:
         fail("stage1 authority invocation drift")
+    if coverage_host.count("evaluate_coverage_obligation_with_authority(") != 1:
+        fail("coverage authority invocation drift")
+    if "store.put_term(&report)" in coverage_host:
+        fail("reachable host coverage report persistence restored")
+    for token in (
+        "export not covered:",
+        "statement-site coverage missing",
+        "decision coverage missing branch outcomes",
+        "mcdc coverage missing condition independence",
+    ):
+        if token in coverage_execution:
+            fail(f"reachable coverage execution policy restored: {token}")
     obligation_typecheck = unit_host.split("pub(super) fn obligation_typecheck(", 1)[1].split(
         "pub(super) fn typecheck_report_with_frontend(", 1
     )[0]
@@ -603,6 +638,23 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
                 "core/obligation::concurrency-replay",
             ],
         ),
+        (
+            "tests/obligation/coverage_profiles",
+            0,
+            True,
+            [
+                "core/obligation::unit-tests",
+                "core/obligation::coverage",
+                "core/obligation::coverage-decision",
+                "core/obligation::coverage-mcdc",
+            ],
+        ),
+        (
+            "tests/spec/pkg_fail_coverage",
+            30,
+            False,
+            ["core/obligation::unit-tests", "core/obligation::coverage"],
+        ),
     ]
     all_observations = []
     for binary in binaries:
@@ -651,6 +703,9 @@ def self_test(root: Path, profile, schema):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_stage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_coverage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_exec_coverage_finalize.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_tests.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
     redirected = "resolved_authority_frontend = default_coreform_frontend();"
@@ -692,6 +747,8 @@ def self_test(root: Path, profile, schema):
         ("property-host-facts", "property_authority_context("),
         ("stage1-route", "decode_stage1_result("),
         ("stage1-host-facts", "stage1_inputs("),
+        ("coverage-route", "decode_coverage_result("),
+        ("coverage-host-facts", "evaluate_coverage_obligation_with_authority("),
     ]:
         try:
             validate_bridge(bridge.replace(route, ""))

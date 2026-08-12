@@ -1,0 +1,15 @@
+dependencies = []
+name = "pkg_coverage_profiles"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::coverage",
+    "core/obligation::coverage-decision",
+    "core/obligation::coverage-mcdc",
+]
+schema = 1
+tests = ["pkg/coverage::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "d1cc7344e16bea868103d1ff53b69612bd3aa04577f61f81dbe6905c8c42d99f"
+path = "coverage.gc"

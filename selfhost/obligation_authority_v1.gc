@@ -45,7 +45,11 @@
                               ((selfhost/obligation::property-authority package) inputs)
                               (if ((core/sym::eq? operation) (quote :stage1-validation))
                                 ((selfhost/obligation::stage1-validation package) inputs)
-                                (selfhost/obligation::error "unknown obligation authority operation")))))))))))))))))
+                                (if (if ((core/sym::eq? operation) (quote :coverage)) true
+                                      (if ((core/sym::eq? operation) (quote :coverage-decision)) true
+                                        ((core/sym::eq? operation) (quote :coverage-mcdc))))
+                                  ((selfhost/obligation::coverage package) inputs)
+                                  (selfhost/obligation::error "unknown obligation authority operation"))))))))))))))))))
 
 (def core/cli::obligation-authority
   (fn (request)
