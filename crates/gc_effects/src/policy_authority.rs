@@ -12,7 +12,7 @@ use crate::error::EffectsError;
 
 use super::{
     AuthorizedCryptoPolicy, AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
-    AuthorizedProcessPrograms, CapsPolicy, OpPolicy,
+    AuthorizedPluginPolicy, AuthorizedProcessPrograms, CapsPolicy, OpPolicy,
 };
 
 #[path = "policy_authority_cap.rs"]
@@ -23,6 +23,8 @@ mod crypto;
 mod database;
 #[path = "policy_authority_network.rs"]
 mod network;
+#[path = "policy_authority_plugin.rs"]
+mod plugin;
 #[path = "policy_authority_process.rs"]
 mod process;
 #[path = "policy_authority_resource.rs"]
@@ -54,6 +56,13 @@ pub(super) fn decode_crypto_policy(
     allowed: bool,
 ) -> Result<AuthorizedCryptoPolicy, EffectsError> {
     crypto::decode(term, allowed)
+}
+#[cfg(test)]
+pub(super) fn decode_plugin_policy(
+    term: &Term,
+    allowed: bool,
+) -> Result<AuthorizedPluginPolicy, EffectsError> {
+    plugin::decode(term, allowed)
 }
 #[cfg(test)]
 pub(super) fn decode_cap(
@@ -157,6 +166,10 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
                 network::input(table),
             ),
             (
+                TermOrdKey(Term::symbol(":plugin-policy")),
+                plugin::input(table),
+            ),
+            (
                 TermOrdKey(Term::symbol(":process-programs")),
                 process::input(table.get("allow_programs")),
             ),
@@ -179,7 +192,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.7".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.8".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
@@ -187,7 +200,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(7.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(8.into())),
         ]
         .into_iter()
         .collect(),
@@ -314,6 +327,7 @@ struct AuthorizedOperation {
     database: AuthorizedDatabasePolicy,
     network: AuthorizedNetworkPolicy,
     crypto: AuthorizedCryptoPolicy,
+    plugin: AuthorizedPluginPolicy,
     cap: Term,
 }
 
@@ -393,6 +407,7 @@ fn decode_result(
         ":max-bytes-policy",
         ":network-policy",
         ":op",
+        ":plugin-policy",
         ":process-program-policy",
         ":request-h",
         ":v",
@@ -403,8 +418,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.7")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &7.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.8")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &8.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -459,6 +474,11 @@ fn decode_result(
             .ok_or_else(|| authority_error("result is missing :crypto-policy"))?,
         allowed,
     )?;
+    let plugin = plugin::decode(
+        map.get(&TermOrdKey(Term::symbol(":plugin-policy")))
+            .ok_or_else(|| authority_error("result is missing :plugin-policy"))?,
+        allowed,
+    )?;
     Ok(AuthorizedOperation {
         allowed,
         base_dir,
@@ -470,6 +490,7 @@ fn decode_result(
         database,
         network,
         crypto,
+        plugin,
         cap,
     })
 }
@@ -591,6 +612,7 @@ pub(super) fn authorize_policy(
             || authorized.database != database::legacy(expected)
             || authorized.network != network::legacy(expected)
             || authorized.crypto != crypto::legacy(expected)
+            || authorized.plugin != plugin::legacy(expected)
         {
             return Err(authority_error(format!(
                 "result for `{op}` contradicts independently reconstructed policy composition"
@@ -610,6 +632,7 @@ pub(super) fn authorize_policy(
             op_policy.authorized_database = Some(authorized.database);
             op_policy.authorized_network = Some(authorized.network);
             op_policy.authorized_crypto = Some(authorized.crypto);
+            op_policy.authorized_plugin = Some(authorized.plugin);
             op_policy.authorized_cap = Some(authorized.cap);
             authorized_ops.insert(op, op_policy);
         }

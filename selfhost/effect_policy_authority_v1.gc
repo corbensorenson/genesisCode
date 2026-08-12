@@ -361,6 +361,7 @@
             :log-inline-max-bytes
             :max-bytes
             :network-policy
+            :plugin-policy
             :process-programs
             :timeout-ms])
         ((selfhost/effect-policy::all-true-loop?
@@ -381,6 +382,8 @@
                ((core/map::get override) (quote :max-bytes)))
              (selfhost/effect-network::input-valid?
                ((core/map::get override) (quote :network-policy)))
+             (selfhost/effect-plugin::input-valid?
+               ((core/map::get override) (quote :plugin-policy)))
              (selfhost/effect-policy::process-program-input-valid?
                ((core/map::get override) (quote :process-programs)))
              (selfhost/effect-policy::optional-int?
@@ -586,8 +589,8 @@
             (override ((core/map::get request) (quote :override)))
             (platform-max ((core/map::get request) (quote :platform-max-bytes))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.7")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 7) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.8")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 8) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -618,7 +621,7 @@
                         (if allowed
                           ((selfhost/effect-policy::database-policy override) platform-max)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.7"
+                      :kind "genesis/effect-policy-authority-result-v0.8"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -628,12 +631,16 @@
                           ((selfhost/effect-network::policy override) platform-max)
                           nil)
                       :op op
+                      :plugin-policy
+                        (if allowed
+                          (selfhost/effect-plugin::policy override)
+                          nil)
                       :process-program-policy
                         (if allowed
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 7}))
+                      :v 8}))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly optional typed admission and base fields"))
               ((core/error::make2 "core/policy/authority")

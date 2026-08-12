@@ -30,6 +30,10 @@ allowlist normalization plus twelve operation-specific byte-limit states.
 Algorithm names are trimmed and ASCII-lowercased; key IDs are trimmed without
 case folding. Algorithm/key matching, key custody, cryptographic execution,
 payload measurement, and output enforcement remain bounded host mechanisms.
+The authority also owns the plugin, command, and optional schema-ID allowlist
+states consumed by `host/plugin::command` and `editor/plugin::command`.
+Allowlist matching, bridge executable identity, schema validation, bridge
+execution, cancellation, and model-provider lifecycle remain host mechanisms.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
@@ -47,14 +51,14 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed six-field map with kind
-`genesis/effect-policy-authority-request-v0.7`, version `7`, the operation string,
+`genesis/effect-policy-authority-request-v0.8`, version `8`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
 `:timeout-ms`, `:log-inline-max-bytes`, `:max-bytes`, `:process-programs`,
-`:database-policy`, `:network-policy`, and `:crypto-policy`. The nested database map has exactly `:target-allow`,
-`:query-classes`, `:max-result-bytes`, `:max-row-count`, and `:max-value-bytes`.
-The base directory is
+`:database-policy`, `:network-policy`, `:crypto-policy`, and `:plugin-policy`.
+The nested database map has exactly `:target-allow`, `:query-classes`,
+`:max-result-bytes`, `:max-row-count`, and `:max-value-bytes`. The base directory is
 `nil` or the exact configured string. Missing optional fields use `nil`. A TOML
 integer is transported exactly for `:max-bytes`; a present non-integer is
 transported as the closed `:invalid-type` observation so GenesisCode, rather than
@@ -76,6 +80,8 @@ The nested crypto map has exactly `:algorithms`, `:key-ids`,
 `:max-salt-bytes`, `:max-signature-bytes`, and `:max-tag-bytes`. Its two
 allowlists use exact string or closed invalid observation transport; every bound
 uses an exact integer or `:invalid-type`.
+The nested plugin map has exactly `:plugins`, `:commands`, and `:schema-ids`;
+all three use exact string or closed invalid observation transport.
 
 Before those per-operation requests, the inventory authority receives a closed
 four-field `genesis/effect-policy-inventory-request-v0.1` map containing version
@@ -87,12 +93,13 @@ host rejects malformed, oversized, duplicate, unsorted, substituted, or
 oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
-The authority returns a closed twelve-field
-`genesis/effect-policy-authority-result-v0.7` map containing the exact operation,
+The authority returns a closed thirteen-field
+`genesis/effect-policy-authority-result-v0.8` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
 `:process-program-policy`, private `:database-policy`, private `:network-policy`,
-private `:crypto-policy`, lowercase canonical request hash, and version `7`.
+private `:crypto-policy`, private `:plugin-policy`, lowercase canonical request
+hash, and version `8`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -107,27 +114,29 @@ allowlists use exact `{:status ... :values ...}` states with `:absent`,
 the closed positive-limit state above. Only valid lists carry nonempty trimmed
 strings, and only valid bounds carry positive platform-sized integers. Denied
 operations must carry no base directory, capability, byte policy,
-process-program policy, database policy, network policy, or crypto policy. The network result
-preserves independent URL and remote list states, closed optional boolean/string
+process-program policy, database policy, network policy, crypto policy, or plugin
+policy. The network result preserves independent URL and remote list states,
+closed optional boolean/string
 states, a closed bind-port state (`:absent`, `:invalid-type`, `:invalid-entry`,
 `:out-of-range`, `:empty`, or `:valid`), and a closed request-byte bound. Only a
 valid bind-port state carries an exact wildcard boolean and ordered in-range port
 vector. The crypto result is an exact fourteen-field map. Its two allowlists use
 the same closed list state; only algorithm values are ASCII-lowercased. Its
-twelve bounds use the closed positive-limit state above. Malformed requests
-return sealed errors.
+twelve bounds use the closed positive-limit state above. The plugin result is an
+exact three-field map whose values use the closed list state above. Malformed
+requests return sealed errors.
 The host rejects
 unknown fields, identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
 noncanonical false/zero/negative/overflowing controls, contradictory status/limit
-pairs, noncanonical or contradictory process-program, database, network, or crypto states, operation
-substitution inside the capability, and any result that
+pairs, noncanonical or contradictory process-program, database, network, crypto,
+or plugin states, operation substitution inside the capability, and any result that
 contradicts its retained compatibility oracle. After validation, the host
 installs the GenesisCode-selected base directory, create-directories flag,
 timeout, per-operation log limit, closed max-byte state, closed normalized
 process-program state, closed database allowlist/bound states, closed network
-allowlist/option/bind/bound states, and closed crypto allowlist/bound states into
-enforcement;
+allowlist/option/bind/bound states, closed crypto allowlist/bound states, and
+closed plugin allowlist states into enforcement;
 its separately parsed values are used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
@@ -176,6 +185,10 @@ Crypto policy likewise retains effect-use timing and exact errors. Missing,
 ill-typed, non-string, empty-after-trimming, nonpositive, and overflowing states
 are installed and rejected only by the crypto operation that consumes the
 corresponding allowlist or bound.
+Plugin allowlist policy likewise retains effect-use timing and exact errors.
+Missing, ill-typed, non-string, and empty-after-trimming states are installed and
+rejected only when a plugin command consumes the corresponding required list, or
+when a typed plugin request consumes the optional schema-ID list.
 
 ## Production Boundary
 
@@ -191,9 +204,9 @@ entries and installs all decoded generic operation and resource controls for hos
 enforcement. The selected base directory remains separate from that descriptor so
 logs do not gain path material; Rust installs it before resolving relative paths
 against the capability-file base. The private max-byte, process-program,
-database, network, and crypto states
-likewise remain out of the descriptor. Every production generic or bridge byte-limit consumer checks
-the installed authority state before the raw compatibility field; raw fallback is
+database, network, crypto, and plugin states likewise remain out of the
+descriptor. Every production generic or bridge byte-limit consumer checks the
+installed authority state before the raw compatibility field; raw fallback is
 reachable only for policies constructed without the self-host authority by
 explicit compatibility and test routes.
 Process launch dispatch follows the same rule: it consumes the installed
@@ -210,8 +223,13 @@ Crypto dispatch consumes installed GenesisCode algorithm/key-ID allowlists and
 all twelve byte-limit states before raw compatibility fields. Rust performs
 allowlist matching, key lookup/custody, payload measurement, limit enforcement,
 and cryptographic execution without selecting the policy state.
-Host code retains payload measurement and enforcement mechanisms, filesystem path resolution,
-accounting mechanisms, cancellation, effect execution, and replay mechanisms.
+Plugin dispatch consumes installed GenesisCode plugin, command, and optional
+schema-ID allowlist states before raw compatibility fields. Rust performs
+matching, bridge digest enforcement, schema validation, and bridge execution
+without selecting those allowlist states.
+Host code retains payload measurement and enforcement mechanisms, filesystem path
+resolution, accounting mechanisms, cancellation, effect execution, and replay
+mechanisms.
 `CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy
 composition oracle remain reachable for tests, host mechanisms, and this partial
 transition, and therefore are not evidence of H2.
@@ -220,7 +238,7 @@ transition, and therefore are not evidence of H2.
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
 and type decoding; global store remote transport, TLS, and authentication policy;
-operation-specific FFI, plugin, model,
+operation-specific FFI, bridge identity, model,
 graphics, and device constraints; secret and path resolution; effect execution
 and cancellation; strict replay; and removal of the compatibility oracle.
 Filesystem policy configuration is no longer a residual decision: admission,
@@ -252,6 +270,11 @@ sign, verify, KDF, AEAD sealing, and AEAD opening. Algorithm/key matching, key
 custody and provider configuration, cryptographic implementation, payload
 measurement, output enforcement, cancellation, and replay remain host
 enforcement/execution mechanisms.
+Plugin allowlist configuration is no longer residual: GenesisCode owns the
+complete plugin, command, and optional schema-ID list states shared by host and
+editor plugin commands. Bridge command/profile selection, executable path and
+digest verification, schema implementation, matching, transport, model-provider
+lifecycle, cancellation, and replay remain in the named host residuals.
 
 This contract does not promote `SD-EFFECT-POLICY`, close R4.2.d or SH-C, establish
 H2/H3/H4, authorize release, or authorize GenesisBench, Genesis Foundry,

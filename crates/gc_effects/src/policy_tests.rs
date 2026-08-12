@@ -144,6 +144,14 @@ fn crypto_policy_term(
     Term::Map(fields)
 }
 
+fn plugin_policy_term(plugins: Term, commands: Term, schema_ids: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":commands")), commands),
+        (TermOrdKey(Term::symbol(":plugins")), plugins),
+        (TermOrdKey(Term::symbol(":schema-ids")), schema_ids),
+    ]))
+}
+
 #[test]
 fn selfhost_authority_composes_admission_and_canonical_caps() {
     let td = tempfile::tempdir().unwrap();
@@ -955,6 +963,128 @@ fn selfhost_authority_rejects_malformed_crypto_decisions() {
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_crypto_policy(&Term::Map(extra), true)
         .expect_err("unknown crypto authority fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_plugin_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."host/plugin::command"]
+allow_plugins = [" demo ", ""]
+allow_commands = [" run "]
+allow_schema_ids = [" genesis/plugin.request.exec.v1 "]
+"#,
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let plugin = policy
+        .op_policy("host/plugin::command")
+        .unwrap()
+        .authorized_plugin
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        plugin.plugins,
+        AuthorizedStringList::Valid(vec!["demo".to_string()])
+    );
+    assert_eq!(
+        plugin.commands,
+        AuthorizedStringList::Valid(vec!["run".to_string()])
+    );
+    assert_eq!(
+        plugin.schema_ids,
+        AuthorizedStringList::Valid(vec!["genesis/plugin.request.exec.v1".to_string()])
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_invalid_plugin_policy_states() {
+    let cases = [
+        (
+            "allow_plugins = \"demo\"",
+            AuthorizedStringList::InvalidType,
+        ),
+        (
+            "allow_plugins = [\"demo\", 7]",
+            AuthorizedStringList::InvalidEntry,
+        ),
+        (
+            "allow_plugins = [\"\", \"   \"]",
+            AuthorizedStringList::Empty,
+        ),
+    ];
+    for (setting, plugins) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[op.\"host/plugin::command\"]\n{setting}\n")).unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        let plugin = policy
+            .op_policy("host/plugin::command")
+            .unwrap()
+            .authorized_plugin
+            .as_ref()
+            .unwrap();
+        assert_eq!(plugin.plugins, plugins, "setting: {setting}");
+        assert_eq!(plugin.commands, AuthorizedStringList::Absent);
+        assert_eq!(plugin.schema_ids, AuthorizedStringList::Absent);
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_plugin_decisions() {
+    use super::policy_authority::decode_plugin_policy;
+
+    let absent = string_list_policy(":absent", Term::Nil);
+    let valid = || plugin_policy_term(absent.clone(), absent.clone(), absent.clone());
+    decode_plugin_policy(&valid(), true).unwrap();
+
+    let cases = [
+        plugin_policy_term(
+            string_list_policy(":valid", Term::Vector(vec![])),
+            absent.clone(),
+            absent.clone(),
+        ),
+        plugin_policy_term(
+            absent.clone(),
+            string_list_policy(":valid", Term::Nil),
+            absent.clone(),
+        ),
+        plugin_policy_term(
+            absent.clone(),
+            absent.clone(),
+            string_list_policy(
+                ":valid",
+                Term::Vector(vec![Term::Str(" padded ".to_string())]),
+            ),
+        ),
+    ];
+    for decision in cases {
+        decode_plugin_policy(&decision, true)
+            .expect_err("contradictory plugin authority decision must fail closed");
+    }
+    decode_plugin_policy(&valid(), false)
+        .expect_err("denied operation must not carry a plugin decision");
+
+    let Term::Map(mut extra) = valid() else {
+        return;
+    };
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_plugin_policy(&Term::Map(extra), true)
+        .expect_err("unknown plugin authority fields must fail closed");
 }
 
 #[test]

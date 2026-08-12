@@ -424,6 +424,7 @@ mod tests {
             authorized_database: None,
             authorized_network: Some(network),
             authorized_crypto: None,
+            authorized_plugin: None,
         }
     }
 

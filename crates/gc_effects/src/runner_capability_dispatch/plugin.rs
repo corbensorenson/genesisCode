@@ -1,27 +1,55 @@
 use super::*;
+#[cfg(test)]
+use crate::policy::AuthorizedPluginPolicy;
+use crate::policy::AuthorizedStringList;
+
+fn authorized_plugin_allowlist(
+    state: &AuthorizedStringList,
+    key: &str,
+    missing: &str,
+) -> Result<Vec<String>, String> {
+    match state {
+        AuthorizedStringList::Absent => Err(missing.to_string()),
+        AuthorizedStringList::InvalidType => Err(format!("{key} must be an array of strings")),
+        AuthorizedStringList::InvalidEntry => Err(format!("{key} entries must be strings")),
+        AuthorizedStringList::Empty => Err(format!("{key} must contain at least one entry")),
+        AuthorizedStringList::Valid(values) => Ok(values.clone()),
+    }
+}
 
 fn plugin_allowlist_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<Vec<String>, String> {
-    parse_nonempty_string_array(
-        pol,
-        "allow_plugins",
-        &format!("{op} requires per-op allow_plugins allowlist in caps.toml"),
-    )
+    let missing = format!("{op} requires per-op allow_plugins allowlist in caps.toml");
+    if let Some(plugin) = pol.and_then(|policy| policy.authorized_plugin.as_ref()) {
+        return authorized_plugin_allowlist(&plugin.plugins, "allow_plugins", &missing);
+    }
+    parse_nonempty_string_array(pol, "allow_plugins", &missing)
 }
 
 fn plugin_command_allowlist_from_policy(
     pol: Option<&OpPolicy>,
     op: &str,
 ) -> Result<Vec<String>, String> {
-    parse_nonempty_string_array(
-        pol,
-        "allow_commands",
-        &format!("{op} requires per-op allow_commands allowlist in caps.toml"),
-    )
+    let missing = format!("{op} requires per-op allow_commands allowlist in caps.toml");
+    if let Some(plugin) = pol.and_then(|policy| policy.authorized_plugin.as_ref()) {
+        return authorized_plugin_allowlist(&plugin.commands, "allow_commands", &missing);
+    }
+    parse_nonempty_string_array(pol, "allow_commands", &missing)
 }
 
 fn plugin_schema_allowlist_from_policy(
     pol: Option<&OpPolicy>,
 ) -> Result<Option<Vec<String>>, String> {
+    if let Some(plugin) = pol.and_then(|policy| policy.authorized_plugin.as_ref()) {
+        return match &plugin.schema_ids {
+            AuthorizedStringList::Absent => Ok(None),
+            state => authorized_plugin_allowlist(
+                state,
+                "allow_schema_ids",
+                "allow_schema_ids must be configured with at least one schema id",
+            )
+            .map(Some),
+        };
+    }
     let Some(pol) = pol else {
         return Ok(None);
     };
@@ -34,6 +62,85 @@ fn plugin_schema_allowlist_from_policy(
         "allow_schema_ids must be configured with at least one schema id",
     )
     .map(Some)
+}
+
+#[cfg(test)]
+mod authority_tests {
+    use super::*;
+    use toml::Value as TomlValue;
+
+    fn policy(plugin: AuthorizedPluginPolicy) -> OpPolicy {
+        OpPolicy {
+            base_dir: None,
+            create_dirs: false,
+            timeout_ms: None,
+            log_inline_max_bytes: None,
+            extra: BTreeMap::from([
+                (
+                    "allow_plugins".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+                (
+                    "allow_commands".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+                (
+                    "allow_schema_ids".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+            ]),
+            authorized_cap: None,
+            authorized_max_bytes: None,
+            authorized_process_programs: None,
+            authorized_database: None,
+            authorized_network: None,
+            authorized_crypto: None,
+            authorized_plugin: Some(plugin),
+        }
+    }
+
+    #[test]
+    fn plugin_dispatch_consumes_authorized_policy_before_raw_policy() {
+        let policy = policy(AuthorizedPluginPolicy {
+            plugins: AuthorizedStringList::Valid(vec!["demo".to_string()]),
+            commands: AuthorizedStringList::Valid(vec!["run".to_string()]),
+            schema_ids: AuthorizedStringList::Valid(vec!["schema.v1".to_string()]),
+        });
+        assert_eq!(
+            plugin_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap(),
+            vec!["demo"]
+        );
+        assert_eq!(
+            plugin_command_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap(),
+            vec!["run"]
+        );
+        assert_eq!(
+            plugin_schema_allowlist_from_policy(Some(&policy)).unwrap(),
+            Some(vec!["schema.v1".to_string()])
+        );
+    }
+
+    #[test]
+    fn plugin_dispatch_preserves_authorized_policy_errors_and_optional_schema() {
+        let policy = policy(AuthorizedPluginPolicy {
+            plugins: AuthorizedStringList::InvalidEntry,
+            commands: AuthorizedStringList::Empty,
+            schema_ids: AuthorizedStringList::Absent,
+        });
+        assert_eq!(
+            plugin_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap_err(),
+            "allow_plugins entries must be strings"
+        );
+        assert_eq!(
+            plugin_command_allowlist_from_policy(Some(&policy), "host/plugin::command")
+                .unwrap_err(),
+            "allow_commands must contain at least one entry"
+        );
+        assert_eq!(
+            plugin_schema_allowlist_from_policy(Some(&policy)).unwrap(),
+            None
+        );
+    }
 }
 
 fn plugin_bridge_digest_pin_is_required(pol: Option<&OpPolicy>) -> bool {

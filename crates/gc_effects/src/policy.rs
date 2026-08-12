@@ -202,6 +202,13 @@ pub(crate) struct AuthorizedCryptoPolicy {
     pub max_tag_bytes: AuthorizedMaxBytes,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedPluginPolicy {
+    pub plugins: AuthorizedStringList,
+    pub commands: AuthorizedStringList,
+    pub schema_ids: AuthorizedStringList,
+}
+
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
@@ -215,6 +222,7 @@ pub struct OpPolicy {
     pub(crate) authorized_database: Option<AuthorizedDatabasePolicy>,
     pub(crate) authorized_network: Option<AuthorizedNetworkPolicy>,
     pub(crate) authorized_crypto: Option<AuthorizedCryptoPolicy>,
+    pub(crate) authorized_plugin: Option<AuthorizedPluginPolicy>,
 }
 
 impl CapsPolicy {
@@ -328,6 +336,7 @@ impl CapsPolicy {
                         authorized_database: None,
                         authorized_network: None,
                         authorized_crypto: None,
+                        authorized_plugin: None,
                     },
                 );
             }

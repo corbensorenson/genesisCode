@@ -162,6 +162,7 @@ mod tests {
             authorized_database: None,
             authorized_network: None,
             authorized_crypto: None,
+            authorized_plugin: None,
         }
     }
 

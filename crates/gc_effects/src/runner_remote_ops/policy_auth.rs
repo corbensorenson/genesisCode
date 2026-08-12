@@ -518,6 +518,7 @@ mod network_authority_tests {
             authorized_database: None,
             authorized_network: Some(network),
             authorized_crypto: None,
+            authorized_plugin: None,
         }
     }
 

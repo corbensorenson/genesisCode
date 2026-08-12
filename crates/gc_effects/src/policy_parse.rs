@@ -420,6 +420,7 @@ pub(super) fn apply_op_cfg(
             authorized_database: None,
             authorized_network: None,
             authorized_crypto: None,
+            authorized_plugin: None,
         },
     );
     Ok(())

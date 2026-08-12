@@ -603,6 +603,7 @@ mod authority_tests {
             authorized_database: None,
             authorized_network: None,
             authorized_crypto: Some(crypto),
+            authorized_plugin: None,
         }
     }
 

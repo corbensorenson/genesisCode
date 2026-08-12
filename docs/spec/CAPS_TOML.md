@@ -213,7 +213,7 @@ Supported keys:
 - `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
 
-For artifact-only production policy loads, GenesisCode authority protocol v0.7
+For artifact-only production policy loads, GenesisCode authority protocol v0.8
 normalizes `url_allow`, `remote_allow`, `allow_http`, `wasi_network_profile`,
 `allow_bind_hosts`, `allow_bind_ports`, and `max_request_bytes` into closed typed
 states before any network, sync, publication, or store-remote consumer runs.
@@ -248,6 +248,11 @@ reachable only through the explicit compatibility/oracle path during R4.2.d.
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
 - `allow_commands` (array<string>): required command allowlist for `host/plugin::command` and `editor/plugin::command`.
 - `allow_schema_ids` (array<string>): required when typed plugin schemas are used (`:request-schema-id` / `:response-schema-id`); every schema id must be allowlisted.
+  - File-backed production policy loads transport plugin, command, and schema-ID
+    lists through `core/effects::policy-authority`; GenesisCode normalizes their
+    closed states, and plugin dispatch enforces only the validated installed
+    result. Matching, bridge identity, schema validation, and execution remain
+    host mechanisms.
 - `allow_abi_ids` (array<string>): required ABI allowlist for `host/ffi::call`, `host/ffi::buffer-pin`, and `host/ffi::buffer-unpin`.
 - `allow_libraries` (array<string>): required allowlist for `host/ffi::call` library names.
 - `allow_symbols` (array<string>): required allowlist for `host/ffi::call` symbols.

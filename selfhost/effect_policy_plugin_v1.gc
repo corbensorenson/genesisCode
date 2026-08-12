@@ -1,0 +1,122 @@
+(def selfhost/effect-plugin::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/effect-plugin::map-has-key-loop? entries) key)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/effect-plugin::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            (((selfhost/effect-plugin::map-has-key-loop? (core/map::entries map))
+               ((core/vec::get keys) index)) 0)
+            (((selfhost/effect-plugin::map-has-keys-loop? map) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/effect-plugin::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/policy::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/effect-plugin::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/effect-plugin::invalid-type?
+  (fn (value)
+    (if (selfhost/policy::sym? value)
+      ((core/sym::eq? value) (quote :invalid-type))
+      false)))
+
+(def selfhost/effect-plugin::invalid-entry?
+  (fn (value)
+    (if (selfhost/policy::sym? value)
+      ((core/sym::eq? value) (quote :invalid-entry))
+      false)))
+
+(def selfhost/effect-plugin::list-input-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (let ((value ((core/vec::get values) index)))
+          (if (selfhost/policy::str? value)
+            ((selfhost/effect-plugin::list-input-loop? values) ((core/int::add index) 1))
+            (selfhost/effect-plugin::invalid-entry? value)))))))
+
+(def selfhost/effect-plugin::list-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::vec? value)
+        ((selfhost/effect-plugin::list-input-loop? value) 0)
+        (selfhost/effect-plugin::invalid-type? value)))))
+
+(def selfhost/effect-plugin::input-valid?
+  (fn (value)
+    (if ((selfhost/effect-plugin::exact-map? value) [:commands :plugins :schema-ids])
+      (if (selfhost/effect-plugin::list-input?
+            ((core/map::get value) (quote :commands)))
+        (if (selfhost/effect-plugin::list-input?
+              ((core/map::get value) (quote :plugins)))
+          (selfhost/effect-plugin::list-input?
+            ((core/map::get value) (quote :schema-ids)))
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-plugin::list-policy-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (if ((core/int::eq? (core/vec::len out)) 0)
+            {:status (quote :empty) :values nil}
+            {:status (quote :valid) :values out})
+          (let ((value ((core/vec::get values) index)))
+            (if (selfhost/policy::str? value)
+              (let ((trimmed (selfhost/policy::trim value)))
+                (((selfhost/effect-plugin::list-policy-loop values)
+                   ((core/int::add index) 1))
+                  (if (selfhost/policy::non-empty-str? trimmed)
+                    ((core/vec::push out) trimmed)
+                    out)))
+              {:status (quote :invalid-entry) :values nil})))))))
+
+(def selfhost/effect-plugin::list-policy
+  (fn (raw)
+    (if (selfhost/policy::nil? raw)
+      {:status (quote :absent) :values nil}
+      (if (selfhost/policy::vec? raw)
+        (((selfhost/effect-plugin::list-policy-loop raw) 0) [])
+        {:status (quote :invalid-type) :values nil}))))
+
+(def selfhost/effect-plugin::empty-input
+  {:commands nil :plugins nil :schema-ids nil})
+
+(def selfhost/effect-plugin::policy
+  (fn (override)
+    (let ((plugin
+      (if (selfhost/policy::nil? override)
+        selfhost/effect-plugin::empty-input
+        ((core/map::get override) (quote :plugin-policy)))))
+      {
+        :commands
+          (selfhost/effect-plugin::list-policy
+            ((core/map::get plugin) (quote :commands)))
+        :plugins
+          (selfhost/effect-plugin::list-policy
+            ((core/map::get plugin) (quote :plugins)))
+        :schema-ids
+          (selfhost/effect-plugin::list-policy
+            ((core/map::get plugin) (quote :schema-ids)))})))
