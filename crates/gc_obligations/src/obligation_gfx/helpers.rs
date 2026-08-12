@@ -1,48 +1,30 @@
 use super::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum GfxGoldenKind {
+pub(crate) enum GfxGoldenKind {
     FrameGraph,
     Scene,
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct GfxGoldenCase {
-    pub(super) id: TestId,
-    pub(super) body: Value,
-    pub(super) kind: GfxGoldenKind,
-    pub(super) expect_hash: String,
-    pub(super) expect_png_hash: Option<String>,
-    pub(super) pixel_width: u32,
-    pub(super) pixel_height: u32,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct ParsedGfxGoldenEntry {
-    pub(super) body: Value,
-    pub(super) kind: GfxGoldenKind,
-    pub(super) expect_hash: String,
-    pub(super) expect_png_hash: Option<String>,
-    pub(super) pixel_width: u32,
-    pub(super) pixel_height: u32,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct GfxFrameBudgetCase {
-    pub(super) id: TestId,
-    pub(super) body: Value,
+pub(crate) struct ParsedGfxGoldenEntry {
+    pub(crate) kind: GfxGoldenKind,
+    pub(crate) expect_hash: String,
+    pub(crate) expect_png_hash: Option<String>,
+    pub(crate) pixel_width: u32,
+    pub(crate) pixel_height: u32,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct FrameMetrics {
-    pub(super) render_passes: u64,
-    pub(super) compute_passes: u64,
-    pub(super) draw_commands: u64,
-    pub(super) compute_commands: u64,
-    pub(super) frame_graph_bytes: u64,
+pub(crate) struct FrameMetrics {
+    pub(crate) render_passes: u64,
+    pub(crate) compute_passes: u64,
+    pub(crate) draw_commands: u64,
+    pub(crate) compute_commands: u64,
+    pub(crate) frame_graph_bytes: u64,
 }
 
-pub(super) fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, ObligationError> {
+pub(crate) fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, ObligationError> {
     let Some(m) = value_as_map(v) else {
         return Err(ObligationError::Test(
             "golden entry must be a map".to_string(),
@@ -149,7 +131,6 @@ pub(super) fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, 
         ));
     }
     Ok(ParsedGfxGoldenEntry {
-        body: body.clone(),
         kind,
         expect_hash: expect,
         expect_png_hash,
@@ -158,7 +139,7 @@ pub(super) fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, 
     })
 }
 
-pub(super) fn parse_gfx_frame_budget_entry(v: &Value) -> Result<Value, ObligationError> {
+pub(crate) fn parse_gfx_frame_budget_entry(v: &Value) -> Result<Value, ObligationError> {
     if is_callable_value(v) {
         return Ok(v.clone());
     }
@@ -186,7 +167,7 @@ fn term_is_typed_map(t: &Term, typ: &str) -> bool {
     )
 }
 
-pub(super) fn extract_frame_graph_term(t: &Term) -> Option<&Term> {
+pub(crate) fn extract_frame_graph_term(t: &Term) -> Option<&Term> {
     if term_is_typed_map(t, ":gfx/frame-graph") {
         return Some(t);
     }
@@ -201,7 +182,7 @@ pub(super) fn extract_frame_graph_term(t: &Term) -> Option<&Term> {
     None
 }
 
-pub(super) fn extract_scene_term(t: &Term) -> Option<&Term> {
+pub(crate) fn extract_scene_term(t: &Term) -> Option<&Term> {
     if term_is_typed_map(t, ":gfx/scene") {
         return Some(t);
     }
@@ -216,7 +197,7 @@ pub(super) fn extract_scene_term(t: &Term) -> Option<&Term> {
     None
 }
 
-pub(super) fn extract_frame_graph_and_time(t: &Term) -> Result<(&Term, Option<u64>), String> {
+pub(crate) fn extract_frame_graph_and_time(t: &Term) -> Result<(&Term, Option<u64>), String> {
     if term_is_typed_map(t, ":gfx/frame-graph") {
         return Ok((t, None));
     }
@@ -243,7 +224,7 @@ pub(super) fn extract_frame_graph_and_time(t: &Term) -> Result<(&Term, Option<u6
     Ok((frame, frame_time_ms))
 }
 
-pub(super) fn frame_graph_metrics(frame: &Term) -> Result<FrameMetrics, String> {
+pub(crate) fn frame_graph_metrics(frame: &Term) -> Result<FrameMetrics, String> {
     let Term::Map(m) = frame else {
         return Err("frame graph must be a map".to_string());
     };

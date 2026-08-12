@@ -1232,6 +1232,175 @@ fn gfx_api_authority_rejects_open_substituted_and_tampered_results() {
     );
 }
 
+fn gfx_runtime_fixture(
+    fixture: &str,
+) -> (
+    tempfile::TempDir,
+    EvidenceStore,
+    PathBuf,
+    PackageManifest,
+    Vec<LoadedModule>,
+) {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec")
+        .join(fixture)
+        .join("package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let modules = load_modules(
+        &package_dir,
+        &manifest.modules,
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("fixture modules");
+    (temp, store, package_dir, manifest, modules)
+}
+
+#[test]
+fn gfx_runtime_authorities_plan_execute_and_finalize_existing_fixtures() {
+    let frontend = fixture_frontend();
+    let (_temp, store, package_dir, manifest, modules) = gfx_runtime_fixture("pkg_gfx_obligations");
+    let golden = evaluate_gfx_golden_with_authority(
+        &store,
+        &package_dir,
+        &manifest,
+        &modules,
+        &frontend,
+        limits(),
+    )
+    .expect("passing gfx golden authority");
+    assert!(golden.ok, "{:?}", golden.errors);
+    let frame = evaluate_gfx_frame_budgets_with_authority(
+        &store,
+        &package_dir,
+        &manifest,
+        &modules,
+        &frontend,
+        limits(),
+    )
+    .expect("passing gfx frame authority");
+    assert!(frame.ok, "{:?}", frame.errors);
+
+    let (_temp, store, package_dir, manifest, modules) = gfx_runtime_fixture("pkg_fail_gfx_golden");
+    let golden = evaluate_gfx_golden_with_authority(
+        &store,
+        &package_dir,
+        &manifest,
+        &modules,
+        &frontend,
+        limits(),
+    )
+    .expect("failing gfx golden authority");
+    assert!(!golden.ok);
+    assert!(
+        golden
+            .errors
+            .iter()
+            .any(|error| error.contains("golden hash mismatch"))
+    );
+
+    let (_temp, store, package_dir, manifest, modules) =
+        gfx_runtime_fixture("pkg_fail_gfx_pixel_golden");
+    let golden = evaluate_gfx_golden_with_authority(
+        &store,
+        &package_dir,
+        &manifest,
+        &modules,
+        &frontend,
+        limits(),
+    )
+    .expect("failing gfx PNG authority");
+    assert!(!golden.ok);
+    assert!(
+        golden
+            .errors
+            .iter()
+            .any(|error| error.contains("golden png hash mismatch"))
+    );
+
+    let (_temp, store, package_dir, manifest, modules) =
+        gfx_runtime_fixture("pkg_fail_gfx_frame_budget");
+    let frame = evaluate_gfx_frame_budgets_with_authority(
+        &store,
+        &package_dir,
+        &manifest,
+        &modules,
+        &frontend,
+        limits(),
+    )
+    .expect("failing gfx frame authority");
+    assert!(!frame.ok);
+    assert!(frame.errors.iter().any(|error| error.contains("exceed")));
+}
+
+#[test]
+fn gfx_runtime_authority_rejects_open_plan_inputs_and_renderer_contradictions() {
+    let (_temp, _store, package_dir, manifest, modules) =
+        gfx_runtime_fixture("pkg_gfx_obligations");
+    let context = gfx_golden_authority_context(&package_dir, &manifest, &modules, limits())
+        .expect("gfx golden context");
+    let mut inputs =
+        gfx_runtime_request_inputs(context.configured, &context.suites, None, ":plan", None);
+    let Term::Map(fields) = &mut inputs else {
+        panic!("gfx plan inputs must be a map");
+    };
+    fields.insert(TermOrdKey(Term::symbol(":verdict")), Term::Bool(true));
+    let request = authority_request_term(
+        ObligationAuthorityOperation::GfxGoldenImages,
+        &manifest.name,
+        inputs,
+    );
+    let error = invoke_authority(request, &fixture_frontend(), limits())
+        .expect_err("open gfx plan must fail closed");
+    assert!(error.to_string().contains("sealed error"));
+
+    let plan = gfx_golden_authority_plan(&manifest, &context, &fixture_frontend(), limits())
+        .expect("closed gfx plan");
+    let test = &plan[0];
+    let body = gfx_runtime_body(&context.bodies, &test.identity).expect("planned body");
+    let base = gfx_outcome_result(body, limits());
+    let frame = crate::obligation_gfx::helpers::extract_frame_graph_term(&base.result)
+        .expect("fixture frame graph");
+    let output = gc_gfx::render_frame_graph_headless(frame, test.pixel_width, test.pixel_height)
+        .expect("headless render");
+    let render = Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":error")), Term::Nil),
+            (
+                TermOrdKey(Term::symbol(":frame-h")),
+                Term::Str("0".repeat(64)),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pixel-height")),
+                Term::Int(BigInt::from(test.pixel_height)),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pixel-width")),
+                Term::Int(BigInt::from(test.pixel_width)),
+            ),
+            (
+                TermOrdKey(Term::symbol(":png-h")),
+                Term::Str(hex32(output.png_hash)),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let outcomes = [GfxGoldenOutcomeObservation {
+        suite_index: test.identity.suite_index,
+        entry_index: test.identity.entry_index,
+        kind: base.kind,
+        result: base.result,
+        render,
+    }];
+    let error = expected_gfx_golden_final(&manifest, &context, &outcomes)
+        .expect_err("renderer frame substitution must fail closed");
+    assert!(error.to_string().contains("renderer binding contradiction"));
+}
+
 fn authority_fixture(
     fixture: &str,
 ) -> (

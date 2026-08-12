@@ -3,6 +3,8 @@ use super::*;
 include!("obligation_authority_caps.rs");
 include!("obligation_authority_coverage.rs");
 include!("obligation_authority_gfx_api.rs");
+include!("obligation_authority_gfx_runtime.rs");
+include!("obligation_authority_gfx_runtime_finalize.rs");
 include!("obligation_authority_lint.rs");
 include!("obligation_authority_property.rs");
 include!("obligation_authority_property_finalize.rs");
@@ -23,6 +25,8 @@ pub(super) enum ObligationAuthorityOperation {
     CoverageMcdc,
     Determinism,
     GfxApiStability,
+    GfxFrameBudgets,
+    GfxGoldenImages,
     Lint,
     PropertyTests,
     ReplayableTests,
@@ -45,6 +49,8 @@ impl ObligationAuthorityOperation {
             Self::CoverageMcdc => ":coverage-mcdc",
             Self::Determinism => ":determinism",
             Self::GfxApiStability => ":gfx-api-stability",
+            Self::GfxFrameBudgets => ":gfx-frame-budgets",
+            Self::GfxGoldenImages => ":gfx-golden-images",
             Self::Lint => ":lint",
             Self::PropertyTests => ":property-tests",
             Self::ReplayableTests => ":replayable-tests",
@@ -67,6 +73,8 @@ impl ObligationAuthorityOperation {
             Self::CoverageMcdc => "core/obligation::coverage-mcdc",
             Self::Determinism => "core/obligation::determinism",
             Self::GfxApiStability => "core/obligation::gfx-api-stability",
+            Self::GfxFrameBudgets => "core/obligation::gfx-frame-budgets",
+            Self::GfxGoldenImages => "core/obligation::gfx-golden-images",
             Self::Lint => "core/obligation::lint",
             Self::PropertyTests => "core/obligation::property-tests",
             Self::ReplayableTests => "core/obligation::replayable-tests",
@@ -299,9 +307,11 @@ fn request_term(
             ));
         }
         ObligationAuthorityOperation::Determinism => capability_inputs(modules, tests),
-        ObligationAuthorityOperation::GfxApiStability => {
+        ObligationAuthorityOperation::GfxApiStability
+        | ObligationAuthorityOperation::GfxFrameBudgets
+        | ObligationAuthorityOperation::GfxGoldenImages => {
             return Err(authority_error(
-                "gfx API stability requires closed definition observations",
+                "gfx obligations require their specialized closed observation decoders",
             ));
         }
         ObligationAuthorityOperation::Coverage
@@ -605,9 +615,11 @@ fn decode_authority_result(
         ObligationAuthorityOperation::Determinism => {
             validate_determinism_report(report, manifest, ok, &errors)?
         }
-        ObligationAuthorityOperation::GfxApiStability => {
+        ObligationAuthorityOperation::GfxApiStability
+        | ObligationAuthorityOperation::GfxFrameBudgets
+        | ObligationAuthorityOperation::GfxGoldenImages => {
             return Err(authority_error(
-                "gfx API stability requires the definition-observation decoder",
+                "gfx obligations require their specialized closed observation decoders",
             ));
         }
         ObligationAuthorityOperation::Lint => {

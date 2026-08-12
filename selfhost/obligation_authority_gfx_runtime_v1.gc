@@ -1,0 +1,380 @@
+(def selfhost/obligation::gfx-field-valid?
+  (fn (field)
+    (if ((selfhost/obligation::property-exact-map? field) [:display :state :value])
+      (selfhost/obligation::sym? ((core/map::get field) (quote :state)))
+      false)))
+
+(def selfhost/obligation::gfx-hash-value
+  (fn (field)
+    (fn (missing-message)
+      (fn (type-message)
+        (fn (hex-message)
+          (let ((state ((core/map::get field) (quote :state))))
+            (if ((core/sym::eq? state) (quote :absent))
+              {:error missing-message :value nil}
+              (if ((core/sym::eq? state) (quote :data))
+                (let ((value ((core/map::get field) (quote :value))))
+                  (if (if (selfhost/obligation::str? value) true
+                        (selfhost/obligation::sym? value))
+                    (let ((text (if (selfhost/obligation::str? value) value
+                                  (core/sym::to-str value))))
+                      (let ((decoded (core/bytes::from-hex text)))
+                        (if (core/error::is? decoded)
+                          {:error hex-message :value nil}
+                          (if ((core/int::eq? (core/bytes::len decoded)) 32)
+                            {:error nil :value (core/bytes::to-hex decoded)}
+                            {:error hex-message :value nil}))))
+                    {:error
+                       ((core/str::concat type-message)
+                         ((core/map::get field) (quote :display)))
+                     :value nil}))
+                (selfhost/obligation::error "unknown gfx field observation state")))))))))
+
+(def selfhost/obligation::gfx-optional-hash-value
+  (fn (field)
+    (let ((state ((core/map::get field) (quote :state))))
+      (if ((core/sym::eq? state) (quote :absent))
+        {:error nil :value nil}
+        (if ((core/sym::eq? state) (quote :data))
+          (let ((value ((core/map::get field) (quote :value))))
+            (if (selfhost/obligation::nil? value)
+              {:error nil :value nil}
+              (if (if (selfhost/obligation::str? value) true
+                    (selfhost/obligation::sym? value))
+                (let ((text (if (selfhost/obligation::str? value) value
+                              (core/sym::to-str value))))
+                  (let ((decoded (core/bytes::from-hex text)))
+                    (if (core/error::is? decoded)
+                      {:error "golden entry :expect-png-h must be 64 lowercase hex chars" :value nil}
+                      (if ((core/int::eq? (core/bytes::len decoded)) 32)
+                        {:error nil :value (core/bytes::to-hex decoded)}
+                        {:error "golden entry :expect-png-h must be 64 lowercase hex chars" :value nil}))))
+                {:error
+                   ((core/str::concat
+                      "golden entry :expect-png-h must be string/symbol or nil, got ")
+                     ((core/map::get field) (quote :display)))
+                 :value nil})))
+          (selfhost/obligation::error "unknown gfx field observation state"))))))
+
+(def selfhost/obligation::gfx-pixel-value
+  (fn (field)
+    (fn (name)
+      (let ((state ((core/map::get field) (quote :state))))
+        (if ((core/sym::eq? state) (quote :absent))
+          {:error nil :value 256}
+          (if ((core/sym::eq? state) (quote :data))
+            (let ((value ((core/map::get field) (quote :value))))
+              (if (selfhost/obligation::nil? value)
+                {:error nil :value 256}
+                (if (selfhost/obligation::int? value)
+                  (if ((core/int::lt? value) 0)
+                    {:error ((core/str::concat name) " must be a non-negative integer") :value nil}
+                    (if ((core/int::lt? 4294967295) value)
+                      {:error ((core/str::concat name) " exceeds u32 range") :value nil}
+                      {:error nil :value value}))
+                  {:error
+                     (((core/str::concat name) " must be int or nil, got ")
+                       ((core/map::get field) (quote :display)))
+                   :value nil})))
+            (selfhost/obligation::error "unknown gfx field observation state")))))))
+
+(def selfhost/obligation::gfx-kind-value
+  (fn (field)
+    (let ((state ((core/map::get field) (quote :state))))
+      (if ((core/sym::eq? state) (quote :absent))
+        {:error nil :value (quote :frame-graph)}
+        (if ((core/sym::eq? state) (quote :data))
+          (let ((value ((core/map::get field) (quote :value))))
+            (if (if (selfhost/obligation::sym? value) true
+                  (selfhost/obligation::str? value))
+              (let ((text (if (selfhost/obligation::sym? value)
+                            (core/sym::to-str value) value)))
+                (if (if ((core/eq? text) ":frame-graph") true
+                      ((core/eq? text) "frame-graph"))
+                  {:error nil :value (quote :frame-graph)}
+                  (if (if ((core/eq? text) ":scene") true ((core/eq? text) "scene"))
+                    {:error nil :value (quote :scene)}
+                    {:error
+                       ((core/str::concat
+                          "golden entry :kind must be :frame-graph or :scene, got ") text)
+                     :value nil})))
+              {:error
+                 ((core/str::concat "golden entry :kind must be symbol/string, got ")
+                   ((core/map::get field) (quote :display)))
+               :value nil}))
+          (selfhost/obligation::error "unknown gfx field observation state"))))))
+
+(def selfhost/obligation::gfx-golden-entry-values
+  (fn (suite-index)
+    (fn (suite)
+      (fn (entry)
+        (fn (name)
+          (let
+            ((expect-state
+               ((((selfhost/obligation::gfx-hash-value
+                    ((core/map::get entry) (quote :expect-h)))
+                  "golden entry missing :expect-h")
+                 "golden entry :expect-h must be string/symbol, got ")
+                "golden entry :expect-h must be 64 lowercase hex chars"))
+              (png-state
+                (selfhost/obligation::gfx-optional-hash-value
+                  ((core/map::get entry) (quote :expect-png-h))))
+              (width-state
+                ((selfhost/obligation::gfx-pixel-value
+                   ((core/map::get entry) (quote :pixel-width))) ":pixel-width"))
+              (height-state
+                ((selfhost/obligation::gfx-pixel-value
+                   ((core/map::get entry) (quote :pixel-height))) ":pixel-height"))
+              (kind-state
+                (selfhost/obligation::gfx-kind-value
+                  ((core/map::get entry) (quote :kind)))))
+            (let ((expect-error ((core/map::get expect-state) (quote :error)))
+                  (png-error ((core/map::get png-state) (quote :error)))
+                  (width-error ((core/map::get width-state) (quote :error)))
+                  (height-error ((core/map::get height-state) (quote :error)))
+                  (kind-error ((core/map::get kind-state) (quote :error))))
+              (let ((first-error
+                     (if (selfhost/obligation::nil? expect-error)
+                       (if (selfhost/obligation::nil? png-error)
+                         (if (selfhost/obligation::nil? width-error)
+                           (if (selfhost/obligation::nil? height-error) kind-error height-error)
+                           width-error)
+                         png-error)
+                       expect-error)))
+              (if (selfhost/obligation::nil? first-error)
+                (let ((width ((core/map::get width-state) (quote :value)))
+                      (height ((core/map::get height-state) (quote :value)))
+                      (kind ((core/map::get kind-state) (quote :value)))
+                      (expect-png ((core/map::get png-state) (quote :value))))
+                  (if (if ((core/int::eq? width) 0) true
+                        ((core/int::eq? height) 0))
+                    {:error "golden entry pixel size must be non-zero" :test nil}
+                    (if (if (selfhost/obligation::nil? expect-png) false
+                          (if ((core/sym::eq? kind) (quote :frame-graph)) false true))
+                      {:error "golden entry :expect-png-h currently supports only :frame-graph kind"
+                       :test nil}
+                      {:error nil
+                       :test
+                         {:entry-index ((core/map::get entry) (quote :index))
+                          :expect-h ((core/map::get expect-state) (quote :value))
+                          :expect-png-h expect-png
+                          :kind kind
+                          :name name
+                          :pixel-height height
+                          :pixel-width width
+                          :suite suite
+                          :suite-index suite-index}})))
+                {:error first-error :test nil})))))))))
+
+(def selfhost/obligation::gfx-golden-entry-decision
+  (fn (suite-index)
+    (fn (suite)
+      (fn (entry)
+        (if ((selfhost/obligation::property-exact-map? entry)
+              [:body-state :entry-display :entry-state :expect-h :expect-png-h :index
+               :key-display :key-kind :kind :name :pixel-height :pixel-width])
+          (let ((key-kind ((core/map::get entry) (quote :key-kind))))
+            (if (if ((core/sym::eq? key-kind) (quote :string)) true
+                  ((core/sym::eq? key-kind) (quote :symbol)))
+              (let ((name ((core/map::get entry) (quote :name))))
+                (if ((core/sym::eq? ((core/map::get entry) (quote :entry-state))) (quote :map))
+                  (let ((body-state ((core/map::get entry) (quote :body-state))))
+                    (if ((core/sym::eq? body-state) (quote :missing))
+                      {:error "golden entry missing :body" :test nil}
+                      (if ((core/sym::eq? body-state) (quote :other))
+                        {:error "golden entry :body must be callable" :test nil}
+                        ((((selfhost/obligation::gfx-golden-entry-values suite-index) suite)
+                          entry) name))))
+                  {:error "golden entry must be a map" :test nil}))
+              {:error
+                 ((core/str::concat "key must be string/symbol, got ")
+                   ((core/map::get entry) (quote :key-display)))
+               :key-error true
+               :test nil}))
+          (selfhost/obligation::error "invalid gfx golden entry observation"))))))
+
+(def selfhost/obligation::gfx-frame-entry-decision
+  (fn (suite-index)
+    (fn (suite)
+      (fn (entry)
+        (if ((selfhost/obligation::property-exact-map? entry)
+              [:body-state :entry-display :entry-state :index :key-display :key-kind :name])
+          (let ((key-kind ((core/map::get entry) (quote :key-kind))))
+            (if (if ((core/sym::eq? key-kind) (quote :string)) true
+                  ((core/sym::eq? key-kind) (quote :symbol)))
+              (let ((state ((core/map::get entry) (quote :entry-state)))
+                    (body-state ((core/map::get entry) (quote :body-state))))
+                (if ((core/sym::eq? state) (quote :callable))
+                  {:error nil
+                   :test {:entry-index ((core/map::get entry) (quote :index))
+                          :name ((core/map::get entry) (quote :name))
+                          :suite suite :suite-index suite-index}}
+                  (if ((core/sym::eq? state) (quote :map))
+                    (if ((core/sym::eq? body-state) (quote :missing))
+                      {:error "frame budget entry missing :body" :test nil}
+                      (if ((core/sym::eq? body-state) (quote :other))
+                        {:error "frame budget entry :body must be callable" :test nil}
+                        {:error nil
+                         :test {:entry-index ((core/map::get entry) (quote :index))
+                                :name ((core/map::get entry) (quote :name))
+                                :suite suite :suite-index suite-index}}))
+                    {:error "frame budget entry must be callable or map" :test nil})))
+              {:error
+                 ((core/str::concat "key must be string/symbol, got ")
+                   ((core/map::get entry) (quote :key-display)))
+               :key-error true :test nil}))
+          (selfhost/obligation::error "invalid gfx frame entry observation"))))))
+
+(def selfhost/obligation::gfx-error-prefix
+  (fn (mode)
+    (fn (suite)
+      (fn (name)
+        (fn (decision)
+          (let ((error ((core/map::get decision) (quote :error))))
+            (if (selfhost/obligation::nil? error)
+              nil
+              (let ((key-error ((core/map::get decision) (quote :key-error))))
+                (if key-error
+                  ((core/str::concat
+                     ((core/str::concat
+                        (if ((core/sym::eq? mode) (quote :golden))
+                          "gfx golden suite " "gfx frame-budget suite "))
+                       (core/sym::to-str suite)))
+                    ((core/str::concat ": ") error))
+                  ((((((selfhost/obligation::property-str6
+                          (if ((core/sym::eq? mode) (quote :golden))
+                            "gfx golden suite " "gfx frame-budget suite "))
+                        (core/sym::to-str suite)) "::") name) ": ") error))))))))))
+
+(def selfhost/obligation::gfx-entries-loop
+  (fn (mode)
+    (fn (suite-index)
+      (fn (suite)
+        (fn (entries)
+          (fn (index)
+            (fn (tests)
+              (fn (errors)
+                (if ((core/int::eq? index) (core/vec::len entries))
+                  {:errors errors :tests tests}
+                  (let ((entry ((core/vec::get entries) index)))
+                    (let ((decision
+                           (if ((core/sym::eq? mode) (quote :golden))
+                             (((selfhost/obligation::gfx-golden-entry-decision suite-index) suite) entry)
+                             (((selfhost/obligation::gfx-frame-entry-decision suite-index) suite) entry))))
+                      (if (core/error::is? decision)
+                        decision
+                        (let ((test ((core/map::get decision) (quote :test)))
+                              (error ((((selfhost/obligation::gfx-error-prefix mode) suite)
+                                       ((core/map::get entry) (quote :name))) decision)))
+                          (((((((selfhost/obligation::gfx-entries-loop mode) suite-index) suite)
+                                entries) ((core/int::add index) 1))
+                              (if (selfhost/obligation::nil? test) tests
+                                ((core/vec::push tests) test)))
+                            (if (selfhost/obligation::nil? error) errors
+                              ((core/vec::push errors) error))))))))))))))))
+
+(def selfhost/obligation::gfx-suites-loop
+  (fn (mode)
+    (fn (suites)
+      (fn (index)
+        (fn (tests)
+          (fn (errors)
+            (if ((core/int::eq? index) (core/vec::len suites))
+              {:errors errors :tests tests}
+              (let ((suite-row ((core/vec::get suites) index)))
+                (if ((selfhost/obligation::property-exact-map? suite-row)
+                      [:entries :index :state :suite])
+                  (let ((suite ((core/map::get suite-row) (quote :suite)))
+                        (state ((core/map::get suite-row) (quote :state))))
+                    (if ((core/sym::eq? state) (quote :map))
+                      (let ((next (((((((selfhost/obligation::gfx-entries-loop mode) index) suite)
+                                       ((core/map::get suite-row) (quote :entries))) 0) tests) errors)))
+                        (if (core/error::is? next) next
+                          (((((selfhost/obligation::gfx-suites-loop mode) suites)
+                              ((core/int::add index) 1))
+                            ((core/map::get next) (quote :tests)))
+                           ((core/map::get next) (quote :errors)))))
+                      (let ((error
+                             (if ((core/sym::eq? state) (quote :missing))
+                               ((core/str::concat
+                                  (if ((core/sym::eq? mode) (quote :golden))
+                                    "missing gfx golden suite symbol "
+                                    "missing gfx frame-budget suite symbol "))
+                                (core/sym::to-str suite))
+                               ((core/str::concat
+                                  (if ((core/sym::eq? mode) (quote :golden))
+                                    "gfx golden suite " "gfx frame-budget suite "))
+                                ((core/str::concat (core/sym::to-str suite)) " must be a map")))))
+                        (((((selfhost/obligation::gfx-suites-loop mode) suites)
+                            ((core/int::add index) 1)) tests)
+                          ((core/vec::push errors) error)))))
+                  (selfhost/obligation::error "invalid gfx suite observation"))))))))))
+
+(def selfhost/obligation::gfx-plan-state
+  (fn (mode)
+    (fn (configured)
+      (fn (suites)
+        (fn (limits)
+          (let ((initial-errors
+                 (if configured []
+                   ((core/vec::push [])
+                     (if ((core/sym::eq? mode) (quote :golden))
+                       "gfx.golden_tests is empty; configure suite symbols for core/obligation::gfx-golden-images"
+                       "gfx.frame_budget_tests is empty; configure suite symbols for core/obligation::gfx-frame-budgets")))))
+            (let ((errors
+                   (if (if ((core/sym::eq? mode) (quote :frame))
+                         ((core/int::eq? (core/map::len limits)) 0) false)
+                     ((core/vec::push initial-errors)
+                       "gfx frame budget obligation requires at least one configured gfx.* budget limit")
+                     initial-errors)))
+              (((((selfhost/obligation::gfx-suites-loop mode) suites) 0) []) errors))))))))
+
+(def selfhost/obligation::gfx-plan
+  (fn (mode)
+    (fn (package)
+      (fn (inputs)
+        (let ((frame? ((core/sym::eq? mode) (quote :frame))))
+          (if ((selfhost/obligation::property-exact-map? inputs)
+                (if frame? [:configured :limits :phase :suites]
+                  [:configured :phase :suites]))
+            (if ((core/sym::eq? ((core/map::get inputs) (quote :phase))) (quote :plan))
+              (let ((configured ((core/map::get inputs) (quote :configured)))
+                    (suites ((core/map::get inputs) (quote :suites)))
+                    (limits (if frame? ((core/map::get inputs) (quote :limits)) {})))
+                (if (if (selfhost/obligation::bool? configured)
+                      (if (selfhost/obligation::vec? suites)
+                        (if frame? (selfhost/obligation::map? limits) true) false) false)
+                  (let ((state ((((selfhost/obligation::gfx-plan-state mode) configured) suites) limits)))
+                    (if (core/error::is? state) state
+                      (let ((errors ((core/map::get state) (quote :errors)))
+                            (tests ((core/map::get state) (quote :tests))))
+                        {:errors errors
+                         :kind selfhost/obligation::RESULT_KIND
+                         :name (if frame? "core/obligation::gfx-frame-budgets"
+                                 "core/obligation::gfx-golden-images")
+                         :ok ((core/int::eq? (core/vec::len errors)) 0)
+                         :operation (if frame? (quote :gfx-frame-budgets)
+                                      (quote :gfx-golden-images))
+                         :report
+                           (if frame?
+                             {:configured configured :errors errors
+                              :kind "genesis/gfx-frame-budget-plan-v0.1"
+                              :limits limits :package package :tests tests}
+                             {:configured configured :errors errors
+                              :kind "genesis/gfx-golden-plan-v0.1"
+                              :package package :tests tests})
+                         :v 2})))
+                  (selfhost/obligation::error "invalid gfx plan inputs")))
+              (selfhost/obligation::error "gfx plan :phase must equal :plan"))
+            (selfhost/obligation::error "gfx plan input fields mismatch")))))))
+
+(def selfhost/obligation::gfx-runtime-authority
+  (fn (mode)
+    (fn (package)
+      (fn (inputs)
+        (let ((phase ((core/map::get inputs) (quote :phase))))
+          (if ((core/sym::eq? phase) (quote :plan))
+            (((selfhost/obligation::gfx-plan mode) package) inputs)
+            (if ((core/sym::eq? phase) (quote :finalize))
+              (((selfhost/obligation::gfx-finalize mode) package) inputs)
+              (selfhost/obligation::error "unknown gfx runtime authority phase"))))))))

@@ -17,11 +17,11 @@
   "caseId": "generation-small",
   "conditionId": "condition-generation-001-retrieval",
   "conditionIdentitySha256": "c5b84328cc05af0db7e176e1986955e51e4c5e42505fb9ab40ca54079d839d41",
-  "contentIdentitySha256": "80050cc3fc07e49562907b5e4f8ae790462fae72124fa4528ab904448855249c",
+  "contentIdentitySha256": "3b150865b0b38be0ac0818b162356b0a0908e56f8bf992163f8f342d54ebd1c5",
   "context": {
     "algorithm": "genesisbench-integer-lexical-retrieval-v0.1",
     "configIdentitySha256": "7c51dac0513d3b1d45ff0dde13621f7ca78cf15a577a18b3a6d6503c821a5e3a",
-    "contentIdentitySha256": "486623fde596ff78a9bc8e220b3e6209aa5cff544476644665493aa0826542a0",
+    "contentIdentitySha256": "46811cf06beb8acb3b6c86d9bd2bdeccb3a22969ab2f57b8662bf65c9435ff07",
     "kind": "genesis/reference-agent-retrieval-transcript-v0.1",
     "queryIdentitySha256": "c92d765f410f0cf9c6a4596e2bf0e75d8d8f914a051355789b95e9ec102c93ae",
     "queryTokens": [
@@ -131,7 +131,7 @@
         ],
         "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
         "score": 280,
-        "sha256": "6c0f75ebc31e559ff2e61890d4d90eec51c9a843659331df88781bd5e9af4672"
+        "sha256": "e4160d5b2459fc5d37ba06df03ad8d02aef07d06012dd2442e1e98dd522a5129"
       },
       {
         "bytes": 3960,
@@ -167,22 +167,22 @@
   "lineageId": "lineage-generation-001",
   "lineageIdentitySha256": "6867cdd950394cd2a7f0b03872c0f15ce4cbcecd3fc2707592cd2b0adec795ce",
   "oracleAccessed": false,
-  "profileIdentitySha256": "e5f58c91653ccaa68b31224b29642b2e899f05a53035cf2ebb5ec81824ac9297",
+  "profileIdentitySha256": "c108a0caf72732b58652a566e76d9f60197e23e00407d3b2cad81a9d4fbc4076",
   "promptSegments": [
     {
       "identitySha256": "da637405bebc9bd518d2f0525b21a4e5d45dc883630cc1c1b35ffa18aed0af65",
       "role": "system-policy"
     },
     {
-      "identitySha256": "e5f58c91653ccaa68b31224b29642b2e899f05a53035cf2ebb5ec81824ac9297",
+      "identitySha256": "c108a0caf72732b58652a566e76d9f60197e23e00407d3b2cad81a9d4fbc4076",
       "role": "agent-profile"
     },
     {
-      "identitySha256": "6c0f75ebc31e559ff2e61890d4d90eec51c9a843659331df88781bd5e9af4672",
+      "identitySha256": "e4160d5b2459fc5d37ba06df03ad8d02aef07d06012dd2442e1e98dd522a5129",
       "role": "task-card"
     },
     {
-      "identitySha256": "486623fde596ff78a9bc8e220b3e6209aa5cff544476644665493aa0826542a0",
+      "identitySha256": "46811cf06beb8acb3b6c86d9bd2bdeccb3a22969ab2f57b8662bf65c9435ff07",
       "role": "context-pack-or-retrieval-transcript"
     },
     {

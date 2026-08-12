@@ -12,7 +12,8 @@ does not promote the ledger row or close R4.2.d.
 `core/obligation::stage1-validation`,
 `core/obligation::coverage`, `core/obligation::coverage-decision`,
 `core/obligation::coverage-mcdc`,
-`core/obligation::gfx-api-stability`,
+`core/obligation::gfx-api-stability`, `core/obligation::gfx-golden-images`,
+`core/obligation::gfx-frame-budgets`,
 `core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
 The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
@@ -227,6 +228,30 @@ reconstructs that report only to reject malformed, substituted, or contradictory
 output before persistence; it cannot provide a surface, verdict, diagnostic, or
 report to the production authority.
 
+For `:gfx-golden-images` and `:gfx-frame-budgets`, authority is two-phase. The
+`:plan` request contains exactly `:configured`, `:phase`, and ordered `:suites`;
+frame-budget requests additionally contain the exact four manifest limits. Suite
+and entry observations bind manifest order, raw shape, key identity and display,
+callable-body presence, and, for golden entries, raw expected term hash, optional
+PNG hash, kind, and pixel dimensions. GenesisCode validates every closed field,
+normalizes 32-byte hashes and bounded dimensions, preserves legacy error precedence,
+and emits an immutable ordered `genesis/gfx-golden-plan-v0.1` or
+`genesis/gfx-frame-budget-plan-v0.1`. A plan is not acceptance evidence.
+
+Rust independently reconstructs the plan to reject a contradiction, invokes only
+the exact callable bodies selected by that plan under caller limits, and records
+raw value, apply-error, effect-program, or sealed-error outcomes. It performs
+headless rendering only when an authorized frame-graph golden case has an expected
+PNG hash. That renderer observation is bound to the canonical frame hash and exact
+authorized pixel dimensions and contains only a raw renderer error or PNG hash.
+The `:finalize` request repeats the immutable suite facts and limits and adds the
+complete ordered outcomes. GenesisCode rejects omitted, added, reordered, or
+substituted outcomes; extracts scene/frame payloads; computes canonical term hashes,
+frame time, render-pass and draw-command counts, and canonical frame bytes; applies
+all golden and budget policy; and emits the exact final reports and ordered errors.
+Rust reconstructs the final report only as a contradiction oracle and persists only
+the validated GenesisCode report.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -253,6 +278,10 @@ counts, optimized-test hashes, and ordered errors.
 Gfx API reports preserve `genesis/gfx-api-stability-v0.2`, including the exact
 canonical surface term and hash, optional expected hash, ordered errors, and final
 disposition.
+Gfx runtime reports preserve `genesis/gfx-golden-images-v0.2` and
+`genesis/gfx-frame-budgets-v0.2`; their intermediate plan reports are
+`genesis/gfx-golden-plan-v0.1` and `genesis/gfx-frame-budget-plan-v0.1` and cannot
+serve as acceptance evidence.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -317,6 +346,15 @@ checked contradiction implementation. GenesisCode alone derives tracked gfx
 membership, surface content and identity, all errors, pass/fail, and the persisted
 report.
 
+The former reachable Rust golden-case parsing, test selection, hash comparison,
+frame-budget calculation, diagnostic, report-production, and persistence path is
+absent from production obligation execution. Rust retains closed suite observation,
+caller-bounded callable invocation, conditionally authorized headless rendering,
+and independently checked plan/final contradiction implementations. GenesisCode
+alone selects valid cases, validates configuration, extracts results, computes
+metrics, applies all golden and frame-budget decisions, orders errors, and produces
+the persisted reports.
+
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
 set, artifact,
 entrypoint, migrated and residual obligation inventories, primitive host facts, and
@@ -345,13 +383,18 @@ mismatches, open and misaligned facts, exact request binding, report tampering, 
 the authentic optimized `pkg_basic` package. Gfx API controls cover a valid
 configured surface, missing exports, conflicting definitions, open observations,
 request substitution, and surface-report tampering; native/WASI fixtures exercise
-both a complete graphics package and a configured surface-hash mismatch. Runtime
+both a complete graphics package and a configured surface-hash mismatch. Gfx
+runtime controls cover passing term and PNG goldens, term-hash and PNG-hash
+mismatches, frame-budget failure, open plan observations, and renderer frame-hash
+substitution. Native/WASI fixtures exercise the complete graphics package and all
+three failing golden, pixel-golden, and frame-budget packages. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 3 obligation kinds remain host-authoritative or only partially routed.
+The remaining `core/obligation::preflight` kind is host-authoritative or only
+partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

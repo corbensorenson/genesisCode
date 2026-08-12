@@ -188,38 +188,12 @@ pub(super) fn value_as_map(v: &Value) -> Option<&gc_kernel::ValueMap> {
     }
 }
 
-pub(super) fn apply_curried_term_args(
-    ctx: &mut EvalCtx,
-    mut f: Value,
-    args: &[Term],
-) -> Result<Value, ObligationError> {
-    for arg in args {
-        f = f
-            .apply(ctx, Value::data(arg.clone()))
-            .map_err(|e| ObligationError::Test(format!("gc helper apply failed: {e}")))?;
-    }
-    Ok(f)
-}
-
 pub(super) fn term_map_get_bool(t: &Term, key: &str) -> Option<bool> {
     let Term::Map(m) = t else { return None };
     match m.get(&TermOrdKey(Term::symbol(key))) {
         Some(Term::Bool(b)) => Some(*b),
         _ => None,
     }
-}
-
-pub(super) fn term_map_get_string_vec(t: &Term, key: &str) -> Vec<String> {
-    let Term::Map(m) = t else { return Vec::new() };
-    let Some(Term::Vector(xs)) = m.get(&TermOrdKey(Term::symbol(key))) else {
-        return Vec::new();
-    };
-    xs.iter()
-        .filter_map(|x| match x {
-            Term::Str(s) | Term::Symbol(s) => Some(s.clone()),
-            _ => None,
-        })
-        .collect()
 }
 
 pub(super) fn hex32(h: [u8; 32]) -> String {

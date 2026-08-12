@@ -476,10 +476,10 @@ pub fn test_package_with_step_limit_and_frontend(
                 &store, &pkg_dir, &manifest, &modules, &caps, &test_runs, limits, &frontend,
             ),
             "core/obligation::gfx-golden-images" => obligation_gfx::obligation_gfx_golden_images(
-                &store, &pkg_dir, &manifest, &modules, limits,
+                &store, &pkg_dir, &manifest, &modules, &frontend, limits,
             ),
             "core/obligation::gfx-frame-budgets" => obligation_gfx::obligation_gfx_frame_budgets(
-                &store, &pkg_dir, &manifest, &modules, limits,
+                &store, &pkg_dir, &manifest, &modules, &frontend, limits,
             ),
             "core/obligation::gfx-api-stability" => {
                 obligation_gfx_api_stability(&store, &manifest, &modules, &frontend, limits)

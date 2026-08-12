@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "fe925d6cfec92a8463c5105acfb8aa2722f913738bbd366900c8143cafa7a090",
+  "contentIdentitySha256": "ebb9a7e3143469a83e667811502421753d3fcf517a1cfd02d57b63467e6f6d6b",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -27,6 +27,15 @@
     "gfx-api-configured-surface-hash",
     "gfx-api-definition-expression-hash",
     "gfx-api-export-symbol",
+    "gfx-configured-status",
+    "gfx-entry-body-callable-status",
+    "gfx-entry-field-value",
+    "gfx-entry-identity",
+    "gfx-entry-shape",
+    "gfx-execution-result",
+    "gfx-frame-budget-limits",
+    "gfx-renderer-result",
+    "gfx-suite-state",
     "module-path",
     "observed-effect-operation",
     "optimizer-original-evaluation-error",
@@ -68,6 +77,8 @@
     "core/obligation::coverage-mcdc",
     "core/obligation::determinism",
     "core/obligation::gfx-api-stability",
+    "core/obligation::gfx-frame-budgets",
+    "core/obligation::gfx-golden-images",
     "core/obligation::lint",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
@@ -92,8 +103,6 @@
     "genesis_wasi"
   ],
   "residualObligations": [
-    "core/obligation::gfx-frame-budgets",
-    "core/obligation::gfx-golden-images",
     "core/obligation::preflight"
   ],
   "resultKind": "genesis/obligation-authority-result-v0.2",
@@ -115,9 +124,11 @@
     "selfhost/obligation_authority_coverage_v1.gc",
     "selfhost/obligation_authority_translation_v1.gc",
     "selfhost/obligation_authority_gfx_api_v1.gc",
+    "selfhost/obligation_authority_gfx_runtime_v1.gc",
+    "selfhost/obligation_authority_gfx_runtime_finalize_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "b324c020055920e6f65bf9dc8fb90c7b54d8ff028fd6287f3f68c6f8c323e0fb",
+  "sourceSetSha256": "05474338436ebaaf0fda6eb0805637d349873caaa70aec285648bcc3f1db17a3",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

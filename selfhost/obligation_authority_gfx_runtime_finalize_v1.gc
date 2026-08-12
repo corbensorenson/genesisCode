@@ -1,0 +1,350 @@
+(def selfhost/obligation::gfx-typed-map?
+  (fn (value)
+    (fn (type)
+      (if (selfhost/obligation::map? value)
+        (let ((actual ((core/map::get value) (quote :type))))
+          (if (selfhost/obligation::sym? actual) ((core/sym::eq? actual) type) false))
+        false))))
+
+(def selfhost/obligation::gfx-extract-frame
+  (fn (value)
+    (if ((selfhost/obligation::gfx-typed-map? value) (quote :gfx/frame-graph))
+      value
+      (if (selfhost/obligation::map? value)
+        (let ((frame ((core/map::get value) (quote :frame))))
+          (if ((selfhost/obligation::gfx-typed-map? frame) (quote :gfx/frame-graph))
+            frame
+            (let ((graph ((core/map::get value) (quote :frame-graph))))
+              (if ((selfhost/obligation::gfx-typed-map? graph) (quote :gfx/frame-graph))
+                graph nil))))
+        nil))))
+
+(def selfhost/obligation::gfx-extract-scene
+  (fn (value)
+    (if ((selfhost/obligation::gfx-typed-map? value) (quote :gfx/scene))
+      value
+      (if (selfhost/obligation::map? value)
+        (let ((scene ((core/map::get value) (quote :scene))))
+          (if ((selfhost/obligation::gfx-typed-map? scene) (quote :gfx/scene)) scene nil))
+        nil))))
+
+(def selfhost/obligation::gfx-outcome-runtime-error
+  (fn (mode)
+    (fn (outcome)
+      (let ((kind ((core/map::get outcome) (quote :kind)))
+            (result ((core/map::get outcome) (quote :result))))
+        (if ((core/sym::eq? kind) (quote :value))
+          nil
+          (if ((core/sym::eq? kind) (quote :apply-error))
+            (if (selfhost/obligation::str? result)
+              ((core/str::concat "apply failed: ") result)
+              (selfhost/obligation::error "gfx apply-error outcome must carry a string"))
+            (if ((core/sym::eq? kind) (quote :effect-program))
+              (if (selfhost/obligation::nil? result)
+                (if ((core/sym::eq? mode) (quote :golden))
+                  "effect program returned; gfx golden tests must return pure frame/scene data"
+                  "effect program returned; gfx frame budgets must return pure frame data")
+                (selfhost/obligation::error "gfx effect-program outcome must carry nil"))
+              (if ((core/sym::eq? kind) (quote :sealed-error))
+                (if (selfhost/obligation::nil? result)
+                  (if ((core/sym::eq? mode) (quote :golden))
+                    "sealed ERROR returned by golden test body"
+                    "sealed ERROR returned by frame budget test body")
+                  (selfhost/obligation::error "gfx sealed-error outcome must carry nil"))
+                (selfhost/obligation::error "unknown gfx outcome kind")))))))))
+
+(def selfhost/obligation::gfx-render-result
+  (fn (test)
+    (fn (frame)
+      (fn (render)
+        (let ((expect-png ((core/map::get test) (quote :expect-png-h))))
+          (if (selfhost/obligation::nil? expect-png)
+            (if (selfhost/obligation::nil? render)
+              {:error nil :png-h nil}
+              (selfhost/obligation::error "unexpected renderer observation"))
+            (if ((selfhost/obligation::property-exact-map? render)
+                  [:error :frame-h :pixel-height :pixel-width :png-h])
+              (let ((frame-h (selfhost/hash::hash-term frame)))
+                (if ((core/eq? ((core/map::get render) (quote :frame-h))) frame-h)
+                  (if ((core/eq? ((core/map::get render) (quote :pixel-width)))
+                        ((core/map::get test) (quote :pixel-width)))
+                    (if ((core/eq? ((core/map::get render) (quote :pixel-height)))
+                          ((core/map::get test) (quote :pixel-height)))
+                      (let ((error ((core/map::get render) (quote :error)))
+                            (png-h ((core/map::get render) (quote :png-h))))
+                        (if (selfhost/obligation::nil? error)
+                          (if (selfhost/obligation::str? png-h)
+                            {:error nil :png-h png-h}
+                            (selfhost/obligation::error "renderer success must carry :png-h"))
+                          (if (selfhost/obligation::str? error)
+                            (if (selfhost/obligation::nil? png-h)
+                              {:error ((core/str::concat "headless render failed: ") error)
+                               :png-h nil}
+                              (selfhost/obligation::error "renderer failure must not carry :png-h"))
+                            (selfhost/obligation::error "renderer :error must be string or nil"))))
+                      (selfhost/obligation::error "renderer pixel height contradicts plan"))
+                    (selfhost/obligation::error "renderer pixel width contradicts plan"))
+                  (selfhost/obligation::error "renderer frame hash contradicts result")))
+              (selfhost/obligation::error "missing or malformed renderer observation"))))))))
+
+(def selfhost/obligation::gfx-case-errors
+  (fn (mode)
+    (fn (test)
+      (fn (case)
+        (let ((errors ((core/map::get case) (quote :errors))))
+          (if ((core/int::eq? (core/vec::len errors)) 0)
+            ((core/vec::push [])
+              (((((selfhost/obligation::property-str5
+                     (core/sym::to-str ((core/map::get test) (quote :suite)))) "::")
+                   ((core/map::get test) (quote :name))) ": ")
+                (if ((core/sym::eq? mode) (quote :golden))
+                  "golden case failed" "frame budget case failed")))
+            ((core/vec::push [])
+              (((((selfhost/obligation::property-str5
+                     (core/sym::to-str ((core/map::get test) (quote :suite)))) "::")
+                   ((core/map::get test) (quote :name))) ": ")
+                ((core/str::join errors) "; ")))))))))
+
+(def selfhost/obligation::gfx-golden-case-outcome
+  (fn (test)
+    (fn (outcome)
+      (if ((selfhost/obligation::property-exact-map? outcome)
+            [:entry-index :kind :render :result :suite-index])
+        (if ((core/eq? ((core/map::get outcome) (quote :suite-index)))
+              ((core/map::get test) (quote :suite-index)))
+          (if ((core/eq? ((core/map::get outcome) (quote :entry-index)))
+                ((core/map::get test) (quote :entry-index)))
+            (let ((runtime-error
+                   ((selfhost/obligation::gfx-outcome-runtime-error (quote :golden)) outcome)))
+              (if (core/error::is? runtime-error) runtime-error
+                (let ((kind ((core/map::get test) (quote :kind)))
+                      (result ((core/map::get outcome) (quote :result)))
+                      (render ((core/map::get outcome) (quote :render))))
+                  (if (selfhost/obligation::nil? runtime-error)
+                    (let ((target
+                           (if ((core/sym::eq? kind) (quote :frame-graph))
+                             (selfhost/obligation::gfx-extract-frame result)
+                             (selfhost/obligation::gfx-extract-scene result))))
+                      (if (selfhost/obligation::nil? target)
+                        {:actual-h nil :actual-png-h nil
+                         :runtime-error
+                           (if ((core/sym::eq? kind) (quote :frame-graph))
+                             "expected frame-graph output" "expected scene output")}
+                        (let ((render-state
+                               (if ((core/sym::eq? kind) (quote :frame-graph))
+                                 (((selfhost/obligation::gfx-render-result test) target) render)
+                                 (if (selfhost/obligation::nil? render)
+                                   {:error nil :png-h nil}
+                                   (selfhost/obligation::error "scene outcome cannot carry renderer observation")))))
+                          (if (core/error::is? render-state) render-state
+                            {:actual-h (selfhost/hash::hash-term target)
+                             :actual-png-h ((core/map::get render-state) (quote :png-h))
+                             :runtime-error ((core/map::get render-state) (quote :error))}))))
+                    (if (selfhost/obligation::nil? render)
+                      {:actual-h nil :actual-png-h nil :runtime-error runtime-error}
+                      (selfhost/obligation::error "failed gfx body cannot carry renderer observation"))))))
+            (selfhost/obligation::error "gfx golden outcome entry identity mismatch"))
+          (selfhost/obligation::error "gfx golden outcome suite identity mismatch"))
+        (selfhost/obligation::error "invalid gfx golden outcome observation")))))
+
+(def selfhost/obligation::gfx-golden-finalize-loop
+  (fn (tests)
+    (fn (outcomes)
+      (fn (index)
+        (fn (cases)
+          (fn (errors)
+            (if ((core/int::eq? index) (core/vec::len tests))
+              (if ((core/int::eq? index) (core/vec::len outcomes))
+                {:cases cases :errors errors}
+                (selfhost/obligation::error "gfx golden outcome inventory length mismatch"))
+              (if ((core/int::lt? index) (core/vec::len outcomes))
+                (let ((test ((core/vec::get tests) index)))
+                  (let ((state ((selfhost/obligation::gfx-golden-case-outcome test)
+                                ((core/vec::get outcomes) index))))
+                    (if (core/error::is? state) state
+                      (let ((case
+                             ((((((((((core/gfx/obligation::golden-case
+                               ((core/map::get test) (quote :suite)))
+                               ((core/map::get test) (quote :name)))
+                               ((core/map::get test) (quote :kind)))
+                               ((core/map::get test) (quote :expect-h)))
+                               ((core/map::get state) (quote :actual-h)))
+                               ((core/map::get test) (quote :expect-png-h)))
+                               ((core/map::get state) (quote :actual-png-h)))
+                               ((core/map::get test) (quote :pixel-width)))
+                               ((core/map::get test) (quote :pixel-height)))
+                               ((core/map::get state) (quote :runtime-error)))))
+                        (((((selfhost/obligation::gfx-golden-finalize-loop tests) outcomes)
+                            ((core/int::add index) 1)) ((core/vec::push cases) case))
+                          (if ((core/map::get case) (quote :ok)) errors
+                            ((selfhost/obligation::append-errors errors)
+                              (((selfhost/obligation::gfx-case-errors (quote :golden)) test) case))))))))
+                (selfhost/obligation::error "gfx golden outcome inventory length mismatch")))))))))
+
+(def selfhost/obligation::gfx-frame-time
+  (fn (value)
+    (if ((selfhost/obligation::gfx-typed-map? value) (quote :gfx/frame-graph))
+      {:error nil :frame value :time nil}
+      (if (selfhost/obligation::map? value)
+        (let ((frame (selfhost/obligation::gfx-extract-frame value))
+              (time ((core/map::get value) (quote :frame-time-ms))))
+          (if (selfhost/obligation::nil? frame)
+            {:error "missing :frame/:frame-graph field" :frame nil :time nil}
+            (if (selfhost/obligation::nil? time)
+              {:error nil :frame frame :time nil}
+              (if (selfhost/obligation::int? time)
+                {:error nil :frame frame
+                 :time (if ((core/int::lt? time) 0) nil time)}
+                {:error
+                   ((core/str::concat ":frame-time-ms must be int or nil, got ")
+                     (selfhost/printer::print-term time))
+                 :frame nil :time nil}))))
+        {:error "expected frame-graph or {:frame <frame-graph> ...}" :frame nil :time nil}))))
+
+(def selfhost/obligation::gfx-command-count-loop
+  (fn (passes)
+    (fn (index)
+      (fn (count)
+        (fn (pass-label)
+          (if ((core/int::eq? index) (core/vec::len passes))
+            {:count count :error nil}
+            (let ((pass ((core/vec::get passes) index)))
+              (if (selfhost/obligation::map? pass)
+                (let ((commands ((core/map::get pass) (quote :commands))))
+                  (if (selfhost/obligation::vec? commands)
+                    ((((selfhost/obligation::gfx-command-count-loop passes)
+                       ((core/int::add index) 1))
+                      ((core/int::add count) (core/vec::len commands))) pass-label)
+                    {:count 0 :error ((core/str::concat pass-label) " :commands must be a vector")}))
+                {:count 0 :error ((core/str::concat pass-label) " must be a map")}))))))))
+
+(def selfhost/obligation::gfx-frame-metrics
+  (fn (frame)
+    (let ((render ((core/map::get frame) (quote :render-passes)))
+          (compute ((core/map::get frame) (quote :compute-passes))))
+      (if (selfhost/obligation::nil? render)
+        {:error "frame graph missing :render-passes" :metrics {}}
+        (if (selfhost/obligation::nil? compute)
+          {:error "frame graph missing :compute-passes" :metrics {}}
+          (if (selfhost/obligation::vec? render)
+            (if (selfhost/obligation::vec? compute)
+              (let ((draw ((((selfhost/obligation::gfx-command-count-loop render) 0) 0)
+                            "render pass"))
+                    (dispatch ((((selfhost/obligation::gfx-command-count-loop compute) 0) 0)
+                                "compute pass")))
+                (if (selfhost/obligation::nil? ((core/map::get draw) (quote :error)))
+                  (if (selfhost/obligation::nil? ((core/map::get dispatch) (quote :error)))
+                    {:error nil
+                     :metrics
+                       {:compute-commands ((core/map::get dispatch) (quote :count))
+                        :compute-passes (core/vec::len compute)
+                        :draw-commands ((core/map::get draw) (quote :count))
+                        :frame-graph-bytes (core/str::len (selfhost/printer::print-term frame))
+                        :render-passes (core/vec::len render)}}
+                    {:error ((core/map::get dispatch) (quote :error)) :metrics {}})
+                  {:error ((core/map::get draw) (quote :error)) :metrics {}}))
+              {:error ":compute-passes must be a vector" :metrics {}})
+            {:error ":render-passes must be a vector" :metrics {}}))))))
+
+(def selfhost/obligation::gfx-frame-case-outcome
+  (fn (test)
+    (fn (outcome)
+      (if ((selfhost/obligation::property-exact-map? outcome)
+            [:entry-index :kind :result :suite-index])
+        (if ((core/eq? ((core/map::get outcome) (quote :suite-index)))
+              ((core/map::get test) (quote :suite-index)))
+          (if ((core/eq? ((core/map::get outcome) (quote :entry-index)))
+                ((core/map::get test) (quote :entry-index)))
+            (let ((runtime-error
+                   ((selfhost/obligation::gfx-outcome-runtime-error (quote :frame)) outcome)))
+              (if (core/error::is? runtime-error) runtime-error
+                (if (selfhost/obligation::nil? runtime-error)
+                  (let ((frame-state
+                         (selfhost/obligation::gfx-frame-time
+                           ((core/map::get outcome) (quote :result)))))
+                    (let ((frame-error ((core/map::get frame-state) (quote :error))))
+                      (if (selfhost/obligation::nil? frame-error)
+                        (let ((metric-state
+                               (selfhost/obligation::gfx-frame-metrics
+                                 ((core/map::get frame-state) (quote :frame)))))
+                          {:metrics ((core/map::get metric-state) (quote :metrics))
+                           :runtime-error ((core/map::get metric-state) (quote :error))
+                           :time ((core/map::get frame-state) (quote :time))})
+                        {:metrics {} :runtime-error frame-error :time nil})))
+                  {:metrics {} :runtime-error runtime-error :time nil})))
+            (selfhost/obligation::error "gfx frame outcome entry identity mismatch"))
+          (selfhost/obligation::error "gfx frame outcome suite identity mismatch"))
+        (selfhost/obligation::error "invalid gfx frame outcome observation")))))
+
+(def selfhost/obligation::gfx-frame-finalize-loop
+  (fn (tests)
+    (fn (outcomes)
+      (fn (limits)
+        (fn (index)
+          (fn (cases)
+            (fn (errors)
+              (if ((core/int::eq? index) (core/vec::len tests))
+                (if ((core/int::eq? index) (core/vec::len outcomes))
+                  {:cases cases :errors errors}
+                  (selfhost/obligation::error "gfx frame outcome inventory length mismatch"))
+                (if ((core/int::lt? index) (core/vec::len outcomes))
+                  (let ((test ((core/vec::get tests) index)))
+                    (let ((state ((selfhost/obligation::gfx-frame-case-outcome test)
+                                  ((core/vec::get outcomes) index))))
+                      (if (core/error::is? state) state
+                        (let ((case
+                               ((((((core/gfx/obligation::frame-budget-case
+                                 ((core/map::get test) (quote :suite)))
+                                 ((core/map::get test) (quote :name)))
+                                 ((core/map::get state) (quote :metrics))) limits)
+                                 ((core/map::get state) (quote :time)))
+                                 ((core/map::get state) (quote :runtime-error)))))
+                          ((((((selfhost/obligation::gfx-frame-finalize-loop tests) outcomes) limits)
+                              ((core/int::add index) 1)) ((core/vec::push cases) case))
+                            (if ((core/map::get case) (quote :ok)) errors
+                              ((selfhost/obligation::append-errors errors)
+                                (((selfhost/obligation::gfx-case-errors (quote :frame)) test) case))))))))
+                  (selfhost/obligation::error "gfx frame outcome inventory length mismatch"))))))))))
+
+(def selfhost/obligation::gfx-finalize
+  (fn (mode)
+    (fn (package)
+      (fn (inputs)
+        (let ((frame? ((core/sym::eq? mode) (quote :frame))))
+          (if ((selfhost/obligation::property-exact-map? inputs)
+                (if frame? [:configured :limits :outcomes :phase :suites]
+                  [:configured :outcomes :phase :suites]))
+            (if ((core/sym::eq? ((core/map::get inputs) (quote :phase))) (quote :finalize))
+              (let ((configured ((core/map::get inputs) (quote :configured)))
+                    (suites ((core/map::get inputs) (quote :suites)))
+                    (outcomes ((core/map::get inputs) (quote :outcomes)))
+                    (limits (if frame? ((core/map::get inputs) (quote :limits)) {})))
+                (let ((plan ((((selfhost/obligation::gfx-plan-state mode) configured) suites) limits)))
+                  (if (core/error::is? plan) plan
+                    (let ((tests ((core/map::get plan) (quote :tests)))
+                          (plan-errors ((core/map::get plan) (quote :errors))))
+                      (let ((final-state
+                             (if frame?
+                               ((((((selfhost/obligation::gfx-frame-finalize-loop tests) outcomes)
+                                    limits) 0) []) plan-errors)
+                               (((((selfhost/obligation::gfx-golden-finalize-loop tests) outcomes)
+                                   0) []) plan-errors))))
+                        (if (core/error::is? final-state) final-state
+                          (let ((errors ((core/map::get final-state) (quote :errors)))
+                                (cases ((core/map::get final-state) (quote :cases))))
+                            {:errors errors
+                             :kind selfhost/obligation::RESULT_KIND
+                             :name (if frame? "core/obligation::gfx-frame-budgets"
+                                     "core/obligation::gfx-golden-images")
+                             :ok ((core/int::eq? (core/vec::len errors)) 0)
+                             :operation (if frame? (quote :gfx-frame-budgets)
+                                          (quote :gfx-golden-images))
+                             :report
+                               (if frame?
+                                 (((((core/gfx/obligation::frame-budget-report package)
+                                     ((core/int::eq? (core/vec::len errors)) 0)) limits) cases) errors)
+                                 ((((core/gfx/obligation::golden-report package)
+                                    ((core/int::eq? (core/vec::len errors)) 0)) cases) errors))
+                             :v 2})))))))
+              (selfhost/obligation::error "gfx finalize :phase must equal :finalize"))
+            (selfhost/obligation::error "gfx finalize input fields mismatch")))))))

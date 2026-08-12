@@ -55,8 +55,12 @@
                                     ((selfhost/obligation::translation-validation package) inputs)
                                     (if ((core/sym::eq? operation) (quote :gfx-api-stability))
                                       ((selfhost/obligation::gfx-api-stability package) inputs)
-                                      (selfhost/obligation::error
-                                        "unknown obligation authority operation"))))))))))))))))))))
+                                      (if ((core/sym::eq? operation) (quote :gfx-golden-images))
+                                        (((selfhost/obligation::gfx-runtime-authority (quote :golden)) package) inputs)
+                                        (if ((core/sym::eq? operation) (quote :gfx-frame-budgets))
+                                          (((selfhost/obligation::gfx-runtime-authority (quote :frame)) package) inputs)
+                                          (selfhost/obligation::error
+                                            "unknown obligation authority operation"))))))))))))))))))))))
 
 (def core/cli::obligation-authority
   (fn (request)

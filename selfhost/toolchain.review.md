@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `47915efa733d9c7293bf538c7c086ea147812bdea8b66733a9029de6ccadd5fe`
-- Freshness artifact hash: `47915efa733d9c7293bf538c7c086ea147812bdea8b66733a9029de6ccadd5fe`
-- Freshness source hash: `47f7f44812ada9fac0f2c84d274822c5e03dfd594014c40b1c2366865bee97b9`
-- Source aggregate hash (module path + module sha256): `c34b30884fcde4c774025c14845f05e1b6606ec4cd49998f2fda5dfe4cfc8d84`
+- Artifact sha256: `b74789606a7f50f330378e661aac8d447dee5aca3042c0e55fd3bf1f7dce9cf7`
+- Freshness artifact hash: `b74789606a7f50f330378e661aac8d447dee5aca3042c0e55fd3bf1f7dce9cf7`
+- Freshness source hash: `1be666b90c51e6783a57076fc5fc30e055c36f4a64ef80804e2e808d117a0c79`
+- Source aggregate hash (module path + module sha256): `f7d58fe6712bc241903ef6255179d6118f28a7b8217ad65e0dae6ac5f169b0bd`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `68`
+- Module count: `70`
 
 ## Module Summary
 
@@ -82,7 +82,9 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/obligation_authority_coverage_v1.gc` | 523 | 24182 | 29 | `77e5304e98081ef0` |
 | `selfhost/obligation_authority_translation_v1.gc` | 547 | 25227 | 24 | `d2f924dbde90c365` |
 | `selfhost/obligation_authority_gfx_api_v1.gc` | 247 | 11297 | 16 | `d7824d7cb9d3a46f` |
-| `selfhost/obligation_authority_v1.gc` | 85 | 5384 | 3 | `033aaa8a235bcb85` |
+| `selfhost/obligation_authority_gfx_runtime_v1.gc` | 380 | 20945 | 14 | `94b78ace06c7e7e4` |
+| `selfhost/obligation_authority_gfx_runtime_finalize_v1.gc` | 350 | 20934 | 14 | `1e26126bb78036ff` |
+| `selfhost/obligation_authority_v1.gc` | 89 | 5831 | 3 | `b7e8d1392fd227b8` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -153,5 +155,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/obligation_authority_coverage_v1.gc`: `selfhost/obligation::coverage-profile-valid?`, `selfhost/obligation::coverage-structural?`, `selfhost/obligation::coverage-mcdc?`, `selfhost/obligation::coverage-name`, `selfhost/obligation::coverage-operation`, `selfhost/obligation::coverage-count-row-valid?`, `selfhost/obligation::coverage-site-row-valid?`, `selfhost/obligation::coverage-decision-counts-valid?`
 - `selfhost/obligation_authority_translation_v1.gc`: `selfhost/obligation::translation-vector-valid-loop?`, `selfhost/obligation::translation-vector-valid?`, `selfhost/obligation::translation-string-vector-valid?`, `selfhost/obligation::translation-status-valid?`, `selfhost/obligation::translation-value-kind-valid?`, `selfhost/obligation::translation-optional-bool?`, `selfhost/obligation::translation-rewrite-valid?`, `selfhost/obligation::translation-stage2-valid?`
 - `selfhost/obligation_authority_gfx_api_v1.gc`: `selfhost/obligation::gfx-api-symbol-vector-valid-loop?`, `selfhost/obligation::gfx-api-symbol-vector-valid?`, `selfhost/obligation::gfx-api-definition-valid?`, `selfhost/obligation::gfx-api-definition-error`, `selfhost/obligation::gfx-api-definitions-loop`, `selfhost/obligation::gfx-api-starts-with?`, `selfhost/obligation::gfx-api-filter-exports-loop`, `selfhost/obligation::gfx-api-filter-exports`
+- `selfhost/obligation_authority_gfx_runtime_v1.gc`: `selfhost/obligation::gfx-field-valid?`, `selfhost/obligation::gfx-hash-value`, `selfhost/obligation::gfx-optional-hash-value`, `selfhost/obligation::gfx-pixel-value`, `selfhost/obligation::gfx-kind-value`, `selfhost/obligation::gfx-golden-entry-values`, `selfhost/obligation::gfx-golden-entry-decision`, `selfhost/obligation::gfx-frame-entry-decision`
+- `selfhost/obligation_authority_gfx_runtime_finalize_v1.gc`: `selfhost/obligation::gfx-typed-map?`, `selfhost/obligation::gfx-extract-frame`, `selfhost/obligation::gfx-extract-scene`, `selfhost/obligation::gfx-outcome-runtime-error`, `selfhost/obligation::gfx-render-result`, `selfhost/obligation::gfx-case-errors`, `selfhost/obligation::gfx-golden-case-outcome`, `selfhost/obligation::gfx-golden-finalize-loop`
 - `selfhost/obligation_authority_v1.gc`: `selfhost/obligation::bind-result`, `selfhost/obligation::dispatch`, `core/cli::obligation-authority`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`
