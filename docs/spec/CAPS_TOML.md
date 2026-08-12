@@ -212,6 +212,14 @@ Supported keys:
 - `allow_bind_hosts` (array<string>): required bind-host allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
+
+For artifact-only production policy loads, GenesisCode authority protocol v0.6
+normalizes `url_allow`, `remote_allow`, `allow_http`, `wasi_network_profile`,
+`allow_bind_hosts`, `allow_bind_ports`, and `max_request_bytes` into closed typed
+states before any network, sync, publication, or store-remote consumer runs.
+Host code retains URL/authority parsing, matching, WASI backend availability,
+transport, cancellation, and byte enforcement; raw TOML interpretation remains
+reachable only through the explicit compatibility/oracle path during R4.2.d.
 - `db_target_allow` (array<string>): allowlist of durable-data targets (DSN/path prefixes) for `io/db::connect` and `io/db::kv-open`.
 - `allow_query_classes` (array<string>): required query/statement class allowlist for SQL-like durable-data ops (`io/db::query`, `io/db::exec`).
 - `max_row_count` (int): required positive row-count bound for `io/db::query`.

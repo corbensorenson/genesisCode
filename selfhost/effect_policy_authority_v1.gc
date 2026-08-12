@@ -342,7 +342,7 @@
     (if (selfhost/policy::nil? override)
       true
       (if (selfhost/policy::map? override)
-        (if ((core/int::eq? (core/map::len override)) 8)
+        (if ((core/int::eq? (core/map::len override)) 9)
           (if (selfhost/effect-policy::optional-bool? ((core/map::get override) (quote :allow)))
             (if (selfhost/effect-policy::optional-str?
                   ((core/map::get override) (quote :base-dir)))
@@ -351,17 +351,21 @@
                   ((core/map::get override) (quote :create-dirs)))
                 (if (selfhost/effect-policy::database-input-valid?
                       ((core/map::get override) (quote :database-policy)))
-                  (if
-                    (selfhost/effect-policy::optional-int?
-                      ((core/map::get override) (quote :log-inline-max-bytes)))
                     (if
-                      (selfhost/effect-policy::limit-input-valid?
-                        ((core/map::get override) (quote :max-bytes)))
+                      (selfhost/effect-policy::optional-int?
+                        ((core/map::get override) (quote :log-inline-max-bytes)))
                       (if
-                        (selfhost/effect-policy::process-program-input-valid?
-                          ((core/map::get override) (quote :process-programs)))
-                        (selfhost/effect-policy::optional-int?
-                          ((core/map::get override) (quote :timeout-ms)))
+                        (selfhost/effect-policy::limit-input-valid?
+                          ((core/map::get override) (quote :max-bytes)))
+                        (if
+                          (selfhost/effect-network::input-valid?
+                            ((core/map::get override) (quote :network-policy)))
+                          (if
+                            (selfhost/effect-policy::process-program-input-valid?
+                              ((core/map::get override) (quote :process-programs)))
+                            (selfhost/effect-policy::optional-int?
+                              ((core/map::get override) (quote :timeout-ms)))
+                            false)
                         false)
                       false)
                     false)
@@ -571,8 +575,8 @@
             (override ((core/map::get request) (quote :override)))
             (platform-max ((core/map::get request) (quote :platform-max-bytes))))
           (if
-            (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.5")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 5) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.6")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 6) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -599,10 +603,14 @@
                         (if allowed
                           ((selfhost/effect-policy::database-policy override) platform-max)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.5"
+                      :kind "genesis/effect-policy-authority-result-v0.6"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
+                          nil)
+                      :network-policy
+                        (if allowed
+                          ((selfhost/effect-network::policy override) platform-max)
                           nil)
                       :op op
                       :process-program-policy
@@ -610,7 +618,7 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 5}))
+                      :v 6}))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly optional typed admission and base fields"))
               ((core/error::make2 "core/policy/authority")

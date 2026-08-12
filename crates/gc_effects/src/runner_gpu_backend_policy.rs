@@ -173,6 +173,7 @@ mod tests {
             authorized_max_bytes: None,
             authorized_process_programs: None,
             authorized_database: None,
+            authorized_network: None,
         }
     }
 

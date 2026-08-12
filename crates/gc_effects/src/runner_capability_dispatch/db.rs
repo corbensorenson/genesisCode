@@ -102,6 +102,7 @@ mod tests {
             authorized_max_bytes: None,
             authorized_process_programs: None,
             authorized_database: Some(authorized),
+            authorized_network: None,
         }
     }
 

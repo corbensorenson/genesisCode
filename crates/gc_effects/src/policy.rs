@@ -148,6 +148,42 @@ pub(crate) struct AuthorizedDatabasePolicy {
     pub max_value_bytes: AuthorizedMaxBytes,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedOptionalBool {
+    Absent,
+    InvalidType,
+    Valid(bool),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedOptionalString {
+    Absent,
+    InvalidType,
+    Empty,
+    Valid(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedBindPorts {
+    Absent,
+    InvalidType,
+    InvalidEntry,
+    OutOfRange,
+    Empty,
+    Valid { any: bool, ports: Vec<u16> },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedNetworkPolicy {
+    pub url_allow: AuthorizedStringList,
+    pub remote_allow: AuthorizedStringList,
+    pub allow_http: AuthorizedOptionalBool,
+    pub wasi_network_profile: AuthorizedOptionalString,
+    pub bind_hosts: AuthorizedStringList,
+    pub bind_ports: AuthorizedBindPorts,
+    pub max_request_bytes: AuthorizedMaxBytes,
+}
+
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
@@ -159,6 +195,7 @@ pub struct OpPolicy {
     pub(crate) authorized_max_bytes: Option<AuthorizedMaxBytes>,
     pub(crate) authorized_process_programs: Option<AuthorizedProcessPrograms>,
     pub(crate) authorized_database: Option<AuthorizedDatabasePolicy>,
+    pub(crate) authorized_network: Option<AuthorizedNetworkPolicy>,
 }
 
 impl CapsPolicy {
@@ -270,6 +307,7 @@ impl CapsPolicy {
                         authorized_max_bytes: None,
                         authorized_process_programs: None,
                         authorized_database: None,
+                        authorized_network: None,
                     },
                 );
             }

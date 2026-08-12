@@ -1,6 +1,7 @@
 use super::{
-    AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedProcessPrograms, AuthorizedStringList,
-    CapsPolicy,
+    AuthorizedBindPorts, AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
+    AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedProcessPrograms,
+    AuthorizedStringList, CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
@@ -67,6 +68,47 @@ fn database_policy_term(
         ),
         (TermOrdKey(Term::symbol(":query-classes")), query_classes),
         (TermOrdKey(Term::symbol(":target-allow")), target_allow),
+    ]))
+}
+
+fn optional_value_policy(status: &str, value: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
+        (TermOrdKey(Term::symbol(":value")), value),
+    ]))
+}
+
+fn bind_ports_policy(status: &str, any: Term, ports: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":any")), any),
+        (TermOrdKey(Term::symbol(":ports")), ports),
+        (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
+    ]))
+}
+
+fn network_policy_term(
+    url_allow: Term,
+    remote_allow: Term,
+    allow_http: Term,
+    wasi_profile: Term,
+    bind_hosts: Term,
+    bind_ports: Term,
+    max_request_bytes: Term,
+) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":allow-http")), allow_http),
+        (TermOrdKey(Term::symbol(":bind-hosts")), bind_hosts),
+        (TermOrdKey(Term::symbol(":bind-ports")), bind_ports),
+        (
+            TermOrdKey(Term::symbol(":max-request-bytes")),
+            max_request_bytes,
+        ),
+        (TermOrdKey(Term::symbol(":remote-allow")), remote_allow),
+        (TermOrdKey(Term::symbol(":url-allow")), url_allow),
+        (
+            TermOrdKey(Term::symbol(":wasi-network-profile")),
+            wasi_profile,
+        ),
     ]))
 }
 
@@ -577,6 +619,170 @@ fn selfhost_authority_rejects_malformed_database_decisions() {
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
     decode_database_policy(&Term::Map(extra), true)
         .expect_err("unknown database authority fields must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_network_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."io/net::http-listen"]
+url_allow = ["  http://127.0.0.1:8080  ", ""]
+remote_allow = ["https://ignored.example"]
+allow_http = true
+wasi_network_profile = "  preview2  "
+allow_bind_hosts = [" 127.0.0.1 "]
+allow_bind_ports = [8080, " * "]
+max_request_bytes = 4096
+"#,
+    )
+    .unwrap();
+
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    assert_eq!(
+        policy
+            .op_policy("io/net::http-listen")
+            .unwrap()
+            .authorized_network,
+        Some(AuthorizedNetworkPolicy {
+            url_allow: AuthorizedStringList::Valid(vec!["http://127.0.0.1:8080".to_string()]),
+            remote_allow: AuthorizedStringList::Valid(vec!["https://ignored.example".to_string(),]),
+            allow_http: AuthorizedOptionalBool::Valid(true),
+            wasi_network_profile: AuthorizedOptionalString::Valid("preview2".to_string()),
+            bind_hosts: AuthorizedStringList::Valid(vec!["127.0.0.1".to_string()]),
+            bind_ports: AuthorizedBindPorts::Valid {
+                any: true,
+                ports: vec![8080],
+            },
+            max_request_bytes: AuthorizedMaxBytes::Valid(4096),
+        })
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_invalid_network_policy_states() {
+    let cases = [
+        (
+            "url_allow = \"bad\"",
+            AuthorizedStringList::InvalidType,
+            AuthorizedBindPorts::Absent,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "allow_bind_ports = [70000]",
+            AuthorizedStringList::Absent,
+            AuthorizedBindPorts::OutOfRange,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "allow_bind_ports = [\"nope\"]",
+            AuthorizedStringList::Absent,
+            AuthorizedBindPorts::InvalidEntry,
+            AuthorizedMaxBytes::Absent,
+        ),
+        (
+            "max_request_bytes = 0",
+            AuthorizedStringList::Absent,
+            AuthorizedBindPorts::Absent,
+            AuthorizedMaxBytes::NonPositive,
+        ),
+    ];
+    for (setting, target_allow, bind_ports, max_request_bytes) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[op.\"io/net::http-listen\"]\n{setting}\n")).unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        let network = policy
+            .op_policy("io/net::http-listen")
+            .unwrap()
+            .authorized_network
+            .as_ref()
+            .unwrap();
+        assert_eq!(network.url_allow, target_allow, "setting: {setting}");
+        assert_eq!(network.bind_ports, bind_ports, "setting: {setting}");
+        assert_eq!(
+            network.max_request_bytes, max_request_bytes,
+            "setting: {setting}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_network_decisions() {
+    use super::policy_authority::decode_network_policy;
+
+    let absent_list = string_list_policy(":absent", Term::Nil);
+    let absent_bool = optional_value_policy(":absent", Term::Nil);
+    let absent_string = optional_value_policy(":absent", Term::Nil);
+    let absent_ports = bind_ports_policy(":absent", Term::Nil, Term::Nil);
+    let absent_limit = max_bytes_policy(":absent", Term::Nil);
+    let valid = || {
+        network_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_bool.clone(),
+            absent_string.clone(),
+            absent_list.clone(),
+            absent_ports.clone(),
+            absent_limit.clone(),
+        )
+    };
+    decode_network_policy(&valid(), true).unwrap();
+
+    let cases = [
+        network_policy_term(
+            string_list_policy(":valid", Term::Nil),
+            absent_list.clone(),
+            absent_bool.clone(),
+            absent_string.clone(),
+            absent_list.clone(),
+            absent_ports.clone(),
+            absent_limit.clone(),
+        ),
+        network_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            optional_value_policy(":valid", Term::Nil),
+            absent_string.clone(),
+            absent_list.clone(),
+            absent_ports.clone(),
+            absent_limit.clone(),
+        ),
+        network_policy_term(
+            absent_list.clone(),
+            absent_list.clone(),
+            absent_bool.clone(),
+            absent_string.clone(),
+            absent_list.clone(),
+            bind_ports_policy(":valid", Term::Bool(false), Term::Vector(vec![])),
+            absent_limit.clone(),
+        ),
+    ];
+    for decision in cases {
+        decode_network_policy(&decision, true)
+            .expect_err("contradictory network authority decision must fail closed");
+    }
+    decode_network_policy(&valid(), false)
+        .expect_err("denied operation must not carry a network decision");
+
+    let Term::Map(mut extra) = valid() else {
+        return;
+    };
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_network_policy(&Term::Map(extra), true)
+        .expect_err("unknown network authority fields must fail closed");
 }
 
 #[test]

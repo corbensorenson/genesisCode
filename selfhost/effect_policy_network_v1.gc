@@ -1,0 +1,267 @@
+(def selfhost/effect-network::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/effect-network::map-has-key-loop? entries) key)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/effect-network::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            (((selfhost/effect-network::map-has-key-loop? (core/map::entries map))
+               ((core/vec::get keys) index)) 0)
+            (((selfhost/effect-network::map-has-keys-loop? map) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/effect-network::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/policy::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/effect-network::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/effect-network::invalid-type?
+  (fn (value)
+    (if (selfhost/policy::sym? value)
+      ((core/sym::eq? value) (quote :invalid-type))
+      false)))
+
+(def selfhost/effect-network::invalid-entry?
+  (fn (value)
+    (if (selfhost/policy::sym? value)
+      ((core/sym::eq? value) (quote :invalid-entry))
+      false)))
+
+(def selfhost/effect-network::list-input-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (let ((value ((core/vec::get values) index)))
+          (if (selfhost/policy::str? value)
+            ((selfhost/effect-network::list-input-loop? values) ((core/int::add index) 1))
+            (selfhost/effect-network::invalid-entry? value)))))))
+
+(def selfhost/effect-network::list-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::vec? value)
+        ((selfhost/effect-network::list-input-loop? value) 0)
+        (selfhost/effect-network::invalid-type? value)))))
+
+(def selfhost/effect-network::optional-bool-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if ((core/sym::eq? (core/data::tag value)) (quote :bool))
+        true
+        (selfhost/effect-network::invalid-type? value)))))
+
+(def selfhost/effect-network::optional-string-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::str? value)
+        true
+        (selfhost/effect-network::invalid-type? value)))))
+
+(def selfhost/effect-network::limit-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::int? value)
+        true
+        (selfhost/effect-network::invalid-type? value)))))
+
+(def selfhost/effect-network::bind-port-input-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (let ((value ((core/vec::get values) index)))
+          (if (selfhost/policy::int? value)
+            ((selfhost/effect-network::bind-port-input-loop? values)
+              ((core/int::add index) 1))
+            (if (selfhost/policy::str? value)
+              ((selfhost/effect-network::bind-port-input-loop? values)
+                ((core/int::add index) 1))
+              (selfhost/effect-network::invalid-entry? value))))))))
+
+(def selfhost/effect-network::bind-port-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::vec? value)
+        ((selfhost/effect-network::bind-port-input-loop? value) 0)
+        (selfhost/effect-network::invalid-type? value)))))
+
+(def selfhost/effect-network::input-valid?
+  (fn (value)
+    (if ((selfhost/effect-network::exact-map? value)
+          [:allow-http
+           :bind-hosts
+           :bind-ports
+           :max-request-bytes
+           :remote-allow
+           :url-allow
+           :wasi-network-profile])
+      (if (selfhost/effect-network::optional-bool-input?
+            ((core/map::get value) (quote :allow-http)))
+        (if (selfhost/effect-network::list-input?
+              ((core/map::get value) (quote :bind-hosts)))
+          (if (selfhost/effect-network::bind-port-input?
+                ((core/map::get value) (quote :bind-ports)))
+            (if (selfhost/effect-network::limit-input?
+                  ((core/map::get value) (quote :max-request-bytes)))
+              (if (selfhost/effect-network::list-input?
+                    ((core/map::get value) (quote :remote-allow)))
+                (if (selfhost/effect-network::list-input?
+                      ((core/map::get value) (quote :url-allow)))
+                  (selfhost/effect-network::optional-string-input?
+                    ((core/map::get value) (quote :wasi-network-profile)))
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-network::list-policy-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (if ((core/int::eq? (core/vec::len out)) 0)
+            {:status (quote :empty) :values nil}
+            {:status (quote :valid) :values out})
+          (let ((value ((core/vec::get values) index)))
+            (if (selfhost/policy::str? value)
+              (let ((trimmed (selfhost/policy::trim value)))
+                (((selfhost/effect-network::list-policy-loop values)
+                   ((core/int::add index) 1))
+                  (if (selfhost/policy::non-empty-str? trimmed)
+                    ((core/vec::push out) trimmed)
+                    out)))
+              {:status (quote :invalid-entry) :values nil})))))))
+
+(def selfhost/effect-network::list-policy
+  (fn (raw)
+    (if (selfhost/policy::nil? raw)
+      {:status (quote :absent) :values nil}
+      (if (selfhost/policy::vec? raw)
+        (((selfhost/effect-network::list-policy-loop raw) 0) [])
+        {:status (quote :invalid-type) :values nil}))))
+
+(def selfhost/effect-network::bool-policy
+  (fn (raw)
+    (if (selfhost/policy::nil? raw)
+      {:status (quote :absent) :value nil}
+      (if (selfhost/effect-network::invalid-type? raw)
+        {:status (quote :invalid-type) :value nil}
+        {:status (quote :valid) :value raw}))))
+
+(def selfhost/effect-network::string-policy
+  (fn (raw)
+    (if (selfhost/policy::nil? raw)
+      {:status (quote :absent) :value nil}
+      (if (selfhost/effect-network::invalid-type? raw)
+        {:status (quote :invalid-type) :value nil}
+        (let ((trimmed (selfhost/policy::trim raw)))
+          (if (selfhost/policy::non-empty-str? trimmed)
+            {:status (quote :valid) :value trimmed}
+            {:status (quote :empty) :value nil}))))))
+
+(def selfhost/effect-network::positive-limit-policy
+  (fn (raw)
+    (fn (platform-max)
+      (if (selfhost/policy::nil? raw)
+        {:limit nil :status (quote :absent)}
+        (if (selfhost/effect-network::invalid-type? raw)
+          {:limit nil :status (quote :invalid-type)}
+          (if ((core/int::lt? raw) 1)
+            {:limit nil :status (quote :nonpositive)}
+            (if ((core/int::lt? platform-max) raw)
+              {:limit nil :status (quote :platform-overflow)}
+              {:limit raw :status (quote :valid)})))))))
+
+(def selfhost/effect-network::bind-port-policy-loop
+  (fn (values)
+    (fn (index)
+      (fn (any)
+        (fn (ports)
+          (if ((core/int::eq? index) (core/vec::len values))
+            (if (if any true ((core/int::lt? 0) (core/vec::len ports)))
+              {:any any :ports ports :status (quote :valid)}
+              {:any nil :ports nil :status (quote :empty)})
+            (let ((value ((core/vec::get values) index)))
+              (if (selfhost/policy::int? value)
+                (if (if ((core/int::lt? value) 1) true ((core/int::lt? 65535) value))
+                  {:any nil :ports nil :status (quote :out-of-range)}
+                  ((((selfhost/effect-network::bind-port-policy-loop values)
+                      ((core/int::add index) 1)) any)
+                    ((core/vec::push ports) value)))
+                (if (selfhost/policy::str? value)
+                  (if ((core/eq? (selfhost/policy::trim value)) "*")
+                    ((((selfhost/effect-network::bind-port-policy-loop values)
+                        ((core/int::add index) 1)) true) ports)
+                    {:any nil :ports nil :status (quote :invalid-entry)})
+                  {:any nil :ports nil :status (quote :invalid-entry)})))))))))
+
+(def selfhost/effect-network::bind-port-policy
+  (fn (raw)
+    (if (selfhost/policy::nil? raw)
+      {:any nil :ports nil :status (quote :absent)}
+      (if (selfhost/policy::vec? raw)
+        ((((selfhost/effect-network::bind-port-policy-loop raw) 0) false) [])
+        {:any nil :ports nil :status (quote :invalid-type)}))))
+
+(def selfhost/effect-network::policy
+  (fn (override)
+    (fn (platform-max)
+      (let ((network
+        (if (selfhost/policy::nil? override)
+          {
+            :allow-http nil
+            :bind-hosts nil
+            :bind-ports nil
+            :max-request-bytes nil
+            :remote-allow nil
+            :url-allow nil
+            :wasi-network-profile nil}
+          ((core/map::get override) (quote :network-policy)))))
+        {
+          :allow-http
+            (selfhost/effect-network::bool-policy
+              ((core/map::get network) (quote :allow-http)))
+          :bind-hosts
+            (selfhost/effect-network::list-policy
+              ((core/map::get network) (quote :bind-hosts)))
+          :bind-ports
+            (selfhost/effect-network::bind-port-policy
+              ((core/map::get network) (quote :bind-ports)))
+          :max-request-bytes
+            ((selfhost/effect-network::positive-limit-policy
+               ((core/map::get network) (quote :max-request-bytes))) platform-max)
+          :remote-allow
+            (selfhost/effect-network::list-policy
+              ((core/map::get network) (quote :remote-allow)))
+          :url-allow
+            (selfhost/effect-network::list-policy
+              ((core/map::get network) (quote :url-allow)))
+          :wasi-network-profile
+            (selfhost/effect-network::string-policy
+              ((core/map::get network) (quote :wasi-network-profile)))}))))

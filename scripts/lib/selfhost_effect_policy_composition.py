@@ -68,6 +68,7 @@ FIELDS = {
     "runtimeEvidence",
     "schema",
     "sourceModule",
+    "sourceModules",
     "sourceSha256",
     "spec",
     "version",
@@ -84,6 +85,7 @@ DECISIONS = [
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
     "per-operation-max-bytes-policy",
+    "per-operation-network-policy",
     "per-operation-process-program-policy",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
@@ -95,7 +97,6 @@ RESIDUALS = {
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
     "global-store-remote-transport-tls-and-auth-policy",
-    "network-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding",
@@ -124,11 +125,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.5",
+        "requestKind": "genesis/effect-policy-authority-request-v0.6",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.5",
+        "resultKind": "genesis/effect-policy-authority-result-v0.6",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -136,8 +137,12 @@ def validate(profile, schema, check_identity=True):
         },
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
+        "sourceModules": [
+            "selfhost/effect_policy_network_v1.gc",
+            "selfhost/effect_policy_authority_v1.gc",
+        ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.9",
+        "version": "0.1.10",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -169,17 +174,30 @@ def source_files(root: Path):
         yield from (root / "crates" / crate / "src").rglob("*.rs")
 
 
+def source_identity(root: Path, source_modules) -> str:
+    digest = hashlib.sha256()
+    for relative in source_modules:
+        path = root / relative
+        digest.update(relative.encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def static_check(root: Path, profile):
-    source_path = root / profile["sourceModule"]
-    if source_path.is_symlink() or not source_path.is_file() or root not in source_path.resolve().parents:
-        fail("effect-policy source is missing, escaping, or symlinked")
-    source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    source_paths = [root / relative for relative in profile["sourceModules"]]
+    for source_path in source_paths:
+        if source_path.is_symlink() or not source_path.is_file() or root not in source_path.resolve().parents:
+            fail("effect-policy source is missing, escaping, or symlinked")
+    source_hash = source_identity(root, profile["sourceModules"])
     if source_hash != profile["sourceSha256"]:
         fail("effect-policy source identity mismatch")
 
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
-    if manifest.count(f'"{profile["sourceModule"]}"') != 1:
-        fail("effect-policy source manifest custody drift")
+    for source_module in profile["sourceModules"]:
+        if manifest.count(f'"{source_module}"') != 1:
+            fail("effect-policy source manifest custody drift")
     if manifest.count(profile["binding"]) != 1:
         fail("effect-policy binding manifest custody drift")
     if manifest.count(profile["inventoryBinding"]) != 1:
@@ -194,6 +212,8 @@ def static_check(root: Path, profile):
         fail("effect-policy process boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_database.rs"]') != 1:
         fail("effect-policy database boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_network.rs"]') != 1:
+        fail("effect-policy network boundary decomposition drift")
     resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
     if resource_boundary_path.is_symlink() or not resource_boundary_path.is_file():
         fail("effect-policy resource host boundary is missing or symlinked")
@@ -203,11 +223,15 @@ def static_check(root: Path, profile):
     database_boundary_path = root / "crates/gc_effects/src/policy_authority_database.rs"
     if database_boundary_path.is_symlink() or not database_boundary_path.is_file():
         fail("effect-policy database host boundary is missing or symlinked")
+    network_boundary_path = root / "crates/gc_effects/src/policy_authority_network.rs"
+    if network_boundary_path.is_symlink() or not network_boundary_path.is_file():
+        fail("effect-policy network host boundary is missing or symlinked")
     authority = (
         authority_root
         + resource_boundary_path.read_text()
         + process_boundary_path.read_text()
         + database_boundary_path.read_text()
+        + network_boundary_path.read_text()
     )
     required_authority = [
         "const MAX_POLICY_OPS: usize = 4_096;",
@@ -234,6 +258,7 @@ def static_check(root: Path, profile):
         "op_policy.authorized_max_bytes = Some(authorized.max_bytes);",
         "op_policy.authorized_process_programs = Some(authorized.process_programs);",
         "op_policy.authorized_database = Some(authorized.database);",
+        "op_policy.authorized_network = Some(authorized.network);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -315,7 +340,31 @@ def static_check(root: Path, profile):
         >= database_policy.find("pol.extra.get(key)")
     ):
         fail("database enforcement consults raw policy before authority state")
-    effect_source = source_path.read_text()
+    network_policy = (
+        root / "crates/gc_effects/src/runner_capability_dispatch/net_policy.rs"
+    ).read_text()
+    for start, end, fallback in (
+        ("fn net_allowlist_from_policy", "fn net_allow_http_from_policy", "pol.extra"),
+        ("fn net_allow_http_from_policy", "fn net_wasi_network_profile_from_policy", "pol.extra"),
+        ("fn net_wasi_network_profile_from_policy", "fn net_bind_hosts_from_policy", "pol.extra"),
+        ("fn net_bind_hosts_from_policy", "#[derive(Debug, Clone)]", "parse_nonempty_string_array"),
+        ("fn net_bind_ports_from_policy", "pub(super) fn net_max_request_bytes_from_policy", "parse_nonempty_u16_array"),
+        ("pub(super) fn net_max_request_bytes_from_policy", "fn validate_net_wasi_profile", "pol.extra"),
+    ):
+        body = network_policy.split(start, 1)[1].split(end, 1)[0]
+        if "authorized_network" not in body or body.find("authorized_network") >= body.find(fallback):
+            fail(f"network enforcement consults raw policy before authority state: {start}")
+    remote_policy = (
+        root / "crates/gc_effects/src/runner_remote_ops/policy_auth.rs"
+    ).read_text()
+    for start, end in (
+        ("fn parse_wasi_network_profile", "fn validate_wasi_remote_profile"),
+        ("pub(super) fn sync_policy_from_op", "pub(super) fn sync_normalize_and_check_remote"),
+    ):
+        body = remote_policy.split(start, 1)[1].split(end, 1)[0]
+        if "authorized_network" not in body or body.find("authorized_network") >= body.find("pol.extra"):
+            fail(f"remote enforcement consults raw policy before authority state: {start}")
+    effect_source = (root / profile["sourceModule"]).read_text()
     cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
         "(def core/effects::policy-authority", 1
     )[0]
@@ -409,6 +458,9 @@ def static_check(root: Path, profile):
         "selfhost_authority_installs_database_policy",
         "selfhost_authority_preserves_invalid_database_policy_states",
         "selfhost_authority_rejects_malformed_database_decisions",
+        "selfhost_authority_installs_network_policy",
+        "selfhost_authority_preserves_invalid_network_policy_states",
+        "selfhost_authority_rejects_malformed_network_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -424,6 +476,18 @@ def static_check(root: Path, profile):
     ):
         if database_policy.count(f"fn {name}()") != 1:
             fail(f"missing focused database authority control: {name}")
+    for name in (
+        "network_dispatch_consumes_authorized_policy_before_raw_policy",
+        "network_dispatch_preserves_authorized_policy_errors",
+    ):
+        if network_policy.count(f"fn {name}()") != 1:
+            fail(f"missing focused network authority control: {name}")
+    for name in (
+        "remote_dispatch_consumes_authorized_network_policy_before_raw_policy",
+        "remote_dispatch_preserves_authorized_network_policy_errors",
+    ):
+        if remote_policy.count(f"fn {name}()") != 1:
+            fail(f"missing focused remote network authority control: {name}")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]
@@ -453,6 +517,7 @@ def mutation_controls(profile, schema):
         ("result", lambda item: item.__setitem__("resultKind", "unknown")),
         ("runtime", lambda item: item["runtimeEvidence"].__setitem__("stepLimit", 0)),
         ("source", lambda item: item.__setitem__("sourceModule", "selfhost/unknown.gc")),
+        ("source-set", lambda item: item["sourceModules"].pop()),
         ("unknown", lambda item: item.__setitem__("unexpected", True)),
     ]
     rejected = 0
@@ -488,7 +553,7 @@ def main():
     profile = load_json(profile_path)
     schema = load_json(root / args.schema)
     if args.refresh_identity:
-        profile["sourceSha256"] = hashlib.sha256((root / profile["sourceModule"]).read_bytes()).hexdigest()
+        profile["sourceSha256"] = source_identity(root, profile["sourceModules"])
         profile["contentIdentitySha256"] = identity(profile)
         profile_path.write_text(json.dumps(profile, indent=2) + "\n")
         print(f"selfhost-effect-policy-composition: refreshed {args.profile}")

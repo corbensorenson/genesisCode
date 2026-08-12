@@ -50,7 +50,7 @@ pub(super) fn input(table: &toml::value::Table) -> Term {
     )
 }
 
-fn legacy_string_list(value: Option<&toml::Value>) -> AuthorizedStringList {
+pub(super) fn legacy_string_list(value: Option<&toml::Value>) -> AuthorizedStringList {
     let Some(value) = value else {
         return AuthorizedStringList::Absent;
     };
@@ -74,7 +74,7 @@ fn legacy_string_list(value: Option<&toml::Value>) -> AuthorizedStringList {
     }
 }
 
-fn legacy_positive(value: Option<&toml::Value>) -> AuthorizedMaxBytes {
+pub(super) fn legacy_positive(value: Option<&toml::Value>) -> AuthorizedMaxBytes {
     let Some(value) = value else {
         return AuthorizedMaxBytes::Absent;
     };
@@ -101,7 +101,10 @@ pub(super) fn legacy(policy: Option<&OpPolicy>) -> AuthorizedDatabasePolicy {
     }
 }
 
-fn decode_string_list(term: &Term, field: &str) -> Result<AuthorizedStringList, EffectsError> {
+pub(super) fn decode_string_list(
+    term: &Term,
+    field: &str,
+) -> Result<AuthorizedStringList, EffectsError> {
     let Term::Map(map) = term else {
         return Err(authority_error(format!(
             "result {field} must be a data map"

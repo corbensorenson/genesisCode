@@ -1,5 +1,7 @@
 static FORCE_WASI_REMOTE_PROFILE: AtomicBool = AtomicBool::new(false);
 
+use crate::policy::{AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedStringList};
+
 type SyncBytesResult = Result<Vec<u8>, gc_registry::RegistryError>;
 type SyncHasResult = Result<BTreeMap<String, bool>, gc_registry::RegistryError>;
 type SyncUploadResult = Result<(), String>;
@@ -8,6 +10,7 @@ pub(crate) fn set_force_wasi_remote_profile(enabled: bool) {
     FORCE_WASI_REMOTE_PROFILE.store(enabled, Ordering::Relaxed);
 }
 
+#[derive(Debug)]
 pub(super) struct SyncPolicy {
     pub(super) remote_allow: Vec<String>,
     pub(super) allow_http: bool,
@@ -28,6 +31,18 @@ fn parse_wasi_network_profile(pol: Option<&OpPolicy>) -> Result<Option<String>, 
     let Some(pol) = pol else {
         return Ok(None);
     };
+    if let Some(authorized) = &pol.authorized_network {
+        return match &authorized.wasi_network_profile {
+            AuthorizedOptionalString::Absent => Ok(None),
+            AuthorizedOptionalString::InvalidType => {
+                Err("wasi_network_profile must be a string".to_string())
+            }
+            AuthorizedOptionalString::Empty => {
+                Err("wasi_network_profile must not be empty".to_string())
+            }
+            AuthorizedOptionalString::Valid(value) => Ok(Some(value.clone())),
+        };
+    }
     let Some(v) = pol.extra.get("wasi_network_profile") else {
         return Ok(None);
     };
@@ -90,23 +105,39 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
     let mut max_artifact_bytes: usize = HARD_REMOTE_ARTIFACT_MAX_BYTES;
     let mut max_batch_bytes: usize = HARD_SYNC_PULL_BATCH_MAX_BYTES;
     if let Some(pol) = pol {
-        if let Some(v) = pol.extra.get("remote_allow")
-            && let Some(arr) = v.as_array()
-        {
-            for x in arr {
-                let s = x
-                    .as_str()
-                    .ok_or_else(|| "remote_allow entries must be strings".to_string())?;
-                let t = s.trim();
-                if !t.is_empty() {
-                    remote_allow.push(t.to_string());
+        if let Some(authorized) = &pol.authorized_network {
+            match &authorized.remote_allow {
+                AuthorizedStringList::Absent
+                | AuthorizedStringList::InvalidType
+                | AuthorizedStringList::Empty => {}
+                AuthorizedStringList::InvalidEntry => {
+                    return Err("remote_allow entries must be strings".to_string());
+                }
+                AuthorizedStringList::Valid(values) => remote_allow.clone_from(values),
+            }
+            allow_http = match &authorized.allow_http {
+                AuthorizedOptionalBool::Valid(value) => *value,
+                AuthorizedOptionalBool::Absent | AuthorizedOptionalBool::InvalidType => false,
+            };
+        } else {
+            if let Some(v) = pol.extra.get("remote_allow")
+                && let Some(arr) = v.as_array()
+            {
+                for x in arr {
+                    let s = x
+                        .as_str()
+                        .ok_or_else(|| "remote_allow entries must be strings".to_string())?;
+                    let t = s.trim();
+                    if !t.is_empty() {
+                        remote_allow.push(t.to_string());
+                    }
                 }
             }
-        }
-        if let Some(v) = pol.extra.get("allow_http")
-            && let Some(b) = v.as_bool()
-        {
-            allow_http = b;
+            if let Some(v) = pol.extra.get("allow_http")
+                && let Some(b) = v.as_bool()
+            {
+                allow_http = b;
+            }
         }
         if let Some(v) = pol.extra.get("auth_token")
             && let Some(s) = v.as_str()
@@ -450,4 +481,87 @@ pub(super) fn store_remote_client(
         }
     };
     Ok(Some((client, base)))
+}
+
+#[cfg(test)]
+mod network_authority_tests {
+    use toml::Value as TomlValue;
+
+    use super::*;
+    use crate::policy::{
+        AuthorizedBindPorts, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
+    };
+
+    fn make_policy(network: AuthorizedNetworkPolicy) -> OpPolicy {
+        OpPolicy {
+            base_dir: None,
+            create_dirs: false,
+            timeout_ms: None,
+            log_inline_max_bytes: None,
+            extra: BTreeMap::from([
+                (
+                    "remote_allow".to_string(),
+                    TomlValue::String("invalid raw fallback".to_string()),
+                ),
+                (
+                    "allow_http".to_string(),
+                    TomlValue::String("invalid raw fallback".to_string()),
+                ),
+                (
+                    "wasi_network_profile".to_string(),
+                    TomlValue::Integer(7),
+                ),
+            ]),
+            authorized_cap: None,
+            authorized_max_bytes: None,
+            authorized_process_programs: None,
+            authorized_database: None,
+            authorized_network: Some(network),
+        }
+    }
+
+    fn base_network() -> AuthorizedNetworkPolicy {
+        AuthorizedNetworkPolicy {
+            url_allow: AuthorizedStringList::Absent,
+            remote_allow: AuthorizedStringList::Absent,
+            allow_http: AuthorizedOptionalBool::Absent,
+            wasi_network_profile: AuthorizedOptionalString::Absent,
+            bind_hosts: AuthorizedStringList::Absent,
+            bind_ports: AuthorizedBindPorts::Absent,
+            max_request_bytes: AuthorizedMaxBytes::Absent,
+        }
+    }
+
+    #[test]
+    fn remote_dispatch_consumes_authorized_network_policy_before_raw_policy() {
+        let mut network = base_network();
+        network.remote_allow =
+            AuthorizedStringList::Valid(vec!["https://safe.example/v1/".to_string()]);
+        network.allow_http = AuthorizedOptionalBool::Valid(false);
+        network.wasi_network_profile = AuthorizedOptionalString::Valid("preview2".to_string());
+        let policy = make_policy(network);
+        let selected = sync_policy_from_op(Some(&policy)).unwrap();
+        assert_eq!(selected.remote_allow, vec!["https://safe.example/v1/"]);
+        assert!(!selected.allow_http);
+        assert_eq!(selected.wasi_network_profile.as_deref(), Some("preview2"));
+    }
+
+    #[test]
+    fn remote_dispatch_preserves_authorized_network_policy_errors() {
+        let mut network = base_network();
+        network.remote_allow = AuthorizedStringList::InvalidEntry;
+        let policy = make_policy(network);
+        assert_eq!(
+            sync_policy_from_op(Some(&policy)).unwrap_err(),
+            "remote_allow entries must be strings"
+        );
+
+        let mut network = base_network();
+        network.wasi_network_profile = AuthorizedOptionalString::InvalidType;
+        let policy = make_policy(network);
+        assert_eq!(
+            parse_wasi_network_profile(Some(&policy)).unwrap_err(),
+            "wasi_network_profile must be a string"
+        );
+    }
 }

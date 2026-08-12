@@ -11,11 +11,14 @@ use num_traits::ToPrimitive;
 use crate::error::EffectsError;
 
 use super::{
-    AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedProcessPrograms, CapsPolicy, OpPolicy,
+    AuthorizedDatabasePolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
+    AuthorizedProcessPrograms, CapsPolicy, OpPolicy,
 };
 
 #[path = "policy_authority_database.rs"]
 mod database;
+#[path = "policy_authority_network.rs"]
+mod network;
 #[path = "policy_authority_process.rs"]
 mod process;
 #[path = "policy_authority_resource.rs"]
@@ -33,6 +36,13 @@ pub(super) fn decode_database_policy(
     allowed: bool,
 ) -> Result<AuthorizedDatabasePolicy, EffectsError> {
     database::decode(term, allowed)
+}
+#[cfg(test)]
+pub(super) fn decode_network_policy(
+    term: &Term,
+    allowed: bool,
+) -> Result<AuthorizedNetworkPolicy, EffectsError> {
+    network::decode(term, allowed)
 }
 
 const MAX_POLICY_OPS: usize = 4_096;
@@ -121,6 +131,10 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
                 max_bytes_input(table.get("max_bytes")),
             ),
             (
+                TermOrdKey(Term::symbol(":network-policy")),
+                network::input(table),
+            ),
+            (
                 TermOrdKey(Term::symbol(":process-programs")),
                 process::input(table.get("allow_programs")),
             ),
@@ -143,7 +157,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.5".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.6".to_string()),
             ),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
@@ -151,7 +165,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term) -> Term {
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(5.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(6.into())),
         ]
         .into_iter()
         .collect(),
@@ -297,6 +311,7 @@ struct AuthorizedOperation {
     max_bytes: AuthorizedMaxBytes,
     process_programs: AuthorizedProcessPrograms,
     database: AuthorizedDatabasePolicy,
+    network: AuthorizedNetworkPolicy,
     cap: Term,
 }
 
@@ -441,6 +456,7 @@ fn decode_result(
         ":database-policy",
         ":kind",
         ":max-bytes-policy",
+        ":network-policy",
         ":op",
         ":process-program-policy",
         ":request-h",
@@ -452,8 +468,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.5")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &5.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.6")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &6.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -498,6 +514,11 @@ fn decode_result(
             .ok_or_else(|| authority_error("result is missing :database-policy"))?,
         allowed,
     )?;
+    let network = network::decode(
+        map.get(&TermOrdKey(Term::symbol(":network-policy")))
+            .ok_or_else(|| authority_error("result is missing :network-policy"))?,
+        allowed,
+    )?;
     Ok(AuthorizedOperation {
         allowed,
         base_dir,
@@ -507,6 +528,7 @@ fn decode_result(
         max_bytes,
         process_programs,
         database,
+        network,
         cap,
     })
 }
@@ -626,6 +648,7 @@ pub(super) fn authorize_policy(
             || authorized.max_bytes != legacy_max_bytes(expected)
             || authorized.process_programs != process::legacy(expected)
             || authorized.database != database::legacy(expected)
+            || authorized.network != network::legacy(expected)
         {
             return Err(authority_error(format!(
                 "result for `{op}` contradicts independently reconstructed policy composition"
@@ -643,6 +666,7 @@ pub(super) fn authorize_policy(
             op_policy.authorized_max_bytes = Some(authorized.max_bytes);
             op_policy.authorized_process_programs = Some(authorized.process_programs);
             op_policy.authorized_database = Some(authorized.database);
+            op_policy.authorized_network = Some(authorized.network);
             op_policy.authorized_cap = Some(authorized.cap);
             authorized_ops.insert(op, op_policy);
         }

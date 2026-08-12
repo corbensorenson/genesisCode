@@ -18,6 +18,12 @@ It also owns the private database policy consumed by SQL and KV dispatch:
 `db_target_allow`, `allow_query_classes`, `max_result_bytes`, `max_row_count`,
 and `max_value_bytes`. Matching and resource measurement remain bounded host
 enforcement mechanisms.
+The authority also owns the complete per-operation network policy shared by
+`io/net::*`, `core/sync::*`, package publication, and store remote access:
+independent `url_allow` and `remote_allow` normalization, `allow_http`,
+`wasi_network_profile`, listener host and port allowlists, and
+`max_request_bytes`. URL/authority parsing, matching, target-specific WASI
+backend availability, transport, and byte enforcement remain host mechanisms.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
@@ -35,12 +41,12 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed six-field map with kind
-`genesis/effect-policy-authority-request-v0.5`, version `5`, the operation string,
+`genesis/effect-policy-authority-request-v0.6`, version `6`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
 `:timeout-ms`, `:log-inline-max-bytes`, `:max-bytes`, `:process-programs`, and
-`:database-policy`. The nested database map has exactly `:target-allow`,
+`:database-policy`, and `:network-policy`. The nested database map has exactly `:target-allow`,
 `:query-classes`, `:max-result-bytes`, `:max-row-count`, and `:max-value-bytes`.
 The base directory is
 `nil` or the exact configured string. Missing optional fields use `nil`. A TOML
@@ -50,7 +56,12 @@ Rust, decides its effect-use error state. Missing `allow_programs` is transporte
 as `nil`, a non-array as `:invalid-type`, and array entries as their exact strings
 or the closed `:invalid-entry` observation. Database allowlists use the same
 exact string or closed invalid observation transport; database bounds use exact
-integers or `:invalid-type`. No omitted or additional field is accepted. A
+integers or `:invalid-type`. The nested network map has exactly `:url-allow`,
+`:remote-allow`, `:allow-http`, `:wasi-network-profile`, `:bind-hosts`,
+`:bind-ports`, and `:max-request-bytes`. String allowlists use the same exact
+transport as database lists; optional boolean/string fields and the positive
+limit use closed invalid observations; bind-port entries are exact integers,
+exact strings, or `:invalid-entry`. No omitted or additional field is accepted. A
 policy may expose at most 4,096 unique candidate operations.
 
 Before those per-operation requests, the inventory authority receives a closed
@@ -63,12 +74,12 @@ host rejects malformed, oversized, duplicate, unsorted, substituted, or
 oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
-The authority returns a closed ten-field
-`genesis/effect-policy-authority-result-v0.5` map containing the exact operation,
+The authority returns a closed eleven-field
+`genesis/effect-policy-authority-result-v0.6` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
-`:process-program-policy`, private `:database-policy`, lowercase canonical
-request hash, and version `5`.
+`:process-program-policy`, private `:database-policy`, private `:network-policy`,
+lowercase canonical request hash, and version `6`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -83,17 +94,23 @@ allowlists use exact `{:status ... :values ...}` states with `:absent`,
 the closed positive-limit state above. Only valid lists carry nonempty trimmed
 strings, and only valid bounds carry positive platform-sized integers. Denied
 operations must carry no base directory, capability, byte policy,
-process-program policy, or database policy. Malformed requests return sealed errors.
+process-program policy, database policy, or network policy. The network result
+preserves independent URL and remote list states, closed optional boolean/string
+states, a closed bind-port state (`:absent`, `:invalid-type`, `:invalid-entry`,
+`:out-of-range`, `:empty`, or `:valid`), and a closed request-byte bound. Only a
+valid bind-port state carries an exact wildcard boolean and ordered in-range port
+vector. Malformed requests return sealed errors.
 The host rejects
 unknown fields, identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
 noncanonical false/zero/negative/overflowing controls, contradictory status/limit
-pairs, noncanonical or contradictory process-program or database states, operation
+pairs, noncanonical or contradictory process-program, database, or network states, operation
 substitution inside the capability, and any result that
 contradicts its retained compatibility oracle. After validation, the host
 installs the GenesisCode-selected base directory, create-directories flag,
 timeout, per-operation log limit, closed max-byte state, closed normalized
-process-program state, and closed database allowlist/bound states into enforcement;
+process-program state, closed database allowlist/bound states, and closed network
+allowlist/option/bind/bound states into enforcement;
 its separately parsed values are used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
@@ -133,6 +150,11 @@ as typed states and rejected only when `sys/process::exec` or `spawn` is used.
 Database policy retains the same effect-use timing and exact errors. Missing,
 ill-typed, non-string, empty-after-trimming, nonpositive, and overflowing states
 are installed and rejected only by the SQL or KV operation that consumes them.
+Network policy likewise retains effect-use timing and exact errors. `io/net`
+prefers a present `url_allow` state and otherwise consumes `remote_allow`; sync
+and publication consume `remote_allow` independently, so both configured fields
+remain observable. Invalid, empty, out-of-range, and overflowing states are
+installed and rejected only by a consuming network or remote operation.
 
 ## Production Boundary
 
@@ -147,7 +169,7 @@ The effect runner uses the validated GenesisCode capability descriptor in log
 entries and installs all decoded generic operation and resource controls for host
 enforcement. The selected base directory remains separate from that descriptor so
 logs do not gain path material; Rust installs it before resolving relative paths
-against the capability-file base. The private max-byte, process-program, and database states
+against the capability-file base. The private max-byte, process-program, database, and network states
 likewise remain out of the descriptor. Every production generic or bridge byte-limit consumer checks
 the installed authority state before the raw compatibility field; raw fallback is
 reachable only for policies constructed without the self-host authority by
@@ -158,6 +180,10 @@ host enforces exact, `*`, or suffix-`*` matching without selecting the rule.
 Database dispatch likewise consumes installed GenesisCode allowlists and bounds
 before raw compatibility fields. Rust validates URL shape, performs the selected
 matching rule, injects authorized bounds, and executes the bridge.
+Network and remote dispatch consume installed GenesisCode URL/remote allowlists,
+HTTP permission, WASI profile, bind rules, and request bound before raw
+compatibility fields. Rust parses targets, performs matching, checks actual WASI
+backend availability, enforces the selected limits, and executes transport.
 Host code retains payload measurement and enforcement mechanisms, filesystem path resolution,
 accounting mechanisms, cancellation, effect execution, and replay mechanisms.
 `CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy
@@ -168,7 +194,7 @@ transition, and therefore are not evidence of H2.
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
 and type decoding; global store remote transport, TLS, and authentication policy;
-operation-specific network, crypto, FFI, plugin, model,
+operation-specific crypto, FFI, plugin, model,
 graphics, and device constraints; secret and path resolution; effect execution
 and cancellation; strict replay; and removal of the compatibility oracle.
 Filesystem policy configuration is no longer a residual decision: admission,
@@ -187,6 +213,13 @@ Database policy configuration is no longer residual: GenesisCode owns target and
 query-class allowlist normalization plus SQL/KV result, row, and value bound
 states. URL parsing, matching, bridge transport, database execution, and
 measurement remain host enforcement/execution mechanisms.
+Network policy configuration is no longer residual: GenesisCode owns both
+per-operation target allowlists, HTTP permission, WASI profile normalization,
+bind host/port states, and inbound request-size state across network, sync,
+publication, and store-remote operation policies. Global store remote selection,
+TLS, credentials, retry/worker settings, URL parsing and normalization, matching,
+WASI backend discovery, DNS/socket/HTTP/WebSocket execution, cancellation, and
+measurement remain in the named host residuals.
 
 This contract does not promote `SD-EFFECT-POLICY`, close R4.2.d or SH-C, establish
 H2/H3/H4, authorize release, or authorize GenesisBench, Genesis Foundry,
