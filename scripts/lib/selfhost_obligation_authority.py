@@ -78,6 +78,7 @@ MIGRATED = [
     "core/obligation::lint",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
+    "core/obligation::stage1-validation",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests",
@@ -89,7 +90,6 @@ RESIDUAL = [
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
-    "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
     "core/obligation::preflight",
 ]
@@ -102,6 +102,7 @@ SOURCE_MODULES = [
     "selfhost/obligation_authority_ai_style_v1.gc",
     "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_property_v1.gc",
+    "selfhost/obligation_authority_stage_v1.gc",
     "selfhost/obligation_authority_v1.gc",
 ]
 
@@ -147,6 +148,13 @@ def validate(profile, schema, check_identity=True):
             "expected-value-hash",
             "module-path",
             "observed-effect-operation",
+            "optimizer-original-evaluation-error",
+            "optimizer-original-module-hash",
+            "optimizer-original-value-hash",
+            "optimizer-stat-counter",
+            "optimizer-transformed-evaluation-error",
+            "optimizer-transformed-module-hash",
+            "optimizer-transformed-value-hash",
             "property-body-callable-status",
             "property-cases-value",
             "property-entry-shape",
@@ -226,6 +234,9 @@ def validate_bridge(bridge: str) -> None:
         "property_authority_plan(",
         "property_authority_finalize(",
         "decode_property_plan_result(",
+        "evaluate_stage1_obligation_with_authority(",
+        "decode_stage1_result(",
+        "stage1_inputs(",
         "replay_observations(",
         "run_replay_authority(",
         "decode_artifact_transport(",
@@ -250,6 +261,8 @@ def validate_bridge(bridge: str) -> None:
         "replay_authorities_decide_from_closed_host_observations",
         "replay_authority_rejects_open_observations_and_contradictory_reports",
         "property_authority_plans_exact_seeds_and_rejects_seed_tampering",
+        "stage1_authority_aggregates_failures_and_rejects_report_tampering",
+        "stage1_eval_observation_obeys_caller_step_limit",
     ]
     for token in required:
         if token not in bridge:
@@ -281,6 +294,8 @@ def static_check(root: Path, profile):
         fail("self-host replay obligation route is absent")
     if "selfhost/obligation::property-authority" not in combined_sources:
         fail("self-host property obligation route is absent")
+    if "selfhost/obligation::stage1-validation" not in combined_sources:
+        fail("self-host stage1 obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -298,6 +313,7 @@ def static_check(root: Path, profile):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_replay.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_stage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_replay.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_tests.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
@@ -333,6 +349,10 @@ def static_check(root: Path, profile):
         "obligation_property_tests(&store, &pkg_dir, &manifest, &modules, &frontend, limits)"
     ) != 1:
         fail("property-test authority production dispatch drift")
+    if types_api.count(
+        "obligation_stage1_validation(&store, &manifest, &modules, &frontend, limits)"
+    ) != 1:
+        fail("stage1 authority production dispatch drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
@@ -388,6 +408,20 @@ def static_check(root: Path, profile):
     for token in ('"genesis/property-tests-v0.2"', "seed_for_case(", "parse_property_entry("):
         if token in property_execution:
             fail(f"reachable host property policy restored: {token}")
+    stage1_execution = stage_host.split("pub(super) fn obligation_stage1_validation(", 1)[1].split(
+        "pub(super) fn obligation_translation_validation(", 1
+    )[0]
+    for token in (
+        "gc_opt::stage1_pipeline(",
+        ".gate_report",
+        "pure value hash mismatch after stage1 transform",
+        "original module is not gate-valid:",
+        "transformed module is not gate-valid:",
+    ):
+        if token in stage1_execution:
+            fail(f"reachable host stage1 policy restored: {token}")
+    if stage1_execution.count("evaluate_stage1_obligation_with_authority(") != 1:
+        fail("stage1 authority invocation drift")
     obligation_typecheck = unit_host.split("pub(super) fn obligation_typecheck(", 1)[1].split(
         "pub(super) fn typecheck_report_with_frontend(", 1
     )[0]
@@ -493,6 +527,7 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
                 "core/obligation::capabilities-declared",
                 "core/obligation::replayable-tests",
                 "core/obligation::typecheck",
+                "core/obligation::stage1-validation",
             ],
         ),
         ("tests/spec/pkg_fail_unit", 30, False, ["core/obligation::unit-tests"]),
@@ -615,6 +650,7 @@ def self_test(root: Path, profile, schema):
     bridge += (root / "crates/gc_obligations/src/obligation_authority_lint.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_property_finalize.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_stage.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_exec_tests.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
     redirected = "resolved_authority_frontend = default_coreform_frontend();"
@@ -654,6 +690,8 @@ def self_test(root: Path, profile, schema):
         ("replay-host-facts", "replay_observations("),
         ("property-plan-route", "decode_property_plan_result("),
         ("property-host-facts", "property_authority_context("),
+        ("stage1-route", "decode_stage1_result("),
+        ("stage1-host-facts", "stage1_inputs("),
     ]:
         try:
             validate_bridge(bridge.replace(route, ""))

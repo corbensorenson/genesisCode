@@ -1,124 +1,54 @@
 use super::*;
+use crate::obligation_authority::{Stage1Observation, evaluate_stage1_obligation_with_authority};
+
+pub(super) fn observe_stage1_eval(
+    forms: &[Term],
+    limits: KernelLimits,
+) -> (Option<[u8; 32]>, Option<String>) {
+    let mut ctx = EvalCtx::with_step_limit(limits.step_limit.resolve());
+    ctx.set_mem_limits(limits.mem_limits);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    match gc_kernel::eval_module(&mut ctx, &mut env, forms) {
+        Ok(Value::EffectProgram(_)) => {
+            (None, Some("effect program produced (not pure)".to_string()))
+        }
+        Ok(value) => (Some(value_hash(&value)), None),
+        Err(error) => (None, Some(error.to_string())),
+    }
+}
 
 pub(super) fn obligation_stage1_validation(
     store: &EvidenceStore,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
-    let mut ok = true;
-    let mut errors = Vec::new();
-    let mut module_reports = Vec::new();
-
+    let mut observations = Vec::with_capacity(modules.len());
     for m in modules {
-        let out =
-            gc_opt::stage1_pipeline(&m.forms).map_err(|e| ObligationError::Opt(format!("{e}")))?;
-        let gate_report = out.gate_report;
-        let optimizer_stats = out.optimize_report.stats;
-
-        if !gate_report.ok {
-            ok = false;
-            for e in &gate_report.errors {
-                errors.push(format!("{}: {e}", m.entry.path));
-            }
-        }
-        module_reports.push(Term::Map(
-            [
-                (
-                    TermOrdKey(Term::symbol(":path")),
-                    Term::Str(m.entry.path.clone()),
-                ),
-                (TermOrdKey(Term::symbol(":ok")), Term::Bool(gate_report.ok)),
-                (
-                    TermOrdKey(Term::symbol(":original-module-h")),
-                    Term::Bytes(gate_report.original_module_hash.to_vec().into()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":transformed-module-h")),
-                    Term::Bytes(gate_report.transformed_module_hash.to_vec().into()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":original-value-h")),
-                    gate_report
-                        .original_value_hash
-                        .map(|h| Term::Bytes(h.to_vec().into()))
-                        .unwrap_or(Term::Nil),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":transformed-value-h")),
-                    gate_report
-                        .transformed_value_hash
-                        .map(|h| Term::Bytes(h.to_vec().into()))
-                        .unwrap_or(Term::Nil),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":errors")),
-                    Term::Vector(gate_report.errors.iter().cloned().map(Term::Str).collect()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":optimizer")),
-                    Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":egg-runs")),
-                                Term::Int((optimizer_stats.egg_runs as i64).into()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":egg-iterations")),
-                                Term::Int((optimizer_stats.iterations as i64).into()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":egg-eclasses")),
-                                Term::Int((optimizer_stats.eclasses as i64).into()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":egg-enodes")),
-                                Term::Int((optimizer_stats.enodes as i64).into()),
-                            ),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    ),
-                ),
-            ]
-            .into_iter()
-            .collect(),
-        ));
+        let (optimized, optimize_report) = gc_opt::optimize_module_with_report(&m.forms);
+        let transformed = canonicalize_module(optimized)
+            .map_err(|error| ObligationError::Opt(format!("stage1 canonicalize: {error}")))?;
+        let (original_value_hash, original_eval_error) = observe_stage1_eval(&m.forms, limits);
+        let (transformed_value_hash, transformed_eval_error) =
+            observe_stage1_eval(&transformed, limits);
+        let optimizer_stats = optimize_report.stats;
+        observations.push(Stage1Observation {
+            path: m.entry.path.clone(),
+            original_module_hash: hash_module(&m.forms),
+            transformed_module_hash: hash_module(&transformed),
+            original_value_hash,
+            transformed_value_hash,
+            original_eval_error,
+            transformed_eval_error,
+            egg_runs: optimizer_stats.egg_runs,
+            egg_iterations: optimizer_stats.iterations,
+            egg_eclasses: optimizer_stats.eclasses,
+            egg_enodes: optimizer_stats.enodes,
+        });
     }
-
-    let report = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/stage1-validation-v0.2".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (
-                TermOrdKey(Term::symbol(":obligation")),
-                Term::Str("core/obligation::stage1-validation".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":modules")),
-                Term::Vector(module_reports),
-            ),
-            (
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-    let artifact = store.put_term(&report)?;
-    Ok(ObligationResult {
-        name: "core/obligation::stage1-validation".to_string(),
-        ok,
-        artifact: Some(artifact),
-        errors,
-    })
+    evaluate_stage1_obligation_with_authority(store, manifest, &observations, frontend, limits)
 }
 
 #[expect(

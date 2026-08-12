@@ -467,7 +467,7 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_typecheck(&store, &manifest, &modules, &frontend, limits, true)
             }
             "core/obligation::stage1-validation" => {
-                obligation_stage1_validation(&store, &manifest, &modules)
+                obligation_stage1_validation(&store, &manifest, &modules, &frontend, limits)
             }
             "core/obligation::translation-validation" => obligation_translation_validation(
                 &store, &pkg_dir, &manifest, &modules, &caps, &test_runs, limits, &frontend,

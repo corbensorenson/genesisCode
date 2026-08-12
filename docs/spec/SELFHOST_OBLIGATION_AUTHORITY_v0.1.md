@@ -9,6 +9,7 @@ does not promote the ledger row or close R4.2.d.
 `core/obligation::lint`, `core/obligation::ai-style`,
 `core/obligation::replayable-tests`, `core/obligation::concurrency-replay`,
 `core/obligation::property-tests`,
+`core/obligation::stage1-validation`,
 `core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
 The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
@@ -138,6 +139,21 @@ post-failure attempts and produces the canonical `genesis/property-tests-v0.2`
 report and errors. Rust independently reconstructs the report only to reject a
 contradiction before persistence; it does not supply the production verdict.
 
+For `:stage1-validation`, `:inputs` contains exactly ordered `:modules`. Each
+module observation contains exactly its base-relative `:path`, original and
+transformed canonical module hashes, original and transformed pure-evaluation
+outcomes, and four nonnegative optimizer counters. An evaluation outcome is
+closed: success has a 32-byte value hash and nil error, while failure has nil
+value hash and a raw string error. Rust performs the conservative transform,
+canonicalization, and caller-bounded isolated Prelude evaluation as mechanisms;
+it does not
+transport a gate verdict or error list. GenesisCode validates every closed
+observation, derives original/transformed evaluation failures and pure-value hash
+mismatches in normative order, prefixes aggregate errors by module path, and emits
+the exact `genesis/stage1-validation-v0.2` report. The host independently
+reconstructs that report only to reject request substitution, malformed outcomes,
+or contradictory output before persistence.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -153,6 +169,8 @@ Replay reports preserve `genesis/replayable-tests-v0.2` and
 the exact concurrent-test count. Property reports preserve
 `genesis/property-tests-v0.2`; the intermediate closed plan is
 `genesis/property-test-plan-v0.1` and is never acceptance evidence by itself.
+Stage1 reports preserve `genesis/stage1-validation-v0.2`, including ordered
+per-module optimizer observations and aggregate path-prefixed errors.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -188,6 +206,13 @@ retains callable invocation and an independently checked implementation of the
 authorized first-non-pass stop mechanism. Neither an
 environment variable nor a feature can silently restore them.
 
+The former reachable Rust stage1 gate-report path is absent from production
+obligation execution. Rust retains optimizer transformation, canonical hashing,
+caller-bounded pure module evaluation, raw evaluation-error transport, optimizer
+counters, and a
+strict contradiction decoder; GenesisCode alone derives stage1 equivalence policy,
+errors, pass/fail, and the persisted report.
+
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
 set, artifact,
 entrypoint, migrated and residual obligation inventories, primitive host facts, and
@@ -206,13 +231,15 @@ strict AI-style warnings, side-artifact substitution, contradictory final report
 valid/failing ordinary and strict package routes, replay hash disagreement, open
 replay observations, missing task scheduling fields, contradictory concurrent
 counts, exact property seeds, full passing case execution, first-case failure, and
-seed-plan tampering. Runtime
+seed-plan tampering. Stage1 controls cover pure equivalence, raw evaluation
+failure, pure-value mismatch, open observation rejection, exact request binding,
+and report tampering. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 9 obligation kinds remain host-authoritative or only partially routed.
+The other 8 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

@@ -1,0 +1,161 @@
+(def selfhost/obligation::stage-eval-valid?
+  (fn (value-h)
+    (fn (error)
+      (if (selfhost/obligation::nil? error)
+        (selfhost/obligation::hash? value-h)
+        (if (selfhost/obligation::str? error)
+          (selfhost/obligation::nil? value-h)
+          false)))))
+
+(def selfhost/obligation::stage-optimizer-valid?
+  (fn (optimizer)
+    (if (selfhost/obligation::map? optimizer)
+      (if ((core/int::eq? (core/map::len optimizer)) 4)
+        (if (selfhost/obligation::nonnegative-int?
+              ((core/map::get optimizer) (quote :egg-eclasses)))
+          (if (selfhost/obligation::nonnegative-int?
+                ((core/map::get optimizer) (quote :egg-enodes)))
+            (if (selfhost/obligation::nonnegative-int?
+                  ((core/map::get optimizer) (quote :egg-iterations)))
+              (selfhost/obligation::nonnegative-int?
+                ((core/map::get optimizer) (quote :egg-runs)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::stage-module-valid?
+  (fn (module)
+    (if (selfhost/obligation::map? module)
+      (if ((core/int::eq? (core/map::len module)) 8)
+        (if (selfhost/obligation::str? ((core/map::get module) (quote :path)))
+          (if (selfhost/obligation::hash?
+                ((core/map::get module) (quote :original-module-h)))
+            (if (selfhost/obligation::hash?
+                  ((core/map::get module) (quote :transformed-module-h)))
+              (if ((selfhost/obligation::stage-eval-valid?
+                     ((core/map::get module) (quote :original-value-h)))
+                    ((core/map::get module) (quote :original-eval-error)))
+                (if ((selfhost/obligation::stage-eval-valid?
+                       ((core/map::get module) (quote :transformed-value-h)))
+                      ((core/map::get module) (quote :transformed-eval-error)))
+                  (selfhost/obligation::stage-optimizer-valid?
+                    ((core/map::get module) (quote :optimizer)))
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::stage-module-errors
+  (fn (module)
+    (let
+      ((original-error ((core/map::get module) (quote :original-eval-error)))
+        (transformed-error ((core/map::get module) (quote :transformed-eval-error))))
+      (let
+        ((errors-1
+           (if (selfhost/obligation::nil? original-error)
+             []
+             ((core/vec::push [])
+               ((core/str::concat "original module is not gate-valid: ") original-error)))))
+        (let
+          ((errors-2
+             (if (selfhost/obligation::nil? transformed-error)
+               errors-1
+               ((core/vec::push errors-1)
+                 ((core/str::concat "transformed module is not gate-valid: ")
+                   transformed-error)))))
+          (if (if ((core/int::eq? (core/vec::len errors-2)) 0)
+                (if ((core/eq?
+                       ((core/map::get module) (quote :original-value-h)))
+                      ((core/map::get module) (quote :transformed-value-h)))
+                  false
+                  true)
+                false)
+            ((core/vec::push errors-2) "pure value hash mismatch after stage1 transform")
+            errors-2))))))
+
+(def selfhost/obligation::stage-prefix-errors-loop
+  (fn (path)
+    (fn (errors)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len errors))
+            out
+            (((((selfhost/obligation::stage-prefix-errors-loop path) errors)
+                 ((core/int::add index) 1))
+               ((core/vec::push out)
+                 ((core/str::concat path)
+                   ((core/str::concat ": ") ((core/vec::get errors) index))))))))))))
+
+(def selfhost/obligation::stage-prefix-errors
+  (fn (path)
+    (fn (errors)
+      ((((selfhost/obligation::stage-prefix-errors-loop path) errors) 0) []))))
+
+(def selfhost/obligation::stage-module-report
+  (fn (module)
+    (let ((errors (selfhost/obligation::stage-module-errors module)))
+      {:errors errors
+       :ok ((core/int::eq? (core/vec::len errors)) 0)
+       :optimizer ((core/map::get module) (quote :optimizer))
+       :original-module-h ((core/map::get module) (quote :original-module-h))
+       :original-value-h ((core/map::get module) (quote :original-value-h))
+       :path ((core/map::get module) (quote :path))
+       :transformed-module-h ((core/map::get module) (quote :transformed-module-h))
+       :transformed-value-h ((core/map::get module) (quote :transformed-value-h))})))
+
+(def selfhost/obligation::stage-modules-loop
+  (fn (modules)
+    (fn (index)
+      (fn (reports)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len modules))
+            {:errors errors :reports reports}
+            (let ((module ((core/vec::get modules) index)))
+              (if (selfhost/obligation::stage-module-valid? module)
+                (let
+                  ((module-errors
+                     ((selfhost/obligation::stage-prefix-errors
+                        ((core/map::get module) (quote :path)))
+                       (selfhost/obligation::stage-module-errors module))))
+                  (((((selfhost/obligation::stage-modules-loop modules)
+                        ((core/int::add index) 1))
+                      ((core/vec::push reports)
+                        (selfhost/obligation::stage-module-report module)))
+                    ((selfhost/obligation::append-errors errors) module-errors))))
+                (selfhost/obligation::error
+                  "stage1 module observation must contain exactly valid path, module hashes, evaluation outcomes, and optimizer counters")))))))))
+
+(def selfhost/obligation::stage1-validation
+  (fn (package)
+    (fn (inputs)
+      (if ((core/int::eq? (core/map::len inputs)) 1)
+        (let ((modules ((core/map::get inputs) (quote :modules))))
+          (if (selfhost/obligation::vec? modules)
+            (let ((state ((((selfhost/obligation::stage-modules-loop modules) 0) []) [])))
+              (if (core/error::is? state)
+                state
+                (let
+                  ((errors ((core/map::get state) (quote :errors)))
+                    (reports ((core/map::get state) (quote :reports))))
+                  (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+                    {:errors errors
+                     :kind selfhost/obligation::RESULT_KIND
+                     :name "core/obligation::stage1-validation"
+                     :ok ok
+                     :operation (quote :stage1-validation)
+                     :report
+                       {:errors errors
+                        :kind "genesis/stage1-validation-v0.2"
+                        :modules reports
+                        :obligation "core/obligation::stage1-validation"
+                        :ok ok
+                        :package package}
+                     :v 2}))))
+            (selfhost/obligation::error ":stage1-validation :modules must be a vector")))
+        (selfhost/obligation::error
+          ":stage1-validation inputs must contain exactly :modules")))))

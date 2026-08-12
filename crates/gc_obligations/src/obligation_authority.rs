@@ -5,6 +5,7 @@ include!("obligation_authority_lint.rs");
 include!("obligation_authority_property.rs");
 include!("obligation_authority_property_finalize.rs");
 include!("obligation_authority_replay.rs");
+include!("obligation_authority_stage.rs");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ObligationAuthorityOperation {
@@ -17,6 +18,7 @@ pub(super) enum ObligationAuthorityOperation {
     Lint,
     PropertyTests,
     ReplayableTests,
+    Stage1Validation,
     Typecheck,
     TypecheckStrict,
 }
@@ -33,6 +35,7 @@ impl ObligationAuthorityOperation {
             Self::Lint => ":lint",
             Self::PropertyTests => ":property-tests",
             Self::ReplayableTests => ":replayable-tests",
+            Self::Stage1Validation => ":stage1-validation",
             Self::Typecheck => ":typecheck",
             Self::TypecheckStrict => ":typecheck-strict",
         }
@@ -49,6 +52,7 @@ impl ObligationAuthorityOperation {
             Self::Lint => "core/obligation::lint",
             Self::PropertyTests => "core/obligation::property-tests",
             Self::ReplayableTests => "core/obligation::replayable-tests",
+            Self::Stage1Validation => "core/obligation::stage1-validation",
             Self::Typecheck => "core/obligation::typecheck",
             Self::TypecheckStrict => "core/obligation::typecheck-strict",
         }
@@ -282,6 +286,11 @@ fn request_term(
         ObligationAuthorityOperation::PropertyTests => {
             return Err(authority_error(
                 "property tests require closed two-phase observations",
+            ));
+        }
+        ObligationAuthorityOperation::Stage1Validation => {
+            return Err(authority_error(
+                "stage1 validation requires closed optimizer observations",
             ));
         }
         ObligationAuthorityOperation::Typecheck | ObligationAuthorityOperation::TypecheckStrict => {
@@ -571,6 +580,11 @@ fn decode_authority_result(
         ObligationAuthorityOperation::PropertyTests => {
             return Err(authority_error(
                 "property tests require the two-phase authority decoder",
+            ));
+        }
+        ObligationAuthorityOperation::Stage1Validation => {
+            return Err(authority_error(
+                "stage1 validation requires the optimizer-observation decoder",
             ));
         }
         ObligationAuthorityOperation::Typecheck => {

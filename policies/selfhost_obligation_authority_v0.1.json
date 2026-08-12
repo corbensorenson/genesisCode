@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "45227de32562442f938d59ef28ab1407ca056e2264c370a4f5055d1790164816",
+  "contentIdentitySha256": "1cb2e6a6aeec81dec6a382105fe28ac195dd619ede7d54614e18a3b6e7d539dc",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -18,6 +18,13 @@
     "expected-value-hash",
     "module-path",
     "observed-effect-operation",
+    "optimizer-original-evaluation-error",
+    "optimizer-original-module-hash",
+    "optimizer-original-value-hash",
+    "optimizer-stat-counter",
+    "optimizer-transformed-evaluation-error",
+    "optimizer-transformed-module-hash",
+    "optimizer-transformed-value-hash",
     "property-body-callable-status",
     "property-cases-value",
     "property-entry-shape",
@@ -39,6 +46,7 @@
     "core/obligation::lint",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
+    "core/obligation::stage1-validation",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests"
@@ -64,7 +72,6 @@
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
-    "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
     "core/obligation::preflight"
   ],
@@ -83,9 +90,10 @@
     "selfhost/obligation_authority_ai_style_v1.gc",
     "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_property_v1.gc",
+    "selfhost/obligation_authority_stage_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "4459b248282a440aefef1280437d5255b238d875f4077597fec3bce7561c10a7",
+  "sourceSetSha256": "ec45d418d70aa227eb60998b3025fc2383a7db4d540a2f25fdd842b37d15ec0b",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

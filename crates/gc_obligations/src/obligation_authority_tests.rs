@@ -546,6 +546,153 @@ fn property_authority_plans_exact_seeds_and_rejects_seed_tampering() {
     assert!(error.to_string().contains("property plan contradiction"));
 }
 
+#[test]
+fn stage1_authority_aggregates_failures_and_rejects_report_tampering() {
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec/pkg_basic/package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let store = EvidenceStore::open(&package_dir).expect("fixture evidence store");
+    let observations = vec![
+        Stage1Observation {
+            path: "a.gc".to_string(),
+            original_module_hash: [1; 32],
+            transformed_module_hash: [2; 32],
+            original_value_hash: Some([3; 32]),
+            transformed_value_hash: Some([3; 32]),
+            original_eval_error: None,
+            transformed_eval_error: None,
+            egg_runs: 1,
+            egg_iterations: 2,
+            egg_eclasses: 3,
+            egg_enodes: 4,
+        },
+        Stage1Observation {
+            path: "b.gc".to_string(),
+            original_module_hash: [5; 32],
+            transformed_module_hash: [6; 32],
+            original_value_hash: None,
+            transformed_value_hash: Some([7; 32]),
+            original_eval_error: Some("synthetic".to_string()),
+            transformed_eval_error: None,
+            egg_runs: 0,
+            egg_iterations: 0,
+            egg_eclasses: 0,
+            egg_enodes: 0,
+        },
+        Stage1Observation {
+            path: "c.gc".to_string(),
+            original_module_hash: [8; 32],
+            transformed_module_hash: [9; 32],
+            original_value_hash: Some([10; 32]),
+            transformed_value_hash: Some([11; 32]),
+            original_eval_error: None,
+            transformed_eval_error: None,
+            egg_runs: 1,
+            egg_iterations: 1,
+            egg_eclasses: 1,
+            egg_enodes: 1,
+        },
+    ];
+    let request = authority_request_term(
+        ObligationAuthorityOperation::Stage1Validation,
+        &manifest.name,
+        stage1_inputs(&observations),
+    );
+    let request_hash = hash_term(&request);
+    let result = invoke_authority(request, &fixture_frontend(), limits()).expect("stage1 result");
+    let decoded = decode_stage1_result(
+        &store,
+        &manifest,
+        &observations,
+        request_hash,
+        result.clone(),
+    )
+    .expect("closed stage1 result");
+    assert!(!decoded.ok);
+    assert_eq!(
+        decoded.errors,
+        vec![
+            "b.gc: original module is not gate-valid: synthetic",
+            "c.gc: pure value hash mismatch after stage1 transform",
+        ]
+    );
+
+    let mut substituted_observations = observations.clone();
+    substituted_observations[0].path = "substituted.gc".to_string();
+    let substituted_request = authority_request_term(
+        ObligationAuthorityOperation::Stage1Validation,
+        &manifest.name,
+        stage1_inputs(&substituted_observations),
+    );
+    let substitution_error = decode_stage1_result(
+        &store,
+        &manifest,
+        &substituted_observations,
+        hash_term(&substituted_request),
+        result.clone(),
+    )
+    .expect_err("stage1 result must remain bound to the exact observation request");
+    assert!(substitution_error.to_string().contains("identity mismatch"));
+
+    let mut malformed_inputs = stage1_inputs(&observations);
+    let Term::Map(inputs) = &mut malformed_inputs else {
+        panic!("stage1 inputs must be a map");
+    };
+    let Some(Term::Vector(modules)) = inputs.get_mut(&TermOrdKey(Term::symbol(":modules"))) else {
+        panic!("stage1 modules must be a vector");
+    };
+    let Term::Map(module) = &mut modules[0] else {
+        panic!("stage1 module must be a map");
+    };
+    module.insert(TermOrdKey(Term::symbol(":undeclared")), Term::Bool(true));
+    let malformed_request = authority_request_term(
+        ObligationAuthorityOperation::Stage1Validation,
+        &manifest.name,
+        malformed_inputs,
+    );
+    let malformed_error = invoke_authority(malformed_request, &fixture_frontend(), limits())
+        .expect_err("open stage1 observation must fail closed");
+    assert!(malformed_error.to_string().contains("exactly valid path"));
+
+    let mut tampered = result;
+    let Term::Map(outer) = &mut tampered else {
+        panic!("authority result must be map");
+    };
+    let Some(Term::Map(report)) = outer.get_mut(&TermOrdKey(Term::symbol(":report"))) else {
+        panic!("stage1 report must be map");
+    };
+    report.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+    let error = decode_stage1_result(&store, &manifest, &observations, request_hash, tampered)
+        .expect_err("tampered stage1 result must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("contradicts optimizer observations")
+    );
+}
+
+#[test]
+fn stage1_eval_observation_obeys_caller_step_limit() {
+    let forms = parse_module(
+        "(def countdown (fn (n) (if (prim int/eq? n 0) 0 (countdown (prim int/sub n 1)))))\n(countdown 1000)\n",
+    )
+    .expect("bounded stage1 fixture");
+    let (value_hash, error) = crate::obligation_stage::observe_stage1_eval(
+        &forms,
+        KernelLimits {
+            step_limit: StepLimit::Limit(100),
+            mem_limits: MemLimits::default(),
+        },
+    );
+    assert_eq!(value_hash, None);
+    assert!(
+        error
+            .as_deref()
+            .is_some_and(|message| message.contains("step limit exceeded"))
+    );
+}
+
 fn authority_fixture(
     fixture: &str,
 ) -> (
