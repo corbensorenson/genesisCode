@@ -70,6 +70,7 @@ FIELDS = {
 MIGRATED = [
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
+    "core/obligation::typecheck",
     "core/obligation::unit-tests",
 ]
 RESIDUAL = [
@@ -87,7 +88,6 @@ RESIDUAL = [
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
-    "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::preflight",
 ]
@@ -176,9 +176,11 @@ def validate_bridge(bridge: str) -> None:
         "unit_test_observations(",
         "budget_observations(",
         "capability_inputs(",
+        "typecheck_inputs(",
         "validate_unit_report(",
         "validate_budget_report(",
         "validate_capabilities_report(",
+        "validate_typecheck_obligation_report(",
         'Term::symbol(":request-h")',
         "let request_hash = hash_term(&request);",
         "obligation_authority_rejects_result_bound_to_another_request",
@@ -198,6 +200,10 @@ def static_check(root: Path, profile):
     source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
     if source_hash != profile["sourceSha256"]:
         fail("obligation authority source identity mismatch")
+    if len(source_path.read_text().splitlines()) > 700:
+        fail("obligation authority source exceeds 700-line decomposition ceiling")
+    if "core/cli::typecheck-package" not in source_path.read_text():
+        fail("self-host typecheck obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     if manifest.count(f'"{profile["sourceModule"]}"') != 1:
         fail("obligation authority source manifest custody drift")
@@ -215,6 +221,10 @@ def static_check(root: Path, profile):
         fail("budget production authority call-site drift")
     if types_api.count("obligation_caps_declared(") != 1:
         fail("capabilities-declared production authority call-site drift")
+    if types_api.count(
+        "obligation_typecheck(&store, &manifest, &modules, &frontend, limits, false)"
+    ) != 1:
+        fail("typecheck production authority call-site drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
@@ -237,6 +247,8 @@ def static_check(root: Path, profile):
         fail("budget authority dispatch drift")
     if unit_host.count("ObligationAuthorityOperation::CapabilitiesDeclared") != 1:
         fail("capabilities-declared authority dispatch drift")
+    if unit_host.count("ObligationAuthorityOperation::Typecheck") != 1:
+        fail("typecheck authority dispatch drift")
     if (
         '"core/obligation::capabilities-declared-report"' in unit_host
         or "did not declare it in :caps" in unit_host
@@ -293,10 +305,38 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
     if not artifact.is_file():
         fail(f"runtime self-host artifact is not a file: {artifact}")
     fixtures = [
-        ("tests/spec/pkg_basic", 0, True),
-        ("tests/spec/pkg_fail_unit", 30, False),
-        ("tests/spec/pkg_fail_budgets", 30, False),
-        ("tests/spec/pkg_fail_caps_declared", 30, False),
+        (
+            "tests/spec/pkg_basic",
+            0,
+            True,
+            [
+                "core/obligation::unit-tests",
+                "core/obligation::capabilities-declared",
+                "core/obligation::typecheck",
+            ],
+        ),
+        ("tests/spec/pkg_fail_unit", 30, False, ["core/obligation::unit-tests"]),
+        (
+            "tests/spec/pkg_fail_budgets",
+            30,
+            False,
+            ["core/obligation::unit-tests", "core/obligation::budgets"],
+        ),
+        (
+            "tests/spec/pkg_fail_caps_declared",
+            30,
+            False,
+            [
+                "core/obligation::unit-tests",
+                "core/obligation::capabilities-declared",
+            ],
+        ),
+        (
+            "tests/spec/pkg_fail_typecheck",
+            30,
+            False,
+            ["core/obligation::typecheck"],
+        ),
     ]
     all_observations = []
     for binary in binaries:
@@ -304,10 +344,12 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
         if not binary.is_file() or not os.access(binary, os.X_OK):
             fail(f"runtime entrypoint is not executable: {binary}")
         observations = []
-        for fixture, expected_exit, expected_ok in fixtures:
+        for fixture, expected_exit, expected_ok, expected_names in fixtures:
             observed = run_case(binary, artifact, root, fixture, profile)
             if observed[0] != expected_exit or observed[1] is not expected_ok:
                 fail(f"{binary.name}/{fixture} disposition drift: {observed[:2]}")
+            if [fact[0] for fact in observed[2]] != expected_names:
+                fail(f"{binary.name}/{fixture} migrated obligation inventory drift: {observed[2]}")
             observations.append(observed)
         all_observations.append(observations)
     if any(observations != all_observations[0] for observations in all_observations[1:]):
@@ -353,6 +395,13 @@ def self_test(root: Path, profile, schema):
         mutations.append("request-result-binding")
     else:
         fail("mutation was not rejected: request-result-binding")
+    typecheck_route = "validate_typecheck_obligation_report("
+    try:
+        validate_bridge(bridge.replace(typecheck_route, ""))
+    except CheckError:
+        mutations.append("typecheck-route")
+    else:
+        fail("mutation was not rejected: typecheck-route")
     return mutations
 
 

@@ -432,10 +432,10 @@ pub fn test_package_with_step_limit_and_frontend(
                 &store, &pkg_dir, &manifest, &modules, &test_runs, limits,
             ),
             "core/obligation::typecheck" => {
-                obligation_typecheck(&store, &modules, &frontend, limits, false)
+                obligation_typecheck(&store, &manifest, &modules, &frontend, limits, false)
             }
             "core/obligation::typecheck-strict" => {
-                obligation_typecheck(&store, &modules, &frontend, limits, true)
+                obligation_typecheck(&store, &manifest, &modules, &frontend, limits, true)
             }
             "core/obligation::stage1-validation" => {
                 obligation_stage1_validation(&store, &manifest, &modules)

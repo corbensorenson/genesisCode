@@ -286,11 +286,23 @@ pub(super) fn obligation_caps_declared(
 
 pub(super) fn obligation_typecheck(
     store: &EvidenceStore,
+    manifest: &PackageManifest,
     modules: &[LoadedModule],
     frontend: &CoreformFrontend,
     limits: KernelLimits,
     strict_sound: bool,
 ) -> Result<ObligationResult, ObligationError> {
+    if !strict_sound {
+        return evaluate_obligation_with_authority(
+            ObligationAuthorityOperation::Typecheck,
+            store,
+            manifest,
+            modules,
+            &[],
+            frontend,
+            limits,
+        );
+    }
     let report = typecheck_report_with_frontend(modules, frontend, limits, strict_sound)?;
     let ok = report.ok;
     let artifact = store.put_term(&report.to_term())?;

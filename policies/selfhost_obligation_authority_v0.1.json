@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-11",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "1a3f1ddeb9aaa341d79fd6a64b69f7bafa8ce39d587b368d4818add88e64fd93",
+  "contentIdentitySha256": "cb7071c3655a6ad97badaeb735b66b7e6d174b64bde10cf4e0c44ae8f7ca861d",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -21,6 +21,7 @@
   "migratedObligations": [
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
+    "core/obligation::typecheck",
     "core/obligation::unit-tests"
   ],
   "nonclaims": [
@@ -52,7 +53,6 @@
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
-    "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::preflight"
   ],
@@ -64,7 +64,7 @@
   },
   "schema": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
   "sourceModule": "selfhost/obligation_authority_v1.gc",
-  "sourceSha256": "f65f457e33d677724e80c6dac2b37b33f4a20a543e1ce6daa199144c17d04f8f",
+  "sourceSha256": "b7594bdeca0aab6102422a51a7df94ae42cb4c440a2889613d2d919c7db593d9",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

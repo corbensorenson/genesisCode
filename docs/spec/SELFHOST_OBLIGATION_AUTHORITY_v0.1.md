@@ -5,12 +5,13 @@ does not promote the ledger row or close R4.2.d.
 
 `core/cli::obligation-authority` is the sole production semantic producer for the
 `core/obligation::unit-tests`, `core/obligation::budgets`, and
-`core/obligation::capabilities-declared` decisions. The host executes test bodies,
+`core/obligation::capabilities-declared`, and `core/obligation::typecheck` decisions. The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
 sealed-error status, measures steps and effect-log sizes, transports canonical
 module forms and ordered effect-operation observations, and persists opaque effect
 logs. It does not decide whether an expectation matches, a budget is exceeded, a
-suite belongs to a module, or an observed operation was declared.
+suite belongs to a module, an observed operation was declared, or a package
+typechecks.
 
 ## Closed Protocol
 
@@ -44,6 +45,14 @@ failed obligation; malformed module/meta/capability facts are sealed protocol
 errors. Tests without effect logs produce no operation observations, preserving the
 v0.2 obligation semantics.
 
+For `:typecheck`, `:inputs` contains exactly ordered `:modules`, each with only its
+base-relative `:path` and canonical `:forms`. GenesisCode validates the complete
+closed inventory, derives each module's `::meta` from those forms, constructs the
+closed `genesis/typecheck-request-v0.1`, and invokes the already H2
+`core/cli::typecheck-package` authority. The host cannot supply or substitute
+metadata. This operation covers ordinary typechecking only; `typecheck-strict`
+remains residual until its strict metadata transformation is GenesisCode-authored.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -51,8 +60,8 @@ identity of the complete closed request. GenesisCode computes it through
 `selfhost/hash::hash-term`; the host independently applies the same normative hash
 profile to the exact request it invoked and rejects a result bound to any other
 request without recomputing the GenesisCode policy decision. The embedded
-report preserves the existing `genesis/unit-tests-v0.2`, `genesis/budgets-v0.2`, or
-`genesis/caps-declared-v0.2`
+report preserves the existing `genesis/unit-tests-v0.2`, `genesis/budgets-v0.2`,
+`genesis/caps-declared-v0.2`, or `genesis/typecheck-v0.2`
 artifact shape and ordering. The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -63,22 +72,23 @@ and resource exhaustion return a sealed protocol error and never synthesize a pa
 Production package testing passes the exact selected self-host artifact and resource
 limits into this authority. Rust retains only execution, measurement, artifact-store
 transport, strict decoding, and contradiction rejection. The former Rust unit-test,
-budget, suite-ownership, and capability-membership decision implementations are
+budget, suite-ownership, capability-membership, and ordinary typecheck-obligation
+decision implementations are
 absent from production source. Neither an
 environment variable nor a feature can silently restore them.
 
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact source, artifact,
 entrypoint, migrated and residual obligation inventories, primitive host facts, and
 nonclaims. `scripts/lib/selfhost_obligation_authority.py` independently validates
-that profile, the production call sites and dependency graphs, removal of the three
+that profile, the production call sites and dependency graphs, removal of the four
 host decision paths, and mutation controls. Focused Rust tests and native/WASI CLI
 runtime observations cover matching, mismatch, sealed error, inclusive/exceeded
 limits, declared/undeclared operations, missing suite ownership, open requests,
-unknown operations, and valid/failing package routes.
+unknown operations, host metadata injection, and valid/failing package routes.
 
 ## Residual Work And Promotion Rule
 
-The other 17 obligation kinds remain host-authoritative or only partially routed.
+The other 16 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

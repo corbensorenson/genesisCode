@@ -34,10 +34,10 @@
     },
     "independentVerifier": {"const": "scripts/lib/selfhost_obligation_authority.py"},
     "kind": {"const": "genesis/selfhost-obligation-authority-v0.1"},
-    "migratedObligations": {"const": ["core/obligation::budgets", "core/obligation::capabilities-declared", "core/obligation::unit-tests"]},
+    "migratedObligations": {"const": ["core/obligation::budgets", "core/obligation::capabilities-declared", "core/obligation::typecheck", "core/obligation::unit-tests"]},
     "nonclaims": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
-    "residualObligations": {"type": "array", "minItems": 17, "maxItems": 17, "uniqueItems": true, "items": {"type": "string"}},
+    "residualObligations": {"type": "array", "minItems": 16, "maxItems": 16, "uniqueItems": true, "items": {"type": "string"}},
     "resultKind": {"const": "genesis/obligation-authority-result-v0.2"},
     "runtimeEvidence": {
       "type": "object",

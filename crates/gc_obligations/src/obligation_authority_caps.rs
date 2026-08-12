@@ -1,5 +1,5 @@
-fn capability_inputs(modules: &[LoadedModule], tests: &[TestRun]) -> Term {
-    let module_observations = modules
+fn module_observations(modules: &[LoadedModule]) -> Vec<Term> {
+    modules
         .iter()
         .map(|module| {
             Term::Map(
@@ -17,7 +17,10 @@ fn capability_inputs(modules: &[LoadedModule], tests: &[TestRun]) -> Term {
                 .collect(),
             )
         })
-        .collect();
+        .collect()
+}
+
+fn capability_inputs(modules: &[LoadedModule], tests: &[TestRun]) -> Term {
     let test_observations = tests
         .iter()
         .filter_map(|test| {
@@ -54,7 +57,7 @@ fn capability_inputs(modules: &[LoadedModule], tests: &[TestRun]) -> Term {
         [
             (
                 TermOrdKey(Term::symbol(":modules")),
-                Term::Vector(module_observations),
+                Term::Vector(module_observations(modules)),
             ),
             (
                 TermOrdKey(Term::symbol(":tests")),
@@ -64,6 +67,43 @@ fn capability_inputs(modules: &[LoadedModule], tests: &[TestRun]) -> Term {
         .into_iter()
         .collect(),
     )
+}
+
+fn typecheck_inputs(modules: &[LoadedModule]) -> Term {
+    Term::Map(
+        [(
+            TermOrdKey(Term::symbol(":modules")),
+            Term::Vector(module_observations(modules)),
+        )]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn typecheck_module_inputs(modules: &[LoadedModule]) -> Vec<TypecheckModuleInput> {
+    modules
+        .iter()
+        .map(|module| TypecheckModuleInput {
+            path: module.entry.path.clone(),
+            forms: module.forms.clone(),
+            meta: extract_meta_static(&module.forms),
+        })
+        .collect()
+}
+
+fn validate_typecheck_obligation_report(
+    report: &Term,
+    modules: &[LoadedModule],
+    outer_ok: bool,
+    outer_errors: &[String],
+) -> Result<(), ObligationError> {
+    let decoded = decode_typecheck_report(report.clone(), &typecheck_module_inputs(modules))?;
+    if decoded.ok != outer_ok || decoded.errors != outer_errors {
+        return Err(authority_error(
+            "typecheck report disagrees with the obligation result",
+        ));
+    }
+    Ok(())
 }
 
 fn validate_capabilities_report(

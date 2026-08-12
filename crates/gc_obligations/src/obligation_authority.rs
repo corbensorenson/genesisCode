@@ -7,6 +7,7 @@ pub(super) enum ObligationAuthorityOperation {
     UnitTests,
     Budgets,
     CapabilitiesDeclared,
+    Typecheck,
 }
 
 impl ObligationAuthorityOperation {
@@ -15,6 +16,7 @@ impl ObligationAuthorityOperation {
             Self::UnitTests => ":unit-tests",
             Self::Budgets => ":budgets",
             Self::CapabilitiesDeclared => ":capabilities-declared",
+            Self::Typecheck => ":typecheck",
         }
     }
 
@@ -23,6 +25,7 @@ impl ObligationAuthorityOperation {
             Self::UnitTests => "core/obligation::unit-tests",
             Self::Budgets => "core/obligation::budgets",
             Self::CapabilitiesDeclared => "core/obligation::capabilities-declared",
+            Self::Typecheck => "core/obligation::typecheck",
         }
     }
 }
@@ -241,6 +244,7 @@ fn request_term(
             .collect(),
         ),
         ObligationAuthorityOperation::CapabilitiesDeclared => capability_inputs(modules, tests),
+        ObligationAuthorityOperation::Typecheck => typecheck_inputs(modules),
     };
     Ok(Term::Map(
         [
@@ -437,6 +441,7 @@ fn decode_authority_result(
     operation: ObligationAuthorityOperation,
     store: &EvidenceStore,
     manifest: &PackageManifest,
+    modules: &[LoadedModule],
     tests: &[TestRun],
     request_hash: [u8; 32],
     term: Term,
@@ -480,6 +485,9 @@ fn decode_authority_result(
         ObligationAuthorityOperation::CapabilitiesDeclared => {
             validate_capabilities_report(report, manifest, ok, &errors)?
         }
+        ObligationAuthorityOperation::Typecheck => {
+            validate_typecheck_obligation_report(report, modules, ok, &errors)?
+        }
     }
     let artifact = store.put_term(report)?;
     Ok(ObligationResult {
@@ -502,7 +510,15 @@ pub(super) fn evaluate_obligation_with_authority(
     let request = request_term(operation, store, manifest, modules, tests)?;
     let request_hash = hash_term(&request);
     let term = invoke_authority(request, frontend, limits)?;
-    decode_authority_result(operation, store, manifest, tests, request_hash, term)
+    decode_authority_result(
+        operation,
+        store,
+        manifest,
+        modules,
+        tests,
+        request_hash,
+        term,
+    )
 }
 
 #[cfg(test)]

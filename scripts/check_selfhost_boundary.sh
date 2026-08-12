@@ -130,8 +130,8 @@ python3 scripts/lib/selfhost_policy_alias_authority.py \
   --schema docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json \
   --self-test
 
-# R4.2.d obligation authority is partial: unit expectations, budgets, and declared
-# capabilities are checked without promoting SD-OBLIGATION while 17 decisions remain.
+# R4.2.d obligation authority is partial: unit expectations, budgets, declared
+# capabilities, and ordinary typechecking are self-hosted while 16 decisions remain.
 python3 scripts/lib/selfhost_obligation_authority.py \
   --root "$ROOT_DIR" \
   --profile policies/selfhost_obligation_authority_v0.1.json \

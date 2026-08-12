@@ -354,12 +354,103 @@ fn obligation_authority_rejects_result_bound_to_another_request() {
         ObligationAuthorityOperation::UnitTests,
         &store,
         &manifest,
+        &[],
         &[test_run(7, Some(7), false)],
         hash_term(&request),
         result,
     )
     .expect_err("substituted request identity must fail closed");
     assert!(error.to_string().contains("result identity mismatch"));
+}
+
+fn authority_fixture(
+    fixture: &str,
+) -> (
+    tempfile::TempDir,
+    EvidenceStore,
+    PackageManifest,
+    Vec<LoadedModule>,
+) {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
+    let package = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/spec")
+        .join(fixture)
+        .join("package.toml");
+    let (manifest, package_dir) = PackageManifest::load(&package).expect("fixture manifest");
+    let modules = load_modules(
+        &package_dir,
+        &manifest.modules,
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("fixture modules");
+    (temp, store, manifest, modules)
+}
+
+#[test]
+fn typecheck_obligation_authority_runs_existing_selfhost_checker() {
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_typecheck_inference_parity");
+    let passed = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::Typecheck,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("valid package typecheck result");
+    assert!(passed.ok);
+    assert!(passed.errors.is_empty());
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_fail_typecheck");
+    let failed = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::Typecheck,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("invalid package typecheck result");
+    assert!(!failed.ok);
+    assert!(!failed.errors.is_empty());
+}
+
+#[test]
+fn typecheck_obligation_authority_rejects_open_module_observations() {
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_typecheck_inference_parity");
+    let mut request = request_term(
+        ObligationAuthorityOperation::Typecheck,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+    )
+    .expect("typecheck request");
+    let Term::Map(request_map) = &mut request else {
+        panic!("request must be a map");
+    };
+    let Some(Term::Map(inputs)) = request_map.get_mut(&TermOrdKey(Term::symbol(":inputs"))) else {
+        panic!("inputs must be a map");
+    };
+    let Some(Term::Vector(observations)) = inputs.get_mut(&TermOrdKey(Term::symbol(":modules")))
+    else {
+        panic!("modules must be a vector");
+    };
+    let Term::Map(module) = &mut observations[0] else {
+        panic!("module must be a map");
+    };
+    module.insert(
+        TermOrdKey(Term::symbol(":meta")),
+        Term::Map(BTreeMap::new()),
+    );
+    let error = invoke_authority(request, &fixture_frontend(), limits())
+        .expect_err("host-supplied metadata must fail closed");
+    assert!(error.to_string().contains("sealed error"));
 }
 
 #[test]

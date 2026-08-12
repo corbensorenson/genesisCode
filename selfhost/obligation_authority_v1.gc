@@ -569,6 +569,48 @@
             ":capabilities-declared inputs must contain exactly :modules and :tests"))
         (selfhost/obligation::error ":capabilities-declared inputs must be a map")))))
 
+(def selfhost/obligation::typecheck-modules-loop
+  (fn (modules)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len modules))
+          out
+          (let ((module ((core/vec::get modules) index)))
+            (((selfhost/obligation::typecheck-modules-loop modules)
+               ((core/int::add index) 1))
+              ((core/vec::push out)
+                {:forms ((core/map::get module) (quote :forms))
+                 :meta (core/cli::module-meta ((core/map::get module) (quote :forms)))
+                 :path ((core/map::get module) (quote :path))}))))))))
+
+(def selfhost/obligation::typecheck
+  (fn (inputs)
+    (if (if (selfhost/obligation::map? inputs)
+          ((core/int::eq? (core/map::len inputs)) 1)
+          false)
+      (let ((modules ((core/map::get inputs) (quote :modules))))
+        (if (selfhost/obligation::vec? modules)
+          (let ((valid ((selfhost/obligation::validate-modules-loop modules) 0)))
+            (if (core/error::is? valid)
+              valid
+              (let
+                ((report
+                   (core/cli::typecheck-package
+                     {:kind "genesis/typecheck-request-v0.1"
+                      :modules (((selfhost/obligation::typecheck-modules-loop modules) 0) [])
+                      :v 1})))
+                (if (core/error::is? report)
+                  report
+                  {:errors ((core/map::get report) (quote :errors))
+                   :kind selfhost/obligation::RESULT_KIND
+                   :name "core/obligation::typecheck"
+                   :ok ((core/map::get report) (quote :ok))
+                   :operation (quote :typecheck)
+                   :report report
+                   :v 2}))))
+          (selfhost/obligation::error ":typecheck :modules input must be a vector")))
+      (selfhost/obligation::error ":typecheck inputs must contain exactly :modules"))))
+
 (def selfhost/obligation::bind-result
   (fn (request)
     (fn (result)
@@ -598,7 +640,9 @@
               (selfhost/obligation::error ":budgets inputs must contain exactly :limits and :tests"))
             (if ((core/sym::eq? operation) (quote :capabilities-declared))
               ((selfhost/obligation::capabilities-declared package) inputs)
-              (selfhost/obligation::error "unknown obligation authority operation"))))))))
+              (if ((core/sym::eq? operation) (quote :typecheck))
+                (selfhost/obligation::typecheck inputs)
+                (selfhost/obligation::error "unknown obligation authority operation")))))))))
 
 (def core/cli::obligation-authority
   (fn (request)
