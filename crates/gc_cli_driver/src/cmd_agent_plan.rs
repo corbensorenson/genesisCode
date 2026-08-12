@@ -146,7 +146,7 @@ pub(super) fn cmd_agent_plan(
         }
     }
 
-    let policy = policy_precheck(caps_path, &selected_required_ops);
+    let policy = policy_precheck(cli, caps_path, &selected_required_ops);
     if !policy.ok {
         let hints = if !policy.denied_ops.is_empty() {
             vec![
@@ -569,9 +569,9 @@ fn select_workflows(
     selected
 }
 
-fn policy_precheck(caps_path: &Path, required_ops: &BTreeSet<String>) -> PolicyPrecheck {
+fn policy_precheck(cli: &Cli, caps_path: &Path, required_ops: &BTreeSet<String>) -> PolicyPrecheck {
     let caps_path_s = caps_path.display().to_string();
-    match CapsPolicy::load(caps_path) {
+    match load_caps_policy(cli, caps_path) {
         Ok(pol) => {
             let denied_ops: Vec<String> = required_ops
                 .iter()
@@ -591,7 +591,7 @@ fn policy_precheck(caps_path: &Path, required_ops: &BTreeSet<String>) -> PolicyP
             checked: true,
             ok: false,
             denied_ops: Vec::new(),
-            error: Some(e.to_string()),
+            error: Some(e.json.message),
         },
     }
 }

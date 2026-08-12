@@ -169,6 +169,7 @@ mod tests {
             timeout_ms: None,
             log_inline_max_bytes: None,
             extra,
+            authorized_cap: None,
         }
     }
 

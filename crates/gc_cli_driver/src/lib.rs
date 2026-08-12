@@ -623,6 +623,28 @@ fn caps_parse_cli_err(err: anyhow::Error) -> CliError {
     cli_err_with_context(EX_PARSE, "caps/parse", message, context)
 }
 
+fn load_caps_policy(cli: &Cli, path: &Path) -> Result<CapsPolicy, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let loaded = match frontend {
+        gc_obligations::CoreformFrontend::Selfhost(config) => {
+            CapsPolicy::load_with_selfhost_authority(
+                path,
+                config.bootstrap_mode,
+                config.artifact.as_deref(),
+            )
+        }
+        #[cfg(feature = "parity-harness")]
+        gc_obligations::CoreformFrontend::Rust => CapsPolicy::load(path),
+        #[cfg(not(feature = "parity-harness"))]
+        gc_obligations::CoreformFrontend::Rust => Err(gc_effects::EffectsError::Log(
+            "Rust effect-policy authority is not compiled into production".to_string(),
+        )),
+    };
+    loaded
+        .with_context(|| format!("read {}", path.display()))
+        .map_err(caps_parse_cli_err)
+}
+
 fn normalize_newlines(s: &str) -> String {
     s.replace("\r\n", "\n")
 }

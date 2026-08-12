@@ -1,5 +1,103 @@
 use super::CapsPolicy;
-use std::path::Path;
+use gc_coreform::{Term, TermOrdKey};
+use gc_prelude::SelfhostBootstrapMode;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
+fn selfhost_artifact() -> PathBuf {
+    std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join("selfhost/toolchain.gc")
+        })
+}
+
+fn expected_cap(op: &str, fields: impl IntoIterator<Item = (&'static str, Term)>) -> Term {
+    let mut cap = BTreeMap::from([(TermOrdKey(Term::symbol(":op")), Term::symbol(op))]);
+    cap.extend(
+        fields
+            .into_iter()
+            .map(|(key, value)| (TermOrdKey(Term::symbol(key)), value)),
+    );
+    Term::Map(cap)
+}
+
+#[test]
+fn selfhost_authority_composes_admission_and_canonical_caps() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["sys/time::now", "io/fs::read"]
+
+[op."io/fs::read"]
+allow = false
+
+[op."core/task::await"]
+allow = true
+create_dirs = true
+timeout_ms = 25
+log_inline_max_bytes = 64
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert!(policy.is_allowed("sys/time::now"));
+    assert!(!policy.is_allowed("io/fs::read"));
+    assert!(policy.is_allowed("core/task::await"));
+    assert!(!policy.is_allowed("sys/env::get"));
+    assert_eq!(
+        policy.authorized_cap("sys/time::now"),
+        Some(&expected_cap("sys/time::now", []))
+    );
+    assert_eq!(
+        policy.authorized_cap("core/task::await"),
+        Some(&expected_cap(
+            "core/task::await",
+            [
+                (":create-dirs", Term::Bool(true)),
+                (":timeout-ms", Term::Int(25.into())),
+                (":log-inline-max-bytes", Term::Int(64.into())),
+            ]
+        ))
+    );
+    assert!(policy.authorized_cap("io/fs::read").is_none());
+}
+
+#[test]
+fn selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    let allow = (0..=4096)
+        .map(|index| format!("\"test/op::{index}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    std::fs::write(&caps, format!("allow = [{allow}]\n")).unwrap();
+
+    let missing_artifact = td.path().join("must-not-be-loaded.gc");
+    let err = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&missing_artifact),
+    )
+    .expect_err("oversized policy must fail before loading an artifact");
+
+    assert!(
+        err.to_string()
+            .contains("operation inventory exceeds fixed limit 4096")
+    );
+}
 
 #[test]
 fn rejects_legacy_top_level_op_tables() {

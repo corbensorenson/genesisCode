@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "c2d81b44c713b50af8e2a7af1d362e7306e7b24fcc0c813c132ee77e09a6dadd",
+      "inputIdentitySha256": "14a01614a204a508bab351c30d2a576af8961d550ea98b779ad89be9289ba702",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -364,7 +364,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -569,7 +569,7 @@
       "executionIdentitySha256": "ca60c0c8740ffc38f92b66c4a85bf1c85c764940d9d9014b38fc968ff96a5ab0",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "ecdfe4e716ce1dee20d40f698e8c76982297d6fa4cfa892586678abc5bd119cf",
+      "inputIdentitySha256": "2556cab256532dfc13db704c0e75051d450d4d180f9a31828835f8d312aa41c7",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -668,7 +668,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -828,7 +828,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1117,6 +1117,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -1145,6 +1146,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -1447,6 +1451,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -1596,6 +1602,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -1830,6 +1837,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -1985,6 +1993,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -2315,7 +2324,7 @@
       "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "4daadffa708580c7d489126a6236252ec6d55f013595ef78e896b01b5c2112db",
+      "inputIdentitySha256": "1e7fc34f4eb6f8b2bfcf064c1fbeb95f857cc4ed170e4349bf4ed30cd0a5c306",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2443,7 +2452,7 @@
       "executionIdentitySha256": "d368d86edc3ac9c640e631f0fafc9012460c8fb68f88949143d1f595760d87c8",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger",
-      "inputIdentitySha256": "f9e242cae7a906dbf6eb93a055c238ac8f39326d4c54a55707fb97f3b19a1eee",
+      "inputIdentitySha256": "62c9a4a7b08d8b95d1400131b189c5ec5adc51d10248b2421bfa315cf55d27b0",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -2514,7 +2523,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2643,6 +2652,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -2671,6 +2681,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -2973,6 +2986,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -3122,6 +3137,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -3356,6 +3372,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -3511,6 +3528,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -3736,7 +3754,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3865,6 +3883,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -3893,6 +3912,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -4195,6 +4217,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -4344,6 +4368,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -4578,6 +4603,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -4733,6 +4759,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -4833,7 +4860,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4962,6 +4989,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -4990,6 +5018,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -5292,6 +5323,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -5441,6 +5474,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -5675,6 +5709,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -5830,6 +5865,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -5918,7 +5954,7 @@
       "executionIdentitySha256": "7589ad69e7f64592a89c2415a6c1eeefa7df379887597d5295085be8b3fb5e79",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "80e75b2abb0afbbbdbf455a185c92ea1d9136707e08cd8c8ef6218142fc4ead7",
+      "inputIdentitySha256": "0192c6d59204988e3b8f6351cd3aa980d3acb21267c3a85343e53c9887a9a57a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -6009,7 +6045,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6138,6 +6174,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -6166,6 +6203,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -6468,6 +6508,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -6617,6 +6659,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -6851,6 +6894,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -7006,6 +7050,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -7394,7 +7439,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "11d2800f0e959aff733eab64e0050e4b70b14bfb8f7b282cdf0f6c17a8d22ae6",
+      "inputIdentitySha256": "9f997cfe98e5cff6f1c19ca33f88bc92ffe763dc544ce423ca556e6bf2948467",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7609,7 +7654,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "46e998edf11919fba859dba9c1740f9d9137b8e00e732c96108c8e1588560503",
+      "inputIdentitySha256": "f58fb40220311ae137da0bd38f3c4fc3d3aad48075bf2b77ab5eeb00caa0e765",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7677,7 +7722,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7806,6 +7851,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -7834,6 +7880,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -8136,6 +8185,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -8285,6 +8336,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -8519,6 +8571,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -8674,6 +8727,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -8758,7 +8812,7 @@
       "executionIdentitySha256": "8cff602dbf244463fb827f70fc6ce31257fb76b4541100508567d3f1fd7ba641",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-adversarial-matrix",
-      "inputIdentitySha256": "9477217077052d7bd14358911c5a8c394ce7d2383a82bdf709de3b52bc71eca0",
+      "inputIdentitySha256": "ab7363752825024b70abf9fab23f30970880f2ce2b24948cbd6690861b9cfb24",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8919,7 +8973,7 @@
       "executionIdentitySha256": "a633534861b74b8d43cdd3226dbcfc79e1b417f9f151828002d3177a7e37eb79",
       "expectedDurationSeconds": 600,
       "id": "gate/feature-matrix-gap-hygiene",
-      "inputIdentitySha256": "dcc1940d10cfad65fa41da42dd5e7cfd272a7169333190b1a725d4ee92d763c4",
+      "inputIdentitySha256": "7fc6dfd10a4641ed417645672547ef16ac23ab945d6ba372d605d4e0bc602d65",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -9062,7 +9116,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "a69a1da229b853eb5d60b039c5f088e88cfccd601faa5e765c76006b876cfee7",
+      "inputIdentitySha256": "a60744757d5959a46833a2990663d668fb0a6e50d3a59dc8d2d7fcd89559bfb8",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9136,7 +9190,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "72c155162cf9fddeaf1064a7cc2a40f21b88a22e5dd22641368ec0dcb6183cab",
+      "inputIdentitySha256": "29773ce7be99ec109117265e02ac1d802990ce3932dbbdb7d2eb955036235288",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9161,6 +9215,7 @@
           "crates/gc_cli_driver/src/lib.rs",
           "crates/gc_cli_driver/src/pkg_abi.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
           "crates/gc_cli_driver/src/selfhost_bridge.rs",
@@ -9171,6 +9226,10 @@
           "crates/gc_coreform/src/print.rs",
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
+          "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -9237,6 +9296,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -9290,6 +9351,7 @@
           "policies/generated_state_v0.1.json",
           "policies/kernel_tcb_contract.toml",
           "policies/release_target_reference_set_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -9318,6 +9380,7 @@
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/release_bin.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -9372,6 +9435,7 @@
           "scripts/update_task_concurrency_stress_report.sh",
           "scripts/update_vcs_selfhost_contract_report.sh",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -9505,7 +9569,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "6ca0e54dc2a03ada7cfeec564735ef207d6f5def32aab0ed580c015f1b95b0d5",
+      "inputIdentitySha256": "32da893fb4b148589f3cc7d4548040cff6e56a99760a022d4f79707375466ffd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9692,7 +9756,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9821,6 +9885,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -9849,6 +9914,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -10151,6 +10219,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -10300,6 +10370,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -10534,6 +10605,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -10689,6 +10761,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -10773,7 +10846,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "c2d81b44c713b50af8e2a7af1d362e7306e7b24fcc0c813c132ee77e09a6dadd",
+      "inputIdentitySha256": "14a01614a204a508bab351c30d2a576af8961d550ea98b779ad89be9289ba702",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11132,7 +11205,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "c2d81b44c713b50af8e2a7af1d362e7306e7b24fcc0c813c132ee77e09a6dadd",
+      "inputIdentitySha256": "14a01614a204a508bab351c30d2a576af8961d550ea98b779ad89be9289ba702",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11491,7 +11564,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "c2d81b44c713b50af8e2a7af1d362e7306e7b24fcc0c813c132ee77e09a6dadd",
+      "inputIdentitySha256": "14a01614a204a508bab351c30d2a576af8961d550ea98b779ad89be9289ba702",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11850,7 +11923,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "c2d81b44c713b50af8e2a7af1d362e7306e7b24fcc0c813c132ee77e09a6dadd",
+      "inputIdentitySha256": "14a01614a204a508bab351c30d2a576af8961d550ea98b779ad89be9289ba702",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12263,7 +12336,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "d9b92eced036476c9c0847d3696f19deeef81a2687ce0a87836e434b42ae3b90",
+      "inputIdentitySha256": "2278585694434b4da71e3cb595d8d092ae943c8171fb826f7f834e8f3468b438",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -12406,7 +12479,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12535,6 +12608,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -12563,6 +12637,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -12865,6 +12942,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -13014,6 +13093,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -13248,6 +13328,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -13403,6 +13484,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -14145,7 +14227,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14274,6 +14356,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -14302,6 +14385,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -14604,6 +14690,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -14753,6 +14841,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -14987,6 +15076,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -15142,6 +15232,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -15230,7 +15321,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15431,7 +15522,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15560,6 +15651,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -15588,6 +15680,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -15890,6 +15985,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -16039,6 +16136,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -16273,6 +16371,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -16428,6 +16527,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -16691,7 +16791,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17099,7 +17199,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17228,6 +17328,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -17256,6 +17357,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -17558,6 +17662,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -17707,6 +17813,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -17941,6 +18048,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -18096,6 +18204,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -18420,7 +18529,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "7b0a0086e2c493c6b230e81d9294ba9991436db7aa9e7dabd6b7215784f47e15",
+      "inputIdentitySha256": "24805878e71ef0e766281db885da131fe9827e4873b123cb151c9bf7e4ef60a9",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -18477,7 +18586,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18606,6 +18715,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -18634,6 +18744,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -18936,6 +19049,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -19085,6 +19200,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -19319,6 +19435,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -19474,6 +19591,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -19754,7 +19872,7 @@
       "executionIdentitySha256": "40e0e760812ac402a0da62d9f43d62652d9bbe79f74df874a1bd7d528bb19c06",
       "expectedDurationSeconds": 600,
       "id": "gate/redteam-report",
-      "inputIdentitySha256": "c8eda4d05e594eaf6bbf8e1a714a1ae0be92804c0a137f1072eb74d4c8afda0b",
+      "inputIdentitySha256": "7a03853d933fdbaf3344cd535c29762b38fa2a1e897074ad372be0409df76b9a",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -19890,7 +20008,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "9d7b21a0990414b610d69673c88381a81e098ea9cb5eaa8196f413de8132a1d2",
+      "inputIdentitySha256": "6355814df003d6873866f24a8b808abc1dd9baf84b6ec030fc8d9e0a0492b4c9",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20091,7 +20209,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "57d434b964e65468b9aa16ebb2f081592006636805b73b7c268829d458bc8a19",
+      "inputIdentitySha256": "86f787b138bb5dd5cb8a19603e3e35629d4dae09f8d4bc0472bc3ef379c62b03",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -20306,7 +20424,7 @@
       "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "9dde11133f0894281151c1ee3248f26e703f1d67fc34aa9ac0e43ae1623699ff",
+      "inputIdentitySha256": "aa9a0678745ec864397278762ec422d142c450d06774882078c3eb6e31daba4e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20372,7 +20490,7 @@
       "executionIdentitySha256": "c67d34d8fa0d26cdac159125af00a1d6d4a744670b69c37f95f8354c0305918d",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "b5fb4c24a6f51753fd6b8d9850458393ca5739de5552b855defd3ec0b65f0a2e",
+      "inputIdentitySha256": "897854acd5b30cc98e65cd44ca9dac82df661fcea0cbec2ed2fe0a8dfc54412c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20460,7 +20578,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "1252f9294a64759b5b4a0570ee1e07d08a9a814783a2364ef6e75e4bbed4020b",
+      "inputIdentitySha256": "aaa6c0b7d66aa498a243718e179cf4ab9058dfc44d68b3f629eb02309a418107",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -20536,7 +20654,7 @@
       "executionIdentitySha256": "60f671e6ef75b6d6e70ff73f92f29946bb7eb9d6ad700778aacacd7da5a3b6a5",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-workloads",
-      "inputIdentitySha256": "c7a9639d85056117f28d5be01266eb327baef540bc0d024ba65e5410a4c555e9",
+      "inputIdentitySha256": "9426468d7e064b421fcadb254c44edb9e31f38e697a35bdd48619d4cfe98492f",
       "inputs": {
         "paths": [
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
@@ -20705,7 +20823,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21055,7 +21173,7 @@
       "executionIdentitySha256": "31a709e63915720b5c2578efcd4bd8b0a78b4a6c02f9b2960b7a22eff7d7ac73",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "ce7e786d6168c9ea0564ed2b2de8fb1ba13ae7425a29ddb6d3c73df34e86216e",
+      "inputIdentitySha256": "f3c525c83a647d529bb8c94c6cb3f3fc67cabda205bba9b18ab28420c56f0dcc",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21127,10 +21245,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_boundary.sh",
-      "executionIdentitySha256": "2815a6a81d96dfb7319e654896d67b66e62515fa193f7baeb41062f6d0d37a7c",
+      "executionIdentitySha256": "1996b2184d722c536b859641702cc1ff078853e2c3e82b919f9552903811fbe6",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "23c9f9cb42879416e8e290b4412747f6809fb66f6dcda6822e5e8b16a424bfd8",
+      "inputIdentitySha256": "8240038ad61969bada4eb4745ecae373b6466df728233c69568ac95003d25b94",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -21152,6 +21270,7 @@
           "crates/gc_cli_driver/src/kernel_exec.rs",
           "crates/gc_cli_driver/src/lib.rs",
           "crates/gc_cli_driver/src/pkg_abi.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
           "crates/gc_cli_driver/src/selfhost_bridge.rs",
@@ -21162,6 +21281,10 @@
           "crates/gc_coreform/src/print.rs",
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
+          "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -21218,6 +21341,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -21239,6 +21364,7 @@
           "docs/status/SELFHOST_AUTHORITY_v0.1.md",
           "docs/status/SELFHOST_CUTOVER.md",
           "policies/kernel_tcb_contract.toml",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -21249,6 +21375,7 @@
           "scripts/check_selfhost_boundary.sh",
           "scripts/check_selfhost_doc_runtime_parity.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -21259,6 +21386,7 @@
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -21311,7 +21439,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "c79ed978c04019d05e9de133cc8c08de3bd258fc496fe06dfa3f8bbb76b66aab",
+      "sourceSha256": "5b8d36b2732784dfd4d5ed3ef318d1d41f3209b6835c4603a68dac6326fae814",
       "tools": [
         "bash",
         "cargo",
@@ -21329,7 +21457,7 @@
       "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "9e93a624ffaee631028d43e1722b9e4e79938f8fb7321e3e958f01fd8df58136",
+      "inputIdentitySha256": "a03736b530c6cfc58ef4d7acb018d4e3fd43829875d38214a1fbb2ded441fb17",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21506,7 +21634,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "366fb40fcc2215dc2d49e1ebe6537accc5affdb5a2b199828febf3ba4c1a5c1d",
+      "inputIdentitySha256": "6c70afb3814b46f171c96163b85f48a9a402771bd8f8ca5fe869dcc4edbd55eb",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21649,7 +21777,7 @@
       "executionIdentitySha256": "de98a9b2dd03b246bd228fb5aa58e6c216ddd3e98c2db5a2dfe508c302766370",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-refactor-guard",
-      "inputIdentitySha256": "c32b992e1115e89b3dada8ca1ea4aa74174f082e02e0e14272b23e874f5e48ff",
+      "inputIdentitySha256": "a351740f306a64641dd4970a900d7025ef33161d784bad2da392a101d0bb6b32",
       "inputs": {
         "paths": [
           "scripts/check_selfhost_refactor_guard.sh",
@@ -21767,7 +21895,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "2a2ed68d7be6a9775f529405c387e9bbf9c3259b36ae829b936044cd37f19beb",
+      "inputIdentitySha256": "cfa83acd207b606065fd7c502edde088f6fb4c659536e558a391341fe746b05d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -21834,7 +21962,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22307,7 +22435,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22436,6 +22564,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -22464,6 +22593,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -22766,6 +22898,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -22915,6 +23049,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -23149,6 +23284,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -23304,6 +23440,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -23506,7 +23643,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "c24f84fec810f79d0057c14420f7b14989962800a462e9dd6d034f19768d8fe8",
+      "inputIdentitySha256": "9b7107b47227a1338e0508450a77128c8939dec49e877c086292beaa5bc2f0be",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23635,6 +23772,7 @@
           "crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs",
           "crates/gc_cli_driver/src/pkg_contract.rs",
           "crates/gc_cli_driver/src/pkg_reports.rs",
+          "crates/gc_cli_driver/src/pkg_runtime_profile.rs",
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
           "crates/gc_cli_driver/src/policy_config.rs",
@@ -23663,6 +23801,9 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/policy.rs",
+          "crates/gc_effects/src/policy_authority.rs",
+          "crates/gc_effects/src/policy_tests.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
@@ -23965,6 +24106,8 @@
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.md",
           "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+          "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
           "docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
@@ -24114,6 +24257,7 @@
           "policies/release_target_reference_set_v0.1.json",
           "policies/roadmap_execution_v0.1.json",
           "policies/rustsec_advisory_db_v0.1.json",
+          "policies/selfhost_effect_policy_composition_v0.1.json",
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
@@ -24348,6 +24492,7 @@
           "scripts/lib/rustsec_advisory_db.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/lib/selfhost_closure_levels.py",
+          "scripts/lib/selfhost_effect_policy_composition.py",
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
@@ -24503,6 +24648,7 @@
           "scripts/wasm_cross_host_determinism.mjs",
           "scripts/webxr_browser_conformance.mjs",
           "selfhost/cli_coreform_v1.gc",
+          "selfhost/effect_policy_authority_v1.gc",
           "selfhost/obligation_authority_ai_style_v1.gc",
           "selfhost/obligation_authority_core_v1.gc",
           "selfhost/obligation_authority_coverage_v1.gc",
@@ -24646,7 +24792,7 @@
       "executionIdentitySha256": "ee98150995cf06d1154b98f37201d1e633fcbc1a82171a3ab4834069bfaed5bc",
       "expectedDurationSeconds": 600,
       "id": "gate/vcs-selfhost-contract",
-      "inputIdentitySha256": "3389afc209a98d62207631609162c7f296eb2e7d6108511285b7cc7fdf912ae8",
+      "inputIdentitySha256": "670885b2c5a14d22a1b44e93e85048fc80a6e1d7ad1de037aa63557f442148ff",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24712,7 +24858,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "90698d5e8c79447eb3f51333d48716e29ee5e635a480a3d78979a9fde7b5388b",
+      "inputIdentitySha256": "85d3716b8d1d488375affa8c3eac6ff35d750fcacaca003b93d22e794165a5b8",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -24783,7 +24929,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "60218520965a2a493fdc0176151e29854c3bc5c1e46edad70a8189ef80472a6e",
+      "inputIdentitySha256": "0fd50652a390ce6be3681cf78724182ca98ef9fb93ef539646713ac56e3af6b7",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -25143,7 +25289,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25300,7 +25446,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "d7a8619255cb6b5d1cbbe260131232d5b894dc4ecc0b08a340e46ba7f315310b",
+      "inputIdentitySha256": "95eb1e1c314340edec824ea69026db87a1f171f569daa70ce281fa9d6a120dd3",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25459,7 +25605,7 @@
       "executionIdentitySha256": "352025cc70b36a3be61f30d540c703e68cd628f85dd842ac902f78dacb6f2a9b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "22dcd8c0811106b40d83179bfb3d164188b0e5d5d03f4afe3eda3a801d8e9737",
+      "inputIdentitySha256": "c2d6ed2180f2d06e3217f2f77308f02b1c0813c00f5a0a39198d3ea1b1352b6d",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25527,7 +25673,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "dbef7034a2e5c8aeb0278277441be75a482281d08335fbdc55592efa187c7430",
+      "inputIdentitySha256": "832420eaf9172352d6c6cef739aac612f765b78affa8c4d27f8a6d1e37ed93f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25619,7 +25765,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "1f72adc6dceb771df25c06fe18b6e21140e82a30f0edc30b407eb56837125e2a"
+        "sha256": "1d2e80a14b99b99172e3ad18bdab6328d2788f7fd724d2c0520dfe81920b1a2b"
       },
       {
         "path": "genesis.prerequisites.json",

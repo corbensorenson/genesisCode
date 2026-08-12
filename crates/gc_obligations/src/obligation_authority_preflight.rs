@@ -226,7 +226,14 @@ pub(super) fn evaluate_preflight_with_authority(
     .map(|error| stable_preflight_error(error.to_string(), &[pkg_dir]));
     let (caps, caps_policy_hash, caps_error) = match policy_path {
         None => (CapsPolicy::empty(), None, None),
-        Some(path) => match CapsPolicy::load(path) {
+        Some(path) => match match frontend {
+            CoreformFrontend::Selfhost(config) => CapsPolicy::load_with_selfhost_authority(
+                path,
+                config.bootstrap_mode,
+                config.artifact.as_deref(),
+            ),
+            CoreformFrontend::Rust => CapsPolicy::load(path),
+        } {
             Ok(caps) => match hash_optional_file(Some(path)) {
                 Ok(hash) => (caps, hash, None),
                 Err(error) => (

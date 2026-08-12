@@ -9,9 +9,7 @@ pub(super) fn cmd_sync(
     let frontend = resolved_coreform_frontend(cli)?;
     let frontend_info = coreform_frontend_json(&frontend);
 
-    let policy = CapsPolicy::load(caps)
-        .with_context(|| format!("read {}", caps.display()))
-        .map_err(caps_parse_cli_err)?;
+    let policy = load_caps_policy(cli, caps)?;
 
     let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);

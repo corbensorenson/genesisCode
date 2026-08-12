@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscodelang.dev/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
+  "title": "GenesisCode partial self-host effect policy composition profile v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "binding",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "hostOracle",
+    "independentVerifier",
+    "kind",
+    "maxPolicyOperations",
+    "nonclaims",
+    "productionEntrypoints",
+    "requestKind",
+    "residualDecisionInventory",
+    "resultKind",
+    "runtimeEvidence",
+    "schema",
+    "sourceModule",
+    "sourceSha256",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/effects::policy-authority"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {
+      "const": ["baseline-operation-admission", "canonical-log-cap-descriptor", "per-operation-allow-precedence"]
+    },
+    "hostOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "removalTask"],
+      "properties": {
+        "required": {"const": true},
+        "removalTask": {"const": "R4.2.d"}
+      }
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_effect_policy_composition.py"},
+    "kind": {"const": "genesis/selfhost-effect-policy-composition-v0.1"},
+    "maxPolicyOperations": {"const": 4096},
+    "nonclaims": {"type": "array", "minItems": 7, "uniqueItems": true, "items": {"type": "string"}},
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "requestKind": {"const": "genesis/effect-policy-authority-request-v0.1"},
+    "residualDecisionInventory": {"type": "array", "minItems": 10, "uniqueItems": true, "items": {"type": "string"}},
+    "resultKind": {"const": "genesis/effect-policy-authority-result-v0.1"},
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allocationLimit", "stepLimit", "timeoutSeconds"],
+      "properties": {
+        "allocationLimit": {"const": 20000000},
+        "stepLimit": {"const": 20000000},
+        "timeoutSeconds": {"const": 30}
+      }
+    },
+    "schema": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/effect_policy_authority_v1.gc"},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

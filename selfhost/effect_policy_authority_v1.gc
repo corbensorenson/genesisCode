@@ -1,0 +1,124 @@
+(def selfhost/effect-policy::optional-bool?
+  (fn (value)
+    (if (selfhost/policy::nil? value) true ((core/sym::eq? (core/data::tag value)) (quote :bool)))))
+
+(def selfhost/effect-policy::optional-int?
+  (fn (value) (if (selfhost/policy::nil? value) true (selfhost/policy::int? value))))
+
+(def selfhost/effect-policy::baseline-contains-loop?
+  (fn (baseline)
+    (fn (op)
+      (fn (count)
+        (fn (index)
+          (if ((core/int::eq? index) count)
+            false
+            (let ((candidate ((core/vec::get baseline) index)))
+              (if (selfhost/policy::str? candidate)
+                (if ((core/eq? candidate) op)
+                  true
+                  ((((selfhost/effect-policy::baseline-contains-loop? baseline) op) count)
+                    ((core/int::add index) 1)))
+                ((core/error::make2 "core/policy/authority")
+                  "effect-policy baseline entries must be strings")))))))))
+
+(def selfhost/effect-policy::baseline-contains?
+  (fn (baseline)
+    (fn (op)
+      ((((selfhost/effect-policy::baseline-contains-loop? baseline) op) (core/vec::len baseline)) 0))))
+
+(def selfhost/effect-policy::override-valid?
+  (fn (override)
+    (if (selfhost/policy::nil? override)
+      true
+      (if (selfhost/policy::map? override)
+        (if ((core/int::eq? (core/map::len override)) 4)
+          (if (selfhost/effect-policy::optional-bool? ((core/map::get override) (quote :allow)))
+            (if
+              (selfhost/effect-policy::optional-bool?
+                ((core/map::get override) (quote :create-dirs)))
+              (if
+                (selfhost/effect-policy::optional-int?
+                  ((core/map::get override) (quote :log-inline-max-bytes)))
+                (selfhost/effect-policy::optional-int?
+                  ((core/map::get override) (quote :timeout-ms)))
+                false)
+              false)
+            false)
+          false)
+        false))))
+
+(def selfhost/effect-policy::allowed?
+  (fn (baseline)
+    (fn (op)
+      (fn (override)
+        (if (selfhost/policy::nil? override)
+          ((selfhost/effect-policy::baseline-contains? baseline) op)
+          (let ((allow ((core/map::get override) (quote :allow))))
+            (if (selfhost/policy::nil? allow) true allow)))))))
+
+(def selfhost/effect-policy::cap
+  (fn (op)
+    (fn (override)
+      (let
+        (
+          (base
+            {
+              :op (core/sym::from-str op)}))
+        (if (selfhost/policy::nil? override)
+          base
+          (let
+            ((create-dirs ((core/map::get override) (quote :create-dirs)))
+              (timeout ((core/map::get override) (quote :timeout-ms)))
+              (inline ((core/map::get override) (quote :log-inline-max-bytes))))
+            (let
+              (
+                (with-create
+                  (if (if (selfhost/policy::nil? create-dirs) false create-dirs)
+                    (((core/map::put base) (quote :create-dirs)) true)
+                    base)))
+              (let
+                (
+                  (with-timeout
+                    (if (selfhost/policy::nil? timeout)
+                      with-create
+                      (((core/map::put with-create) (quote :timeout-ms))
+                        (if ((core/int::lt? timeout) 0) 0 timeout)))))
+                (if (if (selfhost/policy::nil? inline) true ((core/int::lt? inline) 1))
+                  with-timeout
+                  (((core/map::put with-timeout) (quote :log-inline-max-bytes)) inline))))))))))
+
+(def core/effects::policy-authority
+  (fn (request)
+    (if (selfhost/policy::map? request)
+      (if ((core/int::eq? (core/map::len request)) 5)
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (version ((core/map::get request) (quote :v)))
+            (baseline ((core/map::get request) (quote :baseline)))
+            (op ((core/map::get request) (quote :op)))
+            (override ((core/map::get request) (quote :override))))
+          (if
+            (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.1")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 1) false)
+              false)
+            (if (if (selfhost/policy::vec? baseline) (selfhost/policy::str? op) false)
+              (if (selfhost/effect-policy::override-valid? override)
+                (let ((allowed (((selfhost/effect-policy::allowed? baseline) op) override)))
+                  (if (core/error::is? allowed)
+                    allowed
+                    {
+                      :allowed allowed
+                      :cap (if allowed ((selfhost/effect-policy::cap op) override) nil)
+                      :kind "genesis/effect-policy-authority-result-v0.1"
+                      :op op
+                      :request-h (selfhost/hash::hash-term request)
+                      :v 1}))
+                ((core/error::make2 "core/policy/authority")
+                  "effect-policy override must contain exactly optional typed admission fields"))
+              ((core/error::make2 "core/policy/authority")
+                "effect-policy baseline must be a vector and op must be a string"))
+            ((core/error::make2 "core/policy/authority")
+              "effect-policy authority request identity mismatch")))
+        ((core/error::make2 "core/policy/authority")
+          "effect-policy authority request must contain exactly five fields"))
+      ((core/error::make2 "core/policy/authority") "effect-policy authority request must be a map"))))

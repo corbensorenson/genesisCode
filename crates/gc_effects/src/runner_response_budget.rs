@@ -287,7 +287,14 @@ pub(super) fn resp_from_log(
     }
 }
 
-pub(super) fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, EffectsError> {
+pub(super) fn cap_term(
+    policy: &CapsPolicy,
+    op: &str,
+    pol: Option<&OpPolicy>,
+) -> Result<Term, EffectsError> {
+    if let Some(cap) = policy.authorized_cap(op) {
+        return Ok(cap.clone());
+    }
     let mut m = BTreeMap::new();
     m.insert(
         TermOrdKey(Term::Symbol(":op".to_string())),

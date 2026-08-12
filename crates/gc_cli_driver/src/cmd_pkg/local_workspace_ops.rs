@@ -383,9 +383,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
                     pkg_workspace_ops::collect_missing_locked_hashes(workspace_file, lock)
                         .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?;
                 if !missing.is_empty() {
-                    let policy = CapsPolicy::load(caps)
-                        .with_context(|| format!("read {}", caps.display()))
-                        .map_err(caps_parse_cli_err)?;
+                    let policy = load_caps_policy(cli, caps)?;
                     let mut ctx = mk_ctx(cli);
                     let prelude = build_prelude(&mut ctx);
                     let mut env = prelude.env;

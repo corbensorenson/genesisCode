@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 
 use crate::error::EffectsError;
 
+#[path = "policy_authority.rs"]
+mod policy_authority;
 #[path = "policy_parse.rs"]
 mod policy_parse;
 use policy_parse::{
@@ -117,6 +119,7 @@ pub struct OpPolicy {
     pub timeout_ms: Option<u64>,
     pub log_inline_max_bytes: Option<usize>,
     pub extra: BTreeMap<String, toml::Value>,
+    pub(crate) authorized_cap: Option<gc_coreform::Term>,
 }
 
 impl CapsPolicy {
@@ -224,6 +227,7 @@ impl CapsPolicy {
                         timeout_ms: None,
                         log_inline_max_bytes: None,
                         extra: BTreeMap::new(),
+                        authorized_cap: None,
                     },
                 );
             }
@@ -283,6 +287,34 @@ impl CapsPolicy {
             pol.refs.path = Some(base.join(".genesis").join("refs.gc"));
         }
         Ok(pol)
+    }
+
+    pub fn load_with_selfhost_authority(
+        path: &Path,
+        bootstrap_mode: gc_prelude::SelfhostBootstrapMode,
+        artifact: Option<&Path>,
+    ) -> Result<Self, EffectsError> {
+        let source = std::fs::read_to_string(path)?;
+        let mut policy = Self::from_toml_str(&source)?;
+        policy_authority::authorize_policy(&source, &mut policy, bootstrap_mode, artifact)?;
+        let base = path.parent().unwrap_or_else(|| Path::new("."));
+        policy.resolve_relative_paths(base)?;
+        if policy.log.inline_max_bytes.is_some() && policy.log.store_dir.is_none() {
+            policy.log.store_dir = Some(base.join(".genesis").join("store"));
+        }
+        if policy.store.dir.is_none() {
+            policy.store.dir = Some(base.join(".genesis").join("store"));
+        }
+        if policy.refs.path.is_none() {
+            policy.refs.path = Some(base.join(".genesis").join("refs.gc"));
+        }
+        Ok(policy)
+    }
+
+    pub(crate) fn authorized_cap(&self, op: &str) -> Option<&gc_coreform::Term> {
+        self.ops
+            .get(op)
+            .and_then(|policy| policy.authorized_cap.as_ref())
     }
 
     fn resolve_relative_paths(&mut self, base: &Path) -> Result<(), EffectsError> {

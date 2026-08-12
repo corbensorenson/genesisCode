@@ -348,9 +348,7 @@ pub(super) fn cmd_run(
         }
     };
 
-    let policy = CapsPolicy::load(caps)
-        .with_context(|| format!("read {}", caps.display()))
-        .map_err(caps_parse_cli_err)?;
+    let policy = load_caps_policy(cli, caps)?;
 
     let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms).map_err(|e| {
         cli_err_with_context(

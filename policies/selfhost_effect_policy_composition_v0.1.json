@@ -1,0 +1,59 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-12",
+  "binding": "core/effects::policy-authority",
+  "contentIdentitySha256": "9cde5141ab094cc7388cfd764996b68cd20274d827b0bd7650acad37f13d0775",
+  "decisionInventory": [
+    "baseline-operation-admission",
+    "canonical-log-cap-descriptor",
+    "per-operation-allow-precedence"
+  ],
+  "hostOracle": {
+    "required": true,
+    "removalTask": "R4.2.d"
+  },
+  "independentVerifier": "scripts/lib/selfhost_effect_policy_composition.py",
+  "kind": "genesis/selfhost-effect-policy-composition-v0.1",
+  "maxPolicyOperations": 4096,
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "effect-policy-h2",
+    "host-oracle-removal",
+    "r4-2-d-closure",
+    "release-qualification",
+    "replay-authority",
+    "sh-c-closure"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/effect-policy-authority-request-v0.1",
+  "residualDecisionInventory": [
+    "candidate-operation-inventory",
+    "crypto-and-signing-policy",
+    "database-policy",
+    "device-and-graphics-policy",
+    "effect-execution-and-hard-cancellation",
+    "ffi-plugin-and-model-policy",
+    "filesystem-policy",
+    "global-log-store-refs-policy",
+    "network-policy",
+    "path-and-secret-resolution",
+    "process-policy",
+    "replay-execution-and-validation",
+    "runtime-and-task-resource-policy",
+    "toml-syntax-and-type-decoding"
+  ],
+  "resultKind": "genesis/effect-policy-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 20000000,
+    "stepLimit": 20000000,
+    "timeoutSeconds": 30
+  },
+  "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
+  "sourceModule": "selfhost/effect_policy_authority_v1.gc",
+  "sourceSha256": "3aea0f073ad65780a5a45dcc21bfee6a15685c5384624d3ed43eb1ced3b97db8",
+  "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+  "version": "0.1.0"
+}

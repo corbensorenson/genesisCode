@@ -28,9 +28,7 @@ pub(super) fn cmd_vcs(
         )
     })?;
 
-    let policy = CapsPolicy::load(caps)
-        .with_context(|| format!("read {}", caps.display()))
-        .map_err(caps_parse_cli_err)?;
+    let policy = load_caps_policy(cli, caps)?;
 
     let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);

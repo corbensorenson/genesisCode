@@ -273,7 +273,7 @@ pub fn run(
                     )
                 } else {
                     let pol = policy.op_policy(&req.op);
-                    let cap_term = run_try!(cap_term(&req.op, pol));
+                    let cap_term = run_try!(cap_term(policy, &req.op, pol));
                     let resp = if let Some(task_resp) = task_runtime_call(
                         &mut task_runtime,
                         policy,

@@ -130,6 +130,14 @@ python3 scripts/lib/selfhost_policy_alias_authority.py \
   --schema docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.d effect-policy composition is a partial production shadow: the closed
+# GenesisCode decisions and the still-required host oracle are both enforced.
+python3 scripts/lib/selfhost_effect_policy_composition.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_effect_policy_composition_v0.1.json \
+  --schema docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json \
+  --self-test
+
 # R4.2.d obligation authority is partial: eight closed decisions, including lint
 # and AI-style with side-artifact reconstruction, are self-hosted while 12 remain.
 python3 scripts/lib/selfhost_obligation_authority.py \

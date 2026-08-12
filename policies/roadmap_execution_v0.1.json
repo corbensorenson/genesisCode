@@ -983,9 +983,10 @@
       "risk_class": "critical",
       "resource_class": "build",
       "owner_paths": [
-        "selfhost",
-        "crates/gc_cli_driver",
-        "crates/gc_patches",
+      "selfhost",
+      "crates/gc_cli_driver",
+      "crates/gc_effects",
+      "crates/gc_patches",
         "crates/gc_obligations",
         "docs/INDEX.md",
         "docs/spec",
