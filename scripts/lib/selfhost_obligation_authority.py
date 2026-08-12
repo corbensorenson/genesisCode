@@ -70,15 +70,16 @@ FIELDS = {
 }
 
 MIGRATED = [
+    "core/obligation::ai-style",
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
     "core/obligation::determinism",
+    "core/obligation::lint",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests",
 ]
 RESIDUAL = [
-    "core/obligation::ai-style",
     "core/obligation::concurrency-replay",
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
@@ -86,7 +87,6 @@ RESIDUAL = [
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
-    "core/obligation::lint",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
@@ -98,6 +98,8 @@ SOURCE_MODULES = [
     "selfhost/obligation_authority_core_v1.gc",
     "selfhost/obligation_authority_typecheck_v1.gc",
     "selfhost/obligation_authority_determinism_v1.gc",
+    "selfhost/obligation_authority_lint_v1.gc",
+    "selfhost/obligation_authority_ai_style_v1.gc",
     "selfhost/obligation_authority_v1.gc",
 ]
 
@@ -203,9 +205,15 @@ def validate_bridge(bridge: str) -> None:
         "validate_budget_report(",
         "validate_capabilities_report(",
         "validate_determinism_report(",
+        "validate_lint_report(",
+        "validate_ai_style_report(",
+        "decode_artifact_transport(",
+        "expected_lint_patch(",
         "validate_typecheck_obligation_report(",
         "strict_typecheck_meta_for_validation(",
         "ObligationAuthorityOperation::Determinism",
+        "ObligationAuthorityOperation::Lint",
+        "ObligationAuthorityOperation::AiStyle",
         "ObligationAuthorityOperation::TypecheckStrict",
         'Term::symbol(":request-h")',
         "let request_hash = hash_term(&request);",
@@ -213,6 +221,8 @@ def validate_bridge(bridge: str) -> None:
         "if frontend_is_rust(frontend)",
         "resolved_authority_frontend = default_coreform_frontend();",
         "rust_frontend_selection_does_not_replace_selfhost_obligation_authority",
+        "lint_and_ai_style_authorities_decide_and_persist_closed_artifacts",
+        "lint_authority_rejects_side_artifact_and_final_report_tampering",
     ]
     for token in required:
         if token not in bridge:
@@ -236,6 +246,10 @@ def static_check(root: Path, profile):
         fail("self-host typecheck obligation route is absent")
     if "selfhost/obligation::determinism" not in combined_sources:
         fail("self-host determinism obligation route is absent")
+    if "selfhost/obligation::lint" not in combined_sources:
+        fail("self-host lint obligation route is absent")
+    if "selfhost/obligation::ai-style" not in combined_sources:
+        fail("self-host AI-style obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -249,6 +263,7 @@ def static_check(root: Path, profile):
 
     bridge = (root / "crates/gc_obligations/src/obligation_authority.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_caps.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_lint.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
     validate_bridge(bridge)
     types_api = (root / "crates/gc_obligations/src/obligations/types_api.rs").read_text()
@@ -270,10 +285,15 @@ def static_check(root: Path, profile):
         "obligation_determinism(&store, &manifest, &modules, &test_runs, &frontend, limits)"
     ) != 1:
         fail("determinism production authority call-site drift")
+    if types_api.count("obligation_lint(&store, &manifest, &modules, &frontend, limits)") != 1:
+        fail("lint production authority call-site drift")
+    if types_api.count("obligation_ai_style(&store, &manifest, &modules, &frontend, limits)") != 1:
+        fail("AI-style production authority call-site drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
     stage_host = (root / "crates/gc_obligations/src/obligation_stage.rs").read_text()
+    lint_host = (root / "crates/gc_obligations/src/obligation_lint.rs").read_text()
     forbidden = [
         "t.steps >",
         "t.effect_entries >",
@@ -283,8 +303,11 @@ def static_check(root: Path, profile):
         "tr.ok",
         "declares :caps [] but has inferred effects",
         "performed effects but module declares :caps []",
+        "lint_autofix_patch_for_module",
+        "strict_warning_codes",
+        'env.get("core/editor/lint::lint-module")',
     ]
-    combined = unit_host + budget_host + test_host + stage_host
+    combined = unit_host + budget_host + test_host + stage_host + lint_host
     for token in forbidden:
         if token in combined:
             fail(f"reachable host obligation decision restored: {token}")
@@ -300,6 +323,10 @@ def static_check(root: Path, profile):
         fail("strict typecheck authority dispatch drift")
     if unit_host.count("ObligationAuthorityOperation::Determinism") != 1:
         fail("determinism authority dispatch drift")
+    if lint_host.count("ObligationAuthorityOperation::Lint") != 1:
+        fail("lint authority dispatch drift")
+    if lint_host.count("ObligationAuthorityOperation::AiStyle") != 1:
+        fail("AI-style authority dispatch drift")
     obligation_typecheck = unit_host.split("pub(super) fn obligation_typecheck(", 1)[1].split(
         "pub(super) fn typecheck_report_with_frontend(", 1
     )[0]
@@ -424,6 +451,16 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
             False,
             ["core/obligation::typecheck-strict"],
         ),
+        ("tests/spec/pkg_lint", 0, True, ["core/obligation::lint"]),
+        ("tests/spec/pkg_fail_lint", 30, False, ["core/obligation::lint"]),
+        ("tests/spec/pkg_lint_autofix", 0, True, ["core/obligation::lint"]),
+        ("tests/spec/pkg_ai_style", 0, True, ["core/obligation::ai-style"]),
+        (
+            "tests/spec/pkg_fail_ai_style",
+            30,
+            False,
+            ["core/obligation::ai-style"],
+        ),
     ]
     all_observations = []
     for binary in binaries:
@@ -468,6 +505,7 @@ def self_test(root: Path, profile, schema):
             fail(f"mutation was not rejected: {label}")
     bridge = (root / "crates/gc_obligations/src/obligation_authority.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_caps.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_lint.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
     redirected = "resolved_authority_frontend = default_coreform_frontend();"
     try:
@@ -497,6 +535,18 @@ def self_test(root: Path, profile, schema):
         mutations.append("determinism-route")
     else:
         fail("mutation was not rejected: determinism-route")
+    for label, route in [
+        ("lint-route", "validate_lint_report("),
+        ("ai-style-route", "validate_ai_style_report("),
+        ("artifact-transport", "decode_artifact_transport("),
+        ("lint-patch-reconstruction", "expected_lint_patch("),
+    ]:
+        try:
+            validate_bridge(bridge.replace(route, ""))
+        except CheckError:
+            mutations.append(label)
+        else:
+            fail(f"mutation was not rejected: {label}")
     return mutations
 
 

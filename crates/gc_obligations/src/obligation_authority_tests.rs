@@ -514,6 +514,206 @@ fn authority_fixture(
 }
 
 #[test]
+fn lint_and_ai_style_authorities_decide_and_persist_closed_artifacts() {
+    let artifact = fixture_frontend();
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_lint");
+    let lint = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::Lint,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &artifact,
+        limits(),
+    )
+    .expect("valid lint result");
+    assert!(lint.ok, "{:?}", lint.errors);
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_fail_lint");
+    let failed_lint = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::Lint,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &artifact,
+        limits(),
+    )
+    .expect("failing lint result");
+    assert!(!failed_lint.ok);
+    assert_eq!(
+        failed_lint.errors,
+        vec![
+            "lint.gc: editor/lint/export-missing-def: export has no matching def: pkg/fail-lint::missing"
+                .to_string()
+        ]
+    );
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_lint_autofix");
+    let autofix = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::Lint,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &artifact,
+        limits(),
+    )
+    .expect("lint autofix result");
+    assert!(autofix.ok);
+    let report_path = store.path_for(autofix.artifact.as_deref().expect("lint report hash"));
+    let report = parse_term(&std::fs::read_to_string(report_path).expect("lint report bytes"))
+        .expect("lint report term");
+    let Term::Map(report) = report else {
+        panic!("lint report must be map");
+    };
+    let Some(Term::Vector(rows)) = report.get(&TermOrdKey(Term::symbol(":autofix-patches"))) else {
+        panic!("lint report must contain autofix rows");
+    };
+    let Term::Map(first) = &rows[0] else {
+        panic!("lint autofix row must be map");
+    };
+    let Some(Term::Str(patch_hash)) = first.get(&TermOrdKey(Term::symbol(":patch"))) else {
+        panic!("lint autofix row must contain patch hash");
+    };
+    store
+        .verify_hex(patch_hash)
+        .expect("authority-produced patch must be persisted exactly");
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_ai_style");
+    let style = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::AiStyle,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &artifact,
+        limits(),
+    )
+    .expect("valid AI-style result");
+    assert!(style.ok, "{:?}", style.errors);
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_fail_ai_style");
+    let failed_style = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::AiStyle,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &artifact,
+        limits(),
+    )
+    .expect("failing AI-style result");
+    assert!(!failed_style.ok);
+    assert_eq!(
+        failed_style.errors,
+        vec!["ai.gc: editor/lint/missing-intent: ::meta should include :intent string".to_string()]
+    );
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_lint_autofix");
+    let autofix_style = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::AiStyle,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &artifact,
+        limits(),
+    )
+    .expect("AI-style autofix result");
+    assert!(!autofix_style.ok);
+    assert_eq!(
+        autofix_style.errors,
+        vec![
+            "lint.gc: editor/lint/missing-intent: ::meta should include :intent string".to_string(),
+            "lint.gc: editor/lint/missing-types-map: ::meta should include :types map".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn lint_authority_rejects_side_artifact_and_final_report_tampering() {
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_lint_autofix");
+    let request = request_term(
+        ObligationAuthorityOperation::Lint,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+    )
+    .expect("lint request");
+    let mut result = invoke_authority(request.clone(), &fixture_frontend(), limits())
+        .expect("lint authority result");
+    let Term::Map(result_map) = &mut result else {
+        panic!("authority result must be map");
+    };
+    let Some(Term::Map(transport)) = result_map.get_mut(&TermOrdKey(Term::symbol(":report")))
+    else {
+        panic!("lint transport must be map");
+    };
+    let Some(Term::Vector(artifacts)) =
+        transport.get_mut(&TermOrdKey(Term::symbol(":artifact-terms")))
+    else {
+        panic!("lint transport must contain artifacts");
+    };
+    let Term::Map(first) = &mut artifacts[0] else {
+        panic!("side artifact must be map");
+    };
+    first.insert(TermOrdKey(Term::symbol(":hash")), Term::Str("0".repeat(64)));
+    let error = decode_authority_result(
+        ObligationAuthorityOperation::Lint,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        hash_term(&request),
+        result,
+    )
+    .expect_err("substituted side artifact hash must fail closed");
+    assert!(error.to_string().contains("side artifact hash mismatch"));
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_ai_style");
+    let request = request_term(
+        ObligationAuthorityOperation::AiStyle,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+    )
+    .expect("AI-style request");
+    let mut result = invoke_authority(request.clone(), &fixture_frontend(), limits())
+        .expect("AI-style authority result");
+    let Term::Map(result_map) = &mut result else {
+        panic!("authority result must be map");
+    };
+    let Some(Term::Map(transport)) = result_map.get_mut(&TermOrdKey(Term::symbol(":report")))
+    else {
+        panic!("AI-style transport must be map");
+    };
+    let Some(Term::Map(final_report)) = transport.get_mut(&TermOrdKey(Term::symbol(":final")))
+    else {
+        panic!("AI-style final report must be map");
+    };
+    final_report.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+    let error = decode_authority_result(
+        ObligationAuthorityOperation::AiStyle,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        hash_term(&request),
+        result,
+    )
+    .expect_err("contradictory AI-style report must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("AI-style report identity mismatch")
+    );
+}
+
+#[test]
 fn typecheck_obligation_authority_runs_existing_selfhost_checker() {
     let (_temp, store, manifest, modules) = authority_fixture("pkg_typecheck_inference_parity");
     let passed = evaluate_obligation_with_authority(

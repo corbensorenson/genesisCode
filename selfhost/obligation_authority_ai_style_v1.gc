@@ -1,0 +1,220 @@
+(def selfhost/obligation::style-strict-code?
+  (fn (code)
+    (if ((core/eq? code) "editor/lint/missing-meta") true
+      (if ((core/eq? code) "editor/lint/malformed-meta") true
+        (if ((core/eq? code) "editor/lint/missing-exports") true
+          (if ((core/eq? code) "editor/lint/export-not-symbol") true
+            (if ((core/eq? code) "editor/lint/missing-types-map") true
+              (if ((core/eq? code) "editor/lint/missing-type") true
+                (if ((core/eq? code) "editor/lint/missing-intent") true
+                  (if ((core/eq? code) "editor/lint/intent-not-string") true
+                    (if ((core/eq? code) "editor/lint/missing-caps") true
+                      ((core/eq? code) "editor/lint/caps-not-vector"))))))))))))
+
+(def selfhost/obligation::style-level
+  (fn (diag)
+    (let ((level ((core/map::get diag) (quote :level))))
+      (let
+        ((text
+           (if (selfhost/obligation::sym? level)
+             (core/sym::to-str level)
+             (if (selfhost/obligation::str? level) level ":error"))))
+        (if (if ((core/eq? text) ":error") true ((core/eq? text) "error"))
+          (quote :error)
+          (if
+            (if ((core/eq? text) ":warn") true
+              (if ((core/eq? text) "warn") true
+                (if ((core/eq? text) ":warning") true ((core/eq? text) "warning"))))
+            (quote :warn)
+            (quote :info)))))))
+
+(def selfhost/obligation::style-autofix-loop
+  (fn (autofixes)
+    (fn (path)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len autofixes))
+          nil
+          (let ((entry ((core/vec::get autofixes) index)))
+            (if (if (selfhost/obligation::map? entry)
+                  ((core/eq? ((core/map::get entry) (quote :path))) path)
+                  false)
+              entry
+              (((selfhost/obligation::style-autofix-loop autofixes) path)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/obligation::style-fixes
+  (fn (autofix)
+    (fn (code)
+      (if (selfhost/obligation::nil? autofix)
+        []
+        ((core/vec::push [])
+          {:intent
+             ((core/str::concat "apply lint autofix for ") code)
+           :kind (quote :gcpatch)
+           :patch ((core/map::get autofix) (quote :patch))
+           :reasons ((core/map::get autofix) (quote :reasons))
+           :schema "genesis/fix-schema-v1"})))))
+
+(def selfhost/obligation::style-diagnostic-step
+  (fn (module)
+    (fn (module-index)
+      (fn (autofix)
+        (fn (diag)
+          (fn (diag-index)
+            (fn (state)
+              (let
+                ((path ((core/map::get module) (quote :path)))
+                  (code (selfhost/obligation::lint-diag-code diag))
+                  (message (selfhost/obligation::lint-diag-message diag))
+                  (level (selfhost/obligation::style-level diag)))
+                (let
+                  ((fail
+                     (if ((core/sym::eq? level) (quote :error))
+                       true
+                       (if ((core/sym::eq? level) (quote :warn))
+                         (selfhost/obligation::style-strict-code? code)
+                         false))))
+                  {:diagnostics
+                     ((core/vec::push
+                        ((core/map::get state) (quote :diagnostics)))
+                       {:code code
+                        :diag-index diag-index
+                        :fixes ((selfhost/obligation::style-fixes autofix) code)
+                        :id
+                          ((core/str::concat path)
+                            ((core/str::concat "#")
+                              ((core/str::concat (core/int::to-str diag-index))
+                                ((core/str::concat "#") code))))
+                        :message message
+                        :module-index module-index
+                        :path path
+                        :severity level
+                        :symbol ((core/map::get diag) (quote :sym))})
+                   :errors
+                     (if fail
+                       ((core/vec::push ((core/map::get state) (quote :errors)))
+                         ((selfhost/obligation::lint-error path) diag))
+                       ((core/map::get state) (quote :errors)))})))))))))
+
+(def selfhost/obligation::style-diagnostics-loop
+  (fn (module)
+    (fn (module-index)
+      (fn (autofix)
+        (fn (diagnostics)
+          (fn (diag-index)
+            (fn (state)
+              (if ((core/int::eq? diag-index) (core/vec::len diagnostics))
+                state
+                (let ((diag ((core/vec::get diagnostics) diag-index)))
+                  (let
+                    ((next
+                       (if (selfhost/obligation::map? diag)
+                         ((((((selfhost/obligation::style-diagnostic-step module) module-index)
+                              autofix) diag) diag-index) state)
+                         state)))
+                    ((((((selfhost/obligation::style-diagnostics-loop module) module-index)
+                         autofix) diagnostics) ((core/int::add diag-index) 1)) next)))))))))))
+
+(def selfhost/obligation::style-modules-loop
+  (fn (modules)
+    (fn (autofixes)
+      (fn (module-index)
+        (fn (state)
+          (if ((core/int::eq? module-index) (core/vec::len modules))
+            state
+            (let ((module ((core/vec::get modules) module-index)))
+              (if (selfhost/obligation::map? module)
+                (let
+                  ((path ((core/map::get module) (quote :path)))
+                    (diagnostics ((core/map::get module) (quote :diagnostics))))
+                  (let
+                    ((autofix (((selfhost/obligation::style-autofix-loop autofixes) path) 0)))
+                    (let
+                      ((next
+                         ((((((selfhost/obligation::style-diagnostics-loop module) module-index)
+                              autofix) diagnostics) 0) state)))
+                      ((((selfhost/obligation::style-modules-loop modules) autofixes)
+                         ((core/int::add module-index) 1)) next))))
+                ((((selfhost/obligation::style-modules-loop modules) autofixes)
+                   ((core/int::add module-index) 1)) state)))))))))
+
+(def selfhost/obligation::style-patch-intents-loop
+  (fn (autofixes)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len autofixes))
+          out
+          (let ((entry ((core/vec::get autofixes) index)))
+            (((selfhost/obligation::style-patch-intents-loop autofixes)
+               ((core/int::add index) 1))
+              (if (selfhost/obligation::map? entry)
+                ((core/vec::push out)
+                  {:intent "apply canonical lint autofix patch"
+                   :patch ((core/map::get entry) (quote :patch))
+                   :path ((core/map::get entry) (quote :path))
+                   :reasons ((core/map::get entry) (quote :reasons))
+                   :schema "genesis/patch-intent-v1"})
+                out))))))))
+
+(def selfhost/obligation::ai-style
+  (fn (package)
+    (fn (inputs)
+      (if (if (selfhost/obligation::map? inputs)
+            ((core/int::eq? (core/map::len inputs)) 1)
+            false)
+        (let ((modules ((core/map::get inputs) (quote :modules))))
+          (if (selfhost/obligation::vec? modules)
+            (let ((valid ((selfhost/obligation::validate-modules-loop modules) 0)))
+              (if (core/error::is? valid)
+                valid
+                (let ((lint ((selfhost/obligation::lint-build package) modules)))
+                  (if (core/error::is? lint)
+                    lint
+                    (let
+                      ((lint-report ((core/map::get lint) (quote :report)))
+                        (autofixes
+                          ((core/map::get
+                             ((core/map::get lint) (quote :report)))
+                           (quote :autofix-patches))))
+                      (let ((lint-h (selfhost/obligation::artifact-hash-term lint-report)))
+                        (if (core/error::is? lint-h)
+                          lint-h
+                          (let
+                            ((style
+                               ((((selfhost/obligation::style-modules-loop
+                                    ((core/map::get lint-report) (quote :modules))) autofixes) 0)
+                                 {:diagnostics [] :errors []})))
+                            (let
+                              ((errors ((core/map::get style) (quote :errors)))
+                                (ok
+                                  ((core/int::eq?
+                                     (core/vec::len
+                                       ((core/map::get style) (quote :errors)))) 0)))
+                              (let
+                                ((report
+                                   {:diagnostics
+                                      ((core/map::get style) (quote :diagnostics))
+                                    :errors errors
+                                    :kind "genesis/ai-style-v0.1"
+                                    :lint-artifact lint-h
+                                    :obligation "core/obligation::ai-style"
+                                    :ok ok
+                                    :package package
+                                    :patch-intents
+                                      (((selfhost/obligation::style-patch-intents-loop autofixes)
+                                         0) [])
+                                    :schema "genesis/diagnostics-schema-v1"}))
+                                {:errors errors
+                                 :kind selfhost/obligation::RESULT_KIND
+                                 :name "core/obligation::ai-style"
+                                 :ok ok
+                                 :operation (quote :ai-style)
+                                 :report
+                                   {:artifact-terms
+                                      ((core/vec::push
+                                         ((core/map::get lint) (quote :artifacts)))
+                                       {:hash lint-h :term lint-report})
+                                    :final report}
+                                 :v 2}))))))))))
+            (selfhost/obligation::error ":ai-style :modules input must be a vector")))
+        (selfhost/obligation::error ":ai-style inputs must contain exactly :modules")))))

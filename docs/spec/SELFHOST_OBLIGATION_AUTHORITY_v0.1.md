@@ -6,6 +6,7 @@ does not promote the ledger row or close R4.2.d.
 `core/cli::obligation-authority` is the sole production semantic producer for the
 `core/obligation::unit-tests`, `core/obligation::budgets`,
 `core/obligation::capabilities-declared`, `core/obligation::determinism`,
+`core/obligation::lint`, `core/obligation::ai-style`,
 `core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
 The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
@@ -58,6 +59,27 @@ metadata. For `:typecheck-strict`, GenesisCode replaces a missing or non-map
 input only while decoding the returned report; it does not produce the obligation
 decision or provide metadata to GenesisCode.
 
+For `:lint`, `:inputs` contains exactly ordered `:modules` in the same closed
+base-relative shape. GenesisCode invokes the Prelude
+`core/editor/lint::lint-module` authority for every module, preserves diagnostic
+order and bytes, and fails only diagnostics whose normalized level is `:error`.
+When a canonical `::meta` has a symbol-vector `:exports` and either lacks a map
+`:types` or omits an exported symbol, GenesisCode produces exactly one version-1
+`lint/autofix-types` semantic patch. The patch preserves every unrelated metadata
+field, inserts `?` only for missing exported-symbol types, and replaces the exact
+metadata form by base-relative module path and form index. Warnings remain
+non-failing in the lint obligation even when they have an autofix.
+
+For `:ai-style`, `:inputs` contains exactly the same ordered `:modules` and
+GenesisCode derives the lint report directly rather than accepting a host-authored
+lint artifact. It normalizes diagnostic levels to `:error`, `:warn`, or `:info`;
+all errors fail, and warnings fail only for the closed strict-code set
+`missing-meta`, `malformed-meta`, `missing-exports`, `export-not-symbol`,
+`missing-types-map`, `missing-type`, `missing-intent`, `intent-not-string`,
+`missing-caps`, and `caps-not-vector` in the `editor/lint/` namespace. Ordered
+diagnostic IDs bind module path, diagnostic index, and code. Canonical fix records
+and patch intents may reference only the lint autofix produced for the same module.
+
 For `:determinism`, `:inputs` contains exactly the same ordered `:modules` and
 `:tests` observation shapes as `:capabilities-declared`. GenesisCode derives each
 module's metadata, invokes the H2 package typechecker, and applies the two existing
@@ -78,11 +100,24 @@ identity of the complete closed request. GenesisCode computes it through
 profile to the exact request it invoked and rejects a result bound to any other
 request without recomputing the GenesisCode policy decision. The embedded
 report preserves the existing `genesis/unit-tests-v0.2`, `genesis/budgets-v0.2`,
-`genesis/caps-declared-v0.2`, `genesis/determinism-v0.2`, or `genesis/typecheck-v0.2`
-artifact shape and ordering. The host decoder rejects open, missing, reordered,
+`genesis/caps-declared-v0.2`, `genesis/determinism-v0.2`, `genesis/lints-v0.2`,
+`genesis/ai-style-v0.1`, or `genesis/typecheck-v0.2` artifact shape and ordering.
+The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
 and resource exhaustion return a sealed protocol error and never synthesize a pass.
+
+The `:lint` and `:ai-style` result `:report` is a closed transport map containing
+exactly `:artifact-terms` and `:final`. Each side-artifact row contains exactly a
+lowercase 64-character `:hash` and canonical `:term`; the hash is the EvidenceStore
+BLAKE3 identity of the canonical `print-term` UTF-8 bytes. Lint transports only
+autofix patches. AI-style transports those patches plus its complete derived lint
+report, whose hash is the final report's `:lint-artifact`. Rust independently
+recomputes every side hash, reconstructs the exact metadata-preserving lint patch
+from the input module, derives every AI-style diagnostic/fix/failure, rejects any
+extra, missing, duplicate, or contradictory artifact, and persists nothing until
+the complete final report validates. It then requires EvidenceStore persistence to
+return the same hash.
 
 ## Authority Boundary
 
@@ -91,7 +126,9 @@ limits into this authority. Rust retains only execution, measurement, artifact-s
 transport, strict decoding, and contradiction rejection. The former Rust unit-test,
 budget, suite-ownership, capability-membership, determinism-policy, ordinary
 typecheck-obligation, and strict typecheck-obligation decision implementations are
-absent from production source. Neither an
+absent from production source. The former Rust lint traversal, autofix producer,
+strict-warning classifier, AI-style diagnostic producer, and artifact-loading
+composition path are also absent. Neither an
 environment variable nor a feature can silently restore them.
 
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
@@ -107,13 +144,15 @@ previous host decision paths, and mutation controls. Focused Rust tests and nati
 runtime observations cover matching, mismatch, sealed error, inclusive/exceeded
 limits, declared/undeclared operations, missing suite ownership, open requests,
 unknown operations, host metadata and strictness injection, static/runtime
-determinism failures, and valid/failing ordinary and strict package routes. Runtime
+determinism failures, lint errors and warnings, canonical autofix persistence,
+strict AI-style warnings, side-artifact substitution, contradictory final reports,
+and valid/failing ordinary and strict package routes. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 14 obligation kinds remain host-authoritative or only partially routed.
+The other 12 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision

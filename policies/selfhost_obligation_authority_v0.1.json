@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "e7c6189368e1d061cf801daafb75bec79c42e94b05340a8e53f5bb7017229ae0",
+  "contentIdentitySha256": "cf1851a787c57aa509d556d59bce29ebcd380406d0c56d0ff8e569260650efb2",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -19,9 +19,11 @@
   "independentVerifier": "scripts/lib/selfhost_obligation_authority.py",
   "kind": "genesis/selfhost-obligation-authority-v0.1",
   "migratedObligations": [
+    "core/obligation::ai-style",
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
     "core/obligation::determinism",
+    "core/obligation::lint",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests"
@@ -41,7 +43,6 @@
     "genesis_wasi"
   ],
   "residualObligations": [
-    "core/obligation::ai-style",
     "core/obligation::concurrency-replay",
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
@@ -49,7 +50,6 @@
     "core/obligation::gfx-api-stability",
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
-    "core/obligation::lint",
     "core/obligation::property-tests",
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
@@ -67,9 +67,11 @@
     "selfhost/obligation_authority_core_v1.gc",
     "selfhost/obligation_authority_typecheck_v1.gc",
     "selfhost/obligation_authority_determinism_v1.gc",
+    "selfhost/obligation_authority_lint_v1.gc",
+    "selfhost/obligation_authority_ai_style_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "b247022a1bce0d20bc7014c40ac69c66048ba9a7f85d4c76ca5a19f80639a3aa",
+  "sourceSetSha256": "492cd8182f2264f707a2cb3b44bf3d1461d9f1f74d89ad303e8ec324cfecfb5c",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

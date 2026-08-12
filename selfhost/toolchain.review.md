@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `0825decc640c8b236b27ae3407bd31a1872d3fe0be92ce6cb37db25fe1346e5d`
-- Freshness artifact hash: `0825decc640c8b236b27ae3407bd31a1872d3fe0be92ce6cb37db25fe1346e5d`
-- Freshness source hash: `3b6b135d49a1bc21f07c390d86391babe6521d0dbf342670dea4c16c9c4fa0b3`
-- Source aggregate hash (module path + module sha256): `9178ecf3b13815f1b828c001feecb6afd45477ba7f9096fd825bb762ca3c5168`
+- Artifact sha256: `5d6a6152f8d2d4732b93519126e2df0de8709262e4f82ffb07eb55dca6e41e3e`
+- Freshness artifact hash: `5d6a6152f8d2d4732b93519126e2df0de8709262e4f82ffb07eb55dca6e41e3e`
+- Freshness source hash: `068fbeba63b825a402c10d027a4518c42cdd01ee31b81538e69f9a3c2113aaee`
+- Source aggregate hash (module path + module sha256): `46ef61c25c1c808b98cd10c5625e430758778cefd040d9f4e311784e13a339ca`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `60`
+- Module count: `62`
 
 ## Module Summary
 
@@ -71,10 +71,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/patch_authority_merge_v1.gc` | 275 | 11984 | 21 | `a73aa5b6e94e9048` |
 | `selfhost/patch_authority_apply_report_v1.gc` | 136 | 6196 | 12 | `12f15a3a4ab781ff` |
 | `selfhost/policy_authority_v1.gc` | 342 | 15417 | 29 | `8fc36b35f45b1e7e` |
-| `selfhost/obligation_authority_core_v1.gc` | 570 | 24059 | 50 | `ff66607b4137d59a` |
+| `selfhost/obligation_authority_core_v1.gc` | 570 | 24016 | 50 | `859184a3ee1f4dba` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
 | `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
-| `selfhost/obligation_authority_v1.gc` | 63 | 3505 | 3 | `e1e6e1be9f8dd350` |
+| `selfhost/obligation_authority_lint_v1.gc` | 340 | 14378 | 18 | `141e6f21525f3e85` |
+| `selfhost/obligation_authority_ai_style_v1.gc` | 220 | 10449 | 9 | `2f1769614f19e319` |
+| `selfhost/obligation_authority_v1.gc` | 67 | 3789 | 3 | `17128847ae989b13` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -137,5 +139,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
 - `selfhost/obligation_authority_typecheck_v1.gc`: `selfhost/obligation::strict-typecheck-meta`, `selfhost/obligation::typecheck-modules-loop`, `selfhost/obligation::typecheck`
 - `selfhost/obligation_authority_determinism_v1.gc`: `selfhost/obligation::determinism-caps-symbols-loop`, `selfhost/obligation::determinism-module-caps`, `selfhost/obligation::determinism-pure-module?`, `selfhost/obligation::debug-escape-symbol-bytes-loop`, `selfhost/obligation::debug-symbol`, `selfhost/obligation::debug-symbols-loop`, `selfhost/obligation::debug-symbol-set`, `selfhost/obligation::determinism-static-error`
+- `selfhost/obligation_authority_lint_v1.gc`: `selfhost/obligation::artifact-hash-term`, `selfhost/obligation::map-has-key-loop?`, `selfhost/obligation::map-has-key?`, `selfhost/obligation::lint-find-meta-loop`, `selfhost/obligation::lint-symbol-exports-loop`, `selfhost/obligation::lint-fill-types-loop`, `selfhost/obligation::lint-autofix-patch`, `selfhost/obligation::lint-autofix-types`
+- `selfhost/obligation_authority_ai_style_v1.gc`: `selfhost/obligation::style-strict-code?`, `selfhost/obligation::style-level`, `selfhost/obligation::style-autofix-loop`, `selfhost/obligation::style-fixes`, `selfhost/obligation::style-diagnostic-step`, `selfhost/obligation::style-diagnostics-loop`, `selfhost/obligation::style-modules-loop`, `selfhost/obligation::style-patch-intents-loop`
 - `selfhost/obligation_authority_v1.gc`: `selfhost/obligation::bind-result`, `selfhost/obligation::dispatch`, `core/cli::obligation-authority`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

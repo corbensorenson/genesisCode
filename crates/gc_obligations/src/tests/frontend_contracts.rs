@@ -2,48 +2,6 @@ use super::*;
 use gc_kernel::{KernelError, NativeFn};
 
 #[test]
-fn lint_autofix_builds_replace_node_patch_for_missing_types() {
-    let src = r#"
-          (def ::meta (quote {:exports [pkg/a::x pkg/a::y]}))
-          (def pkg/a::x 1)
-          (def pkg/a::y 2)
-        "#;
-    let forms = parse_module(src).unwrap();
-    let (patch, reasons) =
-        obligation_lint::lint_autofix_patch_for_module("lint.gc", &forms).unwrap();
-    assert!(reasons.iter().any(|r| r == "editor/lint/missing-types-map"));
-    assert!(reasons.iter().any(|r| r == "editor/lint/missing-type"));
-
-    let Term::Map(m) = patch else {
-        panic!("patch must be map")
-    };
-    let ops = m
-        .get(&TermOrdKey(Term::symbol(":ops")))
-        .expect("patch must contain :ops");
-    let Term::Vector(ops) = ops else {
-        panic!(":ops must be vector")
-    };
-    assert_eq!(ops.len(), 1);
-    let Term::Map(opm) = &ops[0] else {
-        panic!("op must be map")
-    };
-    assert!(matches!(
-        opm.get(&TermOrdKey(Term::symbol(":op"))),
-        Some(Term::Symbol(s)) if s == ":replace-node"
-    ));
-}
-
-#[test]
-fn lint_autofix_returns_none_when_types_are_complete() {
-    let src = r#"
-          (def ::meta (quote {:exports [pkg/a::x] :types {pkg/a::x Int}}))
-          (def pkg/a::x 1)
-        "#;
-    let forms = parse_module(src).unwrap();
-    assert!(obligation_lint::lint_autofix_patch_for_module("lint.gc", &forms).is_none());
-}
-
-#[test]
 fn env_truthy_accepts_expected_values() {
     let is_truthy = |v: &str| {
         matches!(

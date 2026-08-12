@@ -1,13 +1,16 @@
 use super::*;
 
 include!("obligation_authority_caps.rs");
+include!("obligation_authority_lint.rs");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ObligationAuthorityOperation {
+    AiStyle,
     UnitTests,
     Budgets,
     CapabilitiesDeclared,
     Determinism,
+    Lint,
     Typecheck,
     TypecheckStrict,
 }
@@ -15,10 +18,12 @@ pub(super) enum ObligationAuthorityOperation {
 impl ObligationAuthorityOperation {
     fn symbol(self) -> &'static str {
         match self {
+            Self::AiStyle => ":ai-style",
             Self::UnitTests => ":unit-tests",
             Self::Budgets => ":budgets",
             Self::CapabilitiesDeclared => ":capabilities-declared",
             Self::Determinism => ":determinism",
+            Self::Lint => ":lint",
             Self::Typecheck => ":typecheck",
             Self::TypecheckStrict => ":typecheck-strict",
         }
@@ -26,10 +31,12 @@ impl ObligationAuthorityOperation {
 
     fn obligation_name(self) -> &'static str {
         match self {
+            Self::AiStyle => "core/obligation::ai-style",
             Self::UnitTests => "core/obligation::unit-tests",
             Self::Budgets => "core/obligation::budgets",
             Self::CapabilitiesDeclared => "core/obligation::capabilities-declared",
             Self::Determinism => "core/obligation::determinism",
+            Self::Lint => "core/obligation::lint",
             Self::Typecheck => "core/obligation::typecheck",
             Self::TypecheckStrict => "core/obligation::typecheck-strict",
         }
@@ -251,6 +258,9 @@ fn request_term(
         ),
         ObligationAuthorityOperation::CapabilitiesDeclared => capability_inputs(modules, tests),
         ObligationAuthorityOperation::Determinism => capability_inputs(modules, tests),
+        ObligationAuthorityOperation::AiStyle | ObligationAuthorityOperation::Lint => {
+            typecheck_inputs(modules)
+        }
         ObligationAuthorityOperation::Typecheck | ObligationAuthorityOperation::TypecheckStrict => {
             typecheck_inputs(modules)
         }
@@ -484,7 +494,17 @@ fn decode_authority_result(
         "obligation authority result :errors",
     )?;
     let report = required_field(map, ":report", "obligation authority result")?;
+    let (report, side_artifacts) = match operation {
+        ObligationAuthorityOperation::AiStyle | ObligationAuthorityOperation::Lint => {
+            decode_artifact_transport(report)?
+        }
+        _ => (report.clone(), BTreeMap::new()),
+    };
+    let report = &report;
     match operation {
+        ObligationAuthorityOperation::AiStyle => {
+            validate_ai_style_report(report, manifest, modules, ok, &errors, &side_artifacts)?
+        }
         ObligationAuthorityOperation::UnitTests => {
             validate_unit_report(report, manifest, tests, ok)?
         }
@@ -497,11 +517,20 @@ fn decode_authority_result(
         ObligationAuthorityOperation::Determinism => {
             validate_determinism_report(report, manifest, ok, &errors)?
         }
+        ObligationAuthorityOperation::Lint => {
+            validate_lint_report(report, manifest, modules, ok, &errors, &side_artifacts)?
+        }
         ObligationAuthorityOperation::Typecheck => {
             validate_typecheck_obligation_report(report, modules, false, ok, &errors)?
         }
         ObligationAuthorityOperation::TypecheckStrict => {
             validate_typecheck_obligation_report(report, modules, true, ok, &errors)?
+        }
+    }
+    for (hash, term) in side_artifacts {
+        let stored = store.put_term(&term)?;
+        if stored != hash {
+            return Err(authority_error("side artifact changed during persistence"));
         }
     }
     let artifact = store.put_term(report)?;

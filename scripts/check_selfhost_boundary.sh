@@ -130,8 +130,8 @@ python3 scripts/lib/selfhost_policy_alias_authority.py \
   --schema docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json \
   --self-test
 
-# R4.2.d obligation authority is partial: unit expectations, budgets, declared
-# capabilities, and ordinary typechecking are self-hosted while 16 decisions remain.
+# R4.2.d obligation authority is partial: eight closed decisions, including lint
+# and AI-style with side-artifact reconstruction, are self-hosted while 12 remain.
 python3 scripts/lib/selfhost_obligation_authority.py \
   --root "$ROOT_DIR" \
   --profile policies/selfhost_obligation_authority_v0.1.json \

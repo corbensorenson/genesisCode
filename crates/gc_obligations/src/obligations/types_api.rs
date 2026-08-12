@@ -452,8 +452,12 @@ pub fn test_package_with_step_limit_and_frontend(
             "core/obligation::gfx-api-stability" => {
                 obligation_gfx::obligation_gfx_api_stability(&store, &manifest, &modules, limits)
             }
-            "core/obligation::lint" => obligation_lint(&store, &manifest, &modules, limits),
-            "core/obligation::ai-style" => obligation_ai_style(&store, &manifest, &modules, limits),
+            "core/obligation::lint" => {
+                obligation_lint(&store, &manifest, &modules, &frontend, limits)
+            }
+            "core/obligation::ai-style" => {
+                obligation_ai_style(&store, &manifest, &modules, &frontend, limits)
+            }
             other => {
                 return Err(ObligationError::Test(format!(
                     "core/obligation::plan emitted unsupported obligation {other}"

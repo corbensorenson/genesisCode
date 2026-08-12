@@ -34,10 +34,10 @@
     },
     "independentVerifier": {"const": "scripts/lib/selfhost_obligation_authority.py"},
     "kind": {"const": "genesis/selfhost-obligation-authority-v0.1"},
-    "migratedObligations": {"const": ["core/obligation::budgets", "core/obligation::capabilities-declared", "core/obligation::determinism", "core/obligation::typecheck", "core/obligation::typecheck-strict", "core/obligation::unit-tests"]},
+    "migratedObligations": {"const": ["core/obligation::ai-style", "core/obligation::budgets", "core/obligation::capabilities-declared", "core/obligation::determinism", "core/obligation::lint", "core/obligation::typecheck", "core/obligation::typecheck-strict", "core/obligation::unit-tests"]},
     "nonclaims": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
-    "residualObligations": {"type": "array", "minItems": 14, "maxItems": 14, "uniqueItems": true, "items": {"type": "string"}},
+    "residualObligations": {"type": "array", "minItems": 12, "maxItems": 12, "uniqueItems": true, "items": {"type": "string"}},
     "resultKind": {"const": "genesis/obligation-authority-result-v0.2"},
     "runtimeEvidence": {
       "type": "object",
@@ -50,7 +50,7 @@
       }
     },
     "schema": {"const": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json"},
-    "sourceModules": {"const": ["selfhost/obligation_authority_core_v1.gc", "selfhost/obligation_authority_typecheck_v1.gc", "selfhost/obligation_authority_determinism_v1.gc", "selfhost/obligation_authority_v1.gc"]},
+    "sourceModules": {"const": ["selfhost/obligation_authority_core_v1.gc", "selfhost/obligation_authority_typecheck_v1.gc", "selfhost/obligation_authority_determinism_v1.gc", "selfhost/obligation_authority_lint_v1.gc", "selfhost/obligation_authority_ai_style_v1.gc", "selfhost/obligation_authority_v1.gc"]},
     "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md"},
     "version": {"const": "0.1.0"}

@@ -13,7 +13,7 @@
 (def selfhost/obligation::int? (fn (value) ((selfhost/obligation::tag? value) (quote :int))))
 (def selfhost/obligation::bool? (fn (value) ((selfhost/obligation::tag? value) (quote :bool))))
 (def selfhost/obligation::bytes? (fn (value) ((selfhost/obligation::tag? value) (quote :bytes))))
-(def selfhost/obligation::nil? (fn (value) ((selfhost/obligation::tag? value) (quote :nil))))
+(def selfhost/obligation::nil? core/list::is-nil?)
 
 (def selfhost/obligation::hash?
   (fn (value)

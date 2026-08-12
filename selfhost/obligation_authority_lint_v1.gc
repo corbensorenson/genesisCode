@@ -1,0 +1,340 @@
+(def selfhost/obligation::artifact-hash-term
+  (fn (term)
+    (let ((printed (selfhost/printer::print-term term)))
+      (if (core/error::is? printed)
+        printed
+        (let ((bytes (core/str::to-utf8 printed)))
+          (if (core/error::is? bytes)
+            bytes
+            (let ((digest (core/crypto::blake3 bytes)))
+              (if (core/error::is? digest) digest (core/bytes::to-hex digest)))))))))
+
+(def selfhost/obligation::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (if ((core/eq? ((core/vec::get ((core/vec::get entries) index)) 0)) key)
+            true
+            (((selfhost/obligation::map-has-key-loop? entries) key)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/obligation::map-has-key?
+  (fn (map)
+    (fn (key)
+      (((selfhost/obligation::map-has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/obligation::lint-find-meta-loop
+  (fn (forms)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len forms))
+        nil
+        (let ((form ((core/vec::get forms) index)))
+          (let ((name (core/editor/lint::def-name-or-nil form)))
+            (if (if (selfhost/obligation::sym? name)
+                  ((core/sym::eq? name) (quote ::meta))
+                  false)
+              (let ((expr (core/editor/lint::def-expr-or-nil form)))
+                (if (core/editor/lint::pair? expr)
+                  (let ((items (core/pair::as-proper-list expr)))
+                    (if (if (selfhost/obligation::vec? items)
+                          ((core/int::eq? (core/vec::len items)) 2)
+                          false)
+                      (let
+                        ((head ((core/vec::get items) 0))
+                          (value ((core/vec::get items) 1)))
+                        (if (if (selfhost/obligation::sym? head)
+                              ((core/sym::eq? head) (quote quote))
+                              false)
+                          (if (selfhost/obligation::map? value)
+                            {:index index :meta value}
+                            nil)
+                          nil))
+                      nil))
+                  nil))
+              ((selfhost/obligation::lint-find-meta-loop forms)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/obligation::lint-symbol-exports-loop
+  (fn (exports)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len exports))
+          out
+          (let ((export ((core/vec::get exports) index)))
+            (((selfhost/obligation::lint-symbol-exports-loop exports)
+               ((core/int::add index) 1))
+              (if (selfhost/obligation::sym? export)
+                ((core/vec::push out) export)
+                out))))))))
+
+(def selfhost/obligation::lint-fill-types-loop
+  (fn (exports)
+    (fn (index)
+      (fn (types)
+        (fn (added)
+          (if ((core/int::eq? index) (core/vec::len exports))
+            {:added added :types types}
+            (let ((export ((core/vec::get exports) index)))
+              (((((selfhost/obligation::lint-fill-types-loop exports)
+                    ((core/int::add index) 1))
+                  (if ((selfhost/obligation::map-has-key? types) export)
+                    types
+                    (((core/map::put types) export) (quote ?))))
+                (if ((selfhost/obligation::map-has-key? types) export) added true))))))))))
+
+(def selfhost/obligation::lint-autofix-patch
+  (fn (path)
+    (fn (index)
+      (fn (meta)
+        (fn (types)
+          (fn (reasons)
+            (let ((next-meta (((core/map::put meta) (quote :types)) types)))
+              (let
+                ((quoted
+                   (selfhost/canon::vec->list
+                     ((core/vec::push ((core/vec::push []) (quote quote))) next-meta))))
+                (let
+                  ((next-form
+                     (selfhost/canon::vec->list
+                       ((core/vec::push
+                          ((core/vec::push
+                             ((core/vec::push []) (quote def)))
+                           (quote ::meta)))
+                        quoted))))
+                  (let
+                    ((selector
+                       ((core/vec::push
+                          ((core/vec::push []) (quote :form))) index)))
+                    (let
+                      ((op
+                         {:module-path path
+                          :new next-form
+                          :op (quote :replace-node)
+                          :path ((core/vec::push []) selector)}))
+                      (let
+                        ((patch
+                           {:intent "lint/autofix-types"
+                            :ops ((core/vec::push []) op)
+                            :provenance
+                              {:generated-by "core/obligation::lint"
+                               :module-path path
+                               :reasons reasons}
+                            :version 1}))
+                        (let ((hash (selfhost/obligation::artifact-hash-term patch)))
+                          (if (core/error::is? hash)
+                            hash
+                            {:artifact {:hash hash :term patch}
+                             :hash hash
+                             :reasons reasons}))))))))))))))
+
+(def selfhost/obligation::lint-autofix-types
+  (fn (path)
+    (fn (found)
+      (fn (meta)
+        (fn (exports)
+          (fn (types0)
+            (let
+              ((missing-types-map (if (selfhost/obligation::map? types0) false true))
+                (filled
+                  ((((selfhost/obligation::lint-fill-types-loop exports) 0)
+                     (if (selfhost/obligation::map? types0) types0 {})) false)))
+              (let
+                ((added ((core/map::get filled) (quote :added)))
+                  (types ((core/map::get filled) (quote :types))))
+                (if (if missing-types-map true added)
+                  (let
+                    ((reasons0
+                       (if missing-types-map
+                         ((core/vec::push []) "editor/lint/missing-types-map")
+                         [])))
+                    (((((selfhost/obligation::lint-autofix-patch path)
+                         ((core/map::get found) (quote :index)))
+                        meta)
+                       types)
+                      (if added
+                        ((core/vec::push reasons0) "editor/lint/missing-type")
+                        reasons0)))
+                  nil)))))))))
+
+(def selfhost/obligation::lint-autofix
+  (fn (path)
+    (fn (forms)
+      (let ((found ((selfhost/obligation::lint-find-meta-loop forms) 0)))
+        (if (selfhost/obligation::nil? found)
+          nil
+          (let ((meta ((core/map::get found) (quote :meta))))
+            (let ((exports0 ((core/map::get meta) (quote :exports))))
+              (if (selfhost/obligation::vec? exports0)
+                (((((selfhost/obligation::lint-autofix-types path) found) meta)
+                   (((selfhost/obligation::lint-symbol-exports-loop exports0) 0) []))
+                  ((core/map::get meta) (quote :types)))
+                nil))))))))
+
+(def selfhost/obligation::lint-diag-error?
+  (fn (diag)
+    (let ((level ((core/map::get diag) (quote :level))))
+      (if (selfhost/obligation::sym? level)
+        (if ((core/sym::eq? level) (quote :error))
+          true
+          ((core/sym::eq? level) (quote error)))
+        (if (selfhost/obligation::str? level)
+          (if ((core/eq? level) ":error") true ((core/eq? level) "error"))
+          false)))))
+
+(def selfhost/obligation::lint-diag-code
+  (fn (diag)
+    (let ((code ((core/map::get diag) (quote :code))))
+      (if (selfhost/obligation::str? code)
+        code
+        (if (selfhost/obligation::sym? code)
+          (core/sym::to-str code)
+          "editor/lint/error")))))
+
+(def selfhost/obligation::lint-diag-message
+  (fn (diag)
+    (let ((message ((core/map::get diag) (quote :msg))))
+      (if (selfhost/obligation::str? message) message "lint error"))))
+
+(def selfhost/obligation::lint-error
+  (fn (path)
+    (fn (diag)
+      ((core/str::concat path)
+        ((core/str::concat ": ")
+          ((core/str::concat (selfhost/obligation::lint-diag-code diag))
+            ((core/str::concat ": ")
+              (selfhost/obligation::lint-diag-message diag))))))))
+
+(def selfhost/obligation::lint-errors-loop
+  (fn (path)
+    (fn (diagnostics)
+      (fn (index)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len diagnostics))
+            errors
+            (let ((diag ((core/vec::get diagnostics) index)))
+              ((((selfhost/obligation::lint-errors-loop path) diagnostics)
+                 ((core/int::add index) 1))
+                (if (if (selfhost/obligation::map? diag)
+                      (selfhost/obligation::lint-diag-error? diag)
+                      false)
+                  ((core/vec::push errors)
+                    ((selfhost/obligation::lint-error path) diag))
+                  errors)))))))))
+
+(def selfhost/obligation::lint-module
+  (fn (module)
+    (let
+      ((path ((core/map::get module) (quote :path)))
+        (forms ((core/map::get module) (quote :forms))))
+      (let ((diagnostics ((core/editor/lint::lint-module path) forms)))
+        (if (selfhost/obligation::vec? diagnostics)
+          (let
+            ((autofix ((selfhost/obligation::lint-autofix path) forms))
+              (errors ((((selfhost/obligation::lint-errors-loop path) diagnostics) 0) [])))
+            (if (core/error::is? autofix)
+              autofix
+              {:artifact (if (selfhost/obligation::nil? autofix)
+                           nil
+                           ((core/map::get autofix) (quote :artifact)))
+               :autofix
+                 (if (selfhost/obligation::nil? autofix)
+                   nil
+                   {:patch ((core/map::get autofix) (quote :hash))
+                    :path path
+                    :reasons ((core/map::get autofix) (quote :reasons))})
+               :errors errors
+               :report
+                 {:autofix-patch
+                    (if (selfhost/obligation::nil? autofix)
+                      nil
+                      ((core/map::get autofix) (quote :hash)))
+                  :diagnostics diagnostics
+                  :path path}}))
+          (selfhost/obligation::error "lint result must be vector diagnostics"))))))
+
+(def selfhost/obligation::lint-modules-loop
+  (fn (modules)
+    (fn (index)
+      (fn (state)
+        (if ((core/int::eq? index) (core/vec::len modules))
+          state
+          (let ((result (selfhost/obligation::lint-module ((core/vec::get modules) index))))
+            (if (core/error::is? result)
+              result
+              (((selfhost/obligation::lint-modules-loop modules)
+                 ((core/int::add index) 1))
+                {:artifacts
+                   (if (selfhost/obligation::nil?
+                         ((core/map::get result) (quote :artifact)))
+                     ((core/map::get state) (quote :artifacts))
+                     ((core/vec::push ((core/map::get state) (quote :artifacts)))
+                       ((core/map::get result) (quote :artifact))))
+                 :autofixes
+                   (if (selfhost/obligation::nil?
+                         ((core/map::get result) (quote :autofix)))
+                     ((core/map::get state) (quote :autofixes))
+                     ((core/vec::push ((core/map::get state) (quote :autofixes)))
+                       ((core/map::get result) (quote :autofix))))
+                 :errors
+                   ((selfhost/obligation::append-errors
+                      ((core/map::get state) (quote :errors)))
+                     ((core/map::get result) (quote :errors)))
+                 :modules
+                   ((core/vec::push ((core/map::get state) (quote :modules)))
+                     ((core/map::get result) (quote :report)))}))))))))
+
+(def selfhost/obligation::lint-build
+  (fn (package)
+    (fn (modules)
+      (let
+        ((state
+           (((selfhost/obligation::lint-modules-loop modules) 0)
+             {:artifacts [] :autofixes [] :errors [] :modules []})))
+        (if (core/error::is? state)
+          state
+          (let
+            ((errors ((core/map::get state) (quote :errors)))
+              (ok ((core/int::eq?
+                     (core/vec::len ((core/map::get state) (quote :errors)))) 0)))
+            {:artifacts ((core/map::get state) (quote :artifacts))
+             :errors errors
+             :report
+               {:autofix-patches ((core/map::get state) (quote :autofixes))
+                :errors errors
+                :kind "genesis/lints-v0.2"
+                :modules ((core/map::get state) (quote :modules))
+                :obligation "core/obligation::lint"
+                :ok ok
+                :package package}}))))))
+
+(def selfhost/obligation::lint
+  (fn (package)
+    (fn (inputs)
+      (if (if (selfhost/obligation::map? inputs)
+            ((core/int::eq? (core/map::len inputs)) 1)
+            false)
+        (let ((modules ((core/map::get inputs) (quote :modules))))
+          (if (selfhost/obligation::vec? modules)
+            (let ((valid ((selfhost/obligation::validate-modules-loop modules) 0)))
+              (if (core/error::is? valid)
+                valid
+                (let ((built ((selfhost/obligation::lint-build package) modules)))
+                  (if (core/error::is? built)
+                    built
+                    (let
+                      ((errors ((core/map::get built) (quote :errors)))
+                        (report ((core/map::get built) (quote :report))))
+                      {:errors errors
+                       :kind selfhost/obligation::RESULT_KIND
+                       :name "core/obligation::lint"
+                       :ok ((core/map::get report) (quote :ok))
+                       :operation (quote :lint)
+                       :report
+                         {:artifact-terms
+                            ((core/map::get built) (quote :artifacts))
+                          :final report}
+                       :v 2})))))
+            (selfhost/obligation::error ":lint :modules input must be a vector")))
+        (selfhost/obligation::error ":lint inputs must contain exactly :modules")))))
