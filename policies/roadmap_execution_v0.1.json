@@ -1220,7 +1220,15 @@
     "R3.3": {"profile": "validated-tier", "start_after": ["R2.4", "R3.1", "R3.2"], "sequential": true},
     "R3.4": {"profile": "validated-tier", "start_after": ["R2.3", "R3.3"], "sequential": true},
     "R4.1": {"profile": "selfhost-authority", "start_after": ["R0.1.f", "R0.2"], "sequential": true},
-    "R4.2": {"profile": "selfhost-authority", "start_after": ["R4.1", "R5.1", "R5.3"], "sequential": true},
+    "R4.2": {
+      "profile": "selfhost-authority",
+      "owner_paths": [
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
+      ],
+      "start_after": ["R4.1", "R5.1", "R5.3"],
+      "sequential": true
+    },
     "R4.3": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
     "R4.4": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},
     "R4.5": {"profile": "selfhost-authority", "start_after": ["R4.1"], "sequential": true},

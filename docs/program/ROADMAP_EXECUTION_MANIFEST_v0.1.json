@@ -8,7 +8,7 @@
     "schema": "docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json"
   },
   "input_identities": {
-    "policy_sha256": "fd0865dff1497a6f988999f33a765e02a0bf614df9e9c223d975284cde66c3d1",
+    "policy_sha256": "0ffbc904c5ef229e1eacebf85024ac924fa948aae0a63713d45daee3f008bc1f",
     "roadmap_sha256": "0b503c8976eeb3c3bc834ae1193ffda175e97dd300d6eb2e31c63fb3b4447908",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
@@ -10404,7 +10404,9 @@
           "docs/spec",
           "docs/status",
           "policies",
-          "scripts"
+          "scripts",
+          "crates/gc_cli/Cargo.toml",
+          "crates/gc_wasi_cli/Cargo.toml"
         ],
         "prerequisite_task_ids": [
           "R4.1.e",
@@ -10439,7 +10441,9 @@
         "docs/spec",
         "docs/status",
         "policies",
-        "scripts"
+        "scripts",
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
       ],
       "parallel_safe_with": [],
       "phase": "R4",
@@ -10494,7 +10498,9 @@
           "docs/status",
           "policies",
           "scripts",
-          "tests"
+          "tests",
+          "crates/gc_cli/Cargo.toml",
+          "crates/gc_wasi_cli/Cargo.toml"
         ],
         "prerequisite_task_ids": [
           "R4.1.e",
@@ -10542,7 +10548,9 @@
         "docs/status",
         "policies",
         "scripts",
-        "tests"
+        "tests",
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
       ],
       "parallel_safe_with": [],
       "phase": "R4",
@@ -10586,7 +10594,9 @@
           "docs/spec",
           "docs/status",
           "policies",
-          "scripts"
+          "scripts",
+          "crates/gc_cli/Cargo.toml",
+          "crates/gc_wasi_cli/Cargo.toml"
         ],
         "prerequisite_task_ids": [
           "R4.1.e",
@@ -10622,7 +10632,9 @@
         "docs/spec",
         "docs/status",
         "policies",
-        "scripts"
+        "scripts",
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
       ],
       "parallel_safe_with": [],
       "phase": "R4",
@@ -10666,7 +10678,9 @@
           "docs/spec",
           "docs/status",
           "policies",
-          "scripts"
+          "scripts",
+          "crates/gc_cli/Cargo.toml",
+          "crates/gc_wasi_cli/Cargo.toml"
         ],
         "prerequisite_task_ids": [
           "R4.1.e",
@@ -10702,7 +10716,9 @@
         "docs/spec",
         "docs/status",
         "policies",
-        "scripts"
+        "scripts",
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
       ],
       "parallel_safe_with": [],
       "phase": "R4",
@@ -10748,7 +10764,9 @@
           "docs/spec",
           "docs/status",
           "policies",
-          "scripts"
+          "scripts",
+          "crates/gc_cli/Cargo.toml",
+          "crates/gc_wasi_cli/Cargo.toml"
         ],
         "prerequisite_task_ids": [
           "R4.1.e",
@@ -10784,7 +10802,9 @@
         "docs/spec",
         "docs/status",
         "policies",
-        "scripts"
+        "scripts",
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
       ],
       "parallel_safe_with": [],
       "phase": "R4",
@@ -10830,7 +10850,9 @@
           "docs/spec",
           "docs/status",
           "policies",
-          "scripts"
+          "scripts",
+          "crates/gc_cli/Cargo.toml",
+          "crates/gc_wasi_cli/Cargo.toml"
         ],
         "prerequisite_task_ids": [
           "R4.1.e",
@@ -10869,7 +10891,9 @@
         "docs/spec",
         "docs/status",
         "policies",
-        "scripts"
+        "scripts",
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
       ],
       "parallel_safe_with": [],
       "phase": "R4",
@@ -10921,7 +10945,9 @@
           "docs/spec",
           "docs/status",
           "policies",
-          "scripts"
+          "scripts",
+          "crates/gc_cli/Cargo.toml",
+          "crates/gc_wasi_cli/Cargo.toml"
         ],
         "prerequisite_task_ids": [
           "R4.1.e",
@@ -10957,7 +10983,9 @@
         "docs/spec",
         "docs/status",
         "policies",
-        "scripts"
+        "scripts",
+        "crates/gc_cli/Cargo.toml",
+        "crates/gc_wasi_cli/Cargo.toml"
       ],
       "parallel_safe_with": [],
       "phase": "R4",
