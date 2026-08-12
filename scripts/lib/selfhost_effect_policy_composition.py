@@ -81,6 +81,7 @@ DECISIONS = [
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-enforcement-control-selection",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
 ]
@@ -136,7 +137,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.5",
+        "version": "0.1.6",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -207,8 +208,11 @@ def static_check(root: Path, profile):
         "let request_hash = hash_term(&request);",
         "contradicts independently reconstructed policy composition",
         "resource result contradicts independently reconstructed log/runtime/store/task policy",
-        "op_policy.authorized_cap = Some(cap);",
-        "op_policy.base_dir = base_dir;",
+        "op_policy.authorized_cap = Some(authorized.cap);",
+        "op_policy.base_dir = authorized.base_dir;",
+        "op_policy.create_dirs = authorized.create_dirs;",
+        "op_policy.timeout_ms = authorized.timeout_ms;",
+        "op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -319,6 +323,8 @@ def static_check(root: Path, profile):
         "selfhost_authority_composes_admission_and_canonical_caps",
         "selfhost_authority_owns_per_operation_base_directory",
         "selfhost_authority_discards_denied_operation_base_directory",
+        "selfhost_authority_installs_normalized_operation_controls",
+        "selfhost_authority_rejects_noncanonical_operation_controls",
         "selfhost_authority_owns_sorted_unique_candidate_inventory",
         "selfhost_authority_owns_runtime_and_task_resource_composition",
         "selfhost_authority_owns_adaptive_task_worker_default",

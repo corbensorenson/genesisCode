@@ -6,6 +6,7 @@ use gc_kernel::{Apply, EvalCtx, MemLimits, Value};
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
 };
+use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
 
@@ -225,11 +226,88 @@ fn legacy_cap(op: &str, policy: &OpPolicy) -> Term {
     Term::Map(cap)
 }
 
+struct AuthorizedOperation {
+    allowed: bool,
+    base_dir: Option<PathBuf>,
+    create_dirs: bool,
+    timeout_ms: Option<u64>,
+    log_inline_max_bytes: Option<usize>,
+    cap: Term,
+}
+
+pub(super) fn decode_cap(
+    cap: &Term,
+    op: &str,
+) -> Result<(bool, Option<u64>, Option<usize>), EffectsError> {
+    let Term::Map(map) = cap else {
+        return Err(authority_error("result :cap must be a data map"));
+    };
+    let allowed_keys: BTreeSet<_> = [
+        ":create-dirs",
+        ":log-inline-max-bytes",
+        ":op",
+        ":timeout-ms",
+    ]
+    .into_iter()
+    .map(|key| TermOrdKey(Term::symbol(key)))
+    .collect();
+    if map.keys().any(|key| !allowed_keys.contains(key)) {
+        return Err(authority_error("result :cap field set mismatch"));
+    }
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Symbol(actual)) if actual == op)
+    {
+        return Err(authority_error("result :cap operation mismatch"));
+    }
+    let create_dirs = match map.get(&TermOrdKey(Term::symbol(":create-dirs"))) {
+        None => false,
+        Some(Term::Bool(true)) => true,
+        _ => {
+            return Err(authority_error(
+                "result :cap :create-dirs must be omitted or true",
+            ));
+        }
+    };
+    let timeout_ms = match map.get(&TermOrdKey(Term::symbol(":timeout-ms"))) {
+        None => None,
+        Some(Term::Int(value)) => value
+            .to_u64()
+            .map(Some)
+            .ok_or_else(|| authority_error("result :cap :timeout-ms must fit a nonnegative u64"))?,
+        _ => {
+            return Err(authority_error(
+                "result :cap :timeout-ms must be an integer",
+            ));
+        }
+    };
+    let log_inline_max_bytes = match map.get(&TermOrdKey(Term::symbol(":log-inline-max-bytes"))) {
+        None => None,
+        Some(Term::Int(value)) => {
+            let limit = value.to_usize().ok_or_else(|| {
+                authority_error(
+                    "result :cap :log-inline-max-bytes must fit a positive platform usize",
+                )
+            })?;
+            if limit == 0 {
+                return Err(authority_error(
+                    "result :cap :log-inline-max-bytes must be positive",
+                ));
+            }
+            Some(limit)
+        }
+        _ => {
+            return Err(authority_error(
+                "result :cap :log-inline-max-bytes must be an integer",
+            ));
+        }
+    };
+    Ok((create_dirs, timeout_ms, log_inline_max_bytes))
+}
+
 fn decode_result(
     term: Term,
     op: &str,
     request_hash: [u8; 32],
-) -> Result<(bool, Term, Option<PathBuf>), EffectsError> {
+) -> Result<AuthorizedOperation, EffectsError> {
     let Term::Map(map) = term else {
         return Err(authority_error("result must be a data map"));
     };
@@ -274,7 +352,19 @@ fn decode_result(
     if !allowed && base_dir.is_some() {
         return Err(authority_error("result :base-dir contradicts :allowed"));
     }
-    Ok((allowed, cap, base_dir))
+    let (create_dirs, timeout_ms, log_inline_max_bytes) = if allowed {
+        decode_cap(&cap, op)?
+    } else {
+        (false, None, None)
+    };
+    Ok(AuthorizedOperation {
+        allowed,
+        base_dir,
+        create_dirs,
+        timeout_ms,
+        log_inline_max_bytes,
+        cap,
+    })
 }
 
 pub(super) fn authorize_policy(
@@ -384,23 +474,26 @@ pub(super) fn authorize_policy(
             .apply(&mut context, Value::data(request))
             .map_err(|error| authority_error(format!("authority apply failed: {error}")))?;
         let term = plain_authority_result(value, &context, "operation")?;
-        let (allowed, cap, base_dir) = decode_result(term, &op, request_hash)?;
+        let authorized = decode_result(term, &op, request_hash)?;
         let expected = legacy_ops.get(&op);
-        if allowed != expected.is_some()
-            || expected.is_some_and(|policy| cap != legacy_cap(&op, policy))
-            || base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
+        if authorized.allowed != expected.is_some()
+            || expected.is_some_and(|policy| authorized.cap != legacy_cap(&op, policy))
+            || authorized.base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
         {
             return Err(authority_error(format!(
                 "result for `{op}` contradicts independently reconstructed policy composition"
             )));
         }
-        if allowed {
+        if authorized.allowed {
             let mut op_policy = legacy_ops
                 .get(&op)
                 .cloned()
                 .ok_or_else(|| authority_error("authorized op has no host enforcement state"))?;
-            op_policy.base_dir = base_dir;
-            op_policy.authorized_cap = Some(cap);
+            op_policy.base_dir = authorized.base_dir;
+            op_policy.create_dirs = authorized.create_dirs;
+            op_policy.timeout_ms = authorized.timeout_ms;
+            op_policy.log_inline_max_bytes = authorized.log_inline_max_bytes;
+            op_policy.authorized_cap = Some(authorized.cap);
             authorized_ops.insert(op, op_policy);
         }
     }

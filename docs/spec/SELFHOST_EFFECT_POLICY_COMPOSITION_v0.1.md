@@ -4,9 +4,10 @@ Status: normative partial R4.2.d contract; no H2 claim.
 
 `core/effects::policy-authority` is the GenesisCode producer for the first closed
 effect-policy composition slice: baseline operation admission, per-operation
-`allow` precedence, per-operation base-directory selection, and the canonical
-log capability descriptor fields `:op`, `:create-dirs`, `:timeout-ms`, and
-`:log-inline-max-bytes`.
+`allow` precedence, per-operation base-directory selection, and selection of the
+canonical generic enforcement controls `:create-dirs`, `:timeout-ms`, and
+`:log-inline-max-bytes`. The same path-free map, including exact `:op`, is the
+capability descriptor recorded in the effect log.
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
@@ -48,8 +49,12 @@ admitted or `nil` when denied, lowercase canonical request hash, and version `2`
 Denied operations must carry neither a base directory nor a capability. Malformed
 requests return sealed errors. The host rejects unknown fields, identity drift,
 request-hash substitution, invalid path types, denied non-nil state, admitted
-non-map capabilities, and any result that contradicts its retained compatibility
-oracle.
+non-map capabilities, noncanonical false/zero/negative/overflowing controls,
+operation substitution inside the capability, and any result that contradicts
+its retained compatibility oracle. After validation, the host installs the
+GenesisCode-selected base directory, create-directories flag, timeout, and
+per-operation log limit into enforcement state; its separately parsed values are
+used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
 `genesis/effect-resource-policy-request-v0.3` map. It contains version `3`, the
@@ -90,9 +95,10 @@ selected. Obligation preflight uses the same self-host route while preserving it
 already-normative missing-policy observation behavior.
 
 The effect runner uses the validated GenesisCode capability descriptor in log
-entries and all validated resource limits for host enforcement. The selected base
-directory remains separate from that descriptor so logs do not gain path material;
-Rust installs it before resolving relative paths against the capability-file base.
+entries and installs all decoded generic operation and resource controls for host
+enforcement. The selected base directory remains separate from that descriptor so
+logs do not gain path material; Rust installs it before resolving relative paths
+against the capability-file base.
 Host code retains payload measurement and enforcement mechanisms, filesystem path resolution,
 accounting mechanisms, cancellation, effect execution, and replay mechanisms.
 `CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy

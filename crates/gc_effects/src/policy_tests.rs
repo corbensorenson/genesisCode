@@ -72,7 +72,71 @@ log_inline_max_bytes = 64
             ]
         ))
     );
+    let task_policy = policy.op_policy("core/task::await").unwrap();
+    assert!(task_policy.create_dirs);
+    assert_eq!(task_policy.timeout_ms, Some(25));
+    assert_eq!(task_policy.log_inline_max_bytes, Some(64));
     assert!(policy.authorized_cap("io/fs::read").is_none());
+}
+
+#[test]
+fn selfhost_authority_installs_normalized_operation_controls() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."io/fs::write"]
+create_dirs = false
+timeout_ms = -7
+log_inline_max_bytes = 0
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+    let op_policy = policy.op_policy("io/fs::write").unwrap();
+
+    assert!(!op_policy.create_dirs);
+    assert_eq!(op_policy.timeout_ms, Some(0));
+    assert_eq!(op_policy.log_inline_max_bytes, None);
+    assert_eq!(
+        policy.authorized_cap("io/fs::write"),
+        Some(&expected_cap(
+            "io/fs::write",
+            [(":timeout-ms", Term::Int(0.into()))]
+        ))
+    );
+}
+
+#[test]
+fn selfhost_authority_rejects_noncanonical_operation_controls() {
+    let op = "io/fs::write";
+    let cases = [
+        expected_cap(op, [(":create-dirs", Term::Bool(false))]),
+        expected_cap(op, [(":timeout-ms", Term::Int((-1).into()))]),
+        expected_cap(
+            op,
+            [(
+                ":timeout-ms",
+                Term::Int("18446744073709551616".parse().unwrap()),
+            )],
+        ),
+        expected_cap(op, [(":log-inline-max-bytes", Term::Int(0.into()))]),
+        expected_cap("io/fs::read", []),
+        expected_cap(op, [(":unknown", Term::Bool(true))]),
+    ];
+
+    for cap in cases {
+        super::policy_authority::decode_cap(&cap, op)
+            .expect_err("noncanonical operation control must fail closed");
+    }
 }
 
 #[test]

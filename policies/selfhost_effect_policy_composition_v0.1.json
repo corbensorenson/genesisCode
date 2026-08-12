@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "e3fe7e13ccb345716dfea25a44357b0ee3011ebfdcde28c07516301c18c08f24",
+  "contentIdentitySha256": "d0bffca299b4b42c887c3e3ee05c227ac74be7f7ae59d692db9f2e9ad9515888",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -11,6 +11,7 @@
     "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-enforcement-control-selection",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers"
   ],
@@ -65,5 +66,5 @@
   "sourceModule": "selfhost/effect_policy_authority_v1.gc",
   "sourceSha256": "9d44a7fd1ba6d888c4c1e4af5ddf75c8db13fd84a6e9c32021c11823abf1de58",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.5"
+  "version": "0.1.6"
 }
