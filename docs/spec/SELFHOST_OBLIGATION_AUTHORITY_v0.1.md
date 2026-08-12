@@ -7,6 +7,7 @@ does not promote the ledger row or close R4.2.d.
 `core/obligation::unit-tests`, `core/obligation::budgets`,
 `core/obligation::capabilities-declared`, `core/obligation::determinism`,
 `core/obligation::lint`, `core/obligation::ai-style`,
+`core/obligation::replayable-tests`, `core/obligation::concurrency-replay`,
 `core/obligation::typecheck`, and `core/obligation::typecheck-strict` decisions.
 The host executes test bodies,
 enforces previously authorized effects, records canonical value hashes and
@@ -14,7 +15,8 @@ sealed-error status, measures steps and effect-log sizes, transports canonical
 module forms and ordered effect-operation observations, and persists opaque effect
 logs. It does not decide whether an expectation matches, a budget is exceeded, a
 suite belongs to a module, an observed operation was declared, a pure declaration
-is contradicted by inferred or runtime effects, or a package typechecks.
+is contradicted by inferred or runtime effects, a replay value matches, a task-log
+entry satisfies scheduling metadata rules, or a package typechecks.
 
 ## Closed Protocol
 
@@ -92,6 +94,32 @@ defining module preserve the legacy no-decision behavior rather than inventing a
 new failure. Ordered static errors precede ordered runtime errors. Open module or
 test observations are sealed protocol errors.
 
+For `:replayable-tests` and `:concurrency-replay`, `:inputs` contains exactly
+ordered `:tests` for tests that emitted effect logs. Each observation contains
+exactly `:suite`, `:name`, `:log-artifact`, `:program`, `:actual-h`, `:replay-h`,
+and `:entries`. The host re-evaluates the named test body under the declared
+kernel limits, reports whether its raw runtime kind is an effect program, and, only
+for an effect program, executes strict effect-log replay and reports the resulting
+canonical value hash. A non-program observation has a nil replay hash; a program
+observation has a 32-byte replay hash. Each ordered entry contains exactly its
+zero-based `:position`, raw `:op`, and nullable `:task-id`, `:schedule-step`, and
+`:await-edge`. The log artifact is persisted as raw provenance, but no host field
+asserts replayability, concurrency eligibility, scheduling validity, or obligation
+success.
+
+GenesisCode makes the replay decisions. `:replayable-tests` requires every
+observed test to produce an effect program and its replay hash to equal the original
+value hash. `:concurrency-replay` selects observations containing at least one
+`core/task::` or `editor/task::` operation, counts those tests, applies scheduling
+rules only to task-like entries, and then applies the same program/hash rule.
+Every task-like entry requires `:schedule-step` equal to its zero-based position;
+`core/task::await` requires an await edge; and await, cancel, status, editor poll,
+and editor cancel require a task identity. Error order is test order, then entry
+order, then schedule, await-edge, task-id, and replay result. Tests without effect
+logs are absent, preserving the existing obligation behavior. Replay execution or
+log decoding failure remains an explicit host-boundary error rather than a
+synthetic policy result.
+
 The result kind is `genesis/obligation-authority-result-v0.2`, has `:v` 2, and contains exactly
 `:errors`, `:kind`, `:name`, `:ok`, `:operation`, `:report`, `:request-h`, and `:v`.
 `:request-h` is the 64-character lowercase `genesis/hash-profile/gcv0.2-blake3`
@@ -102,6 +130,9 @@ request without recomputing the GenesisCode policy decision. The embedded
 report preserves the existing `genesis/unit-tests-v0.2`, `genesis/budgets-v0.2`,
 `genesis/caps-declared-v0.2`, `genesis/determinism-v0.2`, `genesis/lints-v0.2`,
 `genesis/ai-style-v0.1`, or `genesis/typecheck-v0.2` artifact shape and ordering.
+Replay reports preserve `genesis/replayable-tests-v0.2` and
+`genesis/concurrency-replay-v0.1`; both contain ordered errors and the latter binds
+the exact concurrent-test count.
 The host decoder rejects open, missing, reordered,
 renamed, contradictory, or observation-substituting output before persistence.
 Malformed or open requests, unknown operations, invalid facts, negative counters,
@@ -128,7 +159,10 @@ budget, suite-ownership, capability-membership, determinism-policy, ordinary
 typecheck-obligation, and strict typecheck-obligation decision implementations are
 absent from production source. The former Rust lint traversal, autofix producer,
 strict-warning classifier, AI-style diagnostic producer, and artifact-loading
-composition path are also absent. Neither an
+composition path are also absent. The former Rust task-operation classifier,
+scheduling-policy checks, replay-hash comparison, concurrent-test counter, and
+replay report producer are absent; one bounded host observation pass is shared by
+both replay obligations. Neither an
 environment variable nor a feature can silently restore them.
 
 `policies/selfhost_obligation_authority_v0.1.json` binds the exact ordered source
@@ -146,17 +180,19 @@ limits, declared/undeclared operations, missing suite ownership, open requests,
 unknown operations, host metadata and strictness injection, static/runtime
 determinism failures, lint errors and warnings, canonical autofix persistence,
 strict AI-style warnings, side-artifact substitution, contradictory final reports,
-and valid/failing ordinary and strict package routes. Runtime
+valid/failing ordinary and strict package routes, replay hash disagreement, open
+replay observations, missing task scheduling fields, and contradictory concurrent
+counts. Runtime
 fixtures execute from isolated temporary copies so effectful tests cannot mutate
 the normative source corpus.
 
 ## Residual Work And Promotion Rule
 
-The other 12 obligation kinds remain host-authoritative or only partially routed.
+The other 10 obligation kinds remain host-authoritative or only partially routed.
 This profile therefore cannot set `SD-OBLIGATION` to H2. The ledger row may be
 promoted only after every residual kind has a closed primitive-fact contract, strict
 production decoder, independent native/WASI evidence, no reachable host decision
 fallback, and one reviewed profile identity. Aggregate planning and acceptance must
 remain GenesisCode-authored throughout. This contract claims no effect-policy,
-replay, signing, evidence-verification, bootstrap-fixpoint, release, or downstream
-product authority.
+effect-replay execution, signing, evidence-verification, bootstrap-fixpoint,
+release, or downstream product authority.

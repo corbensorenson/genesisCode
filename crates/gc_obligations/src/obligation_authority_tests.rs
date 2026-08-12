@@ -436,6 +436,7 @@ fn determinism_authority_rejects_open_observations_and_contradictory_reports() {
         &manifest,
         &modules,
         &[],
+        &[],
         hash_term(&request),
         result,
     )
@@ -480,6 +481,7 @@ fn obligation_authority_rejects_result_bound_to_another_request() {
         &manifest,
         &[],
         &[test_run(7, Some(7), false)],
+        &[],
         hash_term(&request),
         result,
     )
@@ -667,6 +669,7 @@ fn lint_authority_rejects_side_artifact_and_final_report_tampering() {
         &manifest,
         &modules,
         &[],
+        &[],
         hash_term(&request),
         result,
     )
@@ -701,6 +704,7 @@ fn lint_authority_rejects_side_artifact_and_final_report_tampering() {
         &store,
         &manifest,
         &modules,
+        &[],
         &[],
         hash_term(&request),
         result,
@@ -884,4 +888,154 @@ fn budget_authority_applies_manifest_thresholds_to_raw_measurements() {
         failed.errors,
         vec!["test fixture/tests::case exceeded max_steps_per_test: 1001 > 1000"]
     );
+}
+
+fn replay_observation(actual: u8, replayed: u8) -> ReplayObservation {
+    ReplayObservation {
+        suite: "fixture/tests".to_string(),
+        name: "task-case".to_string(),
+        log_artifact: "1".repeat(64),
+        program: true,
+        actual_hash: [actual; 32],
+        replay_hash: Some([replayed; 32]),
+        entries: vec![
+            ReplayEntryObservation {
+                position: 0,
+                op: "core/task::spawn".to_string(),
+                task_id: Some("task-0001".to_string()),
+                schedule_step: Some(0),
+                await_edge: None,
+            },
+            ReplayEntryObservation {
+                position: 1,
+                op: "core/task::await".to_string(),
+                task_id: Some("task-0001".to_string()),
+                schedule_step: Some(1),
+                await_edge: Some("task-0001".to_string()),
+            },
+        ],
+    }
+}
+
+#[test]
+fn replay_authorities_decide_from_closed_host_observations() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
+    let (manifest, _) = PackageManifest::load(
+        &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("tests/spec/pkg_basic/package.toml"),
+    )
+    .expect("fixture manifest");
+    let frontend = fixture_frontend();
+
+    for operation in [
+        ObligationAuthorityOperation::ReplayableTests,
+        ObligationAuthorityOperation::ConcurrencyReplay,
+    ] {
+        let passed = evaluate_replay_obligation_with_authority(
+            operation,
+            &store,
+            &manifest,
+            &[replay_observation(7, 7)],
+            &frontend,
+            limits(),
+        )
+        .expect("matching replay observation");
+        assert!(passed.ok);
+
+        let failed = evaluate_replay_obligation_with_authority(
+            operation,
+            &store,
+            &manifest,
+            &[replay_observation(7, 8)],
+            &frontend,
+            limits(),
+        )
+        .expect("mismatched replay observation");
+        assert!(!failed.ok);
+        assert_eq!(failed.errors.len(), 1);
+        assert!(failed.errors[0].contains("replay mismatch"));
+    }
+
+    let mut malformed = replay_observation(7, 7);
+    malformed.entries[1].schedule_step = None;
+    malformed.entries[1].task_id = None;
+    malformed.entries[1].await_edge = None;
+    let failed = evaluate_replay_obligation_with_authority(
+        ObligationAuthorityOperation::ConcurrencyReplay,
+        &store,
+        &manifest,
+        &[malformed],
+        &frontend,
+        limits(),
+    )
+    .expect("malformed scheduling facts are a failed policy decision");
+    assert!(!failed.ok);
+    assert_eq!(failed.errors.len(), 3);
+    assert!(failed.errors[0].contains("expected :schedule-step 1, got None"));
+    assert!(failed.errors[1].contains("missing :await-edge"));
+    assert!(failed.errors[2].contains("missing :task-id"));
+}
+
+#[test]
+fn replay_authority_rejects_open_observations_and_contradictory_reports() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = EvidenceStore::open(&temp.path().join("store")).expect("evidence store");
+    let (manifest, _) = PackageManifest::load(
+        &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("tests/spec/pkg_basic/package.toml"),
+    )
+    .expect("fixture manifest");
+    let frontend = fixture_frontend();
+    let observations = vec![replay_observation(7, 7)];
+    let request = authority_request_term(
+        ObligationAuthorityOperation::ConcurrencyReplay,
+        &manifest.name,
+        replay_inputs(&observations),
+    );
+    let request_hash = hash_term(&request);
+
+    let mut open_request = request.clone();
+    let Term::Map(request_map) = &mut open_request else {
+        panic!("request must be map");
+    };
+    let Some(Term::Map(inputs)) = request_map.get_mut(&TermOrdKey(Term::symbol(":inputs"))) else {
+        panic!("request inputs must be map");
+    };
+    let Some(Term::Vector(tests)) = inputs.get_mut(&TermOrdKey(Term::symbol(":tests"))) else {
+        panic!("request tests must be vector");
+    };
+    let Term::Map(test) = &mut tests[0] else {
+        panic!("test observation must be map");
+    };
+    test.insert(TermOrdKey(Term::symbol(":trusted-ok")), Term::Bool(true));
+    let error = invoke_authority(open_request, &frontend, limits())
+        .expect_err("open replay observation must fail closed");
+    assert!(error.to_string().contains("sealed error"));
+
+    let mut result = invoke_authority(request, &frontend, limits()).expect("authority result");
+    let Term::Map(result_map) = &mut result else {
+        panic!("result must be map");
+    };
+    let Some(Term::Map(report)) = result_map.get_mut(&TermOrdKey(Term::symbol(":report"))) else {
+        panic!("report must be map");
+    };
+    report.insert(
+        TermOrdKey(Term::symbol(":concurrent-tests")),
+        Term::Int(99.into()),
+    );
+    let error = decode_authority_result(
+        ObligationAuthorityOperation::ConcurrencyReplay,
+        &store,
+        &manifest,
+        &[],
+        &[],
+        &observations,
+        request_hash,
+        result,
+    )
+    .expect_err("contradictory concurrency count must fail closed");
+    assert!(error.to_string().contains("contradicts host observations"));
 }

@@ -375,6 +375,23 @@ pub fn test_package_with_step_limit_and_frontend(
         run_tests_with_frontend(&pkg_dir, &manifest, &modules, &caps, limits, &frontend)?;
 
     let obligation_plan = obligation_plan_symbols(&manifest.obligations)?;
+    let replay_observations = if obligation_plan.iter().any(|obligation| {
+        matches!(
+            obligation.as_str(),
+            "core/obligation::replayable-tests" | "core/obligation::concurrency-replay"
+        )
+    }) {
+        Some(replay_observations(
+            &store,
+            &pkg_dir,
+            &manifest,
+            &modules,
+            &test_runs,
+            limits,
+        )?)
+    } else {
+        None
+    };
     let mut obligation_results = Vec::new();
     for ob in &obligation_plan {
         let r = match ob.as_str() {
@@ -426,10 +443,22 @@ pub fn test_package_with_step_limit_and_frontend(
                 )
             }
             "core/obligation::replayable-tests" => {
-                obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs, limits)
+                run_replay_authority(
+                    ObligationAuthorityOperation::ReplayableTests,
+                    &store,
+                    &manifest,
+                    replay_observations.as_deref().unwrap_or_default(),
+                    &frontend,
+                    limits,
+                )
             }
-            "core/obligation::concurrency-replay" => obligation_concurrency_replay(
-                &store, &pkg_dir, &manifest, &modules, &test_runs, limits,
+            "core/obligation::concurrency-replay" => run_replay_authority(
+                ObligationAuthorityOperation::ConcurrencyReplay,
+                &store,
+                &manifest,
+                replay_observations.as_deref().unwrap_or_default(),
+                &frontend,
+                limits,
             ),
             "core/obligation::typecheck" => {
                 obligation_typecheck(&store, &manifest, &modules, &frontend, limits, false)

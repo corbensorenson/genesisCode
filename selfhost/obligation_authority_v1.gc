@@ -37,7 +37,11 @@
                       ((selfhost/obligation::lint package) inputs)
                       (if ((core/sym::eq? operation) (quote :ai-style))
                         ((selfhost/obligation::ai-style package) inputs)
-                        (selfhost/obligation::error "unknown obligation authority operation")))))))))))))
+                        (if ((core/sym::eq? operation) (quote :replayable-tests))
+                          (((selfhost/obligation::replay-authority operation) package) inputs)
+                          (if ((core/sym::eq? operation) (quote :concurrency-replay))
+                            (((selfhost/obligation::replay-authority operation) package) inputs)
+                            (selfhost/obligation::error "unknown obligation authority operation")))))))))))))))
 
 (def core/cli::obligation-authority
   (fn (request)

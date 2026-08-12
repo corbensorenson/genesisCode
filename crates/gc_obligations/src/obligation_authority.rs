@@ -2,6 +2,7 @@ use super::*;
 
 include!("obligation_authority_caps.rs");
 include!("obligation_authority_lint.rs");
+include!("obligation_authority_replay.rs");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ObligationAuthorityOperation {
@@ -9,8 +10,10 @@ pub(super) enum ObligationAuthorityOperation {
     UnitTests,
     Budgets,
     CapabilitiesDeclared,
+    ConcurrencyReplay,
     Determinism,
     Lint,
+    ReplayableTests,
     Typecheck,
     TypecheckStrict,
 }
@@ -22,8 +25,10 @@ impl ObligationAuthorityOperation {
             Self::UnitTests => ":unit-tests",
             Self::Budgets => ":budgets",
             Self::CapabilitiesDeclared => ":capabilities-declared",
+            Self::ConcurrencyReplay => ":concurrency-replay",
             Self::Determinism => ":determinism",
             Self::Lint => ":lint",
+            Self::ReplayableTests => ":replayable-tests",
             Self::Typecheck => ":typecheck",
             Self::TypecheckStrict => ":typecheck-strict",
         }
@@ -35,8 +40,10 @@ impl ObligationAuthorityOperation {
             Self::UnitTests => "core/obligation::unit-tests",
             Self::Budgets => "core/obligation::budgets",
             Self::CapabilitiesDeclared => "core/obligation::capabilities-declared",
+            Self::ConcurrencyReplay => "core/obligation::concurrency-replay",
             Self::Determinism => "core/obligation::determinism",
             Self::Lint => "core/obligation::lint",
+            Self::ReplayableTests => "core/obligation::replayable-tests",
             Self::Typecheck => "core/obligation::typecheck",
             Self::TypecheckStrict => "core/obligation::typecheck-strict",
         }
@@ -257,6 +264,12 @@ fn request_term(
             .collect(),
         ),
         ObligationAuthorityOperation::CapabilitiesDeclared => capability_inputs(modules, tests),
+        ObligationAuthorityOperation::ConcurrencyReplay
+        | ObligationAuthorityOperation::ReplayableTests => {
+            return Err(authority_error(
+                "replay operations require closed replay observations",
+            ));
+        }
         ObligationAuthorityOperation::Determinism => capability_inputs(modules, tests),
         ObligationAuthorityOperation::AiStyle | ObligationAuthorityOperation::Lint => {
             typecheck_inputs(modules)
@@ -265,7 +278,15 @@ fn request_term(
             typecheck_inputs(modules)
         }
     };
-    Ok(Term::Map(
+    Ok(authority_request_term(operation, &manifest.name, inputs))
+}
+
+fn authority_request_term(
+    operation: ObligationAuthorityOperation,
+    package: &str,
+    inputs: Term,
+) -> Term {
+    Term::Map(
         [
             (
                 TermOrdKey(Term::symbol(":kind")),
@@ -278,13 +299,13 @@ fn request_term(
             ),
             (
                 TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
+                Term::Str(package.to_string()),
             ),
             (TermOrdKey(Term::symbol(":v")), Term::Int(2.into())),
         ]
         .into_iter()
         .collect(),
-    ))
+    )
 }
 
 fn invoke_authority(
@@ -462,6 +483,7 @@ fn decode_authority_result(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     tests: &[TestRun],
+    replay_observations: &[ReplayObservation],
     request_hash: [u8; 32],
     term: Term,
 ) -> Result<ObligationResult, ObligationError> {
@@ -514,12 +536,28 @@ fn decode_authority_result(
         ObligationAuthorityOperation::CapabilitiesDeclared => {
             validate_capabilities_report(report, manifest, ok, &errors)?
         }
+        ObligationAuthorityOperation::ConcurrencyReplay => validate_replay_report(
+            operation,
+            report,
+            manifest,
+            replay_observations,
+            ok,
+            &errors,
+        )?,
         ObligationAuthorityOperation::Determinism => {
             validate_determinism_report(report, manifest, ok, &errors)?
         }
         ObligationAuthorityOperation::Lint => {
             validate_lint_report(report, manifest, modules, ok, &errors, &side_artifacts)?
         }
+        ObligationAuthorityOperation::ReplayableTests => validate_replay_report(
+            operation,
+            report,
+            manifest,
+            replay_observations,
+            ok,
+            &errors,
+        )?,
         ObligationAuthorityOperation::Typecheck => {
             validate_typecheck_obligation_report(report, modules, false, ok, &errors)?
         }
@@ -560,6 +598,7 @@ pub(super) fn evaluate_obligation_with_authority(
         manifest,
         modules,
         tests,
+        &[],
         request_hash,
         term,
     )

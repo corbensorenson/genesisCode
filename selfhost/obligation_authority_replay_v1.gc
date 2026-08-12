@@ -1,0 +1,354 @@
+(def selfhost/obligation::replay-map-has-key?
+  (fn (map)
+    (fn (key)
+      (((selfhost/obligation::replay-map-has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/obligation::replay-map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/obligation::replay-map-has-key-loop? entries) key)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/obligation::replay-entry-valid?
+  (fn (entry)
+    (if (selfhost/obligation::map? entry)
+      (if ((core/int::eq? (core/map::len entry)) 5)
+        (if ((selfhost/obligation::replay-map-has-key? entry) (quote :await-edge))
+          (if ((selfhost/obligation::replay-map-has-key? entry) (quote :op))
+            (if ((selfhost/obligation::replay-map-has-key? entry) (quote :position))
+              (if ((selfhost/obligation::replay-map-has-key? entry) (quote :schedule-step))
+                (if ((selfhost/obligation::replay-map-has-key? entry) (quote :task-id))
+                  (if (selfhost/obligation::optional-str?
+                        ((core/map::get entry) (quote :await-edge)))
+                    (if (selfhost/obligation::sym? ((core/map::get entry) (quote :op)))
+                      (if (selfhost/obligation::nonnegative-int?
+                            ((core/map::get entry) (quote :position)))
+                        (if (selfhost/obligation::optional-nonnegative-int?
+                              ((core/map::get entry) (quote :schedule-step)))
+                          (selfhost/obligation::optional-str?
+                            ((core/map::get entry) (quote :task-id)))
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::replay-entries-valid-loop?
+  (fn (entries)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len entries))
+        true
+        (if (selfhost/obligation::replay-entry-valid? ((core/vec::get entries) index))
+          ((selfhost/obligation::replay-entries-valid-loop? entries)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/obligation::replay-observation-valid?
+  (fn (test)
+    (if (selfhost/obligation::map? test)
+      (if ((core/int::eq? (core/map::len test)) 7)
+        (if ((selfhost/obligation::replay-map-has-key? test) (quote :actual-h))
+          (if ((selfhost/obligation::replay-map-has-key? test) (quote :entries))
+            (if ((selfhost/obligation::replay-map-has-key? test) (quote :log-artifact))
+              (if ((selfhost/obligation::replay-map-has-key? test) (quote :name))
+                (if ((selfhost/obligation::replay-map-has-key? test) (quote :program))
+                  (if ((selfhost/obligation::replay-map-has-key? test) (quote :replay-h))
+                    (if ((selfhost/obligation::replay-map-has-key? test) (quote :suite))
+                      (if (selfhost/obligation::hash? ((core/map::get test) (quote :actual-h)))
+                        (if (selfhost/obligation::vec? ((core/map::get test) (quote :entries)))
+                          (if (selfhost/obligation::str?
+                                ((core/map::get test) (quote :log-artifact)))
+                            (if (selfhost/obligation::str?
+                                  ((core/map::get test) (quote :name)))
+                              (if (selfhost/obligation::bool?
+                                    ((core/map::get test) (quote :program)))
+                                (if (selfhost/obligation::optional-hash?
+                                      ((core/map::get test) (quote :replay-h)))
+                                  (if (selfhost/obligation::sym?
+                                        ((core/map::get test) (quote :suite)))
+                                    (if (((selfhost/obligation::replay-entries-valid-loop?
+                                           ((core/map::get test) (quote :entries))) 0))
+                                      (if ((core/map::get test) (quote :program))
+                                        (selfhost/obligation::hash?
+                                          ((core/map::get test) (quote :replay-h)))
+                                        (selfhost/obligation::nil?
+                                          ((core/map::get test) (quote :replay-h))))
+                                      false)
+                                    false)
+                                  false)
+                                false)
+                              false)
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/obligation::replay-starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let
+            ((length (core/bytes::len bytes))
+              (prefix-length (core/bytes::len prefix-bytes)))
+            (if ((core/int::lt? length) prefix-length)
+              false
+              ((core/eq? (((core/bytes::slice bytes) 0) prefix-length)) prefix-bytes))))))))
+
+(def selfhost/obligation::replay-task-op?
+  (fn (op)
+    (let ((text (core/sym::to-str op)))
+      (if ((selfhost/obligation::replay-starts-with? text) "core/task::")
+        true
+        ((selfhost/obligation::replay-starts-with? text) "editor/task::")))))
+
+(def selfhost/obligation::replay-task-id-required?
+  (fn (op)
+    (if ((core/sym::eq? op) (quote core/task::await)) true
+      (if ((core/sym::eq? op) (quote core/task::cancel)) true
+        (if ((core/sym::eq? op) (quote core/task::status)) true
+          (if ((core/sym::eq? op) (quote editor/task::poll)) true
+            ((core/sym::eq? op) (quote editor/task::cancel))))))))
+
+(def selfhost/obligation::replay-schedule-value-text
+  (fn (value)
+    (if (selfhost/obligation::nil? value)
+      "None"
+      ((core/str::concat "Some(")
+        ((core/str::concat (core/int::to-str value)) ")")))))
+
+(def selfhost/obligation::replay-schedule-error
+  (fn (test)
+    (fn (entry)
+      (let
+        ((suite ((core/map::get test) (quote :suite)))
+          (name ((core/map::get test) (quote :name)))
+          (position ((core/map::get entry) (quote :position)))
+          (schedule ((core/map::get entry) (quote :schedule-step))))
+        ((core/str::concat "concurrency log mismatch for ")
+          ((core/str::concat (core/sym::to-str suite))
+            ((core/str::concat "::")
+              ((core/str::concat name)
+                ((core/str::concat " at entry ")
+                  ((core/str::concat (core/int::to-str position))
+                    ((core/str::concat ": expected :schedule-step ")
+                      ((core/str::concat (core/int::to-str position))
+                        ((core/str::concat ", got ")
+                          (selfhost/obligation::replay-schedule-value-text schedule))))))))))))))
+
+(def selfhost/obligation::replay-missing-field-error
+  (fn (test)
+    (fn (entry)
+      (fn (field)
+        (let
+          ((suite ((core/map::get test) (quote :suite)))
+            (name ((core/map::get test) (quote :name)))
+            (position ((core/map::get entry) (quote :position)))
+            (op ((core/map::get entry) (quote :op))))
+          ((core/str::concat "concurrency log missing ")
+            ((core/str::concat field)
+              ((core/str::concat " for ")
+                ((core/str::concat (core/sym::to-str suite))
+                  ((core/str::concat "::")
+                    ((core/str::concat name)
+                      ((core/str::concat " at entry ")
+                        ((core/str::concat (core/int::to-str position))
+                          (if ((core/eq? field) ":task-id")
+                            ((core/str::concat " (")
+                              ((core/str::concat (core/sym::to-str op)) ")"))
+                            ""))))))))))))))
+
+(def selfhost/obligation::concurrency-entry-errors
+  (fn (test)
+    (fn (entry)
+      (fn (errors)
+        (let
+          ((op ((core/map::get entry) (quote :op)))
+            (position ((core/map::get entry) (quote :position)))
+            (schedule ((core/map::get entry) (quote :schedule-step)))
+            (await-edge ((core/map::get entry) (quote :await-edge)))
+            (task-id ((core/map::get entry) (quote :task-id))))
+          (if (selfhost/obligation::replay-task-op? op)
+            (let
+              ((errors1
+                 (if (if (selfhost/obligation::nil? schedule)
+                       true
+                       (if ((core/int::eq? schedule) position) false true))
+                   ((core/vec::push errors)
+                     ((selfhost/obligation::replay-schedule-error test) entry))
+                   errors)))
+              (let
+                ((errors2
+                   (if (if ((core/sym::eq? op) (quote core/task::await))
+                         (selfhost/obligation::nil? await-edge)
+                         false)
+                     ((core/vec::push errors1)
+                       (((selfhost/obligation::replay-missing-field-error test) entry)
+                         ":await-edge"))
+                     errors1)))
+                (if (if (selfhost/obligation::replay-task-id-required? op)
+                      (selfhost/obligation::nil? task-id)
+                      false)
+                  ((core/vec::push errors2)
+                    (((selfhost/obligation::replay-missing-field-error test) entry)
+                      ":task-id"))
+                  errors2)))
+            errors))))))
+
+(def selfhost/obligation::concurrency-entries-loop
+  (fn (test)
+    (fn (entries)
+      (fn (index)
+        (fn (errors)
+          (if ((core/int::eq? index) (core/vec::len entries))
+            errors
+            ((((selfhost/obligation::concurrency-entries-loop test) entries)
+                ((core/int::add index) 1))
+              (((selfhost/obligation::concurrency-entry-errors test)
+                 ((core/vec::get entries) index)) errors))))))))
+
+(def selfhost/obligation::replay-test-errors
+  (fn (test)
+    (fn (context)
+      (fn (errors)
+        (let
+          ((name ((core/map::get test) (quote :name)))
+            (suite ((core/map::get test) (quote :suite)))
+            (program ((core/map::get test) (quote :program)))
+            (actual ((core/map::get test) (quote :actual-h)))
+            (replayed ((core/map::get test) (quote :replay-h))))
+          (if program
+            (if ((core/eq? actual) replayed)
+              errors
+              ((core/vec::push errors)
+                (if ((core/eq? context) "concurrency replay")
+                  ((core/str::concat "concurrency replay mismatch for ")
+                    ((core/str::concat (core/sym::to-str suite))
+                      ((core/str::concat "::")
+                        ((core/str::concat name)
+                          ((core/str::concat ": ") (core/bytes::to-hex replayed))))))
+                  ((core/str::concat "replay mismatch for ")
+                    ((core/str::concat name)
+                      ((core/str::concat ": ") (core/bytes::to-hex replayed)))))))
+            ((core/vec::push errors)
+              ((core/str::concat "test ")
+                ((core/str::concat name)
+                  ((core/str::concat " expected effect program for ") context))))))))))
+
+(def selfhost/obligation::test-has-task-op-loop?
+  (fn (entries)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len entries))
+        false
+        (if (selfhost/obligation::replay-task-op?
+              ((core/map::get ((core/vec::get entries) index)) (quote :op)))
+          true
+          ((selfhost/obligation::test-has-task-op-loop? entries)
+            ((core/int::add index) 1)))))))
+
+(def selfhost/obligation::replay-tests-loop
+  (fn (tests)
+    (fn (operation)
+      (fn (index)
+        (fn (state)
+          (if ((core/int::eq? index) (core/vec::len tests))
+            state
+            (let ((test ((core/vec::get tests) index)))
+              (if (selfhost/obligation::replay-observation-valid? test)
+                (let
+                  ((concurrency
+                     ((selfhost/obligation::test-has-task-op-loop?
+                        ((core/map::get test) (quote :entries))) 0)))
+                  (if (if ((core/sym::eq? operation) (quote :concurrency-replay))
+                        (if concurrency false true)
+                        false)
+                    ((((selfhost/obligation::replay-tests-loop tests) operation)
+                       ((core/int::add index) 1)) state)
+                    (let
+                      ((errors0 ((core/map::get state) (quote :errors)))
+                        (errors1
+                          (if ((core/sym::eq? operation) (quote :concurrency-replay))
+                            ((((selfhost/obligation::concurrency-entries-loop test)
+                                ((core/map::get test) (quote :entries))) 0) errors0)
+                            errors0)))
+                      (let
+                        ((errors2
+                           (((selfhost/obligation::replay-test-errors test)
+                              (if ((core/sym::eq? operation) (quote :concurrency-replay))
+                                "concurrency replay"
+                                "replayability")) errors1)))
+                        ((((selfhost/obligation::replay-tests-loop tests) operation)
+                           ((core/int::add index) 1))
+                          {:concurrent-tests
+                             (if ((core/sym::eq? operation) (quote :concurrency-replay))
+                               ((core/int::add
+                                  ((core/map::get state) (quote :concurrent-tests))) 1)
+                               ((core/map::get state) (quote :concurrent-tests)))
+                           :errors errors2})))))
+                (selfhost/obligation::error
+                  "replay observation must contain exactly valid identity, log, program, hash, and entry fields")))))))))
+
+(def selfhost/obligation::replay-authority
+  (fn (operation)
+    (fn (package)
+      (fn (inputs)
+        (if (if (selfhost/obligation::map? inputs)
+              ((core/int::eq? (core/map::len inputs)) 1)
+              false)
+          (let ((tests ((core/map::get inputs) (quote :tests))))
+            (if (selfhost/obligation::vec? tests)
+              (let
+                ((state
+                   ((((selfhost/obligation::replay-tests-loop tests) operation) 0)
+                     {:concurrent-tests 0 :errors []})))
+                (if (core/error::is? state)
+                  state
+                  (let
+                    ((errors ((core/map::get state) (quote :errors)))
+                      (concurrent-tests
+                        ((core/map::get state) (quote :concurrent-tests))))
+                    (let ((ok ((core/int::eq? (core/vec::len errors)) 0)))
+                      (let
+                        ((report
+                           (if ((core/sym::eq? operation) (quote :concurrency-replay))
+                             {:concurrent-tests concurrent-tests
+                              :errors errors
+                              :kind "genesis/concurrency-replay-v0.1"
+                              :ok ok
+                              :package package}
+                             {:errors errors
+                              :kind "genesis/replayable-tests-v0.2"
+                              :ok ok
+                              :package package})))
+                        {:errors errors
+                         :kind selfhost/obligation::RESULT_KIND
+                         :name
+                           (if ((core/sym::eq? operation) (quote :concurrency-replay))
+                             "core/obligation::concurrency-replay"
+                             "core/obligation::replayable-tests")
+                         :ok ok
+                         :operation operation
+                         :report report
+                         :v 2})))))
+              (selfhost/obligation::error "replay :tests input must be a vector")))
+          (selfhost/obligation::error "replay inputs must contain exactly :tests"))))))

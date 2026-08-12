@@ -73,14 +73,15 @@ MIGRATED = [
     "core/obligation::ai-style",
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
+    "core/obligation::concurrency-replay",
     "core/obligation::determinism",
     "core/obligation::lint",
+    "core/obligation::replayable-tests",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests",
 ]
 RESIDUAL = [
-    "core/obligation::concurrency-replay",
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
     "core/obligation::coverage-mcdc",
@@ -88,7 +89,6 @@ RESIDUAL = [
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
     "core/obligation::property-tests",
-    "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
     "core/obligation::preflight",
@@ -100,6 +100,7 @@ SOURCE_MODULES = [
     "selfhost/obligation_authority_determinism_v1.gc",
     "selfhost/obligation_authority_lint_v1.gc",
     "selfhost/obligation_authority_ai_style_v1.gc",
+    "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_v1.gc",
 ]
 
@@ -136,9 +137,16 @@ def validate(profile, schema, check_identity=True):
             "effect-entry-count",
             "effect-log-artifact",
             "effect-log-byte-count",
+            "effect-log-entry-await-edge",
+            "effect-log-entry-operation",
+            "effect-log-entry-position",
+            "effect-log-entry-schedule-step",
+            "effect-log-entry-task-id",
+            "effect-program-status",
             "expected-value-hash",
             "module-path",
             "observed-effect-operation",
+            "replay-value-hash",
             "sealed-error-status",
             "step-count",
             "test-identity",
@@ -150,7 +158,7 @@ def validate(profile, schema, check_identity=True):
         "residualObligations": RESIDUAL,
         "resultKind": "genesis/obligation-authority-result-v0.2",
         "runtimeEvidence": {
-            "allocationLimit": 5_000_000,
+            "allocationLimit": 10_000_000,
             "stepLimit": 5_000_000,
             "timeoutSeconds": 60,
         },
@@ -168,7 +176,7 @@ def validate(profile, schema, check_identity=True):
         "evidence-verification-authority",
         "r4-2-d-closure",
         "release-qualification",
-        "replay-authority",
+        "effect-replay-execution-authority",
         "sd-obligation-h2",
         "signing-authority",
     }
@@ -207,6 +215,9 @@ def validate_bridge(bridge: str) -> None:
         "validate_determinism_report(",
         "validate_lint_report(",
         "validate_ai_style_report(",
+        "validate_replay_report(",
+        "replay_observations(",
+        "run_replay_authority(",
         "decode_artifact_transport(",
         "expected_lint_patch(",
         "validate_typecheck_obligation_report(",
@@ -214,6 +225,8 @@ def validate_bridge(bridge: str) -> None:
         "ObligationAuthorityOperation::Determinism",
         "ObligationAuthorityOperation::Lint",
         "ObligationAuthorityOperation::AiStyle",
+        "ObligationAuthorityOperation::ReplayableTests",
+        "ObligationAuthorityOperation::ConcurrencyReplay",
         "ObligationAuthorityOperation::TypecheckStrict",
         'Term::symbol(":request-h")',
         "let request_hash = hash_term(&request);",
@@ -223,6 +236,8 @@ def validate_bridge(bridge: str) -> None:
         "rust_frontend_selection_does_not_replace_selfhost_obligation_authority",
         "lint_and_ai_style_authorities_decide_and_persist_closed_artifacts",
         "lint_authority_rejects_side_artifact_and_final_report_tampering",
+        "replay_authorities_decide_from_closed_host_observations",
+        "replay_authority_rejects_open_observations_and_contradictory_reports",
     ]
     for token in required:
         if token not in bridge:
@@ -250,6 +265,8 @@ def static_check(root: Path, profile):
         fail("self-host lint obligation route is absent")
     if "selfhost/obligation::ai-style" not in combined_sources:
         fail("self-host AI-style obligation route is absent")
+    if "selfhost/obligation::replay-authority" not in combined_sources:
+        fail("self-host replay obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     positions = []
     for relative in profile["sourceModules"]:
@@ -264,6 +281,8 @@ def static_check(root: Path, profile):
     bridge = (root / "crates/gc_obligations/src/obligation_authority.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_caps.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_lint.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_authority_replay.rs").read_text()
+    bridge += (root / "crates/gc_obligations/src/obligation_exec_replay.rs").read_text()
     bridge += (root / "crates/gc_obligations/src/obligation_authority_tests.rs").read_text()
     validate_bridge(bridge)
     types_api = (root / "crates/gc_obligations/src/obligations/types_api.rs").read_text()
@@ -289,11 +308,16 @@ def static_check(root: Path, profile):
         fail("lint production authority call-site drift")
     if types_api.count("obligation_ai_style(&store, &manifest, &modules, &frontend, limits)") != 1:
         fail("AI-style production authority call-site drift")
+    if types_api.count("replay_observations(") != 1:
+        fail("replay host-observation collection call-site drift")
+    if types_api.count("run_replay_authority(") != 2:
+        fail("replay authority production dispatch drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
     stage_host = (root / "crates/gc_obligations/src/obligation_stage.rs").read_text()
     lint_host = (root / "crates/gc_obligations/src/obligation_lint.rs").read_text()
+    replay_host = (root / "crates/gc_obligations/src/obligation_exec_replay.rs").read_text()
     forbidden = [
         "t.steps >",
         "t.effect_entries >",
@@ -306,8 +330,13 @@ def static_check(root: Path, profile):
         "lint_autofix_patch_for_module",
         "strict_warning_codes",
         'env.get("core/editor/lint::lint-module")',
+        "expected effect program for replayability",
+        "expected effect program for concurrency replay",
+        "concurrency log mismatch",
+        "concurrency log missing",
+        "replay mismatch for",
     ]
-    combined = unit_host + budget_host + test_host + stage_host + lint_host
+    combined = unit_host + budget_host + test_host + stage_host + lint_host + replay_host
     for token in forbidden:
         if token in combined:
             fail(f"reachable host obligation decision restored: {token}")
@@ -327,6 +356,10 @@ def static_check(root: Path, profile):
         fail("lint authority dispatch drift")
     if lint_host.count("ObligationAuthorityOperation::AiStyle") != 1:
         fail("AI-style authority dispatch drift")
+    if replay_host.count("gc_effects::replay_with_store(") != 1:
+        fail("replay execution host-fact collection drift")
+    if "ReplayEntryObservation" not in replay_host or "ReplayObservation" not in replay_host:
+        fail("closed replay observation transport drift")
     obligation_typecheck = unit_host.split("pub(super) fn obligation_typecheck(", 1)[1].split(
         "pub(super) fn typecheck_report_with_frontend(", 1
     )[0]
@@ -360,6 +393,28 @@ def run_case(binary: Path, artifact: Path, root: Path, fixture: str, profile):
     with tempfile.TemporaryDirectory(prefix="genesis-obligation-runtime-") as temp:
         fixture_copy = Path(temp) / Path(fixture).name
         shutil.copytree(root / fixture, fixture_copy)
+        if fixture == "tests/spec/pkg_gpu_parallel_obligations":
+            bridge = fixture_copy / "host_bridge.sh"
+            bridge.write_text(
+                "#!/bin/sh\n"
+                "IFS= read -r request_len || exit 2\n"
+                'dd bs=1 count="$request_len" of=/dev/null 2>/dev/null || exit 2\n'
+                "resp='{:ok true :id \"gpu-bridge-0\" :data b\"\\x01\\x02\\x03\\x04\" :written 4}'\n"
+                'printf \'%s\\n%s\' "${#resp}" "$resp"\n'
+            )
+            bridge.chmod(0o755)
+            with (fixture_copy / "caps.toml").open("a") as policy:
+                for operation in (
+                    "gfx/gpu::create-buffer",
+                    "gfx/gpu::write-buffer",
+                    "gfx/gpu::read-buffer",
+                    "gfx/gpu::destroy-resource",
+                ):
+                    policy.write(
+                        f'\n[op."{operation}"]\n'
+                        'base_dir = "."\n'
+                        'bridge_cmd = "host_bridge.sh"\n'
+                    )
         result = subprocess.run(
             [
                 str(binary),
@@ -374,7 +429,7 @@ def run_case(binary: Path, artifact: Path, root: Path, fixture: str, profile):
                 str(limits["allocationLimit"]),
                 "--json",
             ],
-            cwd=root,
+            cwd=(fixture_copy if fixture == "tests/spec/pkg_gpu_parallel_obligations" else root),
             text=True,
             capture_output=True,
             timeout=limits["timeoutSeconds"],
@@ -408,6 +463,7 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
                 "core/obligation::unit-tests",
                 "core/obligation::determinism",
                 "core/obligation::capabilities-declared",
+                "core/obligation::replayable-tests",
                 "core/obligation::typecheck",
             ],
         ),
@@ -460,6 +516,17 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
             30,
             False,
             ["core/obligation::ai-style"],
+        ),
+        (
+            "tests/spec/pkg_gpu_parallel_obligations",
+            0,
+            True,
+            [
+                "core/obligation::unit-tests",
+                "core/obligation::capabilities-declared",
+                "core/obligation::replayable-tests",
+                "core/obligation::concurrency-replay",
+            ],
         ),
     ]
     all_observations = []
@@ -540,6 +607,8 @@ def self_test(root: Path, profile, schema):
         ("ai-style-route", "validate_ai_style_report("),
         ("artifact-transport", "decode_artifact_transport("),
         ("lint-patch-reconstruction", "expected_lint_patch("),
+        ("replay-route", "validate_replay_report("),
+        ("replay-host-facts", "replay_observations("),
     ]:
         try:
             validate_bridge(bridge.replace(route, ""))

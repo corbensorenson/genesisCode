@@ -14,6 +14,7 @@ mod obligation_exec_tests;
 #[cfg(test)]
 pub(crate) use obligation_exec_coverage::mcdc_independence_for_site;
 pub(crate) use obligation_exec_coverage::{CoverageProfile, CoverageRunArgs, obligation_coverage};
+pub(super) use obligation_exec_replay::{replay_observations, run_replay_authority};
 
 pub(super) fn obligation_property_tests(
     store: &EvidenceStore,
@@ -31,30 +32,6 @@ pub(super) fn is_callable_value(v: &Value) -> bool {
 
 pub(super) fn parse_test_entry(v: &Value) -> Result<(Value, Option<Term>), ObligationError> {
     obligation_exec_tests::parse_test_entry(v)
-}
-
-pub(super) fn obligation_replayable(
-    store: &EvidenceStore,
-    pkg_dir: &Path,
-    manifest: &PackageManifest,
-    modules: &[LoadedModule],
-    tests: &[TestRun],
-    limits: KernelLimits,
-) -> Result<ObligationResult, ObligationError> {
-    obligation_exec_replay::obligation_replayable(store, pkg_dir, manifest, modules, tests, limits)
-}
-
-pub(super) fn obligation_concurrency_replay(
-    store: &EvidenceStore,
-    pkg_dir: &Path,
-    manifest: &PackageManifest,
-    modules: &[LoadedModule],
-    tests: &[TestRun],
-    limits: KernelLimits,
-) -> Result<ObligationResult, ObligationError> {
-    obligation_exec_replay::obligation_concurrency_replay(
-        store, pkg_dir, manifest, modules, tests, limits,
-    )
 }
 
 pub(super) fn obligation_budgets(

@@ -2,16 +2,23 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "cf1851a787c57aa509d556d59bce29ebcd380406d0c56d0ff8e569260650efb2",
+  "contentIdentitySha256": "07791dc1073115147dae98e9a1bcb3795bd99ed218067ac339305e646ab709da",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
     "effect-entry-count",
     "effect-log-artifact",
     "effect-log-byte-count",
+    "effect-log-entry-await-edge",
+    "effect-log-entry-operation",
+    "effect-log-entry-position",
+    "effect-log-entry-schedule-step",
+    "effect-log-entry-task-id",
+    "effect-program-status",
     "expected-value-hash",
     "module-path",
     "observed-effect-operation",
+    "replay-value-hash",
     "sealed-error-status",
     "step-count",
     "test-identity"
@@ -22,8 +29,10 @@
     "core/obligation::ai-style",
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
+    "core/obligation::concurrency-replay",
     "core/obligation::determinism",
     "core/obligation::lint",
+    "core/obligation::replayable-tests",
     "core/obligation::typecheck",
     "core/obligation::typecheck-strict",
     "core/obligation::unit-tests"
@@ -34,7 +43,7 @@
     "evidence-verification-authority",
     "r4-2-d-closure",
     "release-qualification",
-    "replay-authority",
+    "effect-replay-execution-authority",
     "sd-obligation-h2",
     "signing-authority"
   ],
@@ -43,7 +52,6 @@
     "genesis_wasi"
   ],
   "residualObligations": [
-    "core/obligation::concurrency-replay",
     "core/obligation::coverage",
     "core/obligation::coverage-decision",
     "core/obligation::coverage-mcdc",
@@ -51,14 +59,13 @@
     "core/obligation::gfx-frame-budgets",
     "core/obligation::gfx-golden-images",
     "core/obligation::property-tests",
-    "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
     "core/obligation::preflight"
   ],
   "resultKind": "genesis/obligation-authority-result-v0.2",
   "runtimeEvidence": {
-    "allocationLimit": 5000000,
+    "allocationLimit": 10000000,
     "stepLimit": 5000000,
     "timeoutSeconds": 60
   },
@@ -69,9 +76,10 @@
     "selfhost/obligation_authority_determinism_v1.gc",
     "selfhost/obligation_authority_lint_v1.gc",
     "selfhost/obligation_authority_ai_style_v1.gc",
+    "selfhost/obligation_authority_replay_v1.gc",
     "selfhost/obligation_authority_v1.gc"
   ],
-  "sourceSetSha256": "492cd8182f2264f707a2cb3b44bf3d1461d9f1f74d89ad303e8ec324cfecfb5c",
+  "sourceSetSha256": "b609d21aa8907432f036b2d3b50c6b111381ce306bc1562ab2548ba190813bf3",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

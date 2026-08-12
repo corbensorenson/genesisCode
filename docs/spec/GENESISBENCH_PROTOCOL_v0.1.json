@@ -38,7 +38,7 @@
       "bytes": 122581,
       "id": "agent-task-benchmark",
       "path": "benchmarks/agent_tasks/v0.1/suite.json",
-      "sha256": "ffeefcd3010372c2eabf375fb960851c6f34a46c5f95e7aa7f3d217b6819e978"
+      "sha256": "035f3199200cf767c031d2082e66fbd2289410afc3e7ecdc8d6ab49bbc09b105"
     },
     {
       "bytes": 8507,
@@ -56,7 +56,7 @@
       "bytes": 12919,
       "id": "agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
-      "sha256": "0264e7d86e50451127003fbdfef884616132f2dcb43e60d24d66480734673e0d"
+      "sha256": "a28de71360588e67a2a9d505e773792d944641c97b944221ba60923f0e54417f"
     },
     {
       "bytes": 8116,
@@ -86,7 +86,7 @@
       "bytes": 4109,
       "id": "benchmark-scoring",
       "path": "docs/spec/GC_AGENT_BENCHMARK_SCORING_v0.1.json",
-      "sha256": "ef6d6925e26ed9ab9d4e6bbaa67ea50cba97ed40910dea6308d337b0318b6fed"
+      "sha256": "b728bd8c8910cd386803fd5ad337a6485fbef56359d06024cb5689473eeeca5e"
     },
     {
       "bytes": 7019,
@@ -200,7 +200,7 @@
       "bytes": 2423,
       "id": "genesisbench-analysis-plan",
       "path": "docs/spec/GENESISBENCH_ANALYSIS_PLAN_v0.1.json",
-      "sha256": "03c17d8b0e06b766630a0164bd1ec426c879e4822b8d680d04ca706c1e4243d1"
+      "sha256": "d664cd907f802ab32bfa586f195eb1579770abc1068b4bcde8ce0da83b81e74b"
     },
     {
       "bytes": 4614,
@@ -236,7 +236,7 @@
       "bytes": 16571,
       "id": "genesisbench-construct-report",
       "path": "benchmarks/genesisbench/v0.1/construct-validity/report.json",
-      "sha256": "99b73574e0af0392dd1bff161af9ddaaf306760520efc4f1ae2c455e3a8f19d9"
+      "sha256": "03ef1b2b1af502cf72a5cf45212aac957fbc9298d0be84d5feab447970270c1b"
     },
     {
       "bytes": 7614,
@@ -344,13 +344,13 @@
       "bytes": 8730,
       "id": "genesisbench-reference-agent",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_v0.1.json",
-      "sha256": "cb0734aae7aa6b2b4cf25cc6d009c13dd998528e0bc9ca69d65a1e855bda0265"
+      "sha256": "191fd501a674469fa7ad21b18a5e8c991dadda5d56300bc2a4c7936ca67d3219"
     },
     {
       "bytes": 47673,
       "id": "genesisbench-reference-agent-ablations",
       "path": "docs/spec/GENESISBENCH_REFERENCE_AGENT_ABLATIONS_v0.1.json",
-      "sha256": "94b7c3a9cb2e5ed02bb47847673896b5641e7933b79ecd5a3802c50cabf3b7ee"
+      "sha256": "d0661e96cd2b86d340f473e564858c9a3a4f58932fffcbaf51d8a54ba575e322"
     },
     {
       "bytes": 4871,
@@ -362,7 +362,7 @@
       "bytes": 5733,
       "id": "genesisbench-reference-agent-plan-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/plan.fixture.json",
-      "sha256": "3c120dfa436b31f44de347c392554277eed82548e2da2b7d1c710ba55d39e78a"
+      "sha256": "6212fd7afc811392828363bb02613001db60d6af5b0875e52ef5a6399c827952"
     },
     {
       "bytes": 1032,
@@ -386,7 +386,7 @@
       "bytes": 4427,
       "id": "genesisbench-reference-agent-trace-fixture",
       "path": "benchmarks/genesisbench/v0.1/reference-agent/trace.fixture.json",
-      "sha256": "ecfd3e0901d1709bd03d14099a571c06049ba6507ef098defef49a74359f62e3"
+      "sha256": "0c84f2c3399b3427b8a4eb005b60c2ea41ee849b273973c0eeba6b9c1cb2e1c0"
     },
     {
       "bytes": 2212,
@@ -554,7 +554,7 @@
       "trainingCutoffRequired": true
     }
   },
-  "contentIdentitySha256": "c3a4ed5d3f0059d79281908d4d91ee66907ff29b78e305ae784c10ee8ea2fef8",
+  "contentIdentitySha256": "dbf3d69309e5a1ddbd3a017f657e5018ac2c04ffd3e99e0b97d78f6161a9e8cf",
   "contextPolicy": {
     "assemblyAlgorithm": "sha256-domain-separated-ordered-artifacts-v0.1",
     "authorityOrder": [
