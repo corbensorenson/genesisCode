@@ -299,15 +299,6 @@ impl CapsPolicy {
         policy_authority::authorize_policy(&source, &mut policy, bootstrap_mode, artifact)?;
         let base = path.parent().unwrap_or_else(|| Path::new("."));
         policy.resolve_relative_paths(base)?;
-        if policy.log.inline_max_bytes.is_some() && policy.log.store_dir.is_none() {
-            policy.log.store_dir = Some(base.join(".genesis").join("store"));
-        }
-        if policy.store.dir.is_none() {
-            policy.store.dir = Some(base.join(".genesis").join("store"));
-        }
-        if policy.refs.path.is_none() {
-            policy.refs.path = Some(base.join(".genesis").join("refs.gc"));
-        }
         Ok(policy)
     }
 

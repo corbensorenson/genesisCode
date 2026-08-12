@@ -9,13 +9,13 @@ effect-policy composition slice: baseline operation admission, per-operation
 `core/effects::policy-inventory-authority` owns deterministic union,
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
-runtime and task resource limits, and selection of an explicit task worker
-default from the configured value or the host's bounded available-worker
-observation.
+log/store/refs configured-or-default location selection, runtime and task
+resource limits, and selection of an explicit task worker default from the
+configured value or the host's bounded available-worker observation.
 
 The Rust host still parses TOML, independently reconstructs the legacy candidate
-inventory, per-operation results, and log/runtime/store/task resource policy, and
-rejects every contradiction.
+inventory, per-operation results, and log/refs/runtime/store/task resource
+policy, and rejects every contradiction.
 That live oracle is a required safety mechanism for this partial checkpoint and
 prevents `SD-EFFECT-POLICY` from reaching H2. Removing it before all residual
 decisions are GenesisCode-owned and independently verified is forbidden.
@@ -47,24 +47,27 @@ return sealed errors. The host rejects unknown fields, identity drift, request-h
 substitution, denied non-nil capabilities, admitted non-map capabilities, and any
 result that contradicts its retained compatibility oracle.
 
-The resource authority receives a closed seven-field
-`genesis/effect-resource-policy-request-v0.2` map. It contains version `2`, the
-positive host observation `:available-workers`, and exact `:log`, `:runtime`,
-`:store`, and `:task` maps. Missing optional TOML fields are represented by
-`nil`. Runtime and task limits must be nonnegative integers, and a configured
-`:default-workers` must be positive. Global `:inline-max-bytes`,
+The resource authority receives a closed eight-field
+`genesis/effect-resource-policy-request-v0.3` map. It contains version `3`, the
+positive host observation `:available-workers`, and exact `:log`, `:refs`,
+`:runtime`, `:store`, and `:task` maps. Missing optional TOML fields are
+represented by `nil`. Runtime and task limits must be nonnegative integers, and
+a configured `:default-workers` must be positive. Global `:inline-max-bytes`,
 `:max-artifact-bytes-per-run`, and `:max-run-bytes` accept the legacy integer
 domain and are normalized by GenesisCode so only positive limits survive; zero
-and negative values become `nil`.
+and negative values become `nil`. Location inputs are `nil` or strings.
 
-The closed `genesis/effect-resource-policy-result-v0.2` result is bound to the
-complete request hash, preserves the validated limits, and replaces a missing
-task default with `:available-workers`. The host strictly decodes every field into
-`u64` or platform `usize`, rejects invalid result domains and overflow, compares
-the complete result with its independently parsed compatibility oracle, and
-installs the validated GenesisCode log, runtime, store, and task resource values
-into the state consumed by effect, log, store, synchronization, and task
-enforcement.
+The closed `genesis/effect-resource-policy-result-v0.3` result is bound to the
+complete request hash, preserves the validated limits, replaces a missing task
+default with `:available-workers`, defaults store and refs locations to
+`.genesis/store` and `.genesis/refs.gc`, and defaults the log store only when the
+normalized inline spill threshold is present. Explicit locations always win. The
+host strictly decodes every field into `u64`, platform `usize`, or a UTF-8 path;
+rejects invalid result domains and overflow; compares the complete result with
+its independently parsed compatibility oracle; installs the validated
+GenesisCode log, refs, runtime, store, and task values; and only then resolves
+relative paths against the capability file's parent directory. Filesystem path
+resolution and use remain host mechanisms rather than policy-selection authority.
 
 Per-operation `allow` has legacy precedence: an override with `allow = false`
 denies the operation; an override with true or no explicit `allow` admits it;
@@ -93,8 +96,8 @@ transition, and therefore are not evidence of H2.
 ## Residual Decisions And Nonclaims
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
-and type decoding; global log/store/refs location, remote transport, TLS, and
-authentication policy; operation-specific filesystem, network, process, database,
+and type decoding; global store remote transport, TLS, and authentication policy;
+operation-specific filesystem, network, process, database,
 crypto, FFI, plugin, model, graphics, and device constraints; secret and path
 resolution; effect execution and cancellation; strict replay; and removal of the
 compatibility oracle. Policy aliases are governed separately by the policy-alias

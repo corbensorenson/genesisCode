@@ -78,6 +78,7 @@ DECISIONS = [
     "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
     "global-log-and-store-resource-limits",
+    "global-log-store-refs-location-defaults",
     "per-operation-allow-precedence",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
@@ -90,7 +91,7 @@ RESIDUALS = {
     "effect-execution-and-hard-cancellation",
     "ffi-plugin-and-model-policy",
     "filesystem-policy",
-    "global-log-store-refs-location-transport-and-auth-policy",
+    "global-store-remote-transport-tls-and-auth-policy",
     "network-policy",
     "path-and-secret-resolution",
     "process-policy",
@@ -123,8 +124,8 @@ def validate(profile, schema, check_identity=True):
         "productionEntrypoints": ["genesis", "genesis_wasi"],
         "requestKind": "genesis/effect-policy-authority-request-v0.1",
         "resourceBinding": "core/effects::resource-policy-authority",
-        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.2",
-        "resourceResultKind": "genesis/effect-resource-policy-result-v0.2",
+        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
+        "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
         "resultKind": "genesis/effect-policy-authority-result-v0.1",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
@@ -134,7 +135,7 @@ def validate(profile, schema, check_identity=True):
         "schema": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json",
         "sourceModule": "selfhost/effect_policy_authority_v1.gc",
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.3",
+        "version": "0.1.4",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -210,6 +211,9 @@ def static_check(root: Path, profile):
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
         "policy.log.max_artifact_bytes_per_run =",
+        "policy.log.store_dir = authorized_resources.log_store_dir;",
+        "policy.refs.path = authorized_resources.refs_path;",
+        "policy.store.dir = authorized_resources.store_dir;",
         "policy.store.max_run_bytes = authorized_resources.store_max_run_bytes;",
     ]
     for token in required_authority:
@@ -219,6 +223,21 @@ def static_check(root: Path, profile):
     policy = (root / "crates/gc_effects/src/policy.rs").read_text()
     if "pub fn load_with_selfhost_authority(" not in policy:
         fail("self-host policy loader is missing")
+    legacy_defaults = (
+        'pol.log.store_dir = Some(base.join(".genesis").join("store"));',
+        'pol.store.dir = Some(base.join(".genesis").join("store"));',
+        'pol.refs.path = Some(base.join(".genesis").join("refs.gc"));',
+    )
+    for token in legacy_defaults:
+        if policy.count(token) != 1:
+            fail(f"legacy location-default oracle drift: {token}")
+    for token in (
+        'policy.log.store_dir = Some(base.join(".genesis").join("store"));',
+        'policy.store.dir = Some(base.join(".genesis").join("store"));',
+        'policy.refs.path = Some(base.join(".genesis").join("refs.gc"));',
+    ):
+        if token in policy:
+            fail(f"production host still selects a location default: {token}")
     runner = (root / "crates/gc_effects/src/runner_response_budget.rs").read_text()
     if "policy.authorized_cap(op)" not in runner:
         fail("effect log does not consume the authorized capability descriptor")
@@ -294,6 +313,8 @@ def static_check(root: Path, profile):
         "selfhost_authority_owns_adaptive_task_worker_default",
         "selfhost_authority_owns_global_log_and_store_resource_limits",
         "selfhost_authority_normalizes_nonpositive_global_resource_limits",
+        "selfhost_authority_owns_default_global_storage_locations",
+        "selfhost_authority_preserves_explicit_global_storage_locations",
         "selfhost_authority_rejects_unbounded_operation_inventories_before_evaluation",
     ):
         if tests.count(f"fn {name}()") != 1:
@@ -317,6 +338,7 @@ def mutation_controls(profile, schema):
         ("inventory-binding", lambda item: item.__setitem__("inventoryBinding", "core/cli::policy-authority")),
         ("resource-binding", lambda item: item.__setitem__("resourceBinding", "core/cli::policy-authority")),
         ("resource-request", lambda item: item.__setitem__("resourceRequestKind", "unknown")),
+        ("resource-result", lambda item: item.__setitem__("resourceResultKind", "unknown")),
         ("decision", lambda item: item["decisionInventory"].pop()),
         ("oracle", lambda item: item["hostOracle"].__setitem__("required", False)),
         ("limit", lambda item: item.__setitem__("maxPolicyOperations", 0)),

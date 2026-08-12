@@ -324,7 +324,7 @@ pub(super) fn authorize_policy(
         plain_authority_result(resource_value, &context, "resource")?,
         resource_request_hash,
     )?;
-    if authorized_resources.policy_term != resource::legacy_policy_term(policy) {
+    if authorized_resources.policy_term != resource::legacy_policy_term(policy)? {
         return Err(authority_error(
             "resource result contradicts independently reconstructed log/runtime/store/task policy",
         ));
@@ -380,6 +380,9 @@ pub(super) fn authorize_policy(
     policy.runtime = authorized_resources.runtime;
     policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;
     policy.log.max_artifact_bytes_per_run = authorized_resources.log_max_artifact_bytes_per_run;
+    policy.log.store_dir = authorized_resources.log_store_dir;
+    policy.refs.path = authorized_resources.refs_path;
+    policy.store.dir = authorized_resources.store_dir;
     policy.store.max_run_bytes = authorized_resources.store_max_run_bytes;
     Ok(())
 }

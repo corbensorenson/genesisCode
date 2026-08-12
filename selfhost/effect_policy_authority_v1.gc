@@ -5,6 +5,9 @@
 (def selfhost/effect-policy::optional-int?
   (fn (value) (if (selfhost/policy::nil? value) true (selfhost/policy::int? value))))
 
+(def selfhost/effect-policy::optional-str?
+  (fn (value) (if (selfhost/policy::nil? value) true (selfhost/policy::str? value))))
+
 (def selfhost/effect-policy::map-has-key-loop?
   (fn (entries)
     (fn (key)
@@ -63,19 +66,30 @@
 (def selfhost/effect-policy::log-resource-policy-valid?
   (fn (log)
     (if ((selfhost/effect-policy::exact-map? log)
-          [:inline-max-bytes :max-artifact-bytes-per-run])
+          [:inline-max-bytes :max-artifact-bytes-per-run :store-dir])
       (if (selfhost/effect-policy::optional-int?
             ((core/map::get log) (quote :inline-max-bytes)))
-        (selfhost/effect-policy::optional-int?
-          ((core/map::get log) (quote :max-artifact-bytes-per-run)))
+        (if (selfhost/effect-policy::optional-int?
+              ((core/map::get log) (quote :max-artifact-bytes-per-run)))
+          (selfhost/effect-policy::optional-str?
+            ((core/map::get log) (quote :store-dir)))
+          false)
         false)
       false)))
 
 (def selfhost/effect-policy::store-resource-policy-valid?
   (fn (store)
-    (if ((selfhost/effect-policy::exact-map? store) [:max-run-bytes])
-      (selfhost/effect-policy::optional-int?
-        ((core/map::get store) (quote :max-run-bytes)))
+    (if ((selfhost/effect-policy::exact-map? store) [:dir :max-run-bytes])
+      (if (selfhost/effect-policy::optional-str? ((core/map::get store) (quote :dir)))
+        (selfhost/effect-policy::optional-int?
+          ((core/map::get store) (quote :max-run-bytes)))
+        false)
+      false)))
+
+(def selfhost/effect-policy::refs-resource-policy-valid?
+  (fn (refs)
+    (if ((selfhost/effect-policy::exact-map? refs) [:path])
+      (selfhost/effect-policy::optional-str? ((core/map::get refs) (quote :path)))
       false)))
 
 (def selfhost/effect-policy::runtime-resource-policy-valid?
@@ -144,40 +158,62 @@
 (def core/effects::resource-policy-authority
   (fn (request)
     (if ((selfhost/effect-policy::exact-map? request)
-          [:available-workers :kind :log :runtime :store :task :v])
+          [:available-workers :kind :log :refs :runtime :store :task :v])
       (let
         ((available-workers ((core/map::get request) (quote :available-workers)))
           (kind ((core/map::get request) (quote :kind)))
           (log ((core/map::get request) (quote :log)))
+          (refs ((core/map::get request) (quote :refs)))
           (runtime ((core/map::get request) (quote :runtime)))
           (store ((core/map::get request) (quote :store)))
           (task ((core/map::get request) (quote :task)))
           (version ((core/map::get request) (quote :v))))
         (if
-          (if ((core/eq? kind) "genesis/effect-resource-policy-request-v0.2")
-            (if (selfhost/policy::int? version) ((core/int::eq? version) 2) false)
+          (if ((core/eq? kind) "genesis/effect-resource-policy-request-v0.3")
+            (if (selfhost/policy::int? version) ((core/int::eq? version) 3) false)
             false)
           (if (selfhost/effect-policy::positive-int? available-workers)
             (if (selfhost/effect-policy::log-resource-policy-valid? log)
-              (if (selfhost/effect-policy::runtime-resource-policy-valid? runtime)
-                (if (selfhost/effect-policy::store-resource-policy-valid? store)
-                  (if (selfhost/effect-policy::task-resource-policy-valid? task)
-                    (let
-                      ((configured-default ((core/map::get task) (quote :default-workers))))
+              (if (selfhost/effect-policy::refs-resource-policy-valid? refs)
+                (if (selfhost/effect-policy::runtime-resource-policy-valid? runtime)
+                  (if (selfhost/effect-policy::store-resource-policy-valid? store)
+                    (if (selfhost/effect-policy::task-resource-policy-valid? task)
+                      (let
+                        ((configured-default ((core/map::get task) (quote :default-workers)))
+                          (configured-log-store ((core/map::get log) (quote :store-dir)))
+                          (configured-refs ((core/map::get refs) (quote :path)))
+                          (configured-store ((core/map::get store) (quote :dir)))
+                          (normalized-inline
+                            (selfhost/effect-policy::normalize-positive-optional
+                              ((core/map::get log) (quote :inline-max-bytes)))))
                       {
-                        :kind "genesis/effect-resource-policy-result-v0.2"
+                        :kind "genesis/effect-resource-policy-result-v0.3"
                         :log
                           {
-                            :inline-max-bytes
-                              (selfhost/effect-policy::normalize-positive-optional
-                                ((core/map::get log) (quote :inline-max-bytes)))
+                            :inline-max-bytes normalized-inline
                             :max-artifact-bytes-per-run
                               (selfhost/effect-policy::normalize-positive-optional
-                                ((core/map::get log) (quote :max-artifact-bytes-per-run)))}
+                                ((core/map::get log) (quote :max-artifact-bytes-per-run)))
+                            :store-dir
+                              (if (selfhost/policy::nil? configured-log-store)
+                                (if (selfhost/policy::nil? normalized-inline)
+                                  nil
+                                  ".genesis/store")
+                                configured-log-store)}
+                        :refs
+                          {
+                            :path
+                              (if (selfhost/policy::nil? configured-refs)
+                                ".genesis/refs.gc"
+                                configured-refs)}
                         :request-h (selfhost/hash::hash-term request)
                         :runtime runtime
                         :store
                           {
+                            :dir
+                              (if (selfhost/policy::nil? configured-store)
+                                ".genesis/store"
+                                configured-store)
                             :max-run-bytes
                               (selfhost/effect-policy::normalize-positive-optional
                                 ((core/map::get store) (quote :max-run-bytes)))}
@@ -194,15 +230,17 @@
                             :max-time-ms-per-task
                               ((core/map::get task) (quote :max-time-ms-per-task))
                             :max-workers ((core/map::get task) (quote :max-workers))}
-                        :v 2})
+                        :v 3})
+                      ((core/error::make2 "core/policy/authority")
+                        "effect task resource policy must contain exact nonnegative limits"))
                     ((core/error::make2 "core/policy/authority")
-                      "effect task resource policy must contain exact nonnegative limits"))
+                      "effect store resource policy must contain exact typed fields"))
                   ((core/error::make2 "core/policy/authority")
-                    "effect store resource policy must contain exact optional integer limits"))
+                    "effect runtime resource policy must contain exact nonnegative limits"))
                 ((core/error::make2 "core/policy/authority")
-                  "effect runtime resource policy must contain exact nonnegative limits"))
+                  "effect refs resource policy must contain an exact optional path"))
               ((core/error::make2 "core/policy/authority")
-                "effect log resource policy must contain exact optional integer limits"))
+                "effect log resource policy must contain exact typed fields"))
             ((core/error::make2 "core/policy/authority")
               "effect resource policy available-workers must be a positive integer"))
           ((core/error::make2 "core/policy/authority")

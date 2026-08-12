@@ -171,6 +171,15 @@ fn selfhost_authority_owns_adaptive_task_worker_default() {
         .max(1);
 
     assert_eq!(policy.task.default_workers, expected);
+    assert_eq!(policy.log.store_dir, None);
+    assert_eq!(
+        policy.store.dir,
+        Some(td.path().join(".genesis").join("store"))
+    );
+    assert_eq!(
+        policy.refs.path,
+        Some(td.path().join(".genesis").join("refs.gc"))
+    );
 }
 
 #[test]
@@ -231,6 +240,73 @@ max_run_bytes = 0
     assert_eq!(policy.log.inline_max_bytes, None);
     assert_eq!(policy.log.max_artifact_bytes_per_run, None);
     assert_eq!(policy.store.max_run_bytes, None);
+}
+
+#[test]
+fn selfhost_authority_owns_default_global_storage_locations() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[log]
+inline_max_bytes = 1
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert_eq!(
+        policy.log.store_dir,
+        Some(td.path().join(".genesis").join("store"))
+    );
+    assert_eq!(
+        policy.store.dir,
+        Some(td.path().join(".genesis").join("store"))
+    );
+    assert_eq!(
+        policy.refs.path,
+        Some(td.path().join(".genesis").join("refs.gc"))
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_explicit_global_storage_locations() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[log]
+store_dir = "./log-store"
+
+[refs]
+path = "./state/refs.gc"
+
+[store]
+dir = "./content-store"
+"#,
+    )
+    .unwrap();
+
+    let artifact = selfhost_artifact();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .unwrap();
+
+    assert_eq!(policy.log.store_dir, Some(td.path().join("./log-store")));
+    assert_eq!(policy.refs.path, Some(td.path().join("./state/refs.gc")));
+    assert_eq!(policy.store.dir, Some(td.path().join("./content-store")));
 }
 
 #[test]
