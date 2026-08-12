@@ -2,49 +2,27 @@ use super::*;
 #[path = "ffi_policy.rs"]
 mod policy;
 
-fn ffi_signed_policy_required(pol: Option<&OpPolicy>) -> bool {
-    pol.and_then(|p| p.extra.get("signed_policy_required"))
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false)
-}
-
 fn is_hex64(s: &str) -> bool {
     s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
-fn ffi_required_nonempty_string(
-    pol: Option<&OpPolicy>,
-    key: &str,
-    op: &str,
-) -> Result<String, String> {
-    let Some(pol) = pol else {
-        return Err(format!(
-            "{op} requires per-op {key} when signed_policy_required=true"
-        ));
-    };
-    let Some(raw) = pol.extra.get(key).and_then(|v| v.as_str()) else {
-        return Err(format!(
-            "{op} requires per-op {key} when signed_policy_required=true"
-        ));
-    };
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(format!(
-            "{op} requires non-empty {key} when signed_policy_required=true"
-        ));
-    }
-    Ok(trimmed.to_string())
+#[derive(Debug, Clone)]
+struct FfiSignedPolicyMetadata {
+    policy_artifact_h: String,
+    policy_signature_h: String,
+    policy_key_id: String,
+    evidence_mode: String,
 }
 
-fn ffi_enforce_signed_policy_opt_in(
+fn ffi_signed_policy_metadata(
     op: &str,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
-) -> Result<(), Value> {
-    if !ffi_signed_policy_required(pol) {
-        return Ok(());
+) -> Result<Option<FfiSignedPolicyMetadata>, Value> {
+    if !policy::signed_policy_required(pol) {
+        return Ok(None);
     }
-    let policy_artifact_h = ffi_required_nonempty_string(pol, "policy_artifact_h", op)
+    let policy_artifact_h = policy::required_signed_string(pol, "policy_artifact_h", op)
         .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
     if !is_hex64(&policy_artifact_h) {
         return Err(mk_error(
@@ -54,7 +32,7 @@ fn ffi_enforce_signed_policy_opt_in(
             Some(op),
         ));
     }
-    let policy_signature_h = ffi_required_nonempty_string(pol, "policy_signature_h", op)
+    let policy_signature_h = policy::required_signed_string(pol, "policy_signature_h", op)
         .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
     if !is_hex64(&policy_signature_h) {
         return Err(mk_error(
@@ -64,9 +42,9 @@ fn ffi_enforce_signed_policy_opt_in(
             Some(op),
         ));
     }
-    let _policy_key_id = ffi_required_nonempty_string(pol, "policy_key_id", op)
+    let policy_key_id = policy::required_signed_string(pol, "policy_key_id", op)
         .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
-    let evidence_mode = ffi_required_nonempty_string(pol, "evidence_mode", op)
+    let evidence_mode = policy::required_signed_string(pol, "evidence_mode", op)
         .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
     if evidence_mode != "deterministic" {
         return Err(mk_error(
@@ -76,7 +54,12 @@ fn ffi_enforce_signed_policy_opt_in(
             Some(op),
         ));
     }
-    Ok(())
+    Ok(Some(FfiSignedPolicyMetadata {
+        policy_artifact_h,
+        policy_signature_h,
+        policy_key_id,
+        evidence_mode,
+    }))
 }
 
 fn ffi_call_payload_len(payload: &Term) -> usize {
@@ -123,7 +106,7 @@ fn ffi_boundary_envelope(
     op: &str,
     payload: &Term,
     response: Term,
-    pol: Option<&OpPolicy>,
+    signed_policy: Option<&FfiSignedPolicyMetadata>,
 ) -> Value {
     let request_envelope = Term::Map(
         [
@@ -159,49 +142,24 @@ fn ffi_boundary_envelope(
     );
     envelope.insert(TermOrdKey(Term::symbol(":result")), response);
 
-    if ffi_signed_policy_required(pol) {
-        let policy_artifact_h = pol
-            .and_then(|p| p.extra.get("policy_artifact_h"))
-            .and_then(|v| v.as_str())
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .unwrap_or("");
-        let policy_signature_h = pol
-            .and_then(|p| p.extra.get("policy_signature_h"))
-            .and_then(|v| v.as_str())
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .unwrap_or("");
-        let policy_key_id = pol
-            .and_then(|p| p.extra.get("policy_key_id"))
-            .and_then(|v| v.as_str())
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .unwrap_or("");
-        let evidence_mode = pol
-            .and_then(|p| p.extra.get("evidence_mode"))
-            .and_then(|v| v.as_str())
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .unwrap_or("deterministic");
-
+    if let Some(signed_policy) = signed_policy {
         let provenance = Term::Map(
             [
                 (
                     TermOrdKey(Term::symbol(":policy-artifact-h")),
-                    Term::Str(policy_artifact_h.to_string()),
+                    Term::Str(signed_policy.policy_artifact_h.clone()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":policy-signature-h")),
-                    Term::Str(policy_signature_h.to_string()),
+                    Term::Str(signed_policy.policy_signature_h.clone()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":policy-key-id")),
-                    Term::Str(policy_key_id.to_string()),
+                    Term::Str(signed_policy.policy_key_id.clone()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":evidence-mode")),
-                    Term::Str(evidence_mode.to_string()),
+                    Term::Str(signed_policy.evidence_mode.clone()),
                 ),
                 (TermOrdKey(Term::symbol(":request-h")), Term::Str(request_h)),
                 (TermOrdKey(Term::symbol(":result-h")), Term::Str(result_h)),
@@ -324,8 +282,8 @@ fn ffi_common_preflight(
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
-) -> Result<crate::runner_ffi_schema::FfiSchemaIds, Value> {
-    ffi_enforce_signed_policy_opt_in(op, pol, error_tok)?;
+) -> Result<FfiPreflight, Value> {
+    let signed_policy = ffi_signed_policy_metadata(op, pol, error_tok)?;
     if ffi_bridge_digest_pin_is_required(pol) && ffi_bridge_digest_pin_from_policy(pol).is_none() {
         return Err(mk_error(
             error_tok,
@@ -357,7 +315,15 @@ fn ffi_common_preflight(
     };
     let _ = ffi_check_schema_ids(op, &schema_ids, pol, error_tok)?;
     ffi_validate_request_schema(op, payload, &schema_ids, error_tok)?;
-    Ok(schema_ids)
+    Ok(FfiPreflight {
+        schema_ids,
+        signed_policy,
+    })
+}
+
+struct FfiPreflight {
+    schema_ids: crate::runner_ffi_schema::FfiSchemaIds,
+    signed_policy: Option<FfiSignedPolicyMetadata>,
 }
 
 fn ffi_common_bridge_call(
@@ -366,6 +332,7 @@ fn ffi_common_bridge_call(
     payload: &Term,
     pol: Option<&OpPolicy>,
     schema_ids: &crate::runner_ffi_schema::FfiSchemaIds,
+    signed_policy: Option<&FfiSignedPolicyMetadata>,
     error_tok: SealId,
 ) -> Value {
     match call_host_bridge(bridge_runtime, "host/ffi", op, payload, pol) {
@@ -373,7 +340,7 @@ fn ffi_common_bridge_call(
             if let Err(err) = ffi_validate_response_schema(op, &response, schema_ids, error_tok) {
                 return err;
             }
-            ffi_boundary_envelope(op, payload, response, pol)
+            ffi_boundary_envelope(op, payload, response, signed_policy)
         }
         Err(err) => mk_bridge_error(error_tok, &err, Some(op)),
     }
@@ -386,8 +353,8 @@ fn capability_host_ffi_call(
     pol: Option<&OpPolicy>,
     error_tok: SealId,
 ) -> Value {
-    let schema_ids = match ffi_common_preflight(op, payload, pol, error_tok) {
-        Ok(ids) => ids,
+    let preflight = match ffi_common_preflight(op, payload, pol, error_tok) {
+        Ok(preflight) => preflight,
         Err(err) => return err,
     };
     let abi_id = match payload_required_string_or_symbol_field(payload, op, ":abi-id") {
@@ -451,7 +418,7 @@ fn capability_host_ffi_call(
     {
         return err;
     }
-    if ffi_signed_policy_required(pol) {
+    if preflight.signed_policy.is_some() {
         let max_call_payload_bytes =
             match policy::positive_usize_from_policy(pol, "max_call_payload_bytes") {
                 Ok(Some(v)) => v,
@@ -480,7 +447,15 @@ fn capability_host_ffi_call(
         }
     }
 
-    ffi_common_bridge_call(bridge_runtime, op, payload, pol, &schema_ids, error_tok)
+    ffi_common_bridge_call(
+        bridge_runtime,
+        op,
+        payload,
+        pol,
+        &preflight.schema_ids,
+        preflight.signed_policy.as_ref(),
+        error_tok,
+    )
 }
 
 fn capability_host_ffi_buffer_pin(
@@ -490,8 +465,8 @@ fn capability_host_ffi_buffer_pin(
     pol: Option<&OpPolicy>,
     error_tok: SealId,
 ) -> Value {
-    let schema_ids = match ffi_common_preflight(op, payload, pol, error_tok) {
-        Ok(ids) => ids,
+    let preflight = match ffi_common_preflight(op, payload, pol, error_tok) {
+        Ok(preflight) => preflight,
         Err(err) => return err,
     };
     let abi_id = match payload_required_string_or_symbol_field(payload, op, ":abi-id") {
@@ -558,7 +533,15 @@ fn capability_host_ffi_buffer_pin(
         );
     }
 
-    ffi_common_bridge_call(bridge_runtime, op, payload, pol, &schema_ids, error_tok)
+    ffi_common_bridge_call(
+        bridge_runtime,
+        op,
+        payload,
+        pol,
+        &preflight.schema_ids,
+        preflight.signed_policy.as_ref(),
+        error_tok,
+    )
 }
 
 fn capability_host_ffi_buffer_unpin(
@@ -568,8 +551,8 @@ fn capability_host_ffi_buffer_unpin(
     pol: Option<&OpPolicy>,
     error_tok: SealId,
 ) -> Value {
-    let schema_ids = match ffi_common_preflight(op, payload, pol, error_tok) {
-        Ok(ids) => ids,
+    let preflight = match ffi_common_preflight(op, payload, pol, error_tok) {
+        Ok(preflight) => preflight,
         Err(err) => return err,
     };
     let abi_id = match payload_required_string_or_symbol_field(payload, op, ":abi-id") {
@@ -603,7 +586,15 @@ fn capability_host_ffi_buffer_unpin(
     {
         return err;
     }
-    ffi_common_bridge_call(bridge_runtime, op, payload, pol, &schema_ids, error_tok)
+    ffi_common_bridge_call(
+        bridge_runtime,
+        op,
+        payload,
+        pol,
+        &preflight.schema_ids,
+        preflight.signed_policy.as_ref(),
+        error_tok,
+    )
 }
 
 pub(super) fn capability_host_ffi(

@@ -213,7 +213,7 @@ Supported keys:
 - `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
 
-For artifact-only production policy loads, GenesisCode authority protocol v0.9
+For artifact-only production policy loads, GenesisCode authority protocol v0.10
 normalizes `url_allow`, `remote_allow`, `allow_http`, `wasi_network_profile`,
 `allow_bind_hosts`, `allow_bind_ports`, and `max_request_bytes` into closed typed
 states before any network, sync, publication, or store-remote consumer runs.
@@ -264,11 +264,14 @@ reachable only through the explicit compatibility/oracle path during R4.2.d.
 - `evidence_mode` (string): must be `"deterministic"` when `signed_policy_required = true`.
 - `max_call_payload_bytes` (int): required positive payload bound for `host/ffi::call` when `signed_policy_required = true`.
   - File-backed production policy loads transport ABI-ID, library, symbol, and
-    schema-ID lists plus buffer and call-payload bounds through
+    schema-ID lists, buffer and call-payload bounds, the normalized signed-policy
+    decision, and all four optional signed-policy metadata strings through
     `core/effects::policy-authority`; GenesisCode normalizes their closed states,
-    and FFI dispatch enforces only the validated installed result. Signed-policy
-    provenance, bridge identity, schema implementation, matching, payload
-    measurement, transport, cancellation, and replay remain host mechanisms.
+    and FFI dispatch enforces only the validated installed result. Hexadecimal
+    form, deterministic evidence-mode validation, signed-policy provenance and
+    signature verification, bridge identity, schema implementation, matching,
+    payload measurement, transport, cancellation, and replay remain host
+    mechanisms.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.

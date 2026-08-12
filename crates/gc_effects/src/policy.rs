@@ -217,6 +217,11 @@ pub(crate) struct AuthorizedFfiPolicy {
     pub schema_ids: AuthorizedStringList,
     pub max_buffer_bytes: AuthorizedMaxBytes,
     pub max_call_payload_bytes: AuthorizedMaxBytes,
+    pub signed_policy_required: bool,
+    pub policy_artifact_h: AuthorizedOptionalString,
+    pub policy_signature_h: AuthorizedOptionalString,
+    pub policy_key_id: AuthorizedOptionalString,
+    pub evidence_mode: AuthorizedOptionalString,
 }
 
 #[derive(Debug, Clone)]

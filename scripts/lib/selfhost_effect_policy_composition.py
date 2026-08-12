@@ -86,6 +86,7 @@ DECISIONS = [
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
     "per-operation-ffi-allowlist-and-bound-policy",
+    "per-operation-ffi-signed-policy-metadata",
     "per-operation-max-bytes-policy",
     "per-operation-network-policy",
     "per-operation-plugin-allowlist-policy",
@@ -97,7 +98,7 @@ DECISIONS = [
 RESIDUALS = {
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
-    "ffi-plugin-and-model-policy",
+    "ffi-bridge-identity-and-model-provider-lifecycle",
     "global-store-remote-transport-tls-and-auth-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
@@ -127,11 +128,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.9",
+        "requestKind": "genesis/effect-policy-authority-request-v0.10",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.3",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.3",
-        "resultKind": "genesis/effect-policy-authority-result-v0.9",
+        "resultKind": "genesis/effect-policy-authority-result-v0.10",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -147,7 +148,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.13",
+        "version": "0.1.14",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -427,6 +428,8 @@ def static_check(root: Path, profile):
         root / "crates/gc_effects/src/runner_capability_dispatch/ffi_policy.rs"
     ).read_text()
     for start in (
+        "pub(super) fn signed_policy_required",
+        "pub(super) fn required_signed_string",
         "pub(super) fn allowlist_from_policy",
         "pub(super) fn schema_allowlist_from_policy",
         "pub(super) fn positive_usize_from_policy",
@@ -440,6 +443,15 @@ def static_check(root: Path, profile):
     for operation in ("call", "buffer_pin", "buffer_unpin"):
         if ffi_dispatch.count(f"fn capability_host_ffi_{operation}(") != 1:
             fail(f"ffi operation policy inventory drift: {operation}")
+    for token in (
+        'extra.get("signed_policy_required")',
+        'extra.get("policy_artifact_h")',
+        'extra.get("policy_signature_h")',
+        'extra.get("policy_key_id")',
+        'extra.get("evidence_mode")',
+    ):
+        if token in ffi_dispatch:
+            fail(f"ffi dispatch bypasses signed-policy authority state: {token}")
     effect_source = (root / profile["sourceModule"]).read_text()
     cap_body = effect_source.split("(def selfhost/effect-policy::cap", 1)[1].split(
         "(def core/effects::policy-authority", 1

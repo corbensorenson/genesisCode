@@ -1,10 +1,15 @@
 (def selfhost/effect-ffi::fields
   [
     :abi-ids
+    :evidence-mode
     :libraries
     :max-buffer-bytes
     :max-call-payload-bytes
+    :policy-artifact-h
+    :policy-key-id
+    :policy-signature-h
     :schema-ids
+    :signed-policy-required
     :symbols])
 
 (def selfhost/effect-ffi::input-valid?
@@ -20,8 +25,26 @@
                   ((core/map::get value) (quote :symbols)))
               (if (selfhost/effect-crypto::limit-input?
                     ((core/map::get value) (quote :max-buffer-bytes)))
-                (selfhost/effect-crypto::limit-input?
-                  ((core/map::get value) (quote :max-call-payload-bytes)))
+                (if (selfhost/effect-crypto::limit-input?
+                      ((core/map::get value) (quote :max-call-payload-bytes)))
+                  (if (selfhost/effect-network::optional-string-input?
+                        ((core/map::get value) (quote :policy-artifact-h)))
+                    (if (selfhost/effect-network::optional-string-input?
+                          ((core/map::get value) (quote :policy-signature-h)))
+                      (if (selfhost/effect-network::optional-string-input?
+                            ((core/map::get value) (quote :policy-key-id)))
+                        (if (selfhost/effect-network::optional-string-input?
+                              ((core/map::get value) (quote :evidence-mode)))
+                          ((core/sym::eq?
+                             (core/data::tag
+                               ((core/map::get value)
+                                 (quote :signed-policy-required))))
+                            (quote :bool))
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
                 false)
               false)
             false)
@@ -32,10 +55,15 @@
 (def selfhost/effect-ffi::empty-input
   {
     :abi-ids nil
+    :evidence-mode nil
     :libraries nil
     :max-buffer-bytes nil
     :max-call-payload-bytes nil
+    :policy-artifact-h nil
+    :policy-key-id nil
+    :policy-signature-h nil
     :schema-ids nil
+    :signed-policy-required false
     :symbols nil})
 
 (def selfhost/effect-ffi::policy
@@ -49,6 +77,9 @@
           :abi-ids
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :abi-ids)))
+          :evidence-mode
+            (selfhost/effect-network::string-policy
+              ((core/map::get ffi) (quote :evidence-mode)))
           :libraries
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :libraries)))
@@ -58,9 +89,20 @@
           :max-call-payload-bytes
             ((selfhost/effect-crypto::positive-limit-policy
                ((core/map::get ffi) (quote :max-call-payload-bytes))) platform-max)
+          :policy-artifact-h
+            (selfhost/effect-network::string-policy
+              ((core/map::get ffi) (quote :policy-artifact-h)))
+          :policy-key-id
+            (selfhost/effect-network::string-policy
+              ((core/map::get ffi) (quote :policy-key-id)))
+          :policy-signature-h
+            (selfhost/effect-network::string-policy
+              ((core/map::get ffi) (quote :policy-signature-h)))
           :schema-ids
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :schema-ids)))
+          :signed-policy-required
+            ((core/map::get ffi) (quote :signed-policy-required))
           :symbols
             (selfhost/effect-plugin::list-policy
               ((core/map::get ffi) (quote :symbols)))}))))

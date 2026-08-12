@@ -1,5 +1,54 @@
 use super::*;
-use crate::policy::{AuthorizedMaxBytes, AuthorizedStringList};
+use crate::policy::{AuthorizedMaxBytes, AuthorizedOptionalString, AuthorizedStringList};
+
+pub(super) fn signed_policy_required(pol: Option<&OpPolicy>) -> bool {
+    if let Some(ffi) = pol.and_then(|policy| policy.authorized_ffi.as_ref()) {
+        return ffi.signed_policy_required;
+    }
+    pol.and_then(|policy| policy.extra.get("signed_policy_required"))
+        .and_then(toml::Value::as_bool)
+        .unwrap_or(false)
+}
+
+pub(super) fn required_signed_string(
+    pol: Option<&OpPolicy>,
+    key: &str,
+    op: &str,
+) -> Result<String, String> {
+    if let Some(ffi) = pol.and_then(|policy| policy.authorized_ffi.as_ref()) {
+        let state = match key {
+            "policy_artifact_h" => &ffi.policy_artifact_h,
+            "policy_signature_h" => &ffi.policy_signature_h,
+            "policy_key_id" => &ffi.policy_key_id,
+            "evidence_mode" => &ffi.evidence_mode,
+            _ => return Err(format!("unknown ffi signed-policy field `{key}`")),
+        };
+        return match state {
+            AuthorizedOptionalString::Absent | AuthorizedOptionalString::InvalidType => Err(
+                format!("{op} requires per-op {key} when signed_policy_required=true"),
+            ),
+            AuthorizedOptionalString::Empty => Err(format!(
+                "{op} requires non-empty {key} when signed_policy_required=true"
+            )),
+            AuthorizedOptionalString::Valid(value) => Ok(value.clone()),
+        };
+    }
+    let Some(raw) = pol
+        .and_then(|policy| policy.extra.get(key))
+        .and_then(toml::Value::as_str)
+    else {
+        return Err(format!(
+            "{op} requires per-op {key} when signed_policy_required=true"
+        ));
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(format!(
+            "{op} requires non-empty {key} when signed_policy_required=true"
+        ));
+    }
+    Ok(trimmed.to_string())
+}
 
 fn authorized_allowlist(
     state: &AuthorizedStringList,
@@ -127,6 +176,11 @@ mod tests {
             schema_ids: AuthorizedStringList::Valid(vec!["schema.v1".to_string()]),
             max_buffer_bytes: AuthorizedMaxBytes::Valid(64),
             max_call_payload_bytes: AuthorizedMaxBytes::Valid(128),
+            signed_policy_required: true,
+            policy_artifact_h: AuthorizedOptionalString::Valid("aa".repeat(32)),
+            policy_signature_h: AuthorizedOptionalString::Valid("bb".repeat(32)),
+            policy_key_id: AuthorizedOptionalString::Valid("root-key".to_string()),
+            evidence_mode: AuthorizedOptionalString::Valid("deterministic".to_string()),
         });
         assert_eq!(
             allowlist_from_policy(Some(&policy), "allow_abi_ids", "host/ffi::call").unwrap(),
@@ -152,6 +206,11 @@ mod tests {
             positive_usize_from_policy(Some(&policy), "max_call_payload_bytes").unwrap(),
             Some(128)
         );
+        assert!(signed_policy_required(Some(&policy)));
+        assert_eq!(
+            required_signed_string(Some(&policy), "policy_key_id", "host/ffi::call").unwrap(),
+            "root-key"
+        );
     }
 
     #[test]
@@ -163,6 +222,11 @@ mod tests {
             schema_ids: AuthorizedStringList::Absent,
             max_buffer_bytes: AuthorizedMaxBytes::NonPositive,
             max_call_payload_bytes: AuthorizedMaxBytes::PlatformOverflow,
+            signed_policy_required: true,
+            policy_artifact_h: AuthorizedOptionalString::InvalidType,
+            policy_signature_h: AuthorizedOptionalString::Empty,
+            policy_key_id: AuthorizedOptionalString::Absent,
+            evidence_mode: AuthorizedOptionalString::Valid("random".to_string()),
         });
         assert_eq!(
             allowlist_from_policy(Some(&policy), "allow_abi_ids", "host/ffi::call").unwrap_err(),
@@ -187,6 +251,16 @@ mod tests {
                 "max_call_payload_bytes is too large for this platform (max {})",
                 usize::MAX
             )
+        );
+        assert_eq!(
+            required_signed_string(Some(&policy), "policy_artifact_h", "host/ffi::call")
+                .unwrap_err(),
+            "host/ffi::call requires per-op policy_artifact_h when signed_policy_required=true"
+        );
+        assert_eq!(
+            required_signed_string(Some(&policy), "policy_signature_h", "host/ffi::call")
+                .unwrap_err(),
+            "host/ffi::call requires non-empty policy_signature_h when signed_policy_required=true"
         );
     }
 }

@@ -160,8 +160,13 @@ fn ffi_policy_term(
     max_buffer_bytes: Term,
     max_call_payload_bytes: Term,
 ) -> Term {
+    let absent_string = optional_value_policy(":absent", Term::Nil);
     Term::Map(BTreeMap::from([
         (TermOrdKey(Term::symbol(":abi-ids")), abi_ids),
+        (
+            TermOrdKey(Term::symbol(":evidence-mode")),
+            absent_string.clone(),
+        ),
         (TermOrdKey(Term::symbol(":libraries")), libraries),
         (
             TermOrdKey(Term::symbol(":max-buffer-bytes")),
@@ -171,7 +176,23 @@ fn ffi_policy_term(
             TermOrdKey(Term::symbol(":max-call-payload-bytes")),
             max_call_payload_bytes,
         ),
+        (
+            TermOrdKey(Term::symbol(":policy-artifact-h")),
+            absent_string.clone(),
+        ),
+        (
+            TermOrdKey(Term::symbol(":policy-key-id")),
+            absent_string.clone(),
+        ),
+        (
+            TermOrdKey(Term::symbol(":policy-signature-h")),
+            absent_string,
+        ),
         (TermOrdKey(Term::symbol(":schema-ids")), schema_ids),
+        (
+            TermOrdKey(Term::symbol(":signed-policy-required")),
+            Term::Bool(false),
+        ),
         (TermOrdKey(Term::symbol(":symbols")), symbols),
     ]))
 }
@@ -1125,6 +1146,11 @@ allow_symbols = [" sum_f64 "]
 allow_schema_ids = [" genesis/ffi.request.call.v1 "]
 max_buffer_bytes = 64
 max_call_payload_bytes = 128
+signed_policy_required = true
+policy_artifact_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+policy_signature_h = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+policy_key_id = " root-key "
+evidence_mode = " deterministic "
 "#,
     )
     .unwrap();
@@ -1159,6 +1185,23 @@ max_call_payload_bytes = 128
     );
     assert_eq!(ffi.max_buffer_bytes, AuthorizedMaxBytes::Valid(64));
     assert_eq!(ffi.max_call_payload_bytes, AuthorizedMaxBytes::Valid(128));
+    assert!(ffi.signed_policy_required);
+    assert_eq!(
+        ffi.policy_artifact_h,
+        AuthorizedOptionalString::Valid("a".repeat(64))
+    );
+    assert_eq!(
+        ffi.policy_signature_h,
+        AuthorizedOptionalString::Valid("b".repeat(64))
+    );
+    assert_eq!(
+        ffi.policy_key_id,
+        AuthorizedOptionalString::Valid("root-key".to_string())
+    );
+    assert_eq!(
+        ffi.evidence_mode,
+        AuthorizedOptionalString::Valid("deterministic".to_string())
+    );
 }
 
 #[test]
@@ -1174,6 +1217,9 @@ allow_libraries = [7]
 allow_symbols = ["", "   "]
 max_buffer_bytes = "large"
 max_call_payload_bytes = 0
+signed_policy_required = "yes"
+policy_artifact_h = 7
+policy_signature_h = "   "
 "#,
     )
     .unwrap();
@@ -1195,6 +1241,11 @@ max_call_payload_bytes = 0
     assert_eq!(ffi.schema_ids, AuthorizedStringList::Absent);
     assert_eq!(ffi.max_buffer_bytes, AuthorizedMaxBytes::InvalidType);
     assert_eq!(ffi.max_call_payload_bytes, AuthorizedMaxBytes::NonPositive);
+    assert!(!ffi.signed_policy_required);
+    assert_eq!(ffi.policy_artifact_h, AuthorizedOptionalString::InvalidType);
+    assert_eq!(ffi.policy_signature_h, AuthorizedOptionalString::Empty);
+    assert_eq!(ffi.policy_key_id, AuthorizedOptionalString::Absent);
+    assert_eq!(ffi.evidence_mode, AuthorizedOptionalString::Absent);
 }
 
 #[test]
@@ -1214,6 +1265,21 @@ fn selfhost_authority_rejects_malformed_ffi_decisions() {
         )
     };
     decode_ffi_policy(&valid(), true).unwrap();
+
+    let Term::Map(mut invalid_signed_required) = valid() else {
+        return;
+    };
+    invalid_signed_required.insert(
+        TermOrdKey(Term::symbol(":signed-policy-required")),
+        Term::symbol(":yes"),
+    );
+    let Term::Map(mut contradictory_key_id) = valid() else {
+        return;
+    };
+    contradictory_key_id.insert(
+        TermOrdKey(Term::symbol(":policy-key-id")),
+        optional_value_policy(":valid", Term::Nil),
+    );
 
     let cases = [
         ffi_policy_term(
@@ -1243,6 +1309,8 @@ fn selfhost_authority_rejects_malformed_ffi_decisions() {
             absent_limit.clone(),
             absent_limit.clone(),
         ),
+        Term::Map(invalid_signed_required),
+        Term::Map(contradictory_key_id),
     ];
     for decision in cases {
         decode_ffi_policy(&decision, true)

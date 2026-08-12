@@ -57,7 +57,7 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed six-field map with kind
-`genesis/effect-policy-authority-request-v0.9`, version `9`, the operation string,
+`genesis/effect-policy-authority-request-v0.10`, version `10`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
@@ -90,9 +90,14 @@ uses an exact integer or `:invalid-type`.
 The nested plugin map has exactly `:plugins`, `:commands`, and `:schema-ids`;
 all three use exact string or closed invalid observation transport.
 The nested FFI map has exactly `:abi-ids`, `:libraries`, `:symbols`,
-`:schema-ids`, `:max-buffer-bytes`, and `:max-call-payload-bytes`. Its four
-allowlists use exact string or closed invalid observation transport; both bounds
-use an exact integer or `:invalid-type`.
+`:schema-ids`, `:max-buffer-bytes`, `:max-call-payload-bytes`,
+`:signed-policy-required`, `:policy-artifact-h`, `:policy-signature-h`,
+`:policy-key-id`, and `:evidence-mode`. Its four allowlists use exact string or
+closed invalid observation transport; both bounds use an exact integer or
+`:invalid-type`; each optional metadata string uses the exact string, `nil`, or
+`:invalid-type`. Rust transports a boolean `:signed-policy-required`, mapping a
+missing or non-boolean legacy input to `false`, and GenesisCode owns that
+normalized decision.
 
 Before those per-operation requests, the inventory authority receives a closed
 four-field `genesis/effect-policy-inventory-request-v0.1` map containing version
@@ -105,12 +110,12 @@ oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
 The authority returns a closed fourteen-field
-`genesis/effect-policy-authority-result-v0.9` map containing the exact operation,
+`genesis/effect-policy-authority-result-v0.10` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
 `:process-program-policy`, private `:database-policy`, private `:network-policy`,
 private `:crypto-policy`, private `:plugin-policy`, private `:ffi-policy`,
-lowercase canonical request hash, and version `9`.
+lowercase canonical request hash, and version `10`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -135,9 +140,11 @@ vector. The crypto result is an exact fourteen-field map. Its two allowlists use
 the same closed list state; only algorithm values are ASCII-lowercased. Its
 twelve bounds use the closed positive-limit state above. The plugin result is an
 exact three-field map whose values use the closed list state above. Malformed
-requests return sealed errors. The FFI result is an exact six-field map whose
-four allowlists use the closed list state above and whose two bounds use the
-closed positive-limit state above.
+requests return sealed errors. The FFI result is an exact eleven-field map whose
+four allowlists use the closed list state above, whose two bounds use the closed
+positive-limit state above, whose four optional metadata values use exact
+`absent|invalid-type|empty|valid` string states, and whose signed-policy decision
+is boolean. Only a `valid` string state carries a nonempty, trimmed string.
 The host rejects
 unknown fields, identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
@@ -149,7 +156,7 @@ installs the GenesisCode-selected base directory, create-directories flag,
 timeout, per-operation log limit, closed max-byte state, closed normalized
 process-program state, closed database allowlist/bound states, closed network
 allowlist/option/bind/bound states, closed crypto allowlist/bound states, and
-closed plugin and FFI allowlist/bound states into enforcement;
+closed plugin and FFI allowlist/bound/signed-metadata states into enforcement;
 its separately parsed values are used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
@@ -298,14 +305,17 @@ complete plugin, command, and optional schema-ID list states shared by host and
 editor plugin commands. Bridge command/profile selection, executable path and
 digest verification, schema implementation, matching, transport, model-provider
 lifecycle, cancellation, and replay remain in the named host residuals.
-FFI allowlist and byte-bound configuration is no longer residual: GenesisCode
+FFI allowlist, byte-bound, and signed-metadata selection is no longer residual: GenesisCode
 owns ABI-ID, library, symbol, optional schema-ID, buffer-size, and call-payload
-states across all three FFI operations. The retained combined
-`ffi-plugin-and-model-policy` residual now covers signed-policy metadata and
-provenance validation, bridge command/profile selection, executable path and
+states across all three FFI operations. It also owns the normalized
+`signed_policy_required` decision and the closed optional-string states for the
+policy artifact hash, signature hash, key ID, and evidence mode. The retained
+`ffi-bridge-identity-and-model-provider-lifecycle` residual covers hexadecimal
+format and deterministic-mode checks, signed-policy provenance and signature
+validation, bridge command/profile selection, executable path and
 digest verification, schema implementation, matching, transport, model-provider
 lifecycle, cancellation, and replay; it does not cover the migrated FFI or
-plugin allowlist and bound decisions.
+plugin policy-selection decisions.
 
 This contract does not promote `SD-EFFECT-POLICY`, close R4.2.d or SH-C, establish
 H2/H3/H4, authorize release, or authorize GenesisBench, Genesis Foundry,

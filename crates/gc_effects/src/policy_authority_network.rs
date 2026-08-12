@@ -33,7 +33,7 @@ fn optional_bool_input(value: Option<&toml::Value>) -> Term {
     }
 }
 
-fn optional_string_input(value: Option<&toml::Value>) -> Term {
+pub(super) fn optional_string_input(value: Option<&toml::Value>) -> Term {
     match value {
         None => Term::Nil,
         Some(value) => value
@@ -111,7 +111,7 @@ fn legacy_optional_bool(value: Option<&toml::Value>) -> AuthorizedOptionalBool {
     }
 }
 
-fn legacy_optional_string(value: Option<&toml::Value>) -> AuthorizedOptionalString {
+pub(super) fn legacy_optional_string(value: Option<&toml::Value>) -> AuthorizedOptionalString {
     match value {
         None => AuthorizedOptionalString::Absent,
         Some(value) => match value.as_str() {
@@ -200,20 +200,23 @@ fn decode_optional_bool(term: &Term) -> Result<AuthorizedOptionalBool, EffectsEr
     }
 }
 
-fn decode_optional_string(term: &Term) -> Result<AuthorizedOptionalString, EffectsError> {
+pub(super) fn decode_optional_string(
+    term: &Term,
+    field: &str,
+) -> Result<AuthorizedOptionalString, EffectsError> {
     let Term::Map(map) = term else {
-        return Err(authority_error(
-            "result :wasi-network-profile must be a data map",
-        ));
+        return Err(authority_error(format!(
+            "result {field} must be a data map"
+        )));
     };
     let expected: BTreeSet<_> = [":status", ":value"]
         .into_iter()
         .map(|key| TermOrdKey(Term::symbol(key)))
         .collect();
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected {
-        return Err(authority_error(
-            "result :wasi-network-profile field set mismatch",
-        ));
+        return Err(authority_error(format!(
+            "result {field} field set mismatch"
+        )));
     }
     match (
         map.get(&TermOrdKey(Term::symbol(":status"))),
@@ -233,9 +236,9 @@ fn decode_optional_string(term: &Term) -> Result<AuthorizedOptionalString, Effec
         {
             Ok(AuthorizedOptionalString::Valid(value.clone()))
         }
-        _ => Err(authority_error(
-            "result :wasi-network-profile status contradicts its value",
-        )),
+        _ => Err(authority_error(format!(
+            "result {field} status contradicts its value"
+        ))),
     }
 }
 
@@ -338,7 +341,10 @@ pub(super) fn decode(term: &Term, allowed: bool) -> Result<AuthorizedNetworkPoli
         url_allow: database::decode_string_list(field(":url-allow")?, ":url-allow")?,
         remote_allow: database::decode_string_list(field(":remote-allow")?, ":remote-allow")?,
         allow_http: decode_optional_bool(field(":allow-http")?)?,
-        wasi_network_profile: decode_optional_string(field(":wasi-network-profile")?)?,
+        wasi_network_profile: decode_optional_string(
+            field(":wasi-network-profile")?,
+            ":wasi-network-profile",
+        )?,
         bind_hosts: database::decode_string_list(field(":bind-hosts")?, ":bind-hosts")?,
         bind_ports: decode_bind_ports(field(":bind-ports")?)?,
         max_request_bytes: decode_max_bytes_policy(field(":max-request-bytes")?, true)?,
