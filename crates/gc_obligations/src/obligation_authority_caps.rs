@@ -80,13 +80,30 @@ fn typecheck_inputs(modules: &[LoadedModule]) -> Term {
     )
 }
 
-fn typecheck_module_inputs(modules: &[LoadedModule]) -> Vec<TypecheckModuleInput> {
+fn strict_typecheck_meta_for_validation(forms: &[Term]) -> Option<Term> {
+    let mut map = match extract_meta_static(forms) {
+        Some(Term::Map(map)) => map,
+        _ => BTreeMap::new(),
+    };
+    map.insert(
+        TermOrdKey(Term::symbol(":strict-effects")),
+        Term::Bool(true),
+    );
+    map.insert(TermOrdKey(Term::symbol(":strict-shapes")), Term::Bool(true));
+    Some(Term::Map(map))
+}
+
+fn typecheck_module_inputs(modules: &[LoadedModule], strict: bool) -> Vec<TypecheckModuleInput> {
     modules
         .iter()
         .map(|module| TypecheckModuleInput {
             path: module.entry.path.clone(),
             forms: module.forms.clone(),
-            meta: extract_meta_static(&module.forms),
+            meta: if strict {
+                strict_typecheck_meta_for_validation(&module.forms)
+            } else {
+                extract_meta_static(&module.forms)
+            },
         })
         .collect()
 }
@@ -94,10 +111,11 @@ fn typecheck_module_inputs(modules: &[LoadedModule]) -> Vec<TypecheckModuleInput
 fn validate_typecheck_obligation_report(
     report: &Term,
     modules: &[LoadedModule],
+    strict: bool,
     outer_ok: bool,
     outer_errors: &[String],
 ) -> Result<(), ObligationError> {
-    let decoded = decode_typecheck_report(report.clone(), &typecheck_module_inputs(modules))?;
+    let decoded = decode_typecheck_report(report.clone(), &typecheck_module_inputs(modules, strict))?;
     if decoded.ok != outer_ok || decoded.errors != outer_errors {
         return Err(authority_error(
             "typecheck report disagrees with the obligation result",

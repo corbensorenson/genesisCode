@@ -418,6 +418,38 @@ fn typecheck_obligation_authority_runs_existing_selfhost_checker() {
     .expect("invalid package typecheck result");
     assert!(!failed.ok);
     assert!(!failed.errors.is_empty());
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_typecheck_strict");
+    let strict_passed = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::TypecheckStrict,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("valid strict package typecheck result");
+    assert!(strict_passed.ok, "{:?}", strict_passed.errors);
+
+    let (_temp, store, manifest, modules) = authority_fixture("pkg_fail_typecheck_strict");
+    let strict_failed = evaluate_obligation_with_authority(
+        ObligationAuthorityOperation::TypecheckStrict,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+        &fixture_frontend(),
+        limits(),
+    )
+    .expect("invalid strict package typecheck result");
+    assert!(!strict_failed.ok);
+    assert!(
+        strict_failed
+            .errors
+            .iter()
+            .any(|error| { error.contains("strict effect mode forbids unknown effect ops") })
+    );
 }
 
 #[test]
@@ -450,6 +482,38 @@ fn typecheck_obligation_authority_rejects_open_module_observations() {
     );
     let error = invoke_authority(request, &fixture_frontend(), limits())
         .expect_err("host-supplied metadata must fail closed");
+    assert!(error.to_string().contains("sealed error"));
+
+    let mut strict_request = request_term(
+        ObligationAuthorityOperation::TypecheckStrict,
+        &store,
+        &manifest,
+        &modules,
+        &[],
+    )
+    .expect("strict typecheck request");
+    let Term::Map(strict_request_map) = &mut strict_request else {
+        panic!("request must be a map");
+    };
+    let Some(Term::Map(strict_inputs)) =
+        strict_request_map.get_mut(&TermOrdKey(Term::symbol(":inputs")))
+    else {
+        panic!("inputs must be a map");
+    };
+    let Some(Term::Vector(strict_observations)) =
+        strict_inputs.get_mut(&TermOrdKey(Term::symbol(":modules")))
+    else {
+        panic!("modules must be a vector");
+    };
+    let Term::Map(strict_module) = &mut strict_observations[0] else {
+        panic!("module must be a map");
+    };
+    strict_module.insert(
+        TermOrdKey(Term::symbol(":strict-effects")),
+        Term::Bool(false),
+    );
+    let error = invoke_authority(strict_request, &fixture_frontend(), limits())
+        .expect_err("host-supplied strictness must fail closed");
     assert!(error.to_string().contains("sealed error"));
 }
 

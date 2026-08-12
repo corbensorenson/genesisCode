@@ -36,6 +36,13 @@ CORPUS_DIR="$TMP_DIR/corpus"
 mkdir -p "$CORPUS_DIR"
 CORPUS_MANIFEST="$TMP_DIR/corpus.manifest"
 CASE_COUNT=0
+EXPECTED_CASE_COUNT="$(python3 - <<'PY'
+import json
+
+with open("policies/selfhost_typecheck_authority_v0.1.json", encoding="utf-8") as handle:
+    print(json.load(handle)["runtimeEvidence"]["corpusFixtureCount"])
+PY
+)"
 MISMATCHES=()
 
 for package in "$ROOT_DIR"/tests/spec/pkg_*/package.toml; do
@@ -103,8 +110,8 @@ PY
   CASE_COUNT=$((CASE_COUNT + 1))
 done
 
-if [[ "$CASE_COUNT" -ne 23 ]]; then
-  echo "selfhost-typecheck-authority: expected 23 corpus fixtures, observed $CASE_COUNT" >&2
+if [[ "$CASE_COUNT" -ne "$EXPECTED_CASE_COUNT" ]]; then
+  echo "selfhost-typecheck-authority: expected $EXPECTED_CASE_COUNT corpus fixtures, observed $CASE_COUNT" >&2
   exit 1
 fi
 if [[ "${#MISMATCHES[@]}" -ne 0 ]]; then

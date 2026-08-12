@@ -9,7 +9,7 @@
     "package": "gc_cli_driver_parity",
     "sunsetReviewDate": "2026-11-11"
   },
-  "contentIdentitySha256": "aa8d3f5a228e334e17408bf148da02c325a3b8c8b1883f2383d08d2fbc5772bd",
+  "contentIdentitySha256": "6fad624ec15f652dad561cd8b332e7f1aa87560d396568bd9cb0281c167313a4",
   "decisionInventory": [
     "abi-export-generation",
     "capability-summaries",
@@ -55,7 +55,7 @@
     "allocationLimit": 50000000,
     "classification": "E0-observation",
     "coldDefinition": "first-fresh-process-after-build",
-    "corpusFixtureCount": 23,
+    "corpusFixtureCount": 25,
     "corpusGlob": "tests/spec/pkg_*/package.toml",
     "lowAllocationControl": 1,
     "lowStepControl": 1,

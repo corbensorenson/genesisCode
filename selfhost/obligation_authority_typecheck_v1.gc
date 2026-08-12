@@ -1,0 +1,63 @@
+(def selfhost/obligation::strict-typecheck-meta
+  (fn (forms)
+    (let ((meta (core/cli::module-meta forms)))
+      (let ((base (if (selfhost/obligation::map? meta) meta {})))
+        (((core/map::put
+            (((core/map::put base) (quote :strict-effects)) true))
+           (quote :strict-shapes))
+          true)))))
+
+(def selfhost/obligation::typecheck-modules-loop
+  (fn (modules)
+    (fn (strict)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len modules))
+            out
+            (let ((module ((core/vec::get modules) index)))
+              ((((selfhost/obligation::typecheck-modules-loop modules) strict)
+                 ((core/int::add index) 1))
+                ((core/vec::push out)
+                  {:forms ((core/map::get module) (quote :forms))
+                   :meta
+                     (if strict
+                       (selfhost/obligation::strict-typecheck-meta
+                         ((core/map::get module) (quote :forms)))
+                       (core/cli::module-meta
+                         ((core/map::get module) (quote :forms))))
+                   :path ((core/map::get module) (quote :path))})))))))))
+
+(def selfhost/obligation::typecheck
+  (fn (operation)
+    (fn (inputs)
+      (if (if (selfhost/obligation::map? inputs)
+            ((core/int::eq? (core/map::len inputs)) 1)
+            false)
+        (let ((modules ((core/map::get inputs) (quote :modules))))
+          (if (selfhost/obligation::vec? modules)
+            (let ((valid ((selfhost/obligation::validate-modules-loop modules) 0)))
+              (if (core/error::is? valid)
+                valid
+                (let
+                  ((strict ((core/sym::eq? operation) (quote :typecheck-strict)))
+                    (report
+                      (core/cli::typecheck-package
+                        {:kind "genesis/typecheck-request-v0.1"
+                         :modules
+                           ((((selfhost/obligation::typecheck-modules-loop modules)
+                                strict) 0) [])
+                         :v 1})))
+                  (if (core/error::is? report)
+                    report
+                    {:errors ((core/map::get report) (quote :errors))
+                     :kind selfhost/obligation::RESULT_KIND
+                     :name
+                       (if strict
+                         "core/obligation::typecheck-strict"
+                         "core/obligation::typecheck")
+                     :ok ((core/map::get report) (quote :ok))
+                     :operation operation
+                     :report report
+                     :v 2}))))
+            (selfhost/obligation::error ":typecheck :modules input must be a vector")))
+        (selfhost/obligation::error ":typecheck inputs must contain exactly :modules")))))

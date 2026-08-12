@@ -61,8 +61,8 @@ FIELDS = {
     "resultKind",
     "runtimeEvidence",
     "schema",
-    "sourceModule",
-    "sourceSha256",
+    "sourceModules",
+    "sourceSetSha256",
     "spec",
     "version",
 }
@@ -71,6 +71,7 @@ MIGRATED = [
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
     "core/obligation::typecheck",
+    "core/obligation::typecheck-strict",
     "core/obligation::unit-tests",
 ]
 RESIDUAL = [
@@ -88,9 +89,27 @@ RESIDUAL = [
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
-    "core/obligation::typecheck-strict",
     "core/obligation::preflight",
 ]
+
+SOURCE_MODULES = [
+    "selfhost/obligation_authority_core_v1.gc",
+    "selfhost/obligation_authority_typecheck_v1.gc",
+    "selfhost/obligation_authority_v1.gc",
+]
+
+
+def source_set_identity(root: Path, modules) -> str:
+    digest = hashlib.sha256()
+    digest.update(b"genesis/selfhost-obligation-authority-source-set-v0.1\0")
+    for relative in modules:
+        encoded_path = relative.encode()
+        source = (root / relative).read_bytes()
+        digest.update(len(encoded_path).to_bytes(8, "big"))
+        digest.update(encoded_path)
+        digest.update(len(source).to_bytes(8, "big"))
+        digest.update(source)
+    return digest.hexdigest()
 
 
 def validate(profile, schema, check_identity=True):
@@ -131,7 +150,7 @@ def validate(profile, schema, check_identity=True):
             "timeoutSeconds": 60,
         },
         "schema": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
-        "sourceModule": "selfhost/obligation_authority_v1.gc",
+        "sourceModules": SOURCE_MODULES,
         "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
         "version": "0.1.0",
     }
@@ -150,7 +169,7 @@ def validate(profile, schema, check_identity=True):
     }
     if set(profile.get("nonclaims", [])) != expected_nonclaims:
         fail("nonclaim inventory drift")
-    for key in ("contentIdentitySha256", "sourceSha256"):
+    for key in ("contentIdentitySha256", "sourceSetSha256"):
         if not re.fullmatch(r"[0-9a-f]{64}", str(profile.get(key, ""))):
             fail(f"invalid {key}")
     if check_identity and profile["contentIdentitySha256"] != identity(profile):
@@ -181,6 +200,8 @@ def validate_bridge(bridge: str) -> None:
         "validate_budget_report(",
         "validate_capabilities_report(",
         "validate_typecheck_obligation_report(",
+        "strict_typecheck_meta_for_validation(",
+        "ObligationAuthorityOperation::TypecheckStrict",
         'Term::symbol(":request-h")',
         "let request_hash = hash_term(&request);",
         "obligation_authority_rejects_result_bound_to_another_request",
@@ -194,19 +215,27 @@ def validate_bridge(bridge: str) -> None:
 
 
 def static_check(root: Path, profile):
-    source_path = root / profile["sourceModule"]
-    if source_path.is_symlink() or not source_path.is_file() or root not in source_path.resolve().parents:
-        fail("obligation authority source is missing, escaping, or symlinked")
-    source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
-    if source_hash != profile["sourceSha256"]:
-        fail("obligation authority source identity mismatch")
-    if len(source_path.read_text().splitlines()) > 700:
-        fail("obligation authority source exceeds 700-line decomposition ceiling")
-    if "core/cli::typecheck-package" not in source_path.read_text():
+    sources = []
+    for relative in profile["sourceModules"]:
+        source_path = root / relative
+        if source_path.is_symlink() or not source_path.is_file() or root not in source_path.resolve().parents:
+            fail("obligation authority source is missing, escaping, or symlinked")
+        if len(source_path.read_text().splitlines()) > 700:
+            fail("obligation authority source exceeds 700-line decomposition ceiling")
+        sources.append(source_path.read_text())
+    source_hash = source_set_identity(root, profile["sourceModules"])
+    if source_hash != profile["sourceSetSha256"]:
+        fail("obligation authority source-set identity mismatch")
+    if "core/cli::typecheck-package" not in "\n".join(sources):
         fail("self-host typecheck obligation route is absent")
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
-    if manifest.count(f'"{profile["sourceModule"]}"') != 1:
-        fail("obligation authority source manifest custody drift")
+    positions = []
+    for relative in profile["sourceModules"]:
+        if manifest.count(f'"{relative}"') != 1:
+            fail("obligation authority source manifest custody drift")
+        positions.append(manifest.index(f'"{relative}"'))
+    if positions != sorted(positions):
+        fail("obligation authority source manifest order drift")
     if manifest.count(profile["binding"]) != 1:
         fail("obligation authority binding manifest custody drift")
 
@@ -225,6 +254,10 @@ def static_check(root: Path, profile):
         "obligation_typecheck(&store, &manifest, &modules, &frontend, limits, false)"
     ) != 1:
         fail("typecheck production authority call-site drift")
+    if types_api.count(
+        "obligation_typecheck(&store, &manifest, &modules, &frontend, limits, true)"
+    ) != 1:
+        fail("strict typecheck production authority call-site drift")
     unit_host = (root / "crates/gc_obligations/src/obligation_exec.rs").read_text()
     budget_host = (root / "crates/gc_obligations/src/obligation_exec_budgets.rs").read_text()
     test_host = (root / "crates/gc_obligations/src/obligations/test_exec.rs").read_text()
@@ -247,8 +280,15 @@ def static_check(root: Path, profile):
         fail("budget authority dispatch drift")
     if unit_host.count("ObligationAuthorityOperation::CapabilitiesDeclared") != 1:
         fail("capabilities-declared authority dispatch drift")
-    if unit_host.count("ObligationAuthorityOperation::Typecheck") != 1:
+    if len(re.findall(r"ObligationAuthorityOperation::Typecheck(?!Strict)", unit_host)) != 1:
         fail("typecheck authority dispatch drift")
+    if unit_host.count("ObligationAuthorityOperation::TypecheckStrict") != 1:
+        fail("strict typecheck authority dispatch drift")
+    obligation_typecheck = unit_host.split("pub(super) fn obligation_typecheck(", 1)[1].split(
+        "pub(super) fn typecheck_report_with_frontend(", 1
+    )[0]
+    if "typecheck_report_with_frontend(" in obligation_typecheck:
+        fail("reachable host strict typecheck obligation decision restored")
     if (
         '"core/obligation::capabilities-declared-report"' in unit_host
         or "did not declare it in :caps" in unit_host
@@ -260,7 +300,7 @@ def static_check(root: Path, profile):
         tree = cargo_tree(root, package)
         if 'gc_obligations feature "parity-oracle"' in tree:
             fail(f"{package} production graph activates obligation parity oracle")
-    return {"migrated": len(MIGRATED), "residual": len(RESIDUAL), "sourceSha256": source_hash}
+    return {"migrated": len(MIGRATED), "residual": len(RESIDUAL), "sourceSetSha256": source_hash}
 
 
 def run_case(binary: Path, artifact: Path, root: Path, fixture: str, profile):
@@ -337,6 +377,18 @@ def runtime_check(root: Path, profile, binaries, artifact_override=None):
             False,
             ["core/obligation::typecheck"],
         ),
+        (
+            "tests/spec/pkg_typecheck_strict",
+            0,
+            True,
+            ["core/obligation::typecheck-strict"],
+        ),
+        (
+            "tests/spec/pkg_fail_typecheck_strict",
+            30,
+            False,
+            ["core/obligation::typecheck-strict"],
+        ),
     ]
     all_observations = []
     for binary in binaries:
@@ -364,7 +416,8 @@ def self_test(root: Path, profile, schema):
         ("migrated", lambda p: p.__setitem__("migratedObligations", MIGRATED[:1])),
         ("residual", lambda p: p.__setitem__("residualObligations", RESIDUAL[:-1])),
         ("host-facts", lambda p: p.__setitem__("hostFacts", p["hostFacts"][:-1])),
-        ("source", lambda p: p.__setitem__("sourceSha256", "0" * 64)),
+        ("source", lambda p: p.__setitem__("sourceSetSha256", "0" * 64)),
+        ("source-inventory", lambda p: p.__setitem__("sourceModules", p["sourceModules"][:-1])),
         ("nonclaim", lambda p: p.__setitem__("nonclaims", p["nonclaims"][:-1])),
     ]:
         candidate = copy.deepcopy(profile)
@@ -422,8 +475,7 @@ def main(argv=None):
     profile = load_json(profile_path)
     schema = load_json(schema_path)
     if args.refresh_identity:
-        source = root / profile["sourceModule"]
-        profile["sourceSha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+        profile["sourceSetSha256"] = source_set_identity(root, profile["sourceModules"])
         profile["contentIdentitySha256"] = identity(profile)
         profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n")
     validate(profile, schema)

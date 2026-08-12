@@ -1,0 +1,12 @@
+(def ::meta
+  '{:caps [core/task::spawn]
+    :exports [pkg/strict-fail::program]
+    :types {pkg/strict-fail::program ?}})
+
+; The operation is intentionally indirect. Strict mode must reject the unknown row.
+(def pkg/strict-fail::operation 'core/task::spawn)
+(def pkg/strict-fail::program
+  (core/effect::perform
+    pkg/strict-fail::operation
+    {:task-id "strict-fixture"}
+    (fn (response) (core/effect::pure response))))

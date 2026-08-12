@@ -1,0 +1,10 @@
+schema = 1
+dependencies = []
+name = "pkg_typecheck_strict"
+obligations = ["core/obligation::typecheck-strict"]
+tests = []
+version = "0.0.1"
+
+[[modules]]
+hash = "13834a2ed2d2122ac8ac60935898e69ca4181457e801810ceeab6423d3ffbdd9"
+path = "strict.gc"

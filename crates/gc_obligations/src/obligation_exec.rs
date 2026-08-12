@@ -292,30 +292,19 @@ pub(super) fn obligation_typecheck(
     limits: KernelLimits,
     strict_sound: bool,
 ) -> Result<ObligationResult, ObligationError> {
-    if !strict_sound {
-        return evaluate_obligation_with_authority(
-            ObligationAuthorityOperation::Typecheck,
-            store,
-            manifest,
-            modules,
-            &[],
-            frontend,
-            limits,
-        );
-    }
-    let report = typecheck_report_with_frontend(modules, frontend, limits, strict_sound)?;
-    let ok = report.ok;
-    let artifact = store.put_term(&report.to_term())?;
-    Ok(ObligationResult {
-        name: if strict_sound {
-            "core/obligation::typecheck-strict".to_string()
+    evaluate_obligation_with_authority(
+        if strict_sound {
+            ObligationAuthorityOperation::TypecheckStrict
         } else {
-            "core/obligation::typecheck".to_string()
+            ObligationAuthorityOperation::Typecheck
         },
-        ok,
-        artifact: Some(artifact),
-        errors: report.errors,
-    })
+        store,
+        manifest,
+        modules,
+        &[],
+        frontend,
+        limits,
+    )
 }
 
 pub(super) fn typecheck_report_with_frontend(

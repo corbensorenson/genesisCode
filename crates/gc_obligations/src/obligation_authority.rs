@@ -8,6 +8,7 @@ pub(super) enum ObligationAuthorityOperation {
     Budgets,
     CapabilitiesDeclared,
     Typecheck,
+    TypecheckStrict,
 }
 
 impl ObligationAuthorityOperation {
@@ -17,6 +18,7 @@ impl ObligationAuthorityOperation {
             Self::Budgets => ":budgets",
             Self::CapabilitiesDeclared => ":capabilities-declared",
             Self::Typecheck => ":typecheck",
+            Self::TypecheckStrict => ":typecheck-strict",
         }
     }
 
@@ -26,6 +28,7 @@ impl ObligationAuthorityOperation {
             Self::Budgets => "core/obligation::budgets",
             Self::CapabilitiesDeclared => "core/obligation::capabilities-declared",
             Self::Typecheck => "core/obligation::typecheck",
+            Self::TypecheckStrict => "core/obligation::typecheck-strict",
         }
     }
 }
@@ -244,7 +247,9 @@ fn request_term(
             .collect(),
         ),
         ObligationAuthorityOperation::CapabilitiesDeclared => capability_inputs(modules, tests),
-        ObligationAuthorityOperation::Typecheck => typecheck_inputs(modules),
+        ObligationAuthorityOperation::Typecheck | ObligationAuthorityOperation::TypecheckStrict => {
+            typecheck_inputs(modules)
+        }
     };
     Ok(Term::Map(
         [
@@ -486,7 +491,10 @@ fn decode_authority_result(
             validate_capabilities_report(report, manifest, ok, &errors)?
         }
         ObligationAuthorityOperation::Typecheck => {
-            validate_typecheck_obligation_report(report, modules, ok, &errors)?
+            validate_typecheck_obligation_report(report, modules, false, ok, &errors)?
+        }
+        ObligationAuthorityOperation::TypecheckStrict => {
+            validate_typecheck_obligation_report(report, modules, true, ok, &errors)?
         }
     }
     let artifact = store.put_term(report)?;

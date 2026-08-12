@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-11",
   "binding": "core/cli::obligation-authority",
-  "contentIdentitySha256": "cb7071c3655a6ad97badaeb735b66b7e6d174b64bde10cf4e0c44ae8f7ca861d",
+  "contentIdentitySha256": "bfb7440db95740e0758dc24cb7e498d63d858ab3461a389e2ecf088aab529d93",
   "hostFacts": [
     "actual-value-hash",
     "canonical-module-forms",
@@ -22,6 +22,7 @@
     "core/obligation::budgets",
     "core/obligation::capabilities-declared",
     "core/obligation::typecheck",
+    "core/obligation::typecheck-strict",
     "core/obligation::unit-tests"
   ],
   "nonclaims": [
@@ -53,7 +54,6 @@
     "core/obligation::replayable-tests",
     "core/obligation::stage1-validation",
     "core/obligation::translation-validation",
-    "core/obligation::typecheck-strict",
     "core/obligation::preflight"
   ],
   "resultKind": "genesis/obligation-authority-result-v0.2",
@@ -63,8 +63,12 @@
     "timeoutSeconds": 60
   },
   "schema": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
-  "sourceModule": "selfhost/obligation_authority_v1.gc",
-  "sourceSha256": "b7594bdeca0aab6102422a51a7df94ae42cb4c440a2889613d2d919c7db593d9",
+  "sourceModules": [
+    "selfhost/obligation_authority_core_v1.gc",
+    "selfhost/obligation_authority_typecheck_v1.gc",
+    "selfhost/obligation_authority_v1.gc"
+  ],
+  "sourceSetSha256": "be808f682327f4a79a4a0f24622a4cf3c3d118352c86acb74ab7afcbf095c8b3",
   "spec": "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

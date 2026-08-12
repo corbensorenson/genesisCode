@@ -1,0 +1,6 @@
+(def ::meta
+  '{:caps []
+    :exports [pkg/strict::answer]
+    :types {pkg/strict::answer Int}})
+
+(def pkg/strict::answer 42)
