@@ -1,0 +1,50 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/refs::authority",
+  "contentIdentitySha256": "0c907043f31ecf9188b81c53fb45b737a817e8caba5b7d0bf1068ebd3a17a74c",
+  "decisionInventory": [
+    "direct-ref-lookup",
+    "direct-ref-prefix-filter-and-order",
+    "direct-ref-cas-conflict-verdict",
+    "direct-ref-update-and-delete-transition",
+    "direct-ref-response-construction",
+    "request-bound-result-verdict"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "refs-db-locking-and-atomic-persistence",
+    "optimistic-snapshot-retry",
+    "policy-evidence-signature-admission",
+    "result-contradiction-checking",
+    "effect-log-and-diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_refs_authority.py",
+  "kind": "genesis/selfhost-refs-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "bulk-gpk-sync-ref-authority",
+    "h2-sd-refs",
+    "policy-evidence-signature-gate-authority",
+    "r4-2-e-closure",
+    "registry-ref-authority",
+    "release-qualification",
+    "sh-c-closure"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/refs-authority-request-v0.1",
+  "resultKind": "genesis/refs-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/refs_authority_v1.gc",
+  "sourceSha256": "57b56ebc487033ddacaa4e000f209420dbb43aeff002877ace6f2a43999d6df6",
+  "spec": "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

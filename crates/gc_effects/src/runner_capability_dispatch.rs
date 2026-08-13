@@ -334,6 +334,7 @@ pub(super) fn call_capability_with_runtime(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     budget: &mut ArtifactBudgetState,
     store_authority: Option<&mut StoreAuthority>,
     bridge_runtime: &mut HostBridgeRuntime,
@@ -427,10 +428,10 @@ pub(super) fn call_capability_with_runtime(
                 s, payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
             )
         }
-        "core/refs::get" => cap_refs_get(payload, refs),
-        "core/refs::list" => cap_refs_list(payload, refs),
-        "core/refs::set" => cap_refs_set(op, payload, store, refs, error_tok),
-        "core/refs::delete" => cap_refs_delete(op, payload, store, refs, error_tok),
+        "core/refs::get" => cap_refs_get(payload, refs, refs_authority),
+        "core/refs::list" => cap_refs_list(payload, refs, refs_authority),
+        "core/refs::set" => cap_refs_set(op, payload, store, refs, refs_authority, error_tok),
+        "core/refs::delete" => cap_refs_delete(op, payload, store, refs, refs_authority, error_tok),
         "core/media::asset-hash" => capability_core_media_asset_hash(op, payload, pol, error_tok),
         "core/media::image-transcode" => {
             capability_core_media_image_transcode(op, payload, pol, error_tok)
@@ -800,6 +801,7 @@ pub(super) fn call_capability(
         policy,
         store,
         refs,
+        None,
         budget,
         None,
         &mut bridge_runtime,

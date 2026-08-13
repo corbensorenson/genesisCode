@@ -3,6 +3,7 @@ mod lock;
 mod log;
 mod policy;
 mod refs;
+mod refs_authority;
 mod replay_authority;
 mod runner;
 mod runner_browser_host;

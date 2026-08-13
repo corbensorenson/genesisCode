@@ -71,6 +71,7 @@
     "selfhost/store_authority_v1.gc"
     "selfhost/store_verify_authority_v1.gc"
     "selfhost/commit_authority_v1.gc"
+    "selfhost/refs_authority_v1.gc"
     "selfhost/signing_authority_v1.gc"
     "selfhost/evidence_verify_package_v1.gc"
     "selfhost/evidence_verify_authority_v1.gc"
@@ -127,6 +128,7 @@
     core/cli::refs-get-program
     core/cli::refs-list-program
     core/cli::refs-set-program
+    core/refs::authority
     core/cli::stage1-transform-module
     core/cli::store-get-program
     core/cli::store-has-program

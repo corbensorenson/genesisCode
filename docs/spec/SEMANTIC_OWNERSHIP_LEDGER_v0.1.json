@@ -1,5 +1,5 @@
 {
-  "auditDate": "2026-08-11",
+  "auditDate": "2026-08-13",
   "canonicalSpec": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
   "canonicalSpecSha256": "b9a7a8e55acba113d6af38a5dcfc6333575462f6fe6a2ee1224ed263cd9441d0",
   "closureContract": "docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.json",
@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "53bccf7461f6ea6d7b514d09f04b09b9fff7f9fe90d20ab3ae30111bf0a60a8a",
+  "contentIdentitySha256": "1719f0abbcc1e817ff61e1b5fbf12cafebe33f47b06ab0ef539cb5144cb3133d",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1826,31 +1826,39 @@
       "id": "SD-REFS",
       "internalOnly": false,
       "limitations": [
-        "GenesisCode route exists; host remains update authority"
+        "Artifact-loaded GenesisCode exclusively decides direct core/refs get/list lookup, prefix filtering/order, expected-old conflict, update/delete transition, and response facts under genesis/selfhost-refs-authority-v0.1",
+        "Rust policy/evidence/signature admission and bulk sync/GPK reference updates remain host-authoritative, so SD-REFS remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
       ],
       "producingImplementationPaths": [
         "selfhost/toolchain.gc",
+        "selfhost/refs_authority_v1.gc",
+        "crates/gc_effects/src/refs_authority.rs",
         "crates/gc_cli_driver/src/cmd_refs.rs"
       ],
       "productionAuthorityPaths": [
+        "selfhost/refs_authority_v1.gc",
+        "crates/gc_effects/src/refs_authority.rs",
         "crates/gc_effects/src/runner_cap_refs.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/CLI.md"
+        "docs/spec/CLI.md",
+        "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.md"
       ],
       "stage0Domains": [
         "S0-A"
       ],
       "testPaths": [
+        "crates/gc_effects/src/refs_authority.rs",
         "crates/gc_cli/tests/cli_refs.rs"
       ],
       "title": "Reference read, list, update, and delete decisions",
       "verifierPaths": [
-        "crates/gc_cli/tests/cli_refs.rs"
+        "crates/gc_cli/tests/cli_refs.rs",
+        "scripts/lib/selfhost_refs_authority.py"
       ]
     },
     {

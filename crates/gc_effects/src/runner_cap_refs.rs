@@ -1,10 +1,19 @@
 use super::*;
 
-pub(super) fn cap_refs_get(payload: &Term, refs: Option<&RefsDb>) -> Result<Value, EffectsError> {
+pub(super) fn cap_refs_get(
+    payload: &Term,
+    refs: Option<&RefsDb>,
+    authority: Option<&mut RefsAuthority>,
+) -> Result<Value, EffectsError> {
     let refs =
         refs.ok_or_else(|| EffectsError::Log("missing refs db for core/refs::get".to_string()))?;
     let name = payload_refs_name(payload)?;
-    let h = refs.get(&name)?;
+    let authority = authority.ok_or_else(|| {
+        EffectsError::Log(
+            "core/refs::get requires the artifact-loaded GenesisCode refs authority".to_string(),
+        )
+    })?;
+    let h = authority.get(refs, &name)?;
     let mut m = BTreeMap::new();
     m.insert(
         TermOrdKey(Term::Symbol(":name".to_string())),
@@ -17,11 +26,20 @@ pub(super) fn cap_refs_get(payload: &Term, refs: Option<&RefsDb>) -> Result<Valu
     Ok(Value::data(Term::Map(m)))
 }
 
-pub(super) fn cap_refs_list(payload: &Term, refs: Option<&RefsDb>) -> Result<Value, EffectsError> {
+pub(super) fn cap_refs_list(
+    payload: &Term,
+    refs: Option<&RefsDb>,
+    authority: Option<&mut RefsAuthority>,
+) -> Result<Value, EffectsError> {
     let refs =
         refs.ok_or_else(|| EffectsError::Log("missing refs db for core/refs::list".to_string()))?;
     let prefix = payload_refs_prefix(payload)?;
-    let xs = refs.list(prefix.as_deref())?;
+    let authority = authority.ok_or_else(|| {
+        EffectsError::Log(
+            "core/refs::list requires the artifact-loaded GenesisCode refs authority".to_string(),
+        )
+    })?;
+    let xs = authority.list(refs, prefix.as_deref())?;
     let mut out = Vec::new();
     for e in xs {
         let mut m = BTreeMap::new();
@@ -48,6 +66,7 @@ pub(super) fn cap_refs_set(
     payload: &Term,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    authority: Option<&mut RefsAuthority>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let store = store.ok_or_else(|| {
@@ -60,21 +79,22 @@ pub(super) fn cap_refs_set(
     let new_hash = payload_refs_hash(payload)?;
     let expected_old = payload_refs_expected_old(payload)?;
     let policy_h = payload_refs_policy_hash(payload)?;
-    let result = match local_refs_set_policy_gated(
-        store,
+    if let Err(value) =
+        local_refs_validate_policy_gate(store, &name, new_hash.as_deref(), &policy_h, error_tok, op)
+    {
+        return Ok(value);
+    }
+    let authority = authority.ok_or_else(|| {
+        EffectsError::Log(
+            "core/refs::set requires the artifact-loaded GenesisCode refs authority".to_string(),
+        )
+    })?;
+    let result = authority.set(
         refs,
-        LocalRefSetRequest {
-            name: &name,
-            new_hash: new_hash.as_deref(),
-            expected_old: expected_old.as_ref().map(|x| x.as_deref()),
-            policy_h: &policy_h,
-        },
-        error_tok,
-        op,
-    ) {
-        Ok(r) => r,
-        Err(v) => return Ok(v),
-    };
+        &name,
+        new_hash.as_deref(),
+        expected_old.as_ref().map(|value| value.as_deref()),
+    )?;
 
     match result {
         SetResult::Updated => {
@@ -115,6 +135,7 @@ pub(super) fn cap_refs_delete(
     payload: &Term,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    authority: Option<&mut RefsAuthority>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let store = store.ok_or_else(|| {
@@ -125,21 +146,22 @@ pub(super) fn cap_refs_delete(
     let name = payload_refs_name(payload)?;
     let expected_old = payload_refs_expected_old(payload)?;
     let policy_h = payload_refs_policy_hash(payload)?;
-    let result = match local_refs_set_policy_gated(
-        store,
+    if let Err(value) =
+        local_refs_validate_policy_gate(store, &name, None, &policy_h, error_tok, op)
+    {
+        return Ok(value);
+    }
+    let authority = authority.ok_or_else(|| {
+        EffectsError::Log(
+            "core/refs::delete requires the artifact-loaded GenesisCode refs authority".to_string(),
+        )
+    })?;
+    let result = authority.set(
         refs,
-        LocalRefSetRequest {
-            name: &name,
-            new_hash: None,
-            expected_old: expected_old.as_ref().map(|x| x.as_deref()),
-            policy_h: &policy_h,
-        },
-        error_tok,
-        op,
-    ) {
-        Ok(r) => r,
-        Err(v) => return Ok(v),
-    };
+        &name,
+        None,
+        expected_old.as_ref().map(|value| value.as_deref()),
+    )?;
 
     match result {
         SetResult::Updated => {

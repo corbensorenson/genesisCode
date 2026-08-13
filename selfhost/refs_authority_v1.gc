@@ -1,0 +1,191 @@
+(def selfhost/refs::tag core/data::tag)
+
+(def selfhost/refs::nil? core/list::is-nil?)
+
+(def selfhost/refs::map?
+  (fn (value) ((core/sym::eq? (selfhost/refs::tag value)) (quote :map))))
+
+(def selfhost/refs::str?
+  (fn (value) ((core/sym::eq? (selfhost/refs::tag value)) (quote :str))))
+
+(def selfhost/refs::bool?
+  (fn (value) ((core/sym::eq? (selfhost/refs::tag value)) (quote :bool))))
+
+(def selfhost/refs::sym?
+  (fn (value) ((core/sym::eq? (selfhost/refs::tag value)) (quote :sym))))
+
+(def selfhost/refs::starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let ((length (core/bytes::len bytes)))
+            (let ((prefix-length (core/bytes::len prefix-bytes)))
+              (if ((core/int::lt? length) prefix-length)
+                false
+                ((core/eq? (((core/bytes::slice bytes) 0) prefix-length)) prefix-bytes)))))))))
+
+(def selfhost/refs::refs-loop?
+  (fn (entries)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len entries))
+        true
+        (let ((entry ((core/vec::get entries) index)))
+          (if (selfhost/refs::str? ((core/vec::get entry) 0))
+            (if (selfhost/store-authority::hash? ((core/vec::get entry) 1))
+              ((selfhost/refs::refs-loop? entries) ((core/int::add index) 1))
+              false)
+            false))))))
+
+(def selfhost/refs::refs?
+  (fn (value)
+    (if (selfhost/refs::map? value)
+      ((selfhost/refs::refs-loop? (core/map::entries value)) 0)
+      false)))
+
+(def selfhost/refs::result
+  (fn (request action current entries refs value)
+    {
+      :action action
+      :code nil
+      :current current
+      :entries entries
+      :kind "genesis/refs-authority-result-v0.1"
+      :message nil
+      :ok true
+      :refs refs
+      :request-h (selfhost/hash::hash-term request)
+      :v 1
+      :value value}))
+
+(def selfhost/refs::reject
+  (fn (request message)
+    {
+      :action (quote :error)
+      :code "core/refs/bad-authority-request"
+      :current nil
+      :entries []
+      :kind "genesis/refs-authority-result-v0.1"
+      :message message
+      :ok false
+      :refs nil
+      :request-h (selfhost/hash::hash-term request)
+      :v 1
+      :value nil}))
+
+(def selfhost/refs::get
+  (fn (request payload)
+    (if ((selfhost/store-authority::exact-map? payload) [:name :refs])
+      (let
+        ((name ((selfhost/store-authority::field payload) (quote :name)))
+          (refs ((selfhost/store-authority::field payload) (quote :refs))))
+        (if (selfhost/refs::str? name)
+          (if (selfhost/refs::refs? refs)
+            (selfhost/refs::result request (quote :read) nil [] nil ((core/map::get refs) name))
+            (selfhost/refs::reject request "refs snapshot must be a string-to-hash map"))
+          (selfhost/refs::reject request "ref name must be a string")))
+      (selfhost/refs::reject request "get payload fields mismatch"))))
+
+(def selfhost/refs::list-loop
+  (fn (entries prefix index out)
+    (if ((core/int::eq? index) (core/vec::len entries))
+      out
+      (let ((entry ((core/vec::get entries) index)))
+        (let
+          ((name ((core/vec::get entry) 0))
+            (hash ((core/vec::get entry) 1)))
+          (selfhost/refs::list-loop entries prefix ((core/int::add index) 1)
+            (if
+              (if (selfhost/refs::nil? prefix)
+                true
+                ((selfhost/refs::starts-with? name) prefix))
+              ((core/vec::push out) {:hash hash :name name})
+              out)))))))
+
+(def selfhost/refs::list
+  (fn (request payload)
+    (if ((selfhost/store-authority::exact-map? payload) [:prefix :refs])
+      (let
+        ((prefix ((selfhost/store-authority::field payload) (quote :prefix)))
+          (refs ((selfhost/store-authority::field payload) (quote :refs))))
+        (if (if (selfhost/refs::nil? prefix) true (selfhost/refs::str? prefix))
+          (if (selfhost/refs::refs? refs)
+            (selfhost/refs::result request (quote :list) nil
+              (selfhost/refs::list-loop (core/map::entries refs) prefix 0 []) nil nil)
+            (selfhost/refs::reject request "refs snapshot must be a string-to-hash map"))
+          (selfhost/refs::reject request "ref prefix must be a string or nil")))
+      (selfhost/refs::reject request "list payload fields mismatch"))))
+
+(def selfhost/refs::remove-loop
+  (fn (entries name index out)
+    (if ((core/int::eq? index) (core/vec::len entries))
+      out
+      (let ((entry ((core/vec::get entries) index)))
+        (let ((key ((core/vec::get entry) 0)) (value ((core/vec::get entry) 1)))
+          (selfhost/refs::remove-loop entries name ((core/int::add index) 1)
+            (if ((core/eq? key) name) out (((core/map::put out) key) value))))))))
+
+(def selfhost/refs::expected-matches?
+  (fn (present expected current)
+    (if present ((core/eq? expected) current) true)))
+
+(def selfhost/refs::set
+  (fn (request payload)
+    (if
+      ((selfhost/store-authority::exact-map? payload)
+        [:expected-old :expected-old-present :name :new-hash :refs])
+      (let
+        ((expected ((selfhost/store-authority::field payload) (quote :expected-old)))
+          (present ((selfhost/store-authority::field payload) (quote :expected-old-present)))
+          (name ((selfhost/store-authority::field payload) (quote :name)))
+          (new-hash ((selfhost/store-authority::field payload) (quote :new-hash)))
+          (refs ((selfhost/store-authority::field payload) (quote :refs))))
+        (if (selfhost/refs::bool? present)
+          (if
+            (if (selfhost/refs::nil? expected)
+              true
+              (selfhost/store-authority::hash? expected))
+            (if (selfhost/refs::str? name)
+              (if
+                (if (selfhost/refs::nil? new-hash)
+                  true
+                  (selfhost/store-authority::hash? new-hash))
+                (if (selfhost/refs::refs? refs)
+                  (let ((current ((core/map::get refs) name)))
+                    (if ((selfhost/refs::expected-matches? present) expected current)
+                      (let
+                        ((updated
+                            (if (selfhost/refs::nil? new-hash)
+                              (selfhost/refs::remove-loop (core/map::entries refs) name 0 {})
+                              (((core/map::put refs) name) new-hash))))
+                        (selfhost/refs::result request (quote :write) current [] updated nil))
+                      (selfhost/refs::result request (quote :conflict) current [] nil nil)))
+                  (selfhost/refs::reject request "refs snapshot must be a string-to-hash map"))
+                (selfhost/refs::reject request "new ref hash must be lowercase hex64 or nil"))
+              (selfhost/refs::reject request "ref name must be a string"))
+            (selfhost/refs::reject request "expected old hash must be lowercase hex64 or nil"))
+          (selfhost/refs::reject request "expected-old-present must be bool")))
+      (selfhost/refs::reject request "set payload fields mismatch"))))
+
+(def core/refs::authority
+  (fn (request)
+    (if ((selfhost/store-authority::exact-map? request) [:kind :op :payload :v])
+      (if
+        ((core/eq? ((selfhost/store-authority::field request) (quote :kind)))
+          "genesis/refs-authority-request-v0.1")
+        (if ((core/int::eq? ((selfhost/store-authority::field request) (quote :v))) 1)
+          (let
+            ((op ((selfhost/store-authority::field request) (quote :op)))
+              (payload ((selfhost/store-authority::field request) (quote :payload))))
+            (if (selfhost/refs::sym? op)
+              (if ((core/sym::eq? op) (quote :get))
+                (selfhost/refs::get request payload)
+                (if ((core/sym::eq? op) (quote :list))
+                  (selfhost/refs::list request payload)
+                  (if ((core/sym::eq? op) (quote :set))
+                    (selfhost/refs::set request payload)
+                    (selfhost/refs::reject request "unsupported refs operation"))))
+              (selfhost/refs::reject request "refs operation must be a symbol")))
+          (selfhost/refs::reject request "refs request version mismatch"))
+        (selfhost/refs::reject request "refs request kind mismatch"))
+      (selfhost/refs::reject request "refs request fields mismatch"))))

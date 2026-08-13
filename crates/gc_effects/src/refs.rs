@@ -148,6 +148,25 @@ impl RefsDb {
         Ok(SetManyResult::Updated)
     }
 
+    pub(crate) fn snapshot(&self) -> Result<BTreeMap<String, String>, EffectsError> {
+        let _lk = self.lock_exclusive()?;
+        self.load_locked()
+    }
+
+    pub(crate) fn replace_if_unchanged(
+        &self,
+        expected: &BTreeMap<String, String>,
+        replacement: &BTreeMap<String, String>,
+    ) -> Result<bool, EffectsError> {
+        let _lk = self.lock_exclusive()?;
+        let current = self.load_locked()?;
+        if &current != expected {
+            return Ok(false);
+        }
+        self.write_locked(replacement)?;
+        Ok(true)
+    }
+
     fn lock_exclusive(&self) -> Result<ExclusiveLock, EffectsError> {
         ExclusiveLock::acquire(&self.lock_path)
     }

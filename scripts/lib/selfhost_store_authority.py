@@ -257,8 +257,8 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     require_all(runner, [
         '"core/store::put"', '"core/store::has"', '"core/store::get"',
         '"core/store::verify"',
-        ".any(|op| policy.is_allowed(op))", ".map(StoreAuthority::load)",
-        "store_authority.as_mut()",
+        "let mut store_authority = None", "req.op.as_str()",
+        ".map(StoreAuthority::load)", "store_authority.as_mut()",
     ], "runner authority custody")
 
     cap_path = "crates/gc_effects/src/runner_cap_store.rs"

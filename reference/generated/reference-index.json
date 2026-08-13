@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 340,
+    "canonicalSources": 342,
     "diagnostics": 201,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 125,
+    "schemas": 126,
     "symbols": 176
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "4ba478b9c68cba77663ec34de104a137dee335641dee793f5bdbdf93b06c0b06"
+      "sha256": "c2187b748e0aa18b34df20b7406553f3592be0249a970eb6cb0b10cdd7ceff8a"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "f16b493deb5dc6ae98cb5c07b50c71465ed5c16b5acba0c0de6847e0f9b40aba"
+      "sha256": "fdf9d546e0413c0a52c37d0abf13b4d0090408dadcf3289fc4a90e1a3ab67d51"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "de41ca6de24b2cc0130ee020733e1c3fe6afb2142dc2073a8d7d2d72af30c8f7"
+      "sha256": "843e52691aef1830805acf4edebd64d3d2701d960631a3188aa6a1311dbdce5d"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -296,7 +296,7 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "12874aa9012f67e63714e6f8a06598f909aa694f22cce734a36d2c4e977cc667"
+      "sha256": "4d2ff8ea96d365ac9118c3b36a98a4f6998d3eee2913df93b5d81a3dc2633a98"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -496,7 +496,7 @@
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.json",
-      "sha256": "e8541dbc72f9f9a5c54d823b3334829dc45642b45a3c3542d0830d02f6c015ac"
+      "sha256": "eecb870a7ebebebdd9b7cfb35b6f683bdcb4a2ca6b6b90e6b092769023f4577a"
     },
     {
       "path": "docs/spec/GC_AGENT_CORPUS_v0.1.schema.json",
@@ -640,11 +640,11 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.json",
-      "sha256": "28f8bc5de4a7b4df8e5a5d9d76572c15549564b62d27d66ad180ce4536849514"
+      "sha256": "1aa885cec786250cefffcd2ac12b4f9a88cd4f3b690d735442a89bf637b2be7b"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PROTOCOL_v0.1.schema.json",
-      "sha256": "f5e878baf0abaa50d25ef9c6a2bf2e16b9c3ea0c1a93240039933aa1617d6aa8"
+      "sha256": "af241d4a40fa98400c3fc4e04ab7a09b9a65736dc49f3c941a27fea8df07c3bc"
     },
     {
       "path": "docs/spec/GENESISBENCH_BASELINE_PUBLICATION_v0.1.schema.json",
@@ -652,7 +652,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_BENCHMARK_CARD_v0.1.json",
-      "sha256": "96fdadac3cd8d710aeebf440bd6f376b03aab97a5397c33e82cc59e520cd27fe"
+      "sha256": "7496d851f4ae8059ed92318f8f6ce5df60a7941aa1b1ba8863fc7862890fee15"
     },
     {
       "path": "docs/spec/GENESISBENCH_BUNDLE_MANIFEST_v0.1.schema.json",
@@ -676,7 +676,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_FAILURE_TAXONOMY_v0.1.json",
-      "sha256": "907efba8d406fe90e5ed0907bf8ffc6b6cf56a0d0a8942aa24a6f078d8992d83"
+      "sha256": "b79521cb3375a4e880d0f75cfa821152ed89f81ec298f01a8db2cef54c302e31"
     },
     {
       "path": "docs/spec/GENESISBENCH_FRONT_DOOR_v0.1.md",
@@ -744,7 +744,7 @@
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.json",
-      "sha256": "2ccf75a3780f5de8fbe51d999e5092e4c60697c69b887a14d3ab6d36bcf15be6"
+      "sha256": "2caced97e6bbe33a19d6808e019c98ca4e5e851ca7c129c3ad41b8f87fc62576"
     },
     {
       "path": "docs/spec/GENESISBENCH_PROTOCOL_v0.1.schema.json",
@@ -1139,6 +1139,14 @@
       "sha256": "62b53c440629b6a9d545f24d3a35425571e5d9d602154d1181904d6299b87d3f"
     },
     {
+      "path": "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.md",
+      "sha256": "975430fe915c8dcce8b3a7cc38d4aee77e05c2f53014355430f99d9931147b83"
+    },
+    {
+      "path": "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.schema.json",
+      "sha256": "183096ee199e713d900583587f19cc9c5337299ee6360ae1074930acc824af21"
+    },
+    {
       "path": "docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.md",
       "sha256": "01da201db976eefc921a50e7406b85f02873c9fa51aebe05ead9e9dbcc2c176f"
     },
@@ -1184,7 +1192,7 @@
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
-      "sha256": "370b18ba2b97e277722e205c751753a38f6144d26674dec761c25f42d8664fc9"
+      "sha256": "707589bb5e1e2bd213b3b913c5e48e16706ea01917b8078c227d8431370488fd"
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
@@ -1352,7 +1360,7 @@
     },
     {
       "path": "docs/status/SELFHOST_AUTHORITY_v0.1.md",
-      "sha256": "bbe931c2f12968097a42ed3e9f1cc135370d82283cf486ef32dd59493dbc36fa"
+      "sha256": "d9641896374381511e205dd853675bd6d0dc1545596f3f9efd0c996a44136bea"
     },
     {
       "path": "docs/status/SELFHOST_CUTOVER.md",

@@ -12,6 +12,7 @@ use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
 use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
+use crate::refs_authority::RefsAuthority;
 use crate::runner_browser_host::{BrowserHostRuntime, browser_host_call};
 use crate::runner_editor_host::{EditorHostRuntime, editor_host_call};
 use crate::runner_gc_payload::{
@@ -43,9 +44,8 @@ use crate::runner_pkg_payload::{
     payload_pkg_tag_policy, payload_pkg_update_policy, payload_pkg_workspace,
 };
 use crate::runner_refs_ops::{
-    LocalRefSetRequest, local_refs_set_policy_gated, local_refs_validate_policy_gate,
-    payload_refs_expected_old, payload_refs_hash, payload_refs_name, payload_refs_policy_hash,
-    payload_refs_prefix,
+    local_refs_validate_policy_gate, payload_refs_expected_old, payload_refs_hash,
+    payload_refs_name, payload_refs_policy_hash, payload_refs_prefix,
 };
 #[cfg(any(test, feature = "parity-oracle"))]
 use crate::runner_store_ops::payload_store_hash;
@@ -198,22 +198,10 @@ pub fn run(
     let mut bridge_runtime = HostBridgeRuntime::default();
     let mut artifact_budget_state = ArtifactBudgetState::default();
     let mut runtime_budget_state = RuntimeBudgetState::default();
-    let mut store_authority = if [
-        "core/store::put",
-        "core/store::has",
-        "core/store::get",
-        "core/store::verify",
-    ]
-    .into_iter()
-    .any(|op| policy.is_allowed(op))
-    {
-        policy
-            .selfhost_authority_config()
-            .map(StoreAuthority::load)
-            .transpose()?
-    } else {
-        None
-    };
+    // Authority contexts are expensive artifact loads; initialize only for an operation that
+    // actually reaches the corresponding production boundary.
+    let mut store_authority = None;
+    let mut refs_authority = None;
 
     macro_rules! run_try {
         ($result:expr) => {
@@ -298,6 +286,38 @@ pub fn run(
                 } else {
                     let pol = policy.op_policy(&req.op);
                     let cap_term = run_try!(cap_term(policy, &req.op, pol));
+                    if store_authority.is_none()
+                        && matches!(
+                            req.op.as_str(),
+                            "core/store::put"
+                                | "core/store::has"
+                                | "core/store::get"
+                                | "core/store::verify"
+                        )
+                    {
+                        store_authority = run_try!(
+                            policy
+                                .selfhost_authority_config()
+                                .map(StoreAuthority::load)
+                                .transpose()
+                        );
+                    }
+                    if refs_authority.is_none()
+                        && matches!(
+                            req.op.as_str(),
+                            "core/refs::get"
+                                | "core/refs::list"
+                                | "core/refs::set"
+                                | "core/refs::delete"
+                        )
+                    {
+                        refs_authority = run_try!(
+                            policy
+                                .selfhost_authority_config()
+                                .map(RefsAuthority::load)
+                                .transpose()
+                        );
+                    }
                     let resp = if let Some(task_resp) = task_runtime_call(
                         &mut task_runtime,
                         policy,
@@ -359,6 +379,7 @@ pub fn run(
                             policy,
                             store.as_ref(),
                             refs.as_ref(),
+                            refs_authority.as_mut(),
                             &mut artifact_budget_state,
                             store_authority.as_mut(),
                             &mut bridge_runtime,

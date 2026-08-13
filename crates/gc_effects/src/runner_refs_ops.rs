@@ -4,29 +4,8 @@ use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{SealId, Value};
 
 use crate::EffectsError;
-use crate::refs::{RefsDb, SetResult};
 use crate::runner_store_ops::store_get_term;
 use crate::store::ArtifactStore;
-
-#[derive(Copy, Clone)]
-pub(crate) struct LocalRefSetRequest<'a> {
-    pub(crate) name: &'a str,
-    pub(crate) new_hash: Option<&'a str>,
-    pub(crate) expected_old: Option<Option<&'a str>>,
-    pub(crate) policy_h: &'a str,
-}
-
-pub(crate) fn local_refs_set_policy_gated(
-    store: &ArtifactStore,
-    refs: &RefsDb,
-    req: LocalRefSetRequest<'_>,
-    error_tok: SealId,
-    op: &str,
-) -> Result<SetResult, Value> {
-    local_refs_validate_policy_gate(store, req.name, req.new_hash, req.policy_h, error_tok, op)?;
-    refs.set(req.name, req.new_hash, req.expected_old)
-        .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))
-}
 
 pub(crate) fn local_refs_validate_policy_gate(
     store: &ArtifactStore,

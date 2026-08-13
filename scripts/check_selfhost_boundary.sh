@@ -179,6 +179,14 @@ python3 scripts/lib/selfhost_commit_authority.py \
   --artifact selfhost/toolchain.gc \
   --self-test
 
+# R4.2.e refs authority is partial: GenesisCode owns direct lookup, list, CAS,
+# update, and delete decisions; policy admission and bulk sync/GPK updates remain H0.
+python3 scripts/lib/selfhost_refs_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_refs_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \
