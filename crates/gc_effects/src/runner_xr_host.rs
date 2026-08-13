@@ -4,27 +4,24 @@ use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{SealId, Value};
 use num_traits::ToPrimitive;
 
-use crate::policy::OpPolicy;
+use crate::policy::{AuthorizedXrBackend, OpPolicy};
 use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 
 #[path = "runner_xr_host/advanced.rs"]
 mod advanced;
+#[path = "runner_xr_host/backend_policy.rs"]
+mod backend_policy;
 #[path = "runner_xr_host/helpers.rs"]
 mod helpers;
 
 use advanced::*;
+use backend_policy::authorized_backend;
 use helpers::*;
 
 const XR_FIRST_PARTY_BACKEND: &str = "xr-first-party-runtime";
 const XR_FIRST_PARTY_ADAPTER: &str = "xr-headless-sim";
 const XR_WEBXR_DEVICE_BACKEND: &str = "xr-webxr-device-runtime";
 const XR_WEBXR_DEVICE_ADAPTER: &str = "webxr-device";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum XrBackendKind {
-    FirstParty,
-    WebxrDevice,
-}
 
 #[derive(Debug, Clone)]
 struct XrAnchorState {
@@ -109,19 +106,42 @@ pub(crate) fn xr_host_call(
     if !is_xr_host_op(op) {
         return None;
     }
-    let backend_kind = match parse_xr_backend_kind(pol, op) {
-        Ok(kind) => kind,
-        Err(err) => return Some(Value::data(err)),
+    let backend = match authorized_backend(pol) {
+        Ok(backend) => backend,
+        Err(message) => {
+            return Some(mk_error(
+                error_tok,
+                &BridgeError {
+                    code: "gfx/xr-backend-policy".to_string(),
+                    message,
+                },
+                Some(op),
+            ));
+        }
     };
-    if backend_kind == XrBackendKind::WebxrDevice {
-        return Some(webxr_device_bridge_call(
-            runtime,
-            bridge_runtime,
-            op,
-            payload,
-            pol,
-            error_tok,
-        ));
+    match backend {
+        AuthorizedXrBackend::WebxrDevice => {
+            return Some(webxr_device_bridge_call(
+                runtime,
+                bridge_runtime,
+                op,
+                payload,
+                pol,
+                error_tok,
+            ));
+        }
+        AuthorizedXrBackend::ProductionRequiresBridge => {
+            return Some(Value::data(production_backend_policy_disabled(op)));
+        }
+        AuthorizedXrBackend::Invalid(normalized) => {
+            return Some(Value::data(policy_error(
+                op,
+                &format!(
+                    "unsupported `xr_backend` value `{normalized}`; expected first-party-runtime or webxr-device"
+                ),
+            )));
+        }
+        AuthorizedXrBackend::FirstParty => {}
     }
 
     if op == "gfx/xr::haptics-pulse" {
@@ -159,65 +179,8 @@ pub(crate) fn xr_host_call(
     )
 }
 
-fn parse_xr_backend_kind(pol: Option<&OpPolicy>, op: &str) -> Result<XrBackendKind, Term> {
-    let has_bridge_profile = has_explicit_bridge_profile(pol);
-    let Some(pol) = pol else {
-        return Ok(XrBackendKind::FirstParty);
-    };
-    let raw = pol.extra.get("xr_backend").and_then(|v| v.as_str());
-    if raw.is_none() && is_production_runtime_profile(Some(pol)) {
-        return production_backend_or_policy_disabled(op, has_bridge_profile);
-    }
-    let Some(raw) = raw else {
-        return Ok(XrBackendKind::FirstParty);
-    };
-    let normalized = raw.trim().to_ascii_lowercase();
-    if normalized.is_empty()
-        || normalized == "first-party"
-        || normalized == "first-party-runtime"
-        || normalized == "headless-sim"
-        || normalized == "xr-headless-sim"
-    {
-        return Ok(XrBackendKind::FirstParty);
-    }
-    if normalized == "production" || normalized == "prod" || normalized == "release" {
-        return production_backend_or_policy_disabled(op, has_bridge_profile);
-    }
-    if normalized == "webxr-device"
-        || normalized == "device-runtime"
-        || normalized == "browser-device"
-    {
-        return Ok(XrBackendKind::WebxrDevice);
-    }
-    Err(policy_error(
-        op,
-        &format!(
-            "unsupported `xr_backend` value `{normalized}`; expected first-party-runtime or webxr-device"
-        ),
-    ))
-}
-
-fn is_production_runtime_profile(pol: Option<&OpPolicy>) -> bool {
-    pol.and_then(|p| {
-        p.extra
-            .get("runtime_profile")
-            .or_else(|| p.extra.get("host_runtime_profile"))
-            .and_then(|v| v.as_str())
-    })
-    .is_some_and(|raw| {
-        let normalized = raw.trim().to_ascii_lowercase();
-        normalized == "production" || normalized == "prod" || normalized == "release"
-    })
-}
-
-fn production_backend_or_policy_disabled(
-    op: &str,
-    has_bridge_profile: bool,
-) -> Result<XrBackendKind, Term> {
-    if has_bridge_profile {
-        return Ok(XrBackendKind::WebxrDevice);
-    }
-    Err(map_term(vec![
+fn production_backend_policy_disabled(op: &str) -> Term {
+    map_term(vec![
         (":ok", Term::Bool(false)),
         (
             ":error/code",
@@ -237,7 +200,7 @@ fn production_backend_or_policy_disabled(
         (":policy-disabled", Term::Bool(true)),
         (":runtime-profile", Term::symbol(":production")),
         (":required-backend", Term::symbol(":webxr-device")),
-    ]))
+    ])
 }
 
 fn webxr_device_bridge_call(

@@ -559,6 +559,7 @@ mod network_authority_tests {
             authorized_crypto: None,
             authorized_gpu: None,
             authorized_gfx_profile: None,
+            authorized_xr_backend: None,
             authorized_bridge_identity: None,
             authorized_plugin: None,
             authorized_ffi: None,

@@ -284,6 +284,14 @@ pub(crate) enum AuthorizedGfxProfile {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedXrBackend {
+    FirstParty,
+    WebxrDevice,
+    ProductionRequiresBridge,
+    Invalid(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum AuthorizedFfiSignedPolicy {
     Disabled,
     InvalidRequiredType,
@@ -332,6 +340,7 @@ pub struct OpPolicy {
     pub(crate) authorized_crypto: Option<AuthorizedCryptoPolicy>,
     pub(crate) authorized_gpu: Option<AuthorizedGpuPolicy>,
     pub(crate) authorized_gfx_profile: Option<AuthorizedGfxProfile>,
+    pub(crate) authorized_xr_backend: Option<AuthorizedXrBackend>,
     pub(crate) authorized_bridge_identity: Option<AuthorizedBridgeIdentityPolicy>,
     pub(crate) authorized_plugin: Option<AuthorizedPluginPolicy>,
     pub(crate) authorized_ffi: Option<AuthorizedFfiPolicy>,
@@ -459,6 +468,7 @@ impl CapsPolicy {
                         authorized_crypto: None,
                         authorized_gpu: None,
                         authorized_gfx_profile: None,
+                        authorized_xr_backend: None,
                         authorized_bridge_identity: None,
                         authorized_plugin: None,
                         authorized_ffi: None,
@@ -478,9 +488,10 @@ impl CapsPolicy {
         // loads replace and verify it through the self-host authority.
         let gpu_default = policy_authority::gpu::observed_default();
         for (op, op_policy) in &mut ops {
-            op_policy.authorized_bridge_identity = Some(
-                policy_authority::legacy_bridge_identity_policy(op, Some(op_policy)),
-            );
+            let bridge = policy_authority::legacy_bridge_identity_policy(op, Some(op_policy));
+            op_policy.authorized_xr_backend =
+                Some(policy_authority::xr::legacy(Some(op_policy), bridge.active));
+            op_policy.authorized_bridge_identity = Some(bridge);
             op_policy.authorized_gpu = Some(policy_authority::gpu::legacy(
                 Some(op_policy),
                 gpu_default.as_deref(),

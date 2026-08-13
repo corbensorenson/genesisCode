@@ -34,6 +34,9 @@ Baseline families:
 
 These ops are first-party deterministic by default and can be explicitly bridge-routed via per-op bridge policy (`bridge_cmd` or `wasi_bridge_profile` response mapping).
 In addition, a dedicated WebXR device lane is available via `xr_backend = "webxr-device"` with explicit bridge transport.
+Artifact-backed production policy loads classify this backend through GenesisCode
+authority protocol v0.18; the host consumes the installed result and retains only
+bridge availability enforcement and execution.
 
 ## Runtime Contract
 
@@ -58,6 +61,9 @@ WebXR device lane policy requirements:
 - per-op `xr_backend = "webxr-device"`
 - explicit bridge profile (`bridge_cmd` or `wasi_bridge_profile` + deterministic bridge response mapping)
 - fail-closed policy error if `xr_backend = "webxr-device"` is configured without bridge transport.
+- production aliases and production runtime-profile fallback require the
+  GenesisCode-composed bridge-active decision and otherwise return the stable
+  `gfx/xr-policy-disabled` envelope.
 - canonical template: `docs/policies/xr_webxr_device_caps_v0.1.toml`
 
 Browser-native conformance lane:

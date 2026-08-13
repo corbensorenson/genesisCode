@@ -386,7 +386,7 @@ Generation and verification:
 - `gfx/xr::session-open`
   - Optional payload field: `:opts` map (`:mode` string/symbol, `:reference-space` string/symbol, `:app` string/symbol).
   - First-party runtime returns deterministic `:session-id` with normalized mode/reference-space metadata.
-  - Optional per-op policy: `xr_backend = "webxr-device"` to force explicit bridge transport and WebXR device replay envelopes.
+  - Optional per-op policy: `xr_backend = "webxr-device"` to force explicit bridge transport and WebXR device replay envelopes; artifact-backed production loads classify backend aliases and production fallback through GenesisCode authority protocol v0.18.
 - `gfx/xr::frame-poll`
   - Required payload field: `:session-id` (string).
   - Response map includes deterministic frame envelopes (`:frame-index`, `:predicted-display-time-ms`, stereo `:views`).

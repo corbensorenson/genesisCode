@@ -14,7 +14,7 @@ use super::{
     AuthorizedBridgeIdentityPolicy, AuthorizedCryptoPolicy, AuthorizedDatabasePolicy,
     AuthorizedFfiPolicy, AuthorizedGfxProfile, AuthorizedGpuPolicy, AuthorizedMaxBytes,
     AuthorizedNetworkPolicy, AuthorizedPluginPolicy, AuthorizedProcessPrograms,
-    AuthorizedStoreRemotePolicy, CapsPolicy, OpPolicy,
+    AuthorizedStoreRemotePolicy, AuthorizedXrBackend, CapsPolicy, OpPolicy,
 };
 
 #[path = "policy_authority_bridge.rs"]
@@ -39,10 +39,14 @@ mod network;
 mod plugin;
 #[path = "policy_authority_process.rs"]
 mod process;
+#[path = "policy_authority_request.rs"]
+mod request;
 #[path = "policy_authority_resource.rs"]
 mod resource;
 #[path = "policy_authority_store_remote.rs"]
 mod store_remote;
+#[path = "policy_authority_xr.rs"]
+pub(super) mod xr;
 pub(super) fn legacy_ffi_policy(policy: Option<&OpPolicy>) -> AuthorizedFfiPolicy {
     ffi::legacy(policy)
 }
@@ -244,38 +248,6 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
     ))
 }
 
-fn request_term(
-    op: &str,
-    baseline: &[String],
-    override_value: Term,
-    gfx_policy: Term,
-    gpu_policy: Term,
-) -> Term {
-    Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":baseline")),
-                Term::Vector(baseline.iter().cloned().map(Term::Str).collect()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.17".to_string()),
-            ),
-            (TermOrdKey(Term::symbol(":gfx-policy")), gfx_policy),
-            (TermOrdKey(Term::symbol(":gpu-policy")), gpu_policy),
-            (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
-            (TermOrdKey(Term::symbol(":override")), override_value),
-            (
-                TermOrdKey(Term::symbol(":platform-max-bytes")),
-                Term::Int(usize::MAX.into()),
-            ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(17.into())),
-        ]
-        .into_iter()
-        .collect(),
-    )
-}
-
 fn inventory_request_term(baseline: &[String], override_ops: &[String]) -> Term {
     Term::Map(
         [
@@ -383,6 +355,7 @@ struct AuthorizedOperation {
     crypto: AuthorizedCryptoPolicy,
     gfx: AuthorizedGfxProfile,
     gpu: AuthorizedGpuPolicy,
+    xr: AuthorizedXrBackend,
     ffi: AuthorizedFfiPolicy,
     plugin: AuthorizedPluginPolicy,
     cap: Term,
@@ -414,6 +387,7 @@ fn decode_result(
         ":process-program-policy",
         ":request-h",
         ":v",
+        ":xr-policy",
     ]
     .into_iter()
     .map(|key| TermOrdKey(Term::symbol(key)))
@@ -421,8 +395,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.17")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &17.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.18")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &18.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -493,6 +467,11 @@ fn decode_result(
             .ok_or_else(|| authority_error("result is missing :gfx-policy"))?,
         allowed,
     )?;
+    let xr = xr::decode(
+        map.get(&TermOrdKey(Term::symbol(":xr-policy")))
+            .ok_or_else(|| authority_error("result is missing :xr-policy"))?,
+        allowed,
+    )?;
     let ffi = ffi::decode(
         map.get(&TermOrdKey(Term::symbol(":ffi-policy")))
             .ok_or_else(|| authority_error("result is missing :ffi-policy"))?,
@@ -517,6 +496,7 @@ fn decode_result(
         crypto,
         gfx,
         gpu,
+        xr,
         ffi,
         plugin,
         cap,
@@ -625,12 +605,13 @@ pub(super) fn authorize_policy(
     let mut authorized_ops = BTreeMap::new();
     for op in candidates {
         let override_table = overrides.get(&op).and_then(toml::Value::as_table);
-        let request = request_term(
+        let request = request::term(
             &op,
             &baseline,
             override_term(overrides.get(&op))?,
             gfx::input(override_table),
             gpu::input(override_table, gpu_default.as_deref()),
+            xr::input(override_table),
         );
         let request_hash = hash_term(&request);
         let value = authority
@@ -651,6 +632,7 @@ pub(super) fn authorize_policy(
             || authorized.crypto != crypto::legacy(expected)
             || authorized.gfx != gfx::legacy(expected)
             || authorized.gpu != gpu::legacy(expected, gpu_default.as_deref())
+            || authorized.xr != xr::legacy(expected, authorized.bridge_identity.active)
             || authorized.ffi != ffi::legacy(expected)
             || authorized.plugin != plugin::legacy(expected)
         {
@@ -675,6 +657,7 @@ pub(super) fn authorize_policy(
             op_policy.authorized_crypto = Some(authorized.crypto);
             op_policy.authorized_gfx_profile = Some(authorized.gfx);
             op_policy.authorized_gpu = Some(authorized.gpu);
+            op_policy.authorized_xr_backend = Some(authorized.xr);
             op_policy.authorized_ffi = Some(authorized.ffi);
             op_policy.authorized_plugin = Some(authorized.plugin);
             op_policy.authorized_cap = Some(authorized.cap);

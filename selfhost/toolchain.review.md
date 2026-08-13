@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `133a8125c9927ba8727bc894eee3124b5990a68adb4b1656d125d86b8c07d37e`
-- Freshness artifact hash: `133a8125c9927ba8727bc894eee3124b5990a68adb4b1656d125d86b8c07d37e`
-- Freshness source hash: `8a623e1428cf14655d7dab731558df8b7030b4fa155cb12ce2424b55c5efeb39`
-- Source aggregate hash (module path + module sha256): `d4ecf3db62ab18a28f90313e19347a9942fd8b024b216fd4782cf69829dfd463`
+- Artifact sha256: `8da26c4ea0cdd60c60499f006640a87f9d0d7d185897ac7a21090686acd9e5b4`
+- Freshness artifact hash: `8da26c4ea0cdd60c60499f006640a87f9d0d7d185897ac7a21090686acd9e5b4`
+- Freshness source hash: `0a59b4b965a061d28b589ff2b4b81ba823d11a236e0de6708650ac30dc77aff2`
+- Source aggregate hash (module path + module sha256): `f94ad31afb67d91bec10c82131a801d7e4acb7c3f33fa20ba23ecf50cea1fbe9`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `80`
+- Module count: `81`
 
 ## Module Summary
 
@@ -78,8 +78,9 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/effect_policy_bridge_v1.gc` | 209 | 8450 | 17 | `a7776f581544e8e3` |
 | `selfhost/effect_policy_gpu_v1.gc` | 49 | 1790 | 5 | `958445f77d461666` |
 | `selfhost/effect_policy_gfx_v1.gc` | 83 | 3231 | 7 | `e7e624b43be25ac1` |
+| `selfhost/effect_policy_xr_v1.gc` | 78 | 3199 | 8 | `22f00aaf30ef7a60` |
 | `selfhost/effect_policy_resource_authority_v1.gc` | 281 | 12711 | 18 | `cb269d02aaf7ba5b` |
-| `selfhost/effect_policy_authority_v1.gc` | 431 | 18605 | 22 | `cd92d04acf5e584e` |
+| `selfhost/effect_policy_authority_v1.gc` | 442 | 19126 | 22 | `92d91945f040376e` |
 | `selfhost/obligation_authority_core_v1.gc` | 570 | 24016 | 50 | `859184a3ee1f4dba` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
 | `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
@@ -161,6 +162,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/effect_policy_bridge_v1.gc`: `selfhost/effect-bridge::starts-with?`, `selfhost/effect-bridge::strip-digest-prefix`, `selfhost/effect-bridge::input-valid?`, `selfhost/effect-bridge::allowlist-policy-loop`, `selfhost/effect-bridge::allowlist-policy`, `selfhost/effect-bridge::args-policy-loop`, `selfhost/effect-bridge::args-policy`, `selfhost/effect-bridge::command-policy`
 - `selfhost/effect_policy_gpu_v1.gc`: `selfhost/effect-gpu::input-valid?`, `selfhost/effect-gpu::normalized-string`, `selfhost/effect-gpu::backend-policy`, `selfhost/effect-gpu::fallback-policy`, `selfhost/effect-gpu::policy`
 - `selfhost/effect_policy_gfx_v1.gc`: `selfhost/effect-gfx::profile?`, `selfhost/effect-gfx::input-valid?`, `selfhost/effect-gfx::selected`, `selfhost/effect-gfx::normalized-string`, `selfhost/effect-gfx::production-runtime?`, `selfhost/effect-gfx::explicit-profile`, `selfhost/effect-gfx::policy`
+- `selfhost/effect_policy_xr_v1.gc`: `selfhost/effect-xr::input-valid?`, `selfhost/effect-xr::selected`, `selfhost/effect-xr::normalized-string`, `selfhost/effect-xr::production?`, `selfhost/effect-xr::decision`, `selfhost/effect-xr::production-decision`, `selfhost/effect-xr::explicit-decision`, `selfhost/effect-xr::policy`
 - `selfhost/effect_policy_resource_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::optional-str?`, `selfhost/effect-policy::map-has-key-loop?`, `selfhost/effect-policy::map-has-key?`, `selfhost/effect-policy::map-has-keys-loop?`, `selfhost/effect-policy::exact-map?`, `selfhost/effect-policy::optional-nonnegative-int?`
 - `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::baseline-contains-loop?`, `selfhost/effect-policy::baseline-contains?`, `selfhost/effect-policy::inventory-add-loop`, `selfhost/effect-policy::inventory-add`, `selfhost/effect-policy::inventory-keys-loop`, `selfhost/effect-policy::inventory-keys`, `core/effects::policy-inventory-authority`, `selfhost/effect-policy::all-true-loop?`
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`

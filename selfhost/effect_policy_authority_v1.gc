@@ -336,7 +336,7 @@
 (def core/effects::policy-authority
   (fn (request)
     (if (selfhost/policy::map? request)
-      (if ((core/int::eq? (core/map::len request)) 8)
+      (if ((core/int::eq? (core/map::len request)) 9)
         (let
           ((kind ((core/map::get request) (quote :kind)))
             (version ((core/map::get request) (quote :v)))
@@ -345,10 +345,11 @@
             (gpu-policy ((core/map::get request) (quote :gpu-policy)))
             (op ((core/map::get request) (quote :op)))
             (override ((core/map::get request) (quote :override)))
-            (platform-max ((core/map::get request) (quote :platform-max-bytes))))
+            (platform-max ((core/map::get request) (quote :platform-max-bytes)))
+            (xr-policy ((core/map::get request) (quote :xr-policy))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.17")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 17) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.18")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 18) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -361,12 +362,19 @@
               (if
                 (if (selfhost/effect-policy::override-valid? override)
                   (if (selfhost/effect-gpu::input-valid? gpu-policy)
-                    (selfhost/effect-gfx::input-valid? gfx-policy)
+                    (if (selfhost/effect-gfx::input-valid? gfx-policy)
+                      (selfhost/effect-xr::input-valid? xr-policy)
+                      false)
                     false)
                   false)
                 (let ((allowed (((selfhost/effect-policy::allowed? baseline) op) override)))
                   (if (core/error::is? allowed)
                     allowed
+                    (let
+                      ((bridge-policy
+                          (if allowed
+                            ((selfhost/effect-bridge::policy op) override)
+                            nil)))
                     {
                       :allowed allowed
                       :base-dir
@@ -376,9 +384,7 @@
                             ((core/map::get override) (quote :base-dir)))
                           nil)
                       :bridge-identity-policy
-                        (if allowed
-                          ((selfhost/effect-bridge::policy op) override)
-                          nil)
+                        bridge-policy
                       :cap (if allowed ((selfhost/effect-policy::cap op) override) nil)
                       :crypto-policy
                         (if allowed
@@ -400,7 +406,7 @@
                         (if allowed
                           (selfhost/effect-gpu::policy gpu-policy)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.17"
+                      :kind "genesis/effect-policy-authority-result-v0.18"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -419,7 +425,12 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 17}))
+                      :v 18
+                      :xr-policy
+                        (if allowed
+                          ((selfhost/effect-xr::policy xr-policy)
+                            ((core/map::get bridge-policy) (quote :active)))
+                          nil)})))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly the closed typed policy fields"))
               ((core/error::make2 "core/policy/authority")
@@ -427,5 +438,5 @@
             ((core/error::make2 "core/policy/authority")
               "effect-policy authority request identity mismatch")))
         ((core/error::make2 "core/policy/authority")
-          "effect-policy authority request must contain exactly eight fields"))
+          "effect-policy authority request must contain exactly nine fields"))
       ((core/error::make2 "core/policy/authority") "effect-policy authority request must be a map"))))

@@ -1,0 +1,78 @@
+(def selfhost/effect-xr::input-valid?
+  (fn (value)
+    (if
+      ((selfhost/effect-policy::exact-map? value)
+        [:backend :runtime-profile :runtime-profile-alias])
+      (if
+        (selfhost/effect-network::optional-string-input?
+          ((core/map::get value) (quote :backend)))
+        (if
+          (selfhost/effect-network::optional-string-input?
+            ((core/map::get value) (quote :runtime-profile)))
+          (selfhost/effect-network::optional-string-input?
+            ((core/map::get value) (quote :runtime-profile-alias)))
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-xr::selected
+  (fn (primary alias)
+    (if (selfhost/policy::nil? primary) alias primary)))
+
+(def selfhost/effect-xr::normalized-string
+  (fn (raw)
+    (if (selfhost/policy::str? raw)
+      (selfhost/effect-crypto::ascii-lower (selfhost/policy::trim raw))
+      "")))
+
+(def selfhost/effect-xr::production?
+  (fn (raw)
+    (if (selfhost/policy::str? raw)
+      (let ((normalized (selfhost/effect-xr::normalized-string raw)))
+        (if ((core/eq? normalized) "production") true
+          (if ((core/eq? normalized) "prod") true
+            ((core/eq? normalized) "release"))))
+      false)))
+
+(def selfhost/effect-xr::decision
+  (fn (backend invalid-value)
+    {:backend backend :invalid-value invalid-value}))
+
+(def selfhost/effect-xr::production-decision
+  (fn (bridge-active)
+    (if bridge-active
+      ((selfhost/effect-xr::decision (quote :webxr-device)) nil)
+      ((selfhost/effect-xr::decision (quote :production-requires-bridge)) nil))))
+
+(def selfhost/effect-xr::explicit-decision
+  (fn (raw bridge-active)
+    (let ((normalized (selfhost/effect-xr::normalized-string raw)))
+      (if
+        (if ((core/eq? normalized) "") true
+          (if ((core/eq? normalized) "first-party") true
+            (if ((core/eq? normalized) "first-party-runtime") true
+              (if ((core/eq? normalized) "headless-sim") true
+                ((core/eq? normalized) "xr-headless-sim")))))
+        ((selfhost/effect-xr::decision (quote :first-party-runtime)) nil)
+        (if (selfhost/effect-xr::production? normalized)
+          (selfhost/effect-xr::production-decision bridge-active)
+          (if
+            (if ((core/eq? normalized) "webxr-device") true
+              (if ((core/eq? normalized) "device-runtime") true
+                ((core/eq? normalized) "browser-device")))
+            ((selfhost/effect-xr::decision (quote :webxr-device)) nil)
+            ((selfhost/effect-xr::decision (quote :invalid)) normalized)))))))
+
+(def selfhost/effect-xr::policy
+  (fn (input bridge-active)
+    (let
+      ((backend ((core/map::get input) (quote :backend)))
+        (runtime-profile
+          ((selfhost/effect-xr::selected
+            ((core/map::get input) (quote :runtime-profile)))
+            ((core/map::get input) (quote :runtime-profile-alias)))))
+      (if (selfhost/policy::str? backend)
+        ((selfhost/effect-xr::explicit-decision backend) bridge-active)
+        (if (selfhost/effect-xr::production? runtime-profile)
+          (selfhost/effect-xr::production-decision bridge-active)
+          ((selfhost/effect-xr::decision (quote :first-party-runtime)) nil))))))

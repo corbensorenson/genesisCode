@@ -4,7 +4,7 @@ use super::{
     AuthorizedFfiSignedPolicy, AuthorizedGfxProfile, AuthorizedGpuBackend, AuthorizedGpuFallback,
     AuthorizedGpuPolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool,
     AuthorizedOptionalString, AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy,
-    AuthorizedStringList, CapsPolicy,
+    AuthorizedStringList, AuthorizedXrBackend, CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
@@ -112,6 +112,13 @@ fn gpu_policy_term(backend: &str, fallback: &str) -> Term {
 
 fn gfx_policy_term(profile: &str) -> Term {
     Term::symbol(profile)
+}
+
+fn xr_policy_term(backend: &str, invalid_value: Term) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":backend")), Term::symbol(backend)),
+        (TermOrdKey(Term::symbol(":invalid-value")), invalid_value),
+    ]))
 }
 
 fn store_remote_policy_term(remote: Term, remote_allow: Term, allow_http: Term) -> Term {
@@ -1766,6 +1773,104 @@ fn selfhost_authority_rejects_malformed_gfx_profile_decisions() {
         decode(&Term::Nil, false).unwrap(),
         AuthorizedGfxProfile::Headless
     );
+}
+
+#[test]
+fn selfhost_authority_installs_xr_backend_with_exact_legacy_precedence() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."gfx/xr::session-open"]
+xr_backend = " first-party "
+
+[op."gfx/xr::frame-poll"]
+xr_backend = " device-runtime "
+
+[op."gfx/xr::input-poll"]
+xr_backend = "production"
+wasi_bridge_profile = true
+
+[op."gfx/xr::hands-poll"]
+runtime_profile = "release"
+
+[op."gfx/xr::hit-test"]
+xr_backend = 7
+runtime_profile = "prod"
+
+[op."gfx/xr::spatial-mesh-poll"]
+runtime_profile = 7
+host_runtime_profile = "release"
+
+[op."gfx/xr::anchor-create"]
+xr_backend = " Quantum-Device "
+
+[op."gfx/xr::anchor-update"]
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let cases = [
+        ("gfx/xr::session-open", AuthorizedXrBackend::FirstParty),
+        ("gfx/xr::frame-poll", AuthorizedXrBackend::WebxrDevice),
+        ("gfx/xr::input-poll", AuthorizedXrBackend::WebxrDevice),
+        (
+            "gfx/xr::hands-poll",
+            AuthorizedXrBackend::ProductionRequiresBridge,
+        ),
+        (
+            "gfx/xr::hit-test",
+            AuthorizedXrBackend::ProductionRequiresBridge,
+        ),
+        ("gfx/xr::spatial-mesh-poll", AuthorizedXrBackend::FirstParty),
+        (
+            "gfx/xr::anchor-create",
+            AuthorizedXrBackend::Invalid("quantum-device".to_string()),
+        ),
+        ("gfx/xr::anchor-update", AuthorizedXrBackend::FirstParty),
+    ];
+    for (op, expected) in cases {
+        assert_eq!(
+            policy.op_policy(op).unwrap().authorized_xr_backend,
+            Some(expected),
+            "op: {op}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_xr_backend_decisions() {
+    use super::policy_authority::xr::decode;
+
+    assert_eq!(
+        decode(&xr_policy_term(":webxr-device", Term::Nil), true).unwrap(),
+        AuthorizedXrBackend::WebxrDevice
+    );
+    assert_eq!(
+        decode(
+            &xr_policy_term(":invalid", Term::Str("future-device".into())),
+            true
+        )
+        .unwrap(),
+        AuthorizedXrBackend::Invalid("future-device".to_string())
+    );
+    for malformed in [
+        Term::Nil,
+        xr_policy_term(":webxr-device", Term::Str("extra".into())),
+        xr_policy_term(":invalid", Term::Nil),
+        xr_policy_term(":unknown", Term::Nil),
+    ] {
+        decode(&malformed, true)
+            .expect_err("malformed XR backend authority decision must fail closed");
+    }
+    decode(&xr_policy_term(":first-party-runtime", Term::Nil), false)
+        .expect_err("denied XR backend authority decision must be nil");
 }
 
 #[test]

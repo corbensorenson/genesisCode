@@ -172,7 +172,7 @@ Supported keys:
     - `persistent-stdio`: keep a per-op bridge process/session alive and exchange framed request/response payloads over persistent stdio.
   - `persistent-stdio` requires the bridge executable to support repeated framed request processing in a single process lifetime.
   - `timeout_ms` terminates and evicts a timed-out `persistent-stdio` session; the uncertain request is never retried.
-  - artifact-backed production loads use GenesisCode authority protocol v0.17 to select the command, compatibility-filter fixed arguments, select or reject the transport, and activate an explicitly configured WASI profile before host execution.
+  - artifact-backed production loads use GenesisCode authority protocol v0.18 to select the command, compatibility-filter fixed arguments, select or reject the transport, and activate an explicitly configured WASI profile before host execution.
 - `first_party_profile` (string): optional profile selector for first-party host backends.
   - currently used by `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`.
   - supported values:
@@ -188,9 +188,22 @@ Supported keys:
     selects `headless`. A present runtime primary likewise blocks its alias.
   - explicit `production` and `prod` select the compile-target production
     default; unsupported explicit strings select `headless`.
-  - artifact-backed production loads use GenesisCode authority protocol v0.17;
+  - artifact-backed production loads use GenesisCode authority protocol v0.18;
     GFX dispatch consumes only the validated installed profile and never rereads
     the raw policy fields.
+- `xr_backend` (string): optional backend selector for `gfx/xr::*`.
+  - `first-party`, `first-party-runtime`, `headless-sim`, and `xr-headless-sim`
+    select the deterministic first-party runtime.
+  - `webxr-device`, `device-runtime`, and `browser-device` select the WebXR
+    device lane, whose host enforcement requires an explicit bridge profile.
+  - `production`, `prod`, and `release`, or an absent/non-string backend under a
+    selected production runtime profile, select WebXR only when GenesisCode's
+    bridge-active decision is true; otherwise they fail closed as
+    `gfx/xr-policy-disabled`.
+  - unsupported strings are canonicalized and rejected; a present non-string
+    `runtime_profile` blocks `host_runtime_profile`.
+  - artifact-backed production loads use GenesisCode authority protocol v0.18;
+    XR dispatch consumes only the installed closed backend state.
 - `gpu_backend` (string): optional backend selector for first-party GPU runtime domains (`gpu/compute::*`, `gfx/gpu::*`).
   - supported values:
     - `first-party-runtime` (default): deterministic in-memory runtime backend.
@@ -198,7 +211,7 @@ Supported keys:
     - `device-runtime-full`: in-repo device-backed backend request for canonical lifecycle ops (`create*`, `write*`, `read*`, `destroy-resource`, `submit`, `limits`, `features`).
     - legacy aliases are not supported; use canonical values only.
   - applies only when no explicit bridge profile is configured for the op.
-  - artifact-backed production loads use GenesisCode authority protocol v0.17
+  - artifact-backed production loads use GenesisCode authority protocol v0.18
     to normalize and select the backend; GPU dispatch does not reread this field.
 - `gpu_backend_policy` (string): optional fail behavior for `gpu_backend = "device-runtime"` or `"device-runtime-full"`.
   - supported values:
@@ -214,17 +227,17 @@ Supported keys:
       explicit fallback (`allow-fallback`/`dev-allow-fallback`).
     - enforced by `scripts/check_agent_gpu_profile_contract.sh`.
   - artifact-backed production loads transport the explicit setting and exact
-    host-observed default through GenesisCode authority protocol v0.17.
+    host-observed default through GenesisCode authority protocol v0.18.
     GenesisCode owns explicit-over-default precedence and the closed fallback
     decision; GPU dispatch does not reread TOML or the environment.
 - `bridge_cmd_allowlist` (array<string>): optional explicit identity allowlist for bridge binaries.
   - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
-  - GenesisCode authority protocol v0.17 trims entries while preserving order and duplicates, treats `[]` as a valid deny-all list, and rejects non-string or empty entries before host matching.
+  - GenesisCode authority protocol v0.18 trims entries while preserving order and duplicates, treats `[]` as a valid deny-all list, and rejects non-string or empty entries before host matching.
 - `bridge_cmd_sha256` (string): executable digest pin (64 hex; optional `sha256:` prefix).
   - required for `host/plugin::command` and `editor/plugin::command` when `bridge_cmd` transport is configured.
   - required for `host/ffi::call`, `host/ffi::buffer-pin`, and `host/ffi::buffer-unpin` when `bridge_cmd` transport is configured.
   - mismatches are denied with deterministic sealed error `<family>/bridge-identity-denied`.
-  - artifact-backed production loads use GenesisCode authority protocol v0.17 to
+  - artifact-backed production loads use GenesisCode authority protocol v0.18 to
     decide whether the pin is required and to trim, validate, and lowercase the
     configured digest before any plugin or FFI bridge preflight or execution.
     Rust retains command resolution, executable hashing, digest comparison,
@@ -252,7 +265,7 @@ Supported keys:
 - `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
 
-For artifact-only production policy loads, GenesisCode authority protocol v0.17
+For artifact-only production policy loads, GenesisCode authority protocol v0.18
 normalizes `url_allow`, `remote_allow`, `allow_http`, `wasi_network_profile`,
 `allow_bind_hosts`, `allow_bind_ports`, and `max_request_bytes` into closed typed
 states before any network, sync, publication, or store-remote consumer runs.
