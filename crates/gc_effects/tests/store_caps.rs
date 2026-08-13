@@ -47,6 +47,19 @@ fn sealed_error_code(v: &Value) -> Option<String> {
     }
 }
 
+fn sealed_error_message(v: &Value) -> Option<String> {
+    let Value::Sealed { payload, .. } = v else {
+        return None;
+    };
+    let Some(Term::Map(m)) = payload.as_ref().as_data() else {
+        return None;
+    };
+    match m.get(&TermOrdKey(Term::symbol(":error/message"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
 #[test]
 fn store_put_without_artifact_authority_fails_closed() {
     let td = tempfile::tempdir().unwrap();
@@ -138,6 +151,174 @@ dir = "./.genesis/store"
             .is_none(),
         "semantic rejection must happen before any store write"
     );
+}
+
+#[test]
+fn store_get_without_artifact_authority_fails_closed() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::get"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load(&caps_path).unwrap();
+    let source = format!(
+        "(def prog (core/effect::perform 'core/store::get {{:hash \"{}\"}} (fn (r) (core/effect::pure r)))) prog",
+        "0".repeat(64)
+    );
+    let forms = parse_module(&source).unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let error = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .err()
+    .expect("store get without selfhost authority must fail");
+    assert!(
+        error
+            .to_string()
+            .contains("requires the artifact-loaded GenesisCode store authority")
+    );
+}
+
+#[test]
+fn store_read_hash_admission_precedes_filesystem_observation() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::has"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = load_policy(&caps_path);
+    std::fs::create_dir_all(td.path().join(".genesis/store")).unwrap();
+    let uppercase = "A".repeat(64);
+    let candidate = td.path().join(".genesis/store").join(&uppercase);
+    std::fs::create_dir(&candidate).unwrap();
+    let source = format!(
+        "(def prog (core/effect::perform 'core/store::has {{:hash \"{uppercase}\"}} (fn (r) (core/effect::pure r)))) prog"
+    );
+    let forms = parse_module(&source).unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let result = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert_eq!(
+        sealed_error_code(&result.value).as_deref(),
+        Some("core/store/bad-payload")
+    );
+    assert!(
+        candidate.is_dir(),
+        "rejected hash path must not be accessed"
+    );
+}
+
+#[test]
+fn store_has_and_get_classify_local_hash_mismatch_as_corruption() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::has", "core/store::get"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = load_policy(&caps_path);
+    std::fs::create_dir_all(td.path().join(".genesis/store")).unwrap();
+    let claimed = "0".repeat(64);
+    std::fs::write(td.path().join(".genesis/store").join(&claimed), b"{:x 1}").unwrap();
+
+    for operation in ["core/store::has", "core/store::get"] {
+        let source = format!(
+            "(def prog (core/effect::perform '{operation} {{:hash \"{claimed}\"}} (fn (r) (core/effect::pure r)))) prog"
+        );
+        let forms = parse_module(&source).unwrap();
+        let module_hash = hash_module(&forms);
+        let (mut context, program) = eval_prog(&forms);
+        let result = run(
+            &mut context,
+            &policy,
+            program,
+            module_hash,
+            "gc_effects-test".to_string(),
+        )
+        .unwrap();
+        assert_eq!(
+            sealed_error_code(&result.value).as_deref(),
+            Some("core/store/corruption"),
+            "{operation} must classify local content mismatch as corruption"
+        );
+    }
+}
+
+#[test]
+fn store_read_io_errors_are_stable_and_nondisclosing() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::has", "core/store::get"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = load_policy(&caps_path);
+    let claimed = "0".repeat(64);
+    std::fs::create_dir_all(td.path().join(".genesis/store").join(&claimed)).unwrap();
+
+    for operation in ["core/store::has", "core/store::get"] {
+        let source = format!(
+            "(def prog (core/effect::perform '{operation} {{:hash \"{claimed}\"}} (fn (r) (core/effect::pure r)))) prog"
+        );
+        let forms = parse_module(&source).unwrap();
+        let module_hash = hash_module(&forms);
+        let (mut context, program) = eval_prog(&forms);
+        let result = run(
+            &mut context,
+            &policy,
+            program,
+            module_hash,
+            "gc_effects-test".to_string(),
+        )
+        .unwrap();
+        assert_eq!(
+            sealed_error_code(&result.value).as_deref(),
+            Some("core/store/io-error")
+        );
+        assert_eq!(
+            sealed_error_message(&result.value).as_deref(),
+            Some("artifact store read failed"),
+            "{operation} must not expose host paths or OS error strings"
+        );
+    }
 }
 
 #[test]

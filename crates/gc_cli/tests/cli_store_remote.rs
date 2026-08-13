@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use predicates::prelude::*;
 
 fn hash_bytes_hex(bytes: &[u8]) -> String {
     blake3::hash(bytes).to_hex().to_string()
@@ -78,4 +79,61 @@ fn store_get_and_has_can_read_through_to_remote_registry() {
     assert!(local.exists());
     let local_bytes = fs::read(local).unwrap();
     assert_eq!(hash_bytes_hex(&local_bytes), hex);
+}
+
+#[test]
+fn store_get_rejects_remote_hash_substitution_before_cache_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let claimed = "0".repeat(64);
+    put_remote_artifact(&remote_dir, &claimed, b"{:substituted true}");
+    let caps = write_caps(dir, &remote, &remote_allow);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["get"])
+        .arg(&claimed)
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("core/store/hash-mismatch"));
+
+    assert!(!dir.join(".genesis/store").join(claimed).exists());
+}
+
+#[test]
+fn store_get_enforces_remote_cache_run_budget_before_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let bytes = gc_coreform::print_term(
+        &gc_coreform::parse_term(&format!("{{:blob \"{}\"}}", "x".repeat(512))).unwrap(),
+    )
+    .into_bytes();
+    let hash = hash_bytes_hex(&bytes);
+    put_remote_artifact(&remote_dir, &hash, &bytes);
+    let caps = write_caps(dir, &remote, &remote_allow);
+    let mut policy = fs::read_to_string(&caps).unwrap();
+    policy.push_str("max_run_bytes = 64\n");
+    fs::write(&caps, policy).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["get"])
+        .arg(&hash)
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("core/caps/resource-limit"));
+
+    assert!(!dir.join(".genesis/store").join(hash).exists());
 }

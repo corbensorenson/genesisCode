@@ -21,6 +21,12 @@ pub struct ArtifactStore {
     integrity_cache: Option<Arc<Mutex<IntegrityCache>>>,
 }
 
+pub(crate) enum ArtifactObservation {
+    Missing,
+    TooLarge { observed: usize },
+    Bytes(Vec<u8>),
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct FileSig {
     len: u64,
@@ -146,10 +152,9 @@ impl ArtifactStore {
                 return Ok((bytes, s2));
             }
         }
-        Err(EffectsError::Log(format!(
-            "artifact store read instability for {}",
-            path.display()
-        )))
+        Err(EffectsError::Log(
+            "artifact store read instability".to_string(),
+        ))
     }
 
     fn cache_is_verified(&self, hex: &str, sig: &FileSig) -> bool {
@@ -272,6 +277,50 @@ impl ArtifactStore {
             self.cache_mark_verified(hex, sig);
         }
         Ok(out)
+    }
+
+    pub(crate) fn observe_bytes_limited(
+        &self,
+        hex: &str,
+        max_bytes: usize,
+    ) -> Result<ArtifactObservation, EffectsError> {
+        const STABLE_READ_RETRIES: usize = 3;
+        let path = self.path_for(hex);
+        for _ in 0..STABLE_READ_RETRIES {
+            let mut file = match std::fs::File::open(&path) {
+                Ok(file) => file,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    return Ok(ArtifactObservation::Missing);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            let before = Self::file_sig(&file.metadata()?);
+            if before.len > max_bytes as u64 {
+                return Ok(ArtifactObservation::TooLarge {
+                    observed: usize::try_from(before.len).unwrap_or(usize::MAX),
+                });
+            }
+            let mut bytes = Vec::with_capacity(before.len as usize);
+            let mut chunk = [0_u8; 8 * 1024];
+            loop {
+                let count = file.read(&mut chunk)?;
+                if count == 0 {
+                    break;
+                }
+                let observed = bytes.len().saturating_add(count);
+                if observed > max_bytes {
+                    return Ok(ArtifactObservation::TooLarge { observed });
+                }
+                bytes.extend_from_slice(&chunk[..count]);
+            }
+            let after = Self::file_sig(&file.metadata()?);
+            if before == after {
+                return Ok(ArtifactObservation::Bytes(bytes));
+            }
+        }
+        Err(EffectsError::Log(
+            "artifact store read instability".to_string(),
+        ))
     }
 }
 

@@ -47,8 +47,10 @@ use crate::runner_refs_ops::{
     payload_refs_expected_old, payload_refs_hash, payload_refs_name, payload_refs_policy_hash,
     payload_refs_prefix,
 };
+#[cfg(any(test, feature = "parity-oracle"))]
+use crate::runner_store_ops::payload_store_hash;
 use crate::runner_store_ops::{
-    is_hex64, payload_store_hash, payload_store_optional_hash, store_get_term, store_scan_hashes,
+    is_hex64, payload_store_optional_hash, store_get_term, store_scan_hashes,
 };
 use crate::runner_sync_payload::{
     payload_sync_depth, payload_sync_force, payload_sync_refs, payload_sync_remote,
@@ -75,6 +77,8 @@ mod runner_cap_pkg_low;
 mod runner_cap_refs;
 #[path = "runner_cap_store.rs"]
 mod runner_cap_store;
+#[path = "runner_cap_store_read.rs"]
+mod runner_cap_store_read;
 #[path = "runner_cap_vcs_low.rs"]
 mod runner_cap_vcs_low;
 #[path = "runner_capability_dispatch.rs"]
@@ -192,7 +196,10 @@ pub fn run(
     let mut bridge_runtime = HostBridgeRuntime::default();
     let mut artifact_budget_state = ArtifactBudgetState::default();
     let mut runtime_budget_state = RuntimeBudgetState::default();
-    let mut store_authority = if policy.is_allowed("core/store::put") {
+    let mut store_authority = if ["core/store::put", "core/store::has", "core/store::get"]
+        .into_iter()
+        .any(|op| policy.is_allowed(op))
+    {
         policy
             .selfhost_authority_config()
             .map(StoreAuthority::load)

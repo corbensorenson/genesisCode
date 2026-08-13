@@ -1,7 +1,7 @@
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module, print_term};
 use gc_effects::{CapsPolicy, Decision, RefsDb, run};
 use gc_kernel::{EvalCtx, Value, eval_module};
-use gc_prelude::build_prelude;
+use gc_prelude::{SelfhostBootstrapMode, build_prelude};
 use tempfile::tempdir;
 
 #[test]
@@ -14,8 +14,16 @@ fn selfhost_frontend_can_load_modules_from_commit_via_ref_and_store_get() {
     // Configure caps to allow store+refs reads and point to our temp locations.
     let caps = {
         let base_dir = td.path().to_string_lossy().to_string();
-        CapsPolicy::from_toml_str(&format!(
-            r#"
+        let artifact = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../..")
+                    .join("selfhost/toolchain.gc")
+            });
+        CapsPolicy::from_toml_str_with_selfhost_authority(
+            &format!(
+                r#"
 allow = ["core/store::get", "core/refs::get"]
 
 [store]
@@ -24,7 +32,10 @@ dir = "{base_dir}/.genesis/store"
 [refs]
 path = "{base_dir}/.genesis/refs.coreform"
 "#
-        ))
+            ),
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
         .expect("caps parse")
     };
 

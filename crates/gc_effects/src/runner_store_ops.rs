@@ -3,6 +3,7 @@ use gc_coreform::{Term, TermOrdKey};
 use crate::EffectsError;
 use crate::store::ArtifactStore;
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_store_hash(payload: &Term) -> Result<String, EffectsError> {
     let Term::Map(m) = payload else {
         return Err(EffectsError::Log(

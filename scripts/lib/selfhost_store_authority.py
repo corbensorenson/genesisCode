@@ -41,8 +41,9 @@ def load_json(path: Path):
 
 FIELDS = {
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
-    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
-    "productionEntrypoints", "requestKind", "resultKind", "runtimeEvidence", "schema",
+    "hostMechanisms", "hostOracle", "hasRequestKind", "hasResultKind",
+    "independentVerifier", "kind", "nonclaims", "productionEntrypoints",
+    "getRequestKind", "getResultKind", "requestKind", "resultKind", "runtimeEvidence", "schema",
     "sourceModule", "sourceSha256", "spec", "version",
 }
 CONSTANTS = {
@@ -51,17 +52,27 @@ CONSTANTS = {
     "decisionInventory": [
         "put-payload-admission", "put-canonical-bytes", "put-operation-budget-admission",
         "put-cumulative-budget-admission", "put-content-hash-identity",
+        "has-payload-hash-admission", "has-local-integrity",
+        "has-remote-fallback-and-result", "get-payload-hash-admission",
+        "get-source-selection", "get-byte-limit-and-integrity",
+        "get-selfhost-coreform-parse", "get-cache-budget-admission",
     ],
     "hostMechanisms": [
         "artifact-only-authority-bootstrap-and-bounded-evaluation",
         "authorized-policy-limit-transport",
         "blake3-and-byte-count-contradiction-checking",
         "atomic-write-once-filesystem-storage-and-durability",
+        "bounded-stable-local-byte-observation",
+        "policy-authorized-remote-presence-byte-and-transport-integrity-observation",
     ],
     "hostOracle": {"parityOnly": True, "productionRequired": False, "removalTask": "R4.2.e"},
     "independentVerifier": "scripts/lib/selfhost_store_authority.py",
+    "hasRequestKind": "genesis/store-has-authority-request-v0.1",
+    "hasResultKind": "genesis/store-has-authority-result-v0.1",
     "kind": "genesis/selfhost-store-authority-v0.1",
     "productionEntrypoints": ["genesis", "genesis_wasi"],
+    "getRequestKind": "genesis/store-get-authority-request-v0.1",
+    "getResultKind": "genesis/store-get-authority-result-v0.1",
     "requestKind": "genesis/store-authority-request-v0.1",
     "resultKind": "genesis/store-authority-result-v0.1",
     "runtimeEvidence": {
@@ -75,7 +86,7 @@ CONSTANTS = {
     "version": "0.1.0",
 }
 NONCLAIMS = {
-    "bootstrap-fixpoint", "get-has-verify-authority", "h2-sd-store",
+    "bootstrap-fixpoint", "verify-authority", "h2-sd-store",
     "package-registry-vcs-authority", "r4-2-e-closure", "release-qualification",
     "sh-c-closure",
 }
@@ -146,6 +157,11 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         "selfhost/printer::print-term", "core/str::to-utf8", "core/crypto::blake3",
         "core/bytes::to-hex", "store put exceeds max_bytes",
         "store put exceeds max_run_bytes", "store put payload must contain exactly :artifact",
+        profile["hasRequestKind"], profile["hasResultKind"], profile["getRequestKind"],
+        profile["getResultKind"], "(quote :observe-local)", "(quote :fetch-remote)",
+        "store has payload must contain exactly one lowercase :hash",
+        "store get payload must contain exactly one lowercase :hash",
+        "selfhost/parse::parse-term", "remote cache write exceeds max_run_bytes",
     ], "GenesisCode store authority")
     if "core/effect::" in source or "core/host::" in source:
         fail("store authority contains an ambient effect or host operation")
@@ -167,6 +183,17 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     ], "Rust store authority bridge")
     if "unwrap_or_default()" in bridge or "unwrap_or(true)" in bridge:
         fail("store authority bridge contains success-capable defaulting")
+    read_bridge_path = "crates/gc_effects/src/store_authority_read.rs"
+    read_bridge = text(root, read_bridge_path, overrides)
+    require_all(read_bridge, [
+        f'const HAS_REQUEST_KIND: &str = "{profile["hasRequestKind"]}"',
+        f'const HAS_RESULT_KIND: &str = "{profile["hasResultKind"]}"',
+        f'const GET_REQUEST_KIND: &str = "{profile["getRequestKind"]}"',
+        f'const GET_RESULT_KIND: &str = "{profile["getResultKind"]}"',
+        "decode_has_result(term, request_hash)", "decode_get_result(term, request_hash)",
+        "result hash must be lowercase hex64", "cache byte count contradiction",
+        "cache hash/bytes contradiction",
+    ], "Rust store read authority bridge")
 
     policy_path = "crates/gc_effects/src/policy.rs"
     policy = text(root, policy_path, overrides)
@@ -183,7 +210,8 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     runner_path = "crates/gc_effects/src/runner.rs"
     runner = text(root, runner_path, overrides)
     require_all(runner, [
-        'policy.is_allowed("core/store::put")', ".map(StoreAuthority::load)",
+        '"core/store::put"', '"core/store::has"', '"core/store::get"',
+        ".any(|op| policy.is_allowed(op))", ".map(StoreAuthority::load)",
         "store_authority.as_mut()",
     ], "runner authority custody")
 
@@ -206,11 +234,52 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
             fail(f"production store put retains host semantic residual {residual!r}")
     if production.index("authority.put(") > production.index(".put_bytes(&bytes)"):
         fail("store write occurs before authority decision")
+    for name in ("cap_store_has_parity", "cap_store_get_parity"):
+        if f'#[cfg(any(test, feature = "parity-oracle"))]\npub(super) fn {name}' not in cap:
+            fail(f"store read parity oracle is not compile-time isolated: {name}")
+
+    read_cap_path = "crates/gc_effects/src/runner_cap_store_read.rs"
+    read_cap = text(root, read_cap_path, overrides)
+    require_all(read_cap, [
+        'authority.has(payload, ":plan"', 'decide(":plan", None, false, None)',
+        "store.observe_bytes_limited(&hash", "StoreHasDecision::FetchRemote",
+        "StoreGetDecision::FetchRemote", "client.store_has(",
+        "client.store_get_opt_bounded(", '":remote-hash-mismatch"',
+        "StoreGetDecision::CacheReturn",
+        "store.put_bytes(&bytes)", "planner-approved hash",
+        "requires the artifact-loaded GenesisCode store authority",
+        'Some("artifact store read failed")',
+        '"remote artifact store authentication failed"',
+        '"remote artifact store request failed"',
+        '"artifact store cache write failed"',
+    ], "store read production route")
+    if (read_cap.index('authority.has(payload, ":plan"')
+            > read_cap.index("store.observe_bytes_limited(&hash")):
+        fail("has filesystem observation occurs before authority plan")
+    get_plan = read_cap.index('decide(":plan", None, false, None)')
+    get_observe = read_cap.index("store.observe_bytes_limited(&hash", get_plan)
+    if get_plan > get_observe:
+        fail("get filesystem observation occurs before authority plan")
+    mechanism_path = "crates/gc_effects/src/store.rs"
+    mechanism = text(root, mechanism_path, overrides)
+    require_all(mechanism, [
+        "pub(crate) enum ArtifactObservation", "pub(crate) fn observe_bytes_limited(",
+        "STABLE_READ_RETRIES", "ArtifactObservation::Missing",
+        "ArtifactObservation::TooLarge", "ArtifactObservation::Bytes",
+    ], "bounded local store observation")
+    for disclosure in (
+        "Some(&error.to_string())", "Some(&rendered)",
+        "artifact store read instability for {}", "path.display()",
+    ):
+        if disclosure in read_cap or disclosure in mechanism:
+            fail(f"store read route retains disclosing host error transport {disclosure!r}")
 
     dispatch_path = "crates/gc_effects/src/runner_capability_dispatch.rs"
     dispatch = text(root, dispatch_path, overrides)
     require_all(dispatch, [
         "store_authority: Option<&mut StoreAuthority>", '"core/store::put" => cap_store_put(',
+        '"core/store::has" => runner_cap_store_read::cap_store_has(',
+        '"core/store::get" => runner_cap_store_read::cap_store_get(',
         "store_authority,", "None,\n        &mut bridge_runtime",
     ], "store dispatch")
 
@@ -228,6 +297,10 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         "store_put_payload_shape_is_decided_as_a_sealed_error",
         "semantic rejection must happen before any store write",
         "store_put_enforces_cumulative_store_run_budget",
+        "store_get_without_artifact_authority_fails_closed",
+        "store_read_hash_admission_precedes_filesystem_observation",
+        "store_has_and_get_classify_local_hash_mismatch_as_corruption",
+        "store_read_io_errors_are_stable_and_nondisclosing",
     ], "store authority tests")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
@@ -261,29 +334,38 @@ def mutation_controls(root: Path, profile) -> int:
     paths = {
         name: (root / name).read_text() for name in (
             profile["sourceModule"], "selfhost/toolchain_manifest.gc",
-            "crates/gc_effects/src/store_authority.rs", "crates/gc_effects/src/policy.rs",
+            "crates/gc_effects/src/store_authority.rs",
+            "crates/gc_effects/src/store_authority_read.rs", "crates/gc_effects/src/policy.rs",
             "crates/gc_effects/src/policy_selfhost.rs",
             "crates/gc_effects/src/runner.rs", "crates/gc_effects/src/runner_cap_store.rs",
+            "crates/gc_effects/src/runner_cap_store_read.rs", "crates/gc_effects/src/store.rs",
             "crates/gc_effects/src/runner_capability_dispatch.rs", "crates/gc_cli_driver/src/lib.rs",
             "crates/gc_effects/tests/store_caps.rs",
         )
     }
     source = paths[profile["sourceModule"]]
     mutations = [
-        ({profile["sourceModule"]: source.replace("(quote :put)", "(quote :removed)", 1)}, "put phase"),
-        ({profile["sourceModule"]: source.replace(":request-h (selfhost/hash::hash-term request)", ":request-h nil", 1)}, "request binding"),
+        ({profile["sourceModule"]: source.replace("(quote :put)", "(quote :removed)")}, "put phase"),
+        ({profile["sourceModule"]: source.replace(":request-h (selfhost/hash::hash-term request)", ":request-h nil")}, "request binding"),
         ({profile["sourceModule"]: source.replace("selfhost/printer::print-term", "selfhost/printer::removed", 1)}, "canonical bytes"),
         ({profile["sourceModule"]: source.replace("store put exceeds max_bytes", "removed max", 1)}, "operation limit"),
         ({profile["sourceModule"]: source.replace("store put exceeds max_run_bytes", "removed run max", 1)}, "run limit"),
-        ({profile["sourceModule"]: source.replace("core/crypto::blake3", "core/crypto::removed", 1)}, "hash identity"),
+        ({profile["sourceModule"]: source.replace("core/crypto::blake3", "core/crypto::removed")}, "hash identity"),
+        ({profile["sourceModule"]: source.replace("(quote :observe-local)", "(quote :removed-local)")}, "read plan"),
+        ({profile["sourceModule"]: source.replace("selfhost/parse::parse-term", "selfhost/parse::removed", 1)}, "selfhost parse"),
+        ({profile["sourceModule"]: source.replace("remote cache write exceeds max_run_bytes", "removed cache limit", 1)}, "cache budget"),
         ({"selfhost/toolchain_manifest.gc": paths["selfhost/toolchain_manifest.gc"].replace(f'    "{profile["sourceModule"]}"\n', "", 1)}, "module custody"),
         ({"selfhost/toolchain_manifest.gc": paths["selfhost/toolchain_manifest.gc"].replace(f"    {profile['binding']}\n", "", 1)}, "binding custody"),
         ({"crates/gc_effects/src/store_authority.rs": paths["crates/gc_effects/src/store_authority.rs"].replace("decode_put_result(term, request_hash)", "Ok(StorePutDecision::Error { code: String::new(), message: String::new() })", 1)}, "strict decode"),
+        ({"crates/gc_effects/src/store_authority_read.rs": paths["crates/gc_effects/src/store_authority_read.rs"].replace("decode_get_result(term, request_hash)", "panic!(\"removed\")", 1)}, "read strict decode"),
         ({"crates/gc_effects/src/policy_selfhost.rs": paths["crates/gc_effects/src/policy_selfhost.rs"].replace("policy.selfhost_authority = Some(SelfhostAuthorityConfig", "let removed_authority = Some(SelfhostAuthorityConfig", 1)}, "policy propagation"),
         ({"crates/gc_effects/src/runner.rs": paths["crates/gc_effects/src/runner.rs"].replace(".map(StoreAuthority::load)", ".map(removed_authority)", 1)}, "runner load"),
         ({"crates/gc_effects/src/runner_cap_store.rs": paths["crates/gc_effects/src/runner_cap_store.rs"].replace("authority.put(", "removed.put(", 1)}, "authority call"),
         ({"crates/gc_effects/src/runner_cap_store.rs": paths["crates/gc_effects/src/runner_cap_store.rs"].replace('#[cfg(any(test, feature = "parity-oracle"))]\nfn cap_store_put_parity', "fn cap_store_put_parity", 1)}, "parity isolation"),
         ({"crates/gc_effects/src/runner_cap_store.rs": paths["crates/gc_effects/src/runner_cap_store.rs"].replace(".put_bytes(&bytes)", ".put_bytes(b\"host-substitution\")", 1)}, "exact write"),
+        ({"crates/gc_effects/src/runner_cap_store_read.rs": paths["crates/gc_effects/src/runner_cap_store_read.rs"].replace('authority.has(payload, ":plan"', 'authority.has(payload, ":removed"', 1)}, "has plan ordering"),
+        ({"crates/gc_effects/src/runner_cap_store_read.rs": paths["crates/gc_effects/src/runner_cap_store_read.rs"].replace('decide(":plan", None, false, None)', 'decide(":removed", None, false, None)', 1)}, "get plan ordering"),
+        ({"crates/gc_effects/src/runner_cap_store_read.rs": paths["crates/gc_effects/src/runner_cap_store_read.rs"].replace("store.put_bytes(&bytes)", "store.put_bytes(b\"substitution\")", 1)}, "cache exact write"),
         ({"crates/gc_cli_driver/src/lib.rs": paths["crates/gc_cli_driver/src/lib.rs"].replace("CapsPolicy::load_with_selfhost_authority(", "CapsPolicy::load_without_authority(", 1)}, "CLI custody"),
         ({"crates/gc_effects/tests/store_caps.rs": paths["crates/gc_effects/tests/store_caps.rs"].replace("store_put_without_artifact_authority_fails_closed", "removed_fail_closed_control", 1)}, "negative control"),
     ]

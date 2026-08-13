@@ -110,7 +110,8 @@ fn cap_store_put_parity(
     Ok(Value::data(Term::Map(m)))
 }
 
-pub(super) fn cap_store_has(
+#[cfg(any(test, feature = "parity-oracle"))]
+pub(super) fn cap_store_has_parity(
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -166,7 +167,8 @@ pub(super) fn cap_store_has(
     clippy::too_many_arguments,
     reason = "store get path receives shared runner context explicitly"
 )]
-pub(super) fn cap_store_get(
+#[cfg(any(test, feature = "parity-oracle"))]
+pub(super) fn cap_store_get_parity(
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,

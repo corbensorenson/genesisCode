@@ -11,10 +11,14 @@
     "decisionInventory",
     "hostMechanisms",
     "hostOracle",
+    "hasRequestKind",
+    "hasResultKind",
     "independentVerifier",
     "kind",
     "nonclaims",
     "productionEntrypoints",
+    "getRequestKind",
+    "getResultKind",
     "requestKind",
     "resultKind",
     "runtimeEvidence",
@@ -35,7 +39,15 @@
         "put-canonical-bytes",
         "put-operation-budget-admission",
         "put-cumulative-budget-admission",
-        "put-content-hash-identity"
+        "put-content-hash-identity",
+        "has-payload-hash-admission",
+        "has-local-integrity",
+        "has-remote-fallback-and-result",
+        "get-payload-hash-admission",
+        "get-source-selection",
+        "get-byte-limit-and-integrity",
+        "get-selfhost-coreform-parse",
+        "get-cache-budget-admission"
       ]
     },
     "hostMechanisms": {
@@ -43,7 +55,9 @@
         "artifact-only-authority-bootstrap-and-bounded-evaluation",
         "authorized-policy-limit-transport",
         "blake3-and-byte-count-contradiction-checking",
-        "atomic-write-once-filesystem-storage-and-durability"
+        "atomic-write-once-filesystem-storage-and-durability",
+        "bounded-stable-local-byte-observation",
+        "policy-authorized-remote-presence-byte-and-transport-integrity-observation"
       ]
     },
     "hostOracle": {
@@ -57,9 +71,13 @@
       }
     },
     "independentVerifier": {"const": "scripts/lib/selfhost_store_authority.py"},
+    "hasRequestKind": {"const": "genesis/store-has-authority-request-v0.1"},
+    "hasResultKind": {"const": "genesis/store-has-authority-result-v0.1"},
     "kind": {"const": "genesis/selfhost-store-authority-v0.1"},
     "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "getRequestKind": {"const": "genesis/store-get-authority-request-v0.1"},
+    "getResultKind": {"const": "genesis/store-get-authority-result-v0.1"},
     "requestKind": {"const": "genesis/store-authority-request-v0.1"},
     "resultKind": {"const": "genesis/store-authority-result-v0.1"},
     "runtimeEvidence": {

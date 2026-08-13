@@ -8,6 +8,15 @@
 (def selfhost/store-authority::int?
   (fn (value) ((core/sym::eq? (selfhost/store-authority::tag value)) (quote :int))))
 
+(def selfhost/store-authority::str?
+  (fn (value) ((core/sym::eq? (selfhost/store-authority::tag value)) (quote :str))))
+
+(def selfhost/store-authority::bool?
+  (fn (value) ((core/sym::eq? (selfhost/store-authority::tag value)) (quote :bool))))
+
+(def selfhost/store-authority::bytes?
+  (fn (value) ((core/sym::eq? (selfhost/store-authority::tag value)) (quote :bytes))))
+
 (def selfhost/store-authority::field
   (fn (map) (fn (key) (if (selfhost/store-authority::map? map) ((core/map::get map) key) nil))))
 
@@ -150,7 +159,408 @@
         (((selfhost/store-authority::semantic-error request) "core/store/bad-payload")
           "store put payload must contain exactly :artifact")))))
 
-(def core/store::authority
+(def selfhost/store-authority::lower-hex-byte?
+  (fn (byte)
+    (if
+      (if ((core/int::lt? 47) byte) ((core/int::lt? byte) 58) false)
+      true
+      (if ((core/int::lt? 96) byte) ((core/int::lt? byte) 103) false))))
+
+(def selfhost/store-authority::lower-hex-loop?
+  (fn (bytes)
+    (fn (index)
+      (if ((core/int::eq? index) (core/bytes::len bytes))
+        true
+        (if (selfhost/store-authority::lower-hex-byte? ((core/bytes::get bytes) index))
+          ((selfhost/store-authority::lower-hex-loop? bytes) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/store-authority::hash?
+  (fn (value)
+    (if (selfhost/store-authority::str? value)
+      (let ((bytes (core/str::to-utf8 value)))
+        (if ((core/int::eq? (core/bytes::len bytes)) 64)
+          ((selfhost/store-authority::lower-hex-loop? bytes) 0)
+          false))
+      false)))
+
+(def selfhost/store-authority::hash-payload?
+  (fn (payload)
+    (if ((selfhost/store-authority::exact-map? payload) [:hash])
+      (selfhost/store-authority::hash?
+        ((selfhost/store-authority::field payload) (quote :hash)))
+      false)))
+
+(def selfhost/store-authority::has-result
+  (fn (request)
+    (fn (ok)
+      (fn (action)
+        (fn (code)
+          (fn (message)
+            (fn (hash)
+              (fn (present)
+                {
+                  :action action
+                  :code code
+                  :hash hash
+                  :kind "genesis/store-has-authority-result-v0.1"
+                  :message message
+                  :ok ok
+                  :present present
+                  :request-h (selfhost/hash::hash-term request)
+                  :v 1}))))))))
+
+(def selfhost/store-authority::has-reject
+  (fn (request)
+    (fn (message)
+      (((((((selfhost/store-authority::has-result request) false) (quote :reject))
+              "store/authority-request") message) nil) nil))))
+
+(def selfhost/store-authority::has-error
+  (fn (request)
+    (fn (code)
+      (fn (message)
+        (((((((selfhost/store-authority::has-result request) true) (quote :error)) code)
+              message) nil) nil)))))
+
+(def selfhost/store-authority::has-return
+  (fn (request)
+    (fn (present)
+      (((((((selfhost/store-authority::has-result request) true) (quote :return)) nil) nil)
+            nil) present))))
+
+(def selfhost/store-authority::has-fetch
+  (fn (request)
+    (fn (hash)
+      (((((((selfhost/store-authority::has-result request) true) (quote :fetch-remote)) nil)
+            nil) hash) nil))))
+
+(def selfhost/store-authority::has-observe
+  (fn (request)
+    (fn (hash)
+      (((((((selfhost/store-authority::has-result request) true) (quote :observe-local)) nil)
+            nil) hash) nil))))
+
+(def selfhost/store-authority::has-message-error
+  (fn (request)
+    (fn (message)
+      (fn (code)
+        (if (selfhost/store-authority::str? message)
+          (((selfhost/store-authority::has-error request) code) message)
+          ((selfhost/store-authority::has-reject request)
+            "mechanism error requires string message"))))))
+
+(def selfhost/store-authority::has-decide-remote
+  (fn (request)
+    (fn (status)
+      (fn (remote-present)
+        (fn (message)
+          (if ((core/sym::eq? status) (quote :remote-present))
+            (if (selfhost/store-authority::bool? remote-present)
+              ((selfhost/store-authority::has-return request) remote-present)
+              ((selfhost/store-authority::has-reject request)
+                "remote-present requires bool observation"))
+            (if ((core/sym::eq? status) (quote :remote-auth-error))
+              (((selfhost/store-authority::has-message-error request) message)
+                "core/store/remote-auth")
+              (if ((core/sym::eq? status) (quote :remote-error))
+                (((selfhost/store-authority::has-message-error request) message)
+                  "core/store/remote-error")
+                ((selfhost/store-authority::has-reject request)
+                  "unsupported has observation status")))))))))
+
+(def selfhost/store-authority::has-decide-local
+  (fn (request)
+    (fn (hash)
+      (fn (status)
+        (fn (remote-enabled)
+          (fn (local-hash)
+            (fn (message)
+              (if ((core/sym::eq? status) (quote :local-present))
+                (if (selfhost/store-authority::hash? local-hash)
+                  (if ((core/eq? hash) local-hash)
+                    ((selfhost/store-authority::has-return request) true)
+                    (((selfhost/store-authority::has-error request) "core/store/corruption")
+                      "local bytes hash mismatch"))
+                  ((selfhost/store-authority::has-reject request)
+                    "local-present requires a lowercase observed hash"))
+                (if ((core/sym::eq? status) (quote :local-missing))
+                  (if (selfhost/store-authority::bool? remote-enabled)
+                    (if remote-enabled
+                      ((selfhost/store-authority::has-fetch request) hash)
+                      ((selfhost/store-authority::has-return request) false))
+                    ((selfhost/store-authority::has-reject request)
+                      "remote-enabled must be bool"))
+                  (if ((core/sym::eq? status) (quote :local-io-error))
+                    (((selfhost/store-authority::has-message-error request) message)
+                      "core/store/io-error")
+                    (if ((core/sym::eq? status) (quote :local-resource-limit))
+                      (((selfhost/store-authority::has-error request)
+                          "core/caps/resource-limit")
+                        "store has exceeds bounded local observation size")
+                      ((selfhost/store-authority::has-reject request)
+                        "unsupported local has observation status"))))))))))))
+
+(def selfhost/store-authority::has-decide
+  (fn (request)
+    (fn (payload)
+      (fn (status)
+        (fn (remote-enabled)
+          (fn (local-hash)
+            (fn (remote-present)
+              (fn (message)
+                (if (selfhost/store-authority::hash-payload? payload)
+                  (let ((hash ((selfhost/store-authority::field payload) (quote :hash))))
+                    (if ((core/sym::eq? status) (quote :plan))
+                      ((selfhost/store-authority::has-observe request) hash)
+                      (if ((core/sym::eq? status) (quote :remote-present))
+                        ((((selfhost/store-authority::has-decide-remote request) status)
+                            remote-present) message)
+                        (if ((core/sym::eq? status) (quote :remote-auth-error))
+                          ((((selfhost/store-authority::has-decide-remote request) status)
+                              remote-present) message)
+                          (if ((core/sym::eq? status) (quote :remote-error))
+                            ((((selfhost/store-authority::has-decide-remote request) status)
+                                remote-present) message)
+                            ((((((selfhost/store-authority::has-decide-local request) hash) status)
+                                  remote-enabled) local-hash) message))))))
+                  (((selfhost/store-authority::has-error request) "core/store/bad-payload")
+                    "store has payload must contain exactly one lowercase :hash"))))))))))
+
+(def selfhost/store-authority::has
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request)
+        [:kind :local-hash :mechanism-message :payload :phase :remote-enabled :remote-present
+          :status :v])
+      (if
+        ((core/eq? ((selfhost/store-authority::field request) (quote :kind)))
+          "genesis/store-has-authority-request-v0.1")
+        (if ((core/int::eq? ((selfhost/store-authority::field request) (quote :v))) 1)
+          (((((((selfhost/store-authority::has-decide request)
+                        ((selfhost/store-authority::field request) (quote :payload)))
+                      ((selfhost/store-authority::field request) (quote :status)))
+                    ((selfhost/store-authority::field request) (quote :remote-enabled)))
+                  ((selfhost/store-authority::field request) (quote :local-hash)))
+                ((selfhost/store-authority::field request) (quote :remote-present)))
+              ((selfhost/store-authority::field request) (quote :mechanism-message)))
+          ((selfhost/store-authority::has-reject request) "has request version mismatch"))
+        ((selfhost/store-authority::has-reject request) "has request kind mismatch"))
+      ((selfhost/store-authority::has-reject request) "has request fields mismatch"))))
+
+(def selfhost/store-authority::get-result
+  (fn (request)
+    (fn (ok)
+      (fn (action)
+        (fn (artifact)
+          (fn (bytes)
+            (fn (code)
+              (fn (hash)
+                (fn (message)
+                  (fn (written-bytes)
+                    {
+                      :action action
+                      :artifact artifact
+                      :bytes bytes
+                      :code code
+                      :hash hash
+                      :kind "genesis/store-get-authority-result-v0.1"
+                      :message message
+                      :ok ok
+                      :request-h (selfhost/hash::hash-term request)
+                      :v 1
+                      :written-bytes written-bytes}))))))))))
+
+(def selfhost/store-authority::get-reject
+  (fn (request)
+    (fn (message)
+      (((((((((selfhost/store-authority::get-result request) false) (quote :reject)) nil) nil)
+              "store/authority-request") nil) message) nil))))
+
+(def selfhost/store-authority::get-error
+  (fn (request)
+    (fn (code)
+      (fn (message)
+        (((((((((selfhost/store-authority::get-result request) true) (quote :error)) nil) nil)
+                code) nil) message) nil)))))
+
+(def selfhost/store-authority::get-fetch
+  (fn (request)
+    (fn (hash)
+      (((((((((selfhost/store-authority::get-result request) true) (quote :fetch-remote)) nil)
+              nil) nil) hash) nil) nil))))
+
+(def selfhost/store-authority::get-observe
+  (fn (request)
+    (fn (hash)
+      (((((((((selfhost/store-authority::get-result request) true) (quote :observe-local)) nil)
+              nil) nil) hash) nil) nil))))
+
+(def selfhost/store-authority::get-return
+  (fn (request)
+    (fn (artifact)
+      (fn (bytes)
+        (fn (hash)
+          (fn (cache)
+            (fn (written-bytes)
+              (((((((((selfhost/store-authority::get-result request) true)
+                          (if cache (quote :cache-return) (quote :return))) artifact) bytes) nil)
+                    hash) nil) written-bytes))))))))
+
+(def selfhost/store-authority::get-cache-return
+  (fn (request)
+    (fn (artifact)
+      (fn (bytes)
+        (fn (hash)
+          (fn (size)
+            (fn (budget-used)
+              (fn (budget-limit)
+                (let ((next-used ((core/int::add budget-used) size)))
+                  (if
+                    (if (selfhost/store-authority::nil? budget-limit)
+                      false
+                      ((core/int::lt? budget-limit) next-used))
+                    (((selfhost/store-authority::get-error request)
+                        "core/caps/resource-limit")
+                      "remote cache write exceeds max_run_bytes")
+                    ((((((selfhost/store-authority::get-return request) artifact) bytes) hash)
+                        true) size)))))))))))
+
+(def selfhost/store-authority::get-found
+  (fn (request)
+    (fn (bytes)
+      (fn (cache)
+        (let
+          ((payload ((selfhost/store-authority::field request) (quote :payload)))
+            (max-bytes ((selfhost/store-authority::field request) (quote :max-bytes)))
+            (budget-used ((selfhost/store-authority::field request) (quote :budget-used)))
+            (budget-limit ((selfhost/store-authority::field request) (quote :budget-limit))))
+          (let
+            ((hash ((selfhost/store-authority::field payload) (quote :hash)))
+              (size (core/bytes::len bytes)))
+            (if ((core/int::lt? max-bytes) size)
+              (((selfhost/store-authority::get-error request) "core/caps/resource-limit")
+                "store get exceeds max_bytes")
+              (if
+                ((core/eq? (core/bytes::to-hex (core/crypto::blake3 bytes))) hash)
+                (let ((artifact (selfhost/parse::parse-term bytes)))
+                  (if (core/error::is? artifact)
+                    (((selfhost/store-authority::get-error request) "core/store/bad-artifact")
+                      "artifact bytes are not a valid CoreForm term")
+                    (if cache
+                      (((((((selfhost/store-authority::get-cache-return request) artifact) bytes)
+                              hash) size) budget-used) budget-limit)
+                      ((((((selfhost/store-authority::get-return request) artifact) nil) hash)
+                        false) nil))))
+                (((selfhost/store-authority::get-error request)
+                    (if cache "core/store/hash-mismatch" "core/store/corruption"))
+                  (if cache
+                    "remote bytes hash mismatch"
+                    "local bytes hash mismatch"))))))))))
+
+(def selfhost/store-authority::get-message-error
+  (fn (request)
+    (fn (message)
+      (fn (code)
+        (if (selfhost/store-authority::str? message)
+          (((selfhost/store-authority::get-error request) code) message)
+          ((selfhost/store-authority::get-reject request)
+            "mechanism error requires string message"))))))
+
+(def selfhost/store-authority::get-decide
+  (fn (request)
+    (fn (payload)
+      (fn (status)
+        (fn (bytes)
+          (fn (remote-enabled)
+            (fn (message)
+              (if ((core/sym::eq? status) (quote :plan))
+                ((selfhost/store-authority::get-observe request)
+                  ((selfhost/store-authority::field payload) (quote :hash)))
+                (if ((core/sym::eq? status) (quote :local-found))
+                  (if (selfhost/store-authority::bytes? bytes)
+                    (((selfhost/store-authority::get-found request) bytes) false)
+                    ((selfhost/store-authority::get-reject request)
+                      "local-found requires bytes"))
+                  (if ((core/sym::eq? status) (quote :local-missing))
+                  (if (selfhost/store-authority::bool? remote-enabled)
+                    (if remote-enabled
+                      ((selfhost/store-authority::get-fetch request)
+                        ((selfhost/store-authority::field payload) (quote :hash)))
+                      (((selfhost/store-authority::get-error request) "core/store/not-found")
+                        "artifact not found"))
+                    ((selfhost/store-authority::get-reject request)
+                      "remote-enabled must be bool"))
+                  (if ((core/sym::eq? status) (quote :remote-found))
+                    (if (selfhost/store-authority::bytes? bytes)
+                      (((selfhost/store-authority::get-found request) bytes) true)
+                      ((selfhost/store-authority::get-reject request)
+                        "remote-found requires bytes"))
+                      (if ((core/sym::eq? status) (quote :remote-not-found))
+                        (((selfhost/store-authority::get-error request) "core/store/not-found")
+                          "artifact not found")
+                        (if ((core/sym::eq? status) (quote :remote-hash-mismatch))
+                          (((selfhost/store-authority::get-error request)
+                              "core/store/hash-mismatch") "remote bytes hash mismatch")
+                          (if
+                            (if ((core/sym::eq? status) (quote :local-resource-limit))
+                              true
+                              ((core/sym::eq? status) (quote :remote-resource-limit)))
+                            (((selfhost/store-authority::get-error request)
+                                "core/caps/resource-limit") "store get exceeds max_bytes")
+                            (if ((core/sym::eq? status) (quote :remote-auth-error))
+                          (((selfhost/store-authority::get-message-error request) message)
+                            "core/store/remote-auth")
+                          (if ((core/sym::eq? status) (quote :local-io-error))
+                            (((selfhost/store-authority::get-message-error request) message)
+                              "core/store/io-error")
+                            (if ((core/sym::eq? status) (quote :remote-error))
+                              (((selfhost/store-authority::get-message-error request) message)
+                                "core/store/remote-error")
+                              ((selfhost/store-authority::get-reject request)
+                                "unsupported get observation status"))))))))))))))))))
+
+(def selfhost/store-authority::get-validated
+  (fn (request)
+    (let
+      ((payload ((selfhost/store-authority::field request) (quote :payload)))
+        (max-bytes ((selfhost/store-authority::field request) (quote :max-bytes)))
+        (budget-used ((selfhost/store-authority::field request) (quote :budget-used)))
+        (budget-limit ((selfhost/store-authority::field request) (quote :budget-limit))))
+      (if (selfhost/store-authority::hash-payload? payload)
+        (if (selfhost/store-authority::nonnegative-int? max-bytes)
+          (if (selfhost/store-authority::nonnegative-int? budget-used)
+            (if (selfhost/store-authority::optional-nonnegative-int? budget-limit)
+              ((((((selfhost/store-authority::get-decide request) payload)
+                        ((selfhost/store-authority::field request) (quote :status)))
+                      ((selfhost/store-authority::field request) (quote :bytes)))
+                    ((selfhost/store-authority::field request) (quote :remote-enabled)))
+                  ((selfhost/store-authority::field request) (quote :mechanism-message)))
+              ((selfhost/store-authority::get-reject request)
+                "get budget-limit must be nil or nonnegative int"))
+            ((selfhost/store-authority::get-reject request)
+              "get budget-used must be nonnegative int"))
+          ((selfhost/store-authority::get-reject request)
+            "get max-bytes must be nonnegative int"))
+        (((selfhost/store-authority::get-error request) "core/store/bad-payload")
+          "store get payload must contain exactly one lowercase :hash")))))
+
+(def selfhost/store-authority::get
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request)
+        [:budget-limit :budget-used :bytes :kind :max-bytes :mechanism-message :payload :phase
+          :remote-enabled :status :v])
+      (if
+        ((core/eq? ((selfhost/store-authority::field request) (quote :kind)))
+          "genesis/store-get-authority-request-v0.1")
+        (if ((core/int::eq? ((selfhost/store-authority::field request) (quote :v))) 1)
+          (selfhost/store-authority::get-validated request)
+          ((selfhost/store-authority::get-reject request) "get request version mismatch"))
+        ((selfhost/store-authority::get-reject request) "get request kind mismatch"))
+      ((selfhost/store-authority::get-reject request) "get request fields mismatch"))))
+
+(def selfhost/store-authority::put-request
   (fn (request)
     (if
       ((selfhost/store-authority::exact-map? request)
@@ -168,3 +578,17 @@
           ((selfhost/store-authority::protocol-reject request) "store request version mismatch"))
         ((selfhost/store-authority::protocol-reject request) "store request kind mismatch"))
       ((selfhost/store-authority::protocol-reject request) "store request fields mismatch"))))
+
+(def core/store::authority
+  (fn (request)
+    (if (selfhost/store-authority::map? request)
+      (let ((phase ((selfhost/store-authority::field request) (quote :phase))))
+        (if ((core/sym::eq? phase) (quote :put))
+          (selfhost/store-authority::put-request request)
+          (if ((core/sym::eq? phase) (quote :has))
+            (selfhost/store-authority::has request)
+            (if ((core/sym::eq? phase) (quote :get))
+              (selfhost/store-authority::get request)
+              ((selfhost/store-authority::protocol-reject request)
+                "unsupported store phase")))))
+      ((selfhost/store-authority::protocol-reject request) "store request must be a map"))))

@@ -8,6 +8,10 @@ use num_traits::ToPrimitive;
 use crate::EffectsError;
 use crate::policy::SelfhostAuthorityConfig;
 
+#[path = "store_authority_read.rs"]
+mod read;
+pub(crate) use read::{StoreGetDecision, StoreHasDecision};
+
 const BINDING: &str = "core/store::authority";
 const REQUEST_KIND: &str = "genesis/store-authority-request-v0.1";
 const RESULT_KIND: &str = "genesis/store-authority-result-v0.1";
@@ -81,6 +85,11 @@ impl StoreAuthority {
             (":phase", Term::symbol(":put")),
             (":v", Term::Int(1.into())),
         ]);
+        let (term, request_hash) = self.evaluate(request)?;
+        decode_put_result(term, request_hash)
+    }
+
+    fn evaluate(&mut self, request: Term) -> Result<(Term, [u8; 32]), EffectsError> {
         let request_hash = hash_term(&request);
         self.context.reset_counters();
         self.context.step_limit = Some(STEP_LIMIT);
@@ -90,7 +99,7 @@ impl StoreAuthority {
             .apply(&mut self.context, Value::data(request))
             .map_err(|error| authority_error(format!("apply failed: {error}")))?;
         let term = plain_result(value, &self.context)?;
-        decode_put_result(term, request_hash)
+        Ok((term, request_hash))
     }
 }
 
