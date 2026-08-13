@@ -218,6 +218,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial package-lock-write authority profile.
 - `policies/selfhost_pkg_lock_write_authority_v0.1.json` - content-addressed package-lock decision inventory, bounded host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_lock_write_authority.py` - independent package-lock source/artifact/production-route/ledger custody and mutation verifier.
+- `docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.md` - normative partial R4.2.e typed package-lock read authority and residual generic TOML host boundary.
+- `docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial package-lock-read authority profile.
+- `policies/selfhost_pkg_lock_read_authority_v0.1.json` - content-addressed package-lock-read decision inventory, bounded host mechanisms, and explicit nonclaims.
+- `scripts/lib/selfhost_pkg_lock_read_authority.py` - independent package-lock-read source/artifact/production-route/ledger custody and mutation verifier.
 - `policies/selfhost_evidence_verify_authority_v0.1.json` - content-addressed verification decisions, bounded host mechanisms, runtime limits, and nonclaims.
 - `scripts/lib/selfhost_evidence_verify_authority.py` - independent source/artifact custody, route-reachability, no-fallback, separation, ledger, and mutation verifier.
 - `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 29-decision, five-residual, bounded-runtime, host-oracle, and nonclaim profile.

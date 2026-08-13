@@ -1,6 +1,9 @@
 use super::*;
+use crate::pkg_lock_read_authority::{PkgLockReadAuthority, PkgLockReadDecision};
 #[path = "dispatch_lock_io/save_lock.rs"]
 mod save_lock;
+
+const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024;
 
 #[expect(
     clippy::too_many_arguments,
@@ -13,6 +16,7 @@ pub(super) fn dispatch_lock_io(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>,
     pkg_lock_write_authority: Option<&mut PkgLockWriteAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
@@ -259,6 +263,19 @@ pub(super) fn dispatch_lock_io(
         }
 
         "core/pkg-low::load-lock" => {
+            let Some(authority) = pkg_lock_read_authority else {
+                #[cfg(any(test, feature = "parity-oracle"))]
+                {
+                    return dispatch_load_lock_parity(payload, pol, error_tok, op);
+                }
+                #[cfg(not(any(test, feature = "parity-oracle")))]
+                {
+                    return Err(EffectsError::Log(
+                        "core/pkg-low::load-lock requires the artifact-loaded GenesisCode lock read authority"
+                            .to_string(),
+                    ));
+                }
+            };
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
@@ -275,98 +292,25 @@ pub(super) fn dispatch_lock_io(
                     ));
                 }
             };
-            let l = match gc_pkg::GenesisLock::load(&lock_path) {
-                Ok(x) => x,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-lock",
-                        format!("{e}"),
-                        Some(op),
-                    ));
+            let bytes = match read_bounded_lock(&lock_path) {
+                Ok(bytes) => bytes,
+                Err(message) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-lock", message, Some(op)));
                 }
             };
-
-            let mut reqs: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
-            for (name, r) in &l.requirements {
-                let mut mm = BTreeMap::new();
-                mm.insert(
-                    TermOrdKey(Term::symbol(":selector")),
-                    Term::Str(r.selector.clone()),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":update-policy")),
-                    Term::Symbol(match r.update_policy {
-                        gc_pkg::UpdatePolicy::Manual => ":manual".to_string(),
-                        gc_pkg::UpdatePolicy::Auto => ":auto".to_string(),
-                    }),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":registry")),
-                    r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                reqs.insert(TermOrdKey(Term::Str(name.clone())), Term::Map(mm));
+            match authority.read_toml(&bytes)? {
+                PkgLockReadDecision::Lock(Term::Map(mut lock)) => {
+                    lock.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+                    lock.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+                    Ok(Value::data(Term::Map(lock)))
+                }
+                PkgLockReadDecision::Lock(_) => Err(EffectsError::Log(
+                    "selfhost package lock read authority returned a non-map lock".to_string(),
+                )),
+                PkgLockReadDecision::Error { code, message } => {
+                    Ok(mk_error(error_tok, &code, message, Some(op)))
+                }
             }
-
-            let mut locked: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
-            for (name, le) in &l.locked {
-                let mut mm = BTreeMap::new();
-                mm.insert(
-                    TermOrdKey(Term::symbol(":commit")),
-                    le.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":snapshot")),
-                    Term::Str(le.snapshot.clone()),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":registry")),
-                    le.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":source_selector")),
-                    if le.source_selector.is_empty() {
-                        Term::Nil
-                    } else {
-                        Term::Str(le.source_selector.clone())
-                    },
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":resolved-ref")),
-                    le.resolved_ref.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":exports_hash")),
-                    le.exports_hash.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                locked.insert(TermOrdKey(Term::Str(name.clone())), Term::Map(mm));
-            }
-
-            let mut registries: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
-            for (name, url) in &l.registries {
-                registries.insert(TermOrdKey(Term::Str(name.clone())), Term::Str(url.clone()));
-            }
-            let mut artifacts: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
-            for (name, h) in &l.artifacts {
-                artifacts.insert(TermOrdKey(Term::Str(name.clone())), Term::Str(h.clone()));
-            }
-
-            let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
-            m.insert(
-                TermOrdKey(Term::symbol(":workspace")),
-                Term::Str(l.workspace),
-            );
-            m.insert(TermOrdKey(Term::symbol(":policy")), Term::Str(l.policy));
-            m.insert(TermOrdKey(Term::symbol(":requirements")), Term::Map(reqs));
-            m.insert(TermOrdKey(Term::symbol(":locked")), Term::Map(locked));
-            m.insert(
-                TermOrdKey(Term::symbol(":registries")),
-                Term::Map(registries),
-            );
-            m.insert(TermOrdKey(Term::symbol(":artifacts")), Term::Map(artifacts));
-            Ok(Value::data(Term::Map(m)))
         }
         "core/pkg-low::load-package" => handle_load_package(payload, pol, error_tok, op),
         "core/pkg-low::save-lock" => {
@@ -380,4 +324,171 @@ pub(super) fn dispatch_lock_io(
             Some(op),
         )),
     }
+}
+
+fn read_bounded_lock(path: &std::path::Path) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+
+    let file = std::fs::File::open(path).map_err(|_| "cannot read lock file".to_string())?;
+    let mut bytes = Vec::new();
+    file.take(MAX_LOCK_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "cannot read lock file".to_string())?;
+    if bytes.len() as u64 > MAX_LOCK_BYTES {
+        return Err("lock file exceeds 4 MiB".to_string());
+    }
+    Ok(bytes)
+}
+
+#[cfg(any(test, feature = "parity-oracle"))]
+fn dispatch_load_lock_parity(
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<Value, EffectsError> {
+    let lock_s = match payload_pkg_lock(payload) {
+        Ok(path) => path,
+        Err(error) => {
+            return Ok(mk_error(error_tok, "core/pkg/bad-payload", error, Some(op)));
+        }
+    };
+    let base_dir = effective_base_dir(pol)?;
+    let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+        Ok(path) => path,
+        Err(error) => {
+            return Ok(mk_error(
+                error_tok,
+                "core/pkg/missing-lock",
+                error.to_string(),
+                Some(op),
+            ));
+        }
+    };
+    let lock = match gc_pkg::GenesisLock::load(&lock_path) {
+        Ok(lock) => lock,
+        Err(error) => {
+            return Ok(mk_error(
+                error_tok,
+                "core/pkg/bad-lock",
+                error.to_string(),
+                Some(op),
+            ));
+        }
+    };
+    Ok(Value::data(legacy_lock_term(lock_s, lock)))
+}
+
+#[cfg(any(test, feature = "parity-oracle"))]
+fn legacy_lock_term(lock_path: String, lock: gc_pkg::GenesisLock) -> Term {
+    let requirements = lock
+        .requirements
+        .into_iter()
+        .map(|(name, requirement)| {
+            let update_policy = match requirement.update_policy {
+                gc_pkg::UpdatePolicy::Manual => ":manual",
+                gc_pkg::UpdatePolicy::Auto => ":auto",
+            };
+            (
+                TermOrdKey(Term::Str(name)),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":registry")),
+                            requirement.registry.map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":selector")),
+                            Term::Str(requirement.selector),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":update-policy")),
+                            Term::symbol(update_policy),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            )
+        })
+        .collect();
+    let locked = lock
+        .locked
+        .into_iter()
+        .map(|(name, entry)| {
+            (
+                TermOrdKey(Term::Str(name)),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":commit")),
+                            entry.commit.map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":exports_hash")),
+                            entry.exports_hash.map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":registry")),
+                            entry.registry.map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":resolved-ref")),
+                            entry.resolved_ref.map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":snapshot")),
+                            Term::Str(entry.snapshot),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":source_selector")),
+                            if entry.source_selector.is_empty() {
+                                Term::Nil
+                            } else {
+                                Term::Str(entry.source_selector)
+                            },
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            )
+        })
+        .collect();
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":artifacts")),
+                Term::Map(
+                    lock.artifacts
+                        .into_iter()
+                        .map(|(key, value)| (TermOrdKey(Term::Str(key)), Term::Str(value)))
+                        .collect(),
+                ),
+            ),
+            (TermOrdKey(Term::symbol(":lock")), Term::Str(lock_path)),
+            (TermOrdKey(Term::symbol(":locked")), Term::Map(locked)),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            (TermOrdKey(Term::symbol(":policy")), Term::Str(lock.policy)),
+            (
+                TermOrdKey(Term::symbol(":registries")),
+                Term::Map(
+                    lock.registries
+                        .into_iter()
+                        .map(|(key, value)| (TermOrdKey(Term::Str(key)), Term::Str(value)))
+                        .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":requirements")),
+                Term::Map(requirements),
+            ),
+            (
+                TermOrdKey(Term::symbol(":workspace")),
+                Term::Str(lock.workspace),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
 }

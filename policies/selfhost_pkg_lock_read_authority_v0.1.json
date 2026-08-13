@@ -1,0 +1,50 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/pkg::lock-read-authority",
+  "contentIdentitySha256": "2cae5e4a88227976de4db75a4edc1f89464fa6380b11cea261677e7a6fe9748c",
+  "decisionInventory": [
+    "supported-lock-version-admission",
+    "workspace-and-policy-normalization",
+    "requirement-policy-and-strategy-normalization",
+    "tag-policy-selector-compatibility",
+    "locked-entry-normalization",
+    "closed-public-lock-term",
+    "request-bound-result-verdict"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "capability-policy-and-sandbox-path-enforcement",
+    "bounded-file-read-and-utf8-validation",
+    "generic-toml-decoding-and-term-transport",
+    "strict-result-contradiction-checking",
+    "effect-log-and-diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": false,
+    "productionRequired": true,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_lock_read_authority.py",
+  "kind": "genesis/selfhost-pkg-lock-read-authority-v0.1",
+  "nonclaims": [
+    "all-lock-consumer-authority",
+    "bootstrap-fixpoint",
+    "graph-resolution-authority",
+    "h2-package-resolution",
+    "r4-2-e-closure",
+    "registry-authority",
+    "release-qualification",
+    "selfhost-toml-codec",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionEntrypoints": ["genesis", "genesis_wasi"],
+  "requestKind": "genesis/pkg-lock-read-authority-request-v0.1",
+  "resultKind": "genesis/pkg-lock-read-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/pkg_lock_read_authority_v1.gc",
+  "sourceSha256": "37f2cc15538994c3024d40dbabff91fa176a04cec53ba0ea17896edc2f048e3c",
+  "spec": "docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

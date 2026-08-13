@@ -195,6 +195,14 @@ python3 scripts/lib/selfhost_pkg_lock_write_authority.py \
   --schema docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e package lock reading is partial: GenesisCode owns the typed public
+# lock result; bounded transport and the generic Rust TOML codec remain H0.
+python3 scripts/lib/selfhost_pkg_lock_read_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_lock_read_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \

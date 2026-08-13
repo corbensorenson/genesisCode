@@ -1,0 +1,384 @@
+(def selfhost/pkg-lock-read::tag core/data::tag)
+
+(def selfhost/pkg-lock-read::map?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-lock-read::tag value)) (quote :map))))
+
+(def selfhost/pkg-lock-read::vec?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-lock-read::tag value)) (quote :vec))))
+
+(def selfhost/pkg-lock-read::str?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-lock-read::tag value)) (quote :str))))
+
+(def selfhost/pkg-lock-read::int?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-lock-read::tag value)) (quote :int))))
+
+(def selfhost/pkg-lock-read::nil?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-lock-read::tag value)) (quote :nil))))
+
+(def selfhost/pkg-lock-read::ok
+  (fn (value) {:message nil :ok true :value value}))
+
+(def selfhost/pkg-lock-read::bad
+  (fn (message) {:message message :ok false :value nil}))
+
+(def selfhost/pkg-lock-read::valid-optional-string?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::nil? value) true (selfhost/pkg-lock-read::str? value))))
+
+(def selfhost/pkg-lock-read::starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let ((length (core/bytes::len bytes)))
+            (let ((prefix-length (core/bytes::len prefix-bytes)))
+              (if ((core/int::lt? length) prefix-length)
+                false
+                ((core/eq? (((core/bytes::slice bytes) 0) prefix-length)) prefix-bytes)))))))))
+
+(def selfhost/pkg-lock-read::ascii-space?
+  (fn (byte)
+    (if ((core/int::eq? byte) 32)
+      true
+      (if ((core/int::eq? byte) 9)
+        true
+        (if ((core/int::eq? byte) 10) true ((core/int::eq? byte) 13))))))
+
+(def selfhost/pkg-lock-read::trim-left
+  (fn (bytes)
+    (fn (length)
+      (fn (index)
+        (if ((core/int::eq? index) length)
+          index
+          (if (selfhost/pkg-lock-read::ascii-space? ((core/bytes::get bytes) index))
+            (((selfhost/pkg-lock-read::trim-left bytes) length) ((core/int::add index) 1))
+            index))))))
+
+(def selfhost/pkg-lock-read::trim-right
+  (fn (bytes)
+    (fn (start)
+      (fn (end)
+        (if ((core/int::eq? start) end)
+          end
+          (let ((index ((core/int::sub end) 1)))
+            (if (selfhost/pkg-lock-read::ascii-space? ((core/bytes::get bytes) index))
+              (((selfhost/pkg-lock-read::trim-right bytes) start) index)
+              end)))))))
+
+(def selfhost/pkg-lock-read::trim
+  (fn (value)
+    (let ((bytes (core/str::to-utf8 value)))
+      (let ((length (core/bytes::len bytes)))
+        (let ((start (((selfhost/pkg-lock-read::trim-left bytes) length) 0)))
+          (let ((end (((selfhost/pkg-lock-read::trim-right bytes) start) length)))
+            (core/str::from-utf8 (((core/bytes::slice bytes) start) ((core/int::sub end) start)))))))))
+
+(def selfhost/pkg-lock-read::drop-prefix
+  (fn (value)
+    (fn (length)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((total (core/bytes::len bytes)))
+          (core/str::from-utf8 (((core/bytes::slice bytes) length) ((core/int::sub total) length))))))))
+
+(def selfhost/pkg-lock-read::tag-selector?
+  (fn (selector)
+    (let ((value (selfhost/pkg-lock-read::trim selector)))
+      (if ((selfhost/pkg-lock-read::starts-with? value) "semver:")
+        (let ((rest (selfhost/pkg-lock-read::trim ((selfhost/pkg-lock-read::drop-prefix value) 7))))
+          ((core/int::lt? 0) (core/str::len rest)))
+        (if ((selfhost/pkg-lock-read::starts-with? value) "ref:refs/tags/")
+          true
+          ((selfhost/pkg-lock-read::starts-with? value) "refs/tags/"))))))
+
+(def selfhost/pkg-lock-read::ref-selector?
+  (fn (selector)
+    (let ((value (selfhost/pkg-lock-read::trim selector)))
+      (if ((selfhost/pkg-lock-read::starts-with? value) "ref:refs/")
+        (if ((selfhost/pkg-lock-read::starts-with? value) "ref:refs/tags/") false true)
+        (if ((selfhost/pkg-lock-read::starts-with? value) "refs/")
+          (if ((selfhost/pkg-lock-read::starts-with? value) "refs/tags/") false true)
+          false)))))
+
+(def selfhost/pkg-lock-read::infer-strategy
+  (fn (selector)
+    (if (selfhost/pkg-lock-read::tag-selector? selector)
+      "tag-policy"
+      (if (selfhost/pkg-lock-read::ref-selector? selector) "track-ref" "pinned"))))
+
+(def selfhost/pkg-lock-read::string-map-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-lock-read::ok out)
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((key ((core/vec::get entry) 0)))
+              (let ((value ((core/vec::get entry) 1)))
+                (if
+                  (if (selfhost/pkg-lock-read::str? key) (selfhost/pkg-lock-read::str? value) false)
+                  (((selfhost/pkg-lock-read::string-map-loop entries) ((core/int::add index) 1))
+                    (((core/map::put out) key) value))
+                  (selfhost/pkg-lock-read::bad "table keys and values must be strings"))))))))))
+
+(def selfhost/pkg-lock-read::string-map
+  (fn (value)
+    (if (selfhost/pkg-lock-read::nil? value)
+      (selfhost/pkg-lock-read::ok {})
+      (if (selfhost/pkg-lock-read::map? value)
+        (((selfhost/pkg-lock-read::string-map-loop (core/map::entries value)) 0) {})
+        (selfhost/pkg-lock-read::bad "expected a string table")))))
+
+(def selfhost/pkg-lock-read::normalize-update-policy
+  (fn (value)
+    (if (selfhost/pkg-lock-read::str? value)
+      (if ((core/eq? value) "auto") (quote :auto) (quote :manual))
+      (quote :manual))))
+
+(def selfhost/pkg-lock-read::normalize-strategy
+  (fn (value)
+    (fn (selector)
+      (if (selfhost/pkg-lock-read::str? value)
+        (if ((core/eq? value) "pinned")
+          "pinned"
+          (if ((core/eq? value) "track-ref")
+            "track-ref"
+            (if ((core/eq? value) "tag-policy") "tag-policy" (selfhost/pkg-lock-read::infer-strategy selector))))
+        (selfhost/pkg-lock-read::infer-strategy selector)))))
+
+(def selfhost/pkg-lock-read::normalize-requirement
+  (fn (name)
+    (fn (value)
+      (if (selfhost/pkg-lock-read::map? value)
+        (let ((selector ((core/map::get value) "selector")))
+          (if (selfhost/pkg-lock-read::str? selector)
+            (let
+              (
+                (registry ((core/map::get value) "registry"))
+                (update-policy ((core/map::get value) "update_policy"))
+                (strategy-value ((core/map::get value) "strategy"))
+                (tag-policy ((core/map::get value) "tag_policy")))
+              (if (selfhost/pkg-lock-read::valid-optional-string? registry)
+                (if (selfhost/pkg-lock-read::valid-optional-string? update-policy)
+                  (if (selfhost/pkg-lock-read::valid-optional-string? strategy-value)
+                    (if (selfhost/pkg-lock-read::valid-optional-string? tag-policy)
+                      (let
+                        ((strategy
+                          ((selfhost/pkg-lock-read::normalize-strategy strategy-value) selector)))
+                        (if
+                          (if ((core/eq? strategy) "tag-policy")
+                            (selfhost/pkg-lock-read::tag-selector? selector)
+                            true)
+                          (selfhost/pkg-lock-read::ok
+                            {
+                              :registry registry
+                              :selector selector
+                              :update-policy
+                                (selfhost/pkg-lock-read::normalize-update-policy update-policy)})
+                          (selfhost/pkg-lock-read::bad
+                            "tag-policy requirement selector must be refs/tags/* or semver:<range>")))
+                      (selfhost/pkg-lock-read::bad "requirement tag_policy must be string"))
+                    (selfhost/pkg-lock-read::bad "requirement strategy must be string"))
+                  (selfhost/pkg-lock-read::bad "requirement update_policy must be string"))
+                (selfhost/pkg-lock-read::bad "requirement registry must be string")))
+            (selfhost/pkg-lock-read::bad "requirement selector must be string")))
+        (selfhost/pkg-lock-read::bad "requirement must be a table")))))
+
+(def selfhost/pkg-lock-read::requirements-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-lock-read::ok out)
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((name ((core/vec::get entry) 0)))
+              (if (selfhost/pkg-lock-read::str? name)
+                (let
+                  ((normalized
+                    ((selfhost/pkg-lock-read::normalize-requirement name) ((core/vec::get entry) 1))))
+                  (if ((core/map::get normalized) (quote :ok))
+                    (((selfhost/pkg-lock-read::requirements-loop entries) ((core/int::add index) 1))
+                      (((core/map::put out) name) ((core/map::get normalized) (quote :value))))
+                    normalized))
+                (selfhost/pkg-lock-read::bad "requirement name must be string")))))))))
+
+(def selfhost/pkg-lock-read::requirements
+  (fn (value)
+    (if (selfhost/pkg-lock-read::nil? value)
+      (selfhost/pkg-lock-read::ok {})
+      (if (selfhost/pkg-lock-read::map? value)
+        (((selfhost/pkg-lock-read::requirements-loop (core/map::entries value)) 0) {})
+        (selfhost/pkg-lock-read::bad "requirements must be a table")))))
+
+(def selfhost/pkg-lock-read::normalize-locked
+  (fn (value)
+    (if (selfhost/pkg-lock-read::map? value)
+      (let ((snapshot ((core/map::get value) "snapshot")))
+        (if (selfhost/pkg-lock-read::str? snapshot)
+          (let
+            (
+              (commit ((core/map::get value) "commit"))
+              (registry ((core/map::get value) "registry"))
+              (source ((core/map::get value) "source_selector"))
+              (resolved ((core/map::get value) "resolved_ref"))
+              (exports ((core/map::get value) "exports_hash"))
+              (environment ((core/map::get value) "environment_fingerprint")))
+            (if
+              (if (selfhost/pkg-lock-read::valid-optional-string? commit)
+                (if (selfhost/pkg-lock-read::valid-optional-string? registry)
+                  (if (selfhost/pkg-lock-read::valid-optional-string? source)
+                    (if (selfhost/pkg-lock-read::valid-optional-string? resolved)
+                      (if (selfhost/pkg-lock-read::valid-optional-string? exports)
+                        (selfhost/pkg-lock-read::valid-optional-string? environment)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              (selfhost/pkg-lock-read::ok
+                {
+                  :commit commit
+                  :exports_hash exports
+                  :registry registry
+                  :resolved-ref resolved
+                  :snapshot snapshot
+                  :source_selector
+                    (if (selfhost/pkg-lock-read::nil? source)
+                      nil
+                      (if ((core/int::eq? (core/str::len source)) 0) nil source))})
+              (selfhost/pkg-lock-read::bad "locked optional fields must be strings")))
+          (selfhost/pkg-lock-read::bad "locked snapshot must be string")))
+      (selfhost/pkg-lock-read::bad "locked entry must be a table"))))
+
+(def selfhost/pkg-lock-read::locked-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-lock-read::ok out)
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((name ((core/vec::get entry) 0)))
+              (if (selfhost/pkg-lock-read::str? name)
+                (let ((normalized (selfhost/pkg-lock-read::normalize-locked ((core/vec::get entry) 1))))
+                  (if ((core/map::get normalized) (quote :ok))
+                    (((selfhost/pkg-lock-read::locked-loop entries) ((core/int::add index) 1))
+                      (((core/map::put out) name) ((core/map::get normalized) (quote :value))))
+                    normalized))
+                (selfhost/pkg-lock-read::bad "locked name must be string")))))))))
+
+(def selfhost/pkg-lock-read::locked
+  (fn (value)
+    (if (selfhost/pkg-lock-read::nil? value)
+      (selfhost/pkg-lock-read::ok {})
+      (if (selfhost/pkg-lock-read::map? value)
+        (((selfhost/pkg-lock-read::locked-loop (core/map::entries value)) 0) {})
+        (selfhost/pkg-lock-read::bad "locked must be a table")))))
+
+(def selfhost/pkg-lock-read::normalize-document-tail
+  (fn (document)
+    (fn (workspace)
+      (fn (policy)
+        (let ((registries (selfhost/pkg-lock-read::string-map ((core/map::get document) "registries"))))
+          (if ((core/map::get registries) (quote :ok))
+            (let ((requirements (selfhost/pkg-lock-read::requirements ((core/map::get document) "requirements"))))
+              (if ((core/map::get requirements) (quote :ok))
+                (let ((locked (selfhost/pkg-lock-read::locked ((core/map::get document) "locked"))))
+                  (if ((core/map::get locked) (quote :ok))
+                    (let ((artifacts (selfhost/pkg-lock-read::string-map ((core/map::get document) "artifacts"))))
+                      (if ((core/map::get artifacts) (quote :ok))
+                        (selfhost/pkg-lock-read::ok
+                          {
+                            :artifacts ((core/map::get artifacts) (quote :value))
+                            :locked ((core/map::get locked) (quote :value))
+                            :policy policy
+                            :registries ((core/map::get registries) (quote :value))
+                            :requirements ((core/map::get requirements) (quote :value))
+                            :workspace workspace})
+                        artifacts))
+                    locked))
+                requirements))
+            registries))))))
+
+(def selfhost/pkg-lock-read::normalize-document
+  (fn (document)
+    (if (selfhost/pkg-lock-read::map? document)
+      (let ((version ((core/map::get document) "version")))
+        (if
+          (if (selfhost/pkg-lock-read::int? version)
+            (if ((core/int::eq? version) 1) true ((core/int::eq? version) 2))
+            false)
+          (let ((workspace ((core/map::get document) "workspace")))
+            (if (selfhost/pkg-lock-read::str? workspace)
+              (let ((policy ((core/map::get document) "policy")))
+                (if (selfhost/pkg-lock-read::nil? policy)
+                  (((selfhost/pkg-lock-read::normalize-document-tail document) workspace)
+                    "policy:default-v0.1")
+                  (if (selfhost/pkg-lock-read::str? policy)
+                    (((selfhost/pkg-lock-read::normalize-document-tail document) workspace) policy)
+                    (selfhost/pkg-lock-read::bad "policy must be string"))))
+              (selfhost/pkg-lock-read::bad "missing or invalid workspace")))
+          (selfhost/pkg-lock-read::bad "missing or unsupported version")))
+      (selfhost/pkg-lock-read::bad "lock document must be a table"))))
+
+(def selfhost/pkg-lock-read::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (lock)
+            {
+              :code code
+              :kind "genesis/pkg-lock-read-authority-result-v0.1"
+              :lock lock
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1}))))))
+
+(def selfhost/pkg-lock-read::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        (((((selfhost/pkg-lock-read::result request-h) false) code) message) nil)))))
+
+(def selfhost/pkg-lock-read::accept
+  (fn (request-h)
+    (fn (lock)
+      (((((selfhost/pkg-lock-read::result request-h) true) nil) nil) lock))))
+
+(def core/pkg::lock-read-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (if ((core/int::eq? (core/vec::len (core/map::entries request))) 4)
+          (let ((kind ((core/map::get request) (quote :kind))))
+            (if
+              (if (selfhost/pkg-lock-read::str? kind)
+                ((core/eq? kind) "genesis/pkg-lock-read-authority-request-v0.1")
+                false)
+              (let ((op ((core/map::get request) (quote :op))))
+                (if
+                  (if ((core/sym::eq? (selfhost/pkg-lock-read::tag op)) (quote :sym))
+                    ((core/sym::eq? op) (quote :read))
+                    false)
+                  (let ((version ((core/map::get request) (quote :v))))
+                    (if
+                      (if (selfhost/pkg-lock-read::int? version) ((core/int::eq? version) 1) false)
+                      (let
+                        ((normalized
+                          (selfhost/pkg-lock-read::normalize-document
+                            ((core/map::get request) (quote :document)))))
+                        (if ((core/map::get normalized) (quote :ok))
+                          ((selfhost/pkg-lock-read::accept request-h)
+                            ((core/map::get normalized) (quote :value)))
+                          (((selfhost/pkg-lock-read::reject request-h) "core/pkg/bad-lock")
+                            ((core/map::get normalized) (quote :message)))))
+                      (((selfhost/pkg-lock-read::reject request-h) "core/pkg/bad-authority-request")
+                        "request :v must be 1")))
+                  (((selfhost/pkg-lock-read::reject request-h) "core/pkg/bad-authority-request")
+                    "request :op must be :read")))
+              (((selfhost/pkg-lock-read::reject request-h) "core/pkg/bad-authority-request")
+                "request :kind mismatch")))
+          (((selfhost/pkg-lock-read::reject request-h) "core/pkg/bad-authority-request")
+            "request fields mismatch"))
+        (((selfhost/pkg-lock-read::reject request-h) "core/pkg/bad-authority-request")
+          "request must be map")))))
