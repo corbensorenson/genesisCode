@@ -93,6 +93,7 @@ DECISIONS = [
     "per-operation-ffi-allowlist-and-bound-policy",
     "per-operation-ffi-signed-policy-admission",
     "per-operation-ffi-signed-policy-metadata",
+    "per-operation-gfx-first-party-profile-policy",
     "per-operation-gpu-backend-policy",
     "per-operation-gpu-fallback-policy",
     "per-operation-max-bytes-policy",
@@ -136,11 +137,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.16",
+        "requestKind": "genesis/effect-policy-authority-request-v0.17",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
-        "resultKind": "genesis/effect-policy-authority-result-v0.16",
+        "resultKind": "genesis/effect-policy-authority-result-v0.17",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -155,11 +156,12 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_ffi_v1.gc",
             "selfhost/effect_policy_bridge_v1.gc",
             "selfhost/effect_policy_gpu_v1.gc",
+            "selfhost/effect_policy_gfx_v1.gc",
             "selfhost/effect_policy_resource_authority_v1.gc",
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.21",
+        "version": "0.1.22",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -235,6 +237,8 @@ def static_check(root: Path, profile):
         fail("effect-policy resource boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_gpu.rs"]') != 1:
         fail("effect-policy GPU boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_gfx.rs"]') != 1:
+        fail("effect-policy GFX boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_process.rs"]') != 1:
         fail("effect-policy process boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_database.rs"]') != 1:
@@ -273,6 +277,9 @@ def static_check(root: Path, profile):
     plugin_boundary_path = root / "crates/gc_effects/src/policy_authority_plugin.rs"
     if plugin_boundary_path.is_symlink() or not plugin_boundary_path.is_file():
         fail("effect-policy plugin host boundary is missing or symlinked")
+    gfx_boundary_path = root / "crates/gc_effects/src/policy_authority_gfx.rs"
+    if gfx_boundary_path.is_symlink() or not gfx_boundary_path.is_file():
+        fail("effect-policy GFX host boundary is missing or symlinked")
     authority = (
         authority_root
         + resource_boundary_path.read_text()
@@ -283,6 +290,7 @@ def static_check(root: Path, profile):
         + crypto_boundary_path.read_text()
         + ffi_boundary_path.read_text()
         + plugin_boundary_path.read_text()
+        + gfx_boundary_path.read_text()
     )
     required_authority = [
         "const MAX_POLICY_OPS: usize = 4_096;",
@@ -313,6 +321,7 @@ def static_check(root: Path, profile):
         "op_policy.authorized_crypto = Some(authorized.crypto);",
         "op_policy.authorized_ffi = Some(authorized.ffi);",
         "op_policy.authorized_plugin = Some(authorized.plugin);",
+        "op_policy.authorized_gfx_profile = Some(authorized.gfx);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -519,6 +528,7 @@ def static_check(root: Path, profile):
         fail("ffi bridge digest authority consumer inventory drift")
     bridge_source = (root / "selfhost/effect_policy_bridge_v1.gc").read_text()
     gpu_source = (root / "selfhost/effect_policy_gpu_v1.gc").read_text()
+    gfx_source = (root / "selfhost/effect_policy_gfx_v1.gc").read_text()
     for binding in (
         "selfhost/effect-bridge::input-valid?",
         "selfhost/effect-bridge::digest-policy",
@@ -541,6 +551,17 @@ def static_check(root: Path, profile):
     for binding in ("input-valid?", "backend-policy", "fallback-policy", "policy"):
         if gpu_source.count(f"(def selfhost/effect-gpu::{binding}\n") != 1:
             fail(f"GPU policy binding inventory drift: {binding}")
+    for binding in (
+        "profile?",
+        "input-valid?",
+        "selected",
+        "normalized-string",
+        "production-runtime?",
+        "explicit-profile",
+        "policy",
+    ):
+        if gfx_source.count(f"(def selfhost/effect-gfx::{binding}\n") != 1:
+            fail(f"GFX policy binding inventory drift: {binding}")
     gpu_consumer = (root / "crates/gc_effects/src/runner_gpu_backend_policy.rs").read_text()
     gpu_production = gpu_consumer.split("#[cfg(test)]", 1)[0]
     if gpu_production.count("fn authorized_gpu_policy(") != 1:
@@ -551,6 +572,16 @@ def static_check(root: Path, profile):
         "fn gpu_backend_selection_consumes_authority_before_raw_policy()"
     ) != 1:
         fail("missing focused GPU authority precedence control")
+    gfx_consumer = (root / "crates/gc_effects/src/runner_gfx_host/profile.rs").read_text()
+    gfx_production = gfx_consumer.split("#[cfg(test)]", 1)[0]
+    if gfx_production.count("fn first_party_profile(") != 1:
+        fail("GFX profile authority consumer inventory drift")
+    if ".extra" in gfx_production or "std::env" in gfx_production:
+        fail("GFX production profile selection bypasses authority state")
+    if gfx_consumer.count(
+        "fn gfx_profile_consumes_authority_before_raw_policy()"
+    ) != 1:
+        fail("missing focused GFX authority precedence control")
     for relative in (
         "crates/gc_effects/src/runner_capability_dispatch.rs",
         "crates/gc_effects/src/runner_editor_host.rs",
@@ -698,6 +729,8 @@ def static_check(root: Path, profile):
         "selfhost_authority_owns_bridge_invocation_configuration",
         "selfhost_authority_preserves_bridge_invocation_compatibility_defaults",
         "selfhost_authority_rejects_malformed_bridge_invocation_decisions",
+        "selfhost_authority_installs_gfx_profile_with_exact_legacy_precedence",
+        "selfhost_authority_rejects_malformed_gfx_profile_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -789,6 +822,7 @@ def mutation_controls(profile, schema):
         ("ffi-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_ffi_v1.gc")),
         ("bridge-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_bridge_v1.gc")),
         ("gpu-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_gpu_v1.gc")),
+        ("gfx-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_gfx_v1.gc")),
         ("resource-source", lambda item: item["sourceModules"].remove("selfhost/effect_policy_resource_authority_v1.gc")),
         ("source-order", lambda item: item["sourceModules"].reverse()),
         ("unknown", lambda item: item.__setitem__("unexpected", True)),

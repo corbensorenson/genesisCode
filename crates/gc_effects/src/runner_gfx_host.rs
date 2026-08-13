@@ -11,9 +11,12 @@ use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge
 mod desktop_adapter;
 #[path = "runner_gfx_host/helpers.rs"]
 mod helpers;
+#[path = "runner_gfx_host/profile.rs"]
+mod profile;
 #[cfg(not(target_os = "wasi"))]
 mod terminal_adapter;
 use helpers::*;
+use profile::{GfxFirstPartyProfile, first_party_profile, profile_label};
 
 const FIRST_PARTY_BACKEND: &str = "first-party-runtime";
 const HEADLESS_ADAPTER: &str = "headless-sim";
@@ -57,25 +60,6 @@ impl SurfaceState {
     }
 }
 
-#[derive(Debug, Clone)]
-enum GfxFirstPartyProfile {
-    Headless,
-    Interactive,
-    Desktop,
-    Browser,
-}
-
-impl GfxFirstPartyProfile {
-    fn as_str(&self) -> &'static str {
-        match self {
-            Self::Headless => "headless",
-            Self::Interactive => "interactive",
-            Self::Desktop => "desktop",
-            Self::Browser => "browser",
-        }
-    }
-}
-
 #[derive(Debug, Default)]
 pub(crate) struct GfxHostRuntime {
     next_surface: u64,
@@ -107,8 +91,12 @@ pub(crate) fn gfx_host_call(
         return None;
     }
     if !has_explicit_bridge_profile(pol) {
+        let profile = match first_party_profile(pol) {
+            Ok(profile) => profile,
+            Err(message) => return Some(gfx_profile_error(error_tok, op, message)),
+        };
         return Some(Value::data(first_party_gfx_response(
-            runtime, op, payload, pol,
+            runtime, op, payload, profile,
         )));
     }
     Some(
@@ -119,66 +107,27 @@ pub(crate) fn gfx_host_call(
     )
 }
 
+fn gfx_profile_error(error_tok: SealId, op: &str, message: String) -> Value {
+    mk_error(
+        error_tok,
+        &BridgeError {
+            code: "gfx/profile-policy".to_string(),
+            message,
+        },
+        Some(op),
+    )
+}
+
 fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {
     crate::runner_host_bridge::runner_host_bridge_policy::bridge_profile_active(pol)
-}
-
-fn first_party_profile(pol: Option<&OpPolicy>) -> GfxFirstPartyProfile {
-    let profile = pol
-        .and_then(|p| {
-            p.extra
-                .get("first_party_profile")
-                .or_else(|| p.extra.get("gfx_first_party_profile"))
-        })
-        .and_then(|v| v.as_str());
-
-    match profile.map(|raw| raw.trim().to_ascii_lowercase()) {
-        Some(value) if value == "interactive" => GfxFirstPartyProfile::Interactive,
-        Some(value) if value == "desktop" => GfxFirstPartyProfile::Desktop,
-        Some(value) if value == "browser" => GfxFirstPartyProfile::Browser,
-        Some(value) if value == "headless" => GfxFirstPartyProfile::Headless,
-        Some(value) if value == "production" || value == "prod" => production_default_profile(),
-        Some(_) => GfxFirstPartyProfile::Headless,
-        None if is_production_runtime_profile(pol) => production_default_profile(),
-        None => GfxFirstPartyProfile::Headless,
-    }
-}
-
-fn is_production_runtime_profile(pol: Option<&OpPolicy>) -> bool {
-    pol.and_then(|p| {
-        p.extra
-            .get("runtime_profile")
-            .or_else(|| p.extra.get("host_runtime_profile"))
-            .and_then(|v| v.as_str())
-    })
-    .is_some_and(|raw| {
-        let normalized = raw.trim().to_ascii_lowercase();
-        normalized == "production" || normalized == "prod" || normalized == "release"
-    })
-}
-
-#[cfg(target_os = "wasi")]
-fn production_default_profile() -> GfxFirstPartyProfile {
-    GfxFirstPartyProfile::Browser
-}
-
-#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
-fn production_default_profile() -> GfxFirstPartyProfile {
-    GfxFirstPartyProfile::Desktop
-}
-
-#[cfg(all(not(target_os = "wasi"), not(feature = "gfx-desktop-backend")))]
-fn production_default_profile() -> GfxFirstPartyProfile {
-    GfxFirstPartyProfile::Interactive
 }
 
 fn first_party_gfx_response(
     runtime: &mut GfxHostRuntime,
     op: &str,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    profile: GfxFirstPartyProfile,
 ) -> Term {
-    let profile = first_party_profile(pol);
     match op {
         "gfx/window::create-surface" => first_party_create_surface(runtime, payload, &profile),
         "gfx/window::resize-surface" => first_party_resize_surface(runtime, payload),
@@ -461,7 +410,7 @@ fn first_party_create_surface(
         (":ok", Term::Bool(true)),
         (":backend", Term::Str(backend)),
         (":adapter", Term::Str(adapter)),
-        (":profile", Term::Str(profile.as_str().to_string())),
+        (":profile", Term::Str(profile_label(*profile).to_string())),
         (":surface", Term::Str(sid)),
         (":width", Term::Int(resolved_width.into())),
         (":height", Term::Int(resolved_height.into())),

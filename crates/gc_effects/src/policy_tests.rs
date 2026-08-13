@@ -1,9 +1,10 @@
 use super::{
     AuthorizedBindPorts, AuthorizedBridgeAllowlist, AuthorizedBridgeDigest,
     AuthorizedBridgeIdentityPolicy, AuthorizedBridgeTransport, AuthorizedDatabasePolicy,
-    AuthorizedFfiSignedPolicy, AuthorizedGpuBackend, AuthorizedGpuFallback, AuthorizedGpuPolicy,
-    AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool, AuthorizedOptionalString,
-    AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy, AuthorizedStringList, CapsPolicy,
+    AuthorizedFfiSignedPolicy, AuthorizedGfxProfile, AuthorizedGpuBackend, AuthorizedGpuFallback,
+    AuthorizedGpuPolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool,
+    AuthorizedOptionalString, AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy,
+    AuthorizedStringList, CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
@@ -107,6 +108,10 @@ fn gpu_policy_term(backend: &str, fallback: &str) -> Term {
             Term::symbol(fallback),
         ),
     ]))
+}
+
+fn gfx_policy_term(profile: &str) -> Term {
+    Term::symbol(profile)
 }
 
 fn store_remote_policy_term(remote: Term, remote_allow: Term, allow_http: Term) -> Term {
@@ -1649,10 +1654,10 @@ fn selfhost_authority_binds_observed_gpu_fallback_default() {
 
 #[test]
 fn selfhost_authority_rejects_malformed_gpu_decisions() {
-    use super::policy_authority::{decode_gpu_policy, legacy_gpu_policy};
+    use super::policy_authority::gpu::{decode, legacy};
 
     assert_eq!(
-        legacy_gpu_policy(None, Some(" REQUIRE-DEVICE ")),
+        legacy(None, Some(" REQUIRE-DEVICE ")),
         AuthorizedGpuPolicy {
             backend: AuthorizedGpuBackend::FirstParty,
             fallback: AuthorizedGpuFallback::RequireDevice,
@@ -1660,7 +1665,7 @@ fn selfhost_authority_rejects_malformed_gpu_decisions() {
     );
     let valid = gpu_policy_term(":device-runtime", ":require-device");
     assert_eq!(
-        decode_gpu_policy(&valid, true).unwrap(),
+        decode(&valid, true).unwrap(),
         AuthorizedGpuPolicy {
             backend: AuthorizedGpuBackend::DeviceRuntimeSubmitIntrospection,
             fallback: AuthorizedGpuFallback::RequireDevice,
@@ -1671,16 +1676,96 @@ fn selfhost_authority_rejects_malformed_gpu_decisions() {
         gpu_policy_term(":device-runtime", ":fallback"),
         Term::Nil,
     ] {
-        decode_gpu_policy(&malformed, true)
-            .expect_err("malformed GPU authority decision must fail closed");
+        decode(&malformed, true).expect_err("malformed GPU authority decision must fail closed");
     }
-    decode_gpu_policy(&valid, false).expect_err("denied GPU authority decision must be nil");
+    decode(&valid, false).expect_err("denied GPU authority decision must be nil");
     let Term::Map(mut extra) = valid else {
         return;
     };
     extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
-    decode_gpu_policy(&Term::Map(extra), true)
-        .expect_err("open GPU authority decision must fail closed");
+    decode(&Term::Map(extra), true).expect_err("open GPU authority decision must fail closed");
+}
+
+#[test]
+fn selfhost_authority_installs_gfx_profile_with_exact_legacy_precedence() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."gfx/window::create-surface"]
+first_party_profile = " interactive "
+gfx_first_party_profile = "browser"
+
+[op."gfx/input::poll-events"]
+gfx_first_party_profile = " desktop "
+
+[op."gfx/audio::enqueue"]
+first_party_profile = "unknown"
+runtime_profile = "production"
+
+[op."gfx/window::surface-info"]
+first_party_profile = 7
+runtime_profile = "release"
+
+[op."gfx/audio::set-master"]
+runtime_profile = 7
+host_runtime_profile = "release"
+
+[op."gfx/window::request-redraw"]
+first_party_profile = "prod"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let production_default = super::policy_authority::gfx::production_default();
+    let cases = [
+        (
+            "gfx/window::create-surface",
+            AuthorizedGfxProfile::Interactive,
+        ),
+        ("gfx/input::poll-events", AuthorizedGfxProfile::Desktop),
+        ("gfx/audio::enqueue", AuthorizedGfxProfile::Headless),
+        ("gfx/window::surface-info", production_default),
+        ("gfx/audio::set-master", AuthorizedGfxProfile::Headless),
+        ("gfx/window::request-redraw", production_default),
+    ];
+    for (op, expected) in cases {
+        assert_eq!(
+            policy.op_policy(op).unwrap().authorized_gfx_profile,
+            Some(expected),
+            "op: {op}"
+        );
+    }
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_gfx_profile_decisions() {
+    use super::policy_authority::gfx::decode;
+
+    assert_eq!(
+        decode(&gfx_policy_term(":browser"), true).unwrap(),
+        AuthorizedGfxProfile::Browser
+    );
+    for malformed in [
+        Term::Nil,
+        gfx_policy_term(":production"),
+        Term::Str("headless".into()),
+    ] {
+        decode(&malformed, true)
+            .expect_err("malformed GFX profile authority decision must fail closed");
+    }
+    decode(&gfx_policy_term(":headless"), false)
+        .expect_err("denied GFX profile authority decision must be nil");
+    assert_eq!(
+        decode(&Term::Nil, false).unwrap(),
+        AuthorizedGfxProfile::Headless
+    );
 }
 
 #[test]

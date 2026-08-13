@@ -1,0 +1,83 @@
+(def selfhost/effect-gfx::profile?
+  (fn (value)
+    (if ((core/eq? value) (quote :headless)) true
+      (if ((core/eq? value) (quote :interactive)) true
+        (if ((core/eq? value) (quote :desktop)) true
+          ((core/eq? value) (quote :browser)))))))
+
+(def selfhost/effect-gfx::input-valid?
+  (fn (value)
+    (if
+      ((selfhost/effect-policy::exact-map? value)
+        [:production-default :profile :profile-alias
+          :runtime-profile :runtime-profile-alias])
+      (if
+        (selfhost/effect-gfx::profile?
+          ((core/map::get value) (quote :production-default)))
+        (if
+          (selfhost/effect-network::optional-string-input?
+            ((core/map::get value) (quote :profile)))
+          (if
+            (selfhost/effect-network::optional-string-input?
+              ((core/map::get value) (quote :profile-alias)))
+            (if
+              (selfhost/effect-network::optional-string-input?
+                ((core/map::get value) (quote :runtime-profile)))
+              (selfhost/effect-network::optional-string-input?
+                ((core/map::get value) (quote :runtime-profile-alias)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-gfx::selected
+  (fn (primary alias)
+    (if (selfhost/policy::nil? primary) alias primary)))
+
+(def selfhost/effect-gfx::normalized-string
+  (fn (raw)
+    (if (selfhost/policy::str? raw)
+      (selfhost/effect-crypto::ascii-lower (selfhost/policy::trim raw))
+      "")))
+
+(def selfhost/effect-gfx::production-runtime?
+  (fn (raw)
+    (if (selfhost/policy::str? raw)
+      (let ((normalized (selfhost/effect-gfx::normalized-string raw)))
+        (if ((core/eq? normalized) "production") true
+          (if ((core/eq? normalized) "prod") true
+            ((core/eq? normalized) "release"))))
+      false)))
+
+(def selfhost/effect-gfx::explicit-profile
+  (fn (raw production-default)
+    (let ((normalized (selfhost/effect-gfx::normalized-string raw)))
+      (if ((core/eq? normalized) "interactive") (quote :interactive)
+        (if ((core/eq? normalized) "desktop") (quote :desktop)
+          (if ((core/eq? normalized) "browser") (quote :browser)
+            (if ((core/eq? normalized) "headless") (quote :headless)
+              (if
+                (if ((core/eq? normalized) "production") true
+                  ((core/eq? normalized) "prod"))
+                production-default
+                (quote :headless)))))))))
+
+(def selfhost/effect-gfx::policy
+  (fn (input)
+    (let
+      ((production-default
+          ((core/map::get input) (quote :production-default)))
+        (profile
+          ((selfhost/effect-gfx::selected
+            ((core/map::get input) (quote :profile)))
+            ((core/map::get input) (quote :profile-alias))))
+        (runtime-profile
+          ((selfhost/effect-gfx::selected
+            ((core/map::get input) (quote :runtime-profile)))
+            ((core/map::get input) (quote :runtime-profile-alias)))))
+      (if (selfhost/policy::str? profile)
+        ((selfhost/effect-gfx::explicit-profile profile) production-default)
+        (if (selfhost/effect-gfx::production-runtime? runtime-profile)
+          production-default
+          (quote :headless))))))

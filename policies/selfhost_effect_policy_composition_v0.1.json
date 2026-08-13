@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "84f401fa904769af644e1a4dcd268bb3ef0b3b6fc18d3cf34e757f9f6c4fec42",
+  "contentIdentitySha256": "e97b4aea6c1b70facf2080c8410b6c11ffe0b18e31af0cc816c33c29630f12e1",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -22,6 +22,7 @@
     "per-operation-ffi-allowlist-and-bound-policy",
     "per-operation-ffi-signed-policy-admission",
     "per-operation-ffi-signed-policy-metadata",
+    "per-operation-gfx-first-party-profile-policy",
     "per-operation-gpu-backend-policy",
     "per-operation-gpu-fallback-policy",
     "per-operation-max-bytes-policy",
@@ -54,7 +55,7 @@
     "genesis",
     "genesis_wasi"
   ],
-  "requestKind": "genesis/effect-policy-authority-request-v0.16",
+  "requestKind": "genesis/effect-policy-authority-request-v0.17",
   "resourceBinding": "core/effects::resource-policy-authority",
   "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
   "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
@@ -67,7 +68,7 @@
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
   ],
-  "resultKind": "genesis/effect-policy-authority-result-v0.16",
+  "resultKind": "genesis/effect-policy-authority-result-v0.17",
   "runtimeEvidence": {
     "allocationLimit": 20000000,
     "stepLimit": 20000000,
@@ -82,10 +83,11 @@
     "selfhost/effect_policy_ffi_v1.gc",
     "selfhost/effect_policy_bridge_v1.gc",
     "selfhost/effect_policy_gpu_v1.gc",
+    "selfhost/effect_policy_gfx_v1.gc",
     "selfhost/effect_policy_resource_authority_v1.gc",
     "selfhost/effect_policy_authority_v1.gc"
   ],
-  "sourceSha256": "077f6a024d0fc55b4a5b7d904e8c37e663a3212e4eeb75bc8bc79a69f9c2dbbd",
+  "sourceSha256": "15646bb9cdf3f7f0032674c3f349605119f1e97addebd5b8728d9cb926937077",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.21"
+  "version": "0.1.22"
 }

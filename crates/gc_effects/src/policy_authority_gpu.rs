@@ -3,7 +3,7 @@ use crate::policy::{AuthorizedGpuBackend, AuthorizedGpuFallback, AuthorizedGpuPo
 
 const DEFAULT_POLICY_ENV: &str = "GENESIS_GPU_BACKEND_POLICY_DEFAULT";
 
-pub(super) fn observed_default() -> Option<String> {
+pub(crate) fn observed_default() -> Option<String> {
     std::env::var(DEFAULT_POLICY_ENV).ok()
 }
 
@@ -52,7 +52,7 @@ fn fallback(raw: Option<&str>) -> AuthorizedGpuFallback {
     }
 }
 
-pub(super) fn legacy(
+pub(crate) fn legacy(
     policy: Option<&OpPolicy>,
     default_policy: Option<&str>,
 ) -> AuthorizedGpuPolicy {
@@ -68,7 +68,7 @@ pub(super) fn legacy(
     }
 }
 
-pub(super) fn decode(term: &Term, allowed: bool) -> Result<AuthorizedGpuPolicy, EffectsError> {
+pub(crate) fn decode(term: &Term, allowed: bool) -> Result<AuthorizedGpuPolicy, EffectsError> {
     if !allowed {
         return if term == &Term::Nil {
             Ok(legacy(None, None))

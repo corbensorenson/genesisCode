@@ -12,9 +12,9 @@ use crate::error::EffectsError;
 
 use super::{
     AuthorizedBridgeIdentityPolicy, AuthorizedCryptoPolicy, AuthorizedDatabasePolicy,
-    AuthorizedFfiPolicy, AuthorizedGpuPolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
-    AuthorizedPluginPolicy, AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy, CapsPolicy,
-    OpPolicy,
+    AuthorizedFfiPolicy, AuthorizedGfxProfile, AuthorizedGpuPolicy, AuthorizedMaxBytes,
+    AuthorizedNetworkPolicy, AuthorizedPluginPolicy, AuthorizedProcessPrograms,
+    AuthorizedStoreRemotePolicy, CapsPolicy, OpPolicy,
 };
 
 #[path = "policy_authority_bridge.rs"]
@@ -27,8 +27,10 @@ mod crypto;
 mod database;
 #[path = "policy_authority_ffi.rs"]
 mod ffi;
+#[path = "policy_authority_gfx.rs"]
+pub(super) mod gfx;
 #[path = "policy_authority_gpu.rs"]
-mod gpu;
+pub(super) mod gpu;
 #[path = "policy_authority_limit.rs"]
 mod limit;
 #[path = "policy_authority_network.rs"]
@@ -49,22 +51,6 @@ pub(super) fn legacy_bridge_identity_policy(
     policy: Option<&OpPolicy>,
 ) -> AuthorizedBridgeIdentityPolicy {
     bridge::legacy(op, policy)
-}
-pub(super) fn observed_gpu_default() -> Option<String> {
-    gpu::observed_default()
-}
-pub(super) fn legacy_gpu_policy(
-    policy: Option<&OpPolicy>,
-    default_policy: Option<&str>,
-) -> AuthorizedGpuPolicy {
-    gpu::legacy(policy, default_policy)
-}
-#[cfg(test)]
-pub(super) fn decode_gpu_policy(
-    term: &Term,
-    allowed: bool,
-) -> Result<AuthorizedGpuPolicy, EffectsError> {
-    gpu::decode(term, allowed)
 }
 #[cfg(test)]
 pub(super) fn decode_bridge_identity_policy(
@@ -258,7 +244,13 @@ fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
     ))
 }
 
-fn request_term(op: &str, baseline: &[String], override_value: Term, gpu_policy: Term) -> Term {
+fn request_term(
+    op: &str,
+    baseline: &[String],
+    override_value: Term,
+    gfx_policy: Term,
+    gpu_policy: Term,
+) -> Term {
     Term::Map(
         [
             (
@@ -267,8 +259,9 @@ fn request_term(op: &str, baseline: &[String], override_value: Term, gpu_policy:
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.16".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.17".to_string()),
             ),
+            (TermOrdKey(Term::symbol(":gfx-policy")), gfx_policy),
             (TermOrdKey(Term::symbol(":gpu-policy")), gpu_policy),
             (TermOrdKey(Term::symbol(":op")), Term::Str(op.to_string())),
             (TermOrdKey(Term::symbol(":override")), override_value),
@@ -276,7 +269,7 @@ fn request_term(op: &str, baseline: &[String], override_value: Term, gpu_policy:
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(16.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(17.into())),
         ]
         .into_iter()
         .collect(),
@@ -388,6 +381,7 @@ struct AuthorizedOperation {
     database: AuthorizedDatabasePolicy,
     network: AuthorizedNetworkPolicy,
     crypto: AuthorizedCryptoPolicy,
+    gfx: AuthorizedGfxProfile,
     gpu: AuthorizedGpuPolicy,
     ffi: AuthorizedFfiPolicy,
     plugin: AuthorizedPluginPolicy,
@@ -410,6 +404,7 @@ fn decode_result(
         ":crypto-policy",
         ":database-policy",
         ":ffi-policy",
+        ":gfx-policy",
         ":gpu-policy",
         ":kind",
         ":max-bytes-policy",
@@ -426,8 +421,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.16")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &16.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.17")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &17.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -493,6 +488,11 @@ fn decode_result(
             .ok_or_else(|| authority_error("result is missing :gpu-policy"))?,
         allowed,
     )?;
+    let gfx = gfx::decode(
+        map.get(&TermOrdKey(Term::symbol(":gfx-policy")))
+            .ok_or_else(|| authority_error("result is missing :gfx-policy"))?,
+        allowed,
+    )?;
     let ffi = ffi::decode(
         map.get(&TermOrdKey(Term::symbol(":ffi-policy")))
             .ok_or_else(|| authority_error("result is missing :ffi-policy"))?,
@@ -515,6 +515,7 @@ fn decode_result(
         database,
         network,
         crypto,
+        gfx,
         gpu,
         ffi,
         plugin,
@@ -628,6 +629,7 @@ pub(super) fn authorize_policy(
             &op,
             &baseline,
             override_term(overrides.get(&op))?,
+            gfx::input(override_table),
             gpu::input(override_table, gpu_default.as_deref()),
         );
         let request_hash = hash_term(&request);
@@ -647,6 +649,7 @@ pub(super) fn authorize_policy(
             || authorized.database != database::legacy(expected)
             || authorized.network != network::legacy(expected)
             || authorized.crypto != crypto::legacy(expected)
+            || authorized.gfx != gfx::legacy(expected)
             || authorized.gpu != gpu::legacy(expected, gpu_default.as_deref())
             || authorized.ffi != ffi::legacy(expected)
             || authorized.plugin != plugin::legacy(expected)
@@ -670,6 +673,7 @@ pub(super) fn authorize_policy(
             op_policy.authorized_database = Some(authorized.database);
             op_policy.authorized_network = Some(authorized.network);
             op_policy.authorized_crypto = Some(authorized.crypto);
+            op_policy.authorized_gfx_profile = Some(authorized.gfx);
             op_policy.authorized_gpu = Some(authorized.gpu);
             op_policy.authorized_ffi = Some(authorized.ffi);
             op_policy.authorized_plugin = Some(authorized.plugin);

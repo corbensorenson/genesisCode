@@ -103,6 +103,16 @@ Profile selection:
 - Set per-op `first_party_profile = "interactive"` in `caps.toml`.
 - Set per-op `first_party_profile = "desktop"` in `caps.toml` for desktop-host.
 - Set per-op `first_party_profile = "browser"` in `caps.toml` for browser-host parity lanes.
+- `gfx_first_party_profile` is a compatibility alias; a present
+  `first_party_profile` takes precedence even when malformed.
+- `production` and `prod` select the compile-target production default. When no
+  valid explicit profile is present, a selected `runtime_profile` or
+  `host_runtime_profile` value of `production`, `prod`, or `release` selects that
+  same default; all other cases select `headless`.
+- Artifact-backed production loads bind these exact observations into GenesisCode
+  authority protocol v0.17. The host validates the result against its temporary
+  compatibility oracle, then GFX dispatch consumes only the installed authority
+  profile.
 - If explicit bridge config is present (`bridge_cmd` or WASI bridge response keys),
   bridge execution takes precedence.
 
