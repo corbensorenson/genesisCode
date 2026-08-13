@@ -20,30 +20,6 @@ pub(super) fn input(value: Option<&toml::Value>) -> Term {
     }
 }
 
-pub(super) fn legacy(policy: Option<&OpPolicy>) -> AuthorizedProcessPrograms {
-    let Some(value) = policy.and_then(|policy| policy.extra.get("allow_programs")) else {
-        return AuthorizedProcessPrograms::Absent;
-    };
-    let Some(values) = value.as_array() else {
-        return AuthorizedProcessPrograms::InvalidType;
-    };
-    let mut programs = Vec::with_capacity(values.len());
-    for value in values {
-        let Some(value) = value.as_str() else {
-            return AuthorizedProcessPrograms::InvalidEntry;
-        };
-        let trimmed = value.trim();
-        if !trimmed.is_empty() {
-            programs.push(trimmed.to_string());
-        }
-    }
-    if programs.is_empty() {
-        AuthorizedProcessPrograms::Empty
-    } else {
-        AuthorizedProcessPrograms::Valid(programs)
-    }
-}
-
 pub(super) fn decode(
     term: &Term,
     allowed: bool,

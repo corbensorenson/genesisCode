@@ -1,6 +1,6 @@
 # Self-host Effect Policy Composition v0.1
 
-Status: normative partial R4.2.d contract; no H2 claim.
+Status: normative H2 effect-policy authority contract within open R4.2.d.
 
 `core/effects::policy-authority` is the GenesisCode producer for the first closed
 effect-policy composition slice: baseline operation admission, per-operation
@@ -81,12 +81,14 @@ runtime and task resource limits, and selection of an explicit task worker
 default from the configured value or the host's bounded available-worker
 observation. Secret bytes never enter the GenesisCode request or result.
 
-The Rust host still parses TOML, independently reconstructs the legacy candidate
-inventory, per-operation results, and log/refs/runtime/store/task resource
-policy, and rejects every contradiction.
-That live oracle is a required safety mechanism for this partial checkpoint and
-prevents `SD-EFFECT-POLICY` from reaching H2. Removing it before all residual
-decisions are GenesisCode-owned and independently verified is forbidden.
+The Rust host parses TOML syntax and structural field types into a neutral
+transport state. It retains candidate names, opaque host-execution fields, and
+private secret bytes, but does not apply baseline/override admission, normalize
+policy values, select resource defaults, or reconstruct an expected result.
+GenesisCode may deny a transported candidate by omitting it; the strict decoder
+rejects any returned operation outside the transported candidate domain. The
+ordinary native, WASI, and internal runtime-profile paths all consume this
+authority. The Rust compatibility parser remains compile-time parity-only.
 
 ## Closed Protocol
 
@@ -201,8 +203,9 @@ operation names. It validates string membership and returns the strictly ordered
 duplicate-free union in a closed
 `genesis/effect-policy-inventory-result-v0.1` map bound to the request hash. The
 host rejects malformed, oversized, duplicate, unsorted, substituted, or
-oracle-contradicting inventory results and uses only the validated GenesisCode
-inventory to drive per-operation composition.
+out-of-domain inventory results and uses only the validated GenesisCode inventory
+to drive per-operation composition. A strict subset is an authoritative denial,
+not a prompt for host reconstruction.
 
 The authority returns a closed nineteen-field
 `genesis/effect-policy-authority-result-v0.20` map containing the exact operation,
@@ -290,18 +293,19 @@ identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
 noncanonical false/zero/negative/overflowing controls, contradictory status/limit
 pairs, noncanonical or contradictory process-program, database, network, crypto,
-plugin, FFI, GFX, GPU, XR, or bridge identity states, operation substitution inside the
-capability, and any result that contradicts its retained compatibility oracle.
+plugin, FFI, GFX, GPU, XR, or bridge identity states, and operation substitution
+inside the capability.
 After validation, the host
 installs the GenesisCode-selected base directory, create-directories flag,
 timeout, per-operation log limit, closed max-byte state, closed normalized
 process-program state, closed database allowlist/bound states, closed network
 allowlist/option/bind/bound states, closed crypto allowlist/bound states, and
 closed plugin and FFI allowlist/bound/signed-metadata states plus the closed GFX
-profile, GPU backend/fallback decision, complete XR device policy, and bridge activation, command allowlist, command,
-arguments, transport, WASI profile, digest
-requirement, and canonical digest into enforcement; its separately parsed values
-are used only by the compatibility oracle.
+profile, GPU backend/fallback decision, complete XR device policy, and bridge
+activation, command allowlist, command, arguments, transport, WASI profile,
+digest requirement, and canonical digest into enforcement. Neutral transport
+state contributes only opaque execution material that the installed decision
+authorizes; it is not an expected semantic result.
 
 The resource authority receives a closed eight-field
 `genesis/effect-resource-policy-request-v0.5` map. It contains version `5`, the
@@ -342,7 +346,6 @@ and any inline selection without the retained private secret. Only after that
 strict decode may Rust inject retained inline secret bytes into private typed
 enforcement state. The host strictly decodes every other field into `u64`,
 platform `usize`, or a UTF-8 path; rejects invalid result domains and overflow;
-compares the complete result with its independently parsed compatibility oracle;
 installs the validated GenesisCode log, refs, runtime, store remote, credential,
 and task values; and only then resolves relative paths against the capability
 file's parent directory. Environment lookup, secret use, path resolution, PEM
@@ -456,17 +459,17 @@ enforcement, and bridge execution without selecting those policy states.
 Host code retains payload measurement and enforcement mechanisms, filesystem path
 resolution, accounting mechanisms, cancellation, effect execution, and replay
 mechanisms.
-`CapsPolicy::from_toml_str`, `CapsPolicy::empty`, and the independent legacy
-composition oracle remain reachable for tests, host mechanisms, and this partial
-transition, and therefore are not evidence of H2.
+`CapsPolicy::from_toml_str` and `CapsPolicy::empty` remain compatibility/test
+constructors. They are not selected by ordinary native, WASI, obligation, or
+runtime-profile production routes; the dedicated parity profile is compile-time
+gated and production selection fails closed.
 
 ## Residual Decisions And Nonclaims
 
-The machine profile lists the complete residual boundary. It includes TOML syntax
-and remaining type decoding; FFI signed-policy provenance, bridge identity
-validation/execution, and model provider lifecycle; secret and path resolution;
-effect execution and hard cancellation; strict replay; and removal of the
-compatibility oracle.
+The machine profile lists the complete residual host-mechanism boundary. It
+includes TOML syntax and structural type decoding; FFI signed-policy provenance,
+bridge identity validation/execution, and model provider lifecycle; secret and
+path resolution; effect execution and hard cancellation; and strict replay.
 Filesystem policy configuration is no longer a residual decision: admission,
 base-directory selection, directory-creation selection, and byte-limit state are
 GenesisCode-produced. Filesystem path joining, canonicalization, symlink defense,
@@ -545,8 +548,7 @@ model-provider lifecycle, cancellation, and replay; it does not cover the
 migrated FFI, plugin, bridge-allowlist, bridge-activation, invocation-selection,
 digest-requirement, or digest-normalization decisions.
 
-This contract does not promote `SD-EFFECT-POLICY`, close R4.2.d or SH-C, establish
-H2/H3/H4, authorize release, or authorize GenesisBench, Genesis Foundry,
-GenesisChallenge, or Genesis Model work. It is an independently checked partial
-production shadow that narrows the next migration frontier without weakening the
-current host enforcement boundary.
+This contract promotes only the exact `SD-EFFECT-POLICY` profile to H2. It does
+not close R4.2.d or SH-C, establish aggregate GenesisCode H2, establish H3/H4,
+move host execution mechanisms into the pure kernel, authorize release, or
+authorize GenesisBench, Genesis Foundry, GenesisChallenge, or Genesis Model work.

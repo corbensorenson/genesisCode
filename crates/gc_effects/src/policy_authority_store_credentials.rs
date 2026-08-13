@@ -225,6 +225,7 @@ fn legacy_raw(
     }
 }
 
+#[cfg(test)]
 fn status_symbol(error: AuthorizedStoreCredentialError) -> &'static str {
     match error {
         AuthorizedStoreCredentialError::AuthTokenInvalidType => ":auth-token-invalid-type",
@@ -270,6 +271,7 @@ fn status_error(status: &str) -> Option<AuthorizedStoreCredentialError> {
     })
 }
 
+#[cfg(test)]
 fn path_term(path: Option<&Path>) -> Result<Term, EffectsError> {
     match path {
         None => Ok(Term::Nil),
@@ -280,6 +282,7 @@ fn path_term(path: Option<&Path>) -> Result<Term, EffectsError> {
     }
 }
 
+#[cfg(test)]
 pub(in crate::policy) fn term(policy: &AuthorizedStoreCredentials) -> Result<Term, EffectsError> {
     let (status, bearer_source, bearer_env, basic_username, password_source, password_env, ca, id) =
         match policy {

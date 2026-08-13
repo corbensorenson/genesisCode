@@ -1,26 +1,5 @@
 use super::*;
 
-pub(super) fn legacy(op: &str, policy: &OpPolicy) -> Term {
-    let mut cap = BTreeMap::new();
-    cap.insert(TermOrdKey(Term::symbol(":op")), Term::symbol(op));
-    if policy.create_dirs {
-        cap.insert(TermOrdKey(Term::symbol(":create-dirs")), Term::Bool(true));
-    }
-    if let Some(timeout_ms) = policy.timeout_ms {
-        cap.insert(
-            TermOrdKey(Term::symbol(":timeout-ms")),
-            Term::Int(timeout_ms.into()),
-        );
-    }
-    if let Some(limit) = policy.log_inline_max_bytes {
-        cap.insert(
-            TermOrdKey(Term::symbol(":log-inline-max-bytes")),
-            Term::Int(limit.into()),
-        );
-    }
-    Term::Map(cap)
-}
-
 pub(super) fn decode(
     cap: &Term,
     op: &str,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent verifier for the partial R4.2.d effect-policy composition slice."""
+"""Independent verifier for H2 GenesisCode effect-policy composition authority."""
 
 import argparse
 import copy
@@ -130,7 +130,7 @@ def validate(profile, schema, check_identity=True):
         "artifact": "selfhost/toolchain.gc",
         "binding": "core/effects::policy-authority",
         "decisionInventory": DECISIONS,
-        "hostOracle": {"required": True, "removalTask": "R4.2.d"},
+        "hostOracle": {"required": False, "removalTask": "R4.2.d"},
         "independentVerifier": "scripts/lib/selfhost_effect_policy_composition.py",
         "inventoryBinding": "core/effects::policy-inventory-authority",
         "inventoryRequestKind": "genesis/effect-policy-inventory-request-v0.1",
@@ -163,7 +163,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.26",
+        "version": "0.1.27",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -183,8 +183,6 @@ def validate(profile, schema, check_identity=True):
         fail("residual decision inventory drift")
     if set(profile.get("nonclaims", [])) != {
         "bootstrap-fixpoint",
-        "effect-policy-h2",
-        "host-oracle-removal",
         "r4-2-d-closure",
         "release-qualification",
         "replay-authority",
@@ -264,6 +262,9 @@ def static_check(root: Path, profile):
     resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
     if resource_boundary_path.is_symlink() or not resource_boundary_path.is_file():
         fail("effect-policy resource host boundary is missing or symlinked")
+    transport_boundary_path = root / "crates/gc_effects/src/policy_transport.rs"
+    if transport_boundary_path.is_symlink() or not transport_boundary_path.is_file():
+        fail("effect-policy neutral transport boundary is missing or symlinked")
     process_boundary_path = root / "crates/gc_effects/src/policy_authority_process.rs"
     if process_boundary_path.is_symlink() or not process_boundary_path.is_file():
         fail("effect-policy process host boundary is missing or symlinked")
@@ -337,10 +338,11 @@ def static_check(root: Path, profile):
         'get("core/effects::policy-authority")',
         'get("core/effects::policy-inventory-authority")',
         'get("core/effects::resource-policy-authority")',
-        "inventory result contradicts independently reconstructed candidate operations",
+        "inventory result invented operation",
+        "let candidate_domain: BTreeSet<String> = policy.ops.keys().cloned().collect();",
+        "let candidate_states = std::mem::take(&mut policy.ops);",
+        "authorized op is outside the transported candidate domain",
         "let request_hash = hash_term(&request);",
-        "contradicts independently reconstructed policy composition",
-        "resource result contradicts independently reconstructed log/runtime/store/task policy",
         "op_policy.authorized_cap = Some(authorized.cap);",
         "op_policy.authorized_xr_policy = Some(authorized.xr);",
         "op_policy.base_dir = authorized.base_dir;",
@@ -370,7 +372,6 @@ def static_check(root: Path, profile):
         "inline bearer decision has no retained inline token",
         "environment bearer decision substituted its environment name",
         "store_credentials::decode_operation(",
-        "store_credentials::legacy_operation(if authorized.allowed",
         "store credential decision substituted an mTLS path",
     ]
     for token in required_authority:
@@ -378,15 +379,47 @@ def static_check(root: Path, profile):
             fail(f"missing effect-policy boundary token: {token}")
 
     policy = (root / "crates/gc_effects/src/policy.rs").read_text()
+    transport = transport_boundary_path.read_text()
+    if policy.count('#[path = "policy_transport.rs"]') != 1:
+        fail("neutral policy transport decomposition drift")
     if "pub fn load_with_selfhost_authority(" not in policy:
         fail("self-host policy loader is missing")
     selfhost_loader = policy.split("pub fn load_with_selfhost_authority(", 1)[1].split(
         "pub(crate) fn authorized_cap", 1
     )[0]
-    if selfhost_loader.find("policy_authority::authorize_policy") >= selfhost_loader.find(
-        "policy.resolve_relative_paths"
+    if (
+        selfhost_loader.find("Self::from_toml_str_with_selfhost_authority")
+        >= selfhost_loader.find("policy.resolve_relative_paths")
     ):
         fail("self-host policy loader must authorize base directories before host path resolution")
+    selfhost_source_loader = policy.split(
+        "pub fn from_toml_str_with_selfhost_authority(", 1
+    )[1].split("pub(crate) fn authorized_cap", 1)[0]
+    if (
+        selfhost_source_loader.count("policy_transport::decode_selfhost_transport(source)") != 1
+        or selfhost_source_loader.count("policy_authority::authorize_policy") != 1
+        or "Self::from_toml_str" in selfhost_source_loader
+    ):
+        fail("self-host policy source loader bypasses the neutral transport boundary")
+    for token in (
+        "toml::from_str(source)",
+        ".entry(op.to_string())",
+        "policy.ops.insert(op.clone(), empty_operation(extra));",
+        "policy.store.auth_token = retain_string(store, \"auth_token\");",
+        "policy.store.authorized_credentials = None;",
+    ):
+        if token not in transport:
+            fail(f"neutral policy transport custody drift: {token}")
+    for token in (
+        "contradicts independently reconstructed candidate operations",
+        "contradicts independently reconstructed policy composition",
+        "resource result contradicts independently reconstructed log/runtime/store/task policy",
+        "legacy_policy_term",
+        "let legacy_ops =",
+        "let legacy_candidates =",
+    ):
+        if token in authority_root or token in resource_boundary_path.read_text():
+            fail(f"live Rust effect-policy oracle remains reachable: {token}")
     legacy_defaults = (
         'pol.log.store_dir = Some(base.join(".genesis").join("store"));',
         'pol.store.dir = Some(base.join(".genesis").join("store"));',
@@ -805,8 +838,12 @@ def static_check(root: Path, profile):
     if preflight.count("load_with_selfhost_authority(") != 1 or "CoreformFrontend::Rust => CapsPolicy::load(path)" not in preflight:
         fail("preflight effect-policy authority routing drift")
     task_profile = (root / "crates/gc_cli_driver/src/pkg_runtime_profile.rs").read_text()
-    if 'CapsPolicy::from_toml_str("allow = [\\"core/task::spawn\\", \\"core/task::await\\"]")' not in task_profile:
-        fail("declared internal compatibility policy disappeared without migration")
+    if (
+        task_profile.count("CapsPolicy::from_toml_str_with_selfhost_authority(") != 1
+        or task_profile.count('#[cfg(feature = "parity-harness")]') != 1
+        or "Rust effect-policy authority is not compiled into production" not in task_profile
+    ):
+        fail("runtime-profile probe does not use the selected self-host policy authority")
 
     runtime_budget = (root / "crates/gc_effects/src/runner_runtime_budget.rs").read_text()
     for field in (
@@ -898,6 +935,25 @@ def static_check(root: Path, profile):
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
+    for source, names in (
+        (
+            authority_root,
+            (
+                "inventory_decoder_allows_authoritative_denial_by_omission",
+                "inventory_decoder_rejects_invented_operations",
+            ),
+        ),
+        (
+            transport,
+            (
+                "candidate_transport_keeps_denied_overrides_and_opaque_host_fields",
+                "transport_rejects_structure_but_does_not_apply_allow_precedence",
+            ),
+        ),
+    ):
+        for name in names:
+            if source.count(f"fn {name}()") != 1:
+                fail(f"missing no-oracle transport control: {name}")
     for name in (
         "process_dispatch_consumes_authorized_programs_before_raw_policy",
         "process_dispatch_preserves_authorized_policy_errors",
@@ -957,8 +1013,14 @@ def static_check(root: Path, profile):
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]
-    if len(rows) != 1 or rows[0].get("currentLevel") is not None or rows[0].get("fallbackReachability") != "host-authoritative":
-        fail("partial effect-policy slice was promoted beyond its evidence")
+    if (
+        len(rows) != 1
+        or rows[0].get("currentLevel") != "H2"
+        or rows[0].get("fallbackReachability") != "none-proven"
+        or "scripts/lib/selfhost_effect_policy_composition.py"
+        not in rows[0].get("verifierPaths", [])
+    ):
+        fail("effect-policy H2 ledger authority drift")
     return {
         "callSites": call_sites,
         "decisions": len(DECISIONS),
@@ -975,7 +1037,7 @@ def mutation_controls(profile, schema):
         ("resource-request", lambda item: item.__setitem__("resourceRequestKind", "unknown")),
         ("resource-result", lambda item: item.__setitem__("resourceResultKind", "unknown")),
         ("decision", lambda item: item["decisionInventory"].pop()),
-        ("oracle", lambda item: item["hostOracle"].__setitem__("required", False)),
+        ("oracle", lambda item: item["hostOracle"].__setitem__("required", True)),
         ("limit", lambda item: item.__setitem__("maxPolicyOperations", 0)),
         ("nonclaim", lambda item: item["nonclaims"].pop()),
         ("residual", lambda item: item["residualDecisionInventory"].pop()),
@@ -1006,7 +1068,7 @@ def mutation_controls(profile, schema):
             continue
         fail(f"self-test accepted authority mutation: {label}")
     stale = copy.deepcopy(profile)
-    stale["auditDate"] = "2026-08-13"
+    stale["auditDate"] = "2026-08-14"
     try:
         validate(stale, schema)
     except CheckError:

@@ -66,8 +66,9 @@ pub(crate) fn handle_runtime_profile(
     max_regression_percent: u64,
     append_history: bool,
     budgets: RuntimeProfileBudgets,
+    frontend: &gc_obligations::CoreformFrontend,
 ) -> Result<LocalPkgResult, String> {
-    let result = run_runtime_profile_probes()?;
+    let result = run_runtime_profile_probes(frontend)?;
     let regression = evaluate_runtime_regression(
         history,
         min_history,
@@ -464,14 +465,18 @@ fn within_regression_budget(observed: u64, baseline_p95: u64, max_regression_per
     observed <= allowed
 }
 
-fn run_runtime_profile_probes() -> Result<RuntimeProfileResult, String> {
-    let task = run_task_scheduler_probe()?;
+fn run_runtime_profile_probes(
+    frontend: &gc_obligations::CoreformFrontend,
+) -> Result<RuntimeProfileResult, String> {
+    let task = run_task_scheduler_probe(frontend)?;
     let io = run_io_store_cycle_probe()?;
     let memory = run_memory_pressure_probe()?;
     Ok(RuntimeProfileResult { task, io, memory })
 }
 
-fn run_task_scheduler_probe() -> Result<RuntimeProbeTrace, String> {
+fn run_task_scheduler_probe(
+    frontend: &gc_obligations::CoreformFrontend,
+) -> Result<RuntimeProbeTrace, String> {
     let src = r#"
 (def bench/prog
   ((core/effect::bind
@@ -491,8 +496,23 @@ bench/prog
 "#;
     let (forms, program_hash) =
         parse_canonicalize_hash_module_source(src).map_err(|e| format!("task source: {e}"))?;
-    let policy = CapsPolicy::from_toml_str("allow = [\"core/task::spawn\", \"core/task::await\"]")
-        .map_err(|e| format!("task profile policy: {e}"))?;
+    let policy_source = "allow = [\"core/task::spawn\", \"core/task::await\"]";
+    let policy = match frontend {
+        gc_obligations::CoreformFrontend::Selfhost(config) => {
+            CapsPolicy::from_toml_str_with_selfhost_authority(
+                policy_source,
+                config.bootstrap_mode,
+                config.artifact.as_deref(),
+            )
+        }
+        #[cfg(feature = "parity-harness")]
+        gc_obligations::CoreformFrontend::Rust => CapsPolicy::from_toml_str(policy_source),
+        #[cfg(not(feature = "parity-harness"))]
+        gc_obligations::CoreformFrontend::Rust => Err(gc_effects::EffectsError::Log(
+            "Rust effect-policy authority is not compiled into production".to_string(),
+        )),
+    }
+    .map_err(|e| format!("task profile policy: {e}"))?;
     let start = Instant::now();
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);

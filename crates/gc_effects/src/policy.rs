@@ -9,6 +9,8 @@ mod policy_authority;
 mod policy_parse;
 #[path = "policy_store.rs"]
 mod policy_store;
+#[path = "policy_transport.rs"]
+mod policy_transport;
 use policy_parse::{
     apply_op_cfg, parse_log_policy, parse_refs_policy, parse_runtime_policy, parse_store_policy,
     parse_task_policy, retired_high_level_op_replacement,
@@ -583,10 +585,20 @@ impl CapsPolicy {
         artifact: Option<&Path>,
     ) -> Result<Self, EffectsError> {
         let source = std::fs::read_to_string(path)?;
-        let mut policy = Self::from_toml_str(&source)?;
-        policy_authority::authorize_policy(&source, &mut policy, bootstrap_mode, artifact)?;
+        let mut policy =
+            Self::from_toml_str_with_selfhost_authority(&source, bootstrap_mode, artifact)?;
         let base = path.parent().unwrap_or_else(|| Path::new("."));
         policy.resolve_relative_paths(base)?;
+        Ok(policy)
+    }
+
+    pub fn from_toml_str_with_selfhost_authority(
+        source: &str,
+        bootstrap_mode: gc_prelude::SelfhostBootstrapMode,
+        artifact: Option<&Path>,
+    ) -> Result<Self, EffectsError> {
+        let mut policy = policy_transport::decode_selfhost_transport(source)?;
+        policy_authority::authorize_policy(source, &mut policy, bootstrap_mode, artifact)?;
         Ok(policy)
     }
 

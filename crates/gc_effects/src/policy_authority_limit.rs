@@ -1,22 +1,6 @@
 use super::*;
 use crate::policy::AuthorizedMaxBytes;
 
-pub(super) fn legacy(policy: Option<&OpPolicy>) -> AuthorizedMaxBytes {
-    let Some(value) = policy.and_then(|policy| policy.extra.get("max_bytes")) else {
-        return AuthorizedMaxBytes::Absent;
-    };
-    let Some(raw) = value.as_integer() else {
-        return AuthorizedMaxBytes::InvalidType;
-    };
-    if raw <= 0 {
-        return AuthorizedMaxBytes::NonPositive;
-    }
-    match usize::try_from(raw) {
-        Ok(limit) => AuthorizedMaxBytes::Valid(limit),
-        Err(_) => AuthorizedMaxBytes::PlatformOverflow,
-    }
-}
-
 pub(super) fn decode(term: &Term, allowed: bool) -> Result<AuthorizedMaxBytes, EffectsError> {
     if !allowed {
         return if term == &Term::Nil {

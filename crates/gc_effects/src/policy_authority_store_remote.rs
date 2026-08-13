@@ -1,8 +1,5 @@
 use super::*;
-use crate::policy::{
-    AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedStoreRemotePolicy,
-    AuthorizedStringList,
-};
+use crate::policy::AuthorizedStoreRemotePolicy;
 
 pub(super) fn input(store: Option<&toml::value::Table>) -> Term {
     let get = |key| store.and_then(|table| table.get(key));
@@ -65,69 +62,4 @@ pub(super) fn decode(term: &Term) -> Result<AuthorizedStoreRemotePolicy, Effects
         )?,
         allow_http: network::decode_optional_bool(field(":allow-http")?)?,
     })
-}
-
-pub(super) fn term(policy: &AuthorizedStoreRemotePolicy) -> Term {
-    Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":allow-http")),
-                optional_bool_term(&policy.allow_http),
-            ),
-            (
-                TermOrdKey(Term::symbol(":remote")),
-                optional_string_term(&policy.remote),
-            ),
-            (
-                TermOrdKey(Term::symbol(":remote-allow")),
-                string_list_term(&policy.remote_allow),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    )
-}
-
-fn optional_bool_term(value: &AuthorizedOptionalBool) -> Term {
-    let (status, value) = match value {
-        AuthorizedOptionalBool::Absent => (":absent", Term::Nil),
-        AuthorizedOptionalBool::InvalidType => (":invalid-type", Term::Nil),
-        AuthorizedOptionalBool::Valid(value) => (":valid", Term::Bool(*value)),
-    };
-    state_term(status, ":value", value)
-}
-
-fn optional_string_term(value: &AuthorizedOptionalString) -> Term {
-    let (status, value) = match value {
-        AuthorizedOptionalString::Absent => (":absent", Term::Nil),
-        AuthorizedOptionalString::InvalidType => (":invalid-type", Term::Nil),
-        AuthorizedOptionalString::Empty => (":empty", Term::Nil),
-        AuthorizedOptionalString::Valid(value) => (":valid", Term::Str(value.clone())),
-    };
-    state_term(status, ":value", value)
-}
-
-fn string_list_term(value: &AuthorizedStringList) -> Term {
-    let (status, values) = match value {
-        AuthorizedStringList::Absent => (":absent", Term::Nil),
-        AuthorizedStringList::InvalidType => (":invalid-type", Term::Nil),
-        AuthorizedStringList::InvalidEntry => (":invalid-entry", Term::Nil),
-        AuthorizedStringList::Empty => (":empty", Term::Nil),
-        AuthorizedStringList::Valid(values) => (
-            ":valid",
-            Term::Vector(values.iter().cloned().map(Term::Str).collect()),
-        ),
-    };
-    state_term(status, ":values", values)
-}
-
-fn state_term(status: &str, value_key: &str, value: Term) -> Term {
-    Term::Map(
-        [
-            (TermOrdKey(Term::symbol(":status")), Term::symbol(status)),
-            (TermOrdKey(Term::symbol(value_key)), value),
-        ]
-        .into_iter()
-        .collect(),
-    )
 }

@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use gc_coreform::{Term, TermOrdKey};
 use num_traits::ToPrimitive;
@@ -7,8 +7,7 @@ use num_traits::ToPrimitive;
 use crate::error::EffectsError;
 
 use super::super::{
-    AuthorizedStoreCredentials, AuthorizedStoreRemotePolicy, CapsPolicy, RuntimePolicy,
-    StorePolicy, TaskPolicy,
+    AuthorizedStoreCredentials, AuthorizedStoreRemotePolicy, RuntimePolicy, StorePolicy, TaskPolicy,
 };
 use super::{authority_error, hex32};
 
@@ -23,7 +22,6 @@ pub(super) struct AuthorizedResources {
     pub(super) store_max_run_bytes: Option<usize>,
     pub(super) store_remote: AuthorizedStoreRemotePolicy,
     pub(super) store_credentials: AuthorizedStoreCredentials,
-    pub(super) policy_term: Term,
 }
 
 fn optional_table_str(table: Option<&toml::value::Table>, key: &str) -> Term {
@@ -265,193 +263,6 @@ fn optional_path_field(
     }
 }
 
-fn optional_u64_term(value: Option<u64>) -> Term {
-    value
-        .map(|number| Term::Int(number.into()))
-        .unwrap_or(Term::Nil)
-}
-
-fn optional_usize_term(value: Option<usize>) -> Term {
-    value
-        .map(|number| Term::Int(number.into()))
-        .unwrap_or(Term::Nil)
-}
-
-fn optional_path_term(value: Option<&Path>) -> Result<Term, EffectsError> {
-    match value {
-        None => Ok(Term::Nil),
-        Some(path) => path
-            .to_str()
-            .map(|value| Term::Str(value.to_string()))
-            .ok_or_else(|| authority_error("resource policy path must be valid UTF-8")),
-    }
-}
-
-fn policy_term(
-    task: &TaskPolicy,
-    runtime: &RuntimePolicy,
-    log_inline_max_bytes: Option<usize>,
-    log_max_artifact_bytes_per_run: Option<usize>,
-    log_store_dir: Option<&Path>,
-    refs_path: Option<&Path>,
-    store_dir: Option<&Path>,
-    store_max_run_bytes: Option<usize>,
-    store_remote: &AuthorizedStoreRemotePolicy,
-    store_credentials: &AuthorizedStoreCredentials,
-) -> Result<Term, EffectsError> {
-    Ok(Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":log")),
-                Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":inline-max-bytes")),
-                            optional_usize_term(log_inline_max_bytes),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-artifact-bytes-per-run")),
-                            optional_usize_term(log_max_artifact_bytes_per_run),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":store-dir")),
-                            optional_path_term(log_store_dir)?,
-                        ),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-            ),
-            (
-                TermOrdKey(Term::symbol(":refs")),
-                Term::Map(
-                    [(
-                        TermOrdKey(Term::symbol(":path")),
-                        optional_path_term(refs_path)?,
-                    )]
-                    .into_iter()
-                    .collect(),
-                ),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime")),
-                Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":max-effect-ops")),
-                            optional_u64_term(runtime.max_effect_ops),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-payload-bytes-per-op")),
-                            optional_usize_term(runtime.max_payload_bytes_per_op),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-payload-bytes-per-run")),
-                            optional_usize_term(runtime.max_payload_bytes_per_run),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-response-bytes-per-op")),
-                            optional_usize_term(runtime.max_response_bytes_per_op),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-response-bytes-per-run")),
-                            optional_usize_term(runtime.max_response_bytes_per_run),
-                        ),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-            ),
-            (
-                TermOrdKey(Term::symbol(":store")),
-                Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":credential-policy")),
-                            super::store_credentials::term(store_credentials)?,
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":dir")),
-                            optional_path_term(store_dir)?,
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-run-bytes")),
-                            optional_usize_term(store_max_run_bytes),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":remote-policy")),
-                            super::store_remote::term(store_remote),
-                        ),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-            ),
-            (
-                TermOrdKey(Term::symbol(":task")),
-                Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":default-workers")),
-                            Term::Int(task.default_workers.into()),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-queue")),
-                            optional_u64_term(task.max_queue),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-steps-per-task")),
-                            optional_u64_term(task.max_steps_per_task),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-tasks")),
-                            optional_u64_term(task.max_tasks),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-time-ms-per-task")),
-                            optional_u64_term(task.max_time_ms_per_task),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":max-workers")),
-                            optional_u64_term(task.max_workers),
-                        ),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    ))
-}
-
-pub(super) fn legacy_policy_term(policy: &CapsPolicy) -> Result<Term, EffectsError> {
-    let default_store = Path::new(".genesis/store");
-    let default_refs = Path::new(".genesis/refs.gc");
-    let log_store_dir = policy
-        .log
-        .store_dir
-        .as_deref()
-        .or(policy.log.inline_max_bytes.map(|_| default_store));
-    policy_term(
-        &policy.task,
-        &policy.runtime,
-        policy.log.inline_max_bytes,
-        policy.log.max_artifact_bytes_per_run,
-        log_store_dir,
-        Some(policy.refs.path.as_deref().unwrap_or(default_refs)),
-        Some(policy.store.dir.as_deref().unwrap_or(default_store)),
-        policy.store.max_run_bytes,
-        policy
-            .authorized_store_remote()
-            .ok_or_else(|| authority_error("global store remote policy authority is missing"))?,
-        policy.authorized_store_credentials().ok_or_else(|| {
-            authority_error("global store credential policy authority is missing")
-        })?,
-    )
-}
-
 pub(super) fn decode_result(
     term: Term,
     request_hash: [u8; 32],
@@ -557,18 +368,6 @@ pub(super) fn decode_result(
     let store_remote = super::store_remote::decode(map_field(store_map, ":remote-policy")?)?;
     let store_credentials =
         super::store_credentials::decode(map_field(store_map, ":credential-policy")?, raw_store)?;
-    let policy_term = policy_term(
-        &task,
-        &runtime,
-        log_inline_max_bytes,
-        log_max_artifact_bytes_per_run,
-        log_store_dir.as_deref(),
-        refs_path.as_deref(),
-        store_dir.as_deref(),
-        store_max_run_bytes,
-        &store_remote,
-        &store_credentials,
-    )?;
     Ok(AuthorizedResources {
         task,
         runtime,
@@ -580,6 +379,5 @@ pub(super) fn decode_result(
         store_max_run_bytes,
         store_remote,
         store_credentials,
-        policy_term,
     })
 }

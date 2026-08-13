@@ -130,8 +130,8 @@ python3 scripts/lib/selfhost_policy_alias_authority.py \
   --schema docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json \
   --self-test
 
-# R4.2.d effect-policy composition is a partial production shadow: the closed
-# GenesisCode decisions and the still-required host oracle are both enforced.
+# R4.2.d effect-policy composition is H2 for its exact decision domain: neutral
+# host transport is bounded and no production Rust semantic oracle remains.
 python3 scripts/lib/selfhost_effect_policy_composition.py \
   --root "$ROOT_DIR" \
   --profile policies/selfhost_effect_policy_composition_v0.1.json \

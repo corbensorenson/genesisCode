@@ -472,6 +472,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
                     io_budget_us: *io_budget_us,
                     memory_budget_us: *memory_budget_us,
                 },
+                frontend,
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/profile-runtime", e))?,
         ),

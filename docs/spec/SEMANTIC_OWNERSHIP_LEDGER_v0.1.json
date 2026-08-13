@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "eba7d2260e55449452de59bf2479fbd61a0b535a704c5a73b9c559df725f493a",
+  "contentIdentitySha256": "27bf871c6bad6a899f683521297e3e038ed0bdc1311a8f58702b1459041e156b",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1032,40 +1032,57 @@
         "gc/*",
         "vcs/*"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
       "hostBindingPaths": [
         "crates/gc_effects/src"
       ],
       "id": "SD-EFFECT-POLICY",
       "internalOnly": false,
       "limitations": [
-        "Rust currently computes production policy outcomes"
+        "H2 is scoped to genesis/selfhost-effect-policy-composition-v0.1; Rust retains TOML transport, secret/path resolution, bounded effect execution, cancellation, bridge validation/lifecycle, and replay mechanisms, while the compile-time parity-only compatibility parser remains independently invocable and H3/H4 are not claimed"
       ],
       "migrationTasks": [
         "R4.2.d"
       ],
       "producingImplementationPaths": [
-        "crates/gc_effects/src/policy.rs",
-        "crates/gc_cli_driver/src/cmd_policy.rs"
+        "selfhost/effect_policy_crypto_v1.gc",
+        "selfhost/effect_policy_network_v1.gc",
+        "selfhost/effect_policy_plugin_v1.gc",
+        "selfhost/effect_policy_ffi_v1.gc",
+        "selfhost/effect_policy_bridge_v1.gc",
+        "selfhost/effect_policy_gpu_v1.gc",
+        "selfhost/effect_policy_gfx_v1.gc",
+        "selfhost/effect_policy_xr_v1.gc",
+        "selfhost/effect_policy_resource_authority_v1.gc",
+        "selfhost/effect_policy_authority_v1.gc"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_effects/src/policy.rs"
+        "selfhost/toolchain.gc",
+        "selfhost/effect_policy_authority_v1.gc",
+        "selfhost/effect_policy_resource_authority_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
         "docs/spec/CAPS_TOML.md",
-        "docs/spec/HOST_ABI.md"
+        "docs/spec/HOST_ABI.md",
+        "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
+        "policies/selfhost_effect_policy_composition_v0.1.json"
       ],
       "stage0Domains": [
         "S0-H"
       ],
       "testPaths": [
-        "crates/gc_effects/src/tests.rs"
+        "crates/gc_effects/src/policy_tests.rs",
+        "crates/gc_effects/src/policy_authority.rs",
+        "crates/gc_effects/src/policy_transport.rs"
       ],
       "title": "Capability and policy authorization decisions",
       "verifierPaths": [
-        "scripts/check_host_abi_conformance.sh"
+        "scripts/check_host_abi_conformance.sh",
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/lib/selfhost_effect_policy_composition.py",
+        "scripts/selfhost_effect_policy_composition_guard.sh"
       ]
     },
     {

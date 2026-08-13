@@ -207,6 +207,7 @@ fn inventory_request_term(baseline: &[String], override_ops: &[String]) -> Term 
 fn decode_inventory_result(
     term: Term,
     request_hash: [u8; 32],
+    candidate_domain: &BTreeSet<String>,
 ) -> Result<Vec<String>, EffectsError> {
     let Term::Map(map) = term else {
         return Err(authority_error("inventory result must be a data map"));
@@ -246,6 +247,14 @@ fn decode_inventory_result(
         return Err(authority_error(
             "inventory :candidate-ops must be strictly ordered and unique",
         ));
+    }
+    if let Some(invented) = candidates
+        .iter()
+        .find(|candidate| !candidate_domain.contains(*candidate))
+    {
+        return Err(authority_error(format!(
+            "inventory result invented operation `{invented}` outside the transported candidate domain"
+        )));
     }
     Ok(candidates)
 }
@@ -529,30 +538,19 @@ pub(super) fn authorize_policy(
         resource_request_hash,
         &policy.store,
     )?;
-    if authorized_resources.policy_term != resource::legacy_policy_term(policy)? {
-        return Err(authority_error(
-            "resource result contradicts independently reconstructed log/runtime/store/task policy",
-        ));
-    }
-
     let inventory_request = inventory_request_term(&baseline, &override_ops);
     let inventory_request_hash = hash_term(&inventory_request);
     let inventory_value = inventory_authority
         .apply(&mut context, Value::data(inventory_request))
         .map_err(|error| authority_error(format!("inventory authority apply failed: {error}")))?;
+    let candidate_domain: BTreeSet<String> = policy.ops.keys().cloned().collect();
     let candidates = decode_inventory_result(
         plain_authority_result(inventory_value, &context, "inventory")?,
         inventory_request_hash,
+        &candidate_domain,
     )?;
-    let mut legacy_candidates: BTreeSet<String> = baseline.iter().cloned().collect();
-    legacy_candidates.extend(override_ops);
-    if candidates != legacy_candidates.iter().cloned().collect::<Vec<_>>() {
-        return Err(authority_error(
-            "inventory result contradicts independently reconstructed candidate operations",
-        ));
-    }
 
-    let legacy_ops = std::mem::take(&mut policy.ops);
+    let candidate_states = std::mem::take(&mut policy.ops);
     let gpu_default = gpu::observed_default();
     let mut authorized_ops = BTreeMap::new();
     for op in candidates {
@@ -572,41 +570,10 @@ pub(super) fn authorize_policy(
             .map_err(|error| authority_error(format!("authority apply failed: {error}")))?;
         let term = plain_authority_result(value, &context, "operation")?;
         let authorized = decode_result(term, &op, request_hash, override_table)?;
-        let expected = legacy_ops.get(&op);
-        if authorized.allowed != expected.is_some()
-            || expected.is_some_and(|policy| authorized.cap != cap::legacy(&op, policy))
-            || authorized.base_dir.as_ref() != expected.and_then(|policy| policy.base_dir.as_ref())
-            || authorized.max_bytes != limit::legacy(expected)
-            || authorized.bridge_identity != bridge::legacy(&op, expected)
-            || authorized.process_programs != process::legacy(expected)
-            || authorized.database != database::legacy(expected)
-            || authorized.network != network::legacy(expected)
-            || authorized.crypto != crypto::legacy(expected)
-            || authorized.credentials
-                != store_credentials::legacy_operation(if authorized.allowed {
-                    if store_credentials::operation_applies(&op) {
-                        override_table
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                })
-            || authorized.gfx != gfx::legacy(expected)
-            || authorized.gpu != gpu::legacy(expected, gpu_default.as_deref())
-            || authorized.xr != xr::legacy(expected, authorized.bridge_identity.active)
-            || authorized.ffi != ffi::legacy(expected)
-            || authorized.plugin != plugin::legacy(expected)
-        {
-            return Err(authority_error(format!(
-                "result for `{op}` contradicts independently reconstructed policy composition"
-            )));
-        }
         if authorized.allowed {
-            let mut op_policy = legacy_ops
-                .get(&op)
-                .cloned()
-                .ok_or_else(|| authority_error("authorized op has no host enforcement state"))?;
+            let mut op_policy = candidate_states.get(&op).cloned().ok_or_else(|| {
+                authority_error("authorized op is outside the transported candidate domain")
+            })?;
             op_policy.base_dir = authorized.base_dir;
             op_policy.create_dirs = authorized.create_dirs;
             op_policy.timeout_ms = authorized.timeout_ms;
@@ -639,4 +606,65 @@ pub(super) fn authorize_policy(
     policy.store.authorized_remote = Some(authorized_resources.store_remote);
     policy.store.authorized_credentials = Some(authorized_resources.store_credentials);
     Ok(())
+}
+
+#[cfg(test)]
+mod inventory_tests {
+    use super::*;
+
+    fn inventory_result(request_hash: [u8; 32], candidates: &[&str]) -> Term {
+        Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":candidate-ops")),
+                    Term::Vector(
+                        candidates
+                            .iter()
+                            .map(|candidate| Term::Str((*candidate).to_string()))
+                            .collect(),
+                    ),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/effect-policy-inventory-result-v0.1".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":request-h")),
+                    Term::Str(hex32(request_hash)),
+                ),
+                (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            ]
+            .into_iter()
+            .collect(),
+        )
+    }
+
+    #[test]
+    fn inventory_decoder_allows_authoritative_denial_by_omission() {
+        let hash = [7; 32];
+        let domain = ["core/a", "core/b"]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        let decoded = decode_inventory_result(inventory_result(hash, &["core/a"]), hash, &domain)
+            .expect("a strict candidate-domain subset is a valid authoritative inventory");
+        assert_eq!(decoded, vec!["core/a"]);
+    }
+
+    #[test]
+    fn inventory_decoder_rejects_invented_operations() {
+        let hash = [9; 32];
+        let domain = ["core/a"].into_iter().map(str::to_string).collect();
+        let error = decode_inventory_result(
+            inventory_result(hash, &["core/a", "core/invented"]),
+            hash,
+            &domain,
+        )
+        .expect_err("authority output cannot widen the transported candidate domain");
+        assert!(
+            error
+                .to_string()
+                .contains("invented operation `core/invented`")
+        );
+    }
 }
