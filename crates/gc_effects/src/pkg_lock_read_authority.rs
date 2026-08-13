@@ -10,6 +10,9 @@ use crate::policy::SelfhostAuthorityConfig;
 #[path = "pkg_lock_model_authority.rs"]
 mod model;
 pub(crate) use model::PkgLockModelDecision;
+#[path = "pkg_lock_ops_authority.rs"]
+mod ops;
+pub(crate) use ops::PkgLockOpsDecision;
 
 const BINDING: &str = "core/pkg::lock-read-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-read-authority-request-v0.1";
@@ -21,6 +24,7 @@ pub(crate) struct PkgLockReadAuthority {
     context: EvalCtx,
     authority: Value,
     model_authority: Option<Value>,
+    ops_authority: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -34,6 +38,8 @@ impl PkgLockReadAuthority {
         matches!(
             op,
             "core/pkg-low::load-lock"
+                | "core/pkg-low::add"
+                | "core/pkg-low::list"
                 | "core/pkg-low::info"
                 | "core/pkg-low::lock"
                 | "core/pkg-low::update"
@@ -65,12 +71,14 @@ impl PkgLockReadAuthority {
             .get(BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {BINDING}")))?;
         let model_authority = environment.get(model::MODEL_BINDING);
+        let ops_authority = environment.get(ops::OPS_BINDING);
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
         Ok(Self {
             context,
             authority,
             model_authority,
+            ops_authority,
         })
     }
 

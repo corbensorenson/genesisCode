@@ -243,7 +243,7 @@ def self_test(root: Path, profile, schema) -> int:
         "artifact",
     )
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", "toml::from_str", "legacy_parse", "codec")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "read_bounded_lock(&lock_path)", "std::fs::read(&lock_path)", "bound")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", "const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024", "const LEGACY_LOCK_BYTES: u64 = 4 * 1024 * 1024", "bound")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.read_toml(&bytes)?", "legacy_read(&bytes)?", "route")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::load-lock"', '"core/pkg-low::legacy-load-lock"', "lazy-route-set")
     source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_operation(&req.op)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")

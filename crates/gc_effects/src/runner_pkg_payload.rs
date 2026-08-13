@@ -48,6 +48,7 @@ pub(crate) fn payload_pkg_name(payload: &Term) -> Result<String, String> {
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_pkg_selector(payload: &Term) -> Result<String, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -66,6 +67,7 @@ pub(crate) fn payload_pkg_registry(payload: &Term) -> Option<String> {
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_pkg_update_policy(
     payload: &Term,
 ) -> Result<Option<gc_pkg::UpdatePolicy>, String> {
@@ -88,6 +90,7 @@ pub(crate) fn payload_pkg_update_policy(
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_pkg_strategy(
     payload: &Term,
 ) -> Result<Option<gc_pkg::ResolutionStrategy>, String> {
@@ -113,6 +116,7 @@ pub(crate) fn payload_pkg_strategy(
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_pkg_tag_policy(payload: &Term) -> Result<Option<String>, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());

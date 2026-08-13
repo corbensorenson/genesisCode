@@ -1,0 +1,260 @@
+(def selfhost/pkg-lock-ops::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (bytes)
+            (fn (lock-h)
+              (fn (value)
+                {
+                  :bytes bytes
+                  :code code
+                  :kind "genesis/pkg-lock-ops-authority-result-v0.1"
+                  :lock-h lock-h
+                  :message message
+                  :ok ok
+                  :request-h request-h
+                  :v 1
+                  :value value}))))))))
+
+(def selfhost/pkg-lock-ops::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        (((((((selfhost/pkg-lock-ops::result request-h) false) code) message) nil) nil) nil)))))
+
+(def selfhost/pkg-lock-ops::accept-write
+  (fn (request-h)
+    (fn (bytes)
+      (
+        ((((((selfhost/pkg-lock-ops::result request-h) true) nil) nil) bytes)
+          (core/bytes::to-hex (core/crypto::blake3 bytes)))
+        nil))))
+
+(def selfhost/pkg-lock-ops::accept-value
+  (fn (request-h)
+    (fn (value) (((((((selfhost/pkg-lock-ops::result request-h) true) nil) nil) nil) nil) value))))
+
+(def selfhost/pkg-lock-ops::writer-locked-entry
+  (fn (entry)
+    {
+      :commit ((core/map::get entry) (quote :commit))
+      :environment-fingerprint ((core/map::get entry) (quote :environment-fingerprint))
+      :exports_hash ((core/map::get entry) (quote :exports-hash))
+      :registry ((core/map::get entry) (quote :registry))
+      :resolved-ref ((core/map::get entry) (quote :resolved-ref))
+      :snapshot ((core/map::get entry) (quote :snapshot))
+      :source_selector ((core/map::get entry) (quote :source-selector))}))
+
+(def selfhost/pkg-lock-ops::writer-locked-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          out
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((name ((core/vec::get entry) 0)))
+              (((selfhost/pkg-lock-ops::writer-locked-loop entries) ((core/int::add index) 1))
+                (((core/map::put out) name)
+                  (selfhost/pkg-lock-ops::writer-locked-entry ((core/vec::get entry) 1)))))))))))
+
+(def selfhost/pkg-lock-ops::writer-locked
+  (fn (locked) (((selfhost/pkg-lock-ops::writer-locked-loop (core/map::entries locked)) 0) {})))
+
+(def selfhost/pkg-lock-ops::writer-payload
+  (fn (model)
+    (core/coreform::parse-term
+      (core/coreform::print-term
+        {
+          :artifacts ((core/map::get model) (quote :artifacts))
+          :locked (selfhost/pkg-lock-ops::writer-locked ((core/map::get model) (quote :locked)))
+          :policy ((core/map::get model) (quote :policy))
+          :registries ((core/map::get model) (quote :registries))
+          :requirements ((core/map::get model) (quote :requirements))
+          :version ((core/map::get model) (quote :version))
+          :workspace ((core/map::get model) (quote :workspace))}))))
+
+(def selfhost/pkg-lock-ops::render-payload
+  (fn (request-h)
+    (fn (payload)
+      (let ((rendered (selfhost/pkg-lock-write::render-lock payload)))
+        (let ((error ((core/map::get rendered) (quote :error))))
+          (if (selfhost/pkg-lock-read::nil? error)
+            ((selfhost/pkg-lock-ops::accept-write request-h)
+              (core/str::to-utf8 ((core/map::get rendered) (quote :text))))
+            (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload") error)))))))
+
+(def selfhost/pkg-lock-ops::render-model
+  (fn (request-h)
+    (fn (model)
+      ((selfhost/pkg-lock-ops::render-payload request-h)
+        (selfhost/pkg-lock-ops::writer-payload model)))))
+
+(def selfhost/pkg-lock-ops::add-to-model
+  (fn (request-h)
+    (fn (model)
+      (fn (payload)
+        (let ((name ((core/map::get payload) (quote :name))))
+          (let ((selector ((core/map::get payload) (quote :selector))))
+            (if
+              (if (selfhost/pkg-lock-read::str? name) (selfhost/pkg-lock-read::str? selector) false)
+              (let
+                (
+                  (update-policy
+                    (selfhost/pkg-lock-write::normalize-update-policy
+                      ((core/map::get payload) (quote :update-policy)))))
+                (if (selfhost/pkg-lock-read::nil? update-policy)
+                  (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload")
+                    ":update-policy must be 'manual' or 'auto'")
+                  (let
+                    (
+                      (strategy
+                        ((selfhost/pkg-lock-write::normalize-strategy ((core/map::get payload) (quote :strategy)))
+                          selector)))
+                    (if (selfhost/pkg-lock-read::nil? strategy)
+                      (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload")
+                        ":strategy must be pinned, track-ref, or tag-policy")
+                      (let ((tag-policy ((core/map::get payload) (quote :tag-policy))))
+                        (if (selfhost/pkg-lock-read::valid-optional-string? tag-policy)
+                          (let
+                            (
+                              (effective-tag
+                                (if ((core/eq? strategy) "tag-policy")
+                                  (if (selfhost/pkg-lock-read::nil? tag-policy) "exact" tag-policy)
+                                  nil)))
+                            (let ((registry0 ((core/map::get payload) (quote :registry))))
+                              (let
+                                (
+                                  (requirement
+                                    {
+                                      :registry
+                                        (if (selfhost/pkg-lock-read::str? registry0) registry0 nil)
+                                      :selector selector
+                                      :strategy strategy
+                                      :tag-policy effective-tag
+                                      :update-policy update-policy}))
+                                (let
+                                  ((requirements (((core/map::put ((core/map::get model) (quote :requirements))) name) requirement)))
+                                  ((selfhost/pkg-lock-ops::render-model request-h)
+                                    (((core/map::put model) (quote :requirements)) requirements))))))
+                          (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload")
+                            ":tag-policy must be string or nil")))))))
+              (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload")
+                "missing :name or :selector string"))))))))
+
+(def selfhost/pkg-lock-ops::add
+  (fn (request-h)
+    (fn (document)
+      (fn (payload)
+        (if (selfhost/pkg-lock-read::map? payload)
+          (let ((normalized (selfhost/pkg-lock-read::normalize-model-document document)))
+            (if ((core/map::get normalized) (quote :ok))
+              (((selfhost/pkg-lock-ops::add-to-model request-h) ((core/map::get normalized) (quote :value)))
+                payload)
+              (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-lock")
+                ((core/map::get normalized) (quote :message)))))
+          (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload")
+            "payload must be a map"))))))
+
+(def selfhost/pkg-lock-ops::list-requirements-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          out
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((name ((core/vec::get entry) 0)))
+              (let ((requirement ((core/vec::get entry) 1)))
+                (((selfhost/pkg-lock-ops::list-requirements-loop entries) ((core/int::add index) 1))
+                  ((core/vec::push out)
+                    {
+                      :name name
+                      :registry ((core/map::get requirement) (quote :registry))
+                      :selector ((core/map::get requirement) (quote :selector))
+                      :strategy ((core/map::get requirement) (quote :strategy))
+                      :tag-policy ((core/map::get requirement) (quote :tag-policy))
+                      :update-policy ((core/map::get requirement) (quote :update-policy))}))))))))))
+
+(def selfhost/pkg-lock-ops::list-locked-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          out
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((name ((core/vec::get entry) 0)))
+              (let ((locked ((core/vec::get entry) 1)))
+                (((selfhost/pkg-lock-ops::list-locked-loop entries) ((core/int::add index) 1))
+                  ((core/vec::push out)
+                    {
+                      :commit ((core/map::get locked) (quote :commit))
+                      :environment-fingerprint
+                        ((core/map::get locked) (quote :environment-fingerprint))
+                      :name name
+                      :snapshot ((core/map::get locked) (quote :snapshot))}))))))))))
+
+(def selfhost/pkg-lock-ops::list
+  (fn (request-h)
+    (fn (document)
+      (let ((normalized (selfhost/pkg-lock-read::normalize-model-document document)))
+        (if ((core/map::get normalized) (quote :ok))
+          (let ((model ((core/map::get normalized) (quote :value))))
+            ((selfhost/pkg-lock-ops::accept-value request-h)
+              {
+                :locked
+                  (
+                    (
+                      (selfhost/pkg-lock-ops::list-locked-loop
+                        (core/map::entries ((core/map::get model) (quote :locked))))
+                      0)
+                    [])
+                :requirements
+                  (
+                    (
+                      (selfhost/pkg-lock-ops::list-requirements-loop
+                        (core/map::entries ((core/map::get model) (quote :requirements))))
+                      0)
+                    [])}))
+          (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-lock")
+            ((core/map::get normalized) (quote :message))))))))
+
+(def selfhost/pkg-lock-ops::dispatch
+  (fn (request-h)
+    (fn (request)
+      (let ((op ((core/map::get request) (quote :op))))
+        (if ((core/sym::eq? op) (quote :add))
+          (((selfhost/pkg-lock-ops::add request-h) ((core/map::get request) (quote :document)))
+            ((core/map::get request) (quote :payload)))
+          (if ((core/sym::eq? op) (quote :list))
+            ((selfhost/pkg-lock-ops::list request-h) ((core/map::get request) (quote :document)))
+            (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
+              "request :op must be :add or :list")))))))
+
+(def core/pkg::lock-ops-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (if
+          ((selfhost/pkg-lock-read::exact-map? request)
+            [
+              :document
+              :kind
+              :op
+              :payload
+              :v])
+          (let ((kind ((core/map::get request) (quote :kind))))
+            (if
+              (if (selfhost/pkg-lock-read::str? kind)
+                ((core/eq? kind) "genesis/pkg-lock-ops-authority-request-v0.1")
+                false)
+              (let ((version ((core/map::get request) (quote :v))))
+                (if (if (selfhost/pkg-lock-read::int? version) ((core/int::eq? version) 1) false)
+                  ((selfhost/pkg-lock-ops::dispatch request-h) request)
+                  (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
+                    "request :v must be 1")))
+              (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
+                "request :kind mismatch")))
+          (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
+            "request fields mismatch"))
+        (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
+          "request must be map")))))

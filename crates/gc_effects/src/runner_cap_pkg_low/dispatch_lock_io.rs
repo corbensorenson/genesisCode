@@ -1,5 +1,10 @@
 use super::*;
-use crate::pkg_lock_read_authority::{PkgLockReadAuthority, PkgLockReadDecision};
+use crate::pkg_lock_read_authority::{
+    PkgLockOpsDecision, PkgLockReadAuthority, PkgLockReadDecision,
+};
+#[cfg(any(test, feature = "parity-oracle"))]
+#[path = "dispatch_lock_io/parity.rs"]
+mod parity;
 #[path = "dispatch_lock_io/save_lock.rs"]
 mod save_lock;
 
@@ -25,17 +30,35 @@ pub(super) fn dispatch_lock_io(
     match op_eff {
         "core/pkg-low::init" => {
             let lock_s = match payload_pkg_lock(payload) {
-                Ok(s) => s,
-                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+                Ok(value) => value,
+                Err(message) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        message,
+                        Some(op),
+                    ));
+                }
             };
             let workspace = match payload_pkg_workspace(payload) {
-                Ok(s) => s,
-                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+                Ok(value) => value,
+                Err(message) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        message,
+                        Some(op),
+                    ));
+                }
             };
-            let policy_s =
+            let mut lock = gc_pkg::GenesisLock::empty(workspace);
+            lock.policy =
                 payload_pkg_policy(payload).unwrap_or_else(|| "policy:default-v0.1".to_string());
-            let reg_default = payload_pkg_registry_default(payload);
-
+            if let Some(registry) = payload_pkg_registry_default(payload) {
+                lock.registries.insert("default".to_string(), registry);
+            }
+            let bytes = lock.to_toml_canonical().into_bytes();
+            let lock_hash = blake3::hash(&bytes).to_hex().to_string();
             let base_dir = effective_base_dir(pol)?;
             let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
             let lock_path = match sandbox_path_write(&base_dir, &lock_s, create_dirs) {
@@ -50,60 +73,32 @@ pub(super) fn dispatch_lock_io(
                 }
             };
 
-            let mut l = gc_pkg::GenesisLock::empty(workspace);
-            l.policy = policy_s;
-            if let Some(rd) = reg_default {
-                l.registries.insert("default".to_string(), rd);
-            }
-            let bytes = l.to_toml_canonical();
-            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
-            if let Err(e) = atomic_write_text(&lock_path, bytes.as_bytes()) {
+            if let Err(error) = atomic_write_text(&lock_path, &bytes) {
                 return Ok(mk_error(
                     error_tok,
                     "core/pkg/io-error",
-                    e.to_string(),
+                    error.to_string(),
                     Some(op),
                 ));
             }
-
-            let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
-            m.insert(
-                TermOrdKey(Term::symbol(":lock-h")),
-                Term::Str(lock_h.clone()),
-            );
-            Ok(Value::data(Term::Map(m)))
+            Ok(lock_write_result(lock_s, lock_hash))
         }
 
         "core/pkg-low::add" => {
+            let Some(authority) = pkg_lock_read_authority else {
+                #[cfg(any(test, feature = "parity-oracle"))]
+                {
+                    return parity::dispatch_lock_ops_parity(op_eff, payload, pol, error_tok, op);
+                }
+                #[cfg(not(any(test, feature = "parity-oracle")))]
+                {
+                    return Err(lock_ops_authority_unavailable(op_eff));
+                }
+            };
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
-            let name = match payload_pkg_name(payload) {
-                Ok(s) => s,
-                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
-            };
-            let selector = match payload_pkg_selector(payload) {
-                Ok(s) => s,
-                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
-            };
-            let update_policy = match payload_pkg_update_policy(payload) {
-                Ok(Some(p)) => p,
-                Ok(None) => gc_pkg::UpdatePolicy::Manual,
-                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
-            };
-            let strategy = match payload_pkg_strategy(payload) {
-                Ok(x) => x,
-                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
-            };
-            let tag_policy = match payload_pkg_tag_policy(payload) {
-                Ok(x) => x,
-                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
-            };
-            let registry = payload_pkg_registry(payload);
-
             let base_dir = effective_base_dir(pol)?;
             let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
                 Ok(p) => p,
@@ -116,28 +111,12 @@ pub(super) fn dispatch_lock_io(
                     ));
                 }
             };
-            let mut l = match gc_pkg::GenesisLock::load(&lock_path) {
-                Ok(x) => x,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-lock",
-                        format!("{e}"),
-                        Some(op),
-                    ));
+            let bytes = match read_bounded_lock(&lock_path) {
+                Ok(bytes) => bytes,
+                Err(message) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-lock", message, Some(op)));
                 }
             };
-
-            l.set_requirement_with_metadata(
-                &name,
-                &selector,
-                update_policy,
-                registry,
-                strategy,
-                tag_policy,
-            );
-            let bytes = l.to_toml_canonical();
-            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
             let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
@@ -149,26 +128,38 @@ pub(super) fn dispatch_lock_io(
                     ));
                 }
             };
-            if let Err(e) = atomic_write_text(&lock_write_path, bytes.as_bytes()) {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/pkg/io-error",
-                    e.to_string(),
-                    Some(op),
-                ));
+            match authority.add_lock_toml(&bytes, payload)? {
+                PkgLockOpsDecision::Write { bytes, lock_hash } => {
+                    if let Err(error) = atomic_write_text(&lock_write_path, &bytes) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/io-error",
+                            error.to_string(),
+                            Some(op),
+                        ));
+                    }
+                    Ok(lock_write_result(lock_s, lock_hash))
+                }
+                PkgLockOpsDecision::Error { code, message } => {
+                    Ok(mk_error(error_tok, &code, message, Some(op)))
+                }
+                PkgLockOpsDecision::List { .. } => Err(EffectsError::Log(
+                    "selfhost package lock ops authority returned list for add".to_string(),
+                )),
             }
-
-            let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
-            m.insert(
-                TermOrdKey(Term::symbol(":lock-h")),
-                Term::Str(lock_h.clone()),
-            );
-            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::list" => {
+            let Some(authority) = pkg_lock_read_authority else {
+                #[cfg(any(test, feature = "parity-oracle"))]
+                {
+                    return parity::dispatch_lock_ops_parity(op_eff, payload, pol, error_tok, op);
+                }
+                #[cfg(not(any(test, feature = "parity-oracle")))]
+                {
+                    return Err(lock_ops_authority_unavailable(op_eff));
+                }
+            };
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
@@ -185,79 +176,31 @@ pub(super) fn dispatch_lock_io(
                     ));
                 }
             };
-            let l = match gc_pkg::GenesisLock::load(&lock_path) {
-                Ok(x) => x,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-lock",
-                        format!("{e}"),
-                        Some(op),
-                    ));
+            let bytes = match read_bounded_lock(&lock_path) {
+                Ok(bytes) => bytes,
+                Err(message) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-lock", message, Some(op)));
                 }
             };
-
-            let mut reqs = Vec::new();
-            for (name, r) in &l.requirements {
-                let mut mm = BTreeMap::new();
-                mm.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name.clone()));
-                mm.insert(
-                    TermOrdKey(Term::symbol(":selector")),
-                    Term::Str(r.selector.clone()),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":update-policy")),
-                    Term::Symbol(match r.update_policy {
-                        gc_pkg::UpdatePolicy::Manual => ":manual".to_string(),
-                        gc_pkg::UpdatePolicy::Auto => ":auto".to_string(),
-                    }),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":registry")),
-                    r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":strategy")),
-                    Term::Symbol(format!(":{}", r.strategy.as_str())),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":tag-policy")),
-                    r.tag_policy.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                reqs.push(Term::Map(mm));
+            match authority.list_lock_toml(&bytes, payload)? {
+                PkgLockOpsDecision::List {
+                    locked,
+                    requirements,
+                } => {
+                    let mut result = BTreeMap::new();
+                    result.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+                    result.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+                    result.insert(TermOrdKey(Term::symbol(":requirements")), requirements);
+                    result.insert(TermOrdKey(Term::symbol(":locked")), locked);
+                    Ok(Value::data(Term::Map(result)))
+                }
+                PkgLockOpsDecision::Error { code, message } => {
+                    Ok(mk_error(error_tok, &code, message, Some(op)))
+                }
+                PkgLockOpsDecision::Write { .. } => Err(EffectsError::Log(
+                    "selfhost package lock ops authority returned write for list".to_string(),
+                )),
             }
-
-            let mut locks = Vec::new();
-            for (name, le) in &l.locked {
-                let mut mm = BTreeMap::new();
-                mm.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name.clone()));
-                mm.insert(
-                    TermOrdKey(Term::symbol(":commit")),
-                    le.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":snapshot")),
-                    Term::Str(le.snapshot.clone()),
-                );
-                mm.insert(
-                    TermOrdKey(Term::symbol(":environment-fingerprint")),
-                    le.environment_fingerprint
-                        .clone()
-                        .map(Term::Str)
-                        .unwrap_or(Term::Nil),
-                );
-                locks.push(Term::Map(mm));
-            }
-
-            let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
-            m.insert(
-                TermOrdKey(Term::symbol(":requirements")),
-                Term::Vector(reqs),
-            );
-            m.insert(TermOrdKey(Term::symbol(":locked")), Term::Vector(locks));
-            Ok(Value::data(Term::Map(m)))
         }
 
         "core/pkg-low::load-lock" => {
@@ -322,6 +265,25 @@ pub(super) fn dispatch_lock_io(
             Some(op),
         )),
     }
+}
+
+fn lock_write_result(lock_path: String, lock_hash: String) -> Value {
+    Value::data(Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            (TermOrdKey(Term::symbol(":lock")), Term::Str(lock_path)),
+            (TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_hash)),
+        ]
+        .into_iter()
+        .collect(),
+    ))
+}
+
+#[cfg(not(any(test, feature = "parity-oracle")))]
+fn lock_ops_authority_unavailable(operation: &str) -> EffectsError {
+    EffectsError::Log(format!(
+        "{operation} requires the artifact-loaded GenesisCode lock ops authority"
+    ))
 }
 
 #[cfg(any(test, feature = "parity-oracle"))]

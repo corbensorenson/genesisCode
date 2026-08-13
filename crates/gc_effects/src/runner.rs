@@ -46,8 +46,7 @@ use crate::runner_pkg_payload::{
     payload_pkg_lock, payload_pkg_name, payload_pkg_only, payload_pkg_policy,
     payload_pkg_publish_commit, payload_pkg_publish_depth, payload_pkg_publish_expected_old,
     payload_pkg_publish_policy, payload_pkg_publish_ref, payload_pkg_publish_remote,
-    payload_pkg_registry, payload_pkg_registry_default, payload_pkg_selector, payload_pkg_strategy,
-    payload_pkg_tag_policy, payload_pkg_update_policy, payload_pkg_workspace,
+    payload_pkg_registry, payload_pkg_registry_default, payload_pkg_workspace,
 };
 use crate::runner_refs_ops::{
     local_refs_validate_policy_gate, payload_refs_expected_old, payload_refs_hash,

@@ -224,6 +224,8 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `scripts/lib/selfhost_pkg_lock_read_authority.py` - independent package-lock-read source/artifact/production-route/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md` - normative partial R4.2.e complete internal package-lock model authority for resolution routes.
 - `docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked internal package-lock model profile.
+- `docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md` - normative partial R4.2.e authority for direct lock requirement mutation and list projection.
+- `docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package-lock operations profile.
 - `policies/selfhost_pkg_lock_model_authority_v0.1.json` - content-addressed internal lock-model decision inventory, selected routes, host mechanisms, and nonclaims.
 - `scripts/lib/selfhost_pkg_lock_model_authority.py` - independent internal lock-model source/artifact/route/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md` - normative partial R4.2.e package requirement fingerprint authority and residual graph-resolution boundary.

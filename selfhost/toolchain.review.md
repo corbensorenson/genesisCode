@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `77fe6e7f257c293055af0c685c002f6dc134faaf28cf03007e46ff60f48f5c22`
-- Freshness artifact hash: `77fe6e7f257c293055af0c685c002f6dc134faaf28cf03007e46ff60f48f5c22`
-- Freshness source hash: `a6cd51c05f4ca9161f550fc74b574eb27922eb98405d27f01bb68970a2e7016c`
-- Source aggregate hash (module path + module sha256): `eccb96aca8edd4876a5bbee494c6592c6d9ba6c7a7faca586183d0d69d3a98da`
+- Artifact sha256: `bbeff2bfc84de7f8cb09dcc6b5a3da1f3db4f53f1225bafa8f9892120feba413`
+- Freshness artifact hash: `bbeff2bfc84de7f8cb09dcc6b5a3da1f3db4f53f1225bafa8f9892120feba413`
+- Freshness source hash: `07e300c48e0b178a02917c34d37ab61d80af6863fc9a075d92f23eda80382954`
+- Source aggregate hash (module path + module sha256): `97edc04a5a1f53450916c975d1c7d3d7c924357228fc766b5c1b44f0c25412bc`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `93`
+- Module count: `94`
 
 ## Module Summary
 
@@ -89,6 +89,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_lock_read_authority_v1.gc` | 420 | 19242 | 37 | `da0e7e49f5cd25a6` |
 | `selfhost/pkg_lock_model_authority_v1.gc` | 274 | 13367 | 13 | `171e257d7532fec2` |
 | `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
+| `selfhost/pkg_lock_ops_authority_v1.gc` | 260 | 12107 | 17 | `d6866ea0a462d3f8` |
 | `selfhost/pkg_resolution_identity_authority_v1.gc` | 491 | 21558 | 35 | `33fdf119d03db49f` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
@@ -185,6 +186,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_lock_read_authority_v1.gc`: `selfhost/pkg-lock-read::tag`, `selfhost/pkg-lock-read::map?`, `selfhost/pkg-lock-read::vec?`, `selfhost/pkg-lock-read::str?`, `selfhost/pkg-lock-read::int?`, `selfhost/pkg-lock-read::nil?`, `selfhost/pkg-lock-read::map-has-key-loop?`, `selfhost/pkg-lock-read::map-has-keys-loop?`
 - `selfhost/pkg_lock_model_authority_v1.gc`: `selfhost/pkg-lock-read::strategy-symbol`, `selfhost/pkg-lock-read::normalize-model-requirement`, `selfhost/pkg-lock-read::model-requirements-loop`, `selfhost/pkg-lock-read::model-requirements`, `selfhost/pkg-lock-read::normalize-model-locked`, `selfhost/pkg-lock-read::model-locked-loop`, `selfhost/pkg-lock-read::model-locked`, `selfhost/pkg-lock-read::normalize-model-document-tail`
 - `selfhost/pkg_lock_write_authority_v1.gc`: `selfhost/pkg-lock-write::append`, `selfhost/pkg-lock-write::append3`, `selfhost/pkg-lock-write::quoted`, `selfhost/pkg-lock-write::starts-with?`, `selfhost/pkg-lock-write::ascii-space?`, `selfhost/pkg-lock-write::trim-left`, `selfhost/pkg-lock-write::trim-right`, `selfhost/pkg-lock-write::trim`
+- `selfhost/pkg_lock_ops_authority_v1.gc`: `selfhost/pkg-lock-ops::result`, `selfhost/pkg-lock-ops::reject`, `selfhost/pkg-lock-ops::accept-write`, `selfhost/pkg-lock-ops::accept-value`, `selfhost/pkg-lock-ops::writer-locked-entry`, `selfhost/pkg-lock-ops::writer-locked-loop`, `selfhost/pkg-lock-ops::writer-locked`, `selfhost/pkg-lock-ops::writer-payload`
 - `selfhost/pkg_resolution_identity_authority_v1.gc`: `selfhost/pkg-resolution-id::tag`, `selfhost/pkg-resolution-id::map?`, `selfhost/pkg-resolution-id::str?`, `selfhost/pkg-resolution-id::sym?`, `selfhost/pkg-resolution-id::int?`, `selfhost/pkg-resolution-id::nil?`, `selfhost/pkg-resolution-id::map-has-key-loop?`, `selfhost/pkg-resolution-id::map-has-keys-loop?`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
