@@ -4,7 +4,7 @@ use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{SealId, Value};
 use num_traits::ToPrimitive;
 
-use crate::policy::{AuthorizedXrBackend, OpPolicy};
+use crate::policy::{AuthorizedXrBackend, AuthorizedXrPolicy, OpPolicy};
 use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 
 #[path = "runner_xr_host/advanced.rs"]
@@ -15,7 +15,7 @@ mod backend_policy;
 mod helpers;
 
 use advanced::*;
-use backend_policy::authorized_backend;
+use backend_policy::authorized_policy;
 use helpers::*;
 
 const XR_FIRST_PARTY_BACKEND: &str = "xr-first-party-runtime";
@@ -106,8 +106,8 @@ pub(crate) fn xr_host_call(
     if !is_xr_host_op(op) {
         return None;
     }
-    let backend = match authorized_backend(pol) {
-        Ok(backend) => backend,
+    let xr_policy = match authorized_policy(pol) {
+        Ok(policy) => policy,
         Err(message) => {
             return Some(mk_error(
                 error_tok,
@@ -119,7 +119,7 @@ pub(crate) fn xr_host_call(
             ));
         }
     };
-    match backend {
+    match &xr_policy.backend {
         AuthorizedXrBackend::WebxrDevice => {
             return Some(webxr_device_bridge_call(
                 runtime,
@@ -149,7 +149,7 @@ pub(crate) fn xr_host_call(
             Ok(req) => req,
             Err(err) => return Some(Value::data(err)),
         };
-        let haptics_policy = match parse_haptics_policy(pol, op) {
+        let haptics_policy = match parse_haptics_policy(&xr_policy, op) {
             Ok(policy) => policy,
             Err(err) => return Some(Value::data(err)),
         };
@@ -168,7 +168,7 @@ pub(crate) fn xr_host_call(
     }
     if !has_explicit_bridge_profile(pol) {
         return Some(Value::data(first_party_xr_response(
-            runtime, op, payload, pol,
+            runtime, op, payload, &xr_policy,
         )));
     }
     Some(
@@ -273,20 +273,20 @@ fn first_party_xr_response(
     runtime: &mut XrHostRuntime,
     op: &str,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
     match op {
         "gfx/xr::session-open" => first_party_session_open(runtime, payload),
         "gfx/xr::frame-poll" => first_party_frame_poll(runtime, payload),
         "gfx/xr::input-poll" => first_party_input_poll(runtime, payload),
-        "gfx/xr::hands-poll" => first_party_hands_poll(runtime, payload, pol),
-        "gfx/xr::hit-test" => first_party_hit_test(runtime, payload, pol),
-        "gfx/xr::spatial-mesh-poll" => first_party_spatial_mesh_poll(runtime, payload, pol),
-        "gfx/xr::anchor-create" => first_party_anchor_create(runtime, payload, pol),
-        "gfx/xr::anchor-update" => first_party_anchor_update(runtime, payload, pol),
+        "gfx/xr::hands-poll" => first_party_hands_poll(runtime, payload, policy),
+        "gfx/xr::hit-test" => first_party_hit_test(runtime, payload, policy),
+        "gfx/xr::spatial-mesh-poll" => first_party_spatial_mesh_poll(runtime, payload, policy),
+        "gfx/xr::anchor-create" => first_party_anchor_create(runtime, payload, policy),
+        "gfx/xr::anchor-update" => first_party_anchor_update(runtime, payload),
         "gfx/xr::anchor-destroy" => first_party_anchor_destroy(runtime, payload),
-        "gfx/xr::layer-create" => first_party_layer_create(runtime, payload, pol),
-        "gfx/xr::layer-update" => first_party_layer_update(runtime, payload, pol),
+        "gfx/xr::layer-create" => first_party_layer_create(runtime, payload, policy),
+        "gfx/xr::layer-update" => first_party_layer_update(runtime, payload, policy),
         "gfx/xr::layer-destroy" => first_party_layer_destroy(runtime, payload),
         "gfx/xr::submit-frame" => first_party_submit_frame(runtime, payload),
         "gfx/xr::session-close" => first_party_session_close(runtime, payload),

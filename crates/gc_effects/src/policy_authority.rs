@@ -14,7 +14,7 @@ use super::{
     AuthorizedBridgeIdentityPolicy, AuthorizedCryptoPolicy, AuthorizedDatabasePolicy,
     AuthorizedFfiPolicy, AuthorizedGfxProfile, AuthorizedGpuPolicy, AuthorizedMaxBytes,
     AuthorizedNetworkPolicy, AuthorizedPluginPolicy, AuthorizedProcessPrograms,
-    AuthorizedStoreRemotePolicy, AuthorizedXrBackend, CapsPolicy, OpPolicy,
+    AuthorizedStoreRemotePolicy, AuthorizedXrPolicy, CapsPolicy, OpPolicy,
 };
 
 #[path = "policy_authority_bridge.rs"]
@@ -355,7 +355,7 @@ struct AuthorizedOperation {
     crypto: AuthorizedCryptoPolicy,
     gfx: AuthorizedGfxProfile,
     gpu: AuthorizedGpuPolicy,
-    xr: AuthorizedXrBackend,
+    xr: AuthorizedXrPolicy,
     ffi: AuthorizedFfiPolicy,
     plugin: AuthorizedPluginPolicy,
     cap: Term,
@@ -395,8 +395,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.18")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &18.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.19")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &19.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -657,7 +657,7 @@ pub(super) fn authorize_policy(
             op_policy.authorized_crypto = Some(authorized.crypto);
             op_policy.authorized_gfx_profile = Some(authorized.gfx);
             op_policy.authorized_gpu = Some(authorized.gpu);
-            op_policy.authorized_xr_backend = Some(authorized.xr);
+            op_policy.authorized_xr_policy = Some(authorized.xr);
             op_policy.authorized_ffi = Some(authorized.ffi);
             op_policy.authorized_plugin = Some(authorized.plugin);
             op_policy.authorized_cap = Some(authorized.cap);

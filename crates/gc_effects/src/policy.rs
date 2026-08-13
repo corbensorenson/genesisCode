@@ -292,6 +292,58 @@ pub(crate) enum AuthorizedXrBackend {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedPositiveI64 {
+    Absent,
+    InvalidType,
+    NonPositive,
+    OutOfRange,
+    Valid(i64),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AuthorizedXrPolicy {
+    pub backend: AuthorizedXrBackend,
+    pub allow_haptics_inputs: AuthorizedStringList,
+    pub max_haptics_amplitude: AuthorizedPositiveI64,
+    pub max_haptics_duration_ms: AuthorizedPositiveI64,
+    pub allow_hand_tracking: AuthorizedOptionalBool,
+    pub max_hand_joints: AuthorizedPositiveI64,
+    pub allow_hit_test: AuthorizedOptionalBool,
+    pub max_hit_results: AuthorizedPositiveI64,
+    pub allow_spatial_mesh: AuthorizedOptionalBool,
+    pub max_meshes: AuthorizedPositiveI64,
+    pub max_mesh_vertices: AuthorizedPositiveI64,
+    pub allow_anchor_spaces: AuthorizedStringList,
+    pub max_anchors: AuthorizedPositiveI64,
+    pub allow_layer_types: AuthorizedStringList,
+    pub max_layers: AuthorizedPositiveI64,
+    pub max_layer_opacity: AuthorizedPositiveI64,
+}
+
+impl Default for AuthorizedXrPolicy {
+    fn default() -> Self {
+        Self {
+            backend: AuthorizedXrBackend::FirstParty,
+            allow_haptics_inputs: AuthorizedStringList::Absent,
+            max_haptics_amplitude: AuthorizedPositiveI64::Absent,
+            max_haptics_duration_ms: AuthorizedPositiveI64::Absent,
+            allow_hand_tracking: AuthorizedOptionalBool::Absent,
+            max_hand_joints: AuthorizedPositiveI64::Absent,
+            allow_hit_test: AuthorizedOptionalBool::Absent,
+            max_hit_results: AuthorizedPositiveI64::Absent,
+            allow_spatial_mesh: AuthorizedOptionalBool::Absent,
+            max_meshes: AuthorizedPositiveI64::Absent,
+            max_mesh_vertices: AuthorizedPositiveI64::Absent,
+            allow_anchor_spaces: AuthorizedStringList::Absent,
+            max_anchors: AuthorizedPositiveI64::Absent,
+            allow_layer_types: AuthorizedStringList::Absent,
+            max_layers: AuthorizedPositiveI64::Absent,
+            max_layer_opacity: AuthorizedPositiveI64::Absent,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum AuthorizedFfiSignedPolicy {
     Disabled,
     InvalidRequiredType,
@@ -340,7 +392,7 @@ pub struct OpPolicy {
     pub(crate) authorized_crypto: Option<AuthorizedCryptoPolicy>,
     pub(crate) authorized_gpu: Option<AuthorizedGpuPolicy>,
     pub(crate) authorized_gfx_profile: Option<AuthorizedGfxProfile>,
-    pub(crate) authorized_xr_backend: Option<AuthorizedXrBackend>,
+    pub(crate) authorized_xr_policy: Option<AuthorizedXrPolicy>,
     pub(crate) authorized_bridge_identity: Option<AuthorizedBridgeIdentityPolicy>,
     pub(crate) authorized_plugin: Option<AuthorizedPluginPolicy>,
     pub(crate) authorized_ffi: Option<AuthorizedFfiPolicy>,
@@ -468,7 +520,7 @@ impl CapsPolicy {
                         authorized_crypto: None,
                         authorized_gpu: None,
                         authorized_gfx_profile: None,
-                        authorized_xr_backend: None,
+                        authorized_xr_policy: None,
                         authorized_bridge_identity: None,
                         authorized_plugin: None,
                         authorized_ffi: None,
@@ -489,7 +541,7 @@ impl CapsPolicy {
         let gpu_default = policy_authority::gpu::observed_default();
         for (op, op_policy) in &mut ops {
             let bridge = policy_authority::legacy_bridge_identity_policy(op, Some(op_policy));
-            op_policy.authorized_xr_backend =
+            op_policy.authorized_xr_policy =
                 Some(policy_authority::xr::legacy(Some(op_policy), bridge.active));
             op_policy.authorized_bridge_identity = Some(bridge);
             op_policy.authorized_gpu = Some(policy_authority::gpu::legacy(

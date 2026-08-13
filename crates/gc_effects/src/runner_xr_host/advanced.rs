@@ -1,64 +1,46 @@
 use super::*;
+use crate::policy::{AuthorizedOptionalBool, AuthorizedStringList, AuthorizedXrPolicy};
 
 #[path = "advanced_layers.rs"]
 mod advanced_layers;
 
-fn parse_policy_bool(pol: Option<&OpPolicy>, key: &str, default_value: bool) -> Result<bool, Term> {
-    let Some(pol) = pol else {
-        return Ok(default_value);
-    };
-    let Some(v) = pol.extra.get(key) else {
-        return Ok(default_value);
-    };
-    let Some(value) = v.as_bool() else {
-        return Err(policy_error(
+fn authorized_bool(
+    decision: &AuthorizedOptionalBool,
+    key: &str,
+    default_value: bool,
+) -> Result<bool, Term> {
+    match decision {
+        AuthorizedOptionalBool::Absent => Ok(default_value),
+        AuthorizedOptionalBool::InvalidType => Err(policy_error(
             "gfx/xr::policy",
             &format!("`{key}` must be a boolean"),
-        ));
-    };
-    Ok(value)
+        )),
+        AuthorizedOptionalBool::Valid(value) => Ok(*value),
+    }
 }
 
-fn parse_policy_string_allowlist(
-    pol: Option<&OpPolicy>,
+fn authorized_string_allowlist(
+    decision: &AuthorizedStringList,
     key: &str,
     defaults: &[&str],
     op: &str,
 ) -> Result<Vec<String>, Term> {
-    let Some(pol) = pol else {
-        return Ok(defaults.iter().map(|x| x.to_string()).collect());
-    };
-    let Some(v) = pol.extra.get(key) else {
-        return Ok(defaults.iter().map(|x| x.to_string()).collect());
-    };
-    let Some(arr) = v.as_array() else {
-        return Err(policy_error(
+    match decision {
+        AuthorizedStringList::Absent => Ok(defaults.iter().map(|x| x.to_string()).collect()),
+        AuthorizedStringList::InvalidType => Err(policy_error(
             op,
             &format!("`{key}` must be an array of strings"),
-        ));
-    };
-    let mut out = Vec::with_capacity(arr.len());
-    for item in arr {
-        let Some(raw) = item.as_str() else {
-            return Err(policy_error(
-                op,
-                &format!("`{key}` entries must be strings"),
-            ));
-        };
-        let trimmed = raw.trim();
-        if !trimmed.is_empty() {
-            out.push(trimmed.to_ascii_lowercase());
-        }
-    }
-    if out.is_empty() {
-        return Err(policy_error(
+        )),
+        AuthorizedStringList::InvalidEntry => Err(policy_error(
+            op,
+            &format!("`{key}` entries must be strings"),
+        )),
+        AuthorizedStringList::Empty => Err(policy_error(
             op,
             &format!("`{key}` must contain at least one entry"),
-        ));
+        )),
+        AuthorizedStringList::Valid(values) => Ok(values.clone()),
     }
-    out.sort();
-    out.dedup();
-    Ok(out)
 }
 
 fn parse_optional_positive_i64(payload: &Term, key: &str) -> Option<i64> {
@@ -145,17 +127,17 @@ fn unknown_layer_error(op: &str, sid: &str, layer_id: &str) -> Term {
 pub(super) fn first_party_layer_create(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
-    advanced_layers::first_party_layer_create(runtime, payload, pol)
+    advanced_layers::first_party_layer_create(runtime, payload, policy)
 }
 
 pub(super) fn first_party_layer_update(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
-    advanced_layers::first_party_layer_update(runtime, payload, pol)
+    advanced_layers::first_party_layer_update(runtime, payload, policy)
 }
 
 pub(super) fn first_party_layer_destroy(runtime: &mut XrHostRuntime, payload: &Term) -> Term {
@@ -165,19 +147,16 @@ pub(super) fn first_party_layer_destroy(runtime: &mut XrHostRuntime, payload: &T
 pub(super) fn first_party_anchor_create(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
     let op = "gfx/xr::anchor-create";
     let session = match required_session(runtime, payload, op) {
         Ok(session) => session,
         Err(err) => return err,
     };
-    let max_anchors = match pol {
-        Some(pol) => match parse_positive_policy_i64(pol, "max_anchors", 64, op) {
-            Ok(value) => value,
-            Err(err) => return err,
-        },
-        None => 64,
+    let max_anchors = match authorized_positive_i64(&policy.max_anchors, "max_anchors", 64, op) {
+        Ok(value) => value,
+        Err(err) => return err,
     };
     if session.anchors.len() as i64 >= max_anchors {
         return policy_error(op, "anchor capacity exceeded max_anchors policy");
@@ -190,8 +169,8 @@ pub(super) fn first_party_anchor_create(
     if space.is_empty() {
         return bad_payload_error(op, "payload field `:space` must not be empty");
     }
-    let allow_spaces = match parse_policy_string_allowlist(
-        pol,
+    let allow_spaces = match authorized_string_allowlist(
+        &policy.allow_anchor_spaces,
         "allow_anchor_spaces",
         &["local", "local-floor", "bounded-floor", "viewer"],
         op,
@@ -236,11 +215,7 @@ pub(super) fn first_party_anchor_create(
     ])
 }
 
-pub(super) fn first_party_anchor_update(
-    runtime: &mut XrHostRuntime,
-    payload: &Term,
-    _pol: Option<&OpPolicy>,
-) -> Term {
+pub(super) fn first_party_anchor_update(runtime: &mut XrHostRuntime, payload: &Term) -> Term {
     let op = "gfx/xr::anchor-update";
     let sid = match payload_session_id(payload) {
         Some(sid) => sid,
@@ -321,27 +296,26 @@ pub(super) fn first_party_anchor_destroy(runtime: &mut XrHostRuntime, payload: &
 pub(super) fn first_party_hands_poll(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
     let op = "gfx/xr::hands-poll";
     let session = match required_session(runtime, payload, op) {
         Ok(session) => session,
         Err(err) => return err,
     };
-    let allow_hand_tracking = match parse_policy_bool(pol, "allow_hand_tracking", true) {
-        Ok(flag) => flag,
-        Err(err) => return err,
-    };
+    let allow_hand_tracking =
+        match authorized_bool(&policy.allow_hand_tracking, "allow_hand_tracking", true) {
+            Ok(flag) => flag,
+            Err(err) => return err,
+        };
     if !allow_hand_tracking {
         return policy_error(op, "hand tracking disabled by allow_hand_tracking policy");
     }
-    let max_hand_joints = match pol {
-        Some(pol) => match parse_positive_policy_i64(pol, "max_hand_joints", 25, op) {
+    let max_hand_joints =
+        match authorized_positive_i64(&policy.max_hand_joints, "max_hand_joints", 25, op) {
             Ok(value) => value,
             Err(err) => return err,
-        },
-        None => 25,
-    };
+        };
     let requested_joints = parse_optional_positive_i64(payload, ":max-joints").unwrap_or(25);
     let joints_count = requested_joints.min(max_hand_joints).max(1) as usize;
     let hands = vec![(":left", 0_i64), (":right", 1_i64)]
@@ -386,27 +360,25 @@ pub(super) fn first_party_hands_poll(
 pub(super) fn first_party_hit_test(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
     let op = "gfx/xr::hit-test";
     let session = match required_session(runtime, payload, op) {
         Ok(session) => session,
         Err(err) => return err,
     };
-    let allow_hit_test = match parse_policy_bool(pol, "allow_hit_test", true) {
+    let allow_hit_test = match authorized_bool(&policy.allow_hit_test, "allow_hit_test", true) {
         Ok(flag) => flag,
         Err(err) => return err,
     };
     if !allow_hit_test {
         return policy_error(op, "hit test disabled by allow_hit_test policy");
     }
-    let max_hit_results = match pol {
-        Some(pol) => match parse_positive_policy_i64(pol, "max_hit_results", 8, op) {
+    let max_hit_results =
+        match authorized_positive_i64(&policy.max_hit_results, "max_hit_results", 8, op) {
             Ok(value) => value,
             Err(err) => return err,
-        },
-        None => 8,
-    };
+        };
     let requested_hits = parse_optional_positive_i64(payload, ":max-hits").unwrap_or(1);
     let hit_count = requested_hits.min(max_hit_results).max(1) as usize;
     let hits = (0..hit_count)
@@ -455,14 +427,14 @@ pub(super) fn first_party_hit_test(
 pub(super) fn first_party_spatial_mesh_poll(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
     let op = "gfx/xr::spatial-mesh-poll";
     let _session = match required_session(runtime, payload, op) {
         Ok(session) => session,
         Err(err) => return err,
     };
-    let allow_mesh = match parse_policy_bool(pol, "allow_spatial_mesh", true) {
+    let allow_mesh = match authorized_bool(&policy.allow_spatial_mesh, "allow_spatial_mesh", true) {
         Ok(flag) => flag,
         Err(err) => return err,
     };
@@ -472,20 +444,15 @@ pub(super) fn first_party_spatial_mesh_poll(
             "spatial mesh polling disabled by allow_spatial_mesh policy",
         );
     }
-    let max_meshes = match pol {
-        Some(pol) => match parse_positive_policy_i64(pol, "max_meshes", 4, op) {
+    let max_meshes = match authorized_positive_i64(&policy.max_meshes, "max_meshes", 4, op) {
+        Ok(value) => value,
+        Err(err) => return err,
+    };
+    let max_vertices =
+        match authorized_positive_i64(&policy.max_mesh_vertices, "max_mesh_vertices", 4096, op) {
             Ok(value) => value,
             Err(err) => return err,
-        },
-        None => 4,
-    };
-    let max_vertices = match pol {
-        Some(pol) => match parse_positive_policy_i64(pol, "max_mesh_vertices", 4096, op) {
-            Ok(value) => value,
-            Err(err) => return err,
-        },
-        None => 4096,
-    };
+        };
     let requested_meshes = parse_optional_positive_i64(payload, ":max-meshes").unwrap_or(1);
     let mesh_count = requested_meshes.min(max_meshes).max(1) as usize;
     let lod = parse_optional_string(payload, ":lod")

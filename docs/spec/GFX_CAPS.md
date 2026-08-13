@@ -110,7 +110,7 @@ Profile selection:
   `host_runtime_profile` value of `production`, `prod`, or `release` selects that
   same default; all other cases select `headless`.
 - Artifact-backed production loads bind these exact observations into GenesisCode
-  authority protocol v0.18. The host validates the result against its temporary
+  authority protocol v0.19. The host validates the result against its temporary
   compatibility oracle, then GFX dispatch consumes only the installed authority
   profile.
 - If explicit bridge config is present (`bridge_cmd` or WASI bridge response keys),

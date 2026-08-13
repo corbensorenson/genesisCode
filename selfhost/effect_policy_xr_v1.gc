@@ -1,16 +1,90 @@
+(def selfhost/effect-xr::identity-input-valid?
+  (fn (value)
+    (if
+      (selfhost/effect-network::optional-string-input?
+        ((core/vec::get value) 6))
+      (if
+        (selfhost/effect-network::optional-string-input?
+          ((core/vec::get value) 16))
+        (selfhost/effect-network::optional-string-input?
+          ((core/vec::get value) 17))
+        false)
+      false)))
+
+(def selfhost/effect-xr::list-input-valid?
+  (fn (value)
+    (if
+      (selfhost/effect-network::list-input?
+        ((core/vec::get value) 0))
+      (if
+        (selfhost/effect-network::list-input?
+          ((core/vec::get value) 2))
+        (selfhost/effect-network::list-input?
+          ((core/vec::get value) 4))
+        false)
+      false)))
+
+(def selfhost/effect-xr::bool-input-valid?
+  (fn (value)
+    (if
+      (selfhost/effect-network::optional-bool-input?
+        ((core/vec::get value) 1))
+      (if
+        (selfhost/effect-network::optional-bool-input?
+          ((core/vec::get value) 3))
+        (selfhost/effect-network::optional-bool-input?
+          ((core/vec::get value) 5))
+        false)
+      false)))
+
+(def selfhost/effect-xr::limit-input-valid?
+  (fn (value)
+    (if
+      (selfhost/effect-network::limit-input?
+        ((core/vec::get value) 7))
+      (if
+        (selfhost/effect-network::limit-input?
+          ((core/vec::get value) 8))
+        (if
+          (selfhost/effect-network::limit-input?
+            ((core/vec::get value) 9))
+          (if
+            (selfhost/effect-network::limit-input?
+              ((core/vec::get value) 10))
+            (if
+              (selfhost/effect-network::limit-input?
+                ((core/vec::get value) 11))
+              (if
+                (selfhost/effect-network::limit-input?
+                  ((core/vec::get value) 12))
+                (if
+                  (selfhost/effect-network::limit-input?
+                    ((core/vec::get value) 13))
+                  (if
+                    (selfhost/effect-network::limit-input?
+                      ((core/vec::get value) 14))
+                    (selfhost/effect-network::limit-input?
+                      ((core/vec::get value) 15))
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
 (def selfhost/effect-xr::input-valid?
   (fn (value)
     (if
-      ((selfhost/effect-policy::exact-map? value)
-        [:backend :runtime-profile :runtime-profile-alias])
-      (if
-        (selfhost/effect-network::optional-string-input?
-          ((core/map::get value) (quote :backend)))
-        (if
-          (selfhost/effect-network::optional-string-input?
-            ((core/map::get value) (quote :runtime-profile)))
-          (selfhost/effect-network::optional-string-input?
-            ((core/map::get value) (quote :runtime-profile-alias)))
+      (if (selfhost/policy::vec? value)
+        ((core/int::eq? (core/vec::len value)) 18)
+        false)
+      (if (selfhost/effect-xr::identity-input-valid? value)
+        (if (selfhost/effect-xr::list-input-valid? value)
+          (if (selfhost/effect-xr::bool-input-valid? value)
+            (selfhost/effect-xr::limit-input-valid? value)
+            false)
           false)
         false)
       false)))
@@ -34,15 +108,15 @@
             ((core/eq? normalized) "release"))))
       false)))
 
-(def selfhost/effect-xr::decision
+(def selfhost/effect-xr::backend-decision
   (fn (backend invalid-value)
     {:backend backend :invalid-value invalid-value}))
 
 (def selfhost/effect-xr::production-decision
   (fn (bridge-active)
     (if bridge-active
-      ((selfhost/effect-xr::decision (quote :webxr-device)) nil)
-      ((selfhost/effect-xr::decision (quote :production-requires-bridge)) nil))))
+      ((selfhost/effect-xr::backend-decision (quote :webxr-device)) nil)
+      ((selfhost/effect-xr::backend-decision (quote :production-requires-bridge)) nil))))
 
 (def selfhost/effect-xr::explicit-decision
   (fn (raw bridge-active)
@@ -53,26 +127,130 @@
             (if ((core/eq? normalized) "first-party-runtime") true
               (if ((core/eq? normalized) "headless-sim") true
                 ((core/eq? normalized) "xr-headless-sim")))))
-        ((selfhost/effect-xr::decision (quote :first-party-runtime)) nil)
+        ((selfhost/effect-xr::backend-decision (quote :first-party-runtime)) nil)
         (if (selfhost/effect-xr::production? normalized)
           (selfhost/effect-xr::production-decision bridge-active)
           (if
             (if ((core/eq? normalized) "webxr-device") true
               (if ((core/eq? normalized) "device-runtime") true
                 ((core/eq? normalized) "browser-device")))
-            ((selfhost/effect-xr::decision (quote :webxr-device)) nil)
-            ((selfhost/effect-xr::decision (quote :invalid)) normalized)))))))
+            ((selfhost/effect-xr::backend-decision (quote :webxr-device)) nil)
+            ((selfhost/effect-xr::backend-decision (quote :invalid)) normalized)))))))
 
-(def selfhost/effect-xr::policy
+(def selfhost/effect-xr::positive-decision
+  (fn (raw maximum)
+    (if (selfhost/policy::nil? raw)
+      nil
+      (if (selfhost/effect-network::invalid-type? raw)
+        (quote :invalid-type)
+        (if ((core/int::lt? raw) 1)
+          (quote :nonpositive)
+          (if
+            (if (selfhost/policy::nil? maximum)
+              false
+              ((core/int::lt? maximum) raw))
+            (quote :out-of-range)
+            raw))))))
+
+(def selfhost/effect-xr::bool-decision
+  (fn (raw)
+    (if (selfhost/policy::nil? raw)
+      nil
+      (if (selfhost/effect-network::invalid-type? raw)
+        (quote :invalid-type)
+        raw))))
+
+(def selfhost/effect-xr::list-decision-loop
+  (fn (values)
+    (fn (index)
+      (fn (lowercase)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len values))
+            (if ((core/int::eq? (core/vec::len out)) 0) (quote :empty) out)
+            (let ((value ((core/vec::get values) index)))
+              (if (selfhost/policy::str? value)
+                (let ((trimmed (selfhost/policy::trim value)))
+                  (((((selfhost/effect-xr::list-decision-loop values)
+                       ((core/int::add index) 1)) lowercase)
+                    (if (selfhost/policy::non-empty-str? trimmed)
+                      ((core/vec::push out)
+                        (if lowercase
+                          (selfhost/effect-crypto::ascii-lower trimmed)
+                          trimmed))
+                      out))))
+                (quote :invalid-entry)))))))))
+
+(def selfhost/effect-xr::list-decision
+  (fn (raw lowercase)
+    (if (selfhost/policy::nil? raw)
+      nil
+      (if (selfhost/effect-network::invalid-type? raw)
+        (quote :invalid-type)
+        ((((selfhost/effect-xr::list-decision-loop raw) 0) lowercase) [])))))
+
+(def selfhost/effect-xr::backend-policy
   (fn (input bridge-active)
     (let
-      ((backend ((core/map::get input) (quote :backend)))
+      ((backend ((core/vec::get input) 6))
         (runtime-profile
           ((selfhost/effect-xr::selected
-            ((core/map::get input) (quote :runtime-profile)))
-            ((core/map::get input) (quote :runtime-profile-alias)))))
+            ((core/vec::get input) 16))
+            ((core/vec::get input) 17))))
       (if (selfhost/policy::str? backend)
         ((selfhost/effect-xr::explicit-decision backend) bridge-active)
         (if (selfhost/effect-xr::production? runtime-profile)
           (selfhost/effect-xr::production-decision bridge-active)
-          ((selfhost/effect-xr::decision (quote :first-party-runtime)) nil))))))
+          ((selfhost/effect-xr::backend-decision (quote :first-party-runtime)) nil))))))
+
+(def selfhost/effect-xr::policy
+  (fn (input bridge-active)
+    (let ((backend ((selfhost/effect-xr::backend-policy input) bridge-active)))
+      {
+        :allow-anchor-spaces
+          ((selfhost/effect-xr::list-decision
+             ((core/vec::get input) 0)) true)
+        :allow-hand-tracking
+          (selfhost/effect-xr::bool-decision
+            ((core/vec::get input) 1))
+        :allow-haptics-inputs
+          ((selfhost/effect-xr::list-decision
+             ((core/vec::get input) 2)) false)
+        :allow-hit-test
+          (selfhost/effect-xr::bool-decision
+            ((core/vec::get input) 3))
+        :allow-layer-types
+          ((selfhost/effect-xr::list-decision
+             ((core/vec::get input) 4)) true)
+        :allow-spatial-mesh
+          (selfhost/effect-xr::bool-decision
+            ((core/vec::get input) 5))
+        :backend ((core/map::get backend) (quote :backend))
+        :invalid-value ((core/map::get backend) (quote :invalid-value))
+        :max-anchors
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 7)) nil)
+        :max-hand-joints
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 8)) nil)
+        :max-haptics-amplitude
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 9)) 1000)
+        :max-haptics-duration-ms
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 10)) nil)
+        :max-hit-results
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 11)) nil)
+        :max-layer-opacity
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 12)) nil)
+        :max-layers
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 13)) nil)
+        :max-mesh-vertices
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 14)) nil)
+        :max-meshes
+          ((selfhost/effect-xr::positive-decision
+             ((core/vec::get input) 15)) nil)
+      })))

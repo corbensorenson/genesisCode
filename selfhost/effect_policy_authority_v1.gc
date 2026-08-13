@@ -348,8 +348,8 @@
             (platform-max ((core/map::get request) (quote :platform-max-bytes)))
             (xr-policy ((core/map::get request) (quote :xr-policy))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.18")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 18) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.19")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 19) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -406,7 +406,7 @@
                         (if allowed
                           (selfhost/effect-gpu::policy gpu-policy)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.18"
+                      :kind "genesis/effect-policy-authority-result-v0.19"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -425,7 +425,7 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 18
+                      :v 19
                       :xr-policy
                         (if allowed
                           ((selfhost/effect-xr::policy xr-policy)

@@ -1,13 +1,13 @@
-use crate::policy::{AuthorizedXrBackend, OpPolicy};
+use crate::policy::{AuthorizedXrPolicy, OpPolicy};
 
-pub(super) fn authorized_backend(policy: Option<&OpPolicy>) -> Result<AuthorizedXrBackend, String> {
+pub(super) fn authorized_policy(policy: Option<&OpPolicy>) -> Result<AuthorizedXrPolicy, String> {
     let Some(policy) = policy else {
-        return Ok(AuthorizedXrBackend::FirstParty);
+        return Ok(AuthorizedXrPolicy::default());
     };
     policy
-        .authorized_xr_backend
+        .authorized_xr_policy
         .clone()
-        .ok_or_else(|| "missing GenesisCode XR backend authority".to_string())
+        .ok_or_else(|| "missing GenesisCode XR policy authority".to_string())
 }
 
 #[cfg(test)]
@@ -17,10 +17,11 @@ mod tests {
     use toml::Value as TomlValue;
 
     use super::*;
+    use crate::policy::AuthorizedXrBackend;
 
     fn policy(
         entries: &[(&str, TomlValue)],
-        authorized_xr_backend: Option<AuthorizedXrBackend>,
+        authorized_xr_policy: Option<AuthorizedXrPolicy>,
     ) -> OpPolicy {
         OpPolicy {
             base_dir: None,
@@ -39,7 +40,7 @@ mod tests {
             authorized_crypto: None,
             authorized_gpu: None,
             authorized_gfx_profile: None,
-            authorized_xr_backend,
+            authorized_xr_policy,
             authorized_bridge_identity: None,
             authorized_plugin: None,
             authorized_ffi: None,
@@ -47,26 +48,27 @@ mod tests {
     }
 
     #[test]
-    fn xr_backend_consumes_authority_before_raw_policy() {
+    fn xr_consumes_authority_before_raw_policy() {
+        let authorized = AuthorizedXrPolicy {
+            backend: AuthorizedXrBackend::WebxrDevice,
+            ..AuthorizedXrPolicy::default()
+        };
         let policy = policy(
             &[(
                 "xr_backend",
                 TomlValue::String("first-party-runtime".to_string()),
             )],
-            Some(AuthorizedXrBackend::WebxrDevice),
+            Some(authorized.clone()),
         );
-        assert_eq!(
-            authorized_backend(Some(&policy)).unwrap(),
-            AuthorizedXrBackend::WebxrDevice
-        );
+        assert_eq!(authorized_policy(Some(&policy)).unwrap(), authorized);
     }
 
     #[test]
-    fn absent_policy_defaults_first_party_but_missing_authority_fails_closed() {
+    fn absent_policy_defaults_but_present_policy_without_authority_fails_closed() {
         assert_eq!(
-            authorized_backend(None).unwrap(),
-            AuthorizedXrBackend::FirstParty
+            authorized_policy(None).unwrap(),
+            AuthorizedXrPolicy::default()
         );
-        assert!(authorized_backend(Some(&policy(&[], None))).is_err());
+        assert!(authorized_policy(Some(&policy(&[], None))).is_err());
     }
 }

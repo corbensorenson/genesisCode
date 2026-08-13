@@ -34,9 +34,11 @@ Baseline families:
 
 These ops are first-party deterministic by default and can be explicitly bridge-routed via per-op bridge policy (`bridge_cmd` or `wasi_bridge_profile` response mapping).
 In addition, a dedicated WebXR device lane is available via `xr_backend = "webxr-device"` with explicit bridge transport.
-Artifact-backed production policy loads classify this backend through GenesisCode
-authority protocol v0.18; the host consumes the installed result and retains only
-bridge availability enforcement and execution.
+Artifact-backed production policy loads classify this backend and every haptics
+and advanced-feature policy field through GenesisCode authority protocol v0.19.
+The host consumes only the installed result and retains matching, bound
+enforcement, deterministic runtime state, bridge/adapter execution, replay, and
+resource lifecycle.
 
 ## Runtime Contract
 
@@ -103,12 +105,21 @@ Session lifecycle contract:
 
 Haptics policy gate contract (`gfx/xr::haptics-pulse`):
 
+Artifact-backed production loads preserve these defaults and effect-use errors
+through the closed GenesisCode XR decision. A malformed haptics field cannot
+change unrelated XR operations or reject the capability file early.
+
 - required per-op `allow_haptics_inputs = ["<input-id>" ...]` allowlist.
 - optional per-op `max_haptics_amplitude` integer (`1..1000`, default `1000`).
 - optional per-op `max_haptics_duration_ms` integer (`>0`, default `250`).
 - requests outside policy bounds fail closed with deterministic `core/caps/policy-error` envelopes.
 
 Advanced XR policy gate contract:
+
+GenesisCode trims these allowlists, removes empty entries, preserves order and
+duplicates, and ASCII-lowercases anchor-space and layer-type values. The strict
+host decoder rejects noncanonical output before installing policy state; no
+first-party XR operation rereads raw TOML.
 
 - `gfx/xr::hands-poll`
   - optional per-op `allow_hand_tracking` (bool, default `true`)

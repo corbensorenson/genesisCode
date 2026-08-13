@@ -3,25 +3,22 @@ use super::*;
 pub(super) fn first_party_layer_create(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
     let op = "gfx/xr::layer-create";
     let session = match required_session(runtime, payload, op) {
         Ok(session) => session,
         Err(err) => return err,
     };
-    let max_layers = match pol {
-        Some(pol) => match parse_positive_policy_i64(pol, "max_layers", 16, op) {
-            Ok(value) => value,
-            Err(err) => return err,
-        },
-        None => 16,
+    let max_layers = match authorized_positive_i64(&policy.max_layers, "max_layers", 16, op) {
+        Ok(value) => value,
+        Err(err) => return err,
     };
     if session.layers.len() as i64 >= max_layers {
         return policy_error(op, "layer capacity exceeded max_layers policy");
     }
-    let allow_layer_types = match parse_policy_string_allowlist(
-        pol,
+    let allow_layer_types = match authorized_string_allowlist(
+        &policy.allow_layer_types,
         "allow_layer_types",
         &["quad", "cylinder", "equirect"],
         op,
@@ -46,13 +43,11 @@ pub(super) fn first_party_layer_create(
     if layout.is_empty() {
         return bad_payload_error(op, "payload field `:layout` must not be empty");
     }
-    let max_layer_opacity = match pol {
-        Some(pol) => match parse_positive_policy_i64(pol, "max_layer_opacity", 1000, op) {
+    let max_layer_opacity =
+        match authorized_positive_i64(&policy.max_layer_opacity, "max_layer_opacity", 1000, op) {
             Ok(value) => value,
             Err(err) => return err,
-        },
-        None => 1000,
-    };
+        };
     let opacity = parse_optional_positive_i64(payload, ":opacity")
         .unwrap_or(1000)
         .min(max_layer_opacity);
@@ -92,7 +87,7 @@ pub(super) fn first_party_layer_create(
 pub(super) fn first_party_layer_update(
     runtime: &mut XrHostRuntime,
     payload: &Term,
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
 ) -> Term {
     let op = "gfx/xr::layer-update";
     let sid = match payload_session_id(payload) {
@@ -125,13 +120,12 @@ pub(super) fn first_party_layer_update(
         layer.layer_type = normalized;
     }
     if let Some(opacity) = parse_optional_positive_i64(payload, ":opacity") {
-        let max_layer_opacity = match pol {
-            Some(pol) => match parse_positive_policy_i64(pol, "max_layer_opacity", 1000, op) {
+        let max_layer_opacity =
+            match authorized_positive_i64(&policy.max_layer_opacity, "max_layer_opacity", 1000, op)
+            {
                 Ok(value) => value,
                 Err(err) => return err,
-            },
-            None => 1000,
-        };
+            };
         if opacity > max_layer_opacity {
             return policy_error(
                 op,

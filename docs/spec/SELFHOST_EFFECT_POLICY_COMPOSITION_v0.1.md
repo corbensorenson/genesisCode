@@ -49,9 +49,13 @@ fallback, and the compile-target production default supplied as an explicit host
 observation. Window, input, audio, rendering, adapter, and resource lifecycle
 execution remain host mechanisms.
 For `gfx/xr::*`, it owns backend classification from `xr_backend`, primary/alias
-runtime-profile fallback, and the GenesisCode-produced bridge-active decision.
-WebXR bridge availability and execution, replay envelopes, payload handling,
-advanced feature gates, haptics, adapters, and lifecycle remain host mechanisms.
+runtime-profile fallback, the GenesisCode-produced bridge-active decision, and
+all haptics and advanced-feature policy states. This includes haptics input and
+amplitude/duration bounds; hand-tracking, hit-test, and spatial-mesh gates and
+bounds; anchor-space and layer-type allowlists; and anchor, mesh, layer, and
+opacity bounds. WebXR bridge availability and execution, replay envelopes,
+payload handling, matching and bound enforcement, adapters, and resource
+lifecycle remain host mechanisms.
 Allowlist matching, command path resolution,
 executable hashing and digest comparison, schema validation, bridge transport
 execution, cancellation, and model-provider lifecycle remain host mechanisms.
@@ -80,7 +84,7 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed nine-field map with kind
-`genesis/effect-policy-authority-request-v0.18`, version `18`, the operation string,
+`genesis/effect-policy-authority-request-v0.19`, version `19`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
@@ -106,15 +110,29 @@ three documented backend values, preserves explicit-over-default fallback
 precedence, and maps unsupported values to the compatibility defaults. The
 request hash binds the ambient default observation used for the decision, so the
 runtime consumer never rereads the environment.
-The top-level `:xr-policy` observation is an exact three-field map containing
-`:backend`, `:runtime-profile`, and `:runtime-profile-alias`; each value is the
-exact configured string, `nil`, or `:invalid-type`. GenesisCode preserves
+The top-level `:xr-policy` observation is an exact 18-slot vector. In order, its
+slots are `allow_anchor_spaces`, `allow_hand_tracking`,
+`allow_haptics_inputs`, `allow_hit_test`, `allow_layer_types`,
+`allow_spatial_mesh`, `xr_backend`, `max_anchors`, `max_hand_joints`,
+`max_haptics_amplitude`, `max_haptics_duration_ms`, `max_hit_results`,
+`max_layer_opacity`, `max_layers`, `max_mesh_vertices`, `max_meshes`,
+`runtime_profile`, and `host_runtime_profile`. Lists carry exact strings or the
+closed `:invalid-entry` observation; booleans, strings, and integers carry their
+exact value, `nil`, or `:invalid-type`. The fixed positional transport avoids
+repeated map-allocation cost while its exact length and per-slot domains remain
+closed and request-hash bound. GenesisCode preserves
 present-primary-over-alias runtime precedence, trims and ASCII-lowercases
 strings, canonicalizes documented first-party and WebXR aliases, and returns an
 exact backend/invalid-value pair. Production aliases select WebXR only when the
 GenesisCode-composed bridge policy is active; otherwise they return the closed
 `:production-requires-bridge` state. Unsupported strings retain only their
-canonical normalized token in the closed invalid state.
+canonical normalized token in the closed invalid state. It trims all XR
+allowlists, removes empty entries, preserves order and duplicates, and
+ASCII-lowercases only anchor-space and layer-type values. It classifies optional
+booleans and positive integer limits without making an unrelated malformed field
+reject policy loading; the consuming XR operation receives the stable policy
+error. `max_haptics_amplitude` additionally classifies values above 1000 as
+`:out-of-range`.
 The nested database map has exactly `:target-allow`, `:query-classes`,
 `:max-result-bytes`, `:max-row-count`, and `:max-value-bytes`. The base directory is
 `nil` or the exact configured string. Missing optional fields use `nil`. A TOML
@@ -180,13 +198,13 @@ oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
 The authority returns a closed eighteen-field
-`genesis/effect-policy-authority-result-v0.18` map containing the exact operation,
+`genesis/effect-policy-authority-result-v0.19` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
 `:process-program-policy`, private `:database-policy`, private `:network-policy`,
 private `:crypto-policy`, private `:plugin-policy`, private `:ffi-policy`, private
 `:bridge-identity-policy`, private `:gfx-policy`, private `:gpu-policy`, private
-`:xr-policy`, lowercase canonical request hash, and version `18`.
+`:xr-policy`, lowercase canonical request hash, and version `19`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -245,10 +263,21 @@ The GPU result is an exact `{:backend ... :fallback ...}` map. Backend is exactl
 exactly `:allow-fallback` or `:require-device`.
 The GFX result is exactly one of `:headless`, `:interactive`, `:desktop`, or
 `:browser` for an admitted operation and `nil` for a denied operation.
-The XR result is an exact `{:backend ... :invalid-value ...}` map. Backend is
+The XR result is an exact 17-field map containing `:backend`, `:invalid-value`,
+`:allow-haptics-inputs`, `:max-haptics-amplitude`,
+`:max-haptics-duration-ms`, `:allow-hand-tracking`, `:max-hand-joints`,
+`:allow-hit-test`, `:max-hit-results`, `:allow-spatial-mesh`, `:max-meshes`,
+`:max-mesh-vertices`, `:allow-anchor-spaces`, `:max-anchors`,
+`:allow-layer-types`, `:max-layers`, and `:max-layer-opacity`. Backend is
 `:first-party-runtime`, `:webxr-device`, `:production-requires-bridge`, or
-`:invalid`; only `:invalid` carries a nonempty canonical string, and every other
-state carries `nil`.
+`:invalid`; only `:invalid` carries a nonempty canonical string. Optional boolean
+decisions are `nil`, `:invalid-type`, or an exact boolean. Positive limits are
+`nil`, `:invalid-type`, `:nonpositive`, or a positive integer;
+`:max-haptics-amplitude` may additionally be `:out-of-range`. List decisions are
+`nil`, `:invalid-type`, `:invalid-entry`, `:empty`, or a nonempty canonical
+string vector. The host rejects every other symbol, padded or empty valid list
+entry, non-lowercase anchor/layer value, nonpositive valid integer, field
+substitution, or denied non-nil XR result.
 The host rejects unknown fields,
 identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
@@ -262,7 +291,7 @@ timeout, per-operation log limit, closed max-byte state, closed normalized
 process-program state, closed database allowlist/bound states, closed network
 allowlist/option/bind/bound states, closed crypto allowlist/bound states, and
 closed plugin and FFI allowlist/bound/signed-metadata states plus the closed GFX
-profile, GPU backend/fallback decision, XR backend state, and bridge activation, command allowlist, command,
+profile, GPU backend/fallback decision, complete XR device policy, and bridge activation, command allowlist, command,
 arguments, transport, WASI profile, digest
 requirement, and canonical digest into enforcement; its separately parsed values
 are used only by the compatibility oracle.
@@ -386,6 +415,12 @@ authority returns a sealed `gpu/backend-policy` error instead of silently
 selecting the in-memory runtime. Rust still decides which operations each device
 backend implements and performs device calls, error transport, and fallback
 response decoration.
+XR dispatch consumes only the installed complete XR policy for backend routing,
+haptics admission and bounds, advanced-feature gates, allowlists, and limits. No
+first-party XR consumer rereads these raw TOML fields. Rust retains matching,
+payload decoding, bound enforcement, deterministic runtime state, adapter and
+bridge execution, replay envelopes, and resource lifecycle without selecting
+the policy state.
 FFI dispatch consumes installed GenesisCode ABI-ID, library, symbol, optional
 schema-ID, buffer-bound, call-payload-bound, and closed signed-policy states
 plus the installed bridge command allowlist, digest requirement, canonical
@@ -406,9 +441,9 @@ transition, and therefore are not evidence of H2.
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
 and remaining type decoding; global store credential, TLS, and transport policy;
-FFI signed-policy provenance, bridge identity, model,
-graphics, and device constraints; secret and path resolution; effect execution
-and cancellation; strict replay; and removal of the compatibility oracle.
+FFI signed-policy provenance, bridge identity validation/execution, and model
+provider lifecycle; secret and path resolution; effect execution and hard
+cancellation; strict replay; and removal of the compatibility oracle.
 Filesystem policy configuration is no longer a residual decision: admission,
 base-directory selection, directory-creation selection, and byte-limit state are
 GenesisCode-produced. Filesystem path joining, canonicalization, symlink defense,
@@ -456,13 +491,16 @@ owns normalization, canonical backend selection, explicit-over-default
 precedence, and fail-open/fail-closed selection. The
 GFX first-party profile decision is also no longer residual: GenesisCode owns
 primary/alias precedence, normalization, runtime-profile fallback, and selection
-of the bound compile-target production default. XR backend selection is no
-longer residual: GenesisCode owns canonical aliases, runtime-profile precedence,
-production bridge requirements, and invalid-state classification. The
-`device-and-graphics-policy` residual still covers advanced XR feature/profile
-and haptics policy, GPU device-operation applicability, and device/graphics execution,
-adapter selection implementation, and resource lifecycle; this partial slice
-does not claim those mechanisms moved into GenesisCode.
+of the bound compile-target production default. XR policy configuration is no
+longer residual: GenesisCode owns canonical backend aliases, runtime-profile
+precedence, production bridge requirements, invalid-state classification, all
+haptics policy, all advanced-feature gates and allowlists, and every XR policy
+bound. GPU/XR operation applicability, matching and bound enforcement,
+device/graphics execution, adapter implementation, replay envelopes, and
+resource lifecycle are enforcement or execution mechanisms under
+`effect-execution-and-hard-cancellation`, replay, or bridge lifecycle rather
+than policy-selection residuals. Retiring `device-and-graphics-policy` does not
+claim that these host mechanisms moved into the pure kernel.
 FFI allowlist, byte-bound, and signed-policy admission is no longer residual: GenesisCode
 owns ABI-ID, library, symbol, optional schema-ID, buffer-size, and call-payload
 states across all three FFI operations. It also owns malformed opt-in rejection,

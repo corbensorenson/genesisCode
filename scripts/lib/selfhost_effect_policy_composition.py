@@ -100,13 +100,12 @@ DECISIONS = [
     "per-operation-network-policy",
     "per-operation-plugin-allowlist-policy",
     "per-operation-process-program-policy",
-    "per-operation-xr-backend-policy",
+    "per-operation-xr-device-and-backend-policy",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers",
 ]
 
 RESIDUALS = {
-    "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "bridge-identity-validation-execution-and-model-provider-lifecycle",
     "global-store-credential-tls-and-transport-policy",
@@ -138,11 +137,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.18",
+        "requestKind": "genesis/effect-policy-authority-request-v0.19",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
-        "resultKind": "genesis/effect-policy-authority-result-v0.18",
+        "resultKind": "genesis/effect-policy-authority-result-v0.19",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -163,7 +162,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.23",
+        "version": "0.1.24",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -289,6 +288,13 @@ def static_check(root: Path, profile):
     xr_boundary_path = root / "crates/gc_effects/src/policy_authority_xr.rs"
     if xr_boundary_path.is_symlink() or not xr_boundary_path.is_file():
         fail("effect-policy XR host boundary is missing or symlinked")
+    xr_decode_path = root / "crates/gc_effects/src/policy_authority_xr_decode.rs"
+    if xr_decode_path.is_symlink() or not xr_decode_path.is_file():
+        fail("effect-policy XR strict decoder is missing or symlinked")
+    if xr_boundary_path.read_text().count(
+        '#[path = "policy_authority_xr_decode.rs"]'
+    ) != 1:
+        fail("effect-policy XR decoder decomposition drift")
     request_boundary_path = root / "crates/gc_effects/src/policy_authority_request.rs"
     if request_boundary_path.is_symlink() or not request_boundary_path.is_file():
         fail("effect-policy request host boundary is missing or symlinked")
@@ -304,6 +310,7 @@ def static_check(root: Path, profile):
         + plugin_boundary_path.read_text()
         + gfx_boundary_path.read_text()
         + xr_boundary_path.read_text()
+        + xr_decode_path.read_text()
         + request_boundary_path.read_text()
     )
     required_authority = [
@@ -324,6 +331,7 @@ def static_check(root: Path, profile):
         "contradicts independently reconstructed policy composition",
         "resource result contradicts independently reconstructed log/runtime/store/task policy",
         "op_policy.authorized_cap = Some(authorized.cap);",
+        "op_policy.authorized_xr_policy = Some(authorized.xr);",
         "op_policy.base_dir = authorized.base_dir;",
         "op_policy.create_dirs = authorized.create_dirs;",
         "op_policy.timeout_ms = authorized.timeout_ms;",
@@ -336,7 +344,6 @@ def static_check(root: Path, profile):
         "op_policy.authorized_ffi = Some(authorized.ffi);",
         "op_policy.authorized_plugin = Some(authorized.plugin);",
         "op_policy.authorized_gfx_profile = Some(authorized.gfx);",
-        "op_policy.authorized_xr_backend = Some(authorized.xr);",
         "policy.task = authorized_resources.task;",
         "policy.runtime = authorized_resources.runtime;",
         "policy.log.inline_max_bytes = authorized_resources.log_inline_max_bytes;",
@@ -579,13 +586,22 @@ def static_check(root: Path, profile):
         if gfx_source.count(f"(def selfhost/effect-gfx::{binding}\n") != 1:
             fail(f"GFX policy binding inventory drift: {binding}")
     for binding in (
+        "identity-input-valid?",
+        "list-input-valid?",
+        "bool-input-valid?",
+        "limit-input-valid?",
         "input-valid?",
         "selected",
         "normalized-string",
         "production?",
-        "decision",
+        "backend-decision",
         "production-decision",
         "explicit-decision",
+        "positive-decision",
+        "bool-decision",
+        "list-decision-loop",
+        "list-decision",
+        "backend-policy",
         "policy",
     ):
         if xr_source.count(f"(def selfhost/effect-xr::{binding}\n") != 1:
@@ -612,12 +628,46 @@ def static_check(root: Path, profile):
         fail("missing focused GFX authority precedence control")
     xr_consumer = (root / "crates/gc_effects/src/runner_xr_host/backend_policy.rs").read_text()
     xr_production = xr_consumer.split("#[cfg(test)]", 1)[0]
-    if xr_production.count("fn authorized_backend(") != 1:
-        fail("XR backend authority consumer inventory drift")
+    if xr_production.count("fn authorized_policy(") != 1:
+        fail("XR device authority consumer inventory drift")
     if ".extra" in xr_production or "std::env" in xr_production:
-        fail("XR production backend selection bypasses authority state")
-    if xr_consumer.count("fn xr_backend_consumes_authority_before_raw_policy()") != 1:
-        fail("missing focused XR authority precedence control")
+        fail("XR production policy selection bypasses authority state")
+    if xr_consumer.count("fn xr_consumes_authority_before_raw_policy()") != 1:
+        fail("missing focused XR device authority precedence control")
+    xr_dispatch = "".join(
+        (root / relative).read_text().split("#[cfg(test)]", 1)[0]
+        for relative in (
+            "crates/gc_effects/src/runner_xr_host.rs",
+            "crates/gc_effects/src/runner_xr_host/helpers.rs",
+            "crates/gc_effects/src/runner_xr_host/advanced.rs",
+            "crates/gc_effects/src/runner_xr_host/advanced_layers.rs",
+        )
+    )
+    if ".extra" in xr_dispatch or "toml::" in xr_dispatch:
+        fail("XR first-party dispatch bypasses installed authority state")
+    for token in (
+        "allow_haptics_inputs",
+        "max_haptics_amplitude",
+        "max_haptics_duration_ms",
+        "allow_hand_tracking",
+        "max_hand_joints",
+        "allow_hit_test",
+        "max_hit_results",
+        "allow_spatial_mesh",
+        "max_meshes",
+        "max_mesh_vertices",
+        "allow_anchor_spaces",
+        "max_anchors",
+        "allow_layer_types",
+        "max_layers",
+        "max_layer_opacity",
+    ):
+        if f"policy.{token}" not in xr_dispatch:
+            fail(f"XR dispatch no longer consumes authorized field: {token}")
+    if xr_boundary_path.read_text().count("Term::Vector(vec![") != 1:
+        fail("XR authority input is not the exact compact vector transport")
+    if "core/vec::get" not in xr_source or "(core/vec::len value)) 18" not in xr_source:
+        fail("XR authority source input shape drift")
     for relative in (
         "crates/gc_effects/src/runner_capability_dispatch.rs",
         "crates/gc_effects/src/runner_editor_host.rs",
@@ -769,6 +819,8 @@ def static_check(root: Path, profile):
         "selfhost_authority_rejects_malformed_gfx_profile_decisions",
         "selfhost_authority_installs_xr_backend_with_exact_legacy_precedence",
         "selfhost_authority_rejects_malformed_xr_backend_decisions",
+        "selfhost_authority_installs_all_xr_device_policy_states",
+        "selfhost_authority_rejects_malformed_xr_device_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")

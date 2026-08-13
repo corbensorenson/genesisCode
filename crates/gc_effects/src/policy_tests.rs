@@ -3,8 +3,9 @@ use super::{
     AuthorizedBridgeIdentityPolicy, AuthorizedBridgeTransport, AuthorizedDatabasePolicy,
     AuthorizedFfiSignedPolicy, AuthorizedGfxProfile, AuthorizedGpuBackend, AuthorizedGpuFallback,
     AuthorizedGpuPolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool,
-    AuthorizedOptionalString, AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy,
-    AuthorizedStringList, AuthorizedXrBackend, CapsPolicy,
+    AuthorizedOptionalString, AuthorizedPositiveI64, AuthorizedProcessPrograms,
+    AuthorizedStoreRemotePolicy, AuthorizedStringList, AuthorizedXrBackend, AuthorizedXrPolicy,
+    CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
@@ -116,8 +117,29 @@ fn gfx_policy_term(profile: &str) -> Term {
 
 fn xr_policy_term(backend: &str, invalid_value: Term) -> Term {
     Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":allow-anchor-spaces")), Term::Nil),
+        (TermOrdKey(Term::symbol(":allow-hand-tracking")), Term::Nil),
+        (TermOrdKey(Term::symbol(":allow-haptics-inputs")), Term::Nil),
+        (TermOrdKey(Term::symbol(":allow-hit-test")), Term::Nil),
+        (TermOrdKey(Term::symbol(":allow-layer-types")), Term::Nil),
+        (TermOrdKey(Term::symbol(":allow-spatial-mesh")), Term::Nil),
         (TermOrdKey(Term::symbol(":backend")), Term::symbol(backend)),
         (TermOrdKey(Term::symbol(":invalid-value")), invalid_value),
+        (TermOrdKey(Term::symbol(":max-anchors")), Term::Nil),
+        (TermOrdKey(Term::symbol(":max-hand-joints")), Term::Nil),
+        (
+            TermOrdKey(Term::symbol(":max-haptics-amplitude")),
+            Term::Nil,
+        ),
+        (
+            TermOrdKey(Term::symbol(":max-haptics-duration-ms")),
+            Term::Nil,
+        ),
+        (TermOrdKey(Term::symbol(":max-hit-results")), Term::Nil),
+        (TermOrdKey(Term::symbol(":max-layer-opacity")), Term::Nil),
+        (TermOrdKey(Term::symbol(":max-layers")), Term::Nil),
+        (TermOrdKey(Term::symbol(":max-mesh-vertices")), Term::Nil),
+        (TermOrdKey(Term::symbol(":max-meshes")), Term::Nil),
     ]))
 }
 
@@ -1837,8 +1859,13 @@ xr_backend = " Quantum-Device "
     ];
     for (op, expected) in cases {
         assert_eq!(
-            policy.op_policy(op).unwrap().authorized_xr_backend,
-            Some(expected),
+            policy
+                .op_policy(op)
+                .unwrap()
+                .authorized_xr_policy
+                .as_ref()
+                .map(|policy| &policy.backend),
+            Some(&expected),
             "op: {op}"
         );
     }
@@ -1849,8 +1876,10 @@ fn selfhost_authority_rejects_malformed_xr_backend_decisions() {
     use super::policy_authority::xr::decode;
 
     assert_eq!(
-        decode(&xr_policy_term(":webxr-device", Term::Nil), true).unwrap(),
-        AuthorizedXrBackend::WebxrDevice
+        decode(&xr_policy_term(":webxr-device", Term::Nil), true)
+            .unwrap()
+            .backend,
+        AuthorizedXrBackend::WebxrDevice,
     );
     assert_eq!(
         decode(
@@ -1858,7 +1887,10 @@ fn selfhost_authority_rejects_malformed_xr_backend_decisions() {
             true
         )
         .unwrap(),
-        AuthorizedXrBackend::Invalid("future-device".to_string())
+        AuthorizedXrPolicy {
+            backend: AuthorizedXrBackend::Invalid("future-device".to_string()),
+            ..AuthorizedXrPolicy::default()
+        }
     );
     for malformed in [
         Term::Nil,
@@ -1871,6 +1903,110 @@ fn selfhost_authority_rejects_malformed_xr_backend_decisions() {
     }
     decode(&xr_policy_term(":first-party-runtime", Term::Nil), false)
         .expect_err("denied XR backend authority decision must be nil");
+}
+
+#[test]
+fn selfhost_authority_installs_all_xr_device_policy_states() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."gfx/xr::haptics-pulse"]
+allow_haptics_inputs = [" Left-Controller ", "", "RIGHT-CONTROLLER"]
+max_haptics_amplitude = 1001
+max_haptics_duration_ms = 0
+allow_hand_tracking = false
+max_hand_joints = "many"
+allow_hit_test = true
+max_hit_results = 4
+allow_spatial_mesh = "yes"
+max_mesh_vertices = -1
+allow_anchor_spaces = [" VIEWER ", "local", "viewer"]
+max_anchors = 2
+allow_layer_types = [" QUAD ", "quad", "CYLINDER"]
+max_layers = 3
+max_layer_opacity = 500
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    assert_eq!(
+        policy
+            .op_policy("gfx/xr::haptics-pulse")
+            .unwrap()
+            .authorized_xr_policy,
+        Some(AuthorizedXrPolicy {
+            backend: AuthorizedXrBackend::FirstParty,
+            allow_haptics_inputs: AuthorizedStringList::Valid(vec![
+                "Left-Controller".to_string(),
+                "RIGHT-CONTROLLER".to_string(),
+            ]),
+            max_haptics_amplitude: AuthorizedPositiveI64::OutOfRange,
+            max_haptics_duration_ms: AuthorizedPositiveI64::NonPositive,
+            allow_hand_tracking: AuthorizedOptionalBool::Valid(false),
+            max_hand_joints: AuthorizedPositiveI64::InvalidType,
+            allow_hit_test: AuthorizedOptionalBool::Valid(true),
+            max_hit_results: AuthorizedPositiveI64::Valid(4),
+            allow_spatial_mesh: AuthorizedOptionalBool::InvalidType,
+            max_meshes: AuthorizedPositiveI64::Absent,
+            max_mesh_vertices: AuthorizedPositiveI64::NonPositive,
+            allow_anchor_spaces: AuthorizedStringList::Valid(vec![
+                "viewer".to_string(),
+                "local".to_string(),
+                "viewer".to_string(),
+            ]),
+            max_anchors: AuthorizedPositiveI64::Valid(2),
+            allow_layer_types: AuthorizedStringList::Valid(vec![
+                "quad".to_string(),
+                "quad".to_string(),
+                "cylinder".to_string(),
+            ]),
+            max_layers: AuthorizedPositiveI64::Valid(3),
+            max_layer_opacity: AuthorizedPositiveI64::Valid(500),
+        })
+    );
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_xr_device_decisions() {
+    use super::policy_authority::xr::decode;
+
+    let mut malformed = xr_policy_term(":first-party-runtime", Term::Nil);
+    let Term::Map(map) = &mut malformed else {
+        unreachable!("test fixture is a map")
+    };
+    map.insert(
+        TermOrdKey(Term::symbol(":max-anchors")),
+        Term::symbol(":out-of-range"),
+    );
+    decode(&malformed, true)
+        .expect_err("out-of-range is not a valid unbounded XR integer decision");
+
+    let mut malformed = xr_policy_term(":first-party-runtime", Term::Nil);
+    let Term::Map(map) = &mut malformed else {
+        unreachable!("test fixture is a map")
+    };
+    map.insert(
+        TermOrdKey(Term::symbol(":allow-layer-types")),
+        Term::Vector(vec![Term::Str(" QUAD ".to_string())]),
+    );
+    decode(&malformed, true).expect_err("padded XR allowlist output must fail closed");
+
+    let mut malformed = xr_policy_term(":first-party-runtime", Term::Nil);
+    let Term::Map(map) = &mut malformed else {
+        unreachable!("test fixture is a map")
+    };
+    map.insert(
+        TermOrdKey(Term::symbol(":allow-hand-tracking")),
+        Term::symbol(":absent"),
+    );
+    decode(&malformed, true).expect_err("noncanonical compact bool state must fail closed");
 }
 
 #[test]

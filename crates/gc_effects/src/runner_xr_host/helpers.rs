@@ -1,4 +1,5 @@
 use super::*;
+use crate::policy::{AuthorizedPositiveI64, AuthorizedStringList, AuthorizedXrPolicy};
 
 pub(super) fn payload_map(payload: &Term) -> Option<&BTreeMap<TermOrdKey, Term>> {
     match payload {
@@ -81,55 +82,48 @@ pub(super) fn parse_haptics_request(payload: &Term, op: &str) -> Result<XrHaptic
 }
 
 pub(super) fn parse_haptics_policy(
-    pol: Option<&OpPolicy>,
+    policy: &AuthorizedXrPolicy,
     op: &str,
 ) -> Result<XrHapticsPolicy, Term> {
-    let Some(pol) = pol else {
-        return Err(policy_error(
-            op,
-            "per-op `allow_haptics_inputs` policy is required for gfx/xr::haptics-pulse",
-        ));
-    };
-    let Some(raw_allow) = pol.extra.get("allow_haptics_inputs") else {
-        return Err(policy_error(
-            op,
-            "per-op `allow_haptics_inputs` policy is required for gfx/xr::haptics-pulse",
-        ));
-    };
-    let Some(allow_arr) = raw_allow.as_array() else {
-        return Err(policy_error(
-            op,
-            "`allow_haptics_inputs` must be an array of strings",
-        ));
-    };
-    let mut allowed_inputs = Vec::with_capacity(allow_arr.len());
-    for item in allow_arr {
-        let Some(raw) = item.as_str() else {
+    let allowed_inputs = match &policy.allow_haptics_inputs {
+        AuthorizedStringList::Absent => {
+            return Err(policy_error(
+                op,
+                "per-op `allow_haptics_inputs` policy is required for gfx/xr::haptics-pulse",
+            ));
+        }
+        AuthorizedStringList::InvalidType => {
+            return Err(policy_error(
+                op,
+                "`allow_haptics_inputs` must be an array of strings",
+            ));
+        }
+        AuthorizedStringList::InvalidEntry => {
             return Err(policy_error(
                 op,
                 "`allow_haptics_inputs` entries must be strings",
             ));
-        };
-        let trimmed = raw.trim();
-        if !trimmed.is_empty() {
-            allowed_inputs.push(trimmed.to_string());
         }
-    }
-    if allowed_inputs.is_empty() {
-        return Err(policy_error(
-            op,
-            "`allow_haptics_inputs` must contain at least one input id",
-        ));
-    }
-
-    let max_amplitude = parse_positive_policy_i64(pol, "max_haptics_amplitude", 1000, op)?;
-    if max_amplitude > 1000 {
-        return Err(policy_error(
-            op,
-            "`max_haptics_amplitude` must be <= 1000 (milli-amplitude scale)",
-        ));
-    }
-    let max_duration_ms = parse_positive_policy_i64(pol, "max_haptics_duration_ms", 250, op)?;
+        AuthorizedStringList::Empty => {
+            return Err(policy_error(
+                op,
+                "`allow_haptics_inputs` must contain at least one input id",
+            ));
+        }
+        AuthorizedStringList::Valid(values) => values.clone(),
+    };
+    let max_amplitude = authorized_positive_i64(
+        &policy.max_haptics_amplitude,
+        "max_haptics_amplitude",
+        1000,
+        op,
+    )?;
+    let max_duration_ms = authorized_positive_i64(
+        &policy.max_haptics_duration_ms,
+        "max_haptics_duration_ms",
+        250,
+        op,
+    )?;
     Ok(XrHapticsPolicy {
         allowed_inputs,
         max_amplitude,
@@ -137,22 +131,29 @@ pub(super) fn parse_haptics_policy(
     })
 }
 
-pub(super) fn parse_positive_policy_i64(
-    pol: &OpPolicy,
+pub(super) fn authorized_positive_i64(
+    decision: &AuthorizedPositiveI64,
     key: &str,
     default_value: i64,
     op: &str,
 ) -> Result<i64, Term> {
-    let Some(value) = pol.extra.get(key) else {
-        return Ok(default_value);
-    };
-    let Some(raw) = value.as_integer() else {
-        return Err(policy_error(op, &format!("`{key}` must be an integer")));
-    };
-    if raw <= 0 {
-        return Err(policy_error(op, &format!("`{key}` must be > 0")));
+    match decision {
+        AuthorizedPositiveI64::Absent => Ok(default_value),
+        AuthorizedPositiveI64::InvalidType => {
+            Err(policy_error(op, &format!("`{key}` must be an integer")))
+        }
+        AuthorizedPositiveI64::NonPositive => {
+            Err(policy_error(op, &format!("`{key}` must be > 0")))
+        }
+        AuthorizedPositiveI64::OutOfRange if key == "max_haptics_amplitude" => Err(policy_error(
+            op,
+            "`max_haptics_amplitude` must be <= 1000 (milli-amplitude scale)",
+        )),
+        AuthorizedPositiveI64::OutOfRange => {
+            Err(policy_error(op, &format!("`{key}` is out of range")))
+        }
+        AuthorizedPositiveI64::Valid(value) => Ok(*value),
     }
-    Ok(raw)
 }
 
 pub(super) fn validate_haptics_policy(

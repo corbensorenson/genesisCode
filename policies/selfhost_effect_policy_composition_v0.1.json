@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "fe542bf4e5f5173f9bb07a6470fa5964fa2ac0b696595140dd46248654a00419",
+  "contentIdentitySha256": "226337d43796b2ff1ec470a4cface91ac8b71b7171413023bb3f6e0fdd0d3c8c",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -29,7 +29,7 @@
     "per-operation-network-policy",
     "per-operation-plugin-allowlist-policy",
     "per-operation-process-program-policy",
-    "per-operation-xr-backend-policy",
+    "per-operation-xr-device-and-backend-policy",
     "runtime-resource-limits",
     "task-resource-limits-and-default-workers"
   ],
@@ -56,12 +56,11 @@
     "genesis",
     "genesis_wasi"
   ],
-  "requestKind": "genesis/effect-policy-authority-request-v0.18",
+  "requestKind": "genesis/effect-policy-authority-request-v0.19",
   "resourceBinding": "core/effects::resource-policy-authority",
   "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
   "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
   "residualDecisionInventory": [
-    "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
     "bridge-identity-validation-execution-and-model-provider-lifecycle",
     "global-store-credential-tls-and-transport-policy",
@@ -69,7 +68,7 @@
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
   ],
-  "resultKind": "genesis/effect-policy-authority-result-v0.18",
+  "resultKind": "genesis/effect-policy-authority-result-v0.19",
   "runtimeEvidence": {
     "allocationLimit": 20000000,
     "stepLimit": 20000000,
@@ -89,7 +88,7 @@
     "selfhost/effect_policy_resource_authority_v1.gc",
     "selfhost/effect_policy_authority_v1.gc"
   ],
-  "sourceSha256": "5653e3ad7a891d54148724562cb24759058284f0dc69fcd9ae3aab46e594b6b6",
+  "sourceSha256": "53990be6d761bdfd612be1198369b3e80cbfcd886d7d7569df540a0bb8ba9586",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.23"
+  "version": "0.1.24"
 }

@@ -16,7 +16,7 @@ pub(super) fn term(
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-policy-authority-request-v0.18".to_string()),
+                Term::Str("genesis/effect-policy-authority-request-v0.19".to_string()),
             ),
             (TermOrdKey(Term::symbol(":gfx-policy")), gfx_policy),
             (TermOrdKey(Term::symbol(":gpu-policy")), gpu_policy),
@@ -26,7 +26,7 @@ pub(super) fn term(
                 TermOrdKey(Term::symbol(":platform-max-bytes")),
                 Term::Int(usize::MAX.into()),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(18.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(19.into())),
             (TermOrdKey(Term::symbol(":xr-policy")), xr_policy),
         ]
         .into_iter()
