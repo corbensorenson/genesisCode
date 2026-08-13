@@ -69,6 +69,7 @@ pub(super) fn capability_pkg_low(
             policy,
             store,
             refs,
+            pkg_lock_read_authority,
             pkg_resolution_identity_authority,
             budget,
             error_tok,
@@ -100,4 +101,38 @@ pub(super) fn capability_pkg_low(
         format!("unknown capability op: {op}"),
         Some(op),
     ))
+}
+
+const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024;
+
+fn read_bounded_lock(path: &std::path::Path) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+
+    let file = std::fs::File::open(path).map_err(|_| "cannot read lock file".to_string())?;
+    let mut bytes = Vec::new();
+    file.take(MAX_LOCK_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "cannot read lock file".to_string())?;
+    if bytes.len() as u64 > MAX_LOCK_BYTES {
+        return Err("lock file exceeds 4 MiB".to_string());
+    }
+    Ok(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bounded_lock_reader_rejects_oversized_input() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("genesis.lock");
+        let file = std::fs::File::create(&path).unwrap();
+        file.set_len(MAX_LOCK_BYTES + 1).unwrap();
+
+        assert_eq!(
+            read_bounded_lock(&path).unwrap_err(),
+            "lock file exceeds 4 MiB"
+        );
+    }
 }

@@ -1,0 +1,57 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/pkg::lock-model-authority",
+  "contentIdentitySha256": "42dd9e2a0919d26076ecfd0020bfa46f986cea462674e14ec36a625d13d08e30",
+  "decisionInventory": [
+    "supported-lock-version-admission",
+    "workspace-and-policy-normalization",
+    "requirement-update-policy-normalization",
+    "requirement-resolution-strategy-normalization",
+    "tag-policy-selector-compatibility",
+    "locked-resolution-metadata-retention",
+    "closed-internal-lock-model",
+    "request-bound-result-verdict"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "capability-policy-and-sandbox-path-enforcement",
+    "bounded-file-read-and-utf8-validation",
+    "generic-toml-decoding-and-term-transport",
+    "strict-result-contradiction-checking-and-typed-reification",
+    "graph-semver-registry-store-and-persistence-mechanisms"
+  ],
+  "hostOracle": {
+    "parityOnly": false,
+    "productionRequired": true,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_lock_model_authority.py",
+  "kind": "genesis/selfhost-pkg-lock-model-authority-v0.1",
+  "nonclaims": [
+    "all-lock-consumer-authority",
+    "bootstrap-fixpoint",
+    "graph-resolution-mechanism-authority",
+    "h2-package-resolution",
+    "r4-2-e-closure",
+    "registry-authority",
+    "release-qualification",
+    "selfhost-toml-codec",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionOperations": [
+    "core/pkg-low::info",
+    "core/pkg-low::lock",
+    "core/pkg-low::update",
+    "core/pkg-low::install",
+    "core/pkg-low::verify"
+  ],
+  "requestKind": "genesis/pkg-lock-model-authority-request-v0.1",
+  "resultKind": "genesis/pkg-lock-model-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/pkg_lock_model_authority_v1.gc",
+  "sourceSha256": "c683ee9f8037e469f1487ce631d84a23d86e1209d3f31c3affc6d09a11c4144e",
+  "spec": "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

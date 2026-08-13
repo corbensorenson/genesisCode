@@ -15,6 +15,41 @@
 (def selfhost/pkg-lock-read::nil?
   (fn (value) ((core/sym::eq? (selfhost/pkg-lock-read::tag value)) (quote :nil))))
 
+(def selfhost/pkg-lock-read::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/pkg-lock-read::map-has-key-loop? entries) key)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/pkg-lock-read::map-has-keys-loop?
+  (fn (value)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            (((selfhost/pkg-lock-read::map-has-key-loop? (core/map::entries value))
+                ((core/vec::get keys) index))
+              0)
+            (((selfhost/pkg-lock-read::map-has-keys-loop? value) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/pkg-lock-read::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/pkg-lock-read::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/pkg-lock-read::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
 (def selfhost/pkg-lock-read::ok
   (fn (value) {:message nil :ok true :value value}))
 
@@ -349,7 +384,8 @@
   (fn (request)
     (let ((request-h (selfhost/hash::hash-term request)))
       (if (selfhost/pkg-lock-read::map? request)
-        (if ((core/int::eq? (core/vec::len (core/map::entries request))) 4)
+        (if
+          ((selfhost/pkg-lock-read::exact-map? request) [:document :kind :op :v])
           (let ((kind ((core/map::get request) (quote :kind))))
             (if
               (if (selfhost/pkg-lock-read::str? kind)

@@ -133,6 +133,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     manifest = source_text(root, "selfhost/toolchain_manifest.gc", overrides)
     artifact = source_text(root, profile["artifact"], overrides)
     adapter = source_text(root, "crates/gc_effects/src/pkg_lock_read_authority.rs", overrides)
+    parent = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low.rs", overrides)
     dispatch = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", overrides)
     runner = source_text(root, "crates/gc_effects/src/runner.rs", overrides)
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
@@ -165,7 +166,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     if route_marker not in production or next_route_marker not in production:
         fail("production load-lock route boundary missing")
     load_route = production.split(route_marker, 1)[1].split(next_route_marker, 1)[0]
-    if "const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024" not in production:
+    if "const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024" not in parent:
         fail("production load-lock byte ceiling missing")
     for marker in (
         "read_bounded_lock(&lock_path)", "authority.read_toml(&bytes)?",
@@ -177,8 +178,10 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("production load-lock route retains typed Rust parser")
     if ".map(PkgLockReadAuthority::load)" not in runner:
         fail("runner does not lazily load lock read authority")
-    if 'req.op == "core/pkg-low::load-lock"' not in runner:
-        fail("lock read authority is not restricted to exact operation")
+    if '"core/pkg-low::load-lock"' not in adapter:
+        fail("lock read authority lazy route is missing load-lock")
+    if "PkgLockReadAuthority::required_for_operation(&req.op)" not in runner:
+        fail("runner does not use the closed lock authority operation set")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
                 if item.get("id") == "SD-PACKAGE-RESOLUTION"), None)
@@ -205,6 +208,7 @@ def self_test(root: Path, profile, schema) -> int:
     paths = [
         profile["sourceModule"], "selfhost/toolchain_manifest.gc", profile["artifact"],
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
         "crates/gc_effects/src/runner.rs",
     ]
@@ -241,7 +245,8 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", "toml::from_str", "legacy_parse", "codec")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "read_bounded_lock(&lock_path)", "std::fs::read(&lock_path)", "bound")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.read_toml(&bytes)?", "legacy_read(&bytes)?", "route")
-    source_mutation("crates/gc_effects/src/runner.rs", 'req.op == "core/pkg-low::load-lock"', 'req.op.starts_with("core/pkg-low::")', "lazy-route")
+    source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::load-lock"', '"core/pkg-low::legacy-load-lock"', "lazy-route-set")
+    source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_operation(&req.op)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
 
     controls = 0
     for changed_profile, overrides, name in mutations:

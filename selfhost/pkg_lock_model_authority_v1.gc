@@ -1,0 +1,274 @@
+; The internal model retains every resolution field. The public lock-read
+; authority below deliberately keeps its smaller compatibility projection.
+
+(def selfhost/pkg-lock-read::strategy-symbol
+  (fn (value)
+    (if ((core/eq? value) "track-ref")
+      (quote :track-ref)
+      (if ((core/eq? value) "tag-policy") (quote :tag-policy) (quote :pinned)))))
+
+(def selfhost/pkg-lock-read::normalize-model-requirement
+  (fn (name)
+    (fn (value)
+      (if (selfhost/pkg-lock-read::map? value)
+        (let ((selector ((core/map::get value) "selector")))
+          (if (selfhost/pkg-lock-read::str? selector)
+            (let
+              (
+                (registry ((core/map::get value) "registry"))
+                (update-policy ((core/map::get value) "update_policy"))
+                (strategy-value ((core/map::get value) "strategy"))
+                (tag-policy ((core/map::get value) "tag_policy")))
+              (if (selfhost/pkg-lock-read::valid-optional-string? registry)
+                (if (selfhost/pkg-lock-read::valid-optional-string? update-policy)
+                  (if (selfhost/pkg-lock-read::valid-optional-string? strategy-value)
+                    (if (selfhost/pkg-lock-read::valid-optional-string? tag-policy)
+                      (let
+                        ((strategy
+                          ((selfhost/pkg-lock-read::normalize-strategy strategy-value) selector)))
+                        (if
+                          (if ((core/eq? strategy) "tag-policy")
+                            (selfhost/pkg-lock-read::tag-selector? selector)
+                            true)
+                          (selfhost/pkg-lock-read::ok
+                            {
+                              :registry registry
+                              :selector selector
+                              :strategy (selfhost/pkg-lock-read::strategy-symbol strategy)
+                              :tag-policy tag-policy
+                              :update-policy
+                                (selfhost/pkg-lock-read::normalize-update-policy update-policy)})
+                          (selfhost/pkg-lock-read::bad
+                            "tag-policy requirement selector must be refs/tags/* or semver:<range>")))
+                      (selfhost/pkg-lock-read::bad "requirement tag_policy must be string"))
+                    (selfhost/pkg-lock-read::bad "requirement strategy must be string"))
+                  (selfhost/pkg-lock-read::bad "requirement update_policy must be string"))
+                (selfhost/pkg-lock-read::bad "requirement registry must be string")))
+            (selfhost/pkg-lock-read::bad "requirement selector must be string")))
+        (selfhost/pkg-lock-read::bad "requirement must be a table")))))
+
+(def selfhost/pkg-lock-read::model-requirements-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-lock-read::ok out)
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((name ((core/vec::get entry) 0)))
+              (if (selfhost/pkg-lock-read::str? name)
+                (let
+                  ((normalized
+                    ((selfhost/pkg-lock-read::normalize-model-requirement name)
+                      ((core/vec::get entry) 1))))
+                  (if ((core/map::get normalized) (quote :ok))
+                    (((selfhost/pkg-lock-read::model-requirements-loop entries)
+                        ((core/int::add index) 1))
+                      (((core/map::put out) name) ((core/map::get normalized) (quote :value))))
+                    normalized))
+                (selfhost/pkg-lock-read::bad "requirement name must be string")))))))))
+
+(def selfhost/pkg-lock-read::model-requirements
+  (fn (value)
+    (if (selfhost/pkg-lock-read::nil? value)
+      (selfhost/pkg-lock-read::ok {})
+      (if (selfhost/pkg-lock-read::map? value)
+        (((selfhost/pkg-lock-read::model-requirements-loop (core/map::entries value)) 0) {})
+        (selfhost/pkg-lock-read::bad "requirements must be a table")))))
+
+(def selfhost/pkg-lock-read::normalize-model-locked
+  (fn (value)
+    (if (selfhost/pkg-lock-read::map? value)
+      (let ((snapshot ((core/map::get value) "snapshot")))
+        (if (selfhost/pkg-lock-read::str? snapshot)
+          (let
+            (
+              (commit ((core/map::get value) "commit"))
+              (registry ((core/map::get value) "registry"))
+              (source ((core/map::get value) "source_selector"))
+              (resolved ((core/map::get value) "resolved_ref"))
+              (exports ((core/map::get value) "exports_hash"))
+              (environment ((core/map::get value) "environment_fingerprint")))
+            (if
+              (if (selfhost/pkg-lock-read::valid-optional-string? commit)
+                (if (selfhost/pkg-lock-read::valid-optional-string? registry)
+                  (if (selfhost/pkg-lock-read::valid-optional-string? source)
+                    (if (selfhost/pkg-lock-read::valid-optional-string? resolved)
+                      (if (selfhost/pkg-lock-read::valid-optional-string? exports)
+                        (selfhost/pkg-lock-read::valid-optional-string? environment)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              (selfhost/pkg-lock-read::ok
+                {
+                  :commit commit
+                  :environment-fingerprint environment
+                  :exports-hash exports
+                  :registry registry
+                  :resolved-ref resolved
+                  :snapshot snapshot
+                  :source-selector
+                    (if (selfhost/pkg-lock-read::nil? source) "" source)})
+              (selfhost/pkg-lock-read::bad "locked optional fields must be strings")))
+          (selfhost/pkg-lock-read::bad "locked snapshot must be string")))
+      (selfhost/pkg-lock-read::bad "locked entry must be a table"))))
+
+(def selfhost/pkg-lock-read::model-locked-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-lock-read::ok out)
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((name ((core/vec::get entry) 0)))
+              (if (selfhost/pkg-lock-read::str? name)
+                (let
+                  ((normalized
+                    (selfhost/pkg-lock-read::normalize-model-locked
+                      ((core/vec::get entry) 1))))
+                  (if ((core/map::get normalized) (quote :ok))
+                    (((selfhost/pkg-lock-read::model-locked-loop entries)
+                        ((core/int::add index) 1))
+                      (((core/map::put out) name) ((core/map::get normalized) (quote :value))))
+                    normalized))
+                (selfhost/pkg-lock-read::bad "locked name must be string")))))))))
+
+(def selfhost/pkg-lock-read::model-locked
+  (fn (value)
+    (if (selfhost/pkg-lock-read::nil? value)
+      (selfhost/pkg-lock-read::ok {})
+      (if (selfhost/pkg-lock-read::map? value)
+        (((selfhost/pkg-lock-read::model-locked-loop (core/map::entries value)) 0) {})
+        (selfhost/pkg-lock-read::bad "locked must be a table")))))
+
+(def selfhost/pkg-lock-read::normalize-model-document-tail
+  (fn (document)
+    (fn (version)
+      (fn (workspace)
+        (fn (policy)
+          (let
+            ((registries
+              (selfhost/pkg-lock-read::string-map ((core/map::get document) "registries"))))
+            (if ((core/map::get registries) (quote :ok))
+              (let
+                ((requirements
+                  (selfhost/pkg-lock-read::model-requirements
+                    ((core/map::get document) "requirements"))))
+                (if ((core/map::get requirements) (quote :ok))
+                  (let
+                    ((locked
+                      (selfhost/pkg-lock-read::model-locked
+                        ((core/map::get document) "locked"))))
+                    (if ((core/map::get locked) (quote :ok))
+                      (let
+                        ((artifacts
+                          (selfhost/pkg-lock-read::string-map
+                            ((core/map::get document) "artifacts"))))
+                        (if ((core/map::get artifacts) (quote :ok))
+                          (selfhost/pkg-lock-read::ok
+                            {
+                              :artifacts ((core/map::get artifacts) (quote :value))
+                              :locked ((core/map::get locked) (quote :value))
+                              :policy policy
+                              :registries ((core/map::get registries) (quote :value))
+                              :requirements ((core/map::get requirements) (quote :value))
+                              :version version
+                              :workspace workspace})
+                          artifacts))
+                      locked))
+                  requirements))
+              registries)))))))
+
+(def selfhost/pkg-lock-read::normalize-model-document
+  (fn (document)
+    (if (selfhost/pkg-lock-read::map? document)
+      (let ((version ((core/map::get document) "version")))
+        (if
+          (if (selfhost/pkg-lock-read::int? version)
+            (if ((core/int::eq? version) 1) true ((core/int::eq? version) 2))
+            false)
+          (let ((workspace ((core/map::get document) "workspace")))
+            (if (selfhost/pkg-lock-read::str? workspace)
+              (let ((policy ((core/map::get document) "policy")))
+                (if (selfhost/pkg-lock-read::nil? policy)
+                  ((((selfhost/pkg-lock-read::normalize-model-document-tail document) version)
+                      workspace)
+                    "policy:default-v0.1")
+                  (if (selfhost/pkg-lock-read::str? policy)
+                    ((((selfhost/pkg-lock-read::normalize-model-document-tail document) version)
+                        workspace)
+                      policy)
+                    (selfhost/pkg-lock-read::bad "policy must be string"))))
+              (selfhost/pkg-lock-read::bad "missing or invalid workspace")))
+          (selfhost/pkg-lock-read::bad "missing or unsupported version")))
+      (selfhost/pkg-lock-read::bad "lock document must be a table"))))
+(def selfhost/pkg-lock-model::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (model)
+            {
+              :code code
+              :kind "genesis/pkg-lock-model-authority-result-v0.1"
+              :message message
+              :model model
+              :ok ok
+              :request-h request-h
+              :v 1}))))))
+
+(def selfhost/pkg-lock-model::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        (((((selfhost/pkg-lock-model::result request-h) false) code) message) nil)))))
+
+(def selfhost/pkg-lock-model::accept
+  (fn (request-h)
+    (fn (model)
+      (((((selfhost/pkg-lock-model::result request-h) true) nil) nil) model))))
+
+(def core/pkg::lock-model-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (if
+          ((selfhost/pkg-lock-read::exact-map? request) [:document :kind :op :v])
+          (let ((kind ((core/map::get request) (quote :kind))))
+            (if
+              (if (selfhost/pkg-lock-read::str? kind)
+                ((core/eq? kind) "genesis/pkg-lock-model-authority-request-v0.1")
+                false)
+              (let ((op ((core/map::get request) (quote :op))))
+                (if
+                  (if ((core/sym::eq? (selfhost/pkg-lock-read::tag op)) (quote :sym))
+                    ((core/sym::eq? op) (quote :read-model))
+                    false)
+                  (let ((version ((core/map::get request) (quote :v))))
+                    (if
+                      (if (selfhost/pkg-lock-read::int? version)
+                        ((core/int::eq? version) 1)
+                        false)
+                      (let
+                        ((normalized
+                          (selfhost/pkg-lock-read::normalize-model-document
+                            ((core/map::get request) (quote :document)))))
+                        (if ((core/map::get normalized) (quote :ok))
+                          ((selfhost/pkg-lock-model::accept request-h)
+                            ((core/map::get normalized) (quote :value)))
+                          (((selfhost/pkg-lock-model::reject request-h) "core/pkg/bad-lock")
+                            ((core/map::get normalized) (quote :message)))))
+                      (((selfhost/pkg-lock-model::reject request-h)
+                          "core/pkg/bad-authority-request")
+                        "request :v must be 1")))
+                  (((selfhost/pkg-lock-model::reject request-h)
+                      "core/pkg/bad-authority-request")
+                    "request :op must be :read-model")))
+              (((selfhost/pkg-lock-model::reject request-h)
+                  "core/pkg/bad-authority-request")
+                "request :kind mismatch")))
+          (((selfhost/pkg-lock-model::reject request-h) "core/pkg/bad-authority-request")
+            "request fields mismatch"))
+        (((selfhost/pkg-lock-model::reject request-h) "core/pkg/bad-authority-request")
+          "request must be map")))))

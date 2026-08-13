@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "e3302dc5e6d2c161bf7ab2c52846a09ba8f500ee38ae5aae3098116bec951344",
+  "contentIdentitySha256": "6a26b11d3b8a6f1f19f89ee9460dca60a670de2e3806bd88fe79d248070c896d",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2002,9 +2002,10 @@
       "limitations": [
         "Artifact-loaded GenesisCode exclusively normalizes and serializes core/pkg-low::save-lock payloads and decides their canonical BLAKE3 lock identity under genesis/selfhost-pkg-lock-write-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively validates and normalizes the typed public core/pkg-low::load-lock result under genesis/selfhost-pkg-lock-read-authority-v0.1",
+        "Artifact-loaded GenesisCode exclusively validates and normalizes the complete internal typed lock model consumed by core/pkg-low::{info,lock,update,install,verify} under genesis/selfhost-pkg-lock-model-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively constructs canonical package requirement environment fingerprints for lock, update, and install hydration under genesis/selfhost-pkg-resolution-identity-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively normalizes and classifies effect-route selectors, checks declared strategy and tag-policy coherence, normalizes semver selection policy, and decides existing-lock update admission under genesis/selfhost-pkg-resolution-plan-authority-v0.1",
-        "The generic Rust TOML syntax decoder, other internal typed lock consumers, semver grammar and comparison, ref observation, package graph resolution, registry behavior and transport, artifact and commit validation, workspace scaffolding, policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
+        "The generic Rust TOML syntax decoder, init/add/list and publish-side typed lock consumers, semver grammar and comparison, ref observation, package graph resolution, registry behavior and transport, artifact and commit validation, workspace scaffolding, policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -2013,9 +2014,11 @@
         "selfhost/toolchain.gc",
         "selfhost/cli_pkg_runtime_v1.gc",
         "selfhost/pkg_lock_read_authority_v1.gc",
+        "selfhost/pkg_lock_model_authority_v1.gc",
         "selfhost/pkg_lock_write_authority_v1.gc",
         "selfhost/pkg_resolution_identity_authority_v1.gc",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
@@ -2023,13 +2026,17 @@
       ],
       "productionAuthorityPaths": [
         "selfhost/pkg_lock_read_authority_v1.gc",
+        "selfhost/pkg_lock_model_authority_v1.gc",
         "selfhost/pkg_lock_write_authority_v1.gc",
         "selfhost/pkg_resolution_identity_authority_v1.gc",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
         "crates/gc_pkg/src"
       ],
@@ -2037,6 +2044,7 @@
       "specAuthorityPaths": [
         "docs/spec/GCPM_BUNDLE_v0.1.md",
         "docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.md",
+        "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md"
@@ -2048,6 +2056,7 @@
         "crates/gc_cli/tests/cli_pkg_engine.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs"
@@ -2056,6 +2065,7 @@
       "verifierPaths": [
         "scripts/check_gcpm_operation_contract_pack.sh",
         "scripts/lib/selfhost_pkg_lock_read_authority.py",
+        "scripts/lib/selfhost_pkg_lock_model_authority.py",
         "scripts/lib/selfhost_pkg_lock_write_authority.py",
         "scripts/lib/selfhost_pkg_resolution_identity_authority.py",
         "scripts/lib/selfhost_pkg_resolution_plan_authority.py"

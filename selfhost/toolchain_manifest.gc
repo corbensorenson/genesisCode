@@ -73,6 +73,7 @@
     "selfhost/commit_authority_v1.gc"
     "selfhost/refs_authority_v1.gc"
     "selfhost/pkg_lock_read_authority_v1.gc"
+    "selfhost/pkg_lock_model_authority_v1.gc"
     "selfhost/pkg_lock_write_authority_v1.gc"
     "selfhost/pkg_resolution_identity_authority_v1.gc"
     "selfhost/signing_authority_v1.gc"
@@ -133,6 +134,7 @@
     core/cli::refs-set-program
     core/refs::authority
     core/pkg::lock-read-authority
+    core/pkg::lock-model-authority
     core/pkg::lock-write-authority
     core/pkg::resolution-identity-authority
     core/pkg::resolution-plan-authority

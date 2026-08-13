@@ -3,8 +3,6 @@ use crate::pkg_lock_read_authority::{PkgLockReadAuthority, PkgLockReadDecision};
 #[path = "dispatch_lock_io/save_lock.rs"]
 mod save_lock;
 
-const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024;
-
 #[expect(
     clippy::too_many_arguments,
     reason = "capability dispatch signatures are explicit by design"
@@ -324,20 +322,6 @@ pub(super) fn dispatch_lock_io(
             Some(op),
         )),
     }
-}
-
-fn read_bounded_lock(path: &std::path::Path) -> Result<Vec<u8>, String> {
-    use std::io::Read;
-
-    let file = std::fs::File::open(path).map_err(|_| "cannot read lock file".to_string())?;
-    let mut bytes = Vec::new();
-    file.take(MAX_LOCK_BYTES + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|_| "cannot read lock file".to_string())?;
-    if bytes.len() as u64 > MAX_LOCK_BYTES {
-        return Err("lock file exceeds 4 MiB".to_string());
-    }
-    Ok(bytes)
 }
 
 #[cfg(any(test, feature = "parity-oracle"))]

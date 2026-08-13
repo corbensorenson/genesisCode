@@ -7,6 +7,10 @@ use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use crate::EffectsError;
 use crate::policy::SelfhostAuthorityConfig;
 
+#[path = "pkg_lock_model_authority.rs"]
+mod model;
+pub(crate) use model::PkgLockModelDecision;
+
 const BINDING: &str = "core/pkg::lock-read-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-read-authority-request-v0.1";
 const RESULT_KIND: &str = "genesis/pkg-lock-read-authority-result-v0.1";
@@ -16,6 +20,7 @@ const ALLOC_LIMIT: u64 = 80_000_000;
 pub(crate) struct PkgLockReadAuthority {
     context: EvalCtx,
     authority: Value,
+    model_authority: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -25,6 +30,18 @@ pub(crate) enum PkgLockReadDecision {
 }
 
 impl PkgLockReadAuthority {
+    pub(crate) fn required_for_operation(op: &str) -> bool {
+        matches!(
+            op,
+            "core/pkg-low::load-lock"
+                | "core/pkg-low::info"
+                | "core/pkg-low::lock"
+                | "core/pkg-low::update"
+                | "core/pkg-low::install"
+                | "core/pkg-low::verify"
+        )
+    }
+
     pub(crate) fn load(config: &SelfhostAuthorityConfig) -> Result<Self, EffectsError> {
         let mut context = EvalCtx::with_step_limit(None);
         context.set_mem_limits(MemLimits {
@@ -47,9 +64,14 @@ impl PkgLockReadAuthority {
         let authority = environment
             .get(BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {BINDING}")))?;
+        let model_authority = environment.get(model::MODEL_BINDING);
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
-        Ok(Self { context, authority })
+        Ok(Self {
+            context,
+            authority,
+            model_authority,
+        })
     }
 
     pub(crate) fn read_toml(&mut self, bytes: &[u8]) -> Result<PkgLockReadDecision, EffectsError> {

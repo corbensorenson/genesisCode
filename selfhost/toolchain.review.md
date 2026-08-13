@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `018ba87289d7eca3a534fd44936efb4cf70025b19976d4e002272906645e6334`
-- Freshness artifact hash: `018ba87289d7eca3a534fd44936efb4cf70025b19976d4e002272906645e6334`
-- Freshness source hash: `69deaec90c89a66a492a555e9d999b483365b9efece3e0d2577089e59da8a2f2`
-- Source aggregate hash (module path + module sha256): `2faac44e7509e65e8e8201321a3c3f7ba9e43f3ae3830b9c750bf55bd5c10b37`
+- Artifact sha256: `77fe6e7f257c293055af0c685c002f6dc134faaf28cf03007e46ff60f48f5c22`
+- Freshness artifact hash: `77fe6e7f257c293055af0c685c002f6dc134faaf28cf03007e46ff60f48f5c22`
+- Freshness source hash: `a6cd51c05f4ca9161f550fc74b574eb27922eb98405d27f01bb68970a2e7016c`
+- Source aggregate hash (module path + module sha256): `eccb96aca8edd4876a5bbee494c6592c6d9ba6c7a7faca586183d0d69d3a98da`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `92`
+- Module count: `93`
 
 ## Module Summary
 
@@ -86,7 +86,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/store_verify_authority_v1.gc` | 374 | 18313 | 24 | `0588486a78bd068c` |
 | `selfhost/commit_authority_v1.gc` | 344 | 16401 | 24 | `dba6fc77d9fa18bb` |
 | `selfhost/refs_authority_v1.gc` | 191 | 8348 | 18 | `e960ef5bc80f891a` |
-| `selfhost/pkg_lock_read_authority_v1.gc` | 384 | 18032 | 34 | `ab97365a6cafcdf4` |
+| `selfhost/pkg_lock_read_authority_v1.gc` | 420 | 19242 | 37 | `da0e7e49f5cd25a6` |
+| `selfhost/pkg_lock_model_authority_v1.gc` | 274 | 13367 | 13 | `171e257d7532fec2` |
 | `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
 | `selfhost/pkg_resolution_identity_authority_v1.gc` | 491 | 21558 | 35 | `33fdf119d03db49f` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
@@ -181,7 +182,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/store_verify_authority_v1.gc`: `selfhost/store-verify::vec?`, `selfhost/store-verify::sym?`, `selfhost/store-verify::single`, `selfhost/store-verify::hash-vectors-equal-loop?`, `selfhost/store-verify::hash-vectors-equal?`, `selfhost/store-verify::result`, `selfhost/store-verify::reject`, `selfhost/store-verify::error`
 - `selfhost/commit_authority_v1.gc`: `selfhost/commit::vec?`, `selfhost/commit::sym?`, `selfhost/commit::nonempty-str?`, `selfhost/commit::optional-nonempty-str?`, `selfhost/commit::hash-vector-loop?`, `selfhost/commit::hash-vector?`, `selfhost/commit::obligation?`, `selfhost/commit::obligation-vector-loop?`
 - `selfhost/refs_authority_v1.gc`: `selfhost/refs::tag`, `selfhost/refs::nil?`, `selfhost/refs::map?`, `selfhost/refs::str?`, `selfhost/refs::bool?`, `selfhost/refs::sym?`, `selfhost/refs::starts-with?`, `selfhost/refs::refs-loop?`
-- `selfhost/pkg_lock_read_authority_v1.gc`: `selfhost/pkg-lock-read::tag`, `selfhost/pkg-lock-read::map?`, `selfhost/pkg-lock-read::vec?`, `selfhost/pkg-lock-read::str?`, `selfhost/pkg-lock-read::int?`, `selfhost/pkg-lock-read::nil?`, `selfhost/pkg-lock-read::ok`, `selfhost/pkg-lock-read::bad`
+- `selfhost/pkg_lock_read_authority_v1.gc`: `selfhost/pkg-lock-read::tag`, `selfhost/pkg-lock-read::map?`, `selfhost/pkg-lock-read::vec?`, `selfhost/pkg-lock-read::str?`, `selfhost/pkg-lock-read::int?`, `selfhost/pkg-lock-read::nil?`, `selfhost/pkg-lock-read::map-has-key-loop?`, `selfhost/pkg-lock-read::map-has-keys-loop?`
+- `selfhost/pkg_lock_model_authority_v1.gc`: `selfhost/pkg-lock-read::strategy-symbol`, `selfhost/pkg-lock-read::normalize-model-requirement`, `selfhost/pkg-lock-read::model-requirements-loop`, `selfhost/pkg-lock-read::model-requirements`, `selfhost/pkg-lock-read::normalize-model-locked`, `selfhost/pkg-lock-read::model-locked-loop`, `selfhost/pkg-lock-read::model-locked`, `selfhost/pkg-lock-read::normalize-model-document-tail`
 - `selfhost/pkg_lock_write_authority_v1.gc`: `selfhost/pkg-lock-write::append`, `selfhost/pkg-lock-write::append3`, `selfhost/pkg-lock-write::quoted`, `selfhost/pkg-lock-write::starts-with?`, `selfhost/pkg-lock-write::ascii-space?`, `selfhost/pkg-lock-write::trim-left`, `selfhost/pkg-lock-write::trim-right`, `selfhost/pkg-lock-write::trim`
 - `selfhost/pkg_resolution_identity_authority_v1.gc`: `selfhost/pkg-resolution-id::tag`, `selfhost/pkg-resolution-id::map?`, `selfhost/pkg-resolution-id::str?`, `selfhost/pkg-resolution-id::sym?`, `selfhost/pkg-resolution-id::int?`, `selfhost/pkg-resolution-id::nil?`, `selfhost/pkg-resolution-id::map-has-key-loop?`, `selfhost/pkg-resolution-id::map-has-keys-loop?`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`

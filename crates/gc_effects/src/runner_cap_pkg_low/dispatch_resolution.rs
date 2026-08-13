@@ -1,4 +1,5 @@
 use super::*;
+use crate::pkg_lock_read_authority::PkgLockModelDecision;
 
 #[path = "dispatch_resolution/install_verify.rs"]
 mod install_verify;
@@ -21,6 +22,7 @@ pub(super) fn dispatch_resolution(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    mut lock_authority: Option<&mut PkgLockReadAuthority>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
@@ -49,16 +51,10 @@ pub(super) fn dispatch_resolution(
                     ));
                 }
             };
-            let l = match gc_pkg::GenesisLock::load(&lock_path) {
+            let l = match load_lock_model(lock_authority.as_deref_mut(), &lock_path, error_tok, op)
+            {
                 Ok(x) => x,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-lock",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
+                Err(error) => return Ok(error),
             };
 
             let mut m = BTreeMap::new();
@@ -161,17 +157,11 @@ pub(super) fn dispatch_resolution(
                     ));
                 }
             };
-            let mut l = match gc_pkg::GenesisLock::load(&lock_path) {
-                Ok(x) => x,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-lock",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
-            };
+            let mut l =
+                match load_lock_model(lock_authority.as_deref_mut(), &lock_path, error_tok, op) {
+                    Ok(x) => x,
+                    Err(error) => return Ok(error),
+                };
 
             let mut out_locked: BTreeMap<String, gc_pkg::LockedEntry> = BTreeMap::new();
             for (name, req) in &l.requirements {
@@ -363,17 +353,11 @@ pub(super) fn dispatch_resolution(
                     ));
                 }
             };
-            let mut l = match gc_pkg::GenesisLock::load(&lock_path) {
-                Ok(x) => x,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-lock",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
-            };
+            let mut l =
+                match load_lock_model(lock_authority.as_deref_mut(), &lock_path, error_tok, op) {
+                    Ok(x) => x,
+                    Err(error) => return Ok(error),
+                };
 
             let mut updated: u64 = 0;
             let mut rationale: Vec<Term> = Vec::new();
@@ -603,6 +587,7 @@ pub(super) fn dispatch_resolution(
             policy,
             store,
             refs,
+            lock_authority.as_deref_mut(),
             identity_authority,
             budget,
             timeout_ms,
@@ -610,9 +595,14 @@ pub(super) fn dispatch_resolution(
             op,
         ),
 
-        "core/pkg-low::verify" => {
-            install_verify::handle_pkg_verify(payload, pol, store, error_tok, op)
-        }
+        "core/pkg-low::verify" => install_verify::handle_pkg_verify(
+            payload,
+            pol,
+            store,
+            lock_authority.as_deref_mut(),
+            error_tok,
+            op,
+        ),
 
         _ => Ok(mk_error(
             error_tok,
@@ -621,6 +611,45 @@ pub(super) fn dispatch_resolution(
             Some(op),
         )),
     }
+}
+
+fn load_lock_model(
+    authority: Option<&mut PkgLockReadAuthority>,
+    path: &std::path::Path,
+    error_tok: SealId,
+    op: &str,
+) -> Result<gc_pkg::GenesisLock, Value> {
+    if let Some(authority) = authority {
+        let bytes = read_bounded_lock(path)
+            .map_err(|message| mk_error(error_tok, "core/pkg/bad-lock", message, Some(op)))?;
+        return match authority.read_model_toml(&bytes) {
+            Ok(PkgLockModelDecision::Lock(lock)) => Ok(lock),
+            Ok(PkgLockModelDecision::Error { code, message }) => {
+                Err(mk_error(error_tok, &code, message, Some(op)))
+            }
+            Err(error) => Err(mk_error(
+                error_tok,
+                "core/pkg/authority-error",
+                error.to_string(),
+                Some(op),
+            )),
+        };
+    }
+
+    #[cfg(any(test, feature = "parity-oracle"))]
+    {
+        return gc_pkg::GenesisLock::load(path).map_err(|error| {
+            mk_error(error_tok, "core/pkg/bad-lock", error.to_string(), Some(op))
+        });
+    }
+
+    #[cfg(not(any(test, feature = "parity-oracle")))]
+    Err(mk_error(
+        error_tok,
+        "core/pkg/authority-error",
+        "selfhost package lock model authority is unavailable".to_string(),
+        Some(op),
+    ))
 }
 
 fn normalize_only_filter(raw: Option<Vec<String>>) -> std::collections::BTreeSet<String> {
@@ -710,6 +739,7 @@ mod tests {
             &Term::Nil,
             None,
             &CapsPolicy::empty(),
+            None,
             None,
             None,
             None,

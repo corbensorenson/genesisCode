@@ -11,8 +11,9 @@ normalization and tag-policy compatibility, optional field types, and the closed
 
 Rust retains capability and sandbox admission, bounded file reads, UTF-8 validation, generic TOML
 decoding, artifact bootstrap, strict result decoding, and diagnostic sealing. Generic TOML decoding
-is still a production-required host oracle, so this slice remains H0. Other package operations still
-use the typed Rust `GenesisLock` parser and remain outside this authority.
+is still a production-required host oracle, so this slice remains H0. The complete internal model
+used by selected resolution routes is governed separately by
+`SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md` and remains outside this public projection.
 
 ## Limits and bootstrap
 
@@ -71,6 +72,6 @@ TOML codec remains reachable and must be removed or independently refined before
 
 ## Nonclaims
 
-This contract does not claim self-hosted TOML decoding, H2 package resolution, authority over
-internal lock consumers, graph solving, update/install/registry/workspace authority, `R4.2.e` or
-SH-C closure, bootstrap fixpoint, or release qualification.
+This contract does not claim self-hosted TOML decoding, H2 package resolution, internal lock-model
+authority, graph solving, update/install/registry/workspace authority, `R4.2.e` or SH-C closure,
+bootstrap fixpoint, or release qualification.

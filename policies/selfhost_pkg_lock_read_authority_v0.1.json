@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-13",
   "binding": "core/pkg::lock-read-authority",
-  "contentIdentitySha256": "2cae5e4a88227976de4db75a4edc1f89464fa6380b11cea261677e7a6fe9748c",
+  "contentIdentitySha256": "cc52babea9329c86b44f0aa37b0cd4953ceaa549a13a8413b28a9369a44970bf",
   "decisionInventory": [
     "supported-lock-version-admission",
     "workspace-and-policy-normalization",
@@ -39,12 +39,15 @@
     "sh-c-closure",
     "workspace-authority"
   ],
-  "productionEntrypoints": ["genesis", "genesis_wasi"],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
   "requestKind": "genesis/pkg-lock-read-authority-request-v0.1",
   "resultKind": "genesis/pkg-lock-read-authority-result-v0.1",
   "schema": "docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.schema.json",
   "sourceModule": "selfhost/pkg_lock_read_authority_v1.gc",
-  "sourceSha256": "37f2cc15538994c3024d40dbabff91fa176a04cec53ba0ea17896edc2f048e3c",
+  "sourceSha256": "7d93af771a0aa6e49a1a9b5ababa681726c31b0b931076911ec41b16f9f826f7",
   "spec": "docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

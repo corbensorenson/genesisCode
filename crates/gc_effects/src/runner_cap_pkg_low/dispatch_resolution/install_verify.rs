@@ -10,6 +10,7 @@ pub(super) fn handle_pkg_install(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    lock_authority: Option<&mut PkgLockReadAuthority>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
     timeout_ms: Option<u64>,
@@ -38,16 +39,9 @@ pub(super) fn handle_pkg_install(
             ));
         }
     };
-    let l = match gc_pkg::GenesisLock::load(&lock_path) {
+    let l = match load_lock_model(lock_authority, &lock_path, error_tok, op) {
         Ok(x) => x,
-        Err(e) => {
-            return Ok(mk_error(
-                error_tok,
-                "core/pkg/bad-lock",
-                format!("{e}"),
-                Some(op),
-            ));
-        }
+        Err(error) => return Ok(error),
     };
     if frozen {
         let missing = l.requirements_missing_locks();
@@ -451,6 +445,7 @@ pub(super) fn handle_pkg_verify(
     payload: &Term,
     pol: Option<&OpPolicy>,
     store: Option<&ArtifactStore>,
+    lock_authority: Option<&mut PkgLockReadAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
@@ -474,16 +469,9 @@ pub(super) fn handle_pkg_verify(
             ));
         }
     };
-    let l = match gc_pkg::GenesisLock::load(&lock_path) {
+    let l = match load_lock_model(lock_authority, &lock_path, error_tok, op) {
         Ok(x) => x,
-        Err(e) => {
-            return Ok(mk_error(
-                error_tok,
-                "core/pkg/bad-lock",
-                format!("{e}"),
-                Some(op),
-            ));
-        }
+        Err(error) => return Ok(error),
     };
 
     let mut ok = true;
