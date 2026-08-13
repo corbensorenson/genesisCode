@@ -48,8 +48,7 @@ use crate::runner_refs_ops::{
     payload_refs_prefix,
 };
 use crate::runner_store_ops::{
-    is_hex64, payload_store_artifact, payload_store_hash, payload_store_optional_hash,
-    store_get_term, store_scan_hashes,
+    is_hex64, payload_store_hash, payload_store_optional_hash, store_get_term, store_scan_hashes,
 };
 use crate::runner_sync_payload::{
     payload_sync_depth, payload_sync_force, payload_sync_refs, payload_sync_remote,
@@ -66,6 +65,7 @@ use crate::runner_vcs_payload::{
 };
 use crate::runner_xr_host::{XrHostRuntime, xr_host_call};
 use crate::store::ArtifactStore;
+use crate::store_authority::StoreAuthority;
 
 #[path = "runner_cap_gc_gpk_low.rs"]
 mod runner_cap_gc_gpk_low;
@@ -192,6 +192,14 @@ pub fn run(
     let mut bridge_runtime = HostBridgeRuntime::default();
     let mut artifact_budget_state = ArtifactBudgetState::default();
     let mut runtime_budget_state = RuntimeBudgetState::default();
+    let mut store_authority = if policy.is_allowed("core/store::put") {
+        policy
+            .selfhost_authority_config()
+            .map(StoreAuthority::load)
+            .transpose()?
+    } else {
+        None
+    };
 
     macro_rules! run_try {
         ($result:expr) => {
@@ -338,6 +346,7 @@ pub fn run(
                             store.as_ref(),
                             refs.as_ref(),
                             &mut artifact_budget_state,
+                            store_authority.as_mut(),
                             &mut bridge_runtime,
                             proto.error,
                         ))

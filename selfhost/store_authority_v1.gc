@@ -1,0 +1,170 @@
+(def selfhost/store-authority::tag core/data::tag)
+
+(def selfhost/store-authority::nil? core/list::is-nil?)
+
+(def selfhost/store-authority::map?
+  (fn (value) ((core/sym::eq? (selfhost/store-authority::tag value)) (quote :map))))
+
+(def selfhost/store-authority::int?
+  (fn (value) ((core/sym::eq? (selfhost/store-authority::tag value)) (quote :int))))
+
+(def selfhost/store-authority::field
+  (fn (map) (fn (key) (if (selfhost/store-authority::map? map) ((core/map::get map) key) nil))))
+
+(def selfhost/store-authority::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (if ((core/eq? ((core/vec::get ((core/vec::get entries) index)) 0)) key)
+            true
+            (((selfhost/store-authority::map-has-key-loop? entries) key)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/store-authority::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            (((selfhost/store-authority::map-has-key-loop? (core/map::entries map))
+                ((core/vec::get keys) index)) 0)
+            (((selfhost/store-authority::map-has-keys-loop? map) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/store-authority::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/store-authority::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/store-authority::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/store-authority::nonnegative-int?
+  (fn (value)
+    (if (selfhost/store-authority::int? value)
+      (if ((core/int::lt? value) 0) false true)
+      false)))
+
+(def selfhost/store-authority::optional-nonnegative-int?
+  (fn (value)
+    (if (selfhost/store-authority::nil? value)
+      true
+      (selfhost/store-authority::nonnegative-int? value))))
+
+(def selfhost/store-authority::result
+  (fn (request)
+    (fn (ok)
+      (fn (action)
+        (fn (code)
+          (fn (message)
+            (fn (bytes)
+              (fn (hash)
+                (fn (written-bytes)
+                  {
+                    :action action
+                    :bytes bytes
+                    :code code
+                    :hash hash
+                    :kind "genesis/store-authority-result-v0.1"
+                    :message message
+                    :ok ok
+                    :request-h (selfhost/hash::hash-term request)
+                    :v 1
+                    :written-bytes written-bytes})))))))))
+
+(def selfhost/store-authority::protocol-reject
+  (fn (request)
+    (fn (message)
+      ((((((((selfhost/store-authority::result request) false) (quote :reject))
+                  "store/authority-request") message) nil) nil) nil))))
+
+(def selfhost/store-authority::semantic-error
+  (fn (request)
+    (fn (code)
+      (fn (message)
+        ((((((((selfhost/store-authority::result request) true) (quote :error)) code) message)
+              nil) nil) nil)))))
+
+(def selfhost/store-authority::write
+  (fn (request)
+    (fn (bytes)
+      (fn (hash)
+        (fn (written-bytes)
+          ((((((((selfhost/store-authority::result request) true) (quote :write)) nil) nil)
+                bytes) hash) written-bytes))))))
+
+(def selfhost/store-authority::put
+  (fn (request)
+    (let
+      ((payload ((selfhost/store-authority::field request) (quote :payload)))
+        (max-bytes ((selfhost/store-authority::field request) (quote :max-bytes)))
+        (budget-used ((selfhost/store-authority::field request) (quote :budget-used)))
+        (budget-limit ((selfhost/store-authority::field request) (quote :budget-limit))))
+      (if
+        ((selfhost/store-authority::exact-map? payload) [:artifact])
+        (if (selfhost/store-authority::nonnegative-int? max-bytes)
+          (if (selfhost/store-authority::nonnegative-int? budget-used)
+            (if (selfhost/store-authority::optional-nonnegative-int? budget-limit)
+              (let
+                ((printed
+                    (selfhost/printer::print-term
+                      ((selfhost/store-authority::field payload) (quote :artifact)))))
+                (if (core/error::is? printed)
+                  (((selfhost/store-authority::semantic-error request) "core/store/bad-artifact")
+                    "artifact cannot be printed canonically")
+                  (let ((bytes (core/str::to-utf8 printed)))
+                    (if (core/error::is? bytes)
+                      (((selfhost/store-authority::semantic-error request) "core/store/bad-artifact")
+                        "canonical artifact is not valid utf-8")
+                      (let ((size (core/bytes::len bytes)))
+                        (if ((core/int::lt? max-bytes) size)
+                          (((selfhost/store-authority::semantic-error request)
+                              "core/caps/resource-limit")
+                            "store put exceeds max_bytes")
+                          (let ((next-used ((core/int::add budget-used) size)))
+                            (if
+                              (if (selfhost/store-authority::nil? budget-limit)
+                                false
+                                ((core/int::lt? budget-limit) next-used))
+                              (((selfhost/store-authority::semantic-error request)
+                                  "core/caps/resource-limit")
+                                "store put exceeds max_run_bytes")
+                              (let ((digest (core/crypto::blake3 bytes)))
+                                (if (core/error::is? digest)
+                                  (((selfhost/store-authority::semantic-error request)
+                                      "core/store/hash-error")
+                                    "artifact hash mechanism failed")
+                                  ((((selfhost/store-authority::write request) bytes)
+                                      (core/bytes::to-hex digest)) size)))))))))))
+              ((selfhost/store-authority::protocol-reject request)
+                "put budget-limit must be nil or a nonnegative integer"))
+            ((selfhost/store-authority::protocol-reject request)
+              "put budget-used must be a nonnegative integer"))
+          ((selfhost/store-authority::protocol-reject request)
+            "put max-bytes must be a nonnegative integer"))
+        (((selfhost/store-authority::semantic-error request) "core/store/bad-payload")
+          "store put payload must contain exactly :artifact")))))
+
+(def core/store::authority
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request)
+        [:budget-limit :budget-used :kind :max-bytes :payload :phase :v])
+      (if
+        ((core/eq? ((selfhost/store-authority::field request) (quote :kind)))
+          "genesis/store-authority-request-v0.1")
+        (if
+          ((core/int::eq? ((selfhost/store-authority::field request) (quote :v))) 1)
+          (if
+            ((core/sym::eq? ((selfhost/store-authority::field request) (quote :phase)))
+              (quote :put))
+            (selfhost/store-authority::put request)
+            ((selfhost/store-authority::protocol-reject request) "unsupported store phase"))
+          ((selfhost/store-authority::protocol-reject request) "store request version mismatch"))
+        ((selfhost/store-authority::protocol-reject request) "store request kind mismatch"))
+      ((selfhost/store-authority::protocol-reject request) "store request fields mismatch"))))

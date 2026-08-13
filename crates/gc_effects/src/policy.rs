@@ -7,6 +7,8 @@ use crate::error::EffectsError;
 mod policy_authority;
 #[path = "policy_parse.rs"]
 mod policy_parse;
+#[path = "policy_selfhost.rs"]
+mod policy_selfhost;
 #[path = "policy_store.rs"]
 mod policy_store;
 #[path = "policy_transport.rs"]
@@ -15,6 +17,7 @@ use policy_parse::{
     apply_op_cfg, parse_log_policy, parse_refs_policy, parse_runtime_policy, parse_store_policy,
     parse_task_policy, retired_high_level_op_replacement,
 };
+pub(crate) use policy_selfhost::SelfhostAuthorityConfig;
 pub use policy_store::StorePolicy;
 pub(crate) use policy_store::{
     AuthorizedSecretSource, AuthorizedStoreCredentialError, AuthorizedStoreCredentials,
@@ -29,6 +32,7 @@ pub struct CapsPolicy {
     pub refs: RefsPolicy,
     pub task: TaskPolicy,
     pub runtime: RuntimePolicy,
+    selfhost_authority: Option<SelfhostAuthorityConfig>,
 }
 
 #[derive(Debug, Clone)]
@@ -407,6 +411,7 @@ impl CapsPolicy {
                 max_response_bytes_per_op: None,
                 max_response_bytes_per_run: None,
             },
+            selfhost_authority: None,
         }
     }
 
@@ -559,6 +564,7 @@ impl CapsPolicy {
             refs,
             task,
             runtime,
+            selfhost_authority: None,
         })
     }
 
@@ -589,16 +595,6 @@ impl CapsPolicy {
             Self::from_toml_str_with_selfhost_authority(&source, bootstrap_mode, artifact)?;
         let base = path.parent().unwrap_or_else(|| Path::new("."));
         policy.resolve_relative_paths(base)?;
-        Ok(policy)
-    }
-
-    pub fn from_toml_str_with_selfhost_authority(
-        source: &str,
-        bootstrap_mode: gc_prelude::SelfhostBootstrapMode,
-        artifact: Option<&Path>,
-    ) -> Result<Self, EffectsError> {
-        let mut policy = policy_transport::decode_selfhost_transport(source)?;
-        policy_authority::authorize_policy(source, &mut policy, bootstrap_mode, artifact)?;
         Ok(policy)
     }
 

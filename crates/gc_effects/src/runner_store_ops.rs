@@ -32,6 +32,7 @@ pub(crate) fn payload_store_optional_hash(payload: &Term) -> Result<Option<Strin
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_store_artifact(payload: &Term) -> Result<Term, EffectsError> {
     let Term::Map(m) = payload else {
         return Err(EffectsError::Log(

@@ -68,6 +68,7 @@
     "selfhost/effect_policy_resource_authority_v1.gc"
     "selfhost/effect_policy_authority_v1.gc"
     "selfhost/effect_replay_authority_v1.gc"
+    "selfhost/store_authority_v1.gc"
     "selfhost/signing_authority_v1.gc"
     "selfhost/evidence_verify_package_v1.gc"
     "selfhost/evidence_verify_authority_v1.gc"
@@ -153,6 +154,7 @@
     core/effects::replay-authority
     core/security::signing-authority
     core/security::evidence-verify-authority
+    core/store::authority
     core/cli::obligation-authority
   ]
 }

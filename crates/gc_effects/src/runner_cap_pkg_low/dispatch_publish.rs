@@ -489,6 +489,7 @@ pub(super) fn dispatch_publish(
                 Some(store),
                 Some(refs),
                 budget,
+                None,
                 bridge_runtime,
                 error_tok,
             )?;
@@ -920,6 +921,7 @@ pub(super) fn dispatch_publish(
                 Some(store),
                 refs,
                 budget,
+                None,
                 bridge_runtime,
                 error_tok,
             )?;

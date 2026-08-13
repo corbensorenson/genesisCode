@@ -6,6 +6,18 @@ use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
 use replay_support::replay;
 
+fn load_policy(path: &std::path::Path) -> CapsPolicy {
+    let artifact = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("selfhost/toolchain.gc");
+    CapsPolicy::load_with_selfhost_authority(
+        path,
+        gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .expect("load selfhost-authorized policy")
+}
+
 fn eval_prog(forms: &[Term]) -> (EvalCtx, Value) {
     let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
@@ -36,6 +48,99 @@ fn sealed_error_code(v: &Value) -> Option<String> {
 }
 
 #[test]
+fn store_put_without_artifact_authority_fails_closed() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::put"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load(&caps_path).unwrap();
+    let forms = parse_module(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/store::put
+            {:artifact (quote {:x 1})}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#,
+    )
+    .unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let error = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .err()
+    .expect("store put without selfhost authority must fail");
+    assert!(
+        error
+            .to_string()
+            .contains("requires the artifact-loaded GenesisCode store authority")
+    );
+}
+
+#[test]
+fn store_put_payload_shape_is_decided_as_a_sealed_error() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::put"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = load_policy(&caps_path);
+    let forms = parse_module(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/store::put
+            {:artifact (quote {:x 1}) :unexpected true}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#,
+    )
+    .unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let result = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert_eq!(
+        sealed_error_code(&result.value).as_deref(),
+        Some("core/store/bad-payload")
+    );
+    assert!(
+        std::fs::read_dir(td.path().join(".genesis/store"))
+            .unwrap()
+            .next()
+            .is_none(),
+        "semantic rejection must happen before any store write"
+    );
+}
+
+#[test]
 fn store_put_has_get_roundtrip_and_replay_does_not_need_store() {
     let td = tempfile::tempdir().unwrap();
 
@@ -50,7 +155,7 @@ dir = "./.genesis/store"
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let artifact: Term = parse_term(r#"{:x 1 :y "hi"}"#).unwrap();
 
@@ -208,7 +313,7 @@ dir = "./.genesis/store"
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let h = "0".repeat(64);
     let get_src = format!(
@@ -251,7 +356,7 @@ max_bytes = 128
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let large_payload = "x".repeat(4096);
     let put_src = format!(
@@ -324,7 +429,7 @@ max_bytes = 256
         ),
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let src = r#"
       (def prog
@@ -363,7 +468,7 @@ max_bytes = 256
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let large_payload = "x".repeat(2048);
     let put_src = format!(
@@ -403,7 +508,7 @@ max_run_bytes = 5000
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let blob1 = "a".repeat(3000);
     let blob2 = "b".repeat(3000);
@@ -461,7 +566,7 @@ base_dir = "{}"
         ),
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let src = r#"
       (def prog

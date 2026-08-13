@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "132d2e60dc6bc263de0414e99f1cdbb964f99f61ce34e32f75f1bad2c51584f9",
+  "contentIdentitySha256": "e1629cfe915e46a268205e88e18b4748c88bf850d97ff827460de3fa77747337",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1768,31 +1768,39 @@
       "id": "SD-STORE",
       "internalOnly": false,
       "limitations": [
-        "GenesisCode effect program is routed; host still computes storage effects and acceptance"
+        "Artifact-loaded GenesisCode exclusively decides core/store::put payload admission, canonical bytes, operation and cumulative budgets, and content identity under genesis/selfhost-store-authority-v0.1",
+        "core/store::{get,has,verify}, local/remote resolution, store traversal, and package/registry/VCS storage decisions remain host-authoritative, so SD-STORE remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
       ],
       "producingImplementationPaths": [
         "selfhost/toolchain.gc",
+        "selfhost/store_authority_v1.gc",
         "crates/gc_cli_driver/src/cmd_store.rs"
       ],
       "productionAuthorityPaths": [
+        "selfhost/store_authority_v1.gc",
+        "crates/gc_effects/src/store_authority.rs",
+        "crates/gc_effects/src/policy_selfhost.rs",
         "crates/gc_effects/src/runner_cap_store.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/CLI.md"
+        "docs/spec/CLI.md",
+        "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md"
       ],
       "stage0Domains": [
         "S0-A"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/cli_store.rs"
+        "crates/gc_cli/tests/cli_store.rs",
+        "crates/gc_effects/tests/store_caps.rs"
       ],
       "title": "Content-addressed object storage and integrity decisions",
       "verifierPaths": [
-        "crates/gc_cli/tests/cli_store.rs"
+        "crates/gc_cli/tests/cli_store.rs",
+        "scripts/lib/selfhost_store_authority.py"
       ]
     },
     {

@@ -379,11 +379,14 @@ def static_check(root: Path, profile):
             fail(f"missing effect-policy boundary token: {token}")
 
     policy = (root / "crates/gc_effects/src/policy.rs").read_text()
+    policy_selfhost = (root / "crates/gc_effects/src/policy_selfhost.rs").read_text()
     transport = transport_boundary_path.read_text()
     if policy.count('#[path = "policy_transport.rs"]') != 1:
         fail("neutral policy transport decomposition drift")
     if "pub fn load_with_selfhost_authority(" not in policy:
         fail("self-host policy loader is missing")
+    if policy.count('#[path = "policy_selfhost.rs"]') != 1:
+        fail("self-host policy authority propagation decomposition drift")
     selfhost_loader = policy.split("pub fn load_with_selfhost_authority(", 1)[1].split(
         "pub(crate) fn authorized_cap", 1
     )[0]
@@ -392,9 +395,9 @@ def static_check(root: Path, profile):
         >= selfhost_loader.find("policy.resolve_relative_paths")
     ):
         fail("self-host policy loader must authorize base directories before host path resolution")
-    selfhost_source_loader = policy.split(
+    selfhost_source_loader = policy_selfhost.split(
         "pub fn from_toml_str_with_selfhost_authority(", 1
-    )[1].split("pub(crate) fn authorized_cap", 1)[0]
+    )[1].split("pub(crate) fn selfhost_authority_config", 1)[0]
     if (
         selfhost_source_loader.count("policy_transport::decode_selfhost_transport(source)") != 1
         or selfhost_source_loader.count("policy_authority::authorize_policy") != 1

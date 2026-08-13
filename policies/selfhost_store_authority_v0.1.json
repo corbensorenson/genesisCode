@@ -1,0 +1,53 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/store::authority",
+  "contentIdentitySha256": "d5e7a1d4b6a71773cb721c11df1fdca51f9e81c68a42bad34e16805214041d6f",
+  "decisionInventory": [
+    "put-payload-admission",
+    "put-canonical-bytes",
+    "put-operation-budget-admission",
+    "put-cumulative-budget-admission",
+    "put-content-hash-identity"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "authorized-policy-limit-transport",
+    "blake3-and-byte-count-contradiction-checking",
+    "atomic-write-once-filesystem-storage-and-durability"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_store_authority.py",
+  "kind": "genesis/selfhost-store-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "get-has-verify-authority",
+    "h2-sd-store",
+    "package-registry-vcs-authority",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/store-authority-request-v0.1",
+  "resultKind": "genesis/store-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 160000000,
+    "maxMapEntries": 32,
+    "maxPayloadBytes": 41943040,
+    "maxVectorEntries": 16384,
+    "stepLimit": 20000000
+  },
+  "schema": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/store_authority_v1.gc",
+  "sourceSha256": "2270c19284d1ebdf511cc18643fb2aea11b359360c5599f74a659b84c489dbf6",
+  "spec": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

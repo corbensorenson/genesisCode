@@ -335,6 +335,7 @@ pub(super) fn call_capability_with_runtime(
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
     budget: &mut ArtifactBudgetState,
+    store_authority: Option<&mut StoreAuthority>,
     bridge_runtime: &mut HostBridgeRuntime,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
@@ -380,7 +381,16 @@ pub(super) fn call_capability_with_runtime(
             op,
             timeout_ms,
         ),
-        "core/store::put" => cap_store_put(op, payload, pol, policy, store, budget, error_tok),
+        "core/store::put" => cap_store_put(
+            op,
+            payload,
+            pol,
+            policy,
+            store,
+            budget,
+            store_authority,
+            error_tok,
+        ),
         "core/store::has" => cap_store_has(op, payload, pol, policy, store, timeout_ms, error_tok),
         "core/store::get" => cap_store_get(
             op, payload, pol, policy, store, budget, timeout_ms, error_tok,
@@ -768,6 +778,7 @@ pub(super) fn call_capability(
         store,
         refs,
         budget,
+        None,
         &mut bridge_runtime,
         error_tok,
     )

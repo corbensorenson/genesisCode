@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `87266ae2fa1ffbdfd71b994774942db8608c56106e12dce6c59a6eb853c0636e`
+- Artifact sha256: `dcef1bdfb37a9fba00a395cd5b894ebce11bd90d527f63cc90cc1a73925d7d2c`
 - Freshness artifact hash: `87266ae2fa1ffbdfd71b994774942db8608c56106e12dce6c59a6eb853c0636e`
 - Freshness source hash: `f990e60a1a09697d51bd1fd6e7533f8c334d3613c8b45db39668187d96e36874`
-- Source aggregate hash (module path + module sha256): `51fadc9716a5290e75c258bb4cb03c499ce529a49581bde1ee3a7ab9eb217d48`
+- Source aggregate hash (module path + module sha256): `23cc5d1180d6cca3eb7e2590f9bae3bdada9f99eaaa93eb57c2660ea8cd387b8`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `85`
+- Module count: `86`
 
 ## Module Summary
 
@@ -82,6 +82,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/effect_policy_resource_authority_v1.gc` | 448 | 20709 | 25 | `2a38003c2a503624` |
 | `selfhost/effect_policy_authority_v1.gc` | 478 | 20480 | 24 | `24a82741ffbeb2bd` |
 | `selfhost/effect_replay_authority_v1.gc` | 478 | 22055 | 34 | `0bcdb0a048345043` |
+| `selfhost/store_authority_v1.gc` | 170 | 7599 | 16 | `324efc01ebc8fdb4` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -170,6 +171,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/effect_policy_resource_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::optional-str?`, `selfhost/effect-policy::map-has-key-loop?`, `selfhost/effect-policy::map-has-key?`, `selfhost/effect-policy::map-has-keys-loop?`, `selfhost/effect-policy::exact-map?`, `selfhost/effect-policy::optional-nonnegative-int?`
 - `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::baseline-contains-loop?`, `selfhost/effect-policy::baseline-contains?`, `selfhost/effect-policy::inventory-add-loop`, `selfhost/effect-policy::inventory-add`, `selfhost/effect-policy::inventory-keys-loop`, `selfhost/effect-policy::inventory-keys`, `core/effects::policy-inventory-authority`, `selfhost/effect-policy::all-true-loop?`
 - `selfhost/effect_replay_authority_v1.gc`: `selfhost/replay::tag`, `selfhost/replay::nil?`, `selfhost/replay::not`, `selfhost/replay::map?`, `selfhost/replay::int?`, `selfhost/replay::str?`, `selfhost/replay::sym?`, `selfhost/replay::bytes?`
+- `selfhost/store_authority_v1.gc`: `selfhost/store-authority::tag`, `selfhost/store-authority::nil?`, `selfhost/store-authority::map?`, `selfhost/store-authority::int?`, `selfhost/store-authority::field`, `selfhost/store-authority::map-has-key-loop?`, `selfhost/store-authority::map-has-keys-loop?`, `selfhost/store-authority::exact-map?`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

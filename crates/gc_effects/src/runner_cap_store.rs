@@ -1,6 +1,77 @@
 use super::*;
+#[cfg(any(test, feature = "parity-oracle"))]
+use crate::runner_store_ops::payload_store_artifact;
+use crate::store_authority::StorePutDecision;
 
 pub(super) fn cap_store_put(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
+    store: Option<&ArtifactStore>,
+    budget: &mut ArtifactBudgetState,
+    authority: Option<&mut StoreAuthority>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let Some(authority) = authority else {
+        #[cfg(any(test, feature = "parity-oracle"))]
+        {
+            return cap_store_put_parity(op, payload, pol, policy, store, budget, error_tok);
+        }
+        #[cfg(not(any(test, feature = "parity-oracle")))]
+        {
+            return Err(EffectsError::Log(
+                "core/store::put requires the artifact-loaded GenesisCode store authority"
+                    .to_string(),
+            ));
+        }
+    };
+    let store = store.ok_or_else(|| {
+        EffectsError::Log("missing artifact store for core/store::put".to_string())
+    })?;
+    let configured_max = match op_extra_positive_usize(pol, "max_bytes") {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let max_bytes = effective_limit(configured_max, HARD_REMOTE_ARTIFACT_MAX_BYTES);
+    let decision = authority.put(
+        payload,
+        max_bytes,
+        budget.store_written_bytes,
+        policy.store.max_run_bytes,
+    )?;
+    let (bytes, h, written_bytes) = match decision {
+        StorePutDecision::Error { code, message } => {
+            return Ok(mk_error(error_tok, &code, message, Some(op)));
+        }
+        StorePutDecision::Write {
+            bytes,
+            hash,
+            written_bytes,
+        } => (bytes, hash, written_bytes),
+    };
+    let stored_h = store
+        .put_bytes(&bytes)
+        .map_err(|e| mk_error(error_tok, "core/store/io-error", e.to_string(), Some(op)));
+    let stored_h = match stored_h {
+        Ok(hash) => hash,
+        Err(value) => return Ok(value),
+    };
+    if stored_h != h {
+        return Err(EffectsError::Log(
+            "store write mechanism contradicted GenesisCode-authorized hash".to_string(),
+        ));
+    }
+    budget.store_written_bytes = budget.store_written_bytes.saturating_add(written_bytes);
+    let mut m = BTreeMap::new();
+    m.insert(TermOrdKey(Term::Symbol(":hash".to_string())), Term::Str(h));
+    Ok(Value::data(Term::Map(m)))
+}
+
+#[cfg(any(test, feature = "parity-oracle"))]
+fn cap_store_put_parity(
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,

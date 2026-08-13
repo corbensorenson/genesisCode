@@ -28,6 +28,7 @@ mod runner_timeout;
 mod runner_vcs_payload;
 mod runner_xr_host;
 mod store;
+mod store_authority;
 
 pub use crate::error::EffectsError;
 pub use crate::log::{

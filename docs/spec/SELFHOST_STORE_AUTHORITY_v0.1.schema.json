@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-store-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "binding",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "hostMechanisms",
+    "hostOracle",
+    "independentVerifier",
+    "kind",
+    "nonclaims",
+    "productionEntrypoints",
+    "requestKind",
+    "resultKind",
+    "runtimeEvidence",
+    "schema",
+    "sourceModule",
+    "sourceSha256",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/store::authority"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {
+      "const": [
+        "put-payload-admission",
+        "put-canonical-bytes",
+        "put-operation-budget-admission",
+        "put-cumulative-budget-admission",
+        "put-content-hash-identity"
+      ]
+    },
+    "hostMechanisms": {
+      "const": [
+        "artifact-only-authority-bootstrap-and-bounded-evaluation",
+        "authorized-policy-limit-transport",
+        "blake3-and-byte-count-contradiction-checking",
+        "atomic-write-once-filesystem-storage-and-durability"
+      ]
+    },
+    "hostOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parityOnly", "productionRequired", "removalTask"],
+      "properties": {
+        "parityOnly": {"const": true},
+        "productionRequired": {"const": false},
+        "removalTask": {"const": "R4.2.e"}
+      }
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_store_authority.py"},
+    "kind": {"const": "genesis/selfhost-store-authority-v0.1"},
+    "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "requestKind": {"const": "genesis/store-authority-request-v0.1"},
+    "resultKind": {"const": "genesis/store-authority-result-v0.1"},
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allocationLimit", "maxMapEntries", "maxPayloadBytes", "maxVectorEntries", "stepLimit"],
+      "properties": {
+        "allocationLimit": {"const": 160000000},
+        "maxMapEntries": {"const": 32},
+        "maxPayloadBytes": {"const": 41943040},
+        "maxVectorEntries": {"const": 16384},
+        "stepLimit": {"const": 20000000}
+      }
+    },
+    "schema": {"const": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/store_authority_v1.gc"},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

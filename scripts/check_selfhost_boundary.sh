@@ -161,6 +161,15 @@ python3 scripts/lib/selfhost_evidence_verify_authority.py \
   --profile policies/selfhost_evidence_verify_authority_v0.1.json \
   --schema docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json
 
+# R4.2.e store authority is partial: GenesisCode exclusively decides put
+# admission, canonical bytes, budgets, and identity while the ledger remains H0.
+python3 scripts/lib/selfhost_store_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_store_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.schema.json \
+  --artifact selfhost/toolchain.gc \
+  --self-test
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \
