@@ -35,6 +35,9 @@ Supported keys:
 - `allow_http` (bool, optional): if true, `http://` remotes are permitted (default false).
 - `auth_token` (string, optional): bearer token for remote registry auth.
 - `auth_token_env` (string, optional): env var name containing bearer token (mutually exclusive with `auth_token`).
+- `basic_username` (string, optional): username for HTTP Basic authentication (mutually exclusive with bearer authentication).
+- `basic_password` (string, optional): inline Basic password (mutually exclusive with `basic_password_env`; requires `basic_username`).
+- `basic_password_env` (string, optional): env var name containing the Basic password (mutually exclusive with `basic_password`; requires `basic_username`).
 - `mtls_ca_pem` (string, optional): PEM file path for additional trusted CA roots.
 - `mtls_identity_pem` (string, optional): PEM file path containing client cert+key for mTLS.
 
@@ -56,12 +59,17 @@ Remote normalization and matching:
 - `remote_allow` is matched by prefix against the normalized base.
 
 Artifact-only production loads transport `store.remote`, `store.remote_allow`,
-and `store.allow_http` through `core/effects::resource-policy-authority`.
+`store.allow_http`, all global credential-source observations, and both mTLS path
+observations through `core/effects::resource-policy-authority`.
 GenesisCode trims and classifies the remote target and allowlist, preserves list
 order and duplicates, removes empty list entries, and emits a closed HTTP
-permission state. Store and package-registry consumers have no raw fallback for
-these fields. URL parsing/normalization and matching, credential/environment
-resolution, PEM loading, TLS, and HTTP transport remain bounded host mechanisms.
+permission state. It also decides credential type/conflict/dependency errors,
+bearer and Basic source modes, Basic username, and mTLS path admission. Inline
+secrets are represented only by presence markers and never enter an authority
+term or its hash. Store and package-registry consumers have no raw fallback for
+these global fields. URL parsing/normalization and matching, environment/secret
+lookup, relative-path resolution, PEM loading, TLS construction, and HTTP
+transport remain bounded host mechanisms.
 
 ## Refs Policy (`[refs]`)
 

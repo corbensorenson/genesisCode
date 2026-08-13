@@ -6,7 +6,10 @@ use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
 
-use super::super::{AuthorizedStoreRemotePolicy, CapsPolicy, RuntimePolicy, TaskPolicy};
+use super::super::{
+    AuthorizedStoreCredentials, AuthorizedStoreRemotePolicy, CapsPolicy, RuntimePolicy,
+    StorePolicy, TaskPolicy,
+};
 use super::{authority_error, hex32};
 
 pub(super) struct AuthorizedResources {
@@ -19,6 +22,7 @@ pub(super) struct AuthorizedResources {
     pub(super) store_dir: Option<PathBuf>,
     pub(super) store_max_run_bytes: Option<usize>,
     pub(super) store_remote: AuthorizedStoreRemotePolicy,
+    pub(super) store_credentials: AuthorizedStoreCredentials,
     pub(super) policy_term: Term,
 }
 
@@ -52,7 +56,7 @@ pub(super) fn request_term(document: &toml::value::Table) -> Term {
             ),
             (
                 TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/effect-resource-policy-request-v0.4".to_string()),
+                Term::Str("genesis/effect-resource-policy-request-v0.5".to_string()),
             ),
             (
                 TermOrdKey(Term::symbol(":log")),
@@ -120,6 +124,10 @@ pub(super) fn request_term(document: &toml::value::Table) -> Term {
                 Term::Map(
                     [
                         (
+                            TermOrdKey(Term::symbol(":credential-policy")),
+                            super::store_credentials::input(store),
+                        ),
+                        (
                             TermOrdKey(Term::symbol(":dir")),
                             optional_table_str(store, "dir"),
                         ),
@@ -169,7 +177,7 @@ pub(super) fn request_term(document: &toml::value::Table) -> Term {
                     .collect(),
                 ),
             ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(4.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(5.into())),
         ]
         .into_iter()
         .collect(),
@@ -289,6 +297,7 @@ fn policy_term(
     store_dir: Option<&Path>,
     store_max_run_bytes: Option<usize>,
     store_remote: &AuthorizedStoreRemotePolicy,
+    store_credentials: &AuthorizedStoreCredentials,
 ) -> Result<Term, EffectsError> {
     Ok(Term::Map(
         [
@@ -357,6 +366,10 @@ fn policy_term(
                 TermOrdKey(Term::symbol(":store")),
                 Term::Map(
                     [
+                        (
+                            TermOrdKey(Term::symbol(":credential-policy")),
+                            super::store_credentials::term(store_credentials)?,
+                        ),
                         (
                             TermOrdKey(Term::symbol(":dir")),
                             optional_path_term(store_dir)?,
@@ -433,12 +446,16 @@ pub(super) fn legacy_policy_term(policy: &CapsPolicy) -> Result<Term, EffectsErr
         policy
             .authorized_store_remote()
             .ok_or_else(|| authority_error("global store remote policy authority is missing"))?,
+        policy.authorized_store_credentials().ok_or_else(|| {
+            authority_error("global store credential policy authority is missing")
+        })?,
     )
 }
 
 pub(super) fn decode_result(
     term: Term,
     request_hash: [u8; 32],
+    raw_store: &StorePolicy,
 ) -> Result<AuthorizedResources, EffectsError> {
     let map = exact_map(
         &term,
@@ -454,8 +471,8 @@ pub(super) fn decode_result(
         ],
         "resource result",
     )?;
-    if !matches!(map_field(map, ":kind")?, Term::Str(kind) if kind == "genesis/effect-resource-policy-result-v0.4")
-        || !matches!(map_field(map, ":v")?, Term::Int(version) if version == &4.into())
+    if !matches!(map_field(map, ":kind")?, Term::Str(kind) if kind == "genesis/effect-resource-policy-result-v0.5")
+        || !matches!(map_field(map, ":v")?, Term::Int(version) if version == &5.into())
         || !matches!(map_field(map, ":request-h")?, Term::Str(actual) if actual == &hex32(request_hash))
     {
         return Err(authority_error("resource result identity mismatch"));
@@ -488,7 +505,12 @@ pub(super) fn decode_result(
     )?;
     let store_map = exact_map(
         map_field(map, ":store")?,
-        &[":dir", ":max-run-bytes", ":remote-policy"],
+        &[
+            ":credential-policy",
+            ":dir",
+            ":max-run-bytes",
+            ":remote-policy",
+        ],
         "resource result :store",
     )?;
     let task_map = exact_map(
@@ -533,6 +555,8 @@ pub(super) fn decode_result(
     let store_dir = optional_path_field(store_map, ":dir")?;
     let store_max_run_bytes = optional_positive_usize_field(store_map, ":max-run-bytes")?;
     let store_remote = super::store_remote::decode(map_field(store_map, ":remote-policy")?)?;
+    let store_credentials =
+        super::store_credentials::decode(map_field(store_map, ":credential-policy")?, raw_store)?;
     let policy_term = policy_term(
         &task,
         &runtime,
@@ -543,6 +567,7 @@ pub(super) fn decode_result(
         store_dir.as_deref(),
         store_max_run_bytes,
         &store_remote,
+        &store_credentials,
     )?;
     Ok(AuthorizedResources {
         task,
@@ -554,6 +579,7 @@ pub(super) fn decode_result(
         store_dir,
         store_max_run_bytes,
         store_remote,
+        store_credentials,
         policy_term,
     })
 }

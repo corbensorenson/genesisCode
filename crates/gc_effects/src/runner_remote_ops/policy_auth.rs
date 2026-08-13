@@ -1,6 +1,12 @@
 static FORCE_WASI_REMOTE_PROFILE: AtomicBool = AtomicBool::new(false);
 
-use crate::policy::{AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedStringList};
+use crate::policy::{
+    AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedStringList,
+};
+
+#[path = "policy_auth_store.rs"]
+mod policy_auth_store;
+pub(super) use policy_auth_store::store_registry_auth;
 
 type SyncBytesResult = Result<Vec<u8>, gc_registry::RegistryError>;
 type SyncHasResult = Result<BTreeMap<String, bool>, gc_registry::RegistryError>;
@@ -395,48 +401,6 @@ fn read_pem_path(path: &std::path::Path) -> Result<Vec<u8>, String> {
     std::fs::read(path).map_err(|e| format!("failed reading PEM `{}`: {e}", path.display()))
 }
 
-pub(super) fn store_registry_auth(
-    policy: &CapsPolicy,
-) -> Result<gc_registry::RegistryAuth, String> {
-    let bearer_token = resolve_auth_token(
-        policy.store.auth_token.as_deref(),
-        policy.store.auth_token_env.as_deref(),
-    )?;
-    let basic_password = resolve_basic_password(
-        policy.store.basic_password.as_deref(),
-        policy.store.basic_password_env.as_deref(),
-    )?;
-    let basic_username = policy.store.basic_username.clone();
-    if bearer_token.is_some() && basic_username.is_some() {
-        return Err(
-            "auth_token/auth_token_env and basic_username are mutually exclusive".to_string(),
-        );
-    }
-    if basic_username.is_none() && basic_password.is_some() {
-        return Err("basic_password/basic_password_env requires basic_username".to_string());
-    }
-    let basic_password = if basic_username.is_some() {
-        Some(basic_password.unwrap_or_default())
-    } else {
-        None
-    };
-    let mtls_ca_pem = match policy.store.mtls_ca_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    let mtls_identity_pem = match policy.store.mtls_identity_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    Ok(gc_registry::RegistryAuth {
-        bearer_token,
-        basic_username,
-        basic_password,
-        mtls_ca_pem,
-        mtls_identity_pem,
-    })
-}
-
 pub(super) fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, String> {
     let bearer_token = resolve_auth_token(sp.auth_token.as_deref(), sp.auth_token_env.as_deref())?;
     let basic_password = resolve_basic_password(
@@ -664,6 +628,36 @@ allow_http = "yes"
             store_normalize_and_check_remote(&policy, None, "https://safe.example/v1/")
                 .unwrap_err(),
             "store.allow_http must be a boolean"
+        );
+    }
+
+    #[test]
+    fn store_auth_consumes_authorized_credentials_before_poisoned_raw_fields() {
+        let mut policy = CapsPolicy::from_toml_str(
+            r#"
+[store]
+auth_token = "authorized-secret"
+"#,
+        )
+        .unwrap();
+        policy.store.auth_token = Some("poisoned-raw-secret".to_string());
+        policy.store.auth_token_env = Some("POISONED_ENV".to_string());
+        policy.store.basic_username = Some("poisoned-user".to_string());
+        policy.store.basic_password = Some("poisoned-password".to_string());
+
+        let auth = store_registry_auth(&policy).unwrap();
+        assert_eq!(auth.bearer_token.as_deref(), Some("authorized-secret"));
+        assert_eq!(auth.basic_username, None);
+        assert_eq!(auth.basic_password, None);
+    }
+
+    #[test]
+    fn store_auth_fails_closed_without_credential_authority() {
+        let mut policy = CapsPolicy::empty();
+        policy.store.authorized_credentials = None;
+        assert_eq!(
+            store_registry_auth(&policy).unwrap_err(),
+            "global store credential policy authority is missing"
         );
     }
 }

@@ -7,9 +7,16 @@ use crate::error::EffectsError;
 mod policy_authority;
 #[path = "policy_parse.rs"]
 mod policy_parse;
+#[path = "policy_store.rs"]
+mod policy_store;
 use policy_parse::{
     apply_op_cfg, parse_log_policy, parse_refs_policy, parse_runtime_policy, parse_store_policy,
     parse_task_policy, retired_high_level_op_replacement,
+};
+pub use policy_store::StorePolicy;
+pub(crate) use policy_store::{
+    AuthorizedSecretSource, AuthorizedStoreCredentialError, AuthorizedStoreCredentials,
+    AuthorizedStoreRemotePolicy,
 };
 
 #[derive(Debug, Clone)]
@@ -36,51 +43,6 @@ pub struct LogPolicy {
 
     /// Optional cumulative per-run byte budget for response artifacts externalized by the logger.
     pub max_artifact_bytes_per_run: Option<usize>,
-}
-
-#[derive(Debug, Clone)]
-pub struct StorePolicy {
-    /// Content-addressed store directory used by `core/store::*` capabilities.
-    pub dir: Option<PathBuf>,
-
-    /// Optional remote registry base used as a read-through source for `core/store::{has,get}`.
-    ///
-    /// This is secure-by-default: if `remote` is set, the runner still requires `remote_allow`
-    /// to be non-empty and to allow the normalized base URL prefix.
-    pub remote: Option<String>,
-
-    /// Allowlist of remote base URL prefixes permitted for `store.remote`.
-    pub remote_allow: Vec<String>,
-
-    /// If true, `http://` remotes are permitted (default false).
-    pub allow_http: bool,
-
-    /// Optional cumulative per-run byte budget for content-addressed store writes.
-    pub max_run_bytes: Option<usize>,
-
-    /// Optional bearer token presented to remote registries.
-    pub auth_token: Option<String>,
-
-    /// Optional env var name containing bearer token for remote registries.
-    pub auth_token_env: Option<String>,
-
-    /// Optional username for HTTP basic auth against remote registries.
-    pub basic_username: Option<String>,
-
-    /// Optional inline password for HTTP basic auth.
-    pub basic_password: Option<String>,
-
-    /// Optional env var name containing HTTP basic auth password.
-    pub basic_password_env: Option<String>,
-
-    /// Optional PEM path for additional trusted CA roots used by remote TLS.
-    pub mtls_ca_pem: Option<PathBuf>,
-
-    /// Optional PEM path for client identity used by mTLS.
-    pub mtls_identity_pem: Option<PathBuf>,
-
-    /// Closed GenesisCode decision for global store remote selection and admission.
-    pub(crate) authorized_remote: Option<AuthorizedStoreRemotePolicy>,
 }
 
 #[derive(Debug, Clone)]
@@ -185,13 +147,6 @@ pub(crate) struct AuthorizedNetworkPolicy {
     pub bind_hosts: AuthorizedStringList,
     pub bind_ports: AuthorizedBindPorts,
     pub max_request_bytes: AuthorizedMaxBytes,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct AuthorizedStoreRemotePolicy {
-    pub remote: AuthorizedOptionalString,
-    pub remote_allow: AuthorizedStringList,
-    pub allow_http: AuthorizedOptionalBool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -425,6 +380,13 @@ impl CapsPolicy {
                     remote_allow: AuthorizedStringList::Absent,
                     allow_http: AuthorizedOptionalBool::Absent,
                 }),
+                authorized_credentials: Some(AuthorizedStoreCredentials::Valid {
+                    bearer: AuthorizedSecretSource::Absent,
+                    basic_username: None,
+                    basic_password: AuthorizedSecretSource::Absent,
+                    mtls_ca_pem: None,
+                    mtls_identity_pem: None,
+                }),
             },
             refs: RefsPolicy { path: None },
             task: TaskPolicy {
@@ -472,6 +434,10 @@ impl CapsPolicy {
 
     pub(crate) fn authorized_store_remote(&self) -> Option<&AuthorizedStoreRemotePolicy> {
         self.store.authorized_remote.as_ref()
+    }
+
+    pub(crate) fn authorized_store_credentials(&self) -> Option<&AuthorizedStoreCredentials> {
+        self.store.authorized_credentials.as_ref()
     }
 
     pub fn refs_db_path(&self) -> Option<&Path> {
@@ -640,6 +606,22 @@ impl CapsPolicy {
             && id.is_relative()
         {
             self.store.mtls_identity_pem = Some(base.join(id));
+        }
+        if let Some(AuthorizedStoreCredentials::Valid {
+            mtls_ca_pem,
+            mtls_identity_pem,
+            ..
+        }) = &mut self.store.authorized_credentials
+        {
+            if mtls_ca_pem.as_ref().is_some_and(|path| path.is_relative()) {
+                *mtls_ca_pem = mtls_ca_pem.take().map(|path| base.join(path));
+            }
+            if mtls_identity_pem
+                .as_ref()
+                .is_some_and(|path| path.is_relative())
+            {
+                *mtls_identity_pem = mtls_identity_pem.take().map(|path| base.join(path));
+            }
         }
         if let Some(rp) = &self.refs.path
             && rp.is_relative()

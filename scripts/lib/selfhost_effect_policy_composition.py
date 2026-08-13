@@ -80,6 +80,7 @@ DECISIONS = [
     "canonical-log-cap-descriptor",
     "global-log-and-store-resource-limits",
     "global-log-store-refs-location-defaults",
+    "global-store-credential-and-tls-policy",
     "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
@@ -108,7 +109,6 @@ DECISIONS = [
 RESIDUALS = {
     "effect-execution-and-hard-cancellation",
     "bridge-identity-validation-execution-and-model-provider-lifecycle",
-    "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding",
@@ -139,8 +139,8 @@ def validate(profile, schema, check_identity=True):
         "productionEntrypoints": ["genesis", "genesis_wasi"],
         "requestKind": "genesis/effect-policy-authority-request-v0.19",
         "resourceBinding": "core/effects::resource-policy-authority",
-        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
-        "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
+        "resourceRequestKind": "genesis/effect-resource-policy-request-v0.5",
+        "resourceResultKind": "genesis/effect-resource-policy-result-v0.5",
         "resultKind": "genesis/effect-policy-authority-result-v0.19",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
@@ -162,7 +162,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.24",
+        "version": "0.1.25",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -258,6 +258,8 @@ def static_check(root: Path, profile):
         fail("effect-policy ffi boundary decomposition drift")
     if authority_root.count('#[path = "policy_authority_plugin.rs"]') != 1:
         fail("effect-policy plugin boundary decomposition drift")
+    if authority_root.count('#[path = "policy_authority_store_credentials.rs"]') != 1:
+        fail("effect-policy store credential boundary decomposition drift")
     resource_boundary_path = root / "crates/gc_effects/src/policy_authority_resource.rs"
     if resource_boundary_path.is_symlink() or not resource_boundary_path.is_file():
         fail("effect-policy resource host boundary is missing or symlinked")
@@ -282,6 +284,9 @@ def static_check(root: Path, profile):
     plugin_boundary_path = root / "crates/gc_effects/src/policy_authority_plugin.rs"
     if plugin_boundary_path.is_symlink() or not plugin_boundary_path.is_file():
         fail("effect-policy plugin host boundary is missing or symlinked")
+    store_credentials_path = root / "crates/gc_effects/src/policy_authority_store_credentials.rs"
+    if store_credentials_path.is_symlink() or not store_credentials_path.is_file():
+        fail("effect-policy store credential boundary is missing or symlinked")
     gfx_boundary_path = root / "crates/gc_effects/src/policy_authority_gfx.rs"
     if gfx_boundary_path.is_symlink() or not gfx_boundary_path.is_file():
         fail("effect-policy GFX host boundary is missing or symlinked")
@@ -308,6 +313,7 @@ def static_check(root: Path, profile):
         + crypto_boundary_path.read_text()
         + ffi_boundary_path.read_text()
         + plugin_boundary_path.read_text()
+        + store_credentials_path.read_text()
         + gfx_boundary_path.read_text()
         + xr_boundary_path.read_text()
         + xr_decode_path.read_text()
@@ -352,6 +358,12 @@ def static_check(root: Path, profile):
         "policy.refs.path = authorized_resources.refs_path;",
         "policy.store.dir = authorized_resources.store_dir;",
         "policy.store.max_run_bytes = authorized_resources.store_max_run_bytes;",
+        "policy.store.authorized_credentials = Some(authorized_resources.store_credentials);",
+        "super::store_credentials::input(store)",
+        "super::store_credentials::decode(map_field(store_map, \":credential-policy\")?, raw_store)",
+        "inline bearer decision has no retained inline token",
+        "environment bearer decision substituted its environment name",
+        "store credential decision substituted an mTLS path",
     ]
     for token in required_authority:
         if token not in authority:
@@ -442,7 +454,13 @@ def static_check(root: Path, profile):
     remote_policy = (
         root / "crates/gc_effects/src/runner_remote_ops/policy_auth.rs"
     ).read_text()
-    remote_production = remote_policy.split("#[cfg(test)]", 1)[0]
+    if remote_policy.count('#[path = "policy_auth_store.rs"]') != 1:
+        fail("store credential consumer decomposition drift")
+    store_auth_path = root / "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs"
+    if store_auth_path.is_symlink() or not store_auth_path.is_file():
+        fail("store credential consumer boundary is missing or symlinked")
+    store_auth_policy = store_auth_path.read_text()
+    remote_production = remote_policy.split("#[cfg(test)]", 1)[0] + store_auth_policy
     for start, end in (
         ("fn parse_wasi_network_profile", "fn validate_wasi_remote_profile"),
         ("pub(super) fn sync_policy_from_op", "pub(super) fn sync_normalize_and_check_remote"),
@@ -686,17 +704,33 @@ def static_check(root: Path, profile):
         "policy.store.remote",
         "policy.store.remote_allow",
         "policy.store.allow_http",
+        "policy.store.auth_token",
+        "policy.store.auth_token_env",
+        "policy.store.basic_username",
+        "policy.store.basic_password",
+        "policy.store.basic_password_env",
+        "policy.store.mtls_ca_pem",
+        "policy.store.mtls_identity_pem",
     ):
         if token in remote_production:
-            fail(f"store remote dispatch bypasses authority state: {token}")
+            fail(f"global store dispatch bypasses authority state: {token}")
     if remote_production.count("fn store_remote_from_policy(") != 1:
         fail("store remote target authority consumer inventory drift")
+    if remote_production.count("fn store_registry_auth(") != 1:
+        fail("store credential authority consumer inventory drift")
+    store_auth = remote_production.split("fn store_registry_auth(", 1)[1].split(
+        "pub(super) fn sync_registry_auth", 1
+    )[0]
+    if "authorized_store_credentials()" not in store_auth or "policy.store." in store_auth:
+        fail("store credential consumer bypasses installed authority state")
     store_resource = (
         root / "selfhost/effect_policy_resource_authority_v1.gc"
     ).read_text()
     for binding in (
         "selfhost/effect-store-remote::input-valid?",
         "selfhost/effect-store-remote::policy",
+        "selfhost/effect-store-credential::input-valid?",
+        "selfhost/effect-store-credential::policy",
         "core/effects::resource-policy-authority",
     ):
         if store_resource.count(f"(def {binding}") != 1:
@@ -821,6 +855,10 @@ def static_check(root: Path, profile):
         "selfhost_authority_rejects_malformed_xr_backend_decisions",
         "selfhost_authority_installs_all_xr_device_policy_states",
         "selfhost_authority_rejects_malformed_xr_device_decisions",
+        "selfhost_authority_owns_global_store_credential_and_tls_selection",
+        "selfhost_authority_selects_basic_environment_credentials",
+        "selfhost_authority_preserves_store_credential_errors_for_effect_use",
+        "store_credential_decoder_rejects_open_contradictory_and_substituted_results",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -845,6 +883,8 @@ def static_check(root: Path, profile):
     for name in (
         "remote_dispatch_consumes_authorized_network_policy_before_raw_policy",
         "remote_dispatch_preserves_authorized_network_policy_errors",
+        "store_auth_consumes_authorized_credentials_before_poisoned_raw_fields",
+        "store_auth_fails_closed_without_credential_authority",
     ):
         if remote_policy.count(f"fn {name}()") != 1:
             fail(f"missing focused remote network authority control: {name}")

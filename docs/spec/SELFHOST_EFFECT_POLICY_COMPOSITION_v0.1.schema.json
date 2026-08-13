@@ -39,7 +39,7 @@
     "binding": {"const": "core/effects::policy-authority"},
     "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "decisionInventory": {
-      "const": ["baseline-operation-admission", "candidate-operation-inventory", "canonical-log-cap-descriptor", "global-log-and-store-resource-limits", "global-log-store-refs-location-defaults", "global-store-remote-target-policy", "per-operation-allow-precedence", "per-operation-base-directory-selection", "per-operation-bridge-activation-policy", "per-operation-bridge-command-allowlist-policy", "per-operation-bridge-digest-pin-policy", "per-operation-bridge-invocation-policy", "per-operation-crypto-policy", "per-operation-database-policy", "per-operation-enforcement-control-selection", "per-operation-ffi-allowlist-and-bound-policy", "per-operation-ffi-signed-policy-admission", "per-operation-ffi-signed-policy-metadata", "per-operation-gfx-first-party-profile-policy", "per-operation-gpu-backend-policy", "per-operation-gpu-fallback-policy", "per-operation-max-bytes-policy", "per-operation-network-policy", "per-operation-plugin-allowlist-policy", "per-operation-process-program-policy", "per-operation-xr-device-and-backend-policy", "runtime-resource-limits", "task-resource-limits-and-default-workers"]
+      "const": ["baseline-operation-admission", "candidate-operation-inventory", "canonical-log-cap-descriptor", "global-log-and-store-resource-limits", "global-log-store-refs-location-defaults", "global-store-credential-and-tls-policy", "global-store-remote-target-policy", "per-operation-allow-precedence", "per-operation-base-directory-selection", "per-operation-bridge-activation-policy", "per-operation-bridge-command-allowlist-policy", "per-operation-bridge-digest-pin-policy", "per-operation-bridge-invocation-policy", "per-operation-crypto-policy", "per-operation-database-policy", "per-operation-enforcement-control-selection", "per-operation-ffi-allowlist-and-bound-policy", "per-operation-ffi-signed-policy-admission", "per-operation-ffi-signed-policy-metadata", "per-operation-gfx-first-party-profile-policy", "per-operation-gpu-backend-policy", "per-operation-gpu-fallback-policy", "per-operation-max-bytes-policy", "per-operation-network-policy", "per-operation-plugin-allowlist-policy", "per-operation-process-program-policy", "per-operation-xr-device-and-backend-policy", "runtime-resource-limits", "task-resource-limits-and-default-workers"]
     },
     "hostOracle": {
       "type": "object",
@@ -60,9 +60,9 @@
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
     "requestKind": {"const": "genesis/effect-policy-authority-request-v0.19"},
     "resourceBinding": {"const": "core/effects::resource-policy-authority"},
-    "resourceRequestKind": {"const": "genesis/effect-resource-policy-request-v0.4"},
-    "resourceResultKind": {"const": "genesis/effect-resource-policy-result-v0.4"},
-    "residualDecisionInventory": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string"}},
+    "resourceRequestKind": {"const": "genesis/effect-resource-policy-request-v0.5"},
+    "resourceResultKind": {"const": "genesis/effect-resource-policy-result-v0.5"},
+    "residualDecisionInventory": {"type": "array", "minItems": 5, "uniqueItems": true, "items": {"type": "string"}},
     "resultKind": {"const": "genesis/effect-policy-authority-result-v0.19"},
     "runtimeEvidence": {
       "type": "object",
@@ -79,6 +79,6 @@
     "sourceModules": {"const": ["selfhost/effect_policy_crypto_v1.gc", "selfhost/effect_policy_network_v1.gc", "selfhost/effect_policy_plugin_v1.gc", "selfhost/effect_policy_ffi_v1.gc", "selfhost/effect_policy_bridge_v1.gc", "selfhost/effect_policy_gpu_v1.gc", "selfhost/effect_policy_gfx_v1.gc", "selfhost/effect_policy_xr_v1.gc", "selfhost/effect_policy_resource_authority_v1.gc", "selfhost/effect_policy_authority_v1.gc"]},
     "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md"},
-    "version": {"const": "0.1.24"}
+    "version": {"const": "0.1.25"}
   }
 }

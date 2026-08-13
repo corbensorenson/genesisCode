@@ -43,6 +43,8 @@ mod process;
 mod request;
 #[path = "policy_authority_resource.rs"]
 mod resource;
+#[path = "policy_authority_store_credentials.rs"]
+pub(super) mod store_credentials;
 #[path = "policy_authority_store_remote.rs"]
 mod store_remote;
 #[path = "policy_authority_xr.rs"]
@@ -75,6 +77,14 @@ pub(super) fn decode_store_remote_policy(
 ) -> Result<AuthorizedStoreRemotePolicy, EffectsError> {
     store_remote::decode(term)
 }
+
+pub(super) fn legacy_store_credentials_policy(
+    store: Option<&toml::value::Table>,
+    raw: &super::StorePolicy,
+) -> super::AuthorizedStoreCredentials {
+    store_credentials::legacy(store, raw)
+}
+
 #[cfg(test)]
 pub(super) fn decode_process_program_policy(
     term: &Term,
@@ -576,6 +586,7 @@ pub(super) fn authorize_policy(
     let authorized_resources = resource::decode_result(
         plain_authority_result(resource_value, &context, "resource")?,
         resource_request_hash,
+        &policy.store,
     )?;
     if authorized_resources.policy_term != resource::legacy_policy_term(policy)? {
         return Err(authority_error(
@@ -674,5 +685,6 @@ pub(super) fn authorize_policy(
     policy.store.dir = authorized_resources.store_dir;
     policy.store.max_run_bytes = authorized_resources.store_max_run_bytes;
     policy.store.authorized_remote = Some(authorized_resources.store_remote);
+    policy.store.authorized_credentials = Some(authorized_resources.store_credentials);
     Ok(())
 }

@@ -4,6 +4,7 @@ use super::{
     AuthorizedFfiSignedPolicy, AuthorizedGfxProfile, AuthorizedGpuBackend, AuthorizedGpuFallback,
     AuthorizedGpuPolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool,
     AuthorizedOptionalString, AuthorizedPositiveI64, AuthorizedProcessPrograms,
+    AuthorizedSecretSource, AuthorizedStoreCredentialError, AuthorizedStoreCredentials,
     AuthorizedStoreRemotePolicy, AuthorizedStringList, AuthorizedXrBackend, AuthorizedXrPolicy,
     CapsPolicy,
 };
@@ -149,6 +150,13 @@ fn store_remote_policy_term(remote: Term, remote_allow: Term, allow_http: Term) 
         (TermOrdKey(Term::symbol(":remote")), remote),
         (TermOrdKey(Term::symbol(":remote-allow")), remote_allow),
     ]))
+}
+
+fn credential_policy_field(term: &mut Term, key: &str, value: Term) {
+    let Term::Map(map) = term else {
+        panic!("credential policy test fixture must be a map");
+    };
+    map.insert(TermOrdKey(Term::symbol(key)), value);
 }
 
 fn bind_ports_policy(status: &str, any: Term, ports: Term) -> Term {
@@ -2617,6 +2625,158 @@ fn selfhost_authority_rejects_contradictory_store_remote_decisions() {
     open.insert(TermOrdKey(Term::symbol(":extra")), Term::Nil);
     decode_store_remote_policy(&Term::Map(open))
         .expect_err("open store remote decision must fail closed");
+}
+
+#[test]
+fn selfhost_authority_owns_global_store_credential_and_tls_selection() {
+    use super::policy_authority::store_credentials::term as store_credentials_policy_term;
+
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[store]
+auth_token = "private-token-never-in-authority-term"
+mtls_ca_pem = "certs/ca.pem"
+mtls_identity_pem = "certs/id.pem"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let authorized = policy.authorized_store_credentials().unwrap();
+    assert_eq!(
+        authorized,
+        &AuthorizedStoreCredentials::Valid {
+            bearer: AuthorizedSecretSource::Inline(
+                "private-token-never-in-authority-term".to_string()
+            ),
+            basic_username: None,
+            basic_password: AuthorizedSecretSource::Absent,
+            mtls_ca_pem: Some(td.path().join("certs/ca.pem")),
+            mtls_identity_pem: Some(td.path().join("certs/id.pem")),
+        }
+    );
+    let closed_term = gc_coreform::print_term(&store_credentials_policy_term(authorized).unwrap());
+    assert!(!closed_term.contains("private-token-never-in-authority-term"));
+    assert!(closed_term.contains(":bearer-source :inline"));
+}
+
+#[test]
+fn selfhost_authority_selects_basic_environment_credentials() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[store]
+basic_username = "robot"
+basic_password_env = "GENESIS_BASIC_PASSWORD"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    assert_eq!(
+        policy.authorized_store_credentials(),
+        Some(&AuthorizedStoreCredentials::Valid {
+            bearer: AuthorizedSecretSource::Absent,
+            basic_username: Some("robot".to_string()),
+            basic_password: AuthorizedSecretSource::Environment(
+                "GENESIS_BASIC_PASSWORD".to_string()
+            ),
+            mtls_ca_pem: None,
+            mtls_identity_pem: None,
+        })
+    );
+}
+
+#[test]
+fn selfhost_authority_preserves_store_credential_errors_for_effect_use() {
+    let cases = [
+        (
+            "auth_token = 7",
+            AuthorizedStoreCredentialError::AuthTokenInvalidType,
+        ),
+        (
+            "auth_token = \"inline\"\nauth_token_env = \"TOKEN_ENV\"",
+            AuthorizedStoreCredentialError::AuthTokenSourceConflict,
+        ),
+        (
+            "basic_password = \"orphan\"",
+            AuthorizedStoreCredentialError::PasswordWithoutUsername,
+        ),
+    ];
+    for (body, expected) in cases {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(&caps, format!("[store]\n{body}\n")).unwrap();
+        let policy = CapsPolicy::load_with_selfhost_authority(
+            &caps,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&selfhost_artifact()),
+        )
+        .unwrap();
+        assert_eq!(
+            policy.authorized_store_credentials(),
+            Some(&AuthorizedStoreCredentials::Invalid(expected))
+        );
+    }
+}
+
+#[test]
+fn store_credential_decoder_rejects_open_contradictory_and_substituted_results() {
+    use super::policy_authority::store_credentials::{
+        decode as decode_store_credentials_policy, term as store_credentials_policy_term,
+    };
+
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+[store]
+auth_token_env = "SAFE_TOKEN_ENV"
+"#,
+    )
+    .unwrap();
+    let authorized = policy.authorized_store_credentials().unwrap();
+    let valid = store_credentials_policy_term(authorized).unwrap();
+    assert_eq!(
+        decode_store_credentials_policy(&valid, &policy.store).unwrap(),
+        *authorized
+    );
+
+    let mut substituted = valid.clone();
+    credential_policy_field(
+        &mut substituted,
+        ":bearer-env",
+        Term::Str("ATTACKER_ENV".to_string()),
+    );
+    decode_store_credentials_policy(&substituted, &policy.store)
+        .expect_err("substituted environment name must fail closed");
+
+    let mut contradictory = valid.clone();
+    credential_policy_field(
+        &mut contradictory,
+        ":status",
+        Term::symbol(":auth-token-source-conflict"),
+    );
+    decode_store_credentials_policy(&contradictory, &policy.store)
+        .expect_err("invalid status with non-nil details must fail closed");
+
+    let Term::Map(mut open) = valid else {
+        return;
+    };
+    open.insert(TermOrdKey(Term::symbol(":extra")), Term::Nil);
+    decode_store_credentials_policy(&Term::Map(open), &policy.store)
+        .expect_err("open credential result must fail closed");
 }
 
 #[test]

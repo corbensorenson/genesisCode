@@ -36,28 +36,28 @@
       "id": "gc-agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
       "role": "card",
-      "sha256": "59fac62fff232e46a7d25b23acb6deef2e079e26bed9650fe64c2b3f897b7861"
+      "sha256": "e57b756544d0420f9ff37fb8f58e39d6900b7fc6d086e366f5c7e18d0fa234d9"
     },
     {
       "bytes": 42032,
       "id": "gc-agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
       "role": "grammar",
-      "sha256": "2e48f328e3cbee6259e18e933ab07a518a20fd1c816987c6fd4f9b53580d6e5c"
+      "sha256": "1334d897f54f07501f6d67b033f6f9cb0065ab0287233f87437280e9bcdeb731"
     },
     {
       "bytes": 308673,
       "id": "gc-agent-symbol-index",
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
       "role": "profile",
-      "sha256": "468f3a6c09472f7d49b7874f7445767afdae3453a7450531b1f6f3f9345de982"
+      "sha256": "f6ce2e7406618014a8097fa004089858ed41764dbdb7b433a300acb20b44376b"
     },
     {
       "bytes": 5886,
       "id": "gc-agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
       "role": "card",
-      "sha256": "dec24cdb6420bdb29483e78d7819c89e1de7e9184b8ef7cd27c6bc13650b40fd"
+      "sha256": "30c1a537751ee2ede0b29b565a4357601177d15209a0251a1f90e4b0e1421fa3"
     },
     {
       "bytes": 352031,
@@ -145,7 +145,7 @@
     "providerMutableFactsTreatment": "recorded-but-not-semantic-input",
     "scaffoldChangePolicy": "new-profile-and-cohort-required"
   },
-  "contentIdentitySha256": "9e9e567172b5807dc73a1cd74bc027c53576ef023a72c1f7a3b43f57edd87108",
+  "contentIdentitySha256": "e359316d9273e43f1cd693d440149fd8215373372e8c288b786f4005d3bac607",
   "grammar": {
     "acceptanceAuthority": "production-parser-and-obligations",
     "authorityArtifactId": "gc-agent-profile",

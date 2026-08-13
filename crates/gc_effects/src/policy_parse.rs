@@ -100,7 +100,7 @@ pub(super) fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, Ef
 
 pub(super) fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsError> {
     let Some(v) = tbl.get("store") else {
-        return Ok(StorePolicy {
+        let mut policy = StorePolicy {
             dir: None,
             remote: None,
             remote_allow: Vec::new(),
@@ -114,7 +114,12 @@ pub(super) fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy
             mtls_ca_pem: None,
             mtls_identity_pem: None,
             authorized_remote: Some(super::policy_authority::legacy_store_remote_policy(None)),
-        });
+            authorized_credentials: None,
+        };
+        policy.authorized_credentials = Some(
+            super::policy_authority::legacy_store_credentials_policy(None, &policy),
+        );
+        return Ok(policy);
     };
     let store_tbl = v
         .as_table()
@@ -186,7 +191,7 @@ pub(super) fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy
             .map(str::to_string)
             .collect(),
     };
-    Ok(StorePolicy {
+    let mut policy = StorePolicy {
         dir,
         remote,
         remote_allow,
@@ -202,7 +207,13 @@ pub(super) fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy
         authorized_remote: Some(super::policy_authority::legacy_store_remote_policy(Some(
             store_tbl,
         ))),
-    })
+        authorized_credentials: None,
+    };
+    policy.authorized_credentials = Some(super::policy_authority::legacy_store_credentials_policy(
+        Some(store_tbl),
+        &policy,
+    ));
+    Ok(policy)
 }
 
 pub(super) fn parse_refs_policy(tbl: &toml::value::Table) -> Result<RefsPolicy, EffectsError> {

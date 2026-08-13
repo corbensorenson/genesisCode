@@ -17,13 +17,11 @@
           (let ((entry ((core/vec::get entries) index)))
             (if ((core/eq? ((core/vec::get entry) 0)) key)
               true
-              (((selfhost/effect-policy::map-has-key-loop? entries) key)
-                ((core/int::add index) 1)))))))))
+              (((selfhost/effect-policy::map-has-key-loop? entries) key) ((core/int::add index) 1)))))))))
 
 (def selfhost/effect-policy::map-has-key?
   (fn (map)
-    (fn (key)
-      (((selfhost/effect-policy::map-has-key-loop? (core/map::entries map)) key) 0))))
+    (fn (key) (((selfhost/effect-policy::map-has-key-loop? (core/map::entries map)) key) 0))))
 
 (def selfhost/effect-policy::map-has-keys-loop?
   (fn (map)
@@ -32,8 +30,7 @@
         (if ((core/int::eq? index) (core/vec::len keys))
           true
           (if ((selfhost/effect-policy::map-has-key? map) ((core/vec::get keys) index))
-            (((selfhost/effect-policy::map-has-keys-loop? map) keys)
-              ((core/int::add index) 1))
+            (((selfhost/effect-policy::map-has-keys-loop? map) keys) ((core/int::add index) 1))
             false))))))
 
 (def selfhost/effect-policy::exact-map?
@@ -49,42 +46,45 @@
   (fn (value)
     (if (selfhost/policy::nil? value)
       true
-      (if (selfhost/policy::int? value)
-        (if ((core/int::lt? value) 0) false true)
-        false))))
+      (if (selfhost/policy::int? value) (if ((core/int::lt? value) 0) false true) false))))
 
 (def selfhost/effect-policy::positive-int?
-  (fn (value)
-    (if (selfhost/policy::int? value) ((core/int::lt? 0) value) false)))
+  (fn (value) (if (selfhost/policy::int? value) ((core/int::lt? 0) value) false)))
 
 (def selfhost/effect-policy::normalize-positive-optional
-  (fn (value)
-    (if (selfhost/policy::nil? value)
-      nil
-      (if ((core/int::lt? 0) value) value nil))))
+  (fn (value) (if (selfhost/policy::nil? value) nil (if ((core/int::lt? 0) value) value nil))))
 
 (def selfhost/effect-policy::log-resource-policy-valid?
   (fn (log)
-    (if ((selfhost/effect-policy::exact-map? log)
-          [:inline-max-bytes :max-artifact-bytes-per-run :store-dir])
-      (if (selfhost/effect-policy::optional-int?
-            ((core/map::get log) (quote :inline-max-bytes)))
-        (if (selfhost/effect-policy::optional-int?
-              ((core/map::get log) (quote :max-artifact-bytes-per-run)))
-          (selfhost/effect-policy::optional-str?
-            ((core/map::get log) (quote :store-dir)))
+    (if
+      ((selfhost/effect-policy::exact-map? log)
+        [:inline-max-bytes :max-artifact-bytes-per-run :store-dir])
+      (if (selfhost/effect-policy::optional-int? ((core/map::get log) (quote :inline-max-bytes)))
+        (if
+          (selfhost/effect-policy::optional-int?
+            ((core/map::get log) (quote :max-artifact-bytes-per-run)))
+          (selfhost/effect-policy::optional-str? ((core/map::get log) (quote :store-dir)))
           false)
         false)
       false)))
 
 (def selfhost/effect-policy::store-resource-policy-valid?
   (fn (store)
-    (if ((selfhost/effect-policy::exact-map? store) [:dir :max-run-bytes :remote-policy])
+    (if
+      ((selfhost/effect-policy::exact-map? store)
+        [
+          :credential-policy
+          :dir
+          :max-run-bytes
+          :remote-policy])
       (if (selfhost/effect-policy::optional-str? ((core/map::get store) (quote :dir)))
-        (if (selfhost/effect-policy::optional-int?
-              ((core/map::get store) (quote :max-run-bytes)))
-          (selfhost/effect-store-remote::input-valid?
-            ((core/map::get store) (quote :remote-policy)))
+        (if (selfhost/effect-policy::optional-int? ((core/map::get store) (quote :max-run-bytes)))
+          (if
+            (selfhost/effect-store-credential::input-valid?
+              ((core/map::get store) (quote :credential-policy)))
+            (selfhost/effect-store-remote::input-valid?
+              ((core/map::get store) (quote :remote-policy)))
+            false)
           false)
         false)
       false)))
@@ -92,12 +92,11 @@
 (def selfhost/effect-store-remote::input-valid?
   (fn (value)
     (if ((selfhost/effect-policy::exact-map? value) [:allow-http :remote :remote-allow])
-      (if (selfhost/effect-network::optional-bool-input?
-            ((core/map::get value) (quote :allow-http)))
-        (if (selfhost/effect-network::optional-string-input?
-              ((core/map::get value) (quote :remote)))
-          (selfhost/effect-network::list-input?
-            ((core/map::get value) (quote :remote-allow)))
+      (if
+        (selfhost/effect-network::optional-bool-input? ((core/map::get value) (quote :allow-http)))
+        (if
+          (selfhost/effect-network::optional-string-input? ((core/map::get value) (quote :remote)))
+          (selfhost/effect-network::list-input? ((core/map::get value) (quote :remote-allow)))
           false)
         false)
       false)))
@@ -105,15 +104,168 @@
 (def selfhost/effect-store-remote::policy
   (fn (value)
     {
-      :allow-http
-        (selfhost/effect-network::bool-policy
-          ((core/map::get value) (quote :allow-http)))
-      :remote
-        (selfhost/effect-network::string-policy
-          ((core/map::get value) (quote :remote)))
+      :allow-http (selfhost/effect-network::bool-policy ((core/map::get value) (quote :allow-http)))
+      :remote (selfhost/effect-network::string-policy ((core/map::get value) (quote :remote)))
       :remote-allow
-        (selfhost/effect-network::list-policy
-          ((core/map::get value) (quote :remote-allow)))}))
+        (selfhost/effect-network::list-policy ((core/map::get value) (quote :remote-allow)))}))
+
+(def selfhost/effect-store-credential::secret-input?
+  (fn (value)
+    (if (selfhost/policy::nil? value)
+      true
+      (if (selfhost/policy::sym? value)
+        (if ((core/sym::eq? value) (quote :present))
+          true
+          ((core/sym::eq? value) (quote :invalid-type)))
+        false))))
+
+(def selfhost/effect-store-credential::present?
+  (fn (value) (if (selfhost/policy::sym? value) ((core/sym::eq? value) (quote :present)) false)))
+
+(def selfhost/effect-store-credential::invalid-type?
+  (fn (value)
+    (if (selfhost/policy::sym? value) ((core/sym::eq? value) (quote :invalid-type)) false)))
+
+(def selfhost/effect-store-credential::input-valid?
+  (fn (value)
+    (if
+      ((selfhost/effect-policy::exact-map? value)
+        [
+          :auth-token
+          :auth-token-env
+          :basic-password
+          :basic-password-env
+          :basic-username
+          :mtls-ca-pem
+          :mtls-identity-pem])
+      (if
+        (selfhost/effect-store-credential::secret-input? ((core/map::get value) (quote :auth-token)))
+        (if
+          (selfhost/effect-network::optional-string-input?
+            ((core/map::get value) (quote :auth-token-env)))
+          (if
+            (selfhost/effect-store-credential::secret-input?
+              ((core/map::get value) (quote :basic-password)))
+            (if
+              (selfhost/effect-network::optional-string-input?
+                ((core/map::get value) (quote :basic-password-env)))
+              (if
+                (selfhost/effect-network::optional-string-input?
+                  ((core/map::get value) (quote :basic-username)))
+                (if
+                  (selfhost/effect-network::optional-string-input?
+                    ((core/map::get value) (quote :mtls-ca-pem)))
+                  (selfhost/effect-network::optional-string-input?
+                    ((core/map::get value) (quote :mtls-identity-pem)))
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-store-credential::invalid
+  (fn (status)
+    {
+      :basic-password-env nil
+      :basic-password-source nil
+      :basic-username nil
+      :bearer-env nil
+      :bearer-source nil
+      :mtls-ca-pem nil
+      :mtls-identity-pem nil
+      :status status}))
+
+(def selfhost/effect-store-credential::valid
+  (fn (auth-token)
+    (fn (auth-token-env)
+      (fn (basic-password)
+        (fn (basic-password-env)
+          (fn (basic-username)
+            (fn (mtls-ca-pem)
+              (fn (mtls-identity-pem)
+                {
+                  :basic-password-env
+                    (if (selfhost/policy::str? basic-password-env) basic-password-env nil)
+                  :basic-password-source
+                    (if (selfhost/policy::str? basic-username)
+                      (if (selfhost/effect-store-credential::present? basic-password)
+                        (quote :inline)
+                        (if (selfhost/policy::str? basic-password-env)
+                          (quote :environment)
+                          (quote :implicit-empty)))
+                      (quote :none))
+                  :basic-username basic-username
+                  :bearer-env (if (selfhost/policy::str? auth-token-env) auth-token-env nil)
+                  :bearer-source
+                    (if (selfhost/effect-store-credential::present? auth-token)
+                      (quote :inline)
+                      (if (selfhost/policy::str? auth-token-env) (quote :environment) (quote :none)))
+                  :mtls-ca-pem mtls-ca-pem
+                  :mtls-identity-pem mtls-identity-pem
+                  :status (quote :valid)}))))))))
+
+(def selfhost/effect-store-credential::policy
+  (fn (value)
+    (let
+      ((auth-token ((core/map::get value) (quote :auth-token)))
+        (auth-token-env ((core/map::get value) (quote :auth-token-env)))
+        (basic-password ((core/map::get value) (quote :basic-password)))
+        (basic-password-env ((core/map::get value) (quote :basic-password-env)))
+        (basic-username ((core/map::get value) (quote :basic-username)))
+        (mtls-ca-pem ((core/map::get value) (quote :mtls-ca-pem)))
+        (mtls-identity-pem ((core/map::get value) (quote :mtls-identity-pem))))
+      (if (selfhost/effect-store-credential::invalid-type? auth-token)
+        (selfhost/effect-store-credential::invalid (quote :auth-token-invalid-type))
+        (if (selfhost/effect-store-credential::invalid-type? auth-token-env)
+          (selfhost/effect-store-credential::invalid (quote :auth-token-env-invalid-type))
+          (if (selfhost/effect-store-credential::invalid-type? basic-username)
+            (selfhost/effect-store-credential::invalid (quote :basic-username-invalid-type))
+            (if (selfhost/effect-store-credential::invalid-type? basic-password)
+              (selfhost/effect-store-credential::invalid (quote :basic-password-invalid-type))
+              (if (selfhost/effect-store-credential::invalid-type? basic-password-env)
+                (selfhost/effect-store-credential::invalid (quote :basic-password-env-invalid-type))
+                (if (selfhost/effect-store-credential::invalid-type? mtls-ca-pem)
+                  (selfhost/effect-store-credential::invalid (quote :mtls-ca-pem-invalid-type))
+                  (if (selfhost/effect-store-credential::invalid-type? mtls-identity-pem)
+                    (selfhost/effect-store-credential::invalid
+                      (quote :mtls-identity-pem-invalid-type))
+                    (if
+                      (if (selfhost/effect-store-credential::present? auth-token)
+                        (selfhost/policy::str? auth-token-env)
+                        false)
+                      (selfhost/effect-store-credential::invalid (quote :auth-token-source-conflict))
+                      (if
+                        (if (selfhost/effect-store-credential::present? basic-password)
+                          (selfhost/policy::str? basic-password-env)
+                          false)
+                        (selfhost/effect-store-credential::invalid
+                          (quote :basic-password-source-conflict))
+                        (if
+                          (if
+                            (if (selfhost/effect-store-credential::present? auth-token)
+                              true
+                              (selfhost/policy::str? auth-token-env))
+                            (selfhost/policy::str? basic-username)
+                            false)
+                          (selfhost/effect-store-credential::invalid (quote :bearer-basic-conflict))
+                          (if
+                            (if (selfhost/policy::str? basic-username)
+                              false
+                              (if (selfhost/effect-store-credential::present? basic-password)
+                                true
+                                (selfhost/policy::str? basic-password-env)))
+                            (selfhost/effect-store-credential::invalid
+                              (quote :password-without-username))
+                            (
+                              (
+                                (
+                                  ((((selfhost/effect-store-credential::valid auth-token) auth-token-env) basic-password)
+                                    basic-password-env)
+                                  basic-username)
+                                mtls-ca-pem)
+                              mtls-identity-pem)))))))))))))))
 
 (def selfhost/effect-policy::refs-resource-policy-valid?
   (fn (refs)
@@ -123,12 +275,14 @@
 
 (def selfhost/effect-policy::runtime-resource-policy-valid?
   (fn (runtime)
-    (if ((selfhost/effect-policy::exact-map? runtime)
-          [:max-effect-ops
-           :max-payload-bytes-per-op
-           :max-payload-bytes-per-run
-           :max-response-bytes-per-op
-           :max-response-bytes-per-run])
+    (if
+      ((selfhost/effect-policy::exact-map? runtime)
+        [
+          :max-effect-ops
+          :max-payload-bytes-per-op
+          :max-payload-bytes-per-run
+          :max-response-bytes-per-op
+          :max-response-bytes-per-run])
       (if
         (selfhost/effect-policy::optional-nonnegative-int?
           ((core/map::get runtime) (quote :max-effect-ops)))
@@ -151,13 +305,15 @@
 
 (def selfhost/effect-policy::task-resource-policy-valid?
   (fn (task)
-    (if ((selfhost/effect-policy::exact-map? task)
-          [:default-workers
-           :max-queue
-           :max-steps-per-task
-           :max-tasks
-           :max-time-ms-per-task
-           :max-workers])
+    (if
+      ((selfhost/effect-policy::exact-map? task)
+        [
+          :default-workers
+          :max-queue
+          :max-steps-per-task
+          :max-tasks
+          :max-time-ms-per-task
+          :max-workers])
       (let ((default-workers ((core/map::get task) (quote :default-workers))))
         (if
           (if (selfhost/policy::nil? default-workers)
@@ -186,8 +342,17 @@
 
 (def core/effects::resource-policy-authority
   (fn (request)
-    (if ((selfhost/effect-policy::exact-map? request)
-          [:available-workers :kind :log :refs :runtime :store :task :v])
+    (if
+      ((selfhost/effect-policy::exact-map? request)
+        [
+          :available-workers
+          :kind
+          :log
+          :refs
+          :runtime
+          :store
+          :task
+          :v])
       (let
         ((available-workers ((core/map::get request) (quote :available-workers)))
           (kind ((core/map::get request) (quote :kind)))
@@ -198,8 +363,8 @@
           (task ((core/map::get request) (quote :task)))
           (version ((core/map::get request) (quote :v))))
         (if
-          (if ((core/eq? kind) "genesis/effect-resource-policy-request-v0.4")
-            (if (selfhost/policy::int? version) ((core/int::eq? version) 4) false)
+          (if ((core/eq? kind) "genesis/effect-resource-policy-request-v0.5")
+            (if (selfhost/policy::int? version) ((core/int::eq? version) 5) false)
             false)
           (if (selfhost/effect-policy::positive-int? available-workers)
             (if (selfhost/effect-policy::log-resource-policy-valid? log)
@@ -215,54 +380,56 @@
                           (normalized-inline
                             (selfhost/effect-policy::normalize-positive-optional
                               ((core/map::get log) (quote :inline-max-bytes)))))
-                      {
-                        :kind "genesis/effect-resource-policy-result-v0.4"
-                        :log
-                          {
-                            :inline-max-bytes normalized-inline
-                            :max-artifact-bytes-per-run
-                              (selfhost/effect-policy::normalize-positive-optional
-                                ((core/map::get log) (quote :max-artifact-bytes-per-run)))
-                            :store-dir
-                              (if (selfhost/policy::nil? configured-log-store)
-                                (if (selfhost/policy::nil? normalized-inline)
-                                  nil
-                                  ".genesis/store")
-                                configured-log-store)}
-                        :refs
-                          {
-                            :path
-                              (if (selfhost/policy::nil? configured-refs)
-                                ".genesis/refs.gc"
-                                configured-refs)}
-                        :request-h (selfhost/hash::hash-term request)
-                        :runtime runtime
-                        :store
-                          {
-                            :dir
-                              (if (selfhost/policy::nil? configured-store)
-                                ".genesis/store"
-                                configured-store)
-                            :max-run-bytes
-                              (selfhost/effect-policy::normalize-positive-optional
-                                ((core/map::get store) (quote :max-run-bytes)))
-                            :remote-policy
-                              (selfhost/effect-store-remote::policy
-                                ((core/map::get store) (quote :remote-policy)))}
-                        :task
-                          {
-                            :default-workers
-                              (if (selfhost/policy::nil? configured-default)
-                                available-workers
-                                configured-default)
-                            :max-queue ((core/map::get task) (quote :max-queue))
-                            :max-steps-per-task
-                              ((core/map::get task) (quote :max-steps-per-task))
-                            :max-tasks ((core/map::get task) (quote :max-tasks))
-                            :max-time-ms-per-task
-                              ((core/map::get task) (quote :max-time-ms-per-task))
-                            :max-workers ((core/map::get task) (quote :max-workers))}
-                        :v 4})
+                        {
+                          :kind "genesis/effect-resource-policy-result-v0.5"
+                          :log
+                            {
+                              :inline-max-bytes normalized-inline
+                              :max-artifact-bytes-per-run
+                                (selfhost/effect-policy::normalize-positive-optional
+                                  ((core/map::get log) (quote :max-artifact-bytes-per-run)))
+                              :store-dir
+                                (if (selfhost/policy::nil? configured-log-store)
+                                  (if (selfhost/policy::nil? normalized-inline)
+                                    nil
+                                    ".genesis/store")
+                                  configured-log-store)}
+                          :refs
+                            {
+                              :path
+                                (if (selfhost/policy::nil? configured-refs)
+                                  ".genesis/refs.gc"
+                                  configured-refs)}
+                          :request-h (selfhost/hash::hash-term request)
+                          :runtime runtime
+                          :store
+                            {
+                              :credential-policy
+                                (selfhost/effect-store-credential::policy
+                                  ((core/map::get store) (quote :credential-policy)))
+                              :dir
+                                (if (selfhost/policy::nil? configured-store)
+                                  ".genesis/store"
+                                  configured-store)
+                              :max-run-bytes
+                                (selfhost/effect-policy::normalize-positive-optional
+                                  ((core/map::get store) (quote :max-run-bytes)))
+                              :remote-policy
+                                (selfhost/effect-store-remote::policy
+                                  ((core/map::get store) (quote :remote-policy)))}
+                          :task
+                            {
+                              :default-workers
+                                (if (selfhost/policy::nil? configured-default)
+                                  available-workers
+                                  configured-default)
+                              :max-queue ((core/map::get task) (quote :max-queue))
+                              :max-steps-per-task ((core/map::get task) (quote :max-steps-per-task))
+                              :max-tasks ((core/map::get task) (quote :max-tasks))
+                              :max-time-ms-per-task
+                                ((core/map::get task) (quote :max-time-ms-per-task))
+                              :max-workers ((core/map::get task) (quote :max-workers))}
+                          :v 5})
                       ((core/error::make2 "core/policy/authority")
                         "effect task resource policy must contain exact nonnegative limits"))
                     ((core/error::make2 "core/policy/authority")

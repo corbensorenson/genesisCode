@@ -70,9 +70,10 @@ lifecycle, and replay remain bounded host mechanisms.
 deduplication, and ordering of baseline and per-operation candidate names.
 `core/effects::resource-policy-authority` owns global log/store byte budgets,
 log/store/refs configured-or-default location selection, global store remote
-target/allowlist/HTTP states, runtime and task resource limits, and selection of
-an explicit task worker default from the configured value or the host's bounded
-available-worker observation.
+target/allowlist/HTTP states, global store credential-source and mTLS-path policy,
+runtime and task resource limits, and selection of an explicit task worker
+default from the configured value or the host's bounded available-worker
+observation. Secret bytes never enter the GenesisCode request or result.
 
 The Rust host still parses TOML, independently reconstructs the legacy candidate
 inventory, per-operation results, and log/refs/runtime/store/task resource
@@ -297,7 +298,7 @@ requirement, and canonical digest into enforcement; its separately parsed values
 are used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
-`genesis/effect-resource-policy-request-v0.4` map. It contains version `4`, the
+`genesis/effect-resource-policy-request-v0.5` map. It contains version `5`, the
 positive host observation `:available-workers`, and exact `:log`, `:refs`,
 `:runtime`, `:store`, and `:task` maps. Missing optional TOML fields are
 represented by `nil`. Runtime and task limits must be nonnegative integers, and
@@ -305,12 +306,17 @@ a configured `:default-workers` must be positive. Global `:inline-max-bytes`,
 `:max-artifact-bytes-per-run`, and `:max-run-bytes` accept the legacy integer
 domain and are normalized by GenesisCode so only positive limits survive; zero
 and negative values become `nil`. Location inputs are `nil` or strings. The
-store map additionally contains an exact `:remote-policy` input with
-`:remote`, `:remote-allow`, and `:allow-http`; present wrong types and non-string
-list entries are transported as closed invalid observations rather than silently
-coerced by Rust.
+store map additionally contains exact `:remote-policy` and `:credential-policy`
+inputs. The former contains `:remote`, `:remote-allow`, and `:allow-http`; present
+wrong types and non-string list entries are transported as closed invalid
+observations rather than silently coerced by Rust. The credential input is an
+exact seven-field map. Inline `auth_token` and `basic_password` values are
+transported only as `:present`, with absent values as `nil` and wrong types as
+`:invalid-type`. Environment names, Basic username, and mTLS paths are transported
+as exact strings, `nil`, or `:invalid-type`. No credential secret is part of the
+request, request hash, authority evaluation, result, or logged policy term.
 
-The closed `genesis/effect-resource-policy-result-v0.4` result is bound to the
+The closed `genesis/effect-resource-policy-result-v0.5` result is bound to the
 complete request hash, preserves the validated limits, replaces a missing task
 default with `:available-workers`, defaults store and refs locations to
 `.genesis/store` and `.genesis/refs.gc`, and defaults the log store only when the
@@ -318,13 +324,24 @@ normalized inline spill threshold is present. Explicit locations always win. Its
 closed store remote decision classifies the target as
 `absent|invalid-type|empty|valid`, the allowlist as
 `absent|invalid-type|invalid-entry|empty|valid`, and HTTP permission as
-`absent|invalid-type|valid`; only valid states carry trimmed values. The
-host strictly decodes every field into `u64`, platform `usize`, or a UTF-8 path;
-rejects invalid result domains and overflow; compares the complete result with
-its independently parsed compatibility oracle; installs the validated
-GenesisCode log, refs, runtime, store remote, and task values; and only then resolves
-relative paths against the capability file's parent directory. Filesystem path
-resolution and use remain host mechanisms rather than policy-selection authority.
+`absent|invalid-type|valid`; only valid states carry trimmed values. The closed
+eight-field credential result has one `:status` plus bearer source/environment,
+Basic username/password source/environment, and two mTLS path fields. GenesisCode
+owns malformed-type precedence, inline-versus-environment conflicts,
+bearer-versus-Basic exclusion, password-without-username rejection, and the
+`none|inline|environment|implicit-empty` source selections. Invalid statuses must
+carry seven `nil` details. The host rejects open maps, unknown statuses, every
+status/detail contradiction, substituted environment names, username or paths,
+and any inline selection without the retained private secret. Only after that
+strict decode may Rust inject retained inline secret bytes into private typed
+enforcement state. The host strictly decodes every other field into `u64`,
+platform `usize`, or a UTF-8 path; rejects invalid result domains and overflow;
+compares the complete result with its independently parsed compatibility oracle;
+installs the validated GenesisCode log, refs, runtime, store remote, credential,
+and task values; and only then resolves relative paths against the capability
+file's parent directory. Environment lookup, secret use, path resolution, PEM
+reads, TLS/client construction, and transport remain host mechanisms rather than
+policy-selection authority.
 
 Per-operation `allow` has legacy precedence: an override with `allow = false`
 denies the operation; an override with true or no explicit `allow` admits it;
@@ -440,10 +457,10 @@ transition, and therefore are not evidence of H2.
 ## Residual Decisions And Nonclaims
 
 The machine profile lists the complete residual boundary. It includes TOML syntax
-and remaining type decoding; global store credential, TLS, and transport policy;
-FFI signed-policy provenance, bridge identity validation/execution, and model
-provider lifecycle; secret and path resolution; effect execution and hard
-cancellation; strict replay; and removal of the compatibility oracle.
+and remaining type decoding; FFI signed-policy provenance, bridge identity
+validation/execution, and model provider lifecycle; secret and path resolution;
+effect execution and hard cancellation; strict replay; and removal of the
+compatibility oracle.
 Filesystem policy configuration is no longer a residual decision: admission,
 base-directory selection, directory-creation selection, and byte-limit state are
 GenesisCode-produced. Filesystem path joining, canonicalization, symlink defense,
@@ -465,10 +482,17 @@ per-operation target allowlists, HTTP permission, WASI profile normalization,
 bind host/port states, and inbound request-size state across network, sync,
 publication, and store-remote operation policies. GenesisCode also owns global
 store remote target selection, allowlist normalization, malformed-state
-classification, and HTTP permission. TLS credentials, secret/environment
-resolution, retry/worker settings, URL parsing and normalization, matching, WASI
-backend discovery, DNS/socket/HTTP/WebSocket execution, cancellation, and
-measurement remain in the named host residuals.
+classification, and HTTP permission. Global store credential and TLS-path policy
+is no longer residual: GenesisCode owns all seven field-type states, conflict and
+dependency precedence, bearer/Basic source selection, Basic username, and mTLS
+path admission without receiving inline secret bytes. Secret/environment lookup,
+relative-path resolution, PEM reads, TLS/client construction, retry/worker
+settings, URL parsing and normalization, matching, WASI backend discovery,
+DNS/socket/HTTP/WebSocket execution, cancellation, and measurement remain bounded
+mechanisms in the named path/secret, bridge-lifecycle, execution, and replay
+residuals. Per-operation sync credential fields remain under
+`path-and-secret-resolution`; this decision retires only the global `[store]`
+credential/TLS policy family.
 Crypto policy configuration is no longer residual: GenesisCode owns algorithm
 and key-ID list normalization and all twelve positive-limit states across hash,
 sign, verify, KDF, AEAD sealing, and AEAD opening. Algorithm/key matching, key

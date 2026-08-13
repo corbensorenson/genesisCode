@@ -2,13 +2,14 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-12",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "226337d43796b2ff1ec470a4cface91ac8b71b7171413023bb3f6e0fdd0d3c8c",
+  "contentIdentitySha256": "ae14e9b2f43ab96bbc2741e1b39d6c44d01b3467cfd91da9d4b5da1466929466",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
     "canonical-log-cap-descriptor",
     "global-log-and-store-resource-limits",
     "global-log-store-refs-location-defaults",
+    "global-store-credential-and-tls-policy",
     "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
@@ -58,12 +59,11 @@
   ],
   "requestKind": "genesis/effect-policy-authority-request-v0.19",
   "resourceBinding": "core/effects::resource-policy-authority",
-  "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
-  "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
+  "resourceRequestKind": "genesis/effect-resource-policy-request-v0.5",
+  "resourceResultKind": "genesis/effect-resource-policy-result-v0.5",
   "residualDecisionInventory": [
     "effect-execution-and-hard-cancellation",
     "bridge-identity-validation-execution-and-model-provider-lifecycle",
-    "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
     "toml-syntax-and-type-decoding"
@@ -88,7 +88,7 @@
     "selfhost/effect_policy_resource_authority_v1.gc",
     "selfhost/effect_policy_authority_v1.gc"
   ],
-  "sourceSha256": "53990be6d761bdfd612be1198369b3e80cbfcd886d7d7569df540a0bb8ba9586",
+  "sourceSha256": "dd36767294d65a1bcdbe59e046c2c60a1a910148914b1be26bf6aed6e8e58920",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.24"
+  "version": "0.1.25"
 }
